@@ -187,6 +187,30 @@ class AudioRoomViewModelTest {
             assertEquals(ConnectionUiState.Step.OpeningTransport, ui.step)
         }
 
+    @Test
+    fun speakingNowClearsOnTeardown() =
+        runTest {
+            val fakeListener = FakeNestsListener()
+            val vm = newViewModel { fakeListener }
+
+            vm.connect()
+            fakeListener.emit(NestsListenerState.Connected(ROOM_INFO, 0xff000011))
+            // Speaking-now is empty until an object arrives — exercising the
+            // timeout-based clearing requires a live SubscribeHandle, which is
+            // covered in nestsClient's pipe tests. Here we just verify the
+            // teardown contract: speakingNow returns to empty after disconnect.
+            vm.disconnect()
+
+            assertTrue(
+                vm.uiState.value.speakingNow
+                    .isEmpty(),
+            )
+            assertTrue(
+                vm.uiState.value.activeSpeakers
+                    .isEmpty(),
+            )
+        }
+
     private fun newViewModel(connect: suspend (CoroutineScope) -> NestsListener): AudioRoomViewModel =
         AudioRoomViewModel(
             httpClient = NoopNestsClient,

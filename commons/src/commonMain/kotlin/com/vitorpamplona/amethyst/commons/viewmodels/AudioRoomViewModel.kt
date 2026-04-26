@@ -39,9 +39,11 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -90,6 +92,7 @@ class AudioRoomViewModel(
     private var stateObserverJob: Job? = null
 
     private val activeSubscriptions = mutableMapOf<String, ActiveSubscription>()
+    private val speakingExpiryJobs = mutableMapOf<String, Job>()
     private var requestedSpeakers: Set<String> = emptySet()
     private var closed = false
 
@@ -204,6 +207,10 @@ class AudioRoomViewModel(
      */
     private fun closeSubscription(slot: ActiveSubscription) {
         val handle = slot.detach()
+        speakingExpiryJobs.remove(slot.pubkey)?.cancel()
+        if (_uiState.value.speakingNow.contains(slot.pubkey)) {
+            _uiState.update { it.copy(speakingNow = (it.speakingNow - slot.pubkey).toPersistentSet()) }
+        }
         if (handle != null) {
             viewModelScope.launch { runCatching { handle.unsubscribe() } }
         }
@@ -224,7 +231,10 @@ class AudioRoomViewModel(
             // Apply current mute state before play() opens the device so the
             // first frame respects it.
             player.setMutedSafe(isMuted)
-            roomPlayer.play(handle.objects, onError = { /* swallow per-packet decoder errors */ })
+            // Tap the object flow to drive the speaking-now indicator before
+            // the decoder consumes it.
+            val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
+            roomPlayer.play(instrumented, onError = { /* swallow per-packet decoder errors */ })
             slot.attach(handle, roomPlayer, player)
             publishActiveSpeakers()
         } catch (ce: CancellationException) {
@@ -247,6 +257,8 @@ class AudioRoomViewModel(
         // the listener.close() below tears down the MoQ session.
         activeSubscriptions.values.forEach { it.detach() }
         activeSubscriptions.clear()
+        speakingExpiryJobs.values.forEach { it.cancel() }
+        speakingExpiryJobs.clear()
         val l = listener
         listener = null
         if (l != null) {
@@ -255,7 +267,13 @@ class AudioRoomViewModel(
             // underlying transport's own cleanup runs.
             viewModelScope.launch { runCatching { l.close() } }
         }
-        _uiState.update { it.copy(connection = targetState, activeSpeakers = persistentSetOf()) }
+        _uiState.update {
+            it.copy(
+                connection = targetState,
+                activeSpeakers = persistentSetOf(),
+                speakingNow = persistentSetOf(),
+            )
+        }
     }
 
     private fun publishActiveSpeakers() {
@@ -265,6 +283,31 @@ class AudioRoomViewModel(
                 .keys
                 .toPersistentSet()
         _uiState.update { it.copy(activeSpeakers = active) }
+    }
+
+    /**
+     * Mark [pubkey] as currently speaking and (re)arm a [SPEAKING_TIMEOUT_MS]
+     * coroutine that clears it once they go quiet. Called once per
+     * MoQ object received on the speaker's track.
+     */
+    private fun onSpeakerActivity(pubkey: String) {
+        if (closed) return
+        speakingExpiryJobs[pubkey]?.cancel()
+        if (!_uiState.value.speakingNow.contains(pubkey)) {
+            _uiState.update { it.copy(speakingNow = (it.speakingNow + pubkey).toPersistentSet()) }
+        }
+        speakingExpiryJobs[pubkey] =
+            viewModelScope.launch {
+                delay(SPEAKING_TIMEOUT_MS)
+                clearSpeaking(pubkey)
+            }
+    }
+
+    private fun clearSpeaking(pubkey: String) {
+        speakingExpiryJobs.remove(pubkey)
+        if (_uiState.value.speakingNow.contains(pubkey)) {
+            _uiState.update { it.copy(speakingNow = (it.speakingNow - pubkey).toPersistentSet()) }
+        }
     }
 
     private class ActiveSubscription private constructor(
@@ -362,8 +405,18 @@ private fun AudioPlayer.setMutedSafe(muted: Boolean) {
 data class AudioRoomUiState(
     val connection: ConnectionUiState = ConnectionUiState.Idle,
     val isMuted: Boolean = false,
+    /** Pubkeys we have an open MoQ subscription for. */
     val activeSpeakers: ImmutableSet<String> = persistentSetOf(),
+    /** Pubkeys whose audio track delivered an object in the last [SPEAKING_TIMEOUT_MS]. */
+    val speakingNow: ImmutableSet<String> = persistentSetOf(),
 )
+
+/**
+ * How long a speaker stays "speaking" after their last received MoQ object.
+ * Roughly 12 × the 20 ms Opus frame so brief packet jitter doesn't make the
+ * indicator flicker.
+ */
+const val SPEAKING_TIMEOUT_MS: Long = 250L
 
 /**
  * Indirection over the top-level `connectNestsListener` so tests can drive

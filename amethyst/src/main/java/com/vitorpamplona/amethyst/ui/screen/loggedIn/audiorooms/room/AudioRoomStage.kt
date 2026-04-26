@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -73,6 +75,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -124,6 +128,8 @@ private fun AudioRoomStageContent(
                     !it.role.equals(ROLE.SPEAKER.code, true)
             }
         }
+    val onStage = remember(hosts, speakers) { hosts + speakers }
+    val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
 
     var handRaised by rememberSaveable(event.address().toValue()) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -148,6 +154,36 @@ private fun AudioRoomStageContent(
         }
     }
 
+    val serviceBase = event.service()
+    val roomId = event.address().dTag
+    val audioAvailable = !serviceBase.isNullOrBlank() && roomId.isNotBlank()
+
+    val viewModel: AudioRoomViewModel? =
+        if (audioAvailable) {
+            val signer = account.signer
+            val viewModelKey = remember(serviceBase, roomId) { "$serviceBase|$roomId" }
+            viewModel(
+                key = viewModelKey,
+                factory =
+                    remember(viewModelKey, signer) {
+                        AudioRoomViewModelFactory(
+                            signer = signer,
+                            serviceBase = serviceBase,
+                            roomId = roomId,
+                        )
+                    },
+            )
+        } else {
+            null
+        }
+
+    LaunchedEffect(viewModel, onStageKeys) {
+        viewModel?.updateSpeakers(onStageKeys)
+    }
+
+    val ui = viewModel?.uiState?.collectAsState()?.value
+    val speakingNow = ui?.speakingNow ?: persistentSetOf()
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         shape = RoundedCornerShape(12.dp),
@@ -168,11 +204,12 @@ private fun AudioRoomStageContent(
                 )
             }
 
-            if (hosts.isNotEmpty() || speakers.isNotEmpty()) {
+            if (onStage.isNotEmpty()) {
                 StagePeopleRow(
                     label = stringRes(R.string.audio_room_stage),
-                    people = hosts + speakers,
+                    people = onStage,
                     avatarSize = Size40dp,
+                    speakingNow = speakingNow,
                     accountViewModel = accountViewModel,
                 )
             }
@@ -182,15 +219,21 @@ private fun AudioRoomStageContent(
                     label = stringRes(R.string.audio_room_audience),
                     people = audience,
                     avatarSize = Size35dp,
+                    speakingNow = persistentSetOf(),
                     accountViewModel = accountViewModel,
                 )
             }
 
-            AudioConnectionRow(
-                event = event,
-                hosts = hosts,
-                accountViewModel = accountViewModel,
-            )
+            if (viewModel != null && ui != null) {
+                AudioConnectionRow(viewModel = viewModel, ui = ui)
+            } else {
+                Text(
+                    text = stringRes(R.string.audio_room_audio_unavailable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -219,8 +262,10 @@ private fun StagePeopleRow(
     label: String,
     people: List<ParticipantTag>,
     avatarSize: androidx.compose.ui.unit.Dp,
+    speakingNow: ImmutableSet<String>,
     accountViewModel: AccountViewModel,
 ) {
+    val ringColor = MaterialTheme.colorScheme.primary
     Column(modifier = Modifier.padding(top = 8.dp)) {
         Text(
             text = label,
@@ -231,11 +276,19 @@ private fun StagePeopleRow(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            items(items = people, key = { it.pubKey }) {
+            items(items = people, key = { it.pubKey }) { participant ->
+                val isSpeaking = participant.pubKey in speakingNow
+                val avatarModifier =
+                    if (isSpeaking) {
+                        Modifier.border(2.dp, ringColor, CircleShape)
+                    } else {
+                        Modifier
+                    }
                 ClickableUserPicture(
-                    baseUserHex = it.pubKey,
+                    baseUserHex = participant.pubKey,
                     size = avatarSize,
                     accountViewModel = accountViewModel,
+                    modifier = avatarModifier,
                 )
             }
         }
@@ -243,52 +296,15 @@ private fun StagePeopleRow(
 }
 
 /**
- * Connect / state-chip / mute row. Wires [AudioRoomViewModel] for the listener
- * audio pipeline. Hidden when the room event has no `service` tag (legacy
- * recordings or rooms hosted on non-nests servers — nothing to connect to).
+ * Connect / state-chip / mute row. Pure-render — the [AudioRoomViewModel] is
+ * owned by the parent so the speaker rows can read `speakingNow` from the
+ * same UI state.
  */
 @Composable
 private fun AudioConnectionRow(
-    event: MeetingSpaceEvent,
-    hosts: List<ParticipantTag>,
-    accountViewModel: AccountViewModel,
+    viewModel: AudioRoomViewModel,
+    ui: com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomUiState,
 ) {
-    val serviceBase = event.service()
-    val roomId = event.address().dTag
-
-    if (serviceBase.isNullOrBlank() || roomId.isBlank()) {
-        Text(
-            text = stringRes(R.string.audio_room_audio_unavailable),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        return
-    }
-
-    val signer = accountViewModel.account.signer
-    val viewModelKey = remember(serviceBase, roomId) { "$serviceBase|$roomId" }
-
-    val viewModel: AudioRoomViewModel =
-        viewModel(
-            key = viewModelKey,
-            factory =
-                remember(viewModelKey, signer) {
-                    AudioRoomViewModelFactory(
-                        signer = signer,
-                        serviceBase = serviceBase,
-                        roomId = roomId,
-                    )
-                },
-        )
-
-    val hostKeys = remember(hosts) { hosts.map { it.pubKey }.toSet() }
-    LaunchedEffect(viewModel, hostKeys) {
-        viewModel.updateSpeakers(hostKeys)
-    }
-
-    val ui by viewModel.uiState.collectAsState()
-
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
