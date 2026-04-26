@@ -137,7 +137,7 @@ object RelayCommands {
         }
     }
 
-    private fun list(dataDir: DataDir): Int {
+    private suspend fun list(dataDir: DataDir): Int {
         val ctx = Context.open(dataDir)
         try {
             val self = ctx.identity.pubKeyHex

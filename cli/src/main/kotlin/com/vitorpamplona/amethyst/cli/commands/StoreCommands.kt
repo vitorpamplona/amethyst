@@ -132,7 +132,7 @@ object StoreCommands {
         return 0
     }
 
-    private fun sweepExpired(dataDir: DataDir): Int =
+    private suspend fun sweepExpired(dataDir: DataDir): Int =
         withStore(dataDir) { store ->
             val expiresAtDir = dataDir.eventsDir.toPath().resolve("idx/expires_at")
             val before = countEntries(expiresAtDir)

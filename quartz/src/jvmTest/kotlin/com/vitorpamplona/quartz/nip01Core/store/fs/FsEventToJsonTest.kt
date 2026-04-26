@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -54,63 +55,65 @@ class FsEventToJsonTest {
     }
 
     @Test
-    fun `default formatter writes compact JSON one line`() {
-        val store = FsEventStore(root)
-        try {
-            val n =
-                signer.sign<TextNoteEvent>(
-                    TextNoteEvent.build("hello", createdAt = 100),
-                )
-            store.insert(n)
-            val canonical =
-                root
-                    .resolve("events")
-                    .resolve(n.id.substring(0, 2))
-                    .resolve(n.id.substring(2, 4))
-                    .resolve("${n.id}.json")
-            val raw = canonical.readText()
-            assertEquals(raw.trim(), raw, "compact form has no trailing whitespace")
-            assertTrue(!raw.contains('\n'), "compact form is single-line")
-        } finally {
-            store.close()
+    fun `default formatter writes compact JSON one line`() =
+        runBlocking {
+            val store = FsEventStore(root)
+            try {
+                val n =
+                    signer.sign<TextNoteEvent>(
+                        TextNoteEvent.build("hello", createdAt = 100),
+                    )
+                store.insert(n)
+                val canonical =
+                    root
+                        .resolve("events")
+                        .resolve(n.id.substring(0, 2))
+                        .resolve(n.id.substring(2, 4))
+                        .resolve("${n.id}.json")
+                val raw = canonical.readText()
+                assertEquals(raw.trim(), raw, "compact form has no trailing whitespace")
+                assertTrue(!raw.contains('\n'), "compact form is single-line")
+            } finally {
+                store.close()
+            }
         }
-    }
 
     @Test
-    fun `pretty formatter writes multi-line indented JSON and round-trips`() {
-        val store =
-            FsEventStore(
-                root,
-                eventToJson = JacksonMapper::toJsonPretty,
-            )
-        try {
-            val n =
-                signer.sign<TextNoteEvent>(
-                    TextNoteEvent.build("hello", createdAt = 100),
+    fun `pretty formatter writes multi-line indented JSON and round-trips`() =
+        runBlocking {
+            val store =
+                FsEventStore(
+                    root,
+                    eventToJson = JacksonMapper::toJsonPretty,
                 )
-            store.insert(n)
-            val canonical =
-                root
-                    .resolve("events")
-                    .resolve(n.id.substring(0, 2))
-                    .resolve(n.id.substring(2, 4))
-                    .resolve("${n.id}.json")
-            val raw = canonical.readText()
-            assertTrue(raw.contains('\n'), "pretty form is multi-line")
-            assertTrue(raw.contains("\"id\""), "field labels survive pretty print")
+            try {
+                val n =
+                    signer.sign<TextNoteEvent>(
+                        TextNoteEvent.build("hello", createdAt = 100),
+                    )
+                store.insert(n)
+                val canonical =
+                    root
+                        .resolve("events")
+                        .resolve(n.id.substring(0, 2))
+                        .resolve(n.id.substring(2, 4))
+                        .resolve("${n.id}.json")
+                val raw = canonical.readText()
+                assertTrue(raw.contains('\n'), "pretty form is multi-line")
+                assertTrue(raw.contains("\"id\""), "field labels survive pretty print")
 
-            // Round-trip: parsing pretty output back must produce the same event.
-            val reparsed = Event.fromJson(raw)
-            assertEquals(n.id, reparsed.id)
-            assertEquals(n.content, reparsed.content)
-            assertEquals(n.sig, reparsed.sig)
+                // Round-trip: parsing pretty output back must produce the same event.
+                val reparsed = Event.fromJson(raw)
+                assertEquals(n.id, reparsed.id)
+                assertEquals(n.content, reparsed.content)
+                assertEquals(n.sig, reparsed.sig)
 
-            // And the store can read it back through its own API.
-            val got = store.query<TextNoteEvent>(Filter(ids = listOf(n.id)))
-            assertEquals(1, got.size)
-            assertEquals(n.id, got[0].id)
-        } finally {
-            store.close()
+                // And the store can read it back through its own API.
+                val got = store.query<TextNoteEvent>(Filter(ids = listOf(n.id)))
+                assertEquals(1, got.size)
+                assertEquals(n.id, got[0].id)
+            } finally {
+                store.close()
+            }
         }
-    }
 }

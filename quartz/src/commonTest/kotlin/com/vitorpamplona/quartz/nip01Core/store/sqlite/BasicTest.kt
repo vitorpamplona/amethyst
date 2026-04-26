@@ -307,10 +307,14 @@ class BasicTest : BaseDBTest() {
             // modules.forEach { it.create(db) }. Pre-fix, FullTextSearchModule
             // left dummy_fts3/4/5 tables behind on first probe, so the
             // second create() would throw "already exists".
-            db.store.modules
-                .reversed()
-                .forEach { it.drop(db.store.connection) }
-            db.store.modules.forEach { it.create(db.store.connection) }
+            // Drive the module re-create against the writer connection
+            // (drop + create touches schema, so we need exclusive access).
+            db.store.pool.useWriter { conn ->
+                db.store.modules
+                    .reversed()
+                    .forEach { it.drop(conn) }
+                db.store.modules.forEach { it.create(conn) }
+            }
 
             // After re-creation the store is still usable.
             val note = signer.sign(TextNoteEvent.build("test1"))

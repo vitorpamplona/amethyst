@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -72,171 +73,181 @@ class FsSlotsTest {
     )
 
     @Test
-    fun `newer replaceable evicts older`() {
-        val v1 = metadata("old", 100)
-        val v2 = metadata("new", 200)
-        store.insert(v1)
-        store.insert(v2)
+    fun `newer replaceable evicts older`() =
+        runBlocking {
+            val v1 = metadata("old", 100)
+            val v2 = metadata("new", 200)
+            store.insert(v1)
+            store.insert(v2)
 
-        // Only the newer survives a query by author.
-        val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
-        assertEquals(listOf(v2.id), got.map { it.id })
+            // Only the newer survives a query by author.
+            val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
+            assertEquals(listOf(v2.id), got.map { it.id })
 
-        // The older canonical is gone.
-        assertFalse(store.hasCanonical(v1.id), "older canonical should be removed")
-    }
-
-    @Test
-    fun `older replaceable is rejected when newer exists`() {
-        val newer = metadata("new", 200)
-        val older = metadata("old", 100)
-        store.insert(newer)
-        store.insert(older)
-
-        // Newer still wins.
-        val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
-        assertEquals(listOf(newer.id), got.map { it.id })
-
-        // And the older was never persisted.
-        assertFalse(store.hasCanonical(older.id), "older should have been rejected")
-    }
+            // The older canonical is gone.
+            assertFalse(store.hasCanonical(v1.id), "older canonical should be removed")
+        }
 
     @Test
-    fun `equal timestamp replaceable resolves by lexical id (NIP-01)`() {
-        val a = metadata("a", 100)
-        val b = metadata("b", 100)
-        // NIP-01 tiebreaker: when createdAt ties, the lexically smaller
-        // id wins, regardless of insertion order.
-        val (winner, loser) = if (a.id < b.id) a to b else b to a
+    fun `older replaceable is rejected when newer exists`() =
+        runBlocking {
+            val newer = metadata("new", 200)
+            val older = metadata("old", 100)
+            store.insert(newer)
+            store.insert(older)
 
-        // Loser inserted first, then winner — winner must replace.
-        store.insert(loser)
-        store.insert(winner)
+            // Newer still wins.
+            val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
+            assertEquals(listOf(newer.id), got.map { it.id })
 
-        val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
-        assertEquals(1, got.size)
-        assertEquals(winner.id, got.single().id)
-    }
-
-    @Test
-    fun `equal timestamp replaceable rejects higher id when winner already present`() {
-        val a = metadata("a", 100)
-        val b = metadata("b", 100)
-        val (winner, loser) = if (a.id < b.id) a to b else b to a
-
-        // Winner inserted first — loser must NOT take the slot.
-        store.insert(winner)
-        store.insert(loser)
-
-        val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
-        assertEquals(1, got.size)
-        assertEquals(winner.id, got.single().id)
-    }
+            // And the older was never persisted.
+            assertFalse(store.hasCanonical(older.id), "older should have been rejected")
+        }
 
     @Test
-    fun `replaceable slot file contains the current winner`() {
-        val v = metadata("only", 100)
-        store.insert(v)
+    fun `equal timestamp replaceable resolves by lexical id (NIP-01)`() =
+        runBlocking {
+            val a = metadata("a", 100)
+            val b = metadata("b", 100)
+            // NIP-01 tiebreaker: when createdAt ties, the lexically smaller
+            // id wins, regardless of insertion order.
+            val (winner, loser) = if (a.id < b.id) a to b else b to a
 
-        val slot = root.resolve("replaceable/${MetadataEvent.KIND}/${signer.pubKey}.json")
-        assertTrue(slot.exists(), "slot must exist")
-        val parsed = Event.fromJson(slot.readText())
-        assertEquals(v.id, parsed.id)
-    }
+            // Loser inserted first, then winner — winner must replace.
+            store.insert(loser)
+            store.insert(winner)
 
-    @Test
-    fun `replaceable slot survives canonical deletion via hardlink`() {
-        val v = metadata("x", 100)
-        store.insert(v)
-
-        // Simulate a user (or bug) removing the canonical file.
-        val canonical =
-            root
-                .resolve("events")
-                .resolve(v.id.substring(0, 2))
-                .resolve(v.id.substring(2, 4))
-                .resolve("${v.id}.json")
-        assertTrue(Files.deleteIfExists(canonical))
-
-        val slot = root.resolve("replaceable/${MetadataEvent.KIND}/${signer.pubKey}.json")
-        assertTrue(slot.exists(), "slot should persist even if canonical is gone (hardlink to same inode)")
-        val parsed = Event.fromJson(slot.readText())
-        assertEquals(v.id, parsed.id)
-    }
+            val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
+            assertEquals(1, got.size)
+            assertEquals(winner.id, got.single().id)
+        }
 
     @Test
-    fun `eviction unlinks index hardlinks for the old winner`() {
-        val v1 = metadata("old", 100)
-        val v2 = metadata("new", 200)
-        store.insert(v1)
-        store.insert(v2)
+    fun `equal timestamp replaceable rejects higher id when winner already present`() =
+        runBlocking {
+            val a = metadata("a", 100)
+            val b = metadata("b", 100)
+            val (winner, loser) = if (a.id < b.id) a to b else b to a
 
-        // Author index should have exactly one entry — the winner.
-        val authorDir = root.resolve("idx/author/${signer.pubKey}")
-        val entries =
-            Files.list(authorDir).use { s ->
-                s.toList().map { it.fileName.toString() }
-            }
-        assertEquals(1, entries.size, "author index should only hold the winner")
-        assertTrue(entries.single().endsWith("-${v2.id}"), "author index entry must point at winner")
-    }
+            // Winner inserted first — loser must NOT take the slot.
+            store.insert(winner)
+            store.insert(loser)
+
+            val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
+            assertEquals(1, got.size)
+            assertEquals(winner.id, got.single().id)
+        }
 
     @Test
-    fun `slot shortcut serves replaceable queries even when idx is wiped`() {
-        // Belt-and-suspenders for the planner shortcut: a query pinned to
-        // (kinds=[0], authors=[pk]) must hit the slot directly without
-        // touching idx/. Wipe idx/ to prove the shortcut isn't relying on
-        // it.
-        val v = metadata("p", 100)
-        store.insert(v)
-        java.nio.file.Files
-            .walk(root.resolve("idx"))
-            .use { s ->
-                s.sorted(Comparator.reverseOrder()).forEach {
-                    java.nio.file.Files
-                        .deleteIfExists(it)
+    fun `replaceable slot file contains the current winner`() =
+        runBlocking {
+            val v = metadata("only", 100)
+            store.insert(v)
+
+            val slot = root.resolve("replaceable/${MetadataEvent.KIND}/${signer.pubKey}.json")
+            assertTrue(slot.exists(), "slot must exist")
+            val parsed = Event.fromJson(slot.readText())
+            assertEquals(v.id, parsed.id)
+        }
+
+    @Test
+    fun `replaceable slot survives canonical deletion via hardlink`() =
+        runBlocking {
+            val v = metadata("x", 100)
+            store.insert(v)
+
+            // Simulate a user (or bug) removing the canonical file.
+            val canonical =
+                root
+                    .resolve("events")
+                    .resolve(v.id.substring(0, 2))
+                    .resolve(v.id.substring(2, 4))
+                    .resolve("${v.id}.json")
+            assertTrue(Files.deleteIfExists(canonical))
+
+            val slot = root.resolve("replaceable/${MetadataEvent.KIND}/${signer.pubKey}.json")
+            assertTrue(slot.exists(), "slot should persist even if canonical is gone (hardlink to same inode)")
+            val parsed = Event.fromJson(slot.readText())
+            assertEquals(v.id, parsed.id)
+        }
+
+    @Test
+    fun `eviction unlinks index hardlinks for the old winner`() =
+        runBlocking {
+            val v1 = metadata("old", 100)
+            val v2 = metadata("new", 200)
+            store.insert(v1)
+            store.insert(v2)
+
+            // Author index should have exactly one entry — the winner.
+            val authorDir = root.resolve("idx/author/${signer.pubKey}")
+            val entries =
+                Files.list(authorDir).use { s ->
+                    s.toList().map { it.fileName.toString() }
                 }
-            }
-
-        val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
-        assertEquals(listOf(v.id), got.map { it.id }, "slot shortcut should serve from replaceable/, not idx/")
-    }
+            assertEquals(1, entries.size, "author index should only hold the winner")
+            assertTrue(entries.single().endsWith("-${v2.id}"), "author index entry must point at winner")
+        }
 
     @Test
-    fun `slot shortcut serves addressable queries when d-tag supplied`() {
-        val v = article("intro", "v", 10)
-        store.insert(v)
-        java.nio.file.Files
-            .walk(root.resolve("idx"))
-            .use { s ->
-                s.sorted(Comparator.reverseOrder()).forEach {
-                    java.nio.file.Files
-                        .deleteIfExists(it)
+    fun `slot shortcut serves replaceable queries even when idx is wiped`() =
+        runBlocking {
+            // Belt-and-suspenders for the planner shortcut: a query pinned to
+            // (kinds=[0], authors=[pk]) must hit the slot directly without
+            // touching idx/. Wipe idx/ to prove the shortcut isn't relying on
+            // it.
+            val v = metadata("p", 100)
+            store.insert(v)
+            java.nio.file.Files
+                .walk(root.resolve("idx"))
+                .use { s ->
+                    s.sorted(Comparator.reverseOrder()).forEach {
+                        java.nio.file.Files
+                            .deleteIfExists(it)
+                    }
                 }
-            }
 
-        val got =
-            store.query<LongTextNoteEvent>(
-                Filter(
-                    authors = listOf(signer.pubKey),
-                    kinds = listOf(LongTextNoteEvent.KIND),
-                    tags = mapOf("d" to listOf("intro")),
-                ),
-            )
-        assertEquals(listOf(v.id), got.map { it.id })
-    }
+            val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
+            assertEquals(listOf(v.id), got.map { it.id }, "slot shortcut should serve from replaceable/, not idx/")
+        }
 
     @Test
-    fun `delete of current replaceable winner clears the slot`() {
-        val v = metadata("only", 100)
-        store.insert(v)
+    fun `slot shortcut serves addressable queries when d-tag supplied`() =
+        runBlocking {
+            val v = article("intro", "v", 10)
+            store.insert(v)
+            java.nio.file.Files
+                .walk(root.resolve("idx"))
+                .use { s ->
+                    s.sorted(Comparator.reverseOrder()).forEach {
+                        java.nio.file.Files
+                            .deleteIfExists(it)
+                    }
+                }
 
-        val slot = root.resolve("replaceable/${MetadataEvent.KIND}/${signer.pubKey}.json")
-        assertTrue(slot.exists())
+            val got =
+                store.query<LongTextNoteEvent>(
+                    Filter(
+                        authors = listOf(signer.pubKey),
+                        kinds = listOf(LongTextNoteEvent.KIND),
+                        tags = mapOf("d" to listOf("intro")),
+                    ),
+                )
+            assertEquals(listOf(v.id), got.map { it.id })
+        }
 
-        store.delete(v.id)
-        assertFalse(slot.exists(), "slot should be cleared when winner is deleted")
-    }
+    @Test
+    fun `delete of current replaceable winner clears the slot`() =
+        runBlocking {
+            val v = metadata("only", 100)
+            store.insert(v)
+
+            val slot = root.resolve("replaceable/${MetadataEvent.KIND}/${signer.pubKey}.json")
+            assertTrue(slot.exists())
+
+            store.delete(v.id)
+            assertFalse(slot.exists(), "slot should be cleared when winner is deleted")
+        }
 
     // ------------------------------------------------------------------
     // Addressable (kinds 30000-39999)
@@ -255,100 +266,107 @@ class FsSlotsTest {
         )
 
     @Test
-    fun `newer addressable evicts older for same d-tag`() {
-        val v1 = article("intro", "draft 1", 10)
-        val v2 = article("intro", "draft 2", 20)
-        store.insert(v1)
-        store.insert(v2)
+    fun `newer addressable evicts older for same d-tag`() =
+        runBlocking {
+            val v1 = article("intro", "draft 1", 10)
+            val v2 = article("intro", "draft 2", 20)
+            store.insert(v1)
+            store.insert(v2)
 
-        val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
-        assertEquals(listOf(v2.id), got.map { it.id })
-        assertFalse(store.hasCanonical(v1.id), "older draft canonical should be removed")
-    }
-
-    @Test
-    fun `addressable with different d-tags coexist`() {
-        val intro = article("intro", "hello", 10)
-        val about = article("about", "bio", 15)
-        store.insert(intro)
-        store.insert(about)
-
-        val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
-        assertEquals(setOf(intro.id, about.id), got.map { it.id }.toSet())
-    }
+            val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            assertEquals(listOf(v2.id), got.map { it.id })
+            assertFalse(store.hasCanonical(v1.id), "older draft canonical should be removed")
+        }
 
     @Test
-    fun `older addressable is rejected when newer exists`() {
-        val newer = article("slug", "new", 200)
-        val older = article("slug", "old", 100)
-        store.insert(newer)
-        store.insert(older)
+    fun `addressable with different d-tags coexist`() =
+        runBlocking {
+            val intro = article("intro", "hello", 10)
+            val about = article("about", "bio", 15)
+            store.insert(intro)
+            store.insert(about)
 
-        val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey)))
-        assertEquals(listOf(newer.id), got.map { it.id })
-    }
-
-    @Test
-    fun `addressable slot file contains the current winner`() {
-        val v = article("intro", "hello", 10)
-        store.insert(v)
-
-        val dHash = FsLayout.sha256Hex("intro")
-        val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
-        assertTrue(slot.exists())
-        val parsed = Event.fromJson(slot.readText())
-        assertEquals(v.id, parsed.id)
-    }
+            val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            assertEquals(setOf(intro.id, about.id), got.map { it.id }.toSet())
+        }
 
     @Test
-    fun `empty d-tag gets its own slot`() {
-        val v = article("", "homepage", 1)
-        store.insert(v)
+    fun `older addressable is rejected when newer exists`() =
+        runBlocking {
+            val newer = article("slug", "new", 200)
+            val older = article("slug", "old", 100)
+            store.insert(newer)
+            store.insert(older)
 
-        val dHash = FsLayout.sha256Hex("")
-        val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
-        assertTrue(slot.exists())
-    }
+            val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey)))
+            assertEquals(listOf(newer.id), got.map { it.id })
+        }
 
     @Test
-    fun `delete of current addressable winner clears the slot`() {
-        val v = article("intro", "hello", 10)
-        store.insert(v)
-        val dHash = FsLayout.sha256Hex("intro")
-        val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
-        assertTrue(slot.exists())
+    fun `addressable slot file contains the current winner`() =
+        runBlocking {
+            val v = article("intro", "hello", 10)
+            store.insert(v)
 
-        store.delete(v.id)
-        assertFalse(slot.exists())
-    }
+            val dHash = FsLayout.sha256Hex("intro")
+            val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
+            assertTrue(slot.exists())
+            val parsed = Event.fromJson(slot.readText())
+            assertEquals(v.id, parsed.id)
+        }
+
+    @Test
+    fun `empty d-tag gets its own slot`() =
+        runBlocking {
+            val v = article("", "homepage", 1)
+            store.insert(v)
+
+            val dHash = FsLayout.sha256Hex("")
+            val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
+            assertTrue(slot.exists())
+        }
+
+    @Test
+    fun `delete of current addressable winner clears the slot`() =
+        runBlocking {
+            val v = article("intro", "hello", 10)
+            store.insert(v)
+            val dHash = FsLayout.sha256Hex("intro")
+            val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
+            assertTrue(slot.exists())
+
+            store.delete(v.id)
+            assertFalse(slot.exists())
+        }
 
     // ------------------------------------------------------------------
     // Non-replaceable events: no slot involvement
     // ------------------------------------------------------------------
 
     @Test
-    fun `regular text note has no slot`() {
-        val note =
-            signer.sign<Event>(
-                createdAt = 1,
-                kind = 1,
-                tags = emptyArray(),
-                content = "plain",
-            )
-        store.insert(note)
+    fun `regular text note has no slot`() =
+        runBlocking {
+            val note =
+                signer.sign<Event>(
+                    createdAt = 1,
+                    kind = 1,
+                    tags = emptyArray(),
+                    content = "plain",
+                )
+            store.insert(note)
 
-        // No entries under replaceable/ or addressable/ — only the scaffolded dirs exist.
-        val replaceableDir = root.resolve("replaceable")
-        val addressableDir = root.resolve("addressable")
-        assertEquals(
-            0,
-            Files.walk(replaceableDir).use { s -> s.filter { Files.isRegularFile(it) }.count() },
-        )
-        assertEquals(
-            0,
-            Files.walk(addressableDir).use { s -> s.filter { Files.isRegularFile(it) }.count() },
-        )
-    }
+            // No entries under replaceable/ or addressable/ — only the scaffolded dirs exist.
+            val replaceableDir = root.resolve("replaceable")
+            val addressableDir = root.resolve("addressable")
+            assertEquals(
+                0,
+                Files.walk(replaceableDir).use { s -> s.filter { Files.isRegularFile(it) }.count() },
+            )
+            assertEquals(
+                0,
+                Files.walk(addressableDir).use { s -> s.filter { Files.isRegularFile(it) }.count() },
+            )
+        }
 
     // helper — check canonical existence
     private fun FsEventStore.hasCanonical(id: String): Boolean {
