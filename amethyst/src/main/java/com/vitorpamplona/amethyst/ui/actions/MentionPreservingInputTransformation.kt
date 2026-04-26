@@ -20,57 +20,71 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 
 /**
- * Rejects any edit that partially modifies a previously-complete Nostr mention
- * (`@npub1…`, `nostr:npub1…`, `@nprofile1…`, `nostr:nprofile1…`).
- *
- * Background: when an `OutputTransformation` collapses an underlying npub into a
- * short `@DisplayName`, Compose's auto-derived offset mapping uses identity inside
- * the wedge. Some IMEs — notably Microsoft SwiftKey — re-enter "word edit mode"
- * over a previously-committed display token after autocorrect-on-space, then issue
- * `setComposingText` with a shortened version. Because the mapping is identity
- * inside the wedge, the IME's replacement only overwrites the leading characters
- * of the underlying bech32, leaving an orphan tail that no longer matches the
- * mention regex. The wedge collapses, the orphan bech32 becomes visible, and the
- * cursor lands in the middle of it. Gboard never enters this state because it
- * does not recompose previously-committed tokens.
- *
- * This guard runs on every input change. If the change's original-text range
- * partially intersects a complete mention but does not fully cover it, the entire
- * change is reverted. The mention stays atomic; the IME re-reads the unchanged
- * buffer and moves on.
+ * Matches a complete Nostr mention token: `@npub1…`, `nostr:npub1…`,
+ * `@nprofile1…`, `nostr:nprofile1…`. Shared with [UrlUserTagOutputTransformation]
+ * so the wedge it produces and the input-side guard below agree on what
+ * counts as a mention.
  */
-object MentionPreservingInputTransformation : InputTransformation {
-    private val mentionRegex =
-        Regex("(?:@|nostr:)(?:npub1[a-z0-9]{58}|nprofile1[a-z0-9]+)")
+internal val MENTION_REGEX = Regex("(?:@|nostr:)(?:npub1[a-z0-9]{58}|nprofile1[a-z0-9]+)")
 
+/**
+ * Keeps Nostr mentions atomic against IME edits that would only modify part of
+ * the underlying bech32 (notably Microsoft SwiftKey, which re-enters word-edit
+ * mode over a previously-committed display token and rewrites a single word of
+ * a multi-word `@DisplayName`, leaving an orphan tail of the npub that no
+ * longer matches the mention regex).
+ *
+ * Three change shapes are blocked and routed to atomic-collapse:
+ *  - Partial overlap (the change's `originalRange` overlaps a mention but does
+ *    not fully cover it).
+ *  - Scope-exact replace (the change's `originalRange` matches the mention's
+ *    range exactly and the replacement is non-empty — covers IMEs that
+ *    fully-cover-replace a multi-word display token with one of its words).
+ *
+ * Anything else passes through:
+ *  - Pure delete that fully covers a mention (the user removed the chip).
+ *  - A change whose range covers more than just the mention (select-all + type,
+ *    select-paragraph + paste, etc.) — treated as deliberate broader edit.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+object MentionPreservingInputTransformation : InputTransformation {
     override fun TextFieldBuffer.transformInput() {
         val changeCount = changes.changeCount
         if (changeCount == 0) return
 
-        val original = originalText.toString()
-        if (original.isEmpty()) return
+        val original = originalText
+        // Cheap gate — most keystrokes happen in mention-free text.
+        if (!original.contains("npub1") && !original.contains("nprofile1")) return
 
-        val mentions = mentionRegex.findAll(original).toList()
-        if (mentions.isEmpty()) return
-
-        for (i in 0 until changeCount) {
-            val origRange = changes.getOriginalRange(i)
-            val origStart = origRange.min
-            val origEnd = origRange.max
-            for (mention in mentions) {
-                val mStart = mention.range.first
-                val mEndExclusive = mention.range.last + 1
-                val overlaps = origStart < mEndExclusive && origEnd > mStart
-                val fullyCovers = origStart <= mStart && origEnd >= mEndExclusive
-                if (overlaps && !fullyCovers) {
-                    revertAllChanges()
-                    return
+        val touched =
+            MENTION_REGEX.findAll(original).firstOrNull { match ->
+                val mStart = match.range.first
+                val mEndExclusive = match.range.last + 1
+                (0 until changeCount).any { i ->
+                    val origRange = changes.getOriginalRange(i)
+                    val origStart = origRange.min
+                    val origEnd = origRange.max
+                    val overlaps = origStart < mEndExclusive && origEnd > mStart
+                    val fullyCovers = origStart <= mStart && origEnd >= mEndExclusive
+                    val isScopeExact = origStart == mStart && origEnd == mEndExclusive
+                    val isPureDelete = changes.getRange(i).length == 0
+                    overlaps && (!fullyCovers || (isScopeExact && !isPureDelete))
                 }
+            } ?: return
+
+        revertAllChanges()
+        val mEndExclusive = touched.range.last + 1
+        val deleteEnd =
+            if (mEndExclusive < length && asCharSequence()[mEndExclusive].isWhitespace()) {
+                mEndExclusive + 1
+            } else {
+                mEndExclusive
             }
-        }
+        replace(touched.range.first, deleteEnd, "")
     }
 }

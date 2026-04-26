@@ -35,11 +35,8 @@ class UrlUserTagOutputTransformation(
     override fun TextFieldBuffer.transformOutput() {
         val text = asCharSequence().toString()
 
-        // Find all user mentions using regex and replace in reverse order
-        // so that earlier indices remain valid after replacements.
-        // Matches: @npub1..., nostr:npub1..., @nprofile1..., nostr:nprofile1...
-        val mentionRegex = Regex("(?:@|nostr:)(?:npub1[a-z0-9]{58}|nprofile1[a-z0-9]+)")
-        val matches = mentionRegex.findAll(text).toList().reversed()
+        // Reverse so earlier indices remain valid after each replace.
+        val matches = MENTION_REGEX.findAll(text).toList().reversed()
 
         // Phase 1: Replace all mentions (reverse order keeps indices valid for replace).
         // Collect replacement info because addStyle must be called after all text mutations.
