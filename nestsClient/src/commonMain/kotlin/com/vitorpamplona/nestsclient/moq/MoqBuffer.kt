@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.nestsclient.moq
 
+import com.vitorpamplona.quic.Varint
+
 /**
  * Append-only byte buffer used by the MoQ encoders. Doubles in capacity when
  * full. Kept intentionally minimal so this module has no buffer-library

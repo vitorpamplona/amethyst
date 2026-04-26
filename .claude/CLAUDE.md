@@ -3,13 +3,17 @@
 ## Project Overview
 
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
-over to a Kotlin Multiplatform project. This project has 5 main modules: `quartz`, `commons`,
-`amethyst`, `desktopApp`, and `cli`. Quartz should contain implementations of Nostr specifications
-and utilities to help implement them. Commons stores shared code between Amethyst Android
-(`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop App is designed to be mouse first and
-so uses a completely different screen and navigation architecture while sharing the back end
-components with the android counterpart. `cli` ships `amy`, a non-interactive JVM command-line
-client that drives the same `quartz` + `commons` code — used by humans, agents, and interop tests.
+over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `amethyst`,
+`desktopApp`, `cli`, plus the audio-rooms transport stack `quic` + `nestsClient`. Quartz should
+contain implementations of Nostr specifications and utilities to help implement them. Commons stores
+shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop
+App is designed to be mouse first and so uses a completely different screen and navigation
+architecture while sharing the back end components with the android counterpart. `cli` ships `amy`,
+a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
+humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
+WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
+exists. `nestsClient` runs the MoQ-transport audio-room protocol on top of `:quic` for the NIP-53
+audio-rooms feature.
 
 ## Architecture
 
@@ -26,6 +30,15 @@ amethyst/
 │       ├── commonMain/    # Shared composables, icons, state
 │       ├── androidMain/   # Android-specific UI utilities
 │       └── jvmMain/       # Desktop-specific UI utilities
+├── quic/           # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport (audio-rooms transport)
+│   └── src/
+│       ├── commonMain/    # Protocol, frame/packet codecs, TLS state machine
+│       ├── jvmAndroid/    # JCA-backed AEAD + UDP socket actuals
+│       └── commonTest/    # RFC vector + adversarial tests
+├── nestsClient/    # MoQ-transport audio-room client on top of :quic
+│   └── src/
+│       ├── commonMain/    # MoQ session, NestsListener, audio glue
+│       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
 ├── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
@@ -35,6 +48,10 @@ amethyst/
 **Sharing Philosophy:**
 - `quartz/` = Nostr business logic, protocol, data (no UI)
 - `commons/` = Shared UI components, icons, composables, flows and ViewModels
+- `quic/` = Transport library (QUIC + HTTP/3 + WebTransport); reusable for any
+  KMP project that needs MoQ. Has no Android-framework dependencies.
+- `nestsClient/` = MoQ + audio-rooms client; takes `:quic` as transport,
+  Quartz for crypto, `MediaCodec` / `AudioRecord` / `AudioTrack` for audio.
 - `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
 - `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic allowed)
 

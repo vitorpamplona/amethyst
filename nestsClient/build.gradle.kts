@@ -38,6 +38,7 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 api(project(":quartz"))
+                implementation(project(":quic"))
             }
         }
 

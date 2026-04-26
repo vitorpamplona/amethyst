@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.nestsclient.moq
+package com.vitorpamplona.quic
 
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -27,13 +27,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class VarintTest {
-    /**
-     * RFC 9000 §A.1 sample encodings, which every QUIC varint implementation
-     * must reproduce bit-for-bit.
-     */
     @Test
     fun rfc9000_sample_151288809941952652() {
-        // 62-bit: 151288809941952652 == 0x2136 0x0000 0000 8c4c (encoded)
         val value = 151288809941952652L
         val encoded = Varint.encode(value)
         assertContentEquals(
@@ -73,11 +68,7 @@ class VarintTest {
     fun boundary_values_round_trip() {
         for (v in listOf(0L, 63L, 64L, 16_383L, 16_384L, 1_073_741_823L, 1_073_741_824L, Varint.MAX_VALUE)) {
             val encoded = Varint.encode(v)
-            assertEquals(
-                v,
-                Varint.decode(encoded)!!.value,
-                "round-trip for $v",
-            )
+            assertEquals(v, Varint.decode(encoded)!!.value, "round-trip for $v")
         }
     }
 
@@ -101,7 +92,6 @@ class VarintTest {
     @Test
     fun short_buffer_returns_null_so_caller_can_buffer_more() {
         assertNull(Varint.decode(ByteArray(0)))
-        // 4-byte varint with only 3 bytes available:
         assertNull(Varint.decode(byteArrayOf(0x9D.toByte(), 0x7F.toByte(), 0x3E), 0))
     }
 

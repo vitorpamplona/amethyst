@@ -32,7 +32,9 @@ package com.vitorpamplona.nestsclient.moq
  *   2. STREAM_HEADER_SUBGROUP — multiple objects per uni stream, reliable.
  *   3. FETCH_HEADER — historical objects over a bidi stream.
  *
- * Phase 3c-2 covers only (1). Stream-delivered objects arrive in Phase 3c-3.
+ * Today the listener path implements only (1) — OBJECT_DATAGRAM — which is
+ * what nests uses for live audio. (2) and (3) are reserved for future
+ * stream-delivered media; see the audio-rooms completion plan.
  */
 data class MoqObject(
     val trackAlias: Long,

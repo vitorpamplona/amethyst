@@ -18,9 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.nestsclient.moq
-
-import com.vitorpamplona.nestsclient.moq.Varint.size
+package com.vitorpamplona.quic
 
 /**
  * QUIC variable-length integer codec, per RFC 9000 §16.
@@ -31,7 +29,7 @@ import com.vitorpamplona.nestsclient.moq.Varint.size
  *   10 → 4 bytes, 30-bit value (0 .. 1_073_741_823)
  *   11 → 8 bytes, 62-bit value (0 .. 4_611_686_018_427_387_903)
  *
- * MoQ messages, parameters, and most length prefixes use this encoding.
+ * Used by QUIC frame and packet framing, by HTTP/3, by QPACK, and by MoQ.
  */
 object Varint {
     const val MAX_VALUE: Long = (1L shl 62) - 1

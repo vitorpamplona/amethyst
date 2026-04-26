@@ -18,26 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.nestsclient.transport
+package com.vitorpamplona.quic.connection
 
-import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import com.vitorpamplona.quic.crypto.Aead
 
-class KwikWebTransportFactoryTest {
-    @Test
-    fun connect_throws_NotImplemented_until_phase_3b_2() =
-        runTest {
-            val factory = KwikWebTransportFactory()
-            val ex =
-                assertFailsWith<WebTransportException> {
-                    factory.connect(
-                        authority = "nostrnests.com",
-                        path = "/moq",
-                        bearerToken = "ignored",
-                    )
-                }
-            assertEquals(WebTransportException.Kind.NotImplemented, ex.kind)
-        }
+/** Per-direction packet protection material at one encryption level. */
+class PacketProtection(
+    val aead: Aead,
+    val key: ByteArray,
+    val iv: ByteArray,
+    val hp: com.vitorpamplona.quic.crypto.HeaderProtection,
+    val hpKey: ByteArray,
+)
+
+/** All four encryption levels we ever see in a QUIC client connection. */
+enum class EncryptionLevel(
+    val space: PacketNumberSpace,
+) {
+    INITIAL(PacketNumberSpace.INITIAL),
+    HANDSHAKE(PacketNumberSpace.HANDSHAKE),
+    APPLICATION(PacketNumberSpace.APPLICATION),
 }

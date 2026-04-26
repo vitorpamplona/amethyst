@@ -74,7 +74,7 @@ sealed class NestsListenerState {
             /** Calling `<service>/<roomId>` to obtain the MoQ endpoint + token. */
             ResolvingRoom,
 
-            /** Opening the WebTransport (Kwik QUIC + Extended CONNECT). */
+            /** Opening the WebTransport ([:quic] + Extended CONNECT). */
             OpeningTransport,
 
             /** Running the MoQ CLIENT_SETUP / SERVER_SETUP exchange. */

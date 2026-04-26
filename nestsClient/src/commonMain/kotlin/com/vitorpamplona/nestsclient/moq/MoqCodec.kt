@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient.moq
 
 import com.vitorpamplona.nestsclient.moq.MoqCodec.encode
+import com.vitorpamplona.quic.Varint
 
 /**
  * Encode/decode MoQ control-stream messages per draft-ietf-moq-transport.
