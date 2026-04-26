@@ -36,7 +36,12 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 object PlaybackServiceClient {
-    val executorService: ExecutorService = Executors.newCachedThreadPool()
+    // Runs the MediaController.buildAsync() completion callbacks. The work per callback is
+    // trivial — Future.get() on an already-completed future plus a non-blocking trySend into
+    // the callbackFlow channel — so a single thread is plenty. The previous newCachedThreadPool
+    // could spin up an unbounded number of threads when many videos appeared at once, each
+    // sticking around for the executor's keep-alive (60s) afterwards.
+    val executorService: ExecutorService = Executors.newSingleThreadExecutor()
 
     fun shutdown() {
         executorService.shutdown()
