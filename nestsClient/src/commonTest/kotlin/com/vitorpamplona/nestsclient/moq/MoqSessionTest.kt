@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient.moq
 
 import com.vitorpamplona.nestsclient.transport.FakeWebTransport
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
@@ -270,5 +271,208 @@ class MoqSessionTest {
             val received = serverStream.incoming().toList()
             assertEquals(1, received.size)
             assertContentEquals(byteArrayOf(0xAA.toByte()), received.single())
+        }
+
+    // ----- Publisher path (M5) -------------------------------------------
+
+    @Test
+    fun announce_completes_on_announce_ok_then_unannounce_sends_unannounce_frame() =
+        runTest {
+            val (publisherSide, peerSide) = FakeWebTransport.pair()
+            val publisherSession = MoqSession.client(publisherSide, backgroundScope)
+
+            val ns = TrackNamespace.of("nests", "test-room")
+
+            val peer =
+                async {
+                    val ctrl = peerSide.peerOpenedBidiStreams().first()
+                    // Setup
+                    val cs = MoqCodec.decode(ctrl.incoming().first())!!.message as ClientSetup
+                    ctrl.write(MoqCodec.encode(ServerSetup(cs.supportedVersions.first())))
+                    // ANNOUNCE
+                    val announce = MoqCodec.decode(ctrl.incoming().first())!!.message as Announce
+                    assertEquals(ns, announce.namespace)
+                    ctrl.write(MoqCodec.encode(AnnounceOk(announce.namespace)))
+                    // Read UNANNOUNCE after publisher tears down
+                    val unannounce = MoqCodec.decode(ctrl.incoming().first())!!.message as Unannounce
+                    assertEquals(ns, unannounce.namespace)
+                }
+
+            publisherSession.setup(listOf(MoqVersion.DRAFT_17))
+            val handle = publisherSession.announce(ns)
+            assertEquals(ns, handle.namespace)
+            handle.unannounce()
+            peer.await()
+
+            publisherSession.close()
+        }
+
+    @Test
+    fun announce_throws_MoqProtocolException_when_peer_replies_announce_error() =
+        runTest {
+            val (publisherSide, peerSide) = FakeWebTransport.pair()
+            val publisherSession = MoqSession.client(publisherSide, backgroundScope)
+            val ns = TrackNamespace.of("nests", "no-perms")
+
+            val peer =
+                async {
+                    val ctrl = peerSide.peerOpenedBidiStreams().first()
+                    val cs = MoqCodec.decode(ctrl.incoming().first())!!.message as ClientSetup
+                    ctrl.write(MoqCodec.encode(ServerSetup(cs.supportedVersions.first())))
+                    val ann = MoqCodec.decode(ctrl.incoming().first())!!.message as Announce
+                    ctrl.write(
+                        MoqCodec.encode(
+                            AnnounceError(
+                                namespace = ann.namespace,
+                                errorCode = 0x10,
+                                reasonPhrase = "no permission",
+                            ),
+                        ),
+                    )
+                }
+
+            publisherSession.setup(listOf(MoqVersion.DRAFT_17))
+            val ex = assertFailsWith<MoqProtocolException> { publisherSession.announce(ns) }
+            assert("0x10" in ex.message!! || "no permission" in ex.message!!)
+            peer.await()
+            publisherSession.close()
+        }
+
+    @Test
+    fun publisher_routes_inbound_subscribe_and_emits_object_datagrams() =
+        runTest {
+            val (publisherSide, peerSide) = FakeWebTransport.pair()
+            val publisherSession = MoqSession.client(publisherSide, backgroundScope)
+            val ns = TrackNamespace.of("nests", "test-room")
+            val trackName = "speaker-pub-1".encodeToByteArray()
+
+            // Real nests servers wait for a viewer's UI to subscribe; they don't
+            // race ANNOUNCE_OK. The test models that with an explicit gate so
+            // openTrack runs before we forge an inbound SUBSCRIBE.
+            val publisherReady = CompletableDeferred<Unit>()
+
+            val peerJob =
+                async {
+                    val ctrl = peerSide.peerOpenedBidiStreams().first()
+                    // Setup
+                    val cs = MoqCodec.decode(ctrl.incoming().first())!!.message as ClientSetup
+                    ctrl.write(MoqCodec.encode(ServerSetup(cs.supportedVersions.first())))
+                    // ANNOUNCE
+                    val announce = MoqCodec.decode(ctrl.incoming().first())!!.message as Announce
+                    ctrl.write(MoqCodec.encode(AnnounceOk(announce.namespace)))
+                    publisherReady.await()
+                    // Send a SUBSCRIBE for the publisher's track
+                    val subscribeId = 42L
+                    val trackAlias = 7L
+                    ctrl.write(
+                        MoqCodec.encode(
+                            Subscribe(
+                                subscribeId = subscribeId,
+                                trackAlias = trackAlias,
+                                namespace = announce.namespace,
+                                trackName = trackName,
+                            ),
+                        ),
+                    )
+                    // Expect a SUBSCRIBE_OK reply
+                    val ok = MoqCodec.decode(ctrl.incoming().first())!!.message as SubscribeOk
+                    assertEquals(subscribeId, ok.subscribeId)
+                    Triple(subscribeId, trackAlias, ok)
+                }
+
+            publisherSession.setup(listOf(MoqVersion.DRAFT_17))
+            val handle = publisherSession.announce(ns)
+            val publisher = handle.openTrack(trackName)
+            publisherReady.complete(Unit)
+
+            val (subscribeId, trackAlias, _) = peerJob.await()
+
+            // Now push 3 objects through the publisher; they should arrive on
+            // the peer's incoming-datagram channel.
+            repeat(3) { i ->
+                publisher.send(byteArrayOf(i.toByte()))
+            }
+
+            val received = peerSide.incomingDatagrams().take(3).toList()
+            val decoded = received.map { MoqObjectDatagram.decode(it) }
+            assertEquals(listOf(0L, 1L, 2L), decoded.map { it.objectId })
+            assertEquals(List(3) { trackAlias }, decoded.map { it.trackAlias })
+            assertContentEquals(byteArrayOf(0), decoded[0].payload)
+            assertContentEquals(byteArrayOf(1), decoded[1].payload)
+            assertContentEquals(byteArrayOf(2), decoded[2].payload)
+
+            // subscribeId is intentionally read so the test fails if the order
+            // ever flips silently.
+            assertEquals(42L, subscribeId)
+
+            publisher.close()
+            handle.unannounce()
+            publisherSession.close()
+        }
+
+    @Test
+    fun publisher_send_returns_false_when_no_subscribers_attached() =
+        runTest {
+            val (publisherSide, peerSide) = FakeWebTransport.pair()
+            val publisherSession = MoqSession.client(publisherSide, backgroundScope)
+            val ns = TrackNamespace.of("nests", "lonely")
+
+            val peer =
+                async {
+                    val ctrl = peerSide.peerOpenedBidiStreams().first()
+                    val cs = MoqCodec.decode(ctrl.incoming().first())!!.message as ClientSetup
+                    ctrl.write(MoqCodec.encode(ServerSetup(cs.supportedVersions.first())))
+                    val a = MoqCodec.decode(ctrl.incoming().first())!!.message as Announce
+                    ctrl.write(MoqCodec.encode(AnnounceOk(a.namespace)))
+                }
+
+            publisherSession.setup(listOf(MoqVersion.DRAFT_17))
+            val handle = publisherSession.announce(ns)
+            peer.await()
+            val publisher = handle.openTrack("nobody-listens".encodeToByteArray())
+
+            assertEquals(false, publisher.send(byteArrayOf(1, 2, 3)))
+
+            publisher.close()
+            handle.unannounce()
+            publisherSession.close()
+        }
+
+    @Test
+    fun publisher_replies_subscribe_error_for_unknown_track_under_announced_namespace() =
+        runTest {
+            val (publisherSide, peerSide) = FakeWebTransport.pair()
+            val publisherSession = MoqSession.client(publisherSide, backgroundScope)
+            val ns = TrackNamespace.of("nests", "test-room")
+
+            val peer =
+                async {
+                    val ctrl = peerSide.peerOpenedBidiStreams().first()
+                    val cs = MoqCodec.decode(ctrl.incoming().first())!!.message as ClientSetup
+                    ctrl.write(MoqCodec.encode(ServerSetup(cs.supportedVersions.first())))
+                    val a = MoqCodec.decode(ctrl.incoming().first())!!.message as Announce
+                    ctrl.write(MoqCodec.encode(AnnounceOk(a.namespace)))
+                    // Send SUBSCRIBE for a track we never opened
+                    ctrl.write(
+                        MoqCodec.encode(
+                            Subscribe(
+                                subscribeId = 1L,
+                                trackAlias = 1L,
+                                namespace = a.namespace,
+                                trackName = "ghost".encodeToByteArray(),
+                            ),
+                        ),
+                    )
+                    val err = MoqCodec.decode(ctrl.incoming().first())!!.message as SubscribeError
+                    assertEquals(1L, err.subscribeId)
+                    assertEquals(ErrorCode.TRACK_DOES_NOT_EXIST, err.errorCode)
+                }
+
+            publisherSession.setup(listOf(MoqVersion.DRAFT_17))
+            val handle = publisherSession.announce(ns)
+            peer.await()
+
+            handle.unannounce()
+            publisherSession.close()
         }
 }

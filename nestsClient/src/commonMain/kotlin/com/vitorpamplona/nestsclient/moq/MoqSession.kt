@@ -106,6 +106,29 @@ class MoqSession private constructor(
     /** subscribe_id → track_alias, so [unsubscribe] can clean up the matching sink. */
     private val aliasBySubscribeId = HashMap<Long, Long>()
 
+    // ------- Publisher-side state (Phase M5) ----------------------------------
+
+    /** namespace → CompletableDeferred awaiting ANNOUNCE_OK / ANNOUNCE_ERROR. */
+    private val pendingAnnounces = HashMap<TrackNamespace, CompletableDeferred<Unit>>()
+
+    /** namespace → AnnounceHandleImpl (alive while we still publish that namespace). */
+    private val announces = HashMap<TrackNamespace, AnnounceHandleImpl>()
+
+    /**
+     * Subscribers attached to one of our published tracks. Keyed by the
+     * subscribeId chosen by the remote subscriber. Each carries the
+     * (namespace, trackName, trackAlias, publisherPriority) tuple we need to
+     * format outbound OBJECT_DATAGRAMs.
+     */
+    private val inboundSubscribers = HashMap<Long, InboundSubscription>()
+
+    /**
+     * subscribers attached per published track. The list is rewritten
+     * (copy-on-write) under [stateMutex] so [TrackPublisherImpl.send] can
+     * read a snapshot without acquiring a lock per OBJECT.
+     */
+    private val publisherSubscribers = HashMap<TrackPublisherImpl, List<InboundSubscription>>()
+
     private var controlPumpJob: Job? = null
     private var datagramPumpJob: Job? = null
     private var closed = false
@@ -259,6 +282,53 @@ class MoqSession private constructor(
         }
     }
 
+    // ---------------------------------------------------------------- Announce (publisher)
+
+    /**
+     * Send ANNOUNCE for [namespace] and suspend until ANNOUNCE_OK arrives.
+     * Returns an [AnnounceHandle] you can [AnnounceHandle.openTrack] on for
+     * each speaker / sub-track you intend to publish under that namespace.
+     *
+     * The session keeps the announce alive until you call
+     * [AnnounceHandle.unannounce] (or [close]); during that time, inbound
+     * SUBSCRIBE messages whose namespace matches will be routed to the
+     * publisher you registered via [AnnounceHandle.openTrack].
+     *
+     * @throws MoqProtocolException if the peer rejects with ANNOUNCE_ERROR
+     *   or the session closes mid-flight.
+     * @throws IllegalStateException if [namespace] is already announced on
+     *   this session.
+     */
+    suspend fun announce(
+        namespace: TrackNamespace,
+        parameters: List<SetupParameter> = emptyList(),
+    ): AnnounceHandle {
+        check(!closed) { "session is closed" }
+        val deferred = CompletableDeferred<Unit>()
+        val handle = AnnounceHandleImpl(namespace)
+
+        stateMutex.withLock {
+            check(!closed) { "session is closed" }
+            check(!announces.containsKey(namespace)) { "namespace $namespace is already announced" }
+            check(!pendingAnnounces.containsKey(namespace)) { "namespace $namespace announce already in flight" }
+            announces[namespace] = handle
+            pendingAnnounces[namespace] = deferred
+        }
+
+        val frame = MoqCodec.encode(Announce(namespace = namespace, parameters = parameters))
+        try {
+            writeMutex.withLock { controlStream.write(frame) }
+            deferred.await()
+            return handle
+        } catch (t: Throwable) {
+            stateMutex.withLock {
+                pendingAnnounces.remove(namespace)
+                announces.remove(namespace)
+            }
+            throw t
+        }
+    }
+
     /**
      * Send UNSUBSCRIBE and tear down all local state for [subscribeId]. Safe
      * to call multiple times — second call is a no-op.
@@ -344,14 +414,115 @@ class MoqSession private constructor(
                 )
             }
 
+            // ----- Publisher-side -------------------------------------------
+
+            is AnnounceOk -> {
+                val deferred = stateMutex.withLock { pendingAnnounces.remove(msg.namespace) }
+                deferred?.complete(Unit)
+            }
+
+            is AnnounceError -> {
+                val deferred =
+                    stateMutex.withLock {
+                        announces.remove(msg.namespace)
+                        pendingAnnounces.remove(msg.namespace)
+                    }
+                deferred?.completeExceptionally(
+                    MoqProtocolException(
+                        "ANNOUNCE rejected: code=${msg.errorCode} reason=${msg.reasonPhrase}",
+                    ),
+                )
+            }
+
+            is Subscribe -> {
+                handleInboundSubscribe(msg)
+            }
+
+            is Unsubscribe -> {
+                handleInboundUnsubscribe(msg)
+            }
+
             else -> {
-                // Other control messages (echoed SETUP, future ANNOUNCE +
-                // SUBSCRIBE-receiving for the publisher path, etc.) are
-                // silently dropped — the listener path only needs the
-                // subscribe lifecycle. Publisher-side routing is Phase M5
-                // in nestsClient/plans/2026-04-26-audio-rooms-completion.md.
+                // Echoed SETUP and other unhandled control messages are
+                // intentionally dropped — they don't change session state.
             }
         }
+    }
+
+    /**
+     * Server (or peer) sent us a SUBSCRIBE for a track we ANNOUNCEd. Look up
+     * the matching publisher; on hit reply with SUBSCRIBE_OK and start
+     * routing this subscriber's OBJECTs. On miss reply with SUBSCRIBE_ERROR
+     * so the peer doesn't hang.
+     */
+    private suspend fun handleInboundSubscribe(msg: Subscribe) {
+        val (publisher, sub) =
+            stateMutex.withLock {
+                val handle = announces[msg.namespace]
+                val publisher = handle?.publisherForLocked(msg.trackName)
+                if (publisher == null) {
+                    null to null
+                } else {
+                    val sub =
+                        InboundSubscription(
+                            subscribeId = msg.subscribeId,
+                            trackAlias = msg.trackAlias,
+                            namespace = msg.namespace,
+                            trackName = msg.trackName,
+                            publisher = publisher,
+                        )
+                    inboundSubscribers[msg.subscribeId] = sub
+                    val current = publisherSubscribers[publisher].orEmpty()
+                    publisherSubscribers[publisher] = current + sub
+                    publisher to sub
+                }
+            }
+
+        if (publisher == null || sub == null) {
+            val err =
+                SubscribeError(
+                    subscribeId = msg.subscribeId,
+                    errorCode = ErrorCode.TRACK_DOES_NOT_EXIST,
+                    reasonPhrase = "no publisher for that namespace+name",
+                    trackAlias = msg.trackAlias,
+                )
+            runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(err)) } }
+            return
+        }
+
+        val ok =
+            SubscribeOk(
+                subscribeId = msg.subscribeId,
+                expiresMs = 0L,
+                groupOrder = 0,
+                contentExists = false,
+            )
+        runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(ok)) } }
+    }
+
+    private suspend fun handleInboundUnsubscribe(msg: Unsubscribe) {
+        val removed =
+            stateMutex.withLock {
+                val sub = inboundSubscribers.remove(msg.subscribeId) ?: return@withLock null
+                val current = publisherSubscribers[sub.publisher].orEmpty()
+                val updated = current.filter { it.subscribeId != msg.subscribeId }
+                if (updated.isEmpty()) {
+                    publisherSubscribers.remove(sub.publisher)
+                } else {
+                    publisherSubscribers[sub.publisher] = updated
+                }
+                sub
+            } ?: return
+
+        // Best-effort SUBSCRIBE_DONE so the peer's local state matches.
+        val done =
+            SubscribeDone(
+                subscribeId = removed.subscribeId,
+                statusCode = SubscribeDoneStatus.UNSUBSCRIBED,
+                streamCount = 0L,
+                reasonPhrase = "unsubscribed",
+            )
+        runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(done)) } }
     }
 
     private suspend fun runDatagramPump() {
@@ -387,11 +558,216 @@ class MoqSession private constructor(
             for ((_, ch) in sinks) ch.close()
             sinks.clear()
             aliasBySubscribeId.clear()
+            // Fail in-flight announce waiters and surface an exception, since
+            // the caller is awaiting on .await().
+            for ((_, deferred) in pendingAnnounces) {
+                deferred.cancel()
+            }
+            pendingAnnounces.clear()
+            announces.values.forEach { it.markSessionClosedLocked() }
+            announces.clear()
+            inboundSubscribers.clear()
+            publisherSubscribers.clear()
         }
         controlPumpJob?.cancel()
         datagramPumpJob?.cancel()
         runCatching { writeMutex.withLock { controlStream.finish() } }
         runCatching { transport.close(code, reason) }
+    }
+
+    // ---------------------------------------------------------------- Publisher implementations
+
+    /**
+     * Public, addressable announce on this session. Returned by [announce] and
+     * lives until [unannounce] (or session [close]).
+     */
+    interface AnnounceHandle {
+        val namespace: TrackNamespace
+
+        /**
+         * Register a publisher for one track name under this namespace. nests
+         * uses the speaker's pubkey hex (UTF-8 bytes) as the track name.
+         *
+         * The returned [TrackPublisher] is the only way to push OBJECTs out;
+         * each call to [TrackPublisher.send] becomes one OBJECT_DATAGRAM
+         * fanned out to every active inbound subscriber for this track.
+         */
+        suspend fun openTrack(name: ByteArray): TrackPublisher
+
+        /**
+         * Withdraw the namespace: send UNANNOUNCE, send SUBSCRIBE_DONE to
+         * every inbound subscriber that's still attached, and close every
+         * registered [TrackPublisher]. Idempotent.
+         */
+        suspend fun unannounce()
+    }
+
+    /** A single outbound track. Push OBJECTs with [send]; tear down with [close]. */
+    interface TrackPublisher {
+        val name: ByteArray
+
+        /**
+         * Send one OBJECT (one Opus frame for nests audio) as an
+         * OBJECT_DATAGRAM to every inbound subscriber currently attached.
+         * Group/object ids are managed internally; this matches the
+         * audio-rooms NIP draft (one group, monotonic object ids).
+         *
+         * @return true if at least one datagram was queued for delivery.
+         *   Returns false (and is a silent no-op) if no inbound subscriber
+         *   exists yet — callers can keep producing audio without buffering.
+         */
+        suspend fun send(payload: ByteArray): Boolean
+
+        /**
+         * Stop publishing this track. Sends SUBSCRIBE_DONE to every attached
+         * subscriber, removes the track from the parent announce. Idempotent.
+         */
+        suspend fun close()
+    }
+
+    /**
+     * Internal accounting for a peer's inbound SUBSCRIBE on one of our
+     * published tracks. We send each `publisher.send(payload)` as a separate
+     * OBJECT_DATAGRAM keyed by this subscription's negotiated trackAlias.
+     */
+    internal class InboundSubscription(
+        val subscribeId: Long,
+        val trackAlias: Long,
+        val namespace: TrackNamespace,
+        val trackName: ByteArray,
+        val publisher: TrackPublisherImpl,
+    )
+
+    internal inner class AnnounceHandleImpl(
+        override val namespace: TrackNamespace,
+    ) : AnnounceHandle {
+        // Non-suspending reads/writes on `tracks` are all guarded by the
+        // session's `stateMutex` (held by the suspend caller).
+        internal val tracks = HashMap<TrackKey, TrackPublisherImpl>()
+        internal var sessionClosed = false
+
+        override suspend fun openTrack(name: ByteArray): TrackPublisher {
+            val key = TrackKey(name)
+            val publisher = TrackPublisherImpl(name)
+            stateMutex.withLock {
+                check(!closed) { "session is closed" }
+                check(!sessionClosed) { "namespace is unannounced" }
+                check(tracks[key] == null) { "track ${name.decodeToString()} already published" }
+                tracks[key] = publisher
+                publisher.parent = this
+            }
+            return publisher
+        }
+
+        // Caller must hold stateMutex.
+        fun publisherForLocked(trackName: ByteArray): TrackPublisherImpl? = tracks[TrackKey(trackName)]
+
+        override suspend fun unannounce() {
+            val toClose: List<TrackPublisherImpl>
+            stateMutex.withLock {
+                if (sessionClosed) return
+                sessionClosed = true
+                toClose = tracks.values.toList()
+                tracks.clear()
+                announces.remove(namespace)
+            }
+            toClose.forEach { runCatching { it.close() } }
+            if (closed) return
+            runCatching {
+                writeMutex.withLock { controlStream.write(MoqCodec.encode(Unannounce(namespace))) }
+            }
+        }
+
+        /**
+         * Called from session.close while the caller already holds stateMutex.
+         * Drops every track without trying to send a wire UNANNOUNCE.
+         */
+        fun markSessionClosedLocked() {
+            sessionClosed = true
+            tracks.values.forEach { it.markSessionDeadLocked() }
+            tracks.clear()
+        }
+    }
+
+    internal inner class TrackPublisherImpl(
+        override val name: ByteArray,
+    ) : TrackPublisher {
+        var parent: AnnounceHandleImpl? = null
+        internal var nextObjectId = 0L
+        internal val groupId = 0L // single-group track per audio-rooms NIP draft
+        internal var trackClosed = false
+        internal var sessionDead = false
+
+        override suspend fun send(payload: ByteArray): Boolean {
+            val snapshotAndId =
+                stateMutex.withLock {
+                    if (trackClosed || sessionDead) return false
+                    val snapshot = publisherSubscribers[this]
+                    if (snapshot.isNullOrEmpty()) return false
+                    val id = nextObjectId
+                    nextObjectId += 1
+                    snapshot to id
+                }
+            val (snapshot, objectId) = snapshotAndId
+            var anySent = false
+            for (sub in snapshot) {
+                val datagram =
+                    MoqObjectDatagram.encode(
+                        MoqObject(
+                            trackAlias = sub.trackAlias,
+                            groupId = groupId,
+                            objectId = objectId,
+                            publisherPriority = DEFAULT_PUBLISHER_PRIORITY,
+                            payload = payload,
+                        ),
+                    )
+                runCatching { transport.sendDatagram(datagram) }
+                    .onSuccess { anySent = true }
+            }
+            return anySent
+        }
+
+        override suspend fun close() {
+            val snapshot: List<InboundSubscription>
+            stateMutex.withLock {
+                if (trackClosed) return
+                trackClosed = true
+                snapshot = publisherSubscribers.remove(this).orEmpty()
+                snapshot.forEach { inboundSubscribers.remove(it.subscribeId) }
+                parent?.tracks?.remove(TrackKey(name))
+            }
+            if (closed || sessionDead) return
+            for (sub in snapshot) {
+                val done =
+                    SubscribeDone(
+                        subscribeId = sub.subscribeId,
+                        statusCode = SubscribeDoneStatus.TRACK_ENDED,
+                        streamCount = 0L,
+                        reasonPhrase = "track closed",
+                    )
+                runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(done)) } }
+            }
+        }
+
+        /** Caller already holds stateMutex (called from session.close). */
+        fun markSessionDeadLocked() {
+            sessionDead = true
+            trackClosed = true
+            publisherSubscribers.remove(this)
+        }
+    }
+
+    /** Equality wrapper for byte-array keys in [AnnounceHandleImpl.tracks]. */
+    internal data class TrackKey(
+        val name: ByteArray,
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is TrackKey) return false
+            return name.contentEquals(other.name)
+        }
+
+        override fun hashCode(): Int = name.contentHashCode()
     }
 
     companion object {
@@ -401,6 +777,14 @@ class MoqSession private constructor(
          * which matches a typical real-time listener's tolerance.
          */
         const val DEFAULT_OBJECT_BUFFER: Int = 64
+
+        /**
+         * Publisher priority byte used for outbound OBJECT_DATAGRAMs from
+         * [TrackPublisher.send]. 0x80 is the middle of the byte range — a
+         * sensible neutral default until nests cares about prioritising
+         * speakers over each other.
+         */
+        const val DEFAULT_PUBLISHER_PRIORITY: Int = 0x80
 
         /**
          * Attach to a [WebTransportSession] in the client role.
@@ -450,3 +834,24 @@ class MoqProtocolException(
     message: String,
     cause: Throwable? = null,
 ) : RuntimeException(message, cause)
+
+/**
+ * MoQ-transport SUBSCRIBE_ERROR / ANNOUNCE_ERROR error codes. Draft revisions
+ * shuffle these around; the values here track the most stable subset.
+ */
+object ErrorCode {
+    /** Track the publisher knows nothing about. */
+    const val TRACK_DOES_NOT_EXIST: Long = 0x04L
+}
+
+/**
+ * MoQ-transport SUBSCRIBE_DONE status_code values. As above, draft-stable
+ * subset; not exhaustive.
+ */
+object SubscribeDoneStatus {
+    /** The publisher has no more objects coming for this track. */
+    const val TRACK_ENDED: Long = 0x00L
+
+    /** Subscriber explicitly UNSUBSCRIBEd; publisher is acknowledging. */
+    const val UNSUBSCRIBED: Long = 0x01L
+}
