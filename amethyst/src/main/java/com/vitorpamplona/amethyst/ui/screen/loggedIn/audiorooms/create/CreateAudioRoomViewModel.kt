@@ -54,7 +54,7 @@ class CreateAudioRoomViewModel : ViewModel() {
     fun bindAccountIfMissing(accountViewModel: AccountViewModel) {
         if (account != null) return
         account = accountViewModel
-        // Seed the URL fields from the user's saved kind-10062 list so
+        // Seed the URL fields from the user's saved kind-10112 list so
         // first-time use flows naturally from the Settings screen. If
         // the list is empty (or the user hasn't published one yet), keep
         // the nostrnests.com defaults already in [FormState.defaults].

@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.update
  *      [_servers] buffer.
  *   3. [addServer] / [removeServer] / [removeAllServers] mutate the
  *      buffer, marking [isModified] = true.
- *   4. [save] publishes a fresh kind-10062 [com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent]
+ *   4. [save] publishes a fresh kind-10112 [com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent]
  *      via [Account.sendNestsServersList].
  */
 @Stable

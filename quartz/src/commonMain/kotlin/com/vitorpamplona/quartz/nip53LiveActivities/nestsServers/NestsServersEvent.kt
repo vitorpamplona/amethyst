@@ -33,12 +33,13 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * Replaceable event listing the audio-room (NIP-53 / nests) MoQ host
  * servers a user prefers to publish their kind-30312 spaces against.
  *
- * Kind: **10062** (proposed; mirrors BlossomServersEvent's 10063 layout).
- *
- * Wire shape — one `server` tag per host base URL:
+ * Kind: **10112** — declared by nostrnests's reference README under
+ * "User-published audio server lists". Wire shape mirrors
+ * BlossomServersEvent's 10063 layout (one `server` tag per host base
+ * URL).
  *
  *     {
- *       "kind": 10062,
+ *       "kind": 10112,
  *       "tags": [
  *         ["alt", "Audio-room (nests) MoQ servers used by the author"],
  *         ["server", "https://moq.nostrnests.com"],
@@ -78,7 +79,7 @@ class NestsServersEvent(
         }
 
     companion object {
-        const val KIND = 10062
+        const val KIND = 10112
         const val ALT = "Audio-room (nests) MoQ servers used by the author"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)

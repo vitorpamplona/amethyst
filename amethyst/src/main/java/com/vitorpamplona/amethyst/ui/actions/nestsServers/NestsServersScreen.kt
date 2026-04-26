@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 
 /**
  * Settings screen for the user's preferred audio-room (NIP-53 / nests)
- * MoQ host servers — kind 10062 [com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent].
+ * MoQ host servers — kind 10112 [com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent].
  *
  * Mirrors [com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen]
  * — top bar with Cancel / Save, list of saved servers with delete

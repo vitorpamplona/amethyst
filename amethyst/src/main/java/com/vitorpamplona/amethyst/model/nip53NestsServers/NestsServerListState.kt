@@ -35,7 +35,7 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * Per-account state for the user's preferred audio-room (NIP-53 / nests)
- * MoQ host servers — kind 10062 [NestsServersEvent]. Mirror of
+ * MoQ host servers — kind 10112 [NestsServersEvent]. Mirror of
  * [com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState]
  * for the nests use case.
  *
@@ -43,7 +43,7 @@ import kotlinx.coroutines.flow.stateIn
  *   - [flow] — current `List<String>` of saved server base URLs
  *   - [getNestsServersListFlow] — reactive `StateFlow<NoteState>` for
  *     downstream UI to recompose on event arrivals
- *   - [saveNestsServersList] — build + sign a new replaceable kind 10062
+ *   - [saveNestsServersList] — build + sign a new replaceable kind 10112
  *     event (preserving prior tags' alt etc.)
  *
  * The list is consumed by [com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.create.CreateAudioRoomViewModel]

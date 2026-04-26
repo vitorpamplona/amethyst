@@ -535,7 +535,7 @@
     <string name="nests_servers_title">Audio-room servers</string>
     <string name="nests_servers_explainer">Choose which MoQ host servers Amethyst publishes your audio rooms to. The first entry is used by default when you start a new space.</string>
     <string name="nests_servers_my_section">Your servers</string>
-    <string name="nests_servers_my_explainer">Saved as a kind-10062 replaceable event so other clients can read your preference.</string>
+    <string name="nests_servers_my_explainer">Saved as a kind-10112 replaceable event so other clients can read your preference.</string>
     <string name="nests_servers_add_field">Add an audio-room server</string>
     <string name="nests_servers_recommended_section">Recommended servers</string>
     <string name="nests_servers_recommended_explainer">Built-in suggestions you can add to your list with one tap.</string>
