@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 private val FadeIn = fadeIn()
 private val FadeOut = fadeOut()
@@ -60,7 +62,7 @@ fun OverflowMenuButtonPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
             OverflowMenuButton(
-                actions = listOf(VideoPlayerAction.Share, VideoPlayerAction.Download, VideoPlayerAction.PictureInPicture),
+                actions = persistentListOf(VideoPlayerAction.Share, VideoPlayerAction.Download, VideoPlayerAction.PictureInPicture),
                 startingMuteState = false,
                 onFullscreenClick = {},
                 onMuteClick = {},
@@ -76,7 +78,7 @@ fun OverflowMenuButtonPreview() {
 @Composable
 fun AnimatedOverflowMenuButton(
     controllerVisible: State<Boolean>,
-    actions: List<VideoPlayerAction>,
+    actions: ImmutableList<VideoPlayerAction>,
     startingMuteState: Boolean,
     onFullscreenClick: (() -> Unit)?,
     onMuteClick: () -> Unit,
@@ -107,7 +109,7 @@ fun AnimatedOverflowMenuButton(
 
 @Composable
 fun OverflowMenuButton(
-    actions: List<VideoPlayerAction>,
+    actions: ImmutableList<VideoPlayerAction>,
     startingMuteState: Boolean,
     onFullscreenClick: (() -> Unit)?,
     onMuteClick: () -> Unit,

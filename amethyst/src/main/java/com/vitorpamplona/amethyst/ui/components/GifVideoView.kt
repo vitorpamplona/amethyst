@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,7 +69,18 @@ fun GifVideoView(
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
 ) {
-    val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
+    // Keys are primitive width/height so a freshly parsed DimensionTag instance for the same
+    // event doesn't re-run this lambda — DimensionTag uses reference equality, not structural.
+    val dimW = dimensions?.width
+    val dimH = dimensions?.height
+    val ratio =
+        remember(videoUri, dimW, dimH) {
+            if (dimW != null && dimH != null && dimH > 0) {
+                dimW.toFloat() / dimH.toFloat()
+            } else {
+                MediaAspectRatioCache.get(videoUri)
+            }
+        }
     val autoPlay = accountViewModel.settings.autoPlayVideos()
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current

@@ -115,13 +115,16 @@ fun VideoView(
 
     // Resolve the aspect ratio once per composition. Prime the URL-keyed cache from the imeta
     // dim tag so the next time this video appears (PiP, dialog, list re-enter) the cache hits
-    // without waiting for ExoPlayer's onVideoSizeChanged.
+    // without waiting for ExoPlayer's onVideoSizeChanged. Keys are primitive width/height so
+    // a freshly parsed DimensionTag instance for the same event doesn't re-run this lambda —
+    // DimensionTag uses reference equality, not structural.
+    val dimW = dimensions?.width
+    val dimH = dimensions?.height
     val ratio =
-        remember(videoUri, dimensions) {
-            val fromDim = dimensions?.takeIf { it.hasSize() }
-            if (fromDim != null) {
-                MediaAspectRatioCache.add(videoUri, fromDim.width, fromDim.height)
-                fromDim.aspectRatio()
+        remember(videoUri, dimW, dimH) {
+            if (dimW != null && dimH != null && dimW > 0 && dimH > 0) {
+                MediaAspectRatioCache.add(videoUri, dimW, dimH)
+                dimW.toFloat() / dimH.toFloat()
             } else {
                 MediaAspectRatioCache.get(videoUri)
             }

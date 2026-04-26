@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import kotlinx.collections.immutable.toImmutableList
 
 @Preview
 @Composable
@@ -194,7 +195,10 @@ fun RenderTopButtons(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
+    // Hold the StateFlow itself across recompositions so collectAsStateWithLifecycle isn't
+    // keyed on the result of a property getter call that happens every recompose.
+    val buttonItemsFlow = remember(accountViewModel) { accountViewModel.videoPlayerButtonItemsFlow() }
+    val buttonItems by buttonItemsFlow.collectAsStateWithLifecycle()
     val shareDialogVisible = remember { mutableStateOf(false) }
     val saveAction =
         rememberSaveMediaAction { context ->
@@ -212,17 +216,22 @@ fun RenderTopButtons(
         }
 
     val canFullscreen = onZoomClick != null
+    // ImmutableList so Compose can treat the action lists as stable parameters when they're
+    // passed through to AnimatedOverflowMenuButton — a plain List is unstable and forces the
+    // overflow tree to recompose whenever any unrelated parent state ticks.
     val topBarActions =
         remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.TopBar && isAvailable(it.action) }
                 .map { it.action }
+                .toImmutableList()
         }
     val overflowActions =
         remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.OverflowMenu && isAvailable(it.action) }
                 .map { it.action }
+                .toImmutableList()
         }
 
     Row(modifier) {
