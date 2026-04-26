@@ -37,11 +37,14 @@ import kotlin.uuid.Uuid
 
 object PlaybackServiceClient {
     // Runs the MediaController.buildAsync() completion callbacks. The work per callback is
-    // trivial — Future.get() on an already-completed future plus a non-blocking trySend into
-    // the callbackFlow channel — so a single thread is plenty. The previous newCachedThreadPool
-    // could spin up an unbounded number of threads when many videos appeared at once, each
-    // sticking around for the executor's keep-alive (60s) afterwards.
-    val executorService: ExecutorService = Executors.newSingleThreadExecutor()
+    // trivial in the steady state (Future.get() on an already-completed future + a non-blocking
+    // trySend into this video's own callbackFlow channel), so the IPC bind itself dominates and
+    // happens on Media3's own threads regardless. We size the pool small enough to stay bounded
+    // under churn but parallel enough that one stuck listener (e.g. the defensive 5s get()
+    // timeout actually firing) can't stall the rest of the videos onscreen behind it. The
+    // original newCachedThreadPool was unbounded and could spin up a thread per concurrent
+    // video, each lingering for the 60s keep-alive afterwards.
+    val executorService: ExecutorService = Executors.newFixedThreadPool(4)
 
     fun shutdown() {
         executorService.shutdown()
