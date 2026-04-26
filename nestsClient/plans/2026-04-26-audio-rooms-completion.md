@@ -1,278 +1,72 @@
-# Audio rooms — completion plan (2026-04-26)
+# Audio rooms — completion plan
 
-What's left between today's code and shippable audio rooms in Amethyst.
+> **STATUS (2026-04-26 PM):** Listener and speaker paths are both live
+> end-to-end on moq-lite Lite-03, the create-space flow ships, and the
+> kind-10112 host-server list lives in Settings. What remains is
+> hardening (reconnect / leave cleanup / per-speaker level metering),
+> Nests-feature parity (chat, hand-raise approval, recordings — see
+> the integration audit), and Desktop / iOS targets.
+> `:nestsClient:jvmTest` (~140 unit tests) is green; integration tests
+> behind `-DnestsInterop=true` work against a real Docker'd nostrnests
+> stack.
 
-> **STATUS UPDATE (2026-04-26 PM):** the interop test suite (phases 1–5
-> of the nostrnests work) uncovered that nostrnests runs on **moq-lite**
-> (kixelated's variant), not IETF `draft-ietf-moq-transport-17`. Both
-> the listener and speaker sides are now wired through moq-lite
-> (`MoqLiteNestsListener` / `MoqLiteNestsSpeaker`), the WebTransport
-> abstraction grew `incomingBidiStreams` + `openUniStream`, and Phase M1
-> manual validation against `nostrnests.com` should work end-to-end.
-> See [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md) for
-> the exact wire spec + landing summary.
+## Implementation state
 
-## Where we are
+### Transport + protocol
 
-The transport stack is **done** and audited
-([quic/plans/2026-04-26-quic-stack-status.md](../../quic/plans/2026-04-26-quic-stack-status.md)).
-On top of it, `:nestsClient` already has:
-
-- HTTP control plane (`NestsClient.resolveRoom` — NIP-98 auth → room info)
-- WebTransport adapter (`QuicWebTransportFactory` wires `:quic` into the
-  `WebTransportSession` interface)
-- MoQ session — listener side: `MoqSession.client(...)` + `setup()` +
-  `subscribe(namespace, trackName, filter)` + control + datagram pumps
-- Opus decode + audio playback chain: `MediaCodecOpusDecoder`,
-  `AudioTrackPlayer`, `AudioRoomPlayer`
-- `NestsListener` API + `connectNestsListener` orchestration
-- Audio capture primitives (`AudioRecordCapture`, `MediaCodecOpusEncoder`)
-  exist but are not wired into a publisher path
-
-Amethyst's `audiorooms/` UI parses NIP-53 events and renders rooms +
-participant chips. It does NOT call `NestsListener` — there's no Connect
-button, no audio output, no mute control wired.
-
-So the punch list is: app-side wiring → manual interop validation → speaker
-path → backgrounding & polish.
-
-## Phase M1 — Listener-only MVP (1 week)
-
-**Goal:** open a real audio room from the Amethyst UI, hear one speaker.
-
-- Wire `connectNestsListener` into a `RememberRoomConnection` composable in
-  `amethyst/.../audiorooms/room/`. Lifecycle tied to `DisposableEffect`;
-  cancels on screen exit.
-- Surface `NestsListenerState` in the UI:
-  - `Idle` / `Connecting` → show a spinner or chip "Connecting…"
-  - `Connected` → show "Audio connected" chip + auto-subscribe to the host's
-    speaker track (NIP-53 room's `p` tag with role `host`)
-  - `Failed(reason, cause)` → toast / inline message
-- `AudioRoomPlayer` per subscription. Per the audio-rooms NIP draft
-  (`docs/plans/2026-04-22-nip-audio-rooms-draft.md`) one speaker = one track
-  name = `<speaker-pubkey-hex>`; one `AudioRoomPlayer` per speaker.
-- Mute toggle drives `AudioPlayer.setVolume(0f / 1f)` on the active player.
-  Mute at the player keeps the network running so unmute is instant.
-- Backed by an `AudioRoomViewModel` in `commons/.../viewmodels/` so desktop
-  can reuse the orchestration once it gets WT.
-
-Tests:
-- Manual: connect to `nostrnests.com`, open a known room, hear audio.
-- Unit: `AudioRoomViewModel` state-flow transitions on
-  `NestsListenerState` updates.
-
-## Phase M2 — Multi-speaker + audience UX (3 days)
-
-- Subscribe to every `host` + `speaker` `p` tag, not just the first one.
-  Mix at the audio side (Android `AudioTrack` accepts multiple writers if
-  we use one shared track + downmix; cleaner: one `AudioTrack` per
-  subscription and let the OS mix).
-- Show per-speaker level meters (if the encoder exposes RMS) or just a
-  speaking indicator driven by "objects received in last 200 ms".
-- React to NIP-53 room event updates: a new speaker added to `p` →
-  open a subscription; a speaker removed → close one.
-
-## Phase M3 — Foreground service (2 days)
-
-- Android `MediaSessionService` with a media-style notification so
-  playback continues when the app backgrounds.
-- Stop the service on:
-  - screen exit AND no other audio-room-screen is alive
-  - user dismisses the notification
-  - underlying `NestsListener` enters `Failed` or `Closed`
-- Permission shim: `RECORD_AUDIO` is NOT needed for listener-only.
-
-## Phase M4 — Manual interop pass against `nostrnests.com` (3 days)
-
-This is the proof-of-life step before any speaker work.
-
-- Build a debug build with the listener flow above.
-- Open one of the long-running test rooms hosted by nests.
-- Confirm: connect succeeds; SUBSCRIBE_OK arrives; OBJECT_DATAGRAMs
-  decode through MediaCodec into audible audio.
-- Anything that surfaces here goes into a follow-up audit / fix pass on
-  `:quic` or `:nestsClient`. We expect one or two issues — protocol drafts
-  drift, and we've only verified against aioquic, not a real MoQ relay.
-- Capture a packet trace if anything fails so we can compare on-the-wire
-  bytes against a known-working JS client.
-
-## Phase M5 — Speaker path: MoQ publisher (1 week) — **DONE (via moq-lite, not IETF MoQ)**
-
-> **Update:** the original plan called for ANNOUNCE / OBJECT emission on
-> the IETF `MoqSession`. Once the moq-lite gap was discovered, the
-> speaker path was implemented on the `MoqLiteSession` instead — see
-> [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md) phase
-> 5c-speaker. The wire shape is different (single-string broadcast +
-> `audio/data` track, group-per-uni-stream framing) but the
-> [NestsSpeaker] / [BroadcastHandle] surface is unchanged.
-
-Original IETF MoQ design (kept as reference):
-
-The big one. `MoqSession` only does subscribe today; it needs ANNOUNCE +
-OBJECT emission.
-
-Required MoQ messages to encode + decode:
-
-| Message | Direction | Status |
+| Surface | Status | Notes |
 |---|---|---|
-| ANNOUNCE | client → server | not implemented |
-| ANNOUNCE_OK / ANNOUNCE_ERROR | server → client | decode + match-by-namespace |
-| ANNOUNCE_CANCEL | server → client | decode + signal publisher to stop |
-| UNANNOUNCE | client → server | encode |
-| SUBSCRIBE | server → client (we're publisher) | accept + map to our track sink |
-| SUBSCRIBE_OK / SUBSCRIBE_ERROR | client → server | encode |
-| SUBSCRIBE_DONE | client → server | encode on track end |
-| OBJECT_DATAGRAM (publish-side) | client → server | encode + emit |
+| `:quic` v1 + HTTP/3 + WebTransport | ✅ done | RFC 9000 + 9220; auditor passes |
+| moq-lite Lite-03 codec (announce / subscribe / group) | ✅ done | `moq/lite/`, full unit suite |
+| moq-lite session (listener + publisher) | ✅ done | `MoqLiteSession.client(...)` |
+| `WebTransportSession.incomingBidiStreams` + `openUniStream` | ✅ done | needed for publisher |
+| IETF `draft-ietf-moq-transport-17` codec | ✅ done | reference impl, no production caller |
 
-API we need on `MoqSession`:
+### `:nestsClient`
 
-```kotlin
-suspend fun announce(
-    namespace: TrackNamespace,
-    parameters: List<TrackParameter> = emptyList(),
-): AnnounceHandle
-
-interface AnnounceHandle {
-    /** New publisher per track name we serve under this namespace. */
-    suspend fun openTrack(name: ByteArray): TrackPublisher
-    /** Stop announcing; sends UNANNOUNCE + closes any open track publishers. */
-    suspend fun unannounce()
-}
-
-interface TrackPublisher {
-    /** Push one OBJECT_DATAGRAM. group/objectId are managed internally
-     *  per the audio-rooms NIP. */
-    suspend fun send(payload: ByteArray)
-    suspend fun close()
-}
-```
-
-Internal additions:
-- `pendingAnnounces` keyed by namespace, like the existing
-  `pendingSubscribes`
-- inbound-SUBSCRIBE routing: when the server SUBSCRIBEs, we look up the
-  publisher by namespace+name and start delivering its objects with the
-  server-assigned subscribeId/trackAlias
-- group/object id management: monotonic group per
-  `TrackPublisher`, object id zero-reset per group; reflect this in the
-  emitted `OBJECT_DATAGRAM` header
-
-Tests:
-- `MoqSession` unit tests for ANNOUNCE round-trip via `FakeWebTransport`
-- Integration: a publisher sends 100 Opus-shaped payloads through to a
-  matching subscriber, all received with intact group/object ids
-
-## Phase M6 — Capture → encode → publish (3 days) — **DONE**
-
-> Both `AudioRoomBroadcaster` (drives the IETF `TrackPublisher`) and
-> `AudioRoomMoqLiteBroadcaster` (drives `MoqLitePublisherHandle`)
-> exist. The Android actuals (`AudioRecordCapture`,
-> `MediaCodecOpusEncoder`) are wired into the production speaker path.
-
-The inverse of `AudioRoomPlayer`:
-
-- `AudioCaptureSource` (commonMain interface) with platform actuals on
-  `AudioRecordCapture` (Android) and a desktop one later
-- `AudioRoomBroadcaster` orchestrates: pull PCM frames from the capture →
-  feed `MediaCodecOpusEncoder` → push the resulting Opus packet into
-  `TrackPublisher.send`
-- `RECORD_AUDIO` permission gate — surface on first-tap of the talk button
-- Push-to-talk vs always-on toggle: at the API level, just `start()` /
-  `stop()` on the broadcaster; the UI decides
-
-## Phase M7 — `NestsSpeaker` API (2 days) — **DONE**
-
-> `NestsSpeaker` interface + `MoqLiteNestsSpeaker` implementation +
-> `connectNestsSpeaker` orchestration are all live and reach the
-> `Connected` state against a connected moq-lite session. The Compose
-> "Talk" button + mute UI in `AudioRoomActivityContent` calls
-> `viewModel.startBroadcasting()` / `setMuted(...)` which routes to
-> `BroadcastHandle.setMuted` and the moq-lite publisher.
-
-Mirror of `NestsListener` for hosts/speakers:
-
-```kotlin
-interface NestsSpeaker {
-    val state: StateFlow<NestsSpeakerState>
-    suspend fun startBroadcasting(): BroadcastHandle
-    suspend fun close()
-}
-
-interface BroadcastHandle {
-    suspend fun setMuted(muted: Boolean)
-    suspend fun close()
-}
-```
-
-Same `connectNestsSpeaker` orchestration as `connectNestsListener` but the
-post-`setup` step is `announce(...)` instead of `subscribe(...)`.
-
-UI:
-- Talk button only enabled when our pubkey is in the room's `p` tags with
-  role `host` or `speaker`
-- "Live" indicator while broadcasting, level meter from the encoder
-- Mute / unmute drives `BroadcastHandle.setMuted`
-
-## Phase M8 — App polish (3-5 days)
-
-- Connection-recovery: `NestsListener` exposes `reconnect()`; the screen
-  retries on `Failed` after a short backoff
-- Room-leave cleanup: on screen exit, send UNSUBSCRIBE + UNANNOUNCE before
-  closing the WT session (audit-4 / 5 already wired the
-  `WtCloseSession` capsule emit on `close()`)
-- Surface server `peerGoawayProtocolError` and the various
-  `NestsListenerState.Failed` reasons as user-readable messages
-- iOS: stub everything in `iosMain` with `expect`s that error cleanly until
-  iOS audio capture/playback land
-
-## Phase M9 — Backgrounding for speakers (2 days)
-
-Different from M3 because capture has stricter Android rules:
-- Foreground service type `microphone` (Android 14+ requires this)
-- Notification with prominent "Speaking" indicator + mute action
-
-## Out of scope for this plan
-
-- **Recording / saving** room audio.
-- **Server-mixed audio.** Each speaker is a separate track per the NIP
-  draft; mixing is client-side.
-- **Video.** We support audio only.
-- **Accessibility transcription.**
-- **Desktop audio capture** (until Compose Desktop has a stable
-  `AudioInput` API; today's options are JNA-heavy).
-
-## Timeline
-
-| Phase | Days | Cumulative |
+| Surface | Status | Notes |
 |---|---|---|
-| M1 Listener wire-up | 5 | 5 |
-| M2 Multi-speaker | 3 | 8 |
-| M3 Foreground listener | 2 | 10 |
-| M4 Real-server interop | 3 | 13 |
-| M5 MoQ publisher | 5 | 18 |
-| M6 Capture + encode | 3 | 21 |
-| M7 NestsSpeaker | 2 | 23 |
-| M8 Polish | 4 | 27 |
-| M9 Foreground speaker | 2 | 29 |
+| HTTP `/auth` JWT mint (NIP-98 → ES256 JWT) | ✅ done | `OkHttpNestsClient.mintToken` |
+| `connectNestsListener` → `MoqLiteNestsListener` | ✅ done | path = `/<namespace>?jwt=<token>` |
+| `connectNestsSpeaker` → `MoqLiteNestsSpeaker` | ✅ done | publishes `audio/data` track |
+| `AudioRecordCapture` + `MediaCodecOpusEncoder` | ✅ done | Android actuals |
+| `MediaCodecOpusDecoder` + `AudioTrackPlayer` | ✅ done | Android actuals |
+| `AudioRoomMoqLiteBroadcaster` + `AudioRoomPlayer` | ✅ done | encode / decode pumps |
+| Interop harness (Docker compose nostrnests stack) | ✅ done | `NostrNestsHarness`, 4 test classes |
 
-≈ **6 weeks** to ship full audio rooms (listener + speaker + Android polish).
-≈ **2 weeks** to ship listener-only (M1+M3+M4) which is the 95% case for
-audience members.
+### Amethyst (Android UI)
 
-## Stop conditions
+| Surface | Status | Notes |
+|---|---|---|
+| `AudioRoomsScreen` feed of kind-30312 events | ✅ done | from followed users |
+| `AudioRoomJoinCard` → launches `AudioRoomActivity` | ✅ done | passes service / endpoint / hostPubkey |
+| `AudioRoomActivity` (full screen + PIP) | ✅ done | lifecycle anchor |
+| `AudioRoomViewModel` (listener + speaker state) | ✅ done | `commons/.../viewmodels/` |
+| Foreground service (`AudioRoomForegroundService`) | ✅ done | listening + microphone variants |
+| Mute / unmute / hand-raise UI | ✅ done | drives `BroadcastHandle.setMuted` + presence |
+| Kind-10312 presence heartbeat | ✅ done | 30 s + debounced state-change publish |
+| **"Start space" FAB → `CreateAudioRoomSheet`** | ✅ done | publishes kind-30312 with caller as host |
+| **Settings → Audio-room servers (kind 10112)** | ✅ done | replaceable list, defaults to `nostrnests.com` |
 
-- **M4 reveals the QUIC stack can't reach `nostrnests.com`** — drop into a
-  protocol-comparison pass (likely a draft-version mismatch or a small
-  framing bug). Up to 1 wk of `:quic` adjustment, otherwise we ship behind
-  a feature flag and chase interop async.
-- **MediaCodec Opus is missing on a target device.** Android 10+ ships the
-  decoder; for older devices we'd need a software Opus, which is out of
-  scope.
+### Pending
+
+| Item | Phase | Effort |
+|---|---|---|
+| Reconnect / retry on listener Failed | M8 | 1 d |
+| Per-speaker level meters (RMS from decoder output) | M8 | 1 d |
+| Connection-failure UX copy (typed reasons → strings) | M8 | 0.5 d |
+| Desktop audio capture + playback | future | gated on Compose Desktop AudioInput API |
+| iOS audio capture + playback | future | new `iosMain` actuals |
+| Nests-feature parity (chat, mod, recordings, …) | see integration audit | varies |
 
 ## Pointers
 
+- moq-lite wire spec + IETF gap: `nestsClient/plans/2026-04-26-moq-lite-gap.md`
+- Nostrnests integration audit (gaps + roadmap): see most recent doc in `nestsClient/plans/`
 - QUIC stack status: `quic/plans/2026-04-26-quic-stack-status.md`
-- Audio-rooms NIP draft: `docs/plans/2026-04-22-nip-audio-rooms-draft.md`
-- Original (frozen) QUIC plan: `docs/plans/2026-04-22-pure-kotlin-quic-webtransport-plan.md`
-- Existing listener entry point: `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/NestsListener.kt`
-- App-side audio-room screen: `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/screen/loggedIn/audiorooms/`
+- Audio-rooms NIP draft (needs refresh after the moq-lite findings):
+  `docs/plans/2026-04-22-nip-audio-rooms-draft.md`
+- Listener entry: `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/NestsConnect.kt`
+- Speaker entry: same file (`connectNestsSpeaker`)
+- Create-space sheet: `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/screen/loggedIn/audiorooms/create/`
+- Servers settings: `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/actions/nestsServers/`

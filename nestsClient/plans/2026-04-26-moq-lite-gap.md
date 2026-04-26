@@ -1,9 +1,11 @@
 # Plan: bridge the moq-lite protocol gap
 
-**Status:** **listener AND speaker sides done** (phases 5a → 5d, commit
-range `fb47a4c` → `5914e9e` + the speaker phase 5c-speaker landing in
-this PR). Default `:nestsClient:jvmTest` suite passes; downstream
-`:commons` and `:amethyst` compile clean.
+**Status:** ✅ **DONE** — listener + speaker on moq-lite Lite-03 against
+the real nostrnests stack. Phases 5a → 5d landed (`fb47a4c` →
+`71cf99d`); follow-up cleanup + harness fixes shipped through `015b0d7`.
+Default `:nestsClient:jvmTest` passes; integration tests gated by
+`-DnestsInterop=true` work end-to-end against a Docker'd nostrnests
+deployment.
 
 **Origin:** discovered while writing the nostrnests interop test suite (phases 1–4).
 
@@ -299,9 +301,20 @@ host runs them with `-DnestsInterop=true`.
 
 ## When picking up
 
-- Read `~/.cache/amethyst-nests-interop/nests/NestsUI-v2/node_modules/@moq/lite/`
-  for the JS reference.
-- Read `kixelated/moq-rs/rs/moq-lite/src/{lite,coding,client,version,
-  path}.rs` for the canonical Rust implementation.
-- The nests-side `claims.put = [pubkey]` rule is in
-  `moq-auth/src/index.ts:160-166`.
+This doc captures the wire spec used during implementation. For the
+shipped surface, start from:
+
+- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/moq/lite/`
+  — `MoqLiteCodec`, `MoqLiteSession`, `MoqLitePath`, `MoqLiteFraming`.
+- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/`
+  `MoqLiteNestsListener.kt` / `MoqLiteNestsSpeaker.kt`.
+- `nestsClient/src/jvmTest/.../interop/` — Docker-driven interop tests
+  (auth, round-trip, multi-peer, endpoint smoke).
+
+For raw protocol reference:
+
+- `~/.cache/amethyst-nests-interop/nests/NestsUI-v2/node_modules/@moq/lite/`
+  — JS reference once the harness has run once.
+- `kixelated/moq-rs/rs/moq-lite/src/{lite,coding,client,version,path}.rs`
+  — canonical Rust implementation.
+- `moq-auth/src/index.ts:160-166` — `claims.put = [pubkey]` rule.
