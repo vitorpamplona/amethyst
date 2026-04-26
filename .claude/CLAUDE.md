@@ -14,9 +14,10 @@ humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
 exists. `nestsClient` runs the audio-room protocol on top of `:quic` for the NIP-53
 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
-`moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`) — the
-production listener path uses moq-lite to interop with the nostrnests reference
-relay. Speaker-side moq-lite is still pending; see
+`moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
+production listener AND speaker paths both run on moq-lite to interop with the
+nostrnests reference relay. The IETF code is kept as a reference + unit-test
+implementation for any future IETF target; see
 `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
 
 ## Architecture

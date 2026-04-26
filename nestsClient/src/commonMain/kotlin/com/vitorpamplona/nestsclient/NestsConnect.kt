@@ -22,10 +22,8 @@ package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
-import com.vitorpamplona.nestsclient.moq.MoqSession
 import com.vitorpamplona.nestsclient.moq.MoqVersion
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
-import com.vitorpamplona.nestsclient.moq.TrackNamespace
 import com.vitorpamplona.nestsclient.transport.WebTransportException
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -163,12 +161,16 @@ private fun failedListener(state: MutableStateFlow<NestsListenerState>): NestsLi
 
 /**
  * Speaker / host counterpart of [connectNestsListener]. Walks the same
- * HTTP → WebTransport → MoQ handshake; the difference is the post-setup
- * step is `announce(...)` (driven by [NestsSpeaker.startBroadcasting])
- * instead of `subscribe(...)`.
+ * three-step HTTP → WebTransport → moq-lite session sequence the
+ * listener does; the difference is downstream: [NestsSpeaker.startBroadcasting]
+ * claims a broadcast suffix on the moq-lite session and starts pumping
+ * Opus frames out as one uni stream per group.
  *
- * @param speakerPubkeyHex this user's pubkey hex, used as the MoQ track
- *   name when we ANNOUNCE — listeners look us up by exactly that name.
+ * @param speakerPubkeyHex this user's pubkey hex. Used as the moq-lite
+ *   broadcast suffix the relay routes to subscribers
+ *   (`MoqLiteSubscribe.broadcast == speakerPubkeyHex`); the JS reference
+ *   mints the same value via `Path.from(identity)`
+ *   (`@moq/publish/screen-B680RFft.js`).
  * @param captureFactory builds an [AudioCapture] (one per broadcast).
  *   Android passes `{ AudioRecordCapture() }`.
  * @param encoderFactory builds an [OpusEncoder] (one per broadcast).
@@ -228,28 +230,23 @@ suspend fun connectNestsSpeaker(
 
     state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.MoqHandshake)
 
+    // moq-lite Lite-03 has NO setup message. Same logic as the listener
+    // path — `supportedMoqVersions` retained for backward compat but
+    // currently a no-op because version is selected by ALPN.
     val moq =
         try {
-            MoqSession.client(webTransport, scope).also { it.setup(supportedMoqVersions) }
+            com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+                .client(webTransport, scope)
         } catch (t: Throwable) {
-            runCatching { webTransport.close(0, "moq setup failed") }
-            state.value = NestsSpeakerState.Failed("MoQ handshake failed: ${t.message}", t)
+            runCatching { webTransport.close(0, "moq-lite session init failed") }
+            state.value = NestsSpeakerState.Failed("moq-lite session init failed: ${t.message}", t)
             return failedSpeaker(state)
         }
 
-    val negotiatedVersion =
-        moq.selectedVersion ?: run {
-            runCatching { moq.close() }
-            state.value = NestsSpeakerState.Failed("MoQ session reported no negotiated version")
-            return failedSpeaker(state)
-        }
-
-    state.value = NestsSpeakerState.Connected(room, negotiatedVersion)
-    return DefaultNestsSpeaker(
+    state.value = NestsSpeakerState.Connected(room, MOQ_LITE_03_VERSION)
+    return MoqLiteNestsSpeaker(
         session = moq,
-        // Same single-segment shape as the listener path; see comment there.
-        roomNamespace = TrackNamespace.of(room.moqNamespace()),
-        speakerTrackName = speakerPubkeyHex.encodeToByteArray(),
+        speakerPubkeyHex = speakerPubkeyHex,
         captureFactory = captureFactory,
         encoderFactory = encoderFactory,
         scope = scope,

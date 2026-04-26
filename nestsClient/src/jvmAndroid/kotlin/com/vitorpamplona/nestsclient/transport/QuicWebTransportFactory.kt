@@ -234,6 +234,11 @@ class QuicWebTransportSession(
         return QuicBidiStreamAdapter(s, state.driver)
     }
 
+    override suspend fun openUniStream(): WebTransportWriteStream {
+        val s = state.openUniStream()
+        return QuicUniWriteStreamAdapter(s, state.driver)
+    }
+
     override fun incomingUniStreams(): Flow<WebTransportReadStream> =
         flow {
             // Surface only unidirectional WT streams whose prefix bytes
@@ -243,6 +248,18 @@ class QuicWebTransportSession(
             state.incomingStrippedStreams.collect { stripped ->
                 if (stripped.isUnidirectional) {
                     emit(StrippedWtReadStreamAdapter(stripped))
+                }
+            }
+        }
+
+    override fun incomingBidiStreams(): Flow<WebTransportBidiStream> =
+        flow {
+            // Surface only peer-initiated bidi streams whose WT_BIDI_STREAM
+            // prefix has been stripped by the demux. send/finish are
+            // wired through the driver wakeup.
+            state.incomingStrippedStreams.collect { stripped ->
+                if (!stripped.isUnidirectional) {
+                    emit(StrippedWtBidiStreamAdapter(stripped))
                 }
             }
         }
@@ -292,9 +309,62 @@ private class QuicReadStreamAdapter(
     override fun incoming(): Flow<ByteArray> = stream.incoming
 }
 
+/**
+ * Write-only adapter over a locally-opened uni QUIC stream. The
+ * underlying [QuicWebTransportSessionState.openUniStream] has already
+ * pushed the WT framing prefix (0x54 + quarter session id), so the
+ * caller's [write] payload goes straight onto the wire.
+ */
+private class QuicUniWriteStreamAdapter(
+    private val stream: QuicStream,
+    private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver,
+) : WebTransportWriteStream {
+    override suspend fun write(chunk: ByteArray) {
+        stream.send.enqueue(chunk)
+        driver.wakeup()
+    }
+
+    override suspend fun finish() {
+        stream.send.finish()
+        driver.wakeup()
+    }
+}
+
 /** Adapter for a WT peer-initiated uni stream whose prefix has been stripped. */
 private class StrippedWtReadStreamAdapter(
     private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = stripped.data
+}
+
+/**
+ * Adapter for a peer-initiated bidi WT stream whose WT_BIDI_STREAM prefix
+ * has been stripped. Routes [write] / [finish] through the demux's
+ * driver-aware closures so application bytes actually leave the
+ * connection.
+ */
+private class StrippedWtBidiStreamAdapter(
+    private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
+) : WebTransportBidiStream {
+    init {
+        check(!stripped.isUnidirectional) {
+            "StrippedWtBidiStreamAdapter requires a bidi stream, got uni"
+        }
+    }
+
+    override fun incoming(): Flow<ByteArray> = stripped.data
+
+    override suspend fun write(chunk: ByteArray) {
+        val send =
+            stripped.send
+                ?: error("peer-initiated bidi stream has no send half — demux didn't wire one")
+        send(chunk)
+    }
+
+    override suspend fun finish() {
+        val finish =
+            stripped.finish
+                ?: error("peer-initiated bidi stream has no finish — demux didn't wire one")
+        finish()
+    }
 }

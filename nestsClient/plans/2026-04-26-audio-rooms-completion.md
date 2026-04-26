@@ -2,17 +2,15 @@
 
 What's left between today's code and shippable audio rooms in Amethyst.
 
-> **STATUS UPDATE (2026-04-26 PM):** the interop test suite (phases 1–5d
-> of the nostrnests work, commits `3283d30` → `41f4dcd`) uncovered that
-> nostrnests runs on **moq-lite** (kixelated's variant), not IETF
-> `draft-ietf-moq-transport-17`. **Listener-side moq-lite is now landed**
-> — `connectNestsListener` opens a `MoqLiteSession` and adapts frames
-> back to `MoqObject` so `AudioRoomPlayer` / `AudioRoomViewModel` keep
-> working unchanged. The Phase M1 manual validation against
-> `nostrnests.com` should now actually work end-to-end (modulo Docker
-> harness running). Speaker-side moq-lite is still pending — needs a
-> small `WebTransportSession.acceptBidiStream` extension; tracked in
-> [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md).
+> **STATUS UPDATE (2026-04-26 PM):** the interop test suite (phases 1–5
+> of the nostrnests work) uncovered that nostrnests runs on **moq-lite**
+> (kixelated's variant), not IETF `draft-ietf-moq-transport-17`. Both
+> the listener and speaker sides are now wired through moq-lite
+> (`MoqLiteNestsListener` / `MoqLiteNestsSpeaker`), the WebTransport
+> abstraction grew `incomingBidiStreams` + `openUniStream`, and Phase M1
+> manual validation against `nostrnests.com` should work end-to-end.
+> See [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md) for
+> the exact wire spec + landing summary.
 
 ## Where we are
 

@@ -54,7 +54,7 @@ class QuicWebTransportSessionState(
     val isOpen: Boolean
         get() = connection.status == QuicConnection.Status.CONNECTED
 
-    private val demux: WtPeerStreamDemux = WtPeerStreamDemux(connectStreamId, scope)
+    private val demux: WtPeerStreamDemux = WtPeerStreamDemux(connectStreamId, scope, driver)
 
     /**
      * Completes once a WT_CLOSE_SESSION capsule arrives on the CONNECT bidi.

@@ -37,11 +37,25 @@ import kotlinx.coroutines.launch
 /**
  * A peer-initiated WebTransport stream whose framing prefix has already been
  * stripped. The [data] flow yields only application-level bytes.
+ *
+ * For peer-initiated **bidirectional** streams (where [isUnidirectional]
+ * is false), [send] and [finish] are wired to the stream's outbound
+ * half so the application can write its response. They are null on
+ * unidirectional streams.
  */
 class StrippedWtStream(
     val streamId: Long,
     val isUnidirectional: Boolean,
     val data: Flow<ByteArray>,
+    /**
+     * Suspends until [chunk] is queued on the stream's send half. Null
+     * for unidirectional streams (write side is the peer's, not ours).
+     */
+    val send: (suspend (chunk: ByteArray) -> Unit)? = null,
+    /**
+     * Half-close the send side (FIN). Null for unidirectional streams.
+     */
+    val finish: (suspend () -> Unit)? = null,
 )
 
 /**
@@ -60,6 +74,14 @@ class StrippedWtStream(
 class WtPeerStreamDemux(
     private val expectedConnectStreamId: Long,
     private val scope: CoroutineScope,
+    /**
+     * Optional driver hook. When non-null, every write on a surfaced
+     * [StrippedWtStream]'s send half wakes the QUIC pump so frames
+     * actually leave the connection. Tests that drive the demux
+     * without a real driver (the stream's own send queue is enough)
+     * can leave this null.
+     */
+    private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver? = null,
 ) {
     private val readyStreams = Channel<StrippedWtStream>(Channel.UNLIMITED)
 
@@ -280,11 +302,35 @@ class WtPeerStreamDemux(
                 for (b in prebuffered) if (b.isNotEmpty()) emit(b)
                 for (chunk in chunkChannel) if (chunk.isNotEmpty()) emit(chunk)
             }
+        // For peer-initiated bidi streams the application also needs to
+        // write back. We expose stream.send.enqueue + driver.wakeup so
+        // the surfaced stream looks symmetric to a locally-opened bidi.
+        // For uni streams (peer is the sender) we leave both null.
+        val send: (suspend (ByteArray) -> Unit)? =
+            if (isUni) {
+                null
+            } else {
+                { chunk ->
+                    stream.send.enqueue(chunk)
+                    driver?.wakeup()
+                }
+            }
+        val finish: (suspend () -> Unit)? =
+            if (isUni) {
+                null
+            } else {
+                {
+                    stream.send.finish()
+                    driver?.wakeup()
+                }
+            }
         readyStreams.trySend(
             StrippedWtStream(
                 streamId = stream.streamId,
                 isUnidirectional = isUni,
                 data = data,
+                send = send,
+                finish = finish,
             ),
         )
     }

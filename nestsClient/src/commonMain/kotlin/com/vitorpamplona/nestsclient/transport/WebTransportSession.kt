@@ -49,11 +49,32 @@ interface WebTransportSession {
     suspend fun openBidiStream(): WebTransportBidiStream
 
     /**
+     * Open a new client-initiated unidirectional WebTransport stream.
+     *
+     * Required by the moq-lite (Lite-03) publisher path: each group of
+     * audio frames is pushed on a fresh uni stream that the publisher
+     * opens — see `rs/moq-lite/src/lite/publisher.rs:338`
+     * (`session.open_uni()`).
+     */
+    suspend fun openUniStream(): WebTransportWriteStream
+
+    /**
      * Flow of inbound unidirectional streams initiated by the peer.
      *
      * The flow completes when [close] is called or the peer tears down the session.
      */
     fun incomingUniStreams(): Flow<WebTransportReadStream>
+
+    /**
+     * Flow of inbound bidirectional streams initiated by the peer.
+     *
+     * Required by the moq-lite (Lite-03) publisher path: kixelated/moq-rs
+     * relays open Announce and Subscribe bidi streams *to* the publisher
+     * — see `rs/moq-lite/src/lite/publisher.rs:40` (`Stream::accept(session)`).
+     * The flow completes when [close] is called or the peer tears down
+     * the session.
+     */
+    fun incomingBidiStreams(): Flow<WebTransportBidiStream>
 
     /** Send a QUIC datagram; returns false if the datagram was dropped by congestion control. */
     suspend fun sendDatagram(payload: ByteArray): Boolean

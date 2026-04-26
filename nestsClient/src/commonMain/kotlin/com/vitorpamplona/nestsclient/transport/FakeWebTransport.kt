@@ -66,6 +66,20 @@ class FakeWebTransport private constructor(
 
     override fun incomingUniStreams(): Flow<WebTransportReadStream> = inboundUniStreams.receiveAsFlow()
 
+    override fun incomingBidiStreams(): Flow<WebTransportBidiStream> = inboundBidiStreams.receiveAsFlow()
+
+    /**
+     * Open a uni stream toward the paired peer — production flow used by
+     * the moq-lite publisher path to push group data. The peer side
+     * receives the new stream via [incomingUniStreams].
+     */
+    override suspend fun openUniStream(): WebTransportWriteStream {
+        stateLock.withLock { check(open) { "session closed" } }
+        val pipe = Channel<ByteArray>(Channel.BUFFERED)
+        outboundUniStreams.send(FakeReadStream(pipe))
+        return ChannelWriteStream(pipe)
+    }
+
     override suspend fun sendDatagram(payload: ByteArray): Boolean {
         if (!open) return false
         outboundDatagrams.send(payload)
@@ -95,19 +109,6 @@ class FakeWebTransport private constructor(
      * other side created via [openBidiStream]).
      */
     fun peerOpenedBidiStreams(): Flow<FakeBidiStream> = inboundBidiStreams.receiveAsFlow()
-
-    /**
-     * Open a uni stream from this side toward the paired peer. Tests use this
-     * to simulate a publisher pushing a moq-lite group uni stream — write the
-     * full sequence of chunks via [WebTransportWriteStream.write] then call
-     * [WebTransportWriteStream.finish] to FIN.
-     */
-    suspend fun openPeerUniStream(): WebTransportWriteStream {
-        stateLock.withLock { check(open) { "session closed" } }
-        val pipe = Channel<ByteArray>(Channel.BUFFERED)
-        outboundUniStreams.send(FakeReadStream(pipe))
-        return ChannelWriteStream(pipe)
-    }
 
     companion object {
         /**
@@ -168,9 +169,10 @@ class FakeReadStream internal constructor(
 }
 
 /**
- * Write-only adapter over a [Channel]. Used by [FakeWebTransport.openPeerUniStream]
- * so a test can drive a peer-initiated uni stream by writing chunks then
- * FIN'ing via [finish].
+ * Write-only adapter over a [Channel]. Backs both
+ * [FakeWebTransport.openUniStream] (production: locally-opened uni
+ * stream that the paired peer reads via incomingUniStreams) and any
+ * test that wants to drive uni-stream bytes through a known channel.
  */
 private class ChannelWriteStream(
     private val channel: Channel<ByteArray>,

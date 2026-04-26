@@ -1,8 +1,9 @@
 # Plan: bridge the moq-lite protocol gap
 
-**Status:** **listener side done** (phase 5a → 5d, commits `fb47a4c` →
-`41f4dcd`); speaker side blocked on a `WebTransportSession` API
-extension. Default `:nestsClient:jvmTest` suite (124 tests) passes.
+**Status:** **listener AND speaker sides done** (phases 5a → 5d, commit
+range `fb47a4c` → `5914e9e` + the speaker phase 5c-speaker landing in
+this PR). Default `:nestsClient:jvmTest` suite passes; downstream
+`:commons` and `:amethyst` compile clean.
 
 **Origin:** discovered while writing the nostrnests interop test suite (phases 1–4).
 
@@ -206,30 +207,21 @@ range. `priority` is a plain byte. Strings = `varint length + UTF-8`.
 | 5c    | `4e136ca` | `MoqLiteSession.client(...)` (no SETUP), `announce`, `subscribe`, group uni-stream demux, framing helpers, `MoqLiteSessionTest` |
 | 5d    | `41f4dcd` | `connectNestsListener` swap — `MoqLiteNestsListener` adapts `MoqLiteFrame` → `MoqObject` for downstream `AudioRoomPlayer` / `AudioRoomViewModel`. WT URL path = `/<namespace>?jwt=<token>`. |
 
-**Pending (speaker path — phase 5c-speaker):**
+**Speaker path landed (phase 5c-speaker):**
 
-The agent's clarifying lookup confirmed (publisher.rs:40 / connection.js:130)
-that moq-lite *publishers* run via `Stream::accept(session)` — the **relay**
-opens both Announce and Subscribe bidi streams *to* the publisher. The
-publisher only initiates uni streams (one per group of audio data).
+| Layer                       | Surface                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WebTransportSession`       | `incomingBidiStreams()` (relay → us) + `openUniStream()` (group push) added.                                                                                                                                                                                                                                                                                     |
+| `:quic` `WtPeerStreamDemux` | `StrippedWtStream` carries optional `send` + `finish` closures (driver-aware) so peer-initiated bidis can write back; demux now takes the `QuicConnectionDriver` so wakeups fire after each app-level write.                                                                                                                                                     |
+| `FakeWebTransport`          | now exposes `incomingBidiStreams` + `openUniStream` directly, so production callers and tests use the same API.                                                                                                                                                                                                                                                  |
+| `MoqLiteSession`            | New `publish(suffix)` returns a `MoqLitePublisherHandle`. The session lazily launches a relay→us bidi pump that dispatches by `ControlType`: `Announce` → reply `Active(suffix=ours)`; `Subscribe` → reply `SubscribeOk` and register an inbound subscription. `MoqLitePublisherHandle.send` opens a uni stream per group with `DataType=0` + group header + `varint(size)+payload` frames; `endGroup` FINs the current uni; `close` emits `Announce(Ended)` on every active announce bidi. |
+| `MoqLiteNestsSpeaker`       | NestsSpeaker adapter that wraps a `MoqLiteSession` + `AudioRoomMoqLiteBroadcaster` (Opus encode + push loop, mirror of the IETF `AudioRoomBroadcaster` but driving the moq-lite publisher).                                                                                                                                                                       |
+| `connectNestsSpeaker`       | now opens a `MoqLiteSession` (no SETUP) and returns `MoqLiteNestsSpeaker`.                                                                                                                                                                                                                                                                                        |
 
-That requires `WebTransportSession.acceptBidiStream(): Flow<WebTransportBidiStream>`
-which is **not** currently exposed by `:nestsClient`'s WT abstraction
-(it has `incomingUniStreams` and `openBidiStream` but no
-`incomingBidiStreams`). The underlying `:quic` stack already has
-`QuicConnection.awaitIncomingPeerStream` (commonMain:397), so wiring
-this through is mechanical — but it's a real API addition and worth a
-separate phase.
-
-Once that lands, the speaker side adds:
-- `MoqLiteSession.runPublisher(suffix, onAnnouncePlease, onSubscribe)`
-  that loops on `acceptBidi` and dispatches by ControlType
-- A new `MoqLiteNestsSpeaker` that wraps the session and feeds
-  Opus frames to one uni-stream-per-group writer
-
-Then `connectNestsSpeaker` switches the same way `connectNestsListener`
-just did, and the existing integration tests (round-trip, multi-peer)
-should pass against the real Docker'd nostrnests stack.
+The existing integration tests (round-trip, multi-peer, fan-out,
+subscribe-before-announce) drive the end-to-end public API — they
+should now pass against the real Docker'd nostrnests stack when the
+host runs them with `-DnestsInterop=true`.
 
 ## Implementation plan (original spec — kept for reference)
 

@@ -37,6 +37,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 
 /**
  * Drives a [MoqLiteSession] from the listener side against a fake peer
@@ -99,7 +100,7 @@ class MoqLiteSessionTest {
             assertEquals(0L, handle.id, "first subscribe id is 0")
 
             // Now push one group with two frames from the server side.
-            val uni = serverSide.openPeerUniStream()
+            val uni = serverSide.openUniStream()
             uni.write(Varint.encode(MoqLiteDataType.Group.code))
             uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId = handle.id, sequence = 7L)))
             uni.write(framePayload(byteArrayOf(0x10, 0x11)))
@@ -226,13 +227,13 @@ class MoqLiteSessionTest {
             assertEquals(1L, handleB.id)
 
             // Push one group for A with payload "a", one for B with payload "b".
-            val uniB = serverSide.openPeerUniStream()
+            val uniB = serverSide.openUniStream()
             uniB.write(Varint.encode(MoqLiteDataType.Group.code))
             uniB.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId = handleB.id, sequence = 0L)))
             uniB.write(framePayload("b".encodeToByteArray()))
             uniB.finish()
 
-            val uniA = serverSide.openPeerUniStream()
+            val uniA = serverSide.openUniStream()
             uniA.write(Varint.encode(MoqLiteDataType.Group.code))
             uniA.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId = handleA.id, sequence = 0L)))
             uniA.write(framePayload("a".encodeToByteArray()))
@@ -245,6 +246,139 @@ class MoqLiteSessionTest {
 
             handleA.unsubscribe()
             handleB.unsubscribe()
+            session.close()
+        }
+
+    @Test
+    fun publisher_replies_to_announcePlease_with_active_announce() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+
+            // Relay (serverSide) opens an Announce bidi to us with
+            // AnnouncePlease(prefix="").
+            val relayBidi = serverSide.openBidiStream()
+            relayBidi.write(Varint.encode(MoqLiteControlType.Announce.code))
+            relayBidi.write(MoqLiteCodec.encodeAnnouncePlease(MoqLiteAnnouncePlease(prefix = "")))
+
+            // We reply on the same bidi with Announce(active=true,
+            // suffix="speakerPubkey").
+            val resp = withTimeout(2_000) { relayBidi.incoming().first() }
+            val announce = MoqLiteCodec.decodeAnnounce(MoqLiteFrameBuffer().apply { push(resp) }.readSizePrefixed()!!)
+            assertEquals(MoqLiteAnnounceStatus.Active, announce.status)
+            assertEquals("speakerPubkey", announce.suffix)
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_acks_subscribe_and_pushes_group_data_on_uni_stream() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+
+            // Step 1: relay opens Subscribe bidi.
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 7L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+
+            // Step 2: we reply SubscribeOk.
+            val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
+            val resp =
+                MoqLiteCodec.decodeSubscribeResponse(
+                    MoqLiteFrameBuffer().apply { push(ackChunk) }.readSizePrefixed()!!,
+                )
+            assertIs<MoqLiteCodec.SubscribeResponse.Ok>(resp)
+
+            // Step 3: publisher pushes one frame, which opens a uni
+            // stream with DataType=Group + group header + frame.
+            assertEquals(true, publisher.send("opus-1".encodeToByteArray()))
+            publisher.endGroup()
+
+            // The uni stream surfaces on the relay side via incomingUniStreams.
+            val relayUni = withTimeout(2_000) { serverSide.incomingUniStreams().first() }
+            val uniChunks = relayUni.incoming().toList()
+            // Concatenate all chunks then parse: type + group header +
+            // first frame. The buffer reader handles arbitrary chunk
+            // boundaries.
+            val buf = MoqLiteFrameBuffer()
+            uniChunks.forEach { buf.push(it) }
+            assertEquals(MoqLiteDataType.Group.code, buf.readVarint(), "uni stream starts with Group type byte")
+            val header =
+                MoqLiteCodec.decodeGroupHeader(
+                    buf.readSizePrefixed() ?: error("group header missing"),
+                )
+            assertEquals(7L, header.subscribeId)
+            assertEquals(0L, header.sequence, "first group is sequence 0")
+            val firstFrame =
+                buf.readSizePrefixed()
+                    ?: error("first frame missing")
+            assertContentEquals("opus-1".encodeToByteArray(), firstFrame)
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_send_returns_false_when_no_inbound_subscriber() =
+        runBlocking {
+            val (clientSide, _) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+            // No relay-opened Subscribe bidi → no subscribers → send is
+            // a silent no-op (returns false), matching the listener
+            // semantics where the speaker keeps capturing audio even
+            // when nobody is listening.
+            assertEquals(false, publisher.send("ignored".encodeToByteArray()))
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_close_emits_ended_announce() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+
+            // Relay opens an announce bidi.
+            val relayBidi = serverSide.openBidiStream()
+            relayBidi.write(Varint.encode(MoqLiteControlType.Announce.code))
+            relayBidi.write(MoqLiteCodec.encodeAnnouncePlease(MoqLiteAnnouncePlease(prefix = "")))
+            // Drain the Active announce so the next .first() picks up Ended.
+            withTimeout(2_000) { relayBidi.incoming().first() }
+
+            publisher.close()
+
+            val endedChunk = withTimeout(2_000) { relayBidi.incoming().first() }
+            val ended =
+                MoqLiteCodec.decodeAnnounce(
+                    MoqLiteFrameBuffer().apply { push(endedChunk) }.readSizePrefixed()!!,
+                )
+            assertEquals(MoqLiteAnnounceStatus.Ended, ended.status)
+            assertEquals("speakerPubkey", ended.suffix)
+
             session.close()
         }
 
