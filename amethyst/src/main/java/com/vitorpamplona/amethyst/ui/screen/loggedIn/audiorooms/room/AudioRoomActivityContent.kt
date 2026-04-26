@@ -35,10 +35,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.audiorooms.AudioRoomForegroundService
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomPresenceFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
@@ -136,6 +139,32 @@ private fun AudioRoomActivityBody(
     LaunchedEffect(viewModel) { viewModel.connect() }
 
     LaunchedEffect(viewModel, onStageKeys) { viewModel.updateSpeakers(onStageKeys) }
+
+    // Per-room kind-10312 presence: open the wire sub for the duration
+    // of this Composable, observe matching events from LocalCache, feed
+    // them into the VM's aggregator. Drives the listener counter +
+    // (Tier 2) participant grid + (T1 #5) hand-raise queue.
+    val roomATag = remember(event) { event.address().toValue() }
+    RoomPresenceFilterAssemblerSubscription(roomATag, accountViewModel)
+    LaunchedEffect(viewModel, roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(MeetingRoomPresenceEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeEvents<MeetingRoomPresenceEvent>(filter).collect { events ->
+            events.forEach { viewModel.onPresenceEvent(it) }
+        }
+    }
+    // Eviction tick — drop peers silent for >6 min (one missed
+    // 30-s heartbeat plus a 5-min "still here" tolerance window so
+    // a transient relay hiccup doesn't drop everyone).
+    LaunchedEffect(viewModel) {
+        while (isActive) {
+            delay(PRESENCE_EVICT_INTERVAL_MS)
+            viewModel.evictStalePresences(System.currentTimeMillis() / 1000 - PRESENCE_STALE_THRESHOLD_SEC)
+        }
+    }
 
     val ui by viewModel.uiState.collectAsState()
 
@@ -256,6 +285,8 @@ private fun AudioRoomActivityBody(
 
 private const val PRESENCE_REFRESH_MS = 30_000L
 private const val PRESENCE_DEBOUNCE_MS = 500L
+private const val PRESENCE_EVICT_INTERVAL_MS = 60_000L
+private const val PRESENCE_STALE_THRESHOLD_SEC = 6L * 60L
 
 private suspend fun publishPresence(
     account: com.vitorpamplona.amethyst.model.Account,
