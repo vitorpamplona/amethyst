@@ -49,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -111,6 +112,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             ThinPaddingTextField(
                 state = postViewModel.title,
                 onTextChanged = { postViewModel.onTitleChanged() },
+                inputTransformation = MentionPreservingInputTransformation,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
@@ -311,6 +313,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             ThinPaddingTextField(
                 state = postViewModel.locationText,
                 onTextChanged = { postViewModel.onLocationChanged() },
+                inputTransformation = MentionPreservingInputTransformation,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(

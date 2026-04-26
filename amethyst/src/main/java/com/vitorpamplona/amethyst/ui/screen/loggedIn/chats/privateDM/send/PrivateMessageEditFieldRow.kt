@@ -53,6 +53,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -203,6 +204,7 @@ fun EditField(
     ThinPaddingTextField(
         state = channelScreenModel.message,
         onTextChanged = { channelScreenModel.onMessageChanged() },
+        inputTransformation = MentionPreservingInputTransformation,
         keyboardOptions = PostKeyboard,
         shape = EditFieldBorder,
         modifier = Modifier.fillMaxWidth(),

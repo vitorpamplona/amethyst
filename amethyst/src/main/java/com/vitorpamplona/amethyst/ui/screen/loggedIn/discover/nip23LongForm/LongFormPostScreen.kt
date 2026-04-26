@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -381,6 +382,7 @@ private fun MarkdownPostScreenBody(
                     ThinPaddingTextField(
                         state = postViewModel.message,
                         onTextChanged = postViewModel::onMessageChanged,
+                        inputTransformation = MentionPreservingInputTransformation,
                         modifier =
                             Modifier
                                 .fillMaxWidth()

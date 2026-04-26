@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -417,6 +418,7 @@ fun SendDirectMessageTo(
             ThinPaddingTextField(
                 state = postViewModel.toUsers,
                 onTextChanged = postViewModel::onToUsersChanged,
+                inputTransformation = MentionPreservingInputTransformation,
                 modifier =
                     Modifier
                         .weight(1f)
