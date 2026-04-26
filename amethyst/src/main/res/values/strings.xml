@@ -518,6 +518,8 @@
     <string name="audio_room_notification_broadcasting">Audio room — Live</string>
     <string name="audio_room_notification_text">Tap to return.</string>
     <string name="audio_room_notification_stop">Stop</string>
+    <string name="audio_room_join">Join audio room</string>
+    <string name="audio_room_leave">Leave</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
     <string name="private_bookmarks">Private Bookmarks</string>

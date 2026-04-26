@@ -219,6 +219,16 @@
             tools:ignore="DiscouragedApi" />
 
         <activity
+            android:name=".ui.screen.loggedIn.audiorooms.room.AudioRoomActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:supportsPictureInPicture="true"
+            android:launchMode="singleTask"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.Amethyst" />
+
+        <activity
             android:name=".ui.call.CallActivity"
             android:autoRemoveFromRecents="true"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
