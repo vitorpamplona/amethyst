@@ -53,6 +53,7 @@ internal fun StagePeopleRow(
     avatarSize: Dp,
     speakingNow: ImmutableSet<String>,
     accountViewModel: AccountViewModel,
+    reactionsByPubkey: Map<String, List<com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction>> = emptyMap(),
 ) {
     val ringColor = MaterialTheme.colorScheme.primary
     Column(modifier = Modifier.padding(top = 8.dp)) {
@@ -73,12 +74,21 @@ internal fun StagePeopleRow(
                     } else {
                         Modifier
                     }
-                ClickableUserPicture(
-                    baseUserHex = participant.pubKey,
-                    size = avatarSize,
-                    accountViewModel = accountViewModel,
-                    modifier = avatarModifier,
-                )
+                Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                    ClickableUserPicture(
+                        baseUserHex = participant.pubKey,
+                        size = avatarSize,
+                        accountViewModel = accountViewModel,
+                        modifier = avatarModifier,
+                    )
+                    val reactions = reactionsByPubkey[participant.pubKey].orEmpty()
+                    if (reactions.isNotEmpty()) {
+                        SpeakerReactionOverlay(
+                            reactions = reactions,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
             }
         }
     }

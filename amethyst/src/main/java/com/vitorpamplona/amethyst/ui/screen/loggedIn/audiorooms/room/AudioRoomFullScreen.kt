@@ -77,6 +77,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTa
 @Composable
 internal fun AudioRoomFullScreen(
     event: MeetingSpaceEvent,
+    roomNote: com.vitorpamplona.amethyst.model.AddressableNote,
     onStage: List<ParticipantTag>,
     audience: List<ParticipantTag>,
     viewModel: AudioRoomViewModel,
@@ -124,6 +125,7 @@ internal fun AudioRoomFullScreen(
             )
         }
 
+        val reactionsByPubkey by viewModel.recentReactions.collectAsState()
         if (onStage.isNotEmpty()) {
             StagePeopleRow(
                 label = stringRes(R.string.audio_room_stage),
@@ -131,6 +133,7 @@ internal fun AudioRoomFullScreen(
                 avatarSize = Size40dp,
                 speakingNow = ui.speakingNow,
                 accountViewModel = accountViewModel,
+                reactionsByPubkey = reactionsByPubkey,
             )
         }
         if (audience.isNotEmpty()) {
@@ -150,6 +153,7 @@ internal fun AudioRoomFullScreen(
             TalkRow(viewModel = viewModel, ui = ui, speakerPubkeyHex = myPubkey)
         }
 
+        var showReactionPicker by rememberSaveable { mutableStateOf(false) }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -167,9 +171,20 @@ internal fun AudioRoomFullScreen(
                         ),
                 )
             }
+            OutlinedButton(onClick = { showReactionPicker = true }) {
+                Text(stringRes(R.string.audio_room_reactions_button))
+            }
             OutlinedButton(onClick = onLeave) {
                 Text(stringRes(R.string.audio_room_leave))
             }
+        }
+        if (showReactionPicker) {
+            RoomReactionPickerSheet(
+                onPick = { emoji ->
+                    accountViewModel.reactToOrDelete(roomNote, emoji)
+                },
+                onDismiss = { showReactionPicker = false },
+            )
         }
 
         AudioRoomChatPanel(

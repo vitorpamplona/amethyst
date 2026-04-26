@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.Article
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.AudioRoomsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomChatFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomPresenceFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomReactionsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
@@ -111,6 +112,7 @@ class RelaySubscriptionsCoordinator(
     val audioRooms = AudioRoomsFilterAssembler(client)
     val roomPresence = RoomPresenceFilterAssembler(client)
     val roomChat = RoomChatFilterAssembler(client)
+    val roomReactions = RoomReactionsFilterAssembler(client)
     val longs = LongsFilterAssembler(client)
     val articles = ArticlesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)

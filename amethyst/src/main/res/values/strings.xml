@@ -528,6 +528,8 @@
     <string name="audio_room_chat_send">Send</string>
     <string name="audio_room_chat_placeholder">Say something…</string>
     <string name="audio_room_chat_empty">No messages yet. Be the first to chat.</string>
+    <string name="audio_room_reactions_title">React</string>
+    <string name="audio_room_reactions_button">React</string>
     <string name="audio_room_create_fab">Start space</string>
     <string name="audio_room_create_title">Start a new audio room</string>
     <string name="audio_room_create_field_room">Room name</string>

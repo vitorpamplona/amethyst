@@ -41,8 +41,10 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomChatFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomPresenceFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomReactionsFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
@@ -86,6 +88,7 @@ internal fun AudioRoomActivityContent(
         val event = addressableNote.event as? MeetingSpaceEvent ?: return@LoadAddressableNote
         AudioRoomActivityBody(
             event = event,
+            roomNote = addressableNote,
             room = room,
             accountViewModel = accountViewModel,
             isInPipMode = isInPipMode,
@@ -100,6 +103,7 @@ internal fun AudioRoomActivityContent(
 @Composable
 private fun AudioRoomActivityBody(
     event: MeetingSpaceEvent,
+    roomNote: com.vitorpamplona.amethyst.model.AddressableNote,
     room: com.vitorpamplona.nestsclient.NestsRoomConfig,
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
@@ -180,6 +184,29 @@ private fun AudioRoomActivityBody(
             )
         LocalCache.observeEvents<LiveActivitiesChatMessageEvent>(filter).collect { events ->
             events.forEach { viewModel.onChatEvent(it) }
+        }
+    }
+
+    // Per-room kind-7 reactions: same shape as chat. The VM's
+    // sliding-window aggregator drops entries older than 30 s; the
+    // 1-s tick below drives the eviction so the floating-up overlay
+    // animation timing is one-place rather than per-component.
+    RoomReactionsFilterAssemblerSubscription(roomATag, accountViewModel)
+    LaunchedEffect(viewModel, roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(ReactionEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeEvents<ReactionEvent>(filter).collect { events ->
+            val nowSec = System.currentTimeMillis() / 1000
+            events.forEach { viewModel.onReactionEvent(it, nowSec) }
+        }
+    }
+    LaunchedEffect(viewModel) {
+        while (isActive) {
+            delay(REACTIONS_TICK_MS)
+            viewModel.evictReactions(System.currentTimeMillis() / 1000 - REACTION_WINDOW_SEC_LOCAL)
         }
     }
 
@@ -288,6 +315,7 @@ private fun AudioRoomActivityBody(
     } else {
         AudioRoomFullScreen(
             event = event,
+            roomNote = roomNote,
             onStage = onStage,
             audience = audience,
             viewModel = viewModel,
@@ -304,6 +332,13 @@ private const val PRESENCE_REFRESH_MS = 30_000L
 private const val PRESENCE_DEBOUNCE_MS = 500L
 private const val PRESENCE_EVICT_INTERVAL_MS = 60_000L
 private const val PRESENCE_STALE_THRESHOLD_SEC = 6L * 60L
+private const val REACTIONS_TICK_MS = 1_000L
+
+// Mirror of [com.vitorpamplona.amethyst.commons.viewmodels.REACTION_WINDOW_SEC]
+// — the platform layer doesn't import from commons here, and a
+// duplicate constant is cheaper than another import. If these
+// drift, the 1-s tick still self-heals within one window length.
+private const val REACTION_WINDOW_SEC_LOCAL = 30L
 
 private suspend fun publishPresence(
     account: com.vitorpamplona.amethyst.model.Account,
