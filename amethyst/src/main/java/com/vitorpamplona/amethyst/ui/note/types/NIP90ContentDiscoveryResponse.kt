@@ -54,7 +54,6 @@ fun RenderNIP90ContentDiscoveryResponse(
         note = note,
         accountViewModel = accountViewModel,
     ) {
-        val modifier = remember(note) { Modifier.fillMaxWidth() }
         val tags =
             remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
@@ -62,7 +61,7 @@ fun RenderNIP90ContentDiscoveryResponse(
             content = noteEvent.content,
             canPreview = canPreview && !makeItShort,
             quotesLeft = quotesLeft,
-            modifier = modifier,
+            modifier = Modifier.fillMaxWidth(),
             tags = tags,
             backgroundColor = backgroundColor,
             id = note.idHex,

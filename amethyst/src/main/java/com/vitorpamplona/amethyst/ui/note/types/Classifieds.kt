@@ -51,7 +51,13 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+
+private val PriceTagModifier =
+    Modifier
+        .clip(SmallBorder)
+        .padding(start = 5.dp)
 
 @Composable
 fun RenderClassifieds(
@@ -60,23 +66,31 @@ fun RenderClassifieds(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val imageSet =
-        noteEvent.imageMetas().ifEmpty { null }?.map {
-            MediaUrlImage(
-                url = it.url,
-                description = it.alt,
-                hash = it.hash,
-                blurhash = it.blurhash,
-                dim = it.dimension,
-                uri = note.toNostrUri(),
-                mimeType = it.mimeType,
-                thumbhash = it.thumbhash,
-            )
+    val imageSet: ImmutableList<MediaUrlImage>? =
+        remember(noteEvent) {
+            noteEvent
+                .imageMetas()
+                .ifEmpty { null }
+                ?.map {
+                    MediaUrlImage(
+                        url = it.url,
+                        description = it.alt,
+                        hash = it.hash,
+                        blurhash = it.blurhash,
+                        dim = it.dimension,
+                        uri = note.toNostrUri(),
+                        mimeType = it.mimeType,
+                        thumbhash = it.thumbhash,
+                    )
+                }?.toImmutableList()
         }
-    val title = noteEvent.title()
-    val summary = noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null }
-    val price = noteEvent.price()
-    val location = noteEvent.location()
+    val title = remember(noteEvent) { noteEvent.title() }
+    val summary =
+        remember(noteEvent) {
+            noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null }
+        }
+    val price = remember(noteEvent) { noteEvent.price() }
+    val location = remember(noteEvent) { noteEvent.location() }
 
     Row(
         modifier =
@@ -94,7 +108,7 @@ fun RenderClassifieds(
                     AutoNonlazyGrid(images.size) {
                         ZoomableContentView(
                             content = images[it],
-                            images = images.toImmutableList(),
+                            images = images,
                             roundedCorner = false,
                             contentScale = ContentScale.Crop,
                             accountViewModel = accountViewModel,
@@ -140,12 +154,7 @@ fun RenderClassifieds(
                         maxLines = 1,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
-                        modifier =
-                            remember {
-                                Modifier
-                                    .clip(SmallBorder)
-                                    .padding(start = 5.dp)
-                            },
+                        modifier = PriceTagModifier,
                     )
                 }
             }

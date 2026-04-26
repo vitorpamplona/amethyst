@@ -216,7 +216,7 @@ fun RenderAppDefinition(
                         CreateTextWithEmoji(
                             text = it,
                             tags =
-                                remember {
+                                remember(note) {
                                     (note.event?.tags ?: emptyArray()).toImmutableListOfLists()
                                 },
                             fontWeight = FontWeight.Bold,
