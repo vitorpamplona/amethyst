@@ -23,12 +23,15 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 
 /**
- * High-level entry point for talking to a nests-compatible audio-room backend.
+ * HTTP control-plane entry point for talking to a nests-compatible
+ * audio-room backend. Resolves a room's MoQ endpoint + bearer token via
+ * NIP-98 auth — that's the only HTTP step before the WebTransport / MoQ
+ * session takes over.
  *
- * Phase 3a only exposes the HTTP control plane — resolving a room's MoQ
- * endpoint + token via NIP-98 auth. Phase 3b will add the WebTransport/MoQ
- * transport on top, keeping this interface stable so audio-room callers only
- * depend on [resolveRoom] for the control-plane step.
+ * The full connect orchestration (HTTP → WebTransport → MoQ → audio) lives
+ * in [NestsListener] / `connectNestsListener`; this interface stays
+ * narrowly focused on the control plane so testing the audio path doesn't
+ * require an HTTP fake.
  */
 interface NestsClient {
     /**

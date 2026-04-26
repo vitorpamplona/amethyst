@@ -42,8 +42,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 /**
- * Pure-Kotlin WebTransport over QUIC v1, drop-in replacement for the
- * Kwik-based stub. This is the realisation of every layer in :quic.
+ * Pure-Kotlin WebTransport over QUIC v1, sitting on top of every layer in
+ * `:quic`. The historical alternative was a Kwik-based JNI binding; that
+ * was rejected because no Android-compatible native classifier ships, so
+ * we wrote `:quic` from scratch.
  *
  * Lifecycle on [connect]:
  *   1. Open a UDP socket connected to (authority host, authority port).

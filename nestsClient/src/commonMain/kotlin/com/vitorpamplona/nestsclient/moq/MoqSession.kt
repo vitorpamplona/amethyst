@@ -345,9 +345,11 @@ class MoqSession private constructor(
             }
 
             else -> {
-                // Other control messages (SETUP echoes, future ANNOUNCE/etc.)
-                // are silently dropped at this layer; Phase 3c-3 only needs the
-                // subscribe lifecycle.
+                // Other control messages (echoed SETUP, future ANNOUNCE +
+                // SUBSCRIBE-receiving for the publisher path, etc.) are
+                // silently dropped — the listener path only needs the
+                // subscribe lifecycle. Publisher-side routing is Phase M5
+                // in nestsClient/plans/2026-04-26-audio-rooms-completion.md.
             }
         }
     }

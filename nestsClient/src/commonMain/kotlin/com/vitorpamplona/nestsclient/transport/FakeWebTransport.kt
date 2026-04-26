@@ -32,8 +32,8 @@ import kotlinx.coroutines.sync.withLock
  *
  * A pair of fakes is connected via [pair] — anything written on one side is
  * delivered on the other. This deliberately simulates *success* semantics
- * only (no packet loss, no congestion); the real Kwik-backed transport will
- * exercise those codepaths separately.
+ * only (no packet loss, no congestion); the real `:quic`-backed transport
+ * exercises those codepaths via its own pipe + interop tests.
  *
  * [incomingDatagrams] and [FakeBidiStream.incoming] use [receiveAsFlow]
  * semantics: a `take(1)` / `first()` followed by a long-running `collect`

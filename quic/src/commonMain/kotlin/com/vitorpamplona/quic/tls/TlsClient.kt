@@ -41,10 +41,12 @@ import com.vitorpamplona.quic.QuicWriter
  *   2. After ServerHello arrives → install Handshake keys both directions.
  *   3. After server Finished decoded → install 1-RTT (application) keys both directions.
  *
- * For Phase B we **do not yet validate the certificate chain or the
- * CertificateVerify signature**. That's wired in during Phase C/L when we
- * have a real server to talk to. We DO compute and verify the server
- * Finished MAC.
+ * Certificate chain validation + CertificateVerify signature verification
+ * are delegated to [certificateValidator] (`JdkCertificateValidator` in
+ * production; `PermissiveCertificateValidator` for in-process tests). The
+ * validator parameter is non-null — passing `null` was a silent-MITM
+ * hazard and was removed in round-4 of the audit. We also compute and
+ * verify the server Finished MAC ourselves.
  */
 class TlsClient(
     val serverName: String,

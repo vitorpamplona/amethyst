@@ -33,8 +33,11 @@ import com.vitorpamplona.quic.tls.deriveQuicKeys
  * TLS traffic secret + TLS cipher-suite identifier. The QUIC labels in
  * RFC 9001 §5.1 (`quic key`, `quic iv`, `quic hp`) drive the expansion.
  *
- * For Phase B–K we only support TLS_AES_128_GCM_SHA256 (16/12/16) and
- * TLS_CHACHA20_POLY1305_SHA256 — the SHA-256 suites; nests speaks both.
+ * Supports the two SHA-256-keyed cipher suites required for QUIC v1
+ * interop with nests / aioquic / picoquic: TLS_AES_128_GCM_SHA256
+ * (16/12/16) and TLS_CHACHA20_POLY1305_SHA256. AES-256-GCM-SHA384 is
+ * omitted — Quartz's primitives don't ship SHA-384 and no interop target
+ * we've encountered requires it.
  */
 fun packetProtectionFromSecret(
     cipherSuite: Int,

@@ -26,13 +26,14 @@ import kotlinx.coroutines.flow.Flow
  * Platform-agnostic WebTransport session, as produced by a successful Extended
  * CONNECT (RFC 9220) handshake.
  *
- * The MoQ layer (Phase 3c) talks to this interface; the real Kwik-based
- * implementation sits behind [WebTransportFactory] in jvmAndroid. Keeping this
- * abstract lets us:
- *   - unit-test the MoQ framing layer with an in-memory fake,
- *   - swap transport implementations (Cronet on Android, a browser-backed
- *     WebView bridge as a contingency, Kwik on JVM desktop) without touching
- *     audio/UI code.
+ * The MoQ layer talks to this interface; the production implementation is
+ * [com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory] which
+ * sits on top of the pure-Kotlin `:quic` stack. Keeping this abstract lets
+ * us:
+ *   - unit-test the MoQ framing layer with [FakeWebTransport],
+ *   - swap transport implementations (a different QUIC backend, or a
+ *     browser-backed bridge as a contingency) without touching audio/UI
+ *     code.
  *
  * Lifecycle: the session is opened via [WebTransportFactory.connect] and must
  * be closed with [close] to release the underlying QUIC connection.
@@ -91,7 +92,7 @@ interface WebTransportWriteStream {
  *
  * [authority] is the `host:port` of the WT server, [path] is the URL path
  * (nests defaults to `/moq`), and [bearerToken] is typically the token
- * returned by the `/api/v1/nests/<roomId>` HTTP call in Phase 3a.
+ * returned by the `/api/v1/nests/<roomId>` HTTP call (see [NestsClient]).
  */
 interface WebTransportFactory {
     suspend fun connect(

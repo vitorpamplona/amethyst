@@ -27,14 +27,16 @@ package com.vitorpamplona.quic.stream
  * Application code [enqueue]s payload bytes; the connection's send loop
  * [takeChunk]s as much as it can fit in the next packet, given the
  * remaining packet budget and stream-level / connection-level flow control
- * credit. Sent bytes stay in the buffer until [acknowledge] (Phase F adds
- * retransmission of lost bytes; for v1 we just trust the receiver and
- * release on send).
+ * credit.
  *
- * For Phase D-K we run a "best effort" mode: bytes are released from the
+ * **Best-effort mode (no STREAM retransmit):** bytes are released from the
  * buffer the moment they're handed off, on the assumption that the
- * underlying network is stable. Phase L adds retransmit-on-loss (using the
- * same send buffer that retains until ACK).
+ * underlying network is stable. A real loss event silently truncates the
+ * stream. Acceptable for MoQ over QUIC (audio rooms use OBJECT_DATAGRAM,
+ * which is loss-tolerant; STREAM is control-plane only). See the deferred
+ * items in `quic/plans/2026-04-26-quic-stack-status.md` — adding
+ * retain-until-ACK + retransmit is the first thing to add for general
+ * STREAM-heavy use.
  */
 class SendBuffer {
     /**

@@ -27,8 +27,11 @@ package com.vitorpamplona.nestsclient.moq
  *
  *   message_type (varint) | message_length (varint) | payload...
  *
- * This phase (3c-1) covers only the setup handshake. SUBSCRIBE / ANNOUNCE /
- * OBJECT messages arrive in Phase 3c-2.
+ * Listener-side messages (CLIENT/SERVER_SETUP, SUBSCRIBE, SUBSCRIBE_OK /
+ * SUBSCRIBE_ERROR, UNSUBSCRIBE) are implemented. Publisher-side messages
+ * (ANNOUNCE / ANNOUNCE_OK / SUBSCRIBE-receiving / SUBSCRIBE_DONE) are not
+ * yet implemented; see `nestsClient/plans/2026-04-26-audio-rooms-completion.md`
+ * (Phase M5).
  */
 sealed class MoqMessage {
     abstract val type: MoqMessageType
@@ -164,7 +167,7 @@ enum class SubscribeFilter(
 
 /**
  * SUBSCRIBE (0x03): client asks a publisher to forward objects belonging to a
- * (namespace, track) pair. Phase 3c-2 supports only the LatestGroup /
+ * (namespace, track) pair. Today the codec supports only the LatestGroup /
  * LatestObject filters — absolute-range variants add extra wire fields the
  * codec will grow in a follow-up if nests ever needs them.
  */
@@ -182,7 +185,7 @@ data class Subscribe(
 
     init {
         require(filter == SubscribeFilter.LatestGroup || filter == SubscribeFilter.LatestObject) {
-            "Phase 3c-2 only supports LatestGroup / LatestObject filters, got $filter"
+            "only LatestGroup / LatestObject filters supported, got $filter"
         }
         require(subscriberPriority in 0..255) { "subscriber_priority must fit in a byte" }
         require(groupOrder in 0..255) { "group_order must fit in a byte" }
