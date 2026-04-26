@@ -159,6 +159,30 @@ class AudioRoomViewModel(
     private val _recentReactions = MutableStateFlow<Map<String, List<RoomReaction>>>(emptyMap())
     val recentReactions: StateFlow<Map<String, List<RoomReaction>>> = _recentReactions.asStateFlow()
 
+    /**
+     * `true` once the local user has been kicked (#5) — the platform
+     * layer flips this on a valid kind-4312 from a host/moderator and
+     * the UI can show a toast + finish the activity. Set-once; never
+     * unset for the lifetime of the VM (a kick survives reconnect
+     * attempts; the user must rejoin the room manually).
+     */
+    private val _wasKicked = MutableStateFlow(false)
+    val wasKicked: StateFlow<Boolean> = _wasKicked.asStateFlow()
+
+    /**
+     * Mark the local user as kicked and disconnect the listener +
+     * speaker pumps. Idempotent. Caller (amethyst layer) is
+     * responsible for verifying the inbound kind-4312 was signed by
+     * a host or moderator on the active kind-30312 before invoking
+     * this — the relay does not enforce that.
+     */
+    fun onKick() {
+        if (closed) return
+        if (_wasKicked.value) return
+        _wasKicked.value = true
+        disconnect()
+    }
+
     private var listener: NestsListener? = null
     private var connectJob: Job? = null
     private var stateObserverJob: Job? = null

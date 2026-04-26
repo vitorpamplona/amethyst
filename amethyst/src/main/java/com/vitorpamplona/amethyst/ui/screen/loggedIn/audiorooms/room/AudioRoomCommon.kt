@@ -54,6 +54,7 @@ internal fun StagePeopleRow(
     speakingNow: ImmutableSet<String>,
     accountViewModel: AccountViewModel,
     reactionsByPubkey: Map<String, List<com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction>> = emptyMap(),
+    onLongPressParticipant: ((String) -> Unit)? = null,
 ) {
     val ringColor = MaterialTheme.colorScheme.primary
     Column(modifier = Modifier.padding(top = 8.dp)) {
@@ -80,6 +81,7 @@ internal fun StagePeopleRow(
                         size = avatarSize,
                         accountViewModel = accountViewModel,
                         modifier = avatarModifier,
+                        onLongClick = onLongPressParticipant?.let { cb -> { hex -> cb(hex) } },
                     )
                     val reactions = reactionsByPubkey[participant.pubKey].orEmpty()
                     if (reactions.isNotEmpty()) {

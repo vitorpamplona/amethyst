@@ -536,6 +536,9 @@
     <string name="audio_room_overflow_menu">Room actions</string>
     <string name="audio_room_hand_raise_queue_title">Raised hands</string>
     <string name="audio_room_hand_raise_approve">Approve</string>
+    <string name="audio_room_promote_speaker">Promote to speaker</string>
+    <string name="audio_room_demote_listener">Demote to listener</string>
+    <string name="audio_room_kick_action">Kick</string>
     <string name="audio_room_create_fab">Start space</string>
     <string name="audio_room_create_title">Start a new audio room</string>
     <string name="audio_room_create_field_room">Room name</string>

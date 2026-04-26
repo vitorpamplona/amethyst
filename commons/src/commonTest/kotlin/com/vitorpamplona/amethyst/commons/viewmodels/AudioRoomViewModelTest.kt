@@ -299,6 +299,37 @@ class AudioRoomViewModelTest {
         }
 
     @Test
+    fun onKickFlipsWasKickedAndDisconnects() =
+        runTest {
+            val fakeListener = FakeNestsListener()
+            val vm = newViewModel { fakeListener }
+            vm.connect()
+            fakeListener.emit(NestsListenerState.Connected(room = ROOM_CONFIG, negotiatedMoqVersion = 0xff000011))
+            assertEquals(ConnectionUiState.Connected, vm.uiState.value.connection)
+            assertFalse(vm.wasKicked.value)
+
+            vm.onKick()
+
+            assertTrue(vm.wasKicked.value)
+            // disconnect() flips connection back to Idle.
+            assertEquals(ConnectionUiState.Idle, vm.uiState.value.connection)
+        }
+
+    @Test
+    fun onKickIsIdempotent() =
+        runTest {
+            val fakeListener = FakeNestsListener()
+            val vm = newViewModel { fakeListener }
+            vm.connect()
+            fakeListener.emit(NestsListenerState.Connected(room = ROOM_CONFIG, negotiatedMoqVersion = 0xff000011))
+
+            vm.onKick()
+            vm.onKick()
+
+            assertTrue(vm.wasKicked.value)
+        }
+
+    @Test
     fun publishingNowDerivesFromBroadcastStateAndMute() {
         // Idle / connecting / failed: never publishing.
         assertFalse(AudioRoomUiState().publishingNow)

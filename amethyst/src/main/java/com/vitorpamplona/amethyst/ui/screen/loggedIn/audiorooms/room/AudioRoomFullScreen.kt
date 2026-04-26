@@ -170,6 +170,13 @@ internal fun AudioRoomFullScreen(
         }
 
         val reactionsByPubkey by viewModel.recentReactions.collectAsState()
+        var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
+        val onLongPressParticipant: ((String) -> Unit)? =
+            if (isHost) {
+                { target -> if (target != event.pubKey) hostMenuTarget = target }
+            } else {
+                null
+            }
         if (onStage.isNotEmpty()) {
             StagePeopleRow(
                 label = stringRes(R.string.audio_room_stage),
@@ -178,6 +185,7 @@ internal fun AudioRoomFullScreen(
                 speakingNow = ui.speakingNow,
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = reactionsByPubkey,
+                onLongPressParticipant = onLongPressParticipant,
             )
         }
         if (audience.isNotEmpty()) {
@@ -187,6 +195,15 @@ internal fun AudioRoomFullScreen(
                 avatarSize = Size35dp,
                 speakingNow = kotlinx.collections.immutable.persistentSetOf(),
                 accountViewModel = accountViewModel,
+                onLongPressParticipant = onLongPressParticipant,
+            )
+        }
+        hostMenuTarget?.let { target ->
+            ParticipantHostActionsSheet(
+                target = target,
+                event = event,
+                accountViewModel = accountViewModel,
+                onDismiss = { hostMenuTarget = null },
             )
         }
 

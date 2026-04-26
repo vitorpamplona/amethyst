@@ -39,9 +39,11 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.audiorooms.AudioRoomForegroundService
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomAdminCommandsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomChatFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomPresenceFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomReactionsFilterAssemblerSubscription
+import com.vitorpamplona.quartz.experimental.audiorooms.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -209,6 +211,37 @@ private fun AudioRoomActivityBody(
             viewModel.evictReactions(System.currentTimeMillis() / 1000 - REACTION_WINDOW_SEC_LOCAL)
         }
     }
+
+    // Per-room kind-4312 admin commands targeting THIS user. The
+    // signer-must-be-host-or-moderator authority check happens here
+    // (not in the relay) — only honour kicks where the signer's
+    // ParticipantTag.canSpeak() returns true on the active
+    // kind-30312. nostrnests' UI does the same gating.
+    val localPubkey = accountViewModel.account.signer.pubKey
+    RoomAdminCommandsFilterAssemblerSubscription(roomATag, localPubkey, accountViewModel)
+    LaunchedEffect(viewModel, roomATag, localPubkey) {
+        val filter =
+            Filter(
+                kinds = listOf(AdminCommandEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag), "p" to listOf(localPubkey)),
+            )
+        LocalCache.observeNewEvents<AdminCommandEvent>(filter).collect { cmd ->
+            if (cmd.action() != AdminCommandEvent.Action.KICK) return@collect
+            if (cmd.targetPubkey() != localPubkey) return@collect
+            // Authority: the signer must currently hold a
+            // host/moderator role on the kind-30312 we joined.
+            // Falling back to "is the signer the room's pubkey"
+            // (the original host) covers the case where the host
+            // sends from the same key that wrote the room event.
+            val signerIsAuthorised =
+                cmd.pubKey == event.pubKey ||
+                    event.participants().any { it.pubKey == cmd.pubKey && (it.isHost() || it.isModerator()) }
+            if (!signerIsAuthorised) return@collect
+            viewModel.onKick()
+        }
+    }
+    val wasKicked by viewModel.wasKicked.collectAsState()
+    LaunchedEffect(wasKicked) { if (wasKicked) onLeave() }
 
     val ui by viewModel.uiState.collectAsState()
 
