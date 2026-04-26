@@ -184,9 +184,16 @@ private fun AudioRoomActivityBody(
     // PRESENCE_DEBOUNCE_MS for further changes before sending a fresh
     // presence event. The LaunchedEffect's auto-cancel on key change
     // serves as the debounce mechanism.
-    LaunchedEffect(micMutedTag) {
-        delay(PRESENCE_DEBOUNCE_MS)
-        publishPresence(account, event, handRaised, micMutedTag)
+    //
+    // Skip when `micMutedTag` is null (we're not broadcasting) — otherwise
+    // the FIRST composition would publish twice within 500 ms (heartbeat
+    // immediately + debounce-publisher 500 ms later, both with muted=null).
+    // Audit round-2 Android #10.
+    if (micMutedTag != null) {
+        LaunchedEffect(micMutedTag) {
+            delay(PRESENCE_DEBOUNCE_MS)
+            publishPresence(account, event, handRaised, micMutedTag)
+        }
     }
     DisposableEffect(event.address().toValue()) {
         onDispose {

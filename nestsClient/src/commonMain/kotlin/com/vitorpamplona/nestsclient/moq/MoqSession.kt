@@ -834,10 +834,11 @@ class MoqSession private constructor(
                     .onSuccess { anySent = true }
             }
             // Roll the objectId back if the entire fan-out failed (e.g.
-            // transport down). Audio-rooms NIP wants strictly contiguous
-            // object ids per group; a gap from a fully-failed send would
-            // trip strict subscribers. We roll back only if the next send
-            // hasn't already grabbed an id past us.
+            // transport down). The audio-rooms NIP wants object ids
+            // monotonic; gaps from real network loss are acceptable per
+            // spec, but a gap caused by a fully-failed local send is
+            // pure noise we can avoid. We only roll back if no
+            // concurrent send has already grabbed an id past us.
             if (!anySent) {
                 stateMutex.withLock {
                     if (nextObjectId == objectId + 1) nextObjectId = objectId

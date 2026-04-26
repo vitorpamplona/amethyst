@@ -76,6 +76,17 @@ import kotlin.coroutines.cancellation.CancellationException
  * [playerFactory] so commonMain doesn't have to know which platform's
  * MediaCodec / AudioTrack is in play. M1 wires Android-only — desktop
  * passes nothing here yet.
+ *
+ * **Threading contract:** all public methods (`connect`, `disconnect`,
+ * `updateSpeakers`, `setMuted`, `setMicMuted`, `startBroadcast`,
+ * `stopBroadcast`) MUST be called on the main thread. Internal mutation
+ * of `activeSubscriptions` / `speakingExpiryJobs` / `requestedSpeakers`
+ * is only thread-safe under that assumption — they're plain HashMaps
+ * confined to `viewModelScope`'s dispatcher (Dispatchers.Main.immediate
+ * on Android, which is the same dispatcher the MoQ flow's `onEach`
+ * callback runs on because the player launch lives in viewModelScope).
+ * If a future caller needs to invoke from a background thread, marshal
+ * via `viewModelScope.launch(Dispatchers.Main.immediate) { ... }` first.
  */
 @Stable
 class AudioRoomViewModel(
@@ -111,6 +122,12 @@ class AudioRoomViewModel(
     private var listener: NestsListener? = null
     private var connectJob: Job? = null
     private var stateObserverJob: Job? = null
+
+    // Last in-flight `listener.close()` launched by teardown(). A subsequent
+    // connect() awaits this before opening a fresh transport so two QUIC
+    // sessions (the closing old one and the opening new one) don't briefly
+    // coexist. Some servers dedupe by client pubkey and reject the new one.
+    private var pendingCloseJob: Job? = null
 
     private val activeSubscriptions = mutableMapOf<String, ActiveSubscription>()
     private val speakingExpiryJobs = mutableMapOf<String, Job>()
@@ -175,34 +192,7 @@ class AudioRoomViewModel(
             teardown(targetState = ConnectionUiState.Idle, finalCleanup = false)
         }
 
-        _uiState.update { it.copy(connection = ConnectionUiState.Connecting(ConnectionUiState.Step.ResolvingRoom)) }
-
-        connectJob =
-            viewModelScope.launch {
-                try {
-                    val l =
-                        connector.connect(
-                            httpClient = httpClient,
-                            transport = transport,
-                            scope = viewModelScope,
-                            serviceBase = serviceBase,
-                            roomId = roomId,
-                            signer = signer,
-                        )
-                    if (closed) {
-                        runCatching { l.close() }
-                        return@launch
-                    }
-                    listener = l
-                    observeListenerState(l)
-                } catch (ce: CancellationException) {
-                    throw ce
-                } catch (t: Throwable) {
-                    _uiState.update {
-                        it.copy(connection = ConnectionUiState.Failed(t.message ?: t::class.simpleName ?: "connect failed"))
-                    }
-                }
-            }
+        launchConnect(triggerRetryOnFailure = false)
     }
 
     fun setMuted(muted: Boolean) {
@@ -293,19 +283,22 @@ class AudioRoomViewModel(
         if (closed) return
         val handle = broadcastHandle ?: return
         viewModelScope.launch {
-            handle
-                .runCatching { setMuted(muted) }
-                .onSuccess {
-                    if (closed) return@onSuccess
-                    _uiState.update {
-                        val current = it.broadcast
-                        if (current is BroadcastUiState.Broadcasting) {
-                            it.copy(broadcast = current.copy(isMuted = muted))
-                        } else {
-                            it
-                        }
-                    }
+            val result = handle.runCatching { setMuted(muted) }
+            if (closed) return@launch
+            _uiState.update {
+                val current = it.broadcast
+                if (current !is BroadcastUiState.Broadcasting) return@update it
+                if (result.isSuccess) {
+                    it.copy(broadcast = current.copy(isMuted = muted, muteError = null))
+                } else {
+                    // Surface the failure so the UI can show a toast / inline
+                    // message instead of silently swallowing (audit round-2
+                    // VM #8b). We keep the broadcast running with the prior
+                    // mute state — only the mute toggle failed.
+                    val why = result.exceptionOrNull()?.message ?: "mute failed"
+                    it.copy(broadcast = current.copy(muteError = why))
                 }
+            }
         }
     }
 
@@ -462,12 +455,32 @@ class AudioRoomViewModel(
         if (closed) return
         val current = _uiState.value.connection
         if (current is ConnectionUiState.Connecting || current is ConnectionUiState.Connected) return
+        launchConnect(triggerRetryOnFailure = true)
+    }
 
+    /**
+     * Shared connect-launch body for [connect] (user-driven, no retry on
+     * failure) and [connectInternal] (auto-retry path, schedules another
+     * retry on failure). Awaits any in-flight `listener.close()` from a
+     * previous teardown so two QUIC sessions don't briefly coexist
+     * (audit round-2 VM #10), then runs the connector and observes the
+     * resulting listener.
+     */
+    private fun launchConnect(triggerRetryOnFailure: Boolean) {
         _uiState.update { it.copy(connection = ConnectionUiState.Connecting(ConnectionUiState.Step.ResolvingRoom)) }
+
+        val priorClose = pendingCloseJob
+        pendingCloseJob = null
 
         connectJob =
             viewModelScope.launch {
                 try {
+                    // Drain the previous listener's close before opening a
+                    // new transport. This is fast (< 100 ms typical: send
+                    // UNSUBSCRIBE / UNANNOUNCE / WT_CLOSE_SESSION + drain).
+                    if (priorClose?.isActive == true) {
+                        runCatching { priorClose.join() }
+                    }
                     val l =
                         connector.connect(
                             httpClient = httpClient,
@@ -489,7 +502,7 @@ class AudioRoomViewModel(
                     _uiState.update {
                         it.copy(connection = ConnectionUiState.Failed(t.message ?: t::class.simpleName ?: "connect failed"))
                     }
-                    scheduleAutoRetry()
+                    if (triggerRetryOnFailure) scheduleAutoRetry()
                 }
             }
     }
@@ -629,7 +642,11 @@ class AudioRoomViewModel(
             // before the QUIC transport drops. Same scope rule as the
             // player stop above: viewModelScope when alive, cleanupScope
             // for onCleared so the wire teardown survives.
-            scope.launch { runCatching { l.close() } }
+            // Track the close so the next connect() can await it (audit
+            // round-2 VM #10). If `finalCleanup` is true we don't bother
+            // — the VM is going away and no future connect() will run.
+            val closeLaunch = scope.launch { runCatching { l.close() } }
+            if (!finalCleanup) pendingCloseJob = closeLaunch
         }
         _uiState.update {
             it.copy(
@@ -787,6 +804,13 @@ sealed class BroadcastUiState {
 
     data class Broadcasting(
         val isMuted: Boolean,
+        /**
+         * Non-null when the most recent mute toggle failed (e.g. handle
+         * setMuted threw). UI surfaces this as an inline message; the
+         * broadcast itself stays running with the previous mute state.
+         * Cleared on the next successful mute toggle.
+         */
+        val muteError: String? = null,
     ) : BroadcastUiState()
 
     data class Failed(

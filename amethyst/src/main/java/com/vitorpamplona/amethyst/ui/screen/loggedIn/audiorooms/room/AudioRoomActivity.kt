@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
@@ -72,7 +73,7 @@ class AudioRoomActivity : AppCompatActivity() {
                         // and forwarded to the VM. Replaces an earlier
                         // process-wide singleton that could leak edges across
                         // activity instances.
-                        toggleMuteSignal.tryEmit(Unit)
+                        _toggleMuteSignal.tryEmit(Unit)
                     }
 
                     ACTION_PIP_LEAVE -> {
@@ -85,8 +86,12 @@ class AudioRoomActivity : AppCompatActivity() {
     private val _toggleMuteSignal =
         MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
-    /** Emitted when the PIP-overlay mute action is tapped. */
-    val toggleMuteSignal: MutableSharedFlow<Unit> get() = _toggleMuteSignal
+    /**
+     * Emitted when the PIP-overlay mute action is tapped. Read-only so
+     * external code can't tryEmit into it from outside the Activity
+     * (audit round-2 Android #2).
+     */
+    val toggleMuteSignal: SharedFlow<Unit> get() = _toggleMuteSignal.asSharedFlow()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,7 +149,7 @@ class AudioRoomActivity : AppCompatActivity() {
                         }
                     },
                     onConnectedChange = { isConnected.value = it },
-                    pipMuteSignal = toggleMuteSignal.asSharedFlow(),
+                    pipMuteSignal = toggleMuteSignal,
                     onLeave = { finish() },
                 )
             }
