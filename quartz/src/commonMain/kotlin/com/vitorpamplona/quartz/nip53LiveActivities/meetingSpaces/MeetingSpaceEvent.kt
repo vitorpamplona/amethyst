@@ -85,6 +85,14 @@ class MeetingSpaceEvent(
      */
     fun background() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.BackgroundTag::parse)
 
+    /**
+     * Scheduled start time as unix seconds, only meaningful when
+     * [status] is [StatusTag.STATUS.PLANNED]. Returns null on
+     * malformed or absent tag — the room-list renderer falls back
+     * to "live now" for status=OPEN/PRIVATE rooms.
+     */
+    fun starts() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StartsTag::parse)
+
     fun relays() = tags.mapNotNull(RelayListTag::parse).flatten()
 
     fun allRelayUrls() = tags.mapNotNull(RelayListTag::parse).flatten()

@@ -134,6 +134,13 @@ fun RenderMeetingSpaceEventInner(
                     MeetingSpaceClosedFlag()
                 }
 
+                MeetingSpaceStatusTag.STATUS.PLANNED -> {
+                    // Planned audio rooms reuse the "open" badge for
+                    // the v1 list; a future commit can render a
+                    // dedicated "Scheduled — starts at HH:MM" chip.
+                    MeetingSpaceOpenFlag()
+                }
+
                 null -> {}
             }
         }

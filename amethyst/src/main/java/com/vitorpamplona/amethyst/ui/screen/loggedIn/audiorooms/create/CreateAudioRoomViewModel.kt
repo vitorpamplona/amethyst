@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomAc
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.image
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.starts
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.summary
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
@@ -79,6 +80,16 @@ class CreateAudioRoomViewModel : ViewModel() {
     fun onImageUrlChange(value: String) = _state.update { it.copy(imageUrl = value.trim(), error = null) }
 
     /**
+     * Toggle scheduled-vs-now mode. When [scheduled] is true the
+     * sheet shows a date / time picker and the published event uses
+     * `status=PLANNED` + `["starts", <unix>]`. When false, the
+     * existing `status=OPEN` "live now" path runs.
+     */
+    fun onScheduledToggle(scheduled: Boolean) = _state.update { it.copy(scheduled = scheduled, error = null) }
+
+    fun onScheduledStartChange(unixSeconds: Long) = _state.update { it.copy(scheduledStartUnix = unixSeconds, error = null) }
+
+    /**
      * Build the kind-30312 event, sign + broadcast it, and return the
      * launch info the sheet needs to start [AudioRoomActivity]. Returns
      * null on validation or network failure (with [FormState.error]
@@ -106,17 +117,26 @@ class CreateAudioRoomViewModel : ViewModel() {
             return null
         }
 
+        if (current.scheduled && current.scheduledStartUnix <= 0L) {
+            _state.update { it.copy(error = "Pick a start time for the scheduled room.") }
+            return null
+        }
+
         _state.update { it.copy(isPublishing = true, error = null) }
         val accountModel = account.account
         val hostPubkey = accountModel.userProfile().pubkeyHex
+        val targetStatus = if (current.scheduled) StatusTag.STATUS.PLANNED else StatusTag.STATUS.OPEN
         val template =
             MeetingSpaceEvent.build(
                 room = current.roomName.trim(),
-                status = StatusTag.STATUS.OPEN,
+                status = targetStatus,
                 service = service,
                 host = ParticipantTag(hostPubkey, null, ROLE.HOST.code, null),
             ) {
                 endpoint(endpoint)
+                if (current.scheduled) {
+                    starts(current.scheduledStartUnix)
+                }
                 current.summary
                     .trim()
                     .takeIf { it.isNotBlank() }
@@ -161,9 +181,17 @@ class CreateAudioRoomViewModel : ViewModel() {
         val imageUrl: String,
         val isPublishing: Boolean,
         val error: String?,
+        /** When true, publish as `status=PLANNED` + `["starts", <unix>]`. */
+        val scheduled: Boolean = false,
+        /** Unix seconds of the scheduled start; 0 = not yet picked. */
+        val scheduledStartUnix: Long = 0L,
     ) {
         val canSubmit: Boolean
-            get() = roomName.isNotBlank() && serviceUrl.isNotBlank() && endpointUrl.isNotBlank()
+            get() =
+                roomName.isNotBlank() &&
+                    serviceUrl.isNotBlank() &&
+                    endpointUrl.isNotBlank() &&
+                    (!scheduled || scheduledStartUnix > 0L)
 
         companion object {
             fun defaults() =

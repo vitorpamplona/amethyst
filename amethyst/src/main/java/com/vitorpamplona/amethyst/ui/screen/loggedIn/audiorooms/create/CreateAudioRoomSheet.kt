@@ -43,8 +43,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -143,6 +145,27 @@ fun CreateAudioRoomSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            // Schedule toggle + start-time picker. Hidden picker when
+            // toggled off so a "Start now" room doesn't waste vertical
+            // space on a date row that isn't relevant.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.Switch(
+                    checked = state.scheduled,
+                    onCheckedChange = viewModel::onScheduledToggle,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringRes(R.string.audio_room_create_schedule_toggle))
+            }
+            if (state.scheduled) {
+                ScheduleStartPicker(
+                    unixSeconds = state.scheduledStartUnix,
+                    onChange = viewModel::onScheduledStartChange,
+                )
+            }
+
             state.error?.let { error ->
                 Text(
                     text = error,
@@ -193,6 +216,62 @@ fun CreateAudioRoomSheet(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Schedule-start picker. Shows the currently-selected start time
+ * as a chip; tapping it opens a Material3 DatePickerDialog. Time
+ * defaults to 00:00 of the selected date — finer granularity is a
+ * follow-up (Material3's TimePicker is a separate dialog and
+ * stitching the two needs an extra state machine).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScheduleStartPicker(
+    unixSeconds: Long,
+    onChange: (Long) -> Unit,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val pretty =
+        if (unixSeconds <= 0L) {
+            stringRes(R.string.audio_room_create_when)
+        } else {
+            val instant = java.util.Date(unixSeconds * 1000L)
+            java.text.DateFormat
+                .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                .format(instant)
+        }
+    androidx.compose.material3.OutlinedButton(
+        onClick = { showDialog = true },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(pretty)
+    }
+    if (showDialog) {
+        val initial = if (unixSeconds > 0L) unixSeconds * 1000L else System.currentTimeMillis()
+        val datePickerState =
+            androidx.compose.material3.rememberDatePickerState(
+                initialSelectedDateMillis = initial,
+            )
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { onChange(it / 1000L) }
+                    showDialog = false
+                }) {
+                    Text(stringRes(R.string.audio_room_create_submit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(stringRes(R.string.audio_room_create_cancel))
+                }
+            },
+        ) {
+            androidx.compose.material3.DatePicker(state = datePickerState)
         }
     }
 }

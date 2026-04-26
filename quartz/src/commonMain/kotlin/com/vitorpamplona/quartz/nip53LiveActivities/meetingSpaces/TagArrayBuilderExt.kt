@@ -47,6 +47,12 @@ fun TagArrayBuilder<MeetingSpaceEvent>.service(url: String) = addUnique(ServiceU
 
 fun TagArrayBuilder<MeetingSpaceEvent>.endpoint(url: String) = addUnique(EndpointUrlTag.assemble(url))
 
+fun TagArrayBuilder<MeetingSpaceEvent>.starts(unixSeconds: Long) =
+    addUnique(
+        com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StartsTag
+            .assemble(unixSeconds),
+    )
+
 fun TagArrayBuilder<MeetingSpaceEvent>.relays(urls: List<NormalizedRelayUrl>) = addUnique(RelayListTag.assemble(urls))
 
 fun TagArrayBuilder<MeetingSpaceEvent>.participant(

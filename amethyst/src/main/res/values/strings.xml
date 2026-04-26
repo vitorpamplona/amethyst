@@ -556,6 +556,8 @@
     <string name="audio_room_create_field_image">Cover image URL (optional)</string>
     <string name="audio_room_create_cancel">Cancel</string>
     <string name="audio_room_create_submit">Start space</string>
+    <string name="audio_room_create_schedule_toggle">Schedule for later</string>
+    <string name="audio_room_create_when">Pick a start time</string>
     <string name="nests_servers_title">Audio-room servers</string>
     <string name="nests_servers_explainer">Choose which MoQ host servers Amethyst publishes your audio rooms to. The first entry is used by default when you start a new space.</string>
     <string name="nests_servers_my_section">Your servers</string>

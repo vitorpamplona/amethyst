@@ -23,48 +23,28 @@ package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
-class StatusTag {
-    enum class STATUS(
-        val code: String,
-    ) {
-        /** Scheduled in the future — host hasn't started the room yet. Pairs with a `["starts", <unix>]` tag. */
-        PLANNED("planned"),
-        OPEN("open"),
-        PRIVATE("private"),
-        CLOSED("closed"),
-        ;
-
-        fun toTagArray() = assemble(this)
-
-        companion object {
-            fun parse(code: String): STATUS? =
-                when (code) {
-                    PLANNED.code -> PLANNED
-                    OPEN.code -> OPEN
-                    PRIVATE.code -> PRIVATE
-                    CLOSED.code -> CLOSED
-                    else -> null
-                }
-        }
-    }
-
+/**
+ * `["starts", "<unix-seconds>"]` on a kind-30312 audio-room event
+ * with [StatusTag.STATUS.PLANNED]. Tells subscribers when the host
+ * intends to start the room. nostrnests' room-list uses it to sort
+ * upcoming rooms ahead of live ones.
+ *
+ * Strict numeric parser — non-numeric values return null so a
+ * malformed tag can't crash the room-list renderer.
+ */
+class StartsTag {
     companion object {
-        const val TAG_NAME = "status"
+        const val TAG_NAME = "starts"
 
-        fun parse(tag: Array<String>): String? {
+        fun parse(tag: Array<String>): Long? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
+            return tag[1].toLongOrNull()
         }
 
-        fun parseEnum(tag: Array<String>): STATUS? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return STATUS.parse(tag[1])
+        fun assemble(unixSeconds: Long): Array<String> {
+            require(unixSeconds >= 0) { "starts: unix seconds must be non-negative, got $unixSeconds" }
+            return arrayOf(TAG_NAME, unixSeconds.toString())
         }
-
-        fun assemble(status: STATUS) = arrayOf(TAG_NAME, status.code)
     }
 }
