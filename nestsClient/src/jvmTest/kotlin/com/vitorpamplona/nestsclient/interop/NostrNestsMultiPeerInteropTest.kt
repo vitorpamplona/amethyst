@@ -29,6 +29,7 @@ import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.connectNestsListener
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
 import com.vitorpamplona.nestsclient.moq.MoqObject
+import com.vitorpamplona.nestsclient.moq.MoqProtocolException
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -65,9 +66,12 @@ import kotlin.test.fail
  *   - **Multi-speaker** — 2 speakers under the same room; one listener
  *     subscribes to each by pubkey hex; both subscriptions deliver
  *     their respective speaker's frames with no cross-talk.
- *   - **Subscribe-before-announce** — listener subscribes before the
- *     speaker has announced; per moq-rs the relay holds the subscribe
- *     and resolves it once a publisher arrives.
+ *   - **Subscribe-before-announce** — listener subscribes to a
+ *     pubkey that has not yet announced. moq-lite-03's relay rejects
+ *     immediately with `not found` instead of holding the subscribe
+ *     pending an announce (older moq-rs queued; Lite-03 doesn't).
+ *     This test pins that contract — flipping the assertion vs the
+ *     pre-Lite-03 behaviour where pending subscribes resolved later.
  *
  * Skipped by default — set `-DnestsInterop=true` to enable.
  */
@@ -266,60 +270,63 @@ class NostrNestsMultiPeerInteropTest {
         }
 
     @Test
-    fun listener_subscribed_before_announce_receives_late_frames() =
+    fun subscribe_before_announce_fails_with_not_found() =
         runBlocking {
             NostrNestsHarness.assumeNestsInterop()
             val harness = harnessOrNull ?: return@runBlocking
 
-            // The relay holds the SUBSCRIBE open until a publisher
-            // announces. Validates moq-rs's "subscribe before announce"
-            // contract end-to-end through our client.
+            // moq-lite-03 contract: a SUBSCRIBE to a not-yet-announced
+            // broadcast is rejected immediately rather than held pending
+            // an announce. The relay logs `subscribed error err=not found`
+            // and FINs the subscribe bidi; our session reader surfaces
+            // that as a MoqProtocolException with "FIN before reply".
+            //
+            // Older moq-rs variants queued such subscribes and resolved
+            // them once a publisher appeared; this test pins the new
+            // contract so a future regression to the queueing behaviour
+            // (or a different reject semantic — e.g. a SubscribeDrop
+            // reply) shows up here.
             val speakerSigner = NostrSignerInternal(KeyPair())
             val listenerSigner = NostrSignerInternal(KeyPair())
             val room = freshRoom(harness, hostPubkey = speakerSigner.pubKey)
 
             val supervisor = SupervisorJob()
             val pumpScope = CoroutineScope(supervisor + Dispatchers.IO)
-            val capture = DriverCapture()
 
             val scope = "presub"
-            InteropDebug.checkpoint(scope, "room=${room.moqNamespace()} speaker=${speakerSigner.pubKey.take(8)}")
+            InteropDebug.checkpoint(scope, "room=${room.moqNamespace()} speaker=${speakerSigner.pubKey.take(8)} (never announces)")
 
             try {
                 val listener = connectListener(pumpScope, room, listenerSigner, debugScope = "$scope/listener")
-                val sub =
-                    InteropDebug.stepSuspending("$scope/listener", "subscribeSpeaker(${speakerSigner.pubKey.take(8)})") {
-                        listener.subscribeSpeaker(speakerSigner.pubKey)
+                val rejection =
+                    InteropDebug.stepSuspending("$scope/listener", "subscribeSpeaker(${speakerSigner.pubKey.take(8)}) — expect rejection") {
+                        runCatching { listener.subscribeSpeaker(speakerSigner.pubKey) }.exceptionOrNull()
                     }
-                val collected = collectFrames(pumpScope, sub, FRAMES_PRESUB)
-
-                // Wait briefly so the SUBSCRIBE is on the relay before
-                // the publisher arrives — the relay should hold it.
-                delay(SUBSCRIBE_SETTLE_MS)
-                InteropDebug.checkpoint(scope, "subscribe settled — bringing speaker up now")
-
-                val speaker = connectSpeaker(pumpScope, room, speakerSigner, capture, debugScope = "$scope/speaker")
-                InteropDebug.stepSuspending("$scope/speaker", "startBroadcasting") { speaker.startBroadcasting() }
-                InteropDebug.assertSpeakerReached("$scope/speaker", "Broadcasting", speaker.state.value)
-
-                // Give the announce + publisher-side subscribe matchup
-                // time to plumb before pushing frames.
-                delay(SUBSCRIBE_SETTLE_MS)
-                InteropDebug.checkpoint(scope, "pushing $FRAMES_PRESUB frames into capture")
-                for (i in 0 until FRAMES_PRESUB) {
-                    capture.push(shortArrayOf(i.toShort()))
-                    delay(FRAME_SPACING_MS)
+                if (rejection == null) {
+                    fail("[$scope] expected MoqProtocolException for subscribe to never-announced broadcast, got success")
+                }
+                InteropDebug.checkpoint(scope, "rejection=${InteropDebug.describe(rejection)}")
+                if (rejection !is MoqProtocolException) {
+                    fail(
+                        "[$scope] expected MoqProtocolException for subscribe to never-announced broadcast, got " +
+                            InteropDebug.describe(rejection),
+                    )
+                }
+                // moq-relay 0.10.x signals "broadcast does not exist"
+                // by FIN'ing the subscribe bidi without writing a
+                // SubscribeDrop body. Our reader translates that into
+                // "subscribe stream FIN before reply for id=...".
+                // If a future relay version starts sending an explicit
+                // SubscribeDrop with reason="not found", the message
+                // would change — accept either form.
+                val msg = rejection.message ?: ""
+                val accepted = msg.contains("FIN before reply") || msg.contains("not found")
+                if (!accepted) {
+                    fail("[$scope] unexpected rejection message: $msg")
                 }
 
-                InteropDebug.stepSuspending(scope, "await pre-subscribed listener frames") {
-                    assertFrameSequence(collected.await(), FRAMES_PRESUB, "$scope/listener")
-                }
-
-                runCatching { sub.unsubscribe() }
                 runCatching { listener.close() }
-                runCatching { speaker.close() }
             } finally {
-                capture.stop()
                 supervisor.cancelAndJoin()
             }
             Unit
