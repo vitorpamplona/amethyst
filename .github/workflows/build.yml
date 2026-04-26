@@ -68,6 +68,16 @@ jobs:
       - name: Test + Build Desktop (gradle)
         run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }} --no-daemon
 
+      # jpackage pins libicu to the build host's version (libicu74 on
+      # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
+      # releases can install the uploaded artifact.
+      - name: Relax libicu dependency in .deb
+        if: matrix.desktop-task == 'packageDeb'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main/deb/*.deb
+
       - name: Upload Desktop Distribution
         uses: actions/upload-artifact@v7
         with:
