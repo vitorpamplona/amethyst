@@ -50,6 +50,45 @@ class MeetingRoomPresenceEventTest {
     }
 
     @Test
+    fun parsesPublishingAndOnstageTags() {
+        val event =
+            MeetingRoomPresenceEvent(
+                id = "0".repeat(64),
+                pubKey = participant,
+                createdAt = 1_700_000_000L,
+                tags =
+                    arrayOf(
+                        arrayOf("a", "30312:${"b".repeat(64)}:room"),
+                        arrayOf("hand", "0"),
+                        arrayOf("muted", "1"),
+                        arrayOf("publishing", "1"),
+                        arrayOf("onstage", "1"),
+                    ),
+                content = "",
+                sig = "0".repeat(128),
+            )
+        assertEquals(false, event.handRaised())
+        assertEquals(true, event.muted())
+        assertEquals(true, event.publishing())
+        assertEquals(true, event.onstage())
+    }
+
+    @Test
+    fun missingPublishingAndOnstageTagsReturnNull() {
+        val event =
+            MeetingRoomPresenceEvent(
+                id = "0".repeat(64),
+                pubKey = participant,
+                createdAt = 1_700_000_000L,
+                tags = arrayOf(arrayOf("a", "30312:${"b".repeat(64)}:room")),
+                content = "",
+                sig = "0".repeat(128),
+            )
+        assertEquals(null, event.publishing())
+        assertEquals(null, event.onstage())
+    }
+
+    @Test
     fun createAddressKeysByPubKeyOnly() {
         val a = MeetingRoomPresenceEvent.createAddress(participant)
         assertEquals(MeetingRoomPresenceEvent.KIND, a.kind)
