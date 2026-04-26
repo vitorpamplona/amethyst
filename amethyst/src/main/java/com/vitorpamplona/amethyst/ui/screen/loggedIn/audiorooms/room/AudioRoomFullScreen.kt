@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -98,6 +99,25 @@ internal fun AudioRoomFullScreen(
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+
+        // Listener counter — counts every active kind-10312 presence
+        // in the room. Hidden until the aggregator has at least one
+        // entry so the placeholder doesn't flash on entry.
+        val presences by viewModel.presences.collectAsState()
+        val listenerCount = presences.size
+        if (listenerCount > 0) {
+            Text(
+                text =
+                    androidx.compose.ui.res.pluralStringResource(
+                        R.plurals.audio_room_listener_count,
+                        listenerCount,
+                        listenerCount,
+                    ),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )

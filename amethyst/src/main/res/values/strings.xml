@@ -521,6 +521,10 @@
     <string name="audio_room_notification_stop">Stop</string>
     <string name="audio_room_join">Join audio room</string>
     <string name="audio_room_leave">Leave</string>
+    <plurals name="audio_room_listener_count">
+        <item quantity="one">%1$d listener</item>
+        <item quantity="other">%1$d listeners</item>
+    </plurals>
     <string name="audio_room_create_fab">Start space</string>
     <string name="audio_room_create_title">Start a new audio room</string>
     <string name="audio_room_create_field_room">Room name</string>
