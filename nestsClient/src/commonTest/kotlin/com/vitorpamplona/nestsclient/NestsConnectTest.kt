@@ -79,8 +79,12 @@ class NestsConnectTest {
             assertEquals(MoqVersion.DRAFT_17, connected.negotiatedMoqVersion)
 
             assertEquals("relay.example.com", transport.lastConnectedAuthority)
-            assertEquals("/moq", transport.lastConnectedPath)
-            assertEquals("tok-abc", transport.lastBearer)
+            assertEquals(
+                "/${room.moqNamespace()}?jwt=tok-abc",
+                transport.lastConnectedPath,
+                "moq-rs treats the WT path as the namespace literal and reads the JWT from `?jwt=`",
+            )
+            assertEquals(null, transport.lastBearer, "JWT goes in the query param, not Authorization")
 
             assertEquals(false, httpClient.lastPublishFlag, "listener mints with publish=false")
 

@@ -80,7 +80,7 @@ suspend fun connectNestsListener(
 
     val (authority, path) =
         try {
-            parseEndpoint(room.endpoint)
+            buildRelayConnectTarget(room.endpoint, room.moqNamespace(), token)
         } catch (t: Throwable) {
             state.value =
                 NestsListenerState.Failed(
@@ -92,7 +92,9 @@ suspend fun connectNestsListener(
 
     val webTransport =
         try {
-            transport.connect(authority = authority, path = path, bearerToken = token)
+            // moq-rs reads the JWT from the `?jwt=` query parameter and
+            // ignores the Authorization header — bearer must be null here.
+            transport.connect(authority = authority, path = path, bearerToken = null)
         } catch (t: WebTransportException) {
             state.value =
                 NestsListenerState.Failed(
@@ -191,7 +193,7 @@ suspend fun connectNestsSpeaker(
 
     val (authority, path) =
         try {
-            parseEndpoint(room.endpoint)
+            buildRelayConnectTarget(room.endpoint, room.moqNamespace(), token)
         } catch (t: Throwable) {
             state.value =
                 NestsSpeakerState.Failed(
@@ -203,7 +205,9 @@ suspend fun connectNestsSpeaker(
 
     val webTransport =
         try {
-            transport.connect(authority = authority, path = path, bearerToken = token)
+            // moq-rs reads the JWT from the `?jwt=` query parameter and
+            // ignores the Authorization header — bearer must be null here.
+            transport.connect(authority = authority, path = path, bearerToken = null)
         } catch (t: WebTransportException) {
             state.value =
                 NestsSpeakerState.Failed(
@@ -257,6 +261,32 @@ private fun failedSpeaker(state: MutableStateFlow<NestsSpeakerState>): NestsSpea
             }
         }
     }
+
+/**
+ * Build the WebTransport connect target for a nests room.
+ *
+ *   - **Authority** comes from the kind-30312 `endpoint` URL (host + port).
+ *   - **Path** is `/<moqNamespace>?jwt=<token>`. The JS reference client
+ *     overwrites `relayUrl.pathname` with the namespace literal — moq-rs
+ *     compares this path to `claims.root` for ANNOUNCE / SUBSCRIBE
+ *     authorisation, so any other path on the relay returns
+ *     `401 IncorrectRoot`.
+ *   - **Token** is delivered as the `?jwt=` query parameter (NOT an
+ *     `Authorization` header — moq-rs only reads the query param). Per the
+ *     ES256 JWT alphabet (base64url `[A-Za-z0-9_-]` + `.`) the token never
+ *     contains characters reserved in a query string, so no encoding is
+ *     applied. The path itself contains `:` and `/`, both legal in
+ *     `pchar` per RFC 3986.
+ */
+internal fun buildRelayConnectTarget(
+    endpoint: String,
+    namespace: String,
+    token: String,
+): Pair<String, String> {
+    val (authority, _) = parseEndpoint(endpoint)
+    val path = "/" + namespace + "?jwt=" + token
+    return authority to path
+}
 
 /**
  * Split a typical nests endpoint URL such as `https://relay.example.com/moq`

@@ -106,10 +106,12 @@ class NostrNestsHarness private constructor(
             return NostrNestsHarness(
                 workDir = workDir,
                 authBaseUrl = "http://127.0.0.1:$AUTH_HOST_PORT",
-                // The moq-relay terminates TLS — we use a permissive
-                // certificate validator on the QuicWebTransportFactory in
-                // tests. Path is `/anon` per the relay's default WT route.
-                moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/anon",
+                // moq-rs terminates TLS with a self-signed cert in dev —
+                // production tests pair this with PermissiveCertificateValidator.
+                // The path under this base is the namespace literal (per
+                // moq-rs `claims.root` matching); the `:nestsClient` connect
+                // helpers append `/<namespace>?jwt=<token>` themselves.
+                moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/",
             )
         }
 
