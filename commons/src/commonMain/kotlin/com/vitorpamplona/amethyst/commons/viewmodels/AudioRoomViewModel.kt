@@ -906,6 +906,15 @@ private fun NestsListenerState.toUiState(previous: ConnectionUiState): Connectio
             ConnectionUiState.Connected
         }
 
+        is NestsListenerState.Reconnecting -> {
+            // Reconnect is conceptually a "we're connecting again";
+            // surface it under the same UI bucket as the initial
+            // OpeningTransport step so the existing chip/spinner
+            // works without UI changes. A future commit can add a
+            // dedicated UI state for "Attempt N in Mms".
+            ConnectionUiState.Connecting(step = ConnectionUiState.Step.OpeningTransport)
+        }
+
         is NestsListenerState.Failed -> {
             ConnectionUiState.Failed(reason)
         }

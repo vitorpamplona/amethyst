@@ -89,6 +89,21 @@ sealed class NestsListenerState {
         val negotiatedMoqVersion: Long,
     ) : NestsListenerState()
 
+    /**
+     * The previous session dropped and the reconnect orchestrator
+     * is waiting [delayMs] before trying again. [attempt] is
+     * 1-indexed (1 = first retry after the original session
+     * failed). UI shows a "Reconnecting…" chip; the session does
+     * NOT retry while the listener stays in this state — the
+     * orchestrator transitions through [Connecting] for the next
+     * attempt and back to [Failed] / [Connected] once the open
+     * call resolves.
+     */
+    data class Reconnecting(
+        val attempt: Int,
+        val delayMs: Long,
+    ) : NestsListenerState()
+
     /** A connect attempt or live session failed. UI shows [reason] to the user. */
     data class Failed(
         val reason: String,

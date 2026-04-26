@@ -106,6 +106,17 @@ sealed class NestsSpeakerState {
         val isMuted: Boolean,
     ) : NestsSpeakerState()
 
+    /**
+     * The previous session dropped and the reconnect orchestrator
+     * is waiting [delayMs] before trying again. Mirror of
+     * [NestsListenerState.Reconnecting]; see that class's KDoc for
+     * the state-machine contract.
+     */
+    data class Reconnecting(
+        val attempt: Int,
+        val delayMs: Long,
+    ) : NestsSpeakerState()
+
     data class Failed(
         val reason: String,
         val cause: Throwable? = null,
