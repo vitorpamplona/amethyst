@@ -61,8 +61,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -82,7 +80,6 @@ internal fun AudioRoomFullScreen(
     event: MeetingSpaceEvent,
     roomNote: com.vitorpamplona.amethyst.model.AddressableNote,
     onStage: List<ParticipantTag>,
-    audience: List<ParticipantTag>,
     viewModel: AudioRoomViewModel,
     ui: AudioRoomUiState,
     accountViewModel: AccountViewModel,
@@ -191,27 +188,26 @@ internal fun AudioRoomFullScreen(
             val onLongPressParticipant: ((String) -> Unit) = { target ->
                 if (target != accountViewModel.account.signer.pubKey) hostMenuTarget = target
             }
-            if (onStage.isNotEmpty()) {
-                StagePeopleRow(
-                    label = stringRes(R.string.audio_room_stage),
-                    people = onStage,
-                    avatarSize = Size40dp,
-                    speakingNow = ui.speakingNow,
-                    accountViewModel = accountViewModel,
-                    reactionsByPubkey = reactionsByPubkey,
-                    onLongPressParticipant = onLongPressParticipant,
-                )
-            }
-            if (audience.isNotEmpty()) {
-                StagePeopleRow(
-                    label = stringRes(R.string.audio_room_audience),
-                    people = audience,
-                    avatarSize = Size35dp,
-                    speakingNow = kotlinx.collections.immutable.persistentSetOf(),
-                    accountViewModel = accountViewModel,
-                    onLongPressParticipant = onLongPressParticipant,
-                )
-            }
+            // Tier-2 #1: replace the two LazyRow sections with a single
+            // pure-projection ParticipantGrid. The `absent` flag (member
+            // promoted in the kind-30312 but never emitted a kind-10312)
+            // greys out at 50 % alpha, matching nostrnests' web client.
+            val participantGrid =
+                androidx.compose.runtime.remember(event, presences) {
+                    com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid(
+                        participants = event.participants(),
+                        presences = presences,
+                    )
+                }
+            ParticipantsGrid(
+                grid = participantGrid,
+                speakingNow = ui.speakingNow,
+                accountViewModel = accountViewModel,
+                onStageLabel = stringRes(R.string.audio_room_stage),
+                audienceLabel = stringRes(R.string.audio_room_audience),
+                reactionsByPubkey = reactionsByPubkey,
+                onLongPressParticipant = onLongPressParticipant,
+            )
             hostMenuTarget?.let { target ->
                 ParticipantHostActionsSheet(
                     target = target,

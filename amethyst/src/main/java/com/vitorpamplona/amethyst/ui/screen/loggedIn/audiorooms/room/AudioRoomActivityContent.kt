@@ -117,13 +117,10 @@ private fun AudioRoomActivityBody(
     val participants = remember(event) { event.participants() }
     val hosts = remember(participants) { participants.filter { it.role.equals(ROLE.HOST.code, true) } }
     val speakers = remember(participants) { participants.filter { it.role.equals(ROLE.SPEAKER.code, true) } }
-    val audience =
-        remember(participants) {
-            participants.filter {
-                !it.role.equals(ROLE.HOST.code, true) &&
-                    !it.role.equals(ROLE.SPEAKER.code, true)
-            }
-        }
+    // The grid renderer derives audience from `event.participants()` +
+    // the kind-10312 presence aggregator (see ParticipantsGrid /
+    // buildParticipantGrid). This composable only needs the on-stage
+    // subset for the talk-row gate + PIP renderer.
     val onStage = remember(hosts, speakers) { hosts + speakers }
     val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
 
@@ -350,7 +347,6 @@ private fun AudioRoomActivityBody(
             event = event,
             roomNote = roomNote,
             onStage = onStage,
-            audience = audience,
             viewModel = viewModel,
             ui = ui,
             accountViewModel = accountViewModel,
