@@ -215,6 +215,59 @@ class AudioRoomViewModelTest {
         }
 
     @Test
+    fun onChatEventAccumulatesMessagesSortedByCreatedAt() =
+        runTest {
+            val vm = newViewModel { FakeNestsListener() }
+            val alice = "a".repeat(64)
+
+            fun chat(
+                id: String,
+                createdAt: Long,
+                body: String,
+            ) = com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent(
+                id = id,
+                pubKey = alice,
+                createdAt = createdAt,
+                tags = arrayOf(arrayOf("a", "30312:host:room")),
+                content = body,
+                sig = "0".repeat(128),
+            )
+
+            // Out-of-order arrival on the relay must still produce a
+            // chronological transcript on screen.
+            vm.onChatEvent(chat(id = "1".repeat(64), createdAt = 200L, body = "second"))
+            vm.onChatEvent(chat(id = "2".repeat(64), createdAt = 100L, body = "first"))
+
+            val messages = vm.chat.value
+            assertEquals(2, messages.size)
+            assertEquals("first", messages[0].content)
+            assertEquals("second", messages[1].content)
+        }
+
+    @Test
+    fun onChatEventDedupesByEventId() =
+        runTest {
+            val vm = newViewModel { FakeNestsListener() }
+            val alice = "a".repeat(64)
+            val msg =
+                com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent(
+                    id = "1".repeat(64),
+                    pubKey = alice,
+                    createdAt = 100L,
+                    tags = arrayOf(arrayOf("a", "30312:host:room")),
+                    content = "hello",
+                    sig = "0".repeat(128),
+                )
+
+            // Same id re-emitted by the relay on reconnect must not
+            // produce a duplicate row.
+            vm.onChatEvent(msg)
+            vm.onChatEvent(msg)
+
+            assertEquals(1, vm.chat.value.size)
+        }
+
+    @Test
     fun publishingNowDerivesFromBroadcastStateAndMute() {
         // Idle / connecting / failed: never publishing.
         assertFalse(AudioRoomUiState().publishingNow)

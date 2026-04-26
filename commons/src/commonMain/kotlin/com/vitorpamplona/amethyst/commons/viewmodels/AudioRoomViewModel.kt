@@ -134,6 +134,21 @@ class AudioRoomViewModel(
     private val _presences = MutableStateFlow<Map<String, RoomPresence>>(emptyMap())
     val presences: StateFlow<Map<String, RoomPresence>> = _presences.asStateFlow()
 
+    /**
+     * Chat ledger for the live-activities chat panel (#1) — every
+     * kind-1311 ([com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent])
+     * tagged with this room's `a`-pointer, ordered by `created_at`
+     * ascending so the newest message is at the end (the panel
+     * auto-scrolls to it).
+     *
+     * Dedupes by event id — a relay re-emit on reconnect can't
+     * produce a duplicate row.
+     */
+    private val chatById = LinkedHashMap<String, com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent>()
+    private val _chat =
+        MutableStateFlow<List<com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent>>(emptyList())
+    val chat: StateFlow<List<com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent>> = _chat.asStateFlow()
+
     private var listener: NestsListener? = null
     private var connectJob: Job? = null
     private var stateObserverJob: Job? = null
@@ -249,6 +264,19 @@ class AudioRoomViewModel(
     fun evictStalePresences(olderThanSec: Long) {
         if (closed) return
         _presences.value = presenceAgg.evictOlderThan(olderThanSec)
+    }
+
+    /**
+     * Apply one kind-1311 chat event to the room ledger. The platform
+     * layer is the source — it filters by `a`-tag matching the current
+     * room before invoking this. Same-id re-emits are deduped; the
+     * resulting list is sorted by `created_at` ascending.
+     */
+    fun onChatEvent(event: com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent) {
+        if (closed) return
+        if (chatById.containsKey(event.id)) return
+        chatById[event.id] = event
+        _chat.value = chatById.values.sortedBy { it.createdAt }
     }
 
     /**
