@@ -28,6 +28,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import androidx.activity.compose.setContent
@@ -35,6 +36,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Standalone activity that owns the lifetime of an audio-room session. The
@@ -54,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 class AudioRoomActivity : AppCompatActivity() {
     private val isInPipMode = mutableStateOf(false)
     private val isMuted = mutableStateOf(false)
+    private val isConnected = mutableStateOf(false)
 
     private val pipReceiver =
         object : BroadcastReceiver() {
@@ -63,10 +68,11 @@ class AudioRoomActivity : AppCompatActivity() {
             ) {
                 when (intent.action) {
                     ACTION_PIP_TOGGLE_MUTE -> {
-                        // The composable owns the VM; the easiest signal is a
-                        // shared static the content layer will pick up via
-                        // its mute state observer.
-                        AudioRoomPipActions.toggleMuteRequested.value = !AudioRoomPipActions.toggleMuteRequested.value
+                        // Per-Activity SharedFlow — observed by the composable
+                        // and forwarded to the VM. Replaces an earlier
+                        // process-wide singleton that could leak edges across
+                        // activity instances.
+                        toggleMuteSignal.tryEmit(Unit)
                     }
 
                     ACTION_PIP_LEAVE -> {
@@ -75,6 +81,12 @@ class AudioRoomActivity : AppCompatActivity() {
                 }
             }
         }
+
+    private val _toggleMuteSignal =
+        MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /** Emitted when the PIP-overlay mute action is tapped. */
+    val toggleMuteSignal: MutableSharedFlow<Unit> get() = _toggleMuteSignal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,14 +100,21 @@ class AudioRoomActivity : AppCompatActivity() {
             return
         }
 
-        registerReceiver(
-            pipReceiver,
+        val filter =
             IntentFilter().apply {
                 addAction(ACTION_PIP_TOGGLE_MUTE)
                 addAction(ACTION_PIP_LEAVE)
-            },
-            RECEIVER_NOT_EXPORTED,
-        )
+            }
+        // RECEIVER_NOT_EXPORTED requires API 33+. The PendingIntents that
+        // fire these actions all use setPackage(packageName) so the
+        // visibility risk on older devices is bounded; pre-33 we register
+        // without the flag.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(pipReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(pipReceiver, filter)
+        }
 
         setContent {
             AmethystTheme {
@@ -111,6 +130,8 @@ class AudioRoomActivity : AppCompatActivity() {
                             updatePipParams()
                         }
                     },
+                    onConnectedChange = { isConnected.value = it },
+                    pipMuteSignal = toggleMuteSignal.asSharedFlow(),
                     onLeave = { finish() },
                 )
             }
@@ -119,6 +140,11 @@ class AudioRoomActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        // PIP only makes sense once the audio session is live; entering
+        // PIP from the lobby/Connecting state would freeze a half-rendered
+        // card in Recents. Also gates on the system supporting PIP.
+        if (!isConnected.value) return
+        if (!packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) return
         runCatching { enterPictureInPictureMode(buildPipParams()) }
     }
 
@@ -197,17 +223,4 @@ class AudioRoomActivity : AppCompatActivity() {
             )
         }
     }
-}
-
-/**
- * Cross-talk between the PIP system buttons (which arrive as broadcast
- * intents in the Activity) and the composable that owns the VM. The
- * Activity flips `toggleMuteRequested`; a `LaunchedEffect` in the
- * composable observes it and forwards the toggle to the VM.
- *
- * Lives at file scope so the composable can see it without cross-package
- * visibility shenanigans.
- */
-internal object AudioRoomPipActions {
-    val toggleMuteRequested = mutableStateOf(false)
 }

@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresence
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -64,6 +65,8 @@ internal fun AudioRoomActivityContent(
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
     onMuteState: (Boolean) -> Unit,
+    onConnectedChange: (Boolean) -> Unit,
+    pipMuteSignal: SharedFlow<Unit>,
     onLeave: () -> Unit,
 ) {
     val parsedAddress = remember(addressValue) { Address.parse(addressValue) }
@@ -84,6 +87,8 @@ internal fun AudioRoomActivityContent(
             accountViewModel = accountViewModel,
             isInPipMode = isInPipMode,
             onMuteState = onMuteState,
+            onConnectedChange = onConnectedChange,
+            pipMuteSignal = pipMuteSignal,
             onLeave = onLeave,
         )
     }
@@ -97,6 +102,8 @@ private fun AudioRoomActivityBody(
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
     onMuteState: (Boolean) -> Unit,
+    onConnectedChange: (Boolean) -> Unit,
+    pipMuteSignal: SharedFlow<Unit>,
     onLeave: () -> Unit,
 ) {
     val participants = remember(event) { event.participants() }
@@ -136,18 +143,18 @@ private fun AudioRoomActivityBody(
 
     val ui by viewModel.uiState.collectAsState()
 
-    // Push mute state into the activity so it can rebuild the PIP RemoteAction.
+    // Push mute + connected state up so the Activity can rebuild PIP
+    // RemoteActions and gate `enterPictureInPictureMode` on Connected.
     LaunchedEffect(ui.isMuted) { onMuteState(ui.isMuted) }
+    val isConnectedNow = ui.connection is ConnectionUiState.Connected
+    LaunchedEffect(isConnectedNow) { onConnectedChange(isConnectedNow) }
 
-    // The PIP mute system action signals via a shared toggle flag whose
-    // value flips on every tap. Observe the changes (skipping the initial
-    // composition) and forward to the VM.
-    val toggleSignal by AudioRoomPipActions.toggleMuteRequested
-    var lastSeenToggle by remember { mutableStateOf(toggleSignal) }
-    LaunchedEffect(toggleSignal) {
-        if (toggleSignal != lastSeenToggle) {
-            lastSeenToggle = toggleSignal
-            viewModel.setMuted(!ui.isMuted)
+    // Forward PIP-overlay mute taps into the VM. Per-Activity SharedFlow
+    // so a stale emission from a previous Activity instance can't leak
+    // into a new one.
+    LaunchedEffect(viewModel) {
+        pipMuteSignal.collect {
+            viewModel.setMuted(!viewModel.uiState.value.isMuted)
         }
     }
 

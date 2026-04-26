@@ -40,6 +40,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -211,7 +212,7 @@ class AudioRoomViewModelTest {
             )
         }
 
-    private fun newViewModel(connect: suspend (CoroutineScope) -> NestsListener): AudioRoomViewModel =
+    private fun TestScope.newViewModel(connect: suspend (CoroutineScope) -> NestsListener): AudioRoomViewModel =
         AudioRoomViewModel(
             httpClient = NoopNestsClient,
             transport = NoopWebTransportFactory,
@@ -224,6 +225,9 @@ class AudioRoomViewModelTest {
                 NestsListenerConnector { _, _, scope, _, _, _ ->
                     connect(scope)
                 },
+            // Wire to the test's backgroundScope so close calls run during
+            // the test rather than escaping to the real GlobalScope.
+            cleanupScope = backgroundScope,
         )
 
     private class FakeNestsListener : NestsListener {

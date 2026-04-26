@@ -44,6 +44,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,6 +97,13 @@ class AudioRoomViewModel(
     // listener whose state they can drive directly.
     private val connector: NestsListenerConnector = DefaultNestsListenerConnector,
     private val speakerConnector: NestsSpeakerConnector = DefaultNestsSpeakerConnector,
+    // Scope used for fire-and-forget MoQ cleanup (UNANNOUNCE,
+    // SUBSCRIBE_DONE, MoQ session close) that needs to outlive the VM's
+    // own scope. Production passes [GlobalScope] so onCleared can finish
+    // sending control frames before the QUIC transport drops; tests pass
+    // their `backgroundScope` so assertions can observe the close.
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+    private val cleanupScope: CoroutineScope = GlobalScope,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AudioRoomUiState())
     val uiState: StateFlow<AudioRoomUiState> = _uiState.asStateFlow()
@@ -278,16 +286,16 @@ class AudioRoomViewModel(
         autoRetryJob?.cancel()
         autoRetryJob = null
         autoRetryAttempts = 0
-        teardownBroadcast(BroadcastUiState.Idle)
-        teardown(targetState = ConnectionUiState.Idle)
+        teardownBroadcast(BroadcastUiState.Idle, finalCleanup = false)
+        teardown(targetState = ConnectionUiState.Idle, finalCleanup = false)
     }
 
     override fun onCleared() {
         closed = true
         autoRetryJob?.cancel()
         autoRetryJob = null
-        teardownBroadcast(BroadcastUiState.Idle)
-        teardown(targetState = ConnectionUiState.Closed)
+        teardownBroadcast(BroadcastUiState.Idle, finalCleanup = true)
+        teardown(targetState = ConnectionUiState.Closed, finalCleanup = true)
         super.onCleared()
     }
 
@@ -313,7 +321,10 @@ class AudioRoomViewModel(
             }
     }
 
-    private fun teardownBroadcast(targetState: BroadcastUiState) {
+    private fun teardownBroadcast(
+        targetState: BroadcastUiState,
+        finalCleanup: Boolean = false,
+    ) {
         speakerConnectJob?.cancel()
         speakerConnectJob = null
         speakerStateJob?.cancel()
@@ -323,7 +334,12 @@ class AudioRoomViewModel(
         broadcastHandle = null
         speaker = null
         if (handle != null || s != null) {
-            viewModelScope.launch {
+            // User-driven disconnect can use viewModelScope (still alive);
+            // onCleared must use cleanupScope because viewModelScope is
+            // already cancelled and a launch on it would no-op without
+            // emitting the UNANNOUNCE / SUBSCRIBE_DONE wire frames.
+            val scope = if (finalCleanup) cleanupScope else viewModelScope
+            scope.launch {
                 handle?.runCatching { close() }
                 s?.runCatching { close() }
             }
@@ -347,6 +363,14 @@ class AudioRoomViewModel(
 
                         is NestsListenerState.Failed -> {
                             scheduleAutoRetry()
+                        }
+
+                        // Server-initiated Closed: reset the retry counter and
+                        // tear down stale local state so any later user-driven
+                        // reconnect starts fresh.
+                        NestsListenerState.Closed -> {
+                            autoRetryAttempts = 0
+                            teardown(targetState = ConnectionUiState.Closed)
                         }
 
                         else -> { /* no extra side effect */ }
@@ -467,6 +491,15 @@ class AudioRoomViewModel(
         if (closed || activeSubscriptions[pubkey] !== slot) return
         try {
             val handle = l.subscribeSpeaker(pubkey)
+            // Re-check after the suspending subscribeSpeaker — the user
+            // may have removed this speaker via updateSpeakers / disconnected
+            // while the SUBSCRIBE was in flight. If so, abandon the handle
+            // cleanly (fire-and-forget UNSUBSCRIBE) instead of attaching it
+            // to a slot the reconcile loop has already discarded.
+            if (closed || activeSubscriptions[pubkey] !== slot) {
+                viewModelScope.launch { runCatching { handle.unsubscribe() } }
+                return
+            }
             val decoder = decoderFactory()
             val player = playerFactory()
             val isMuted = _uiState.value.isMuted
@@ -491,7 +524,10 @@ class AudioRoomViewModel(
         }
     }
 
-    private fun teardown(targetState: ConnectionUiState) {
+    private fun teardown(
+        targetState: ConnectionUiState,
+        finalCleanup: Boolean = false,
+    ) {
         connectJob?.cancel()
         connectJob = null
         stateObserverJob?.cancel()
@@ -505,10 +541,14 @@ class AudioRoomViewModel(
         val l = listener
         listener = null
         if (l != null) {
-            // Closing the listener is suspending; fire-and-forget on the VM
-            // scope is fine — even if the scope is cancelled (onCleared), the
-            // underlying transport's own cleanup runs.
-            viewModelScope.launch { runCatching { l.close() } }
+            // Listener.close() sends MoQ control frames (UNSUBSCRIBE etc.)
+            // before the QUIC transport drops. User-driven disconnect uses
+            // the still-alive viewModelScope; onCleared has already had its
+            // viewModelScope cancelled, so it routes through cleanupScope
+            // (a process-lived scope) so the peer sees a clean teardown
+            // rather than a hard QUIC drop.
+            val scope = if (finalCleanup) cleanupScope else viewModelScope
+            scope.launch { runCatching { l.close() } }
         }
         _uiState.update {
             it.copy(

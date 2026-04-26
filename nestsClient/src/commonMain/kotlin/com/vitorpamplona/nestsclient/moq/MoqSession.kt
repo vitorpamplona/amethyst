@@ -336,7 +336,9 @@ class MoqSession private constructor(
     suspend fun unsubscribe(subscribeId: Long) {
         val alias =
             stateMutex.withLock {
-                pendingSubscribes.remove(subscribeId)?.cancel()
+                pendingSubscribes.remove(subscribeId)?.completeExceptionally(
+                    MoqProtocolException("unsubscribed before SUBSCRIBE_OK arrived"),
+                )
                 aliasBySubscribeId.remove(subscribeId)?.also { sinks.remove(it)?.close() }
             } ?: return
 
@@ -550,18 +552,20 @@ class MoqSession private constructor(
         stateMutex.withLock {
             if (closed) return
             closed = true
-            // Fail any in-flight subscribe waiters cleanly.
+            // Fail any in-flight subscribe waiters with a domain exception
+            // (not Cancellation — that would propagate as scope cancellation
+            // in the awaiting coroutine instead of a recoverable error).
+            val sessionGone = MoqProtocolException("session closed")
             for ((_, deferred) in pendingSubscribes) {
-                deferred.cancel()
+                deferred.completeExceptionally(sessionGone)
             }
             pendingSubscribes.clear()
             for ((_, ch) in sinks) ch.close()
             sinks.clear()
             aliasBySubscribeId.clear()
-            // Fail in-flight announce waiters and surface an exception, since
-            // the caller is awaiting on .await().
+            // Fail in-flight announce waiters the same way.
             for ((_, deferred) in pendingAnnounces) {
-                deferred.cancel()
+                deferred.completeExceptionally(sessionGone)
             }
             pendingAnnounces.clear()
             announces.values.forEach { it.markSessionClosedLocked() }
@@ -845,13 +849,15 @@ object ErrorCode {
 }
 
 /**
- * MoQ-transport SUBSCRIBE_DONE status_code values. As above, draft-stable
- * subset; not exhaustive.
+ * MoQ-transport SUBSCRIBE_DONE status_code values. Per draft-ietf-moq-transport
+ * (draft-11+): 0x00 = UNSUBSCRIBED, 0x03 = TRACK_ENDED. The constants
+ * shipped initially had these inverted, which the audit caught — a peer
+ * decoded our "track closed" SUBSCRIBE_DONE as INTERNAL_ERROR.
  */
 object SubscribeDoneStatus {
-    /** The publisher has no more objects coming for this track. */
-    const val TRACK_ENDED: Long = 0x00L
-
     /** Subscriber explicitly UNSUBSCRIBEd; publisher is acknowledging. */
-    const val UNSUBSCRIBED: Long = 0x01L
+    const val UNSUBSCRIBED: Long = 0x00L
+
+    /** The publisher has no more objects coming for this track. */
+    const val TRACK_ENDED: Long = 0x03L
 }
