@@ -254,6 +254,58 @@ class InMemoryQuicPipe(
     private var initialCryptoOffset: Long = 0L
     private var handshakeCryptoOffset: Long = 0L
 
+    /**
+     * Build a 1-RTT (short-header) datagram from the server containing the
+     * given frames, encrypted with the negotiated server-side application
+     * keys. Tests use this to drive flow-control violations, MAX_STREAMS
+     * frames, and other peer-initiated frame paths against the real client.
+     *
+     * The handshake must have completed (server has 1-RTT keys) — calling
+     * before that returns null.
+     */
+    fun buildServerApplicationDatagram(frames: List<com.vitorpamplona.quic.frame.Frame>): ByteArray? {
+        val proto = serverApplicationTx ?: return null
+        val pn = applicationPnSpace.allocateOutbound()
+        val payload = encodeFrames(frames)
+        return ShortHeaderPacket.build(
+            com.vitorpamplona.quic.packet.ShortHeaderPlaintextPacket(
+                dcid = client.sourceConnectionId,
+                packetNumber = pn,
+                payload = payload,
+            ),
+            proto.aead,
+            proto.key,
+            proto.iv,
+            proto.hp,
+            proto.hpKey,
+            largestAckedInSpace = applicationPnSpace.largestReceived,
+        )
+    }
+
+    /**
+     * Concatenate multiple already-built packets into a single UDP datagram —
+     * the wire-level shape of QUIC coalesced packets (RFC 9000 §12.2). Tests
+     * use this to verify the client's loop in `feedDatagram` correctly walks
+     * across packet boundaries instead of stopping at the first packet.
+     */
+    fun coalesceDatagrams(packets: List<ByteArray>): ByteArray {
+        var total = 0
+        for (p in packets) total += p.size
+        val out = ByteArray(total)
+        var pos = 0
+        for (p in packets) {
+            p.copyInto(out, pos)
+            pos += p.size
+        }
+        return out
+    }
+
+    /**
+     * Build a 1-RTT packet without coalescing it — used together with
+     * [coalesceDatagrams] to construct hostile/multi-packet datagrams.
+     */
+    fun buildServerApplicationPacket(frames: List<com.vitorpamplona.quic.frame.Frame>): ByteArray? = buildServerApplicationDatagram(frames)
+
     private fun buildServerInitialPacket(crypto: ByteArray): ByteArray {
         val proto =
             PacketProtection(
