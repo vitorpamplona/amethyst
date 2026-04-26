@@ -173,7 +173,7 @@ class Context(
      * publish from", which mirrors `User.outboxRelays()` in the
      * Android app.
      */
-    fun outboxRelays(): Set<NormalizedRelayUrl> =
+    suspend fun outboxRelays(): Set<NormalizedRelayUrl> =
         relaysOf(identity.pubKeyHex)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: DefaultNIP65RelaySet
 
@@ -181,7 +181,7 @@ class Context(
      * DM inbox relays (NIP-17 kind:10050) for this account. Falls back
      * to [DefaultDMRelayList] when no kind:10050 has been seen.
      */
-    fun inboxRelays(): Set<NormalizedRelayUrl> =
+    suspend fun inboxRelays(): Set<NormalizedRelayUrl> =
         dmInboxOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: DefaultDMRelayList.toSet()
 
@@ -190,12 +190,12 @@ class Context(
      * back to [outboxRelays] when no kind:10051 has been seen — same
      * fallback the Android app uses for KeyPackage discovery.
      */
-    fun keyPackageRelays(): Set<NormalizedRelayUrl> =
+    suspend fun keyPackageRelays(): Set<NormalizedRelayUrl> =
         keyPackageRelaysOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: outboxRelays()
 
     /** Union of all three buckets. */
-    fun anyRelays(): Set<NormalizedRelayUrl> = outboxRelays() + inboxRelays() + keyPackageRelays()
+    suspend fun anyRelays(): Set<NormalizedRelayUrl> = outboxRelays() + inboxRelays() + keyPackageRelays()
 
     /**
      * Seed relays for "look up someone we know nothing about" queries —
@@ -208,7 +208,7 @@ class Context(
      * most reliable place to find a stranger's replaceable events even when
      * we and they have completely disjoint relay configurations.
      */
-    fun bootstrapRelays(): Set<NormalizedRelayUrl> =
+    suspend fun bootstrapRelays(): Set<NormalizedRelayUrl> =
         buildSet {
             addAll(anyRelays())
             addAll(DefaultNIP65RelaySet)
@@ -319,7 +319,7 @@ class Context(
      * Every event-arrival path in the CLI funnels through this method
      * so that [store] is the authoritative cache of what Amy has seen.
      */
-    fun verifyAndStore(event: Event): Boolean {
+    suspend fun verifyAndStore(event: Event): Boolean {
         if (!event.verify()) {
             System.err.println("[cli] dropped event ${event.id.take(8)} kind=${event.kind} — bad signature")
             return false
@@ -342,7 +342,7 @@ class Context(
      * this user. Callers that need a network fetch on miss should fall
      * back to [drain] explicitly — this helper never hits the network.
      */
-    fun profileOf(pubKey: HexKey): MetadataEvent? =
+    suspend fun profileOf(pubKey: HexKey): MetadataEvent? =
         store
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(MetadataEvent.KIND), limit = 1),
@@ -352,7 +352,7 @@ class Context(
      * Latest known kind:10002 advertised relay list (NIP-65) for
      * [pubKey]. `null` when Amy has never seen one.
      */
-    fun relaysOf(pubKey: HexKey): AdvertisedRelayListEvent? =
+    suspend fun relaysOf(pubKey: HexKey): AdvertisedRelayListEvent? =
         store
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1),
@@ -363,7 +363,7 @@ class Context(
      * `null` if Amy has never observed one. Useful for follow-graph
      * lookups without re-hitting relays.
      */
-    fun contactsOf(pubKey: HexKey): ContactListEvent? =
+    suspend fun contactsOf(pubKey: HexKey): ContactListEvent? =
         store
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1),
@@ -374,7 +374,7 @@ class Context(
      * for [pubKey], or `null` if Amy has never observed one. Used by
      * `dm send` to resolve where to deliver a wrap.
      */
-    fun dmInboxOf(pubKey: HexKey): ChatMessageRelayListEvent? =
+    suspend fun dmInboxOf(pubKey: HexKey): ChatMessageRelayListEvent? =
         store
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(ChatMessageRelayListEvent.KIND), limit = 1),
@@ -386,7 +386,7 @@ class Context(
      * `marmot key-package check` and `marmot await key-package` to
      * locate where the recipient publishes their KeyPackages.
      */
-    fun keyPackageRelaysOf(pubKey: HexKey): KeyPackageRelayListEvent? =
+    suspend fun keyPackageRelaysOf(pubKey: HexKey): KeyPackageRelayListEvent? =
         store
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(KeyPackageRelayListEvent.KIND), limit = 1),
@@ -405,7 +405,7 @@ class Context(
      * we'll still hand back the old list. Commands that care can drain
      * (which re-populates the cache) or expose a `--refresh` flag.
      */
-    fun cachedRelayListsOf(pubKey: HexKey): RecipientRelayFetcher.Lists? {
+    suspend fun cachedRelayListsOf(pubKey: HexKey): RecipientRelayFetcher.Lists? {
         val dm = dmInboxOf(pubKey)
         val kp = keyPackageRelaysOf(pubKey)
         val nip65 = relaysOf(pubKey)

@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -63,141 +64,152 @@ class FsEventStoreTest {
     }
 
     @Test
-    fun `insert and query by id round-trips`() {
-        val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("hello"))
+    fun `insert and query by id round-trips`() =
+        runBlocking {
+            val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("hello"))
 
-        store.insert(note)
+            store.insert(note)
 
-        val got = store.query<TextNoteEvent>(Filter(ids = listOf(note.id)))
-        assertEquals(1, got.size)
-        assertEquals(note.id, got[0].id)
-        assertEquals(note.content, got[0].content)
-        assertEquals(note.sig, got[0].sig)
-    }
-
-    @Test
-    fun `canonical path uses 2-char sharding`() {
-        val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("shard me"))
-        store.insert(note)
-
-        val shard = root.resolve("events").resolve(note.id.substring(0, 2)).resolve(note.id.substring(2, 4))
-        val file = shard.resolve("${note.id}.json")
-        assertTrue(file.exists(), "expected canonical at $file")
-    }
-
-    @Test
-    fun `query returns empty when nothing inserted`() {
-        val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("missing"))
-        assertEquals(emptyList(), store.query<TextNoteEvent>(Filter(ids = listOf(note.id))))
-    }
-
-    @Test
-    fun `delete by id removes the file`() {
-        val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("to-delete"))
-        store.insert(note)
-        assertEquals(1, store.count(Filter(ids = listOf(note.id))))
-
-        val removed = store.delete(note.id)
-        assertEquals(1, removed)
-        assertEquals(0, store.count(Filter(ids = listOf(note.id))))
-    }
-
-    @Test
-    fun `delete returns 0 when event absent`() {
-        val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("never-inserted"))
-        assertEquals(0, store.delete(note.id))
-    }
-
-    @Test
-    fun `delete by filter with ids removes matching events`() {
-        val a = signer.sign<TextNoteEvent>(TextNoteEvent.build("a"))
-        val b = signer.sign<TextNoteEvent>(TextNoteEvent.build("b"))
-        store.insert(a)
-        store.insert(b)
-
-        store.delete(Filter(ids = listOf(a.id)))
-
-        assertNull(store.query<TextNoteEvent>(Filter(ids = listOf(a.id))).firstOrNull())
-        assertEquals(b.id, store.query<TextNoteEvent>(Filter(ids = listOf(b.id))).single().id)
-    }
-
-    @Test
-    fun `insert of duplicate id is a no-op`() {
-        val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("dup"))
-        store.insert(note)
-        store.insert(note) // must not throw; content is immutable anyway
-        assertEquals(1, store.count(Filter(ids = listOf(note.id))))
-    }
-
-    @Test
-    fun `ephemeral events are not persisted`() {
-        // Kind 20_000 is the lowest ephemeral kind; use a bare Event
-        // constructed inline because TextNoteEvent pins kind=1.
-        val ephemeral =
-            signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(
-                createdAt = 1,
-                kind = 20_000,
-                tags = emptyArray(),
-                content = "ghost",
-            )
-        store.insert(ephemeral)
-        assertEquals(0, store.count(Filter(ids = listOf(ephemeral.id))))
-    }
-
-    @Test
-    fun `ids that share the same 4-char shard both persist`() {
-        // Find two real events whose ids share the same first 4 hex chars.
-        // With a random KeyPair per sign, this takes a handful of tries.
-        var a = signer.sign<TextNoteEvent>(TextNoteEvent.build("a0", createdAt = 1))
-        var b: TextNoteEvent
-        var salt = 2L
-        do {
-            b = signer.sign<TextNoteEvent>(TextNoteEvent.build("b$salt", createdAt = salt))
-            salt++
-        } while (b.id.substring(0, 4) != a.id.substring(0, 4) && salt < 200_000)
-        if (b.id.substring(0, 4) != a.id.substring(0, 4)) {
-            // Didn't find a collision cheaply. Fall back to inserting two
-            // unrelated events and checking they both live under their own
-            // shards — still verifies basic sharding without flakiness.
-            b = signer.sign(TextNoteEvent.build("unrelated"))
+            val got = store.query<TextNoteEvent>(Filter(ids = listOf(note.id)))
+            assertEquals(1, got.size)
+            assertEquals(note.id, got[0].id)
+            assertEquals(note.content, got[0].content)
+            assertEquals(note.sig, got[0].sig)
         }
 
-        store.insert(a)
-        store.insert(b)
-
-        assertTrue(store.count(Filter(ids = listOf(a.id))) == 1)
-        assertTrue(store.count(Filter(ids = listOf(b.id))) == 1)
-    }
-
     @Test
-    fun `delete with empty filter is safe`() {
-        val a = signer.sign<TextNoteEvent>(TextNoteEvent.build("a", createdAt = 1))
-        val b = signer.sign<TextNoteEvent>(TextNoteEvent.build("b", createdAt = 2))
-        store.insert(a)
-        store.insert(b)
+    fun `canonical path uses 2-char sharding`() =
+        runBlocking {
+            val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("shard me"))
+            store.insert(note)
 
-        // Empty filter: query returns everything, but delete must NOT
-        // wipe the store. Same safe-by-default contract as SQLiteEventStore.
-        assertEquals(2, store.count(Filter()))
-        store.delete(Filter())
-        assertEquals(2, store.count(Filter()))
-
-        store.delete(listOf(Filter(), Filter()))
-        assertEquals(2, store.count(Filter()))
-    }
-
-    @Test
-    fun `staging dir is cleared on init`() {
-        val staging = root.resolve(".staging")
-        val leftover = Files.createTempFile(staging, "crash-", ".json")
-        assertTrue(leftover.exists())
-
-        // Reopening the store should sweep the staging dir.
-        val reopened = FsEventStore(root)
-        try {
-            assertFalse(leftover.exists(), "staging leftover should be cleared on open")
-        } finally {
-            reopened.close()
+            val shard = root.resolve("events").resolve(note.id.substring(0, 2)).resolve(note.id.substring(2, 4))
+            val file = shard.resolve("${note.id}.json")
+            assertTrue(file.exists(), "expected canonical at $file")
         }
-    }
+
+    @Test
+    fun `query returns empty when nothing inserted`() =
+        runBlocking {
+            val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("missing"))
+            assertEquals(emptyList(), store.query<TextNoteEvent>(Filter(ids = listOf(note.id))))
+        }
+
+    @Test
+    fun `delete by id removes the file`() =
+        runBlocking {
+            val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("to-delete"))
+            store.insert(note)
+            assertEquals(1, store.count(Filter(ids = listOf(note.id))))
+
+            val removed = store.delete(note.id)
+            assertEquals(1, removed)
+            assertEquals(0, store.count(Filter(ids = listOf(note.id))))
+        }
+
+    @Test
+    fun `delete returns 0 when event absent`() =
+        runBlocking {
+            val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("never-inserted"))
+            assertEquals(0, store.delete(note.id))
+        }
+
+    @Test
+    fun `delete by filter with ids removes matching events`() =
+        runBlocking {
+            val a = signer.sign<TextNoteEvent>(TextNoteEvent.build("a"))
+            val b = signer.sign<TextNoteEvent>(TextNoteEvent.build("b"))
+            store.insert(a)
+            store.insert(b)
+
+            store.delete(Filter(ids = listOf(a.id)))
+
+            assertNull(store.query<TextNoteEvent>(Filter(ids = listOf(a.id))).firstOrNull())
+            assertEquals(b.id, store.query<TextNoteEvent>(Filter(ids = listOf(b.id))).single().id)
+        }
+
+    @Test
+    fun `insert of duplicate id is a no-op`() =
+        runBlocking {
+            val note = signer.sign<TextNoteEvent>(TextNoteEvent.build("dup"))
+            store.insert(note)
+            store.insert(note) // must not throw; content is immutable anyway
+            assertEquals(1, store.count(Filter(ids = listOf(note.id))))
+        }
+
+    @Test
+    fun `ephemeral events are not persisted`() =
+        runBlocking {
+            // Kind 20_000 is the lowest ephemeral kind; use a bare Event
+            // constructed inline because TextNoteEvent pins kind=1.
+            val ephemeral =
+                signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(
+                    createdAt = 1,
+                    kind = 20_000,
+                    tags = emptyArray(),
+                    content = "ghost",
+                )
+            store.insert(ephemeral)
+            assertEquals(0, store.count(Filter(ids = listOf(ephemeral.id))))
+        }
+
+    @Test
+    fun `ids that share the same 4-char shard both persist`() =
+        runBlocking {
+            // Find two real events whose ids share the same first 4 hex chars.
+            // With a random KeyPair per sign, this takes a handful of tries.
+            var a = signer.sign<TextNoteEvent>(TextNoteEvent.build("a0", createdAt = 1))
+            var b: TextNoteEvent
+            var salt = 2L
+            do {
+                b = signer.sign<TextNoteEvent>(TextNoteEvent.build("b$salt", createdAt = salt))
+                salt++
+            } while (b.id.substring(0, 4) != a.id.substring(0, 4) && salt < 200_000)
+            if (b.id.substring(0, 4) != a.id.substring(0, 4)) {
+                // Didn't find a collision cheaply. Fall back to inserting two
+                // unrelated events and checking they both live under their own
+                // shards — still verifies basic sharding without flakiness.
+                b = signer.sign(TextNoteEvent.build("unrelated"))
+            }
+
+            store.insert(a)
+            store.insert(b)
+
+            assertTrue(store.count(Filter(ids = listOf(a.id))) == 1)
+            assertTrue(store.count(Filter(ids = listOf(b.id))) == 1)
+        }
+
+    @Test
+    fun `delete with empty filter is safe`() =
+        runBlocking {
+            val a = signer.sign<TextNoteEvent>(TextNoteEvent.build("a", createdAt = 1))
+            val b = signer.sign<TextNoteEvent>(TextNoteEvent.build("b", createdAt = 2))
+            store.insert(a)
+            store.insert(b)
+
+            // Empty filter: query returns everything, but delete must NOT
+            // wipe the store. Same safe-by-default contract as SQLiteEventStore.
+            assertEquals(2, store.count(Filter()))
+            store.delete(Filter())
+            assertEquals(2, store.count(Filter()))
+
+            store.delete(listOf(Filter(), Filter()))
+            assertEquals(2, store.count(Filter()))
+        }
+
+    @Test
+    fun `staging dir is cleared on init`() =
+        runBlocking {
+            val staging = root.resolve(".staging")
+            val leftover = Files.createTempFile(staging, "crash-", ".json")
+            assertTrue(leftover.exists())
+
+            // Reopening the store should sweep the staging dir.
+            val reopened = FsEventStore(root)
+            try {
+                assertFalse(leftover.exists(), "staging leftover should be cleared on open")
+            } finally {
+                reopened.close()
+            }
+        }
 }

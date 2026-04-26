@@ -226,7 +226,7 @@ object ProfileCommands {
      * else's profile, fall back to the bootstrap union so we still find a
      * kind:0 even when our relay set and theirs are disjoint.
      */
-    private fun relaysForReadingProfile(
+    private suspend fun relaysForReadingProfile(
         ctx: Context,
         isSelf: Boolean,
     ): Set<NormalizedRelayUrl> =

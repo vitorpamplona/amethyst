@@ -67,7 +67,7 @@ internal class FsLockManager(
         }
     }
 
-    fun <T> withWriteLock(body: () -> T): T {
+    fun acquireWriteLock() {
         inProcessLock.lock()
         try {
             // Only the outermost re-entry actually touches the file lock.
@@ -83,15 +83,33 @@ internal class FsLockManager(
                 channel = ch
                 fileLock = l
             }
-            try {
-                return body()
-            } finally {
-                if (inProcessLock.holdCount == 1) {
-                    releaseFileLock()
-                }
+        } catch (t: Throwable) {
+            inProcessLock.unlock()
+            throw t
+        }
+    }
+
+    fun releaseWriteLock() {
+        try {
+            if (inProcessLock.holdCount == 1) {
+                releaseFileLock()
             }
         } finally {
             inProcessLock.unlock()
+        }
+    }
+
+    /**
+     * Inline so callers may invoke `suspend` functions inside the lock
+     * body — needed by [FsEventStore.delete], which calls the suspend
+     * `query` to enumerate ids before deleting them.
+     */
+    inline fun <T> withWriteLock(body: () -> T): T {
+        acquireWriteLock()
+        try {
+            return body()
+        } finally {
+            releaseWriteLock()
         }
     }
 

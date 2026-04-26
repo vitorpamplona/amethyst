@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -81,128 +82,136 @@ class FsExpirationTest {
         )
 
     @Test
-    fun `event with future expiration is accepted and indexed`() {
-        clockNow = 1_000
-        val e = expiringNote("future", createdAt = 500, expiresAt = 2_000)
-        store.insert(e)
+    fun `event with future expiration is accepted and indexed`() =
+        runBlocking {
+            clockNow = 1_000
+            val e = expiringNote("future", createdAt = 500, expiresAt = 2_000)
+            store.insert(e)
 
-        assertEquals(listOf(e.id), store.query<Event>(Filter(ids = listOf(e.id))).map { it.id })
+            assertEquals(listOf(e.id), store.query<Event>(Filter(ids = listOf(e.id))).map { it.id })
 
-        val expIdx = root.resolve("idx/expires_at")
-        val entries = expIdx.listDirectoryEntries().map { it.fileName.toString() }
-        assertEquals(1, entries.size, "expires_at index should hold exactly one entry")
-        assertTrue(entries.single().endsWith("-${e.id}"))
-        assertTrue(entries.single().startsWith("0000002000"), "filename should be padded expiration ts")
-    }
-
-    @Test
-    fun `event already expired at insert time is rejected`() {
-        clockNow = 5_000
-        val e = expiringNote("dead-on-arrival", createdAt = 1_000, expiresAt = 4_000)
-        store.insert(e)
-
-        assertEquals(emptyList(), store.query<Event>(Filter(ids = listOf(e.id))).map { it.id })
-        assertFalse(store.hasCanonical(e.id))
-    }
+            val expIdx = root.resolve("idx/expires_at")
+            val entries = expIdx.listDirectoryEntries().map { it.fileName.toString() }
+            assertEquals(1, entries.size, "expires_at index should hold exactly one entry")
+            assertTrue(entries.single().endsWith("-${e.id}"))
+            assertTrue(entries.single().startsWith("0000002000"), "filename should be padded expiration ts")
+        }
 
     @Test
-    fun `event with expiration equal to now is rejected (parity with SQLite trigger)`() {
-        clockNow = 5_000
-        val e = expiringNote("just-now", createdAt = 1_000, expiresAt = 5_000)
-        store.insert(e)
+    fun `event already expired at insert time is rejected`() =
+        runBlocking {
+            clockNow = 5_000
+            val e = expiringNote("dead-on-arrival", createdAt = 1_000, expiresAt = 4_000)
+            store.insert(e)
 
-        assertFalse(store.hasCanonical(e.id), "exp == now should be rejected (SQLite uses <=)")
-    }
-
-    @Test
-    fun `non-positive expiration is ignored`() {
-        clockNow = 5_000
-        val zero = expiringNote("zero", createdAt = 1, expiresAt = 0)
-        val neg = expiringNote("neg", createdAt = 2, expiresAt = -1)
-        store.insert(zero)
-        store.insert(neg)
-
-        assertTrue(store.hasCanonical(zero.id))
-        assertTrue(store.hasCanonical(neg.id))
-        // And nothing in idx/expires_at.
-        val expIdx = root.resolve("idx/expires_at")
-        assertEquals(0, expIdx.listDirectoryEntries().size, "non-positive exp should not be indexed")
-    }
+            assertEquals(emptyList(), store.query<Event>(Filter(ids = listOf(e.id))).map { it.id })
+            assertFalse(store.hasCanonical(e.id))
+        }
 
     @Test
-    fun `deleteExpiredEvents sweeps everything past now`() {
-        clockNow = 1_000
-        val a = expiringNote("a", createdAt = 100, expiresAt = 500) // already expired
-        val b = expiringNote("b", createdAt = 200, expiresAt = 999) // expired in past
-        val c = expiringNote("c", createdAt = 300, expiresAt = 2_000) // still alive
+    fun `event with expiration equal to now is rejected (parity with SQLite trigger)`() =
+        runBlocking {
+            clockNow = 5_000
+            val e = expiringNote("just-now", createdAt = 1_000, expiresAt = 5_000)
+            store.insert(e)
 
-        // Insert at a fake earlier "now" so all three pass the insert guard.
-        clockNow = 99
-        store.insert(a)
-        store.insert(b)
-        store.insert(c)
-
-        // Advance the clock and sweep.
-        clockNow = 1_000
-        store.deleteExpiredEvents()
-
-        assertFalse(store.hasCanonical(a.id), "a should be swept")
-        assertFalse(store.hasCanonical(b.id), "b should be swept")
-        assertTrue(store.hasCanonical(c.id), "c should survive")
-    }
+            assertFalse(store.hasCanonical(e.id), "exp == now should be rejected (SQLite uses <=)")
+        }
 
     @Test
-    fun `sweep uses strict less-than parity with SQLite`() {
-        // SQLite trigger: WHERE NEW.expiration <= unixepoch()      (insert)
-        // SQLite sweep:   WHERE expiration < unixepoch()           (delete)
-        // Insert-time uses inclusive <=, sweep uses strict <.
-        clockNow = 50
-        val onTheTick = expiringNote("equal", createdAt = 10, expiresAt = 100)
-        store.insert(onTheTick)
+    fun `non-positive expiration is ignored`() =
+        runBlocking {
+            clockNow = 5_000
+            val zero = expiringNote("zero", createdAt = 1, expiresAt = 0)
+            val neg = expiringNote("neg", createdAt = 2, expiresAt = -1)
+            store.insert(zero)
+            store.insert(neg)
 
-        clockNow = 100 // exp == now → sweep keeps it
-        store.deleteExpiredEvents()
-        assertTrue(store.hasCanonical(onTheTick.id), "exp == now should NOT be swept")
-
-        clockNow = 101
-        store.deleteExpiredEvents()
-        assertFalse(store.hasCanonical(onTheTick.id), "exp < now should be swept")
-    }
+            assertTrue(store.hasCanonical(zero.id))
+            assertTrue(store.hasCanonical(neg.id))
+            // And nothing in idx/expires_at.
+            val expIdx = root.resolve("idx/expires_at")
+            assertEquals(0, expIdx.listDirectoryEntries().size, "non-positive exp should not be indexed")
+        }
 
     @Test
-    fun `sweep removes index entries too`() {
-        clockNow = 50
-        val e = expiringNote("x", createdAt = 1, expiresAt = 100)
-        store.insert(e)
+    fun `deleteExpiredEvents sweeps everything past now`() =
+        runBlocking {
+            clockNow = 1_000
+            val a = expiringNote("a", createdAt = 100, expiresAt = 500) // already expired
+            val b = expiringNote("b", createdAt = 200, expiresAt = 999) // expired in past
+            val c = expiringNote("c", createdAt = 300, expiresAt = 2_000) // still alive
 
-        val expIdx = root.resolve("idx/expires_at")
-        assertEquals(1, expIdx.listDirectoryEntries().size)
+            // Insert at a fake earlier "now" so all three pass the insert guard.
+            clockNow = 99
+            store.insert(a)
+            store.insert(b)
+            store.insert(c)
 
-        clockNow = 1_000
-        store.deleteExpiredEvents()
-        assertEquals(0, expIdx.listDirectoryEntries().size, "expires_at entry should be unlinked")
+            // Advance the clock and sweep.
+            clockNow = 1_000
+            store.deleteExpiredEvents()
 
-        // Author + kind index entries also gone.
-        val authorDir = root.resolve("idx/author/${signer.pubKey}")
-        if (authorDir.exists()) assertEquals(0, authorDir.listDirectoryEntries().size)
-    }
+            assertFalse(store.hasCanonical(a.id), "a should be swept")
+            assertFalse(store.hasCanonical(b.id), "b should be swept")
+            assertTrue(store.hasCanonical(c.id), "c should survive")
+        }
 
     @Test
-    fun `events without expiration are unaffected by sweep`() {
-        clockNow = 100
-        val plain =
-            signer.sign<Event>(
-                createdAt = 50,
-                kind = 1,
-                tags = emptyArray(),
-                content = "plain",
-            )
-        store.insert(plain)
+    fun `sweep uses strict less-than parity with SQLite`() =
+        runBlocking {
+            // SQLite trigger: WHERE NEW.expiration <= unixepoch()      (insert)
+            // SQLite sweep:   WHERE expiration < unixepoch()           (delete)
+            // Insert-time uses inclusive <=, sweep uses strict <.
+            clockNow = 50
+            val onTheTick = expiringNote("equal", createdAt = 10, expiresAt = 100)
+            store.insert(onTheTick)
 
-        clockNow = 1_000_000
-        store.deleteExpiredEvents()
-        assertTrue(store.hasCanonical(plain.id))
-    }
+            clockNow = 100 // exp == now → sweep keeps it
+            store.deleteExpiredEvents()
+            assertTrue(store.hasCanonical(onTheTick.id), "exp == now should NOT be swept")
+
+            clockNow = 101
+            store.deleteExpiredEvents()
+            assertFalse(store.hasCanonical(onTheTick.id), "exp < now should be swept")
+        }
+
+    @Test
+    fun `sweep removes index entries too`() =
+        runBlocking {
+            clockNow = 50
+            val e = expiringNote("x", createdAt = 1, expiresAt = 100)
+            store.insert(e)
+
+            val expIdx = root.resolve("idx/expires_at")
+            assertEquals(1, expIdx.listDirectoryEntries().size)
+
+            clockNow = 1_000
+            store.deleteExpiredEvents()
+            assertEquals(0, expIdx.listDirectoryEntries().size, "expires_at entry should be unlinked")
+
+            // Author + kind index entries also gone.
+            val authorDir = root.resolve("idx/author/${signer.pubKey}")
+            if (authorDir.exists()) assertEquals(0, authorDir.listDirectoryEntries().size)
+        }
+
+    @Test
+    fun `events without expiration are unaffected by sweep`() =
+        runBlocking {
+            clockNow = 100
+            val plain =
+                signer.sign<Event>(
+                    createdAt = 50,
+                    kind = 1,
+                    tags = emptyArray(),
+                    content = "plain",
+                )
+            store.insert(plain)
+
+            clockNow = 1_000_000
+            store.deleteExpiredEvents()
+            assertTrue(store.hasCanonical(plain.id))
+        }
 
     private fun FsEventStore.hasCanonical(id: String): Boolean {
         val p =

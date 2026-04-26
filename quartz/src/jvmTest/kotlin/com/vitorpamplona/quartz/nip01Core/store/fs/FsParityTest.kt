@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -81,7 +82,7 @@ class FsParityTest {
     }
 
     /** Insert into both stores. Swallow SQLite rejections (we only care about the resulting state). */
-    private fun insertBoth(event: Event) {
+    private suspend fun insertBoth(event: Event) {
         try {
             sqlite.insert(event)
         } catch (_: Throwable) {
@@ -93,7 +94,7 @@ class FsParityTest {
     }
 
     /** Assert both stores return the same ids (as a set) for the given filter. */
-    private fun assertParity(
+    private suspend fun assertParity(
         filter: Filter,
         message: String = "",
     ) {
@@ -103,7 +104,7 @@ class FsParityTest {
     }
 
     /** Same, but expect a stable DESC-by-createdAt ordering. */
-    private fun assertParityOrdered(
+    private suspend fun assertParityOrdered(
         filter: Filter,
         message: String = "",
     ) {
@@ -135,350 +136,368 @@ class FsParityTest {
     // ------------------------------------------------------------------
 
     @Test
-    fun `id lookup matches`() {
-        val n = note("hello", 10)
-        insertBoth(n)
-        assertParity(Filter(ids = listOf(n.id)))
-    }
+    fun `id lookup matches`() =
+        runBlocking {
+            val n = note("hello", 10)
+            insertBoth(n)
+            assertParity(Filter(ids = listOf(n.id)))
+        }
 
     @Test
-    fun `kind + author query matches`() {
-        val a = note("a", 1)
-        val b = note("b", 2)
-        val c = note("c", 3, s = otherSigner)
-        listOf(a, b, c).forEach(::insertBoth)
+    fun `kind + author query matches`() =
+        runBlocking {
+            val a = note("a", 1)
+            val b = note("b", 2)
+            val c = note("c", 3, s = otherSigner)
+            listOf(a, b, c).forEach { insertBoth(it) }
 
-        assertParityOrdered(Filter(kinds = listOf(1), authors = listOf(signer.pubKey)))
-        assertParityOrdered(Filter(authors = listOf(signer.pubKey, otherSigner.pubKey)))
-    }
+            assertParityOrdered(Filter(kinds = listOf(1), authors = listOf(signer.pubKey)))
+            assertParityOrdered(Filter(authors = listOf(signer.pubKey, otherSigner.pubKey)))
+        }
 
     @Test
-    fun `since until limit match`() {
-        repeat(10) { i -> insertBoth(note("n$i", i.toLong() + 1)) }
-        assertParityOrdered(Filter(authors = listOf(signer.pubKey), since = 4, until = 8))
-        assertParityOrdered(Filter(authors = listOf(signer.pubKey), limit = 3))
-    }
+    fun `since until limit match`() =
+        runBlocking {
+            repeat(10) { i -> insertBoth(note("n$i", i.toLong() + 1)) }
+            assertParityOrdered(Filter(authors = listOf(signer.pubKey), since = 4, until = 8))
+            assertParityOrdered(Filter(authors = listOf(signer.pubKey), limit = 3))
+        }
 
     // ------------------------------------------------------------------
     // Tag indexing
     // ------------------------------------------------------------------
 
     @Test
-    fun `single-letter tag queries match`() {
-        val tagged =
-            signer.sign<Event>(
-                createdAt = 5,
-                kind = 1,
-                tags = arrayOf(arrayOf("t", "nostr"), arrayOf("t", "bitcoin")),
-                content = "x",
-            )
-        val plain = note("plain", 6)
-        insertBoth(tagged)
-        insertBoth(plain)
+    fun `single-letter tag queries match`() =
+        runBlocking {
+            val tagged =
+                signer.sign<Event>(
+                    createdAt = 5,
+                    kind = 1,
+                    tags = arrayOf(arrayOf("t", "nostr"), arrayOf("t", "bitcoin")),
+                    content = "x",
+                )
+            val plain = note("plain", 6)
+            insertBoth(tagged)
+            insertBoth(plain)
 
-        assertParity(Filter(tags = mapOf("t" to listOf("nostr"))))
-        assertParity(Filter(tags = mapOf("t" to listOf("nostr", "bitcoin"))))
-    }
+            assertParity(Filter(tags = mapOf("t" to listOf("nostr"))))
+            assertParity(Filter(tags = mapOf("t" to listOf("nostr", "bitcoin"))))
+        }
 
     // ------------------------------------------------------------------
     // Replaceable / Addressable
     // ------------------------------------------------------------------
 
     @Test
-    fun `replaceable newer wins parity`() {
-        val v1 =
-            signer.sign<Event>(
-                createdAt = 100,
-                kind = 0,
-                tags = emptyArray(),
-                content = "{\"name\":\"v1\"}",
-            )
-        val v2 =
-            signer.sign<Event>(
-                createdAt = 200,
-                kind = 0,
-                tags = emptyArray(),
-                content = "{\"name\":\"v2\"}",
-            )
-        insertBoth(v1)
-        insertBoth(v2)
+    fun `replaceable newer wins parity`() =
+        runBlocking {
+            val v1 =
+                signer.sign<Event>(
+                    createdAt = 100,
+                    kind = 0,
+                    tags = emptyArray(),
+                    content = "{\"name\":\"v1\"}",
+                )
+            val v2 =
+                signer.sign<Event>(
+                    createdAt = 200,
+                    kind = 0,
+                    tags = emptyArray(),
+                    content = "{\"name\":\"v2\"}",
+                )
+            insertBoth(v1)
+            insertBoth(v2)
 
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(0)))
-        assertParity(Filter(ids = listOf(v1.id)))
-    }
-
-    @Test
-    fun `replaceable older rejected parity`() {
-        val newer =
-            signer.sign<Event>(createdAt = 200, kind = 0, tags = emptyArray(), content = "{\"name\":\"new\"}")
-        val older =
-            signer.sign<Event>(createdAt = 100, kind = 0, tags = emptyArray(), content = "{\"name\":\"old\"}")
-        insertBoth(newer)
-        insertBoth(older)
-
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(0)))
-    }
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(0)))
+            assertParity(Filter(ids = listOf(v1.id)))
+        }
 
     @Test
-    fun `addressable d-tag dedup parity`() {
-        val v1 = article("intro", "v1", 10)
-        val v2 = article("intro", "v2", 20)
-        val v3 = article("about", "bio", 15)
-        insertBoth(v1)
-        insertBoth(v2)
-        insertBoth(v3)
+    fun `replaceable older rejected parity`() =
+        runBlocking {
+            val newer =
+                signer.sign<Event>(createdAt = 200, kind = 0, tags = emptyArray(), content = "{\"name\":\"new\"}")
+            val older =
+                signer.sign<Event>(createdAt = 100, kind = 0, tags = emptyArray(), content = "{\"name\":\"old\"}")
+            insertBoth(newer)
+            insertBoth(older)
 
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
-    }
-
-    @Test
-    fun `replaceable same-createdAt lexical id tiebreaker parity`() {
-        // Two kind-0 events with identical createdAt produce different ids
-        // because their content differs. NIP-01 says the lexically smaller
-        // id wins on a tie. Both stores must agree, regardless of insertion
-        // order.
-        val a =
-            signer.sign<Event>(
-                createdAt = 100,
-                kind = 0,
-                tags = emptyArray(),
-                content = "{\"name\":\"a\"}",
-            )
-        val b =
-            signer.sign<Event>(
-                createdAt = 100,
-                kind = 0,
-                tags = emptyArray(),
-                content = "{\"name\":\"b\"}",
-            )
-
-        insertBoth(a)
-        insertBoth(b)
-
-        assertParity(
-            Filter(authors = listOf(signer.pubKey), kinds = listOf(0)),
-            "loser-then-winner: lexically smaller id should win",
-        )
-        assertParity(
-            Filter(ids = listOf(a.id, b.id)),
-            "the loser must not survive in the by-id query",
-        )
-    }
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(0)))
+        }
 
     @Test
-    fun `addressable same-createdAt lexical id tiebreaker parity`() {
-        val a = article("tie", "version a", 100)
-        val b = article("tie", "version b", 100)
+    fun `addressable d-tag dedup parity`() =
+        runBlocking {
+            val v1 = article("intro", "v1", 10)
+            val v2 = article("intro", "v2", 20)
+            val v3 = article("about", "bio", 15)
+            insertBoth(v1)
+            insertBoth(v2)
+            insertBoth(v3)
 
-        insertBoth(a)
-        insertBoth(b)
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+        }
 
-        assertParity(
-            Filter(
-                authors = listOf(signer.pubKey),
-                kinds = listOf(LongTextNoteEvent.KIND),
-                tags = mapOf("d" to listOf("tie")),
-            ),
-        )
-        assertParity(Filter(ids = listOf(a.id, b.id)))
-    }
+    @Test
+    fun `replaceable same-createdAt lexical id tiebreaker parity`() =
+        runBlocking {
+            // Two kind-0 events with identical createdAt produce different ids
+            // because their content differs. NIP-01 says the lexically smaller
+            // id wins on a tie. Both stores must agree, regardless of insertion
+            // order.
+            val a =
+                signer.sign<Event>(
+                    createdAt = 100,
+                    kind = 0,
+                    tags = emptyArray(),
+                    content = "{\"name\":\"a\"}",
+                )
+            val b =
+                signer.sign<Event>(
+                    createdAt = 100,
+                    kind = 0,
+                    tags = emptyArray(),
+                    content = "{\"name\":\"b\"}",
+                )
+
+            insertBoth(a)
+            insertBoth(b)
+
+            assertParity(
+                Filter(authors = listOf(signer.pubKey), kinds = listOf(0)),
+                "loser-then-winner: lexically smaller id should win",
+            )
+            assertParity(
+                Filter(ids = listOf(a.id, b.id)),
+                "the loser must not survive in the by-id query",
+            )
+        }
+
+    @Test
+    fun `addressable same-createdAt lexical id tiebreaker parity`() =
+        runBlocking {
+            val a = article("tie", "version a", 100)
+            val b = article("tie", "version b", 100)
+
+            insertBoth(a)
+            insertBoth(b)
+
+            assertParity(
+                Filter(
+                    authors = listOf(signer.pubKey),
+                    kinds = listOf(LongTextNoteEvent.KIND),
+                    tags = mapOf("d" to listOf("tie")),
+                ),
+            )
+            assertParity(Filter(ids = listOf(a.id, b.id)))
+        }
 
     // ------------------------------------------------------------------
     // Deletion (NIP-09)
     // ------------------------------------------------------------------
 
     @Test
-    fun `deletion by id parity`() {
-        val a = note("a", 10)
-        val b = note("b", 20)
-        insertBoth(a)
-        insertBoth(b)
+    fun `deletion by id parity`() =
+        runBlocking {
+            val a = note("a", 10)
+            val b = note("b", 20)
+            insertBoth(a)
+            insertBoth(b)
 
-        val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(a), createdAt = 30))
-        insertBoth(del)
+            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(a), createdAt = 30))
+            insertBoth(del)
 
-        assertParity(Filter(ids = listOf(a.id)))
-        assertParity(Filter(ids = listOf(b.id)))
-        assertParity(Filter(kinds = listOf(DeletionEvent.KIND)))
+            assertParity(Filter(ids = listOf(a.id)))
+            assertParity(Filter(ids = listOf(b.id)))
+            assertParity(Filter(kinds = listOf(DeletionEvent.KIND)))
 
-        // Re-insert blocked.
-        insertBoth(a)
-        assertParity(Filter(ids = listOf(a.id)))
-    }
+            // Re-insert blocked.
+            insertBoth(a)
+            assertParity(Filter(ids = listOf(a.id)))
+        }
 
     @Test
-    fun `deletion by address parity`() {
-        val v = article("intro", "v1", 10)
-        insertBoth(v)
+    fun `deletion by address parity`() =
+        runBlocking {
+            val v = article("intro", "v1", 10)
+            insertBoth(v)
 
-        val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v), createdAt = 20))
-        insertBoth(del)
+            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v), createdAt = 20))
+            insertBoth(del)
 
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
 
-        // Older event at this address must be blocked, newer must pass.
-        insertBoth(article("intro", "older", 5))
-        insertBoth(article("intro", "newer", 100))
+            // Older event at this address must be blocked, newer must pass.
+            insertBoth(article("intro", "older", 5))
+            insertBoth(article("intro", "newer", 100))
 
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
-    }
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+        }
 
     // ------------------------------------------------------------------
     // Expiration (NIP-40)
     // ------------------------------------------------------------------
 
     @Test
-    fun `expiration sweep parity`() {
-        // Build events with future-then-past expirations relative to now.
-        val now =
-            com.vitorpamplona.quartz.utils.TimeUtils
-                .now()
-        val expired =
-            signer.sign<Event>(
-                createdAt = now - 100,
-                kind = 1,
-                tags = arrayOf(arrayOf("expiration", (now - 50).toString())),
-                content = "old",
-            )
-        val alive =
-            signer.sign<Event>(
-                createdAt = now - 100,
-                kind = 1,
-                tags = arrayOf(arrayOf("expiration", (now + 1_000_000).toString())),
-                content = "still here",
-            )
-        insertBoth(expired) // both stores reject (already expired)
-        insertBoth(alive)
+    fun `expiration sweep parity`() =
+        runBlocking {
+            // Build events with future-then-past expirations relative to now.
+            val now =
+                com.vitorpamplona.quartz.utils.TimeUtils
+                    .now()
+            val expired =
+                signer.sign<Event>(
+                    createdAt = now - 100,
+                    kind = 1,
+                    tags = arrayOf(arrayOf("expiration", (now - 50).toString())),
+                    content = "old",
+                )
+            val alive =
+                signer.sign<Event>(
+                    createdAt = now - 100,
+                    kind = 1,
+                    tags = arrayOf(arrayOf("expiration", (now + 1_000_000).toString())),
+                    content = "still here",
+                )
+            insertBoth(expired) // both stores reject (already expired)
+            insertBoth(alive)
 
-        assertParity(Filter(ids = listOf(expired.id)))
-        assertParity(Filter(ids = listOf(alive.id)))
+            assertParity(Filter(ids = listOf(expired.id)))
+            assertParity(Filter(ids = listOf(alive.id)))
 
-        // Sweep both; alive survives.
-        sqlite.deleteExpiredEvents()
-        fs.deleteExpiredEvents()
-        assertParity(Filter(ids = listOf(alive.id)))
-    }
+            // Sweep both; alive survives.
+            sqlite.deleteExpiredEvents()
+            fs.deleteExpiredEvents()
+            assertParity(Filter(ids = listOf(alive.id)))
+        }
 
     // ------------------------------------------------------------------
     // Search (NIP-50)
     // ------------------------------------------------------------------
 
     @Test
-    fun `search parity`() {
-        val a = note("hello bitcoin", 1)
-        val b = note("nostr only", 2)
-        val c = note("bitcoin and nostr", 3)
-        insertBoth(a)
-        insertBoth(b)
-        insertBoth(c)
+    fun `search parity`() =
+        runBlocking {
+            val a = note("hello bitcoin", 1)
+            val b = note("nostr only", 2)
+            val c = note("bitcoin and nostr", 3)
+            insertBoth(a)
+            insertBoth(b)
+            insertBoth(c)
 
-        // Tokenizers differ slightly between SQLite FTS5 unicode61 and
-        // our Kotlin port, so we stick to plain ASCII single-token queries
-        // where both should agree.
-        assertParity(Filter(search = "bitcoin"))
-        assertParity(Filter(search = "nostr"))
-    }
+            // Tokenizers differ slightly between SQLite FTS5 unicode61 and
+            // our Kotlin port, so we stick to plain ASCII single-token queries
+            // where both should agree.
+            assertParity(Filter(search = "bitcoin"))
+            assertParity(Filter(search = "nostr"))
+        }
 
     // ------------------------------------------------------------------
     // Count
     // ------------------------------------------------------------------
 
     @Test
-    fun `count parity across mixed stream`() {
-        listOf(
-            note("a", 1),
-            note("b", 2),
-            note("c", 3),
-            note("from-other", 4, s = otherSigner),
-        ).forEach(::insertBoth)
+    fun `count parity across mixed stream`() =
+        runBlocking {
+            listOf(
+                note("a", 1),
+                note("b", 2),
+                note("c", 3),
+                note("from-other", 4, s = otherSigner),
+            ).forEach { insertBoth(it) }
 
-        val filter = Filter(authors = listOf(signer.pubKey))
-        assertEquals(sqlite.count(filter), fs.count(filter))
-    }
+            val filter = Filter(authors = listOf(signer.pubKey))
+            assertEquals(sqlite.count(filter), fs.count(filter))
+        }
 
     // ------------------------------------------------------------------
     // Mixed kitchen-sink scenario
     // ------------------------------------------------------------------
 
     @Test
-    fun `kitchen sink scenario`() {
-        // Notes
-        val n1 = note("first", 1)
-        val n2 = note("second", 2)
-        // Replaceable
-        val meta1 =
-            signer.sign<Event>(createdAt = 10, kind = 0, tags = emptyArray(), content = "{\"name\":\"v1\"}")
-        val meta2 =
-            signer.sign<Event>(createdAt = 20, kind = 0, tags = emptyArray(), content = "{\"name\":\"v2\"}")
-        // Addressable
-        val artA = article("a", "A v1", 30)
-        val artB = article("b", "B v1", 30)
-        val artBv2 = article("b", "B v2", 50)
-        // Deletion of n1
-        val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(n1), createdAt = 40))
+    fun `kitchen sink scenario`() =
+        runBlocking {
+            // Notes
+            val n1 = note("first", 1)
+            val n2 = note("second", 2)
+            // Replaceable
+            val meta1 =
+                signer.sign<Event>(createdAt = 10, kind = 0, tags = emptyArray(), content = "{\"name\":\"v1\"}")
+            val meta2 =
+                signer.sign<Event>(createdAt = 20, kind = 0, tags = emptyArray(), content = "{\"name\":\"v2\"}")
+            // Addressable
+            val artA = article("a", "A v1", 30)
+            val artB = article("b", "B v1", 30)
+            val artBv2 = article("b", "B v2", 50)
+            // Deletion of n1
+            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(n1), createdAt = 40))
 
-        listOf(n1, n2, meta1, meta2, artA, artB, artBv2, del).forEach(::insertBoth)
+            listOf(n1, n2, meta1, meta2, artA, artB, artBv2, del).forEach { insertBoth(it) }
 
-        // Snapshots that should match.
-        assertParity(Filter(ids = listOf(n1.id)), "n1 deleted")
-        assertParity(Filter(ids = listOf(n2.id)), "n2 alive")
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(0)), "metadata winner")
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)), "articles set")
-        assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(DeletionEvent.KIND)), "deletion present")
-    }
+            // Snapshots that should match.
+            assertParity(Filter(ids = listOf(n1.id)), "n1 deleted")
+            assertParity(Filter(ids = listOf(n2.id)), "n2 alive")
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(0)), "metadata winner")
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)), "articles set")
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(DeletionEvent.KIND)), "deletion present")
+        }
 
     // ------------------------------------------------------------------
     // Multi-filter union
     // ------------------------------------------------------------------
 
     @Test
-    fun `multi-filter union parity`() {
-        val a = note("a", 1)
-        val b = note("b", 2, s = otherSigner)
-        insertBoth(a)
-        insertBoth(b)
+    fun `multi-filter union parity`() =
+        runBlocking {
+            val a = note("a", 1)
+            val b = note("b", 2, s = otherSigner)
+            insertBoth(a)
+            insertBoth(b)
 
-        val filters =
-            listOf(
-                Filter(authors = listOf(signer.pubKey)),
-                Filter(authors = listOf(otherSigner.pubKey)),
+            val filters =
+                listOf(
+                    Filter(authors = listOf(signer.pubKey)),
+                    Filter(authors = listOf(otherSigner.pubKey)),
+                )
+
+            assertEquals(
+                sqlite.query<Event>(filters).map { it.id }.toSet(),
+                fs.query<Event>(filters).map { it.id }.toSet(),
             )
-
-        assertEquals(
-            sqlite.query<Event>(filters).map { it.id }.toSet(),
-            fs.query<Event>(filters).map { it.id }.toSet(),
-        )
-    }
+        }
 
     // ------------------------------------------------------------------
     // Direct delete by filter
     // ------------------------------------------------------------------
 
     @Test
-    fun `delete by filter parity`() {
-        val toKill = note("dead", 5)
-        val survivor = note("alive", 6)
-        insertBoth(toKill)
-        insertBoth(survivor)
+    fun `delete by filter parity`() =
+        runBlocking {
+            val toKill = note("dead", 5)
+            val survivor = note("alive", 6)
+            insertBoth(toKill)
+            insertBoth(survivor)
 
-        sqlite.delete(Filter(ids = listOf(toKill.id)))
-        fs.delete(Filter(ids = listOf(toKill.id)))
+            sqlite.delete(Filter(ids = listOf(toKill.id)))
+            fs.delete(Filter(ids = listOf(toKill.id)))
 
-        assertParity(Filter(authors = listOf(signer.pubKey)))
-    }
+            assertParity(Filter(authors = listOf(signer.pubKey)))
+        }
 
     // ------------------------------------------------------------------
     // Helper: ensure SQLite store really does what we think
     // ------------------------------------------------------------------
 
     @Test
-    fun `helper sanity - empty stores agree`() {
-        assertParity(Filter(authors = listOf(signer.pubKey)))
-        assertParity(Filter(kinds = listOf(1)))
-    }
+    fun `helper sanity - empty stores agree`() =
+        runBlocking {
+            assertParity(Filter(authors = listOf(signer.pubKey)))
+            assertParity(Filter(kinds = listOf(1)))
+        }
 
     @Suppress("unused")
-    private fun debugDump(label: String): String {
+    private suspend fun debugDump(label: String): String {
         val sqIds =
             sqlite
                 .query<Event>(Filter(authors = listOf(signer.pubKey, otherSigner.pubKey)))
