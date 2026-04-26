@@ -25,6 +25,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -94,8 +95,51 @@ internal fun AudioRoomFullScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
     ) {
-        event.room()?.let {
-            Text(text = it, style = MaterialTheme.typography.headlineSmall)
+        var showEditSheet by rememberSaveable { mutableStateOf(false) }
+        var showHostMenu by rememberSaveable { mutableStateOf(false) }
+        val isHost = accountViewModel.account.signer.pubKey == event.pubKey
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            event.room()?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (isHost) {
+                Box {
+                    androidx.compose.material3.IconButton(onClick = { showHostMenu = true }) {
+                        Icon(
+                            symbol = MaterialSymbols.MoreVert,
+                            contentDescription = stringRes(R.string.audio_room_overflow_menu),
+                        )
+                    }
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = showHostMenu,
+                        onDismissRequest = { showHostMenu = false },
+                    ) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(stringRes(R.string.audio_room_edit_title)) },
+                            onClick = {
+                                showHostMenu = false
+                                showEditSheet = true
+                            },
+                        )
+                    }
+                }
+            }
+        }
+        if (showEditSheet) {
+            EditAudioRoomSheet(
+                accountViewModel = accountViewModel,
+                event = event,
+                onDismiss = { showEditSheet = false },
+            )
         }
         event.summary()?.let {
             Text(
