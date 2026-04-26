@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.nestsclient.interop
 
-import com.vitorpamplona.nestsclient.NestsListenerState
 import com.vitorpamplona.nestsclient.NestsRoomConfig
-import com.vitorpamplona.nestsclient.NestsSpeakerState
 import com.vitorpamplona.nestsclient.OkHttpNestsClient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
+import com.vitorpamplona.nestsclient.audio.AudioRoomMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.connectNestsListener
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
+import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -48,8 +48,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * End-to-end interop test. Drives the production [connectNestsSpeaker]
@@ -58,11 +57,10 @@ import kotlin.test.assertTrue
  * (`MoqLitePublisherHandle`), the listener subscribes by speaker
  * pubkey (`broadcast=pubkey`, `track="audio/data"`), the speaker
  * pushes deterministic Opus-shaped payloads through the
- * [com.vitorpamplona.nestsclient.audio.AudioRoomMoqLiteBroadcaster]
- * pipeline, and the listener collects them via
- * [com.vitorpamplona.nestsclient.moq.SubscribeHandle.objects] (which
- * the moq-lite adapter wraps over `MoqLiteFrame` so existing decoder
- * / player code keeps working).
+ * [AudioRoomMoqLiteBroadcaster] pipeline, and the listener collects
+ * them via [SubscribeHandle.objects] (which the moq-lite adapter
+ * wraps over `MoqLiteFrame` so existing decoder / player code keeps
+ * working).
  *
  * Verifies:
  *   - QuicWebTransportFactory + PermissiveCertificateValidator can speak
@@ -118,43 +116,47 @@ class NostrNestsRoundTripInteropTest {
             val capture = DriverCapture()
             val encoder = StubEncoder(prefix = "FRAME-".encodeToByteArray())
 
+            val scope = "round-trip"
+            InteropDebug.checkpoint(scope, "room=${room.moqNamespace()} authBase=${room.authBaseUrl} endpoint=${room.endpoint}")
+
             try {
                 val speaker =
-                    connectNestsSpeaker(
-                        httpClient = httpClient,
-                        transport = transport,
-                        scope = pumpScope,
-                        room = room,
-                        signer = signer,
-                        speakerPubkeyHex = pubkey,
-                        captureFactory = { capture },
-                        encoderFactory = { encoder },
-                    )
-                assertTrue(
-                    speaker.state.value is NestsSpeakerState.Connected,
-                    "speaker did not reach Connected — was ${speaker.state.value}",
-                )
+                    InteropDebug.stepSuspending(scope, "connectNestsSpeaker") {
+                        connectNestsSpeaker(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = signer,
+                            speakerPubkeyHex = pubkey,
+                            captureFactory = { capture },
+                            encoderFactory = { encoder },
+                        )
+                    }
+                InteropDebug.assertSpeakerReached(scope, "Connected", speaker.state.value)
 
-                val broadcast = speaker.startBroadcasting()
-                assertTrue(
-                    speaker.state.value is NestsSpeakerState.Broadcasting,
-                    "speaker did not reach Broadcasting — was ${speaker.state.value}",
-                )
+                val broadcast =
+                    InteropDebug.stepSuspending(scope, "speaker.startBroadcasting") {
+                        speaker.startBroadcasting()
+                    }
+                InteropDebug.assertSpeakerReached(scope, "Broadcasting", speaker.state.value)
 
                 val listener =
-                    connectNestsListener(
-                        httpClient = httpClient,
-                        transport = transport,
-                        scope = pumpScope,
-                        room = room,
-                        signer = signer,
-                    )
-                assertTrue(
-                    listener.state.value is NestsListenerState.Connected,
-                    "listener did not reach Connected — was ${listener.state.value}",
-                )
+                    InteropDebug.stepSuspending(scope, "connectNestsListener") {
+                        connectNestsListener(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = signer,
+                        )
+                    }
+                InteropDebug.assertListenerReached(scope, "Connected", listener.state.value)
 
-                val subscription = listener.subscribeSpeaker(pubkey)
+                val subscription =
+                    InteropDebug.stepSuspending(scope, "listener.subscribeSpeaker(pubkey)") {
+                        listener.subscribeSpeaker(pubkey)
+                    }
 
                 // Start collecting before the speaker publishes anything —
                 // moq-lite group frames that arrive before .objects.collect
@@ -172,6 +174,7 @@ class NostrNestsRoundTripInteropTest {
                 // and rolls back the object id without queuing a datagram).
                 delay(SUBSCRIBE_SETTLE_MS)
 
+                InteropDebug.checkpoint(scope, "pushing $N_FRAMES frames into capture")
                 for (i in 0 until N_FRAMES) {
                     capture.push(shortArrayOf(i.toShort()))
                     // Pace frames slightly so a transient datagram drop
@@ -179,11 +182,18 @@ class NostrNestsRoundTripInteropTest {
                     delay(FRAME_SPACING_MS)
                 }
 
-                val datagrams = received.await()
-                assertNotNull(
-                    datagrams,
-                    "Did not receive $N_FRAMES moq-lite frames within ${RECEIVE_TIMEOUT_MS}ms",
-                )
+                val datagrams =
+                    InteropDebug.stepSuspending(scope, "await $N_FRAMES frames on subscription") {
+                        received.await()
+                    }
+                if (datagrams == null) {
+                    fail(
+                        "[$scope] Did not receive $N_FRAMES moq-lite frames within ${RECEIVE_TIMEOUT_MS}ms — " +
+                            "speaker=${InteropDebug.describe(speaker.state.value)}, " +
+                            "listener=${InteropDebug.describe(listener.state.value)}",
+                    )
+                }
+                InteropDebug.checkpoint(scope, "received ${datagrams.size} frames (expected $N_FRAMES)")
                 assertEquals(N_FRAMES, datagrams.size, "expected exactly $N_FRAMES objects")
 
                 datagrams.forEachIndexed { idx, obj ->

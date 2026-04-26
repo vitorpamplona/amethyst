@@ -162,10 +162,17 @@ class NostrNestsHarness private constructor(
                 // otherwise hits the first test of the second class.
                 waitForHealth("http://127.0.0.1:$AUTH_HOST_PORT/health", PORT_READY_TIMEOUT_MS)
             } catch (t: Throwable) {
-                // If readiness probe fails, tear down so we don't leak the
-                // stack into the next test run.
+                // Capture container state + recent logs BEFORE tearing
+                // down so the failure message is actually actionable.
+                // Otherwise we get "Port 8090 not ready in 90 s" with
+                // zero clue whether moq-auth crashed, the build failed,
+                // or something else was binding the port.
+                val diagnostics = captureFailureDiagnostics(workDir)
                 runCatching { runDocker(workDir, "down", "-v", "--remove-orphans") }
-                throw t
+                throw IllegalStateException(
+                    "harness start failed: ${t.message}\n--- diagnostics ---\n$diagnostics",
+                    t,
+                )
             }
             return NostrNestsHarness(
                 workDir = workDir,
@@ -286,6 +293,46 @@ class NostrNestsHarness private constructor(
                 "${args.joinToString(" ")} exited with code $exit\n--- output ---\n$output"
             }
         }
+
+        /**
+         * Snapshot `docker compose ps` + the tail of each service's
+         * logs into a single string for inclusion in a thrown
+         * exception message. Best-effort — never throws, so it can
+         * be called from a [start] catch handler without masking the
+         * original error.
+         */
+        private fun captureFailureDiagnostics(workDir: File): String =
+            buildString {
+                append("== docker compose ps ==\n")
+                append(captureDocker(workDir, listOf("ps")))
+                for (service in listOf("moq-auth", "moq-relay", "strfry")) {
+                    append("\n== docker compose logs --tail 30 $service ==\n")
+                    append(captureDocker(workDir, listOf("logs", "--tail", "30", service)))
+                }
+            }
+
+        /**
+         * Run a docker compose subcommand and return its combined
+         * stdout/stderr; on any failure return the error text instead
+         * of throwing.
+         */
+        private fun captureDocker(
+            workDir: File,
+            args: List<String>,
+        ): String =
+            try {
+                val process =
+                    ProcessBuilder(listOf("docker", "compose", "-f", COMPOSE_FILE) + args)
+                        .directory(workDir)
+                        .redirectErrorStream(true)
+                        .start()
+                process.inputStream
+                    .bufferedReader()
+                    .readText()
+                    .also { process.waitFor() }
+            } catch (t: Throwable) {
+                "(failed to capture: ${t.message})"
+            }
 
         private fun waitForPort(
             host: String,

@@ -21,10 +21,8 @@
 package com.vitorpamplona.nestsclient.interop
 
 import com.vitorpamplona.nestsclient.NestsListener
-import com.vitorpamplona.nestsclient.NestsListenerState
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.NestsSpeaker
-import com.vitorpamplona.nestsclient.NestsSpeakerState
 import com.vitorpamplona.nestsclient.OkHttpNestsClient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
@@ -52,8 +50,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * Phase-4 multi-peer interop tests. Each test brings up a real
@@ -92,6 +89,9 @@ class NostrNestsMultiPeerInteropTest {
             val listenerSignerA = NostrSignerInternal(KeyPair())
             val listenerSignerB = NostrSignerInternal(KeyPair())
 
+            val scope = "fanout"
+            InteropDebug.checkpoint(scope, "room=${speakerRoom.moqNamespace()} speaker=${speakerSigner.pubKey.take(8)}")
+
             try {
                 val speaker =
                     connectSpeaker(
@@ -99,26 +99,39 @@ class NostrNestsMultiPeerInteropTest {
                         room = speakerRoom,
                         signer = speakerSigner,
                         capture = capture,
+                        debugScope = scope,
                     )
-                speaker.startBroadcasting()
+                InteropDebug.stepSuspending(scope, "speaker.startBroadcasting") { speaker.startBroadcasting() }
+                InteropDebug.assertSpeakerReached(scope, "Broadcasting", speaker.state.value)
 
-                val listenerA = connectListener(pumpScope, speakerRoom, listenerSignerA)
-                val listenerB = connectListener(pumpScope, speakerRoom, listenerSignerB)
+                val listenerA = connectListener(pumpScope, speakerRoom, listenerSignerA, debugScope = "$scope/listenerA")
+                val listenerB = connectListener(pumpScope, speakerRoom, listenerSignerB, debugScope = "$scope/listenerB")
 
-                val subA = listenerA.subscribeSpeaker(speakerSigner.pubKey)
-                val subB = listenerB.subscribeSpeaker(speakerSigner.pubKey)
+                val subA =
+                    InteropDebug.stepSuspending("$scope/listenerA", "subscribeSpeaker(${speakerSigner.pubKey.take(8)})") {
+                        listenerA.subscribeSpeaker(speakerSigner.pubKey)
+                    }
+                val subB =
+                    InteropDebug.stepSuspending("$scope/listenerB", "subscribeSpeaker(${speakerSigner.pubKey.take(8)})") {
+                        listenerB.subscribeSpeaker(speakerSigner.pubKey)
+                    }
 
                 val collectedA = collectFrames(pumpScope, subA, FRAMES_FANOUT)
                 val collectedB = collectFrames(pumpScope, subB, FRAMES_FANOUT)
 
                 delay(SUBSCRIBE_SETTLE_MS)
+                InteropDebug.checkpoint(scope, "pushing $FRAMES_FANOUT frames")
                 for (i in 0 until FRAMES_FANOUT) {
                     capture.push(shortArrayOf(i.toShort()))
                     delay(FRAME_SPACING_MS)
                 }
 
-                assertFrameSequence(collectedA.await(), FRAMES_FANOUT, "listener A")
-                assertFrameSequence(collectedB.await(), FRAMES_FANOUT, "listener B")
+                InteropDebug.stepSuspending(scope, "await listener A frames") {
+                    assertFrameSequence(collectedA.await(), FRAMES_FANOUT, "$scope/listenerA")
+                }
+                InteropDebug.stepSuspending(scope, "await listener B frames") {
+                    assertFrameSequence(collectedB.await(), FRAMES_FANOUT, "$scope/listenerB")
+                }
 
                 runCatching { subA.unsubscribe() }
                 runCatching { subB.unsubscribe() }
@@ -154,47 +167,88 @@ class NostrNestsMultiPeerInteropTest {
             val captureA = DriverCapture()
             val captureB = DriverCapture()
 
+            val scope = "multispeaker"
+            InteropDebug.checkpoint(scope, "room=${room.moqNamespace()} A=${signerA.pubKey.take(8)} B=${signerB.pubKey.take(8)}")
+
             try {
                 val speakerA =
-                    connectSpeaker(pumpScope, room, signerA, captureA, encoderPrefix = "A:")
+                    connectSpeaker(
+                        pumpScope,
+                        room,
+                        signerA,
+                        captureA,
+                        encoderPrefix = "A:",
+                        debugScope = "$scope/speakerA",
+                    )
                 val speakerB =
-                    connectSpeaker(pumpScope, room, signerB, captureB, encoderPrefix = "B:")
-                speakerA.startBroadcasting()
-                speakerB.startBroadcasting()
+                    connectSpeaker(
+                        pumpScope,
+                        room,
+                        signerB,
+                        captureB,
+                        encoderPrefix = "B:",
+                        debugScope = "$scope/speakerB",
+                    )
+                InteropDebug.stepSuspending("$scope/speakerA", "startBroadcasting") { speakerA.startBroadcasting() }
+                InteropDebug.assertSpeakerReached("$scope/speakerA", "Broadcasting", speakerA.state.value)
+                InteropDebug.stepSuspending("$scope/speakerB", "startBroadcasting") { speakerB.startBroadcasting() }
+                InteropDebug.assertSpeakerReached("$scope/speakerB", "Broadcasting", speakerB.state.value)
 
-                val listener = connectListener(pumpScope, room, listenerSigner)
-                val subA = listener.subscribeSpeaker(signerA.pubKey)
-                val subB = listener.subscribeSpeaker(signerB.pubKey)
+                val listener = connectListener(pumpScope, room, listenerSigner, debugScope = "$scope/listener")
+                val subA =
+                    InteropDebug.stepSuspending("$scope/listener", "subscribeSpeaker(A=${signerA.pubKey.take(8)})") {
+                        listener.subscribeSpeaker(signerA.pubKey)
+                    }
+                val subB =
+                    InteropDebug.stepSuspending("$scope/listener", "subscribeSpeaker(B=${signerB.pubKey.take(8)})") {
+                        listener.subscribeSpeaker(signerB.pubKey)
+                    }
 
                 val collectedA = collectFrames(pumpScope, subA, FRAMES_MULTI_SPEAKER)
                 val collectedB = collectFrames(pumpScope, subB, FRAMES_MULTI_SPEAKER)
 
                 delay(SUBSCRIBE_SETTLE_MS)
+                InteropDebug.checkpoint(scope, "pushing $FRAMES_MULTI_SPEAKER frames into each capture")
                 for (i in 0 until FRAMES_MULTI_SPEAKER) {
                     captureA.push(shortArrayOf((i + 0).toShort()))
                     captureB.push(shortArrayOf((i + 100).toShort()))
                     delay(FRAME_SPACING_MS)
                 }
 
-                val resA = collectedA.await()
-                val resB = collectedB.await()
-                assertNotNull(resA, "listener never received speaker-A frames")
-                assertNotNull(resB, "listener never received speaker-B frames")
-                assertEquals(FRAMES_MULTI_SPEAKER, resA.size, "speaker A count")
-                assertEquals(FRAMES_MULTI_SPEAKER, resB.size, "speaker B count")
+                val resA =
+                    InteropDebug.stepSuspending(scope, "await speaker A frames") { collectedA.await() }
+                val resB =
+                    InteropDebug.stepSuspending(scope, "await speaker B frames") { collectedB.await() }
+                if (resA == null) {
+                    fail(
+                        "[$scope] listener never received speaker-A frames within ${RECEIVE_TIMEOUT_MS}ms — " +
+                            "speakerA=${InteropDebug.describe(speakerA.state.value)}, " +
+                            "listener=${InteropDebug.describe(listener.state.value)}",
+                    )
+                }
+                if (resB == null) {
+                    fail(
+                        "[$scope] listener never received speaker-B frames within ${RECEIVE_TIMEOUT_MS}ms — " +
+                            "speakerB=${InteropDebug.describe(speakerB.state.value)}, " +
+                            "listener=${InteropDebug.describe(listener.state.value)}",
+                    )
+                }
+                InteropDebug.checkpoint(scope, "received ${resA.size} A-frames, ${resB.size} B-frames")
+                assertEquals(FRAMES_MULTI_SPEAKER, resA.size, "[$scope] speaker A count")
+                assertEquals(FRAMES_MULTI_SPEAKER, resB.size, "[$scope] speaker B count")
 
                 resA.forEachIndexed { idx, obj ->
                     assertContentEquals(
                         "A:".encodeToByteArray() + byteArrayOf(idx.toByte()),
                         obj.payload,
-                        "speaker A frame $idx — must not contain B's payload (no cross-talk)",
+                        "[$scope] speaker A frame $idx — must not contain B's payload (no cross-talk)",
                     )
                 }
                 resB.forEachIndexed { idx, obj ->
                     assertContentEquals(
                         "B:".encodeToByteArray() + byteArrayOf((idx + 100).toByte()),
                         obj.payload,
-                        "speaker B frame $idx — must not contain A's payload (no cross-talk)",
+                        "[$scope] speaker B frame $idx — must not contain A's payload (no cross-talk)",
                     )
                 }
 
@@ -228,27 +282,38 @@ class NostrNestsMultiPeerInteropTest {
             val pumpScope = CoroutineScope(supervisor + Dispatchers.IO)
             val capture = DriverCapture()
 
+            val scope = "presub"
+            InteropDebug.checkpoint(scope, "room=${room.moqNamespace()} speaker=${speakerSigner.pubKey.take(8)}")
+
             try {
-                val listener = connectListener(pumpScope, room, listenerSigner)
-                val sub = listener.subscribeSpeaker(speakerSigner.pubKey)
+                val listener = connectListener(pumpScope, room, listenerSigner, debugScope = "$scope/listener")
+                val sub =
+                    InteropDebug.stepSuspending("$scope/listener", "subscribeSpeaker(${speakerSigner.pubKey.take(8)})") {
+                        listener.subscribeSpeaker(speakerSigner.pubKey)
+                    }
                 val collected = collectFrames(pumpScope, sub, FRAMES_PRESUB)
 
                 // Wait briefly so the SUBSCRIBE is on the relay before
                 // the publisher arrives — the relay should hold it.
                 delay(SUBSCRIBE_SETTLE_MS)
+                InteropDebug.checkpoint(scope, "subscribe settled — bringing speaker up now")
 
-                val speaker = connectSpeaker(pumpScope, room, speakerSigner, capture)
-                speaker.startBroadcasting()
+                val speaker = connectSpeaker(pumpScope, room, speakerSigner, capture, debugScope = "$scope/speaker")
+                InteropDebug.stepSuspending("$scope/speaker", "startBroadcasting") { speaker.startBroadcasting() }
+                InteropDebug.assertSpeakerReached("$scope/speaker", "Broadcasting", speaker.state.value)
 
                 // Give the announce + publisher-side subscribe matchup
                 // time to plumb before pushing frames.
                 delay(SUBSCRIBE_SETTLE_MS)
+                InteropDebug.checkpoint(scope, "pushing $FRAMES_PRESUB frames into capture")
                 for (i in 0 until FRAMES_PRESUB) {
                     capture.push(shortArrayOf(i.toShort()))
                     delay(FRAME_SPACING_MS)
                 }
 
-                assertFrameSequence(collected.await(), FRAMES_PRESUB, "pre-subscribed listener")
+                InteropDebug.stepSuspending(scope, "await pre-subscribed listener frames") {
+                    assertFrameSequence(collected.await(), FRAMES_PRESUB, "$scope/listener")
+                }
 
                 runCatching { sub.unsubscribe() }
                 runCatching { listener.close() }
@@ -268,22 +333,22 @@ class NostrNestsMultiPeerInteropTest {
         signer: NostrSignerInternal,
         capture: AudioCapture,
         encoderPrefix: String = "FRAME-",
+        debugScope: String = "speaker(${signer.pubKey.take(8)})",
     ): NestsSpeaker {
         val speaker =
-            connectNestsSpeaker(
-                httpClient = http,
-                transport = transport,
-                scope = scope,
-                room = room,
-                signer = signer,
-                speakerPubkeyHex = signer.pubKey,
-                captureFactory = { capture },
-                encoderFactory = { StubEncoder(encoderPrefix.encodeToByteArray()) },
-            )
-        assertTrue(
-            speaker.state.value is NestsSpeakerState.Connected,
-            "speaker did not reach Connected — was ${speaker.state.value}",
-        )
+            InteropDebug.stepSuspending(debugScope, "connectNestsSpeaker") {
+                connectNestsSpeaker(
+                    httpClient = http,
+                    transport = transport,
+                    scope = scope,
+                    room = room,
+                    signer = signer,
+                    speakerPubkeyHex = signer.pubKey,
+                    captureFactory = { capture },
+                    encoderFactory = { StubEncoder(encoderPrefix.encodeToByteArray()) },
+                )
+            }
+        InteropDebug.assertSpeakerReached(debugScope, "Connected", speaker.state.value)
         return speaker
     }
 
@@ -291,19 +356,19 @@ class NostrNestsMultiPeerInteropTest {
         scope: CoroutineScope,
         room: NestsRoomConfig,
         signer: NostrSignerInternal,
+        debugScope: String = "listener(${signer.pubKey.take(8)})",
     ): NestsListener {
         val listener =
-            connectNestsListener(
-                httpClient = http,
-                transport = transport,
-                scope = scope,
-                room = room,
-                signer = signer,
-            )
-        assertTrue(
-            listener.state.value is NestsListenerState.Connected,
-            "listener did not reach Connected — was ${listener.state.value}",
-        )
+            InteropDebug.stepSuspending(debugScope, "connectNestsListener") {
+                connectNestsListener(
+                    httpClient = http,
+                    transport = transport,
+                    scope = scope,
+                    room = room,
+                    signer = signer,
+                )
+            }
+        InteropDebug.assertListenerReached(debugScope, "Connected", listener.state.value)
         return listener
     }
 
@@ -322,7 +387,14 @@ class NostrNestsMultiPeerInteropTest {
         expectedCount: Int,
         who: String,
     ) {
-        assertNotNull(objs, "$who did not receive $expectedCount frames within ${RECEIVE_TIMEOUT_MS}ms")
+        if (objs == null) {
+            fail(
+                "$who did not receive $expectedCount frames within ${RECEIVE_TIMEOUT_MS}ms — " +
+                    "verify the speaker actually announced + the relay forwarded; " +
+                    "look upstream for ✘ checkpoints in the captured stdout",
+            )
+        }
+        InteropDebug.checkpoint(who, "received ${objs.size} frames (expected $expectedCount)")
         assertEquals(expectedCount, objs.size, "$who frame count")
         objs.forEachIndexed { idx, obj ->
             assertEquals(idx.toLong(), obj.objectId, "$who object id at index $idx")
