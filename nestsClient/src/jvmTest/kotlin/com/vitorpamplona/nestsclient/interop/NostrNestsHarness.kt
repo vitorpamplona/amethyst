@@ -75,6 +75,16 @@ class NostrNestsHarness private constructor(
         const val MOQ_HOST_PORT = 4443
 
         private const val REPO_URL = "https://github.com/nostrnests/nests.git"
+        private const val MOQ_REPO_URL = "https://github.com/kixelated/moq.git"
+
+        /**
+         * Pin the upstream `kixelated/moq` revision so test runs are
+         * reproducible even if upstream main changes a wire-level detail
+         * we depend on (e.g. moq-lite framing). Override at runtime via
+         * `-DnestsInteropMoqRev=<sha-or-branch>`.
+         */
+        const val DEFAULT_MOQ_REVISION = "main"
+
         private const val COMPOSE_FILE = "docker-compose-moq.yml"
         private const val PORT_READY_TIMEOUT_MS = 90_000L
         private const val PORT_PROBE_INTERVAL_MS = 500L
@@ -90,6 +100,14 @@ class NostrNestsHarness private constructor(
             }
 
             val workDir = ensureRepo()
+            // The compose file `build:`s `./moq` — the upstream moq-rs
+            // sources — but nostrnests does NOT ship that directory; it
+            // expects each developer to clone `kixelated/moq` into it.
+            ensureMoqSource(workDir)
+            // moq-relay needs TLS certs to bring up its WebTransport
+            // listener; nostrnests ships a self-signed-cert generator
+            // we run on first invocation.
+            ensureDevCerts(workDir)
             // Bring everything up detached. The compose file's services log
             // to stdout; we don't tail them — failures surface via
             // port-probe timeouts.
@@ -152,20 +170,52 @@ class NostrNestsHarness private constructor(
             val rev = System.getProperty("nestsInteropRev") ?: DEFAULT_REVISION
             val target = cacheRoot().resolve("nests").toFile()
             if (!target.exists()) {
-                // Recurse-submodules pulls in the `moq` (kixelated/moq-rs)
-                // and `moq-auth` build contexts that docker-compose-moq.yml
-                // references via `build: ./moq` / `./moq-auth`. Without
-                // them docker compose fails with "unable to prepare
-                // context: path '<repo>/moq' not found".
-                runProcess(cacheRoot().toFile(), "git", "clone", "--recurse-submodules", REPO_URL, "nests")
+                runProcess(cacheRoot().toFile(), "git", "clone", REPO_URL, "nests")
             }
             // Always fetch + checkout the requested revision so test runs
-            // are reproducible even if `main` advances. Sync submodules to
-            // whatever the checked-out commit pins.
+            // are reproducible even if `main` advances.
             runProcess(target, "git", "fetch", "origin", "--quiet")
             runProcess(target, "git", "checkout", "--quiet", rev)
-            runProcess(target, "git", "submodule", "update", "--init", "--recursive")
             return target
+        }
+
+        /**
+         * Clone (and refresh) the upstream `kixelated/moq` repo into
+         * `nestsRepo/moq`. The nostrnests compose file `build:`s
+         * `./moq` directly, but the directory is NOT shipped in the
+         * nostrnests repo (and is NOT a submodule); each developer is
+         * expected to set it up. We do that automatically here.
+         */
+        private fun ensureMoqSource(nestsRepo: File) {
+            val moqDir = File(nestsRepo, "moq")
+            val rev = System.getProperty("nestsInteropMoqRev") ?: DEFAULT_MOQ_REVISION
+            if (!moqDir.exists()) {
+                runProcess(nestsRepo, "git", "clone", MOQ_REPO_URL, "moq")
+            }
+            // Reproducible runs: pin to the requested revision.
+            runProcess(moqDir, "git", "fetch", "origin", "--quiet")
+            runProcess(moqDir, "git", "checkout", "--quiet", rev)
+        }
+
+        /**
+         * Run `dev-config/generate-certs.sh` if `dev-config/certs/`
+         * doesn't already hold a chain — moq-relay's container mounts
+         * that directory read-only and refuses to start without it.
+         * The script is idempotent (it bails out if the certs already
+         * exist), so we always invoke it; logs go through [runProcess]
+         * so a failure surfaces as a clear `IllegalStateException`.
+         */
+        private fun ensureDevCerts(nestsRepo: File) {
+            val certs = File(nestsRepo, "dev-config/certs")
+            if (certs.exists() && File(certs, "fullchain.pem").exists()) return
+            val script = File(nestsRepo, "dev-config/generate-certs.sh")
+            check(script.exists()) {
+                "expected dev-config/generate-certs.sh in the nostrnests checkout but it's missing"
+            }
+            // chmod +x defensively (ownerOnly = false) in case git
+            // didn't preserve the bit on Windows / some CI checkouts.
+            script.setExecutable(true, false)
+            runProcess(File(nestsRepo, "dev-config"), "./generate-certs.sh")
         }
 
         private fun runDocker(
