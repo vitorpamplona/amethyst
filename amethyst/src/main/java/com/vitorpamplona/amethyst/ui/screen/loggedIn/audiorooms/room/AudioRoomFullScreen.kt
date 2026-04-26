@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 
@@ -170,6 +171,19 @@ internal fun AudioRoomFullScreen(
                 Text(stringRes(R.string.audio_room_leave))
             }
         }
+
+        AudioRoomChatPanel(
+            roomATag =
+                ATag(
+                    kind = event.kind,
+                    pubKeyHex = event.pubKey,
+                    dTag = event.dTag(),
+                    relay = null,
+                ),
+            viewModel = viewModel,
+            accountViewModel = accountViewModel,
+            modifier = Modifier.padding(top = 12.dp),
+        )
     }
 }
 

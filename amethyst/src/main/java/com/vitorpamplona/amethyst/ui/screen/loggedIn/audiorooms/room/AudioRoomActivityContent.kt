@@ -39,9 +39,11 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.audiorooms.AudioRoomForegroundService
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomChatFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomPresenceFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
@@ -163,6 +165,21 @@ private fun AudioRoomActivityBody(
         while (isActive) {
             delay(PRESENCE_EVICT_INTERVAL_MS)
             viewModel.evictStalePresences(System.currentTimeMillis() / 1000 - PRESENCE_STALE_THRESHOLD_SEC)
+        }
+    }
+
+    // Per-room kind-1311 live chat: open the wire sub for the duration
+    // of this Composable, observe matching events from LocalCache, feed
+    // them into the VM's chat ledger.
+    RoomChatFilterAssemblerSubscription(roomATag, accountViewModel)
+    LaunchedEffect(viewModel, roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeEvents<LiveActivitiesChatMessageEvent>(filter).collect { events ->
+            events.forEach { viewModel.onChatEvent(it) }
         }
     }
 
