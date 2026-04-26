@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.nestsclient
 
+import com.vitorpamplona.nestsclient.audio.AudioCapture
+import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.MoqSession
 import com.vitorpamplona.nestsclient.moq.MoqVersion
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
@@ -137,6 +139,114 @@ private fun failedListener(state: MutableStateFlow<NestsListenerState>): NestsLi
         override suspend fun close() {
             if (state.value !is NestsListenerState.Closed) {
                 state.value = NestsListenerState.Closed
+            }
+        }
+    }
+
+/**
+ * Speaker / host counterpart of [connectNestsListener]. Walks the same
+ * HTTP → WebTransport → MoQ handshake; the difference is the post-setup
+ * step is `announce(...)` (driven by [NestsSpeaker.startBroadcasting])
+ * instead of `subscribe(...)`.
+ *
+ * @param speakerPubkeyHex this user's pubkey hex, used as the MoQ track
+ *   name when we ANNOUNCE — listeners look us up by exactly that name.
+ * @param captureFactory builds an [AudioCapture] (one per broadcast).
+ *   Android passes `{ AudioRecordCapture() }`.
+ * @param encoderFactory builds an [OpusEncoder] (one per broadcast).
+ *   Android passes `{ MediaCodecOpusEncoder() }`.
+ */
+suspend fun connectNestsSpeaker(
+    httpClient: NestsClient,
+    transport: WebTransportFactory,
+    scope: CoroutineScope,
+    serviceBase: String,
+    roomId: String,
+    signer: NostrSigner,
+    speakerPubkeyHex: String,
+    captureFactory: () -> AudioCapture,
+    encoderFactory: () -> OpusEncoder,
+    supportedMoqVersions: List<Long> = listOf(MoqVersion.DRAFT_17),
+): NestsSpeaker {
+    val state =
+        MutableStateFlow<NestsSpeakerState>(
+            NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.ResolvingRoom),
+        )
+
+    val roomInfo =
+        try {
+            httpClient.resolveRoom(serviceBase = serviceBase, roomId = roomId, signer = signer)
+        } catch (t: NestsException) {
+            state.value = NestsSpeakerState.Failed("Room resolution failed: ${t.message}", t)
+            return failedSpeaker(state)
+        }
+
+    state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.OpeningTransport)
+
+    val (authority, path) =
+        try {
+            parseEndpoint(roomInfo.endpoint)
+        } catch (t: Throwable) {
+            state.value =
+                NestsSpeakerState.Failed(
+                    "Malformed MoQ endpoint URL '${roomInfo.endpoint}': ${t.message}",
+                    t,
+                )
+            return failedSpeaker(state)
+        }
+
+    val webTransport =
+        try {
+            transport.connect(authority = authority, path = path, bearerToken = roomInfo.token)
+        } catch (t: WebTransportException) {
+            state.value =
+                NestsSpeakerState.Failed(
+                    "WebTransport ${t.kind.name}: ${t.message}",
+                    t,
+                )
+            return failedSpeaker(state)
+        }
+
+    state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.MoqHandshake)
+
+    val moq =
+        try {
+            MoqSession.client(webTransport, scope).also { it.setup(supportedMoqVersions) }
+        } catch (t: Throwable) {
+            runCatching { webTransport.close(0, "moq setup failed") }
+            state.value = NestsSpeakerState.Failed("MoQ handshake failed: ${t.message}", t)
+            return failedSpeaker(state)
+        }
+
+    val negotiatedVersion =
+        moq.selectedVersion ?: run {
+            runCatching { moq.close() }
+            state.value = NestsSpeakerState.Failed("MoQ session reported no negotiated version")
+            return failedSpeaker(state)
+        }
+
+    state.value = NestsSpeakerState.Connected(roomInfo, negotiatedVersion)
+    return DefaultNestsSpeaker(
+        session = moq,
+        roomNamespace = TrackNamespace.of("nests", roomId),
+        speakerTrackName = speakerPubkeyHex.encodeToByteArray(),
+        captureFactory = captureFactory,
+        encoderFactory = encoderFactory,
+        scope = scope,
+        mutableState = state,
+    )
+}
+
+/** Mirror of [failedListener] for the speaker path. */
+private fun failedSpeaker(state: MutableStateFlow<NestsSpeakerState>): NestsSpeaker =
+    object : NestsSpeaker {
+        override val state = state
+
+        override suspend fun startBroadcasting(): BroadcastHandle = error("speaker never connected: ${state.value}")
+
+        override suspend fun close() {
+            if (state.value !is NestsSpeakerState.Closed) {
+                state.value = NestsSpeakerState.Closed
             }
         }
     }
