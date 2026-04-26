@@ -2199,6 +2199,8 @@
     <string name="ai_writing_help">AI 写入帮助</string>
     <string name="ai_writing_setting_title">建议文本改进</string>
     <string name="ai_writing_setting_description">使用设备上的 AI 模型来提出文本更正和音调更改。</string>
+    <string name="tracked_broadcasts_setting_title">已跟踪的广播</string>
+    <string name="tracked_broadcasts_setting_description">在发送事件时使用已跟踪的广播。在广播时显示实时进度和每个中继的状态。</string>
     <string name="ai_writing_use_this">使用它</string>
     <string name="ai_writing_dismiss">忽略</string>
     <string name="ai_tone_correct">更正</string>
