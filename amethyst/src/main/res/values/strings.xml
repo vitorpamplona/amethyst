@@ -493,6 +493,17 @@
     <string name="audio_room_audience">Audience</string>
     <string name="audio_room_raise_hand">Raise hand</string>
     <string name="audio_room_lower_hand">Lower hand</string>
+    <string name="audio_room_connect">Connect audio</string>
+    <string name="audio_room_disconnect">Disconnect</string>
+    <string name="audio_room_mute">Mute</string>
+    <string name="audio_room_unmute">Unmute</string>
+    <string name="audio_room_connecting">Connecting…</string>
+    <string name="audio_room_connecting_resolving">Resolving room</string>
+    <string name="audio_room_connecting_transport">Opening transport</string>
+    <string name="audio_room_connecting_handshake">Negotiating audio</string>
+    <string name="audio_room_connected">Audio connected</string>
+    <string name="audio_room_audio_failed">Audio failed: %1$s</string>
+    <string name="audio_room_audio_unavailable">Audio is not available for this room</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
     <string name="private_bookmarks">Private Bookmarks</string>

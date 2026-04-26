@@ -206,6 +206,8 @@ class AudioRoomPlayerTest {
             private set
         val stopped: Boolean get() = stopCount > 0
         val queued = mutableListOf<ShortArray>()
+        var muted: Boolean = false
+            private set
 
         override fun start() {
             started = true
@@ -213,6 +215,10 @@ class AudioRoomPlayerTest {
 
         override suspend fun enqueue(pcm: ShortArray) {
             queued.add(pcm)
+        }
+
+        override fun setMuted(muted: Boolean) {
+            this.muted = muted
         }
 
         override fun stop() {

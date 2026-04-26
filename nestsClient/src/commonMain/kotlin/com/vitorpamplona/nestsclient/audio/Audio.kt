@@ -110,6 +110,17 @@ interface AudioPlayer {
      */
     suspend fun enqueue(pcm: ShortArray)
 
+    /**
+     * Toggle output silence without halting the underlying decode/network
+     * pipeline. The producer keeps pushing PCM into [enqueue]; the device
+     * just stops emitting sound. Default is unmuted.
+     *
+     * Used so the audio-room UI mute button is instant — nothing to
+     * re-handshake on unmute. Setting before [start] is allowed; the value
+     * is applied when the device opens.
+     */
+    fun setMuted(muted: Boolean)
+
     /** Stop playback and release resources. After this, the player is unusable. */
     fun stop()
 }
