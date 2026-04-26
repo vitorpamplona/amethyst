@@ -43,11 +43,35 @@ data class RoomTheme(
     val primaryArgb: Long?,
     val backgroundImageUrl: String?,
     val backgroundMode: BackgroundMode,
+    /**
+     * Suggested font family from the kind-30312 `["f", family,
+     * optionalUrl]` tag. Renderers map this to a platform
+     * FontFamily — the system-font shorthand list ("sans-serif",
+     * "serif", "monospace", "cursive") is honoured directly;
+     * other names fall back to the platform default unless the
+     * renderer also fetches [fontUrl].
+     */
+    val fontFamily: String?,
+    /**
+     * Optional URL to a font file (e.g. WOFF2). The protocol
+     * permits async loading; clients without a font-fetch loader
+     * stay on [fontFamily] alone (or default typography on miss).
+     */
+    val fontUrl: String?,
 ) {
     enum class BackgroundMode { COVER, TILE }
 
     companion object {
-        val Empty = RoomTheme(null, null, null, null, BackgroundMode.COVER)
+        val Empty =
+            RoomTheme(
+                backgroundArgb = null,
+                textArgb = null,
+                primaryArgb = null,
+                backgroundImageUrl = null,
+                backgroundMode = BackgroundMode.COVER,
+                fontFamily = null,
+                fontUrl = null,
+            )
 
         /**
          * Project the theme tags off a kind-30312 event. Returns
@@ -57,6 +81,7 @@ data class RoomTheme(
         fun from(event: MeetingSpaceEvent): RoomTheme {
             val colors = event.colors()
             val bg = event.background()
+            val font = event.font()
 
             fun pickHex(target: ColorTag.Target): Long? =
                 colors
@@ -74,6 +99,8 @@ data class RoomTheme(
                         BackgroundTag.Mode.TILE -> BackgroundMode.TILE
                         else -> BackgroundMode.COVER
                     },
+                fontFamily = font?.family,
+                fontUrl = font?.url,
             )
         }
 

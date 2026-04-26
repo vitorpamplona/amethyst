@@ -128,4 +128,28 @@ class RoomThemeTest {
         assertEquals(0xFF000000L, RoomTheme.hexToOpaqueArgb("000000"))
         assertEquals(0xFFFFFFFFL, RoomTheme.hexToOpaqueArgb("FFFFFF"))
     }
+
+    @Test
+    fun fontFamilyOnly() {
+        val theme = RoomTheme.from(event(listOf(arrayOf("f", "Inter"))))
+        assertEquals("Inter", theme.fontFamily)
+        assertNull(theme.fontUrl)
+    }
+
+    @Test
+    fun fontFamilyAndUrl() {
+        val theme =
+            RoomTheme.from(
+                event(listOf(arrayOf("f", "Inter", "https://fonts.example/inter.woff2"))),
+            )
+        assertEquals("Inter", theme.fontFamily)
+        assertEquals("https://fonts.example/inter.woff2", theme.fontUrl)
+    }
+
+    @Test
+    fun emptyFontDefaultsBothNull() {
+        val theme = RoomTheme.from(event(emptyList()))
+        assertNull(theme.fontFamily)
+        assertNull(theme.fontUrl)
+    }
 }

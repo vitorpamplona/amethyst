@@ -23,11 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
 
@@ -62,7 +64,18 @@ internal fun AudioRoomThemedScope(
             )
         }
 
-    MaterialTheme(colorScheme = themed) {
+    val originalTypography = MaterialTheme.typography
+    val themedTypography =
+        remember(theme.fontFamily, originalTypography) {
+            val family = systemFontFamilyFor(theme.fontFamily)
+            if (family == null) {
+                originalTypography
+            } else {
+                applyFontFamily(originalTypography, family)
+            }
+        }
+
+    MaterialTheme(colorScheme = themed, typography = themedTypography) {
         Box(modifier = Modifier.fillMaxSize()) {
             theme.backgroundImageUrl?.let { url ->
                 AsyncImage(
@@ -85,3 +98,45 @@ internal fun AudioRoomThemedScope(
         }
     }
 }
+
+/**
+ * Map a kind-30312 `["f", family]` value to a Compose [FontFamily].
+ * Only the four CSS-style generic-family names are honoured today —
+ * arbitrary names (e.g. "Inter") fall back to platform default
+ * unless a downloader is wired up. URL-based loading
+ * (RoomTheme.fontUrl) is the natural follow-up: fetch + cache
+ * via OkHttp, then build a FontFamily from a local file. Until
+ * then, an unknown family is silently a no-op.
+ */
+private fun systemFontFamilyFor(name: String?): FontFamily? =
+    when (name?.trim()?.lowercase()) {
+        null -> null
+        "" -> null
+        "sans-serif", "sans serif", "sansserif" -> FontFamily.SansSerif
+        "serif" -> FontFamily.Serif
+        "monospace", "mono" -> FontFamily.Monospace
+        "cursive" -> FontFamily.Cursive
+        else -> null
+    }
+
+private fun applyFontFamily(
+    typography: Typography,
+    family: FontFamily,
+): Typography =
+    typography.copy(
+        displayLarge = typography.displayLarge.copy(fontFamily = family),
+        displayMedium = typography.displayMedium.copy(fontFamily = family),
+        displaySmall = typography.displaySmall.copy(fontFamily = family),
+        headlineLarge = typography.headlineLarge.copy(fontFamily = family),
+        headlineMedium = typography.headlineMedium.copy(fontFamily = family),
+        headlineSmall = typography.headlineSmall.copy(fontFamily = family),
+        titleLarge = typography.titleLarge.copy(fontFamily = family),
+        titleMedium = typography.titleMedium.copy(fontFamily = family),
+        titleSmall = typography.titleSmall.copy(fontFamily = family),
+        bodyLarge = typography.bodyLarge.copy(fontFamily = family),
+        bodyMedium = typography.bodyMedium.copy(fontFamily = family),
+        bodySmall = typography.bodySmall.copy(fontFamily = family),
+        labelLarge = typography.labelLarge.copy(fontFamily = family),
+        labelMedium = typography.labelMedium.copy(fontFamily = family),
+        labelSmall = typography.labelSmall.copy(fontFamily = family),
+    )

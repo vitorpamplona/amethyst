@@ -53,6 +53,14 @@ fun TagArrayBuilder<MeetingSpaceEvent>.starts(unixSeconds: Long) =
             .assemble(unixSeconds),
     )
 
+fun TagArrayBuilder<MeetingSpaceEvent>.font(
+    family: String,
+    url: String? = null,
+) = addUnique(
+    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.FontTag
+        .assemble(family, url),
+)
+
 fun TagArrayBuilder<MeetingSpaceEvent>.relays(urls: List<NormalizedRelayUrl>) = addUnique(RelayListTag.assemble(urls))
 
 fun TagArrayBuilder<MeetingSpaceEvent>.participant(

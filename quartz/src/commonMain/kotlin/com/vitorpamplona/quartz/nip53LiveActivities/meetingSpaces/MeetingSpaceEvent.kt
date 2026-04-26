@@ -86,6 +86,14 @@ class MeetingSpaceEvent(
     fun background() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.BackgroundTag::parse)
 
     /**
+     * Suggested typography for the room screen. Returns the first
+     * `["f", family, optionalUrl]` tag. Clients with theming
+     * support match the family against system fonts (or fetch the
+     * URL); clients without theming support ignore.
+     */
+    fun font() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.FontTag::parse)
+
+    /**
      * Scheduled start time as unix seconds, only meaningful when
      * [status] is [StatusTag.STATUS.PLANNED]. Returns null on
      * malformed or absent tag — the room-list renderer falls back
