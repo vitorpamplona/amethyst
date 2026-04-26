@@ -48,7 +48,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderC
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -137,38 +139,63 @@ private fun FeedLoaded(
 }
 
 // Stable per-chatroom key — derived from chatroom identity, not the latest
-// message id, so reorders move the row instead of recreating it.
+// message id, so reorders move the row instead of recreating it. Uses a
+// sealed wrapper around an existing String/RoomId/ChatroomKey to avoid the
+// StringBuilder + concatenation allocations of a typed-prefix string key.
+private sealed interface ChatroomLazyKey
+
+private data class MarmotChatroomLazyKey(
+    val groupId: HexKey,
+) : ChatroomLazyKey
+
+private data class PublicChannelLazyKey(
+    val channelId: HexKey,
+) : ChatroomLazyKey
+
+private data class EphemeralChannelLazyKey(
+    val roomId: RoomId,
+) : ChatroomLazyKey
+
+private data class PrivateChatLazyKey(
+    val key: ChatroomKey,
+) : ChatroomLazyKey
+
+private data class FallbackChatroomLazyKey(
+    val noteIdHex: HexKey,
+) : ChatroomLazyKey
+
 private fun chatroomLazyKey(
     item: Note,
     myPubKey: HexKey,
-): String {
+): ChatroomLazyKey {
     item.inGatherers
         ?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
-        ?.let { return "marmot:${it.nostrGroupId}" }
+        ?.let { return MarmotChatroomLazyKey(it.nostrGroupId) }
 
     return when (val event = item.event) {
         is ChannelMessageEvent -> {
-            "ch:${event.channelId() ?: item.idHex}"
+            PublicChannelLazyKey(event.channelId() ?: item.idHex)
         }
 
         is ChannelMetadataEvent -> {
-            "ch:${event.channelId() ?: item.idHex}"
+            PublicChannelLazyKey(event.channelId() ?: item.idHex)
         }
 
         is ChannelCreateEvent -> {
-            "ch:${event.id}"
+            PublicChannelLazyKey(event.id)
         }
 
         is EphemeralChatEvent -> {
-            "eph:${event.roomId()?.toKey() ?: item.idHex}"
+            event.roomId()?.let { EphemeralChannelLazyKey(it) }
+                ?: FallbackChatroomLazyKey(item.idHex)
         }
 
         is ChatroomKeyable -> {
-            "dm:${event.chatroomKey(myPubKey).users.sorted().joinToString(",")}"
+            PrivateChatLazyKey(event.chatroomKey(myPubKey))
         }
 
         else -> {
-            item.idHex
+            FallbackChatroomLazyKey(item.idHex)
         }
     }
 }
