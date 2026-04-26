@@ -2199,6 +2199,8 @@
     <string name="ai_writing_help">एआई॰ लेखन सहायता</string>
     <string name="ai_writing_setting_title">लेख शोधन प्रस्ताव करें</string>
     <string name="ai_writing_setting_description">यन्त्र स्थित एआई॰ प्रतिरूप का प्रयोग करता है लेख सुधार तथा स्वर परिवर्तन प्रस्तावों के लिए।</string>
+    <string name="tracked_broadcasts_setting_title">पदचिह्न युक्त प्रसारण</string>
+    <string name="tracked_broadcasts_setting_description">पदचिह्न युक्त प्रसारक का उपयोग करें घटनाओं को भेजते समय। तत्काल प्रगति दिखाता है तथा प्रत्येक पुनःप्रसारक की स्थिति प्रसारण करते समय।</string>
     <string name="ai_writing_use_this">इसका प्रयोग करें</string>
     <string name="ai_writing_dismiss">हटाएँ</string>
     <string name="ai_tone_correct">सम्यक</string>

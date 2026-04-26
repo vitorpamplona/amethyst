@@ -1147,8 +1147,8 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać satosze</string>
     <string name="zap_split_weight">Procentowo</string>
     <string name="zap_split_weight_placeholder">25</string>
-    <string name="splitting_zaps_with">Podziel zapsy z</string>
-    <string name="forwarding_zaps_to">Przesyłanie zapasów do</string>
+    <string name="splitting_zaps_with">Podziel zapy z</string>
+    <string name="forwarding_zaps_to">Przesyłanie zapów do</string>
     <string name="lightning_wallets_not_found2">Nie znaleziono portfeli Lightning</string>
     <string name="paid">Zapłacone</string>
     <string name="wallet_number">Portfel %1$s</string>
