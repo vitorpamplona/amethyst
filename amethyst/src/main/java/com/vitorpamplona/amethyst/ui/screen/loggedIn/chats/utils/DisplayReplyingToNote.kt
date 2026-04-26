@@ -30,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -57,7 +56,7 @@ fun DisplayReplyingToNote(
             .animateContentSize(),
     ) {
         if (replyingNote != null) {
-            Column(remember { Modifier.weight(1f) }) {
+            Column(Modifier.weight(1f)) {
                 ChatroomMessageCompose(
                     baseNote = replyingNote,
                     null,

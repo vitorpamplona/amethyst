@@ -334,8 +334,8 @@ private fun DialogContent(
 
         AnimatedVisibility(
             visible = controllerVisible.value,
-            enter = remember { fadeIn() },
-            exit = remember { fadeOut() },
+            enter = fadeIn(),
+            exit = fadeOut(),
             // Also fade with the grow animation so controls appear/disappear alongside it.
             modifier = Modifier.graphicsLayer { alpha = progress().coerceIn(0f, 1f) },
         ) {

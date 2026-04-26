@@ -78,7 +78,7 @@ fun NewDmDialog(
     val relaySearchResults by searchState.relaySearchResults.collectAsState()
     val isSearchingRelays by searchState.isSearchingRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
+    val connectedRelays = relayStatuses.keys
     val focusRequester = remember { FocusRequester() }
 
     // NIP-50 relay search when local cache has few/no results

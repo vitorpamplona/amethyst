@@ -404,8 +404,8 @@ fun LocalImageView(
                                 AnimatedVisibility(
                                     visible = controllerVisible.value,
                                     modifier = Modifier.align(Alignment.TopEnd),
-                                    enter = remember { fadeIn() },
-                                    exit = remember { fadeOut() },
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
                                 ) {
                                     Box(Modifier.align(Alignment.TopEnd), contentAlignment = Alignment.TopEnd) {
                                         HashVerificationSymbol(it)
@@ -649,8 +649,8 @@ fun ShowHashAnimated(
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = modifier,
-        enter = remember { fadeIn() },
-        exit = remember { fadeOut() },
+        enter = fadeIn(),
+        exit = fadeOut(),
     ) {
         Box(modifier, contentAlignment = Alignment.TopEnd) {
             ShowHash(content)
