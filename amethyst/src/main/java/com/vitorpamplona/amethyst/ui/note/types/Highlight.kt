@@ -357,7 +357,7 @@ fun DisplayEntryForAUrl(
     }
 
     val validatedUrl =
-        remember {
+        remember(url) {
             try {
                 URL(url)
             } catch (_: Exception) {

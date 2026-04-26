@@ -278,6 +278,24 @@ private fun RenderParticipants(
     }
 }
 
+private val MeetingSpaceOpenModifier =
+    Modifier
+        .clip(SmallBorder)
+        .background(Color(0xFF4CAF50))
+        .padding(horizontal = 5.dp)
+
+private val MeetingSpacePrivateModifier =
+    Modifier
+        .clip(SmallBorder)
+        .background(Color(0xFFFF9800))
+        .padding(horizontal = 5.dp)
+
+private val MeetingSpaceClosedModifier =
+    Modifier
+        .clip(SmallBorder)
+        .background(Color.Black)
+        .padding(horizontal = 5.dp)
+
 @Composable
 fun MeetingSpaceOpenFlag() {
     Text(
@@ -285,13 +303,7 @@ fun MeetingSpaceOpenFlag() {
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
-        modifier =
-            remember {
-                Modifier
-                    .clip(SmallBorder)
-                    .background(Color(0xFF4CAF50))
-                    .padding(horizontal = 5.dp)
-            },
+        modifier = MeetingSpaceOpenModifier,
     )
 }
 
@@ -302,13 +314,7 @@ fun MeetingSpacePrivateFlag() {
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
-        modifier =
-            remember {
-                Modifier
-                    .clip(SmallBorder)
-                    .background(Color(0xFFFF9800))
-                    .padding(horizontal = 5.dp)
-            },
+        modifier = MeetingSpacePrivateModifier,
     )
 }
 
@@ -319,12 +325,6 @@ fun MeetingSpaceClosedFlag() {
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
-        modifier =
-            remember {
-                Modifier
-                    .clip(SmallBorder)
-                    .background(Color.Black)
-                    .padding(horizontal = 5.dp)
-            },
+        modifier = MeetingSpaceClosedModifier,
     )
 }
