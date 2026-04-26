@@ -70,14 +70,9 @@ internal object TranslationDictionary {
             dict[placeholder(counter++)] = value
         }
 
-        val lnMatcher = lnRegex.matcher(text)
-        while (lnMatcher.find()) addUnique(lnMatcher.group())
-
-        val tagMatcher = tagRegex.matcher(text)
-        while (tagMatcher.find()) addUnique(tagMatcher.group())
-
-        val nip08Matcher = nip08RefRegex.matcher(text)
-        while (nip08Matcher.find()) addUnique(nip08Matcher.group())
+        lnRegex.forEachMatch(text, ::addUnique)
+        tagRegex.forEachMatch(text, ::addUnique)
+        nip08RefRegex.forEachMatch(text, ::addUnique)
 
         for (url in UrlDetector(text).detect()) {
             val original = url.originalUrl
@@ -87,6 +82,14 @@ internal object TranslationDictionary {
         }
 
         return dict
+    }
+
+    private inline fun Pattern.forEachMatch(
+        text: String,
+        block: (String) -> Unit,
+    ) {
+        val matcher = matcher(text)
+        while (matcher.find()) block(matcher.group())
     }
 
     fun encode(

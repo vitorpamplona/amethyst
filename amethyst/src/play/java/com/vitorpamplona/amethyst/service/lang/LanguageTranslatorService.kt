@@ -128,22 +128,34 @@ object LanguageTranslatorService {
         translateTo: String,
     ): Task<ResultOrError> {
         if (!TranslationDictionary.isWorthTranslating(text)) return Tasks.forCanceled()
-
-        val key = InFlightKey(text, translateTo, dontTranslateFrom)
-        inFlight[key]?.let { return it }
-
-        val task =
+        return dedupe(InFlightKey(text, translateTo, dontTranslateFrom)) {
             identifyLanguage(text).onSuccessTask(executorService) { detected ->
-                when {
-                    detected == "und" -> Tasks.forCanceled()
-                    detected.equals(translateTo, ignoreCase = true) -> Tasks.forCanceled()
-                    detected in dontTranslateFrom -> Tasks.forCanceled()
-                    else -> translate(text, detected, translateTo)
-                }
+                translateOrSkip(text, detected, dontTranslateFrom, translateTo)
             }
+        }
+    }
 
+    private fun translateOrSkip(
+        text: String,
+        detected: String,
+        dontTranslateFrom: Set<String>,
+        translateTo: String,
+    ): Task<ResultOrError> =
+        when {
+            detected == "und" -> Tasks.forCanceled()
+            detected.equals(translateTo, ignoreCase = true) -> Tasks.forCanceled()
+            detected in dontTranslateFrom -> Tasks.forCanceled()
+            else -> translate(text, detected, translateTo)
+        }
+
+    private inline fun dedupe(
+        key: InFlightKey,
+        factory: () -> Task<ResultOrError>,
+    ): Task<ResultOrError> {
+        inFlight[key]?.let { return it }
+        val candidate = factory()
         // putIfAbsent guards against a racing caller: keep the winner, drop the loser.
-        val winner = inFlight.putIfAbsent(key, task) ?: task
+        val winner = inFlight.putIfAbsent(key, candidate) ?: candidate
         winner.addOnCompleteListener(executorService) { inFlight.remove(key, winner) }
         return winner
     }

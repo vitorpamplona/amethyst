@@ -20,17 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.res.Resources
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -38,31 +28,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.service.lang.TranslationsCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.tasks.await
-import java.util.Locale
+import kotlin.coroutines.coroutineContext
 
 @Composable
 fun TranslatableRichTextViewer(
@@ -119,51 +98,13 @@ fun TranslatableRichTextViewer(
         }
 
     LaunchedEffect(content, translateTo, dontTranslateFrom) {
-        TranslationsCache.get(content, translateTo, dontTranslateFrom)?.let {
-            translatedTextState.value = it
-            return@LaunchedEffect
-        }
-
-        val noOp = TranslationConfig(content, null, null)
         try {
-            val task = LanguageTranslatorService.autoTranslate(content, dontTranslateFrom, translateTo)
-            // ML Kit cancels the task to signal "no translation needed" (same language, "und",
-            // blocklisted). await() bridges that into a CancellationException; cache the no-op so
-            // we don't re-run language identification next time the same text scrolls into view.
-            val raw =
-                try {
-                    task.await()
-                } catch (e: CancellationException) {
-                    coroutineContext.ensureActive()
-                    TranslationsCache.set(content, translateTo, dontTranslateFrom, noOp)
-                    translatedTextState.value = noOp
-                    return@LaunchedEffect
-                }
-
-            coroutineContext.ensureActive()
-
-            val translated = raw.result
-            val source = raw.sourceLang
-            val target = raw.targetLang
-            val newConfig =
-                if (
-                    translated != null &&
-                    source != null &&
-                    target != null &&
-                    source != target &&
-                    translated != content
-                ) {
-                    TranslationConfig(translated, source, target)
-                } else {
-                    noOp
-                }
-            TranslationsCache.set(content, translateTo, dontTranslateFrom, newConfig)
-            translatedTextState.value = newConfig
+            translatedTextState.value = translateAndCache(content, translateTo, dontTranslateFrom)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            // Network / model download / translator failure — keep showing the original. Do not
-            // cache: a transient failure shouldn't block future attempts on the same text.
+            // Transient ML Kit / network failure — keep showing the original. Do not cache: a
+            // one-off failure shouldn't block future attempts on the same text.
         }
     }
 
@@ -202,7 +143,7 @@ private fun RenderTextWithTranslateOptions(
         displayText(toBeViewed)
 
         if (translationOccurred) {
-            TranslationMessage(
+            TranslationStatusBar(
                 source = source,
                 target = target,
                 modifier = translationMessageModifier,
@@ -212,146 +153,40 @@ private fun RenderTextWithTranslateOptions(
     }
 }
 
-@Composable
-private fun TranslationMessage(
-    source: String,
-    target: String,
-    modifier: Modifier = MaxWidthPaddingTop5dp,
-    accountViewModel: AccountViewModel,
-    onChangeWhatToShow: (Boolean) -> Unit,
-) {
-    var langSettingsPopupExpanded by remember { mutableStateOf(false) }
+/**
+ * Returns the translation for [content] under the current language settings, hitting the cache
+ * first and falling back to ML Kit. ML Kit's "no translation needed" cancellation (same language,
+ * undetected, blocklisted) is bridged into a no-op [TranslationConfig] that is itself cached, so
+ * the same text scrolling back into view doesn't re-run language identification.
+ */
+private suspend fun translateAndCache(
+    content: String,
+    translateTo: String,
+    dontTranslateFrom: Set<String>,
+): TranslationConfig {
+    TranslationsCache.get(content, translateTo, dontTranslateFrom)?.let { return it }
 
-    val sourceDisplay = remember(source) { Locale.forLanguageTag(source).displayName }
-    val targetDisplay = remember(target) { Locale.forLanguageTag(target).displayName }
-    val autoLabel = stringRes(R.string.translations_auto)
-    val translatedFromLabel = stringRes(R.string.translations_translated_from)
-    val toLabel = stringRes(R.string.translations_to)
-
-    Row(modifier = modifier) {
-        val textColor = MaterialTheme.colorScheme.lessImportantLink
-
-        Text(
-            text =
-                buildAnnotatedString {
-                    appendLink(autoLabel, textColor) { langSettingsPopupExpanded = !langSettingsPopupExpanded }
-                    append(" $translatedFromLabel ")
-                    appendLink(sourceDisplay, textColor) { onChangeWhatToShow(true) }
-                    append(" $toLabel ")
-                    appendLink(targetDisplay, textColor) { onChangeWhatToShow(false) }
-                },
-            style =
-                LocalTextStyle.current.copy(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f),
-                    fontSize = Font14SP,
-                ),
-            overflow = TextOverflow.Visible,
-            maxLines = 3,
-        )
-
-        if (langSettingsPopupExpanded) {
-            LangSettingsDropdown(
-                expanded = true,
-                source = source,
-                target = target,
-                sourceDisplay = sourceDisplay,
-                targetDisplay = targetDisplay,
-                accountViewModel = accountViewModel,
-                onDismiss = { langSettingsPopupExpanded = false },
-            )
+    val noOp = TranslationConfig(content, null, null)
+    val raw =
+        try {
+            LanguageTranslatorService.autoTranslate(content, dontTranslateFrom, translateTo).await()
+        } catch (e: CancellationException) {
+            // If our coroutine is the cancelled one, propagate; otherwise it's ML Kit signalling
+            // "no translation needed" — cache the no-op and return it.
+            coroutineContext.ensureActive()
+            return noOp.also { TranslationsCache.set(content, translateTo, dontTranslateFrom, it) }
         }
-    }
+    coroutineContext.ensureActive()
+
+    val config = raw.toTranslationConfig(content) ?: noOp
+    TranslationsCache.set(content, translateTo, dontTranslateFrom, config)
+    return config
 }
 
-@Composable
-private fun LangSettingsDropdown(
-    expanded: Boolean,
-    source: String,
-    target: String,
-    sourceDisplay: String,
-    targetDisplay: String,
-    accountViewModel: AccountViewModel,
-    onDismiss: () -> Unit,
-) {
-    val deviceLocales =
-        remember {
-            val list = ConfigurationCompat.getLocales(Resources.getSystem().configuration)
-            (0 until list.size()).mapNotNull { list.get(it) }
-        }
-
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        DropdownMenuItem(
-            text = {
-                CheckmarkRow(
-                    checked = source in accountViewModel.dontTranslateFrom(),
-                    label = stringRes(R.string.translations_never_translate_from_lang, sourceDisplay),
-                )
-            },
-            onClick = {
-                accountViewModel.toggleDontTranslateFrom(source)
-                onDismiss()
-            },
-        )
-        HorizontalDivider(thickness = DividerThickness)
-        DropdownMenuItem(
-            text = {
-                CheckmarkRow(
-                    checked = accountViewModel.account.settings.preferenceBetween(source, target) == source,
-                    label = stringRes(R.string.translations_show_in_lang_first, sourceDisplay),
-                )
-            },
-            onClick = {
-                accountViewModel.prefer(source, target, source)
-                onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = {
-                CheckmarkRow(
-                    checked = accountViewModel.account.settings.preferenceBetween(source, target) == target,
-                    label = stringRes(R.string.translations_show_in_lang_first, targetDisplay),
-                )
-            },
-            onClick = {
-                accountViewModel.prefer(source, target, target)
-                onDismiss()
-            },
-        )
-        HorizontalDivider(thickness = DividerThickness)
-
-        for (lang in deviceLocales) {
-            DropdownMenuItem(
-                text = {
-                    CheckmarkRow(
-                        checked = accountViewModel.account.settings.translateToContains(lang.language),
-                        label = stringRes(R.string.translations_always_translate_to_lang, lang.displayName),
-                    )
-                },
-                onClick = {
-                    onDismiss()
-                    accountViewModel.updateTranslateTo(lang.language)
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun CheckmarkRow(
-    checked: Boolean,
-    label: String,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (checked) {
-            Icon(
-                symbol = MaterialSymbols.Check,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-            )
-        } else {
-            Spacer(modifier = Modifier.size(24.dp))
-        }
-        Spacer(modifier = Modifier.size(10.dp))
-        Text(label)
-    }
+private fun ResultOrError.toTranslationConfig(content: String): TranslationConfig? {
+    val translated = result ?: return null
+    val source = sourceLang ?: return null
+    val target = targetLang ?: return null
+    if (source == target || translated == content) return null
+    return TranslationConfig(translated, source, target)
 }
