@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
+import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -89,196 +90,199 @@ internal fun AudioRoomFullScreen(
     onHandRaisedChange: (Boolean) -> Unit,
     onLeave: () -> Unit,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-    ) {
-        var showEditSheet by rememberSaveable { mutableStateOf(false) }
-        var showHostMenu by rememberSaveable { mutableStateOf(false) }
-        val isHost = accountViewModel.account.signer.pubKey == event.pubKey
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
+    val roomTheme = androidx.compose.runtime.remember(event) { RoomTheme.from(event) }
+    AudioRoomThemedScope(theme = roomTheme) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
-            event.room()?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            // Overflow menu — visible to everyone (Share); host-only
-            // rows (Edit) are gated inside.
-            Box {
-                androidx.compose.material3.IconButton(onClick = { showHostMenu = true }) {
-                    Icon(
-                        symbol = MaterialSymbols.MoreVert,
-                        contentDescription = stringRes(R.string.audio_room_overflow_menu),
+            var showEditSheet by rememberSaveable { mutableStateOf(false) }
+            var showHostMenu by rememberSaveable { mutableStateOf(false) }
+            val isHost = accountViewModel.account.signer.pubKey == event.pubKey
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                event.room()?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f),
                     )
                 }
-                val context = androidx.compose.ui.platform.LocalContext.current
-                androidx.compose.material3.DropdownMenu(
-                    expanded = showHostMenu,
-                    onDismissRequest = { showHostMenu = false },
-                ) {
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text(stringRes(R.string.audio_room_share_action)) },
-                        onClick = {
-                            showHostMenu = false
-                            shareRoomNaddr(context, event)
-                        },
-                    )
-                    if (isHost) {
+                // Overflow menu — visible to everyone (Share); host-only
+                // rows (Edit) are gated inside.
+                Box {
+                    androidx.compose.material3.IconButton(onClick = { showHostMenu = true }) {
+                        Icon(
+                            symbol = MaterialSymbols.MoreVert,
+                            contentDescription = stringRes(R.string.audio_room_overflow_menu),
+                        )
+                    }
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = showHostMenu,
+                        onDismissRequest = { showHostMenu = false },
+                    ) {
                         androidx.compose.material3.DropdownMenuItem(
-                            text = { Text(stringRes(R.string.audio_room_edit_title)) },
+                            text = { Text(stringRes(R.string.audio_room_share_action)) },
                             onClick = {
                                 showHostMenu = false
-                                showEditSheet = true
+                                shareRoomNaddr(context, event)
                             },
                         )
+                        if (isHost) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(stringRes(R.string.audio_room_edit_title)) },
+                                onClick = {
+                                    showHostMenu = false
+                                    showEditSheet = true
+                                },
+                            )
+                        }
                     }
                 }
             }
-        }
-        if (showEditSheet) {
-            EditAudioRoomSheet(
-                accountViewModel = accountViewModel,
-                event = event,
-                onDismiss = { showEditSheet = false },
-            )
-        }
-        event.summary()?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-
-        // Listener counter — counts every active kind-10312 presence
-        // in the room. Hidden until the aggregator has at least one
-        // entry so the placeholder doesn't flash on entry.
-        val presences by viewModel.presences.collectAsState()
-        val listenerCount = presences.size
-        if (listenerCount > 0) {
-            Text(
-                text =
-                    androidx.compose.ui.res.pluralStringResource(
-                        R.plurals.audio_room_listener_count,
-                        listenerCount,
-                        listenerCount,
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-
-        val reactionsByPubkey by viewModel.recentReactions.collectAsState()
-        var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
-        // Long-press opens the participant context sheet for ANYONE
-        // (T2 #2). The sheet's own gating decides which rows to show
-        // (follow/mute always; promote/demote/kick host-only).
-        val onLongPressParticipant: ((String) -> Unit) = { target ->
-            if (target != accountViewModel.account.signer.pubKey) hostMenuTarget = target
-        }
-        if (onStage.isNotEmpty()) {
-            StagePeopleRow(
-                label = stringRes(R.string.audio_room_stage),
-                people = onStage,
-                avatarSize = Size40dp,
-                speakingNow = ui.speakingNow,
-                accountViewModel = accountViewModel,
-                reactionsByPubkey = reactionsByPubkey,
-                onLongPressParticipant = onLongPressParticipant,
-            )
-        }
-        if (audience.isNotEmpty()) {
-            StagePeopleRow(
-                label = stringRes(R.string.audio_room_audience),
-                people = audience,
-                avatarSize = Size35dp,
-                speakingNow = kotlinx.collections.immutable.persistentSetOf(),
-                accountViewModel = accountViewModel,
-                onLongPressParticipant = onLongPressParticipant,
-            )
-        }
-        hostMenuTarget?.let { target ->
-            ParticipantHostActionsSheet(
-                target = target,
-                event = event,
-                accountViewModel = accountViewModel,
-                onDismiss = { hostMenuTarget = null },
-            )
-        }
-
-        if (isHost) {
-            HandRaiseQueueSection(
-                event = event,
-                viewModel = viewModel,
-                accountViewModel = accountViewModel,
-            )
-        }
-
-        ConnectionRow(viewModel = viewModel, ui = ui)
-
-        val myPubkey = accountViewModel.account.signer.pubKey
-        if (viewModel.canBroadcast && onStage.any { it.pubKey == myPubkey }) {
-            TalkRow(viewModel = viewModel, ui = ui, speakerPubkeyHex = myPubkey)
-        }
-
-        var showReactionPicker by rememberSaveable { mutableStateOf(false) }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FilledTonalIconToggleButton(
-                checked = handRaised,
-                onCheckedChange = onHandRaisedChange,
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.PanTool,
-                    contentDescription =
-                        stringRes(
-                            if (handRaised) R.string.audio_room_lower_hand else R.string.audio_room_raise_hand,
-                        ),
+            if (showEditSheet) {
+                EditAudioRoomSheet(
+                    accountViewModel = accountViewModel,
+                    event = event,
+                    onDismiss = { showEditSheet = false },
                 )
             }
-            OutlinedButton(onClick = { showReactionPicker = true }) {
-                Text(stringRes(R.string.audio_room_reactions_button))
+            event.summary()?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
-            OutlinedButton(onClick = onLeave) {
-                Text(stringRes(R.string.audio_room_leave))
+
+            // Listener counter — counts every active kind-10312 presence
+            // in the room. Hidden until the aggregator has at least one
+            // entry so the placeholder doesn't flash on entry.
+            val presences by viewModel.presences.collectAsState()
+            val listenerCount = presences.size
+            if (listenerCount > 0) {
+                Text(
+                    text =
+                        androidx.compose.ui.res.pluralStringResource(
+                            R.plurals.audio_room_listener_count,
+                            listenerCount,
+                            listenerCount,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
-        }
-        if (showReactionPicker) {
-            RoomReactionPickerSheet(
-                onPick = { emoji ->
-                    accountViewModel.reactToOrDelete(roomNote, emoji)
-                },
-                onDismiss = { showReactionPicker = false },
+
+            val reactionsByPubkey by viewModel.recentReactions.collectAsState()
+            var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
+            // Long-press opens the participant context sheet for ANYONE
+            // (T2 #2). The sheet's own gating decides which rows to show
+            // (follow/mute always; promote/demote/kick host-only).
+            val onLongPressParticipant: ((String) -> Unit) = { target ->
+                if (target != accountViewModel.account.signer.pubKey) hostMenuTarget = target
+            }
+            if (onStage.isNotEmpty()) {
+                StagePeopleRow(
+                    label = stringRes(R.string.audio_room_stage),
+                    people = onStage,
+                    avatarSize = Size40dp,
+                    speakingNow = ui.speakingNow,
+                    accountViewModel = accountViewModel,
+                    reactionsByPubkey = reactionsByPubkey,
+                    onLongPressParticipant = onLongPressParticipant,
+                )
+            }
+            if (audience.isNotEmpty()) {
+                StagePeopleRow(
+                    label = stringRes(R.string.audio_room_audience),
+                    people = audience,
+                    avatarSize = Size35dp,
+                    speakingNow = kotlinx.collections.immutable.persistentSetOf(),
+                    accountViewModel = accountViewModel,
+                    onLongPressParticipant = onLongPressParticipant,
+                )
+            }
+            hostMenuTarget?.let { target ->
+                ParticipantHostActionsSheet(
+                    target = target,
+                    event = event,
+                    accountViewModel = accountViewModel,
+                    onDismiss = { hostMenuTarget = null },
+                )
+            }
+
+            if (isHost) {
+                HandRaiseQueueSection(
+                    event = event,
+                    viewModel = viewModel,
+                    accountViewModel = accountViewModel,
+                )
+            }
+
+            ConnectionRow(viewModel = viewModel, ui = ui)
+
+            val myPubkey = accountViewModel.account.signer.pubKey
+            if (viewModel.canBroadcast && onStage.any { it.pubKey == myPubkey }) {
+                TalkRow(viewModel = viewModel, ui = ui, speakerPubkeyHex = myPubkey)
+            }
+
+            var showReactionPicker by rememberSaveable { mutableStateOf(false) }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FilledTonalIconToggleButton(
+                    checked = handRaised,
+                    onCheckedChange = onHandRaisedChange,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.PanTool,
+                        contentDescription =
+                            stringRes(
+                                if (handRaised) R.string.audio_room_lower_hand else R.string.audio_room_raise_hand,
+                            ),
+                    )
+                }
+                OutlinedButton(onClick = { showReactionPicker = true }) {
+                    Text(stringRes(R.string.audio_room_reactions_button))
+                }
+                OutlinedButton(onClick = onLeave) {
+                    Text(stringRes(R.string.audio_room_leave))
+                }
+            }
+            if (showReactionPicker) {
+                RoomReactionPickerSheet(
+                    onPick = { emoji ->
+                        accountViewModel.reactToOrDelete(roomNote, emoji)
+                    },
+                    onDismiss = { showReactionPicker = false },
+                )
+            }
+
+            AudioRoomChatPanel(
+                roomATag =
+                    ATag(
+                        kind = event.kind,
+                        pubKeyHex = event.pubKey,
+                        dTag = event.dTag(),
+                        relay = null,
+                    ),
+                viewModel = viewModel,
+                accountViewModel = accountViewModel,
+                modifier = Modifier.padding(top = 12.dp),
             )
         }
-
-        AudioRoomChatPanel(
-            roomATag =
-                ATag(
-                    kind = event.kind,
-                    pubKeyHex = event.pubKey,
-                    dTag = event.dTag(),
-                    relay = null,
-                ),
-            viewModel = viewModel,
-            accountViewModel = accountViewModel,
-            modifier = Modifier.padding(top = 12.dp),
-        )
     }
 }
 
