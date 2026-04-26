@@ -195,10 +195,7 @@ fun RenderTopButtons(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    // Hold the StateFlow itself across recompositions so collectAsStateWithLifecycle isn't
-    // keyed on the result of a property getter call that happens every recompose.
-    val buttonItemsFlow = remember(accountViewModel) { accountViewModel.videoPlayerButtonItemsFlow() }
-    val buttonItems by buttonItemsFlow.collectAsStateWithLifecycle()
+    val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
     val shareDialogVisible = remember { mutableStateOf(false) }
     val saveAction =
         rememberSaveMediaAction { context ->
