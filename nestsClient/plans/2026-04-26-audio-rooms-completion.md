@@ -2,17 +2,17 @@
 
 What's left between today's code and shippable audio rooms in Amethyst.
 
-> **STATUS UPDATE (2026-04-26 PM):** the interop test suite (phases 1–4 of
-> the nostrnests work, see commits `3283d30` → `1887bd1`) uncovered that
-> nostrnests's stack runs on **moq-lite** (kixelated's variant), NOT IETF
-> `draft-ietf-moq-transport-17` — which is what `:nestsClient`'s MoQ layer
-> currently implements. The two are wire-incompatible. Concrete impact:
-> the listener path described under "Where we are" below works against
-> any IETF MoQ-transport server but cannot exchange a single MoQ message
-> with the real nostrnests relay until a moq-lite codec lands. Tracking
-> doc: [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md). Phase
-> M1 below should be re-read with that gap in mind — manual validation
-> against `nostrnests.com` is on hold until the moq-lite phase ships.
+> **STATUS UPDATE (2026-04-26 PM):** the interop test suite (phases 1–5d
+> of the nostrnests work, commits `3283d30` → `41f4dcd`) uncovered that
+> nostrnests runs on **moq-lite** (kixelated's variant), not IETF
+> `draft-ietf-moq-transport-17`. **Listener-side moq-lite is now landed**
+> — `connectNestsListener` opens a `MoqLiteSession` and adapts frames
+> back to `MoqObject` so `AudioRoomPlayer` / `AudioRoomViewModel` keep
+> working unchanged. The Phase M1 manual validation against
+> `nostrnests.com` should now actually work end-to-end (modulo Docker
+> harness running). Speaker-side moq-lite is still pending — needs a
+> small `WebTransportSession.acceptBidiStream` extension; tracked in
+> [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md).
 
 ## Where we are
 
