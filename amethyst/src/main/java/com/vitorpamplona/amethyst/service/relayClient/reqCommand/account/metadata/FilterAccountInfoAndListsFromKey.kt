@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
@@ -73,6 +74,7 @@ val AccountInfoAndListsFromKeyKinds2 =
         TrustProviderListEvent.KIND,
         PaymentTargetsEvent.KIND,
         RelayFeedsListEvent.KIND,
+        InterestSetEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
@@ -102,7 +104,7 @@ fun filterAccountInfoAndListsFromKey(
                 Filter(
                     kinds = AccountInfoAndListsFromKeyKinds2,
                     authors = listOf(pubkey),
-                    limit = 20,
+                    limit = 80,
                     since = since,
                 ),
         ),
