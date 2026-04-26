@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import kotlinx.collections.immutable.toImmutableList
 
 private const val WORDS_PER_MINUTE = 225
 private val COVER_ASPECT_RATIO = 16f / 9f
@@ -92,7 +93,14 @@ fun LongFormHeader(
         remember(noteEvent) {
             noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
         }
-    val topics = remember(noteEvent) { noteEvent.topics().distinct().take(3) }
+    val topics =
+        remember(noteEvent) {
+            noteEvent
+                .topics()
+                .distinct()
+                .take(3)
+                .toImmutableList()
+        }
     val readingMinutes = remember(noteEvent) { estimateReadingMinutes(noteEvent.content) }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
