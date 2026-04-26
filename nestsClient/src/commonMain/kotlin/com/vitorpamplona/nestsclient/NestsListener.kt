@@ -99,12 +99,16 @@ sealed class NestsListenerState {
 }
 
 /**
- * Default [NestsListener] implementation that delegates to a [MoqSession]
- * already set up on a [com.vitorpamplona.nestsclient.transport.WebTransportSession].
+ * IETF `draft-ietf-moq-transport-17` [NestsListener] reference
+ * implementation. **Not used in production** — the production listener
+ * path uses [MoqLiteNestsListener] over moq-lite Lite-03 (see
+ * `nestsClient/plans/2026-04-26-moq-lite-gap.md`). Kept for the IETF
+ * unit-test suite (`MoqSession`, `MoqCodec`) and for any future IETF
+ * MoQ-transport target.
  *
- * Construction does NOT open the transport — call [connectNestsListener] to
- * walk the full HTTP + transport + MoQ handshake; this class just owns the
- * resulting session and exposes the listener API on top.
+ * Delegates to a [MoqSession] already set up on a
+ * [com.vitorpamplona.nestsclient.transport.WebTransportSession];
+ * construction does NOT open the transport.
  */
 class DefaultNestsListener internal constructor(
     private val session: MoqSession,

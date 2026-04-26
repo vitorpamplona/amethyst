@@ -96,7 +96,17 @@ This is the proof-of-life step before any speaker work.
 - Capture a packet trace if anything fails so we can compare on-the-wire
   bytes against a known-working JS client.
 
-## Phase M5 — Speaker path: MoQ publisher (1 week)
+## Phase M5 — Speaker path: MoQ publisher (1 week) — **DONE (via moq-lite, not IETF MoQ)**
+
+> **Update:** the original plan called for ANNOUNCE / OBJECT emission on
+> the IETF `MoqSession`. Once the moq-lite gap was discovered, the
+> speaker path was implemented on the `MoqLiteSession` instead — see
+> [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md) phase
+> 5c-speaker. The wire shape is different (single-string broadcast +
+> `audio/data` track, group-per-uni-stream framing) but the
+> [NestsSpeaker] / [BroadcastHandle] surface is unchanged.
+
+Original IETF MoQ design (kept as reference):
 
 The big one. `MoqSession` only does subscribe today; it needs ANNOUNCE +
 OBJECT emission.
@@ -152,7 +162,12 @@ Tests:
 - Integration: a publisher sends 100 Opus-shaped payloads through to a
   matching subscriber, all received with intact group/object ids
 
-## Phase M6 — Capture → encode → publish (3 days)
+## Phase M6 — Capture → encode → publish (3 days) — **DONE**
+
+> Both `AudioRoomBroadcaster` (drives the IETF `TrackPublisher`) and
+> `AudioRoomMoqLiteBroadcaster` (drives `MoqLitePublisherHandle`)
+> exist. The Android actuals (`AudioRecordCapture`,
+> `MediaCodecOpusEncoder`) are wired into the production speaker path.
 
 The inverse of `AudioRoomPlayer`:
 
@@ -165,7 +180,14 @@ The inverse of `AudioRoomPlayer`:
 - Push-to-talk vs always-on toggle: at the API level, just `start()` /
   `stop()` on the broadcaster; the UI decides
 
-## Phase M7 — `NestsSpeaker` API (2 days)
+## Phase M7 — `NestsSpeaker` API (2 days) — **DONE**
+
+> `NestsSpeaker` interface + `MoqLiteNestsSpeaker` implementation +
+> `connectNestsSpeaker` orchestration are all live and reach the
+> `Connected` state against a connected moq-lite session. The Compose
+> "Talk" button + mute UI in `AudioRoomActivityContent` calls
+> `viewModel.startBroadcasting()` / `setMuted(...)` which routes to
+> `BroadcastHandle.setMuted` and the moq-lite publisher.
 
 Mirror of `NestsListener` for hosts/speakers:
 

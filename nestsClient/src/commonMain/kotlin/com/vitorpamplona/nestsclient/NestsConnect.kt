@@ -22,7 +22,6 @@ package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
-import com.vitorpamplona.nestsclient.moq.MoqVersion
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportException
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
@@ -55,10 +54,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * @param signer NIP-98 signer for the mintToken HTTP call.
  * @param scope where the moq-lite pumps live (typically the caller's
  *   ViewModel scope so they cancel when the screen leaves).
- * @param supportedMoqVersions retained for source-compatible callers but
- *   currently a no-op — moq-lite negotiates via ALPN, not an in-band
- *   SETUP message. Will be repurposed to drive ALPN preference once a
- *   second moq-lite version ships.
  */
 suspend fun connectNestsListener(
     httpClient: NestsClient,
@@ -66,7 +61,6 @@ suspend fun connectNestsListener(
     scope: CoroutineScope,
     room: NestsRoomConfig,
     signer: NostrSigner,
-    supportedMoqVersions: List<Long> = listOf(MoqVersion.DRAFT_17),
 ): NestsListener {
     val state =
         MutableStateFlow<NestsListenerState>(
@@ -112,10 +106,8 @@ suspend fun connectNestsListener(
     state.value = NestsListenerState.Connecting(NestsListenerState.Connecting.ConnectStep.MoqHandshake)
 
     // moq-lite Lite-03 has NO setup message — the WebTransport handshake
-    // itself is the handshake, version is selected by ALPN. The
-    // `supportedMoqVersions` parameter is retained for backward compat
-    // with callers that may want to gate on a version mismatch in
-    // future, but it is currently a no-op.
+    // itself is the handshake, version is selected by the ALPN
+    // `moq-lite-03`.
     val moq =
         try {
             com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
@@ -185,7 +177,6 @@ suspend fun connectNestsSpeaker(
     speakerPubkeyHex: String,
     captureFactory: () -> AudioCapture,
     encoderFactory: () -> OpusEncoder,
-    supportedMoqVersions: List<Long> = listOf(MoqVersion.DRAFT_17),
 ): NestsSpeaker {
     val state =
         MutableStateFlow<NestsSpeakerState>(
@@ -231,8 +222,7 @@ suspend fun connectNestsSpeaker(
     state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.MoqHandshake)
 
     // moq-lite Lite-03 has NO setup message. Same logic as the listener
-    // path — `supportedMoqVersions` retained for backward compat but
-    // currently a no-op because version is selected by ALPN.
+    // path — version is selected by the `moq-lite-03` ALPN.
     val moq =
         try {
             com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession

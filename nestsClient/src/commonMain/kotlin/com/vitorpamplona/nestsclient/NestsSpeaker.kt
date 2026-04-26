@@ -115,11 +115,16 @@ sealed class NestsSpeakerState {
 }
 
 /**
- * Default [NestsSpeaker] that wraps a connected [MoqSession] and plumbs an
- * [AudioRoomBroadcaster] through it on [startBroadcasting].
+ * IETF `draft-ietf-moq-transport-17` [NestsSpeaker] reference
+ * implementation. **Not used in production** — the production speaker
+ * path uses [MoqLiteNestsSpeaker] over moq-lite Lite-03 (see
+ * `nestsClient/plans/2026-04-26-moq-lite-gap.md`). Kept for the IETF
+ * unit-test suite (`NestsSpeakerTest`) and for any future IETF
+ * MoQ-transport target.
  *
- * Construction does NOT open the transport — call [connectNestsSpeaker] to
- * walk the full HTTP + transport + MoQ handshake.
+ * Wraps a connected [MoqSession] and plumbs an [AudioRoomBroadcaster]
+ * through it on [startBroadcasting]. Construction does NOT open the
+ * transport.
  */
 class DefaultNestsSpeaker internal constructor(
     private val session: MoqSession,

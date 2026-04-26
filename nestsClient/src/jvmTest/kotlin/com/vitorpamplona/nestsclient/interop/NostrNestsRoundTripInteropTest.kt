@@ -52,29 +52,34 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Phase-3 interop test. Drives the production [connectNestsSpeaker] +
- * [connectNestsListener] entry points end-to-end against the real
- * nostrnests Docker stack: the speaker announces a track, the listener
- * subscribes by speaker pubkey, the speaker pushes deterministic Opus-
- * shaped payloads through the [com.vitorpamplona.nestsclient.audio.AudioRoomBroadcaster]
- * pipeline, and the listener collects them via the [com.vitorpamplona.nestsclient.moq.SubscribeHandle.objects]
- * flow.
+ * End-to-end interop test. Drives the production [connectNestsSpeaker]
+ * + [connectNestsListener] entry points against the real nostrnests
+ * Docker stack: the speaker claims a moq-lite broadcast suffix
+ * (`MoqLitePublisherHandle`), the listener subscribes by speaker
+ * pubkey (`broadcast=pubkey`, `track="audio/data"`), the speaker
+ * pushes deterministic Opus-shaped payloads through the
+ * [com.vitorpamplona.nestsclient.audio.AudioRoomMoqLiteBroadcaster]
+ * pipeline, and the listener collects them via
+ * [com.vitorpamplona.nestsclient.moq.SubscribeHandle.objects] (which
+ * the moq-lite adapter wraps over `MoqLiteFrame` so existing decoder
+ * / player code keeps working).
  *
  * Verifies:
  *   - QuicWebTransportFactory + PermissiveCertificateValidator can speak
  *     to the relay's self-signed cert
- *   - JWT minting + WebTransport CONNECT + MoQ SETUP all succeed against
- *     the reference relay (not a unit-test mock)
- *   - The single-segment TrackNamespace shape (`nests/<kind>:<host>:<room>`)
- *     matches the relay's `root` JWT claim — chosen in Phase 2 without
- *     wire confirmation; this test is the confirmation.
- *   - OBJECT_DATAGRAMs round-trip with payload integrity + monotonic
- *     object ids.
+ *   - JWT minting + WebTransport CONNECT succeed against the reference
+ *     relay (moq-lite Lite-03 has no in-band SETUP — the WT handshake
+ *     itself is the handshake)
+ *   - The WT path = `/<moqNamespace>` + `?jwt=<token>` matches the
+ *     relay's `claims.root` exactly
+ *   - moq-lite group uni streams (`DataType=0` + GroupHeader +
+ *     `varint(size)+payload` frames) round-trip with payload integrity
+ *     and monotonic synthesised object ids on the listener adapter
  *
  * One keypair drives both the speaker and the listener — that sidesteps
  * the question of how nostrnests's auth sidecar gates speaker vs. audience
  * (kind 30312 hostlist, NIP-65, etc.) so this test focuses on the
- * transport + MoQ protocol, not the authorisation policy. A future
+ * transport + moq-lite protocol, not the authorisation policy. A future
  * dual-keypair test can layer permission checks on top.
  *
  * Skipped by default — set `-DnestsInterop=true` to enable.
@@ -152,8 +157,8 @@ class NostrNestsRoundTripInteropTest {
                 val subscription = listener.subscribeSpeaker(pubkey)
 
                 // Start collecting before the speaker publishes anything —
-                // OBJECT_DATAGRAMs that arrive before .objects.collect runs
-                // are dropped by the per-subscription buffer.
+                // moq-lite group frames that arrive before .objects.collect
+                // runs are dropped by the per-subscription buffer.
                 val received =
                     async(pumpScope.coroutineContext) {
                         withTimeoutOrNull(RECEIVE_TIMEOUT_MS) {
@@ -177,7 +182,7 @@ class NostrNestsRoundTripInteropTest {
                 val datagrams = received.await()
                 assertNotNull(
                     datagrams,
-                    "Did not receive $N_FRAMES OBJECT_DATAGRAMs within ${RECEIVE_TIMEOUT_MS}ms",
+                    "Did not receive $N_FRAMES moq-lite frames within ${RECEIVE_TIMEOUT_MS}ms",
                 )
                 assertEquals(N_FRAMES, datagrams.size, "expected exactly $N_FRAMES objects")
 
