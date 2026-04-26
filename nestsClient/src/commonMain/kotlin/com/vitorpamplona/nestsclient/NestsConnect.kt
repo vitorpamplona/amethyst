@@ -36,10 +36,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * Walk the full join-as-listener handshake against a nests-compatible audio
  * server:
  *
- *   1. Resolve the room — POST/GET `<serviceBase>/<roomId>` with NIP-98 auth,
- *      returning [NestsRoomInfo] (the MoQ endpoint + bearer token).
+ *   1. Mint a JWT — POST `<authBase>/auth` with NIP-98 + namespace body
+ *      (see [NestsClient.mintToken]).
  *   2. Open a [com.vitorpamplona.nestsclient.transport.WebTransportSession]
- *      against the endpoint via [transport].
+ *      against the [room.endpoint] via [transport], passing the JWT as the
+ *      bearer token.
  *   3. Run the MoQ SETUP handshake.
  *
  * The returned [NestsListener] is in state [NestsListenerState.Connected];
@@ -47,7 +48,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * [NestsListenerState.Failed] with the underlying cause attached and the
  * transport torn down.
  *
- * @param signer NIP-98 signer for the resolveRoom HTTP call.
+ * @param room per-room config built from the NIP-53 kind 30312 event by
+ *   the caller (UI / VM).
+ * @param signer NIP-98 signer for the mintToken HTTP call.
  * @param scope where the [MoqSession] pumps live (typically the caller's
  *   ViewModel scope so they cancel when the screen leaves).
  * @param supportedMoqVersions in preference order; defaults to draft-17.
@@ -56,8 +59,7 @@ suspend fun connectNestsListener(
     httpClient: NestsClient,
     transport: WebTransportFactory,
     scope: CoroutineScope,
-    serviceBase: String,
-    roomId: String,
+    room: NestsRoomConfig,
     signer: NostrSigner,
     supportedMoqVersions: List<Long> = listOf(MoqVersion.DRAFT_17),
 ): NestsListener {
@@ -66,11 +68,11 @@ suspend fun connectNestsListener(
             NestsListenerState.Connecting(NestsListenerState.Connecting.ConnectStep.ResolvingRoom),
         )
 
-    val roomInfo =
+    val token =
         try {
-            httpClient.resolveRoom(serviceBase = serviceBase, roomId = roomId, signer = signer)
+            httpClient.mintToken(room = room, publish = false, signer = signer)
         } catch (t: NestsException) {
-            state.value = NestsListenerState.Failed("Room resolution failed: ${t.message}", t)
+            state.value = NestsListenerState.Failed("Auth failed: ${t.message}", t)
             return failedListener(state)
         }
 
@@ -78,11 +80,11 @@ suspend fun connectNestsListener(
 
     val (authority, path) =
         try {
-            parseEndpoint(roomInfo.endpoint)
+            parseEndpoint(room.endpoint)
         } catch (t: Throwable) {
             state.value =
                 NestsListenerState.Failed(
-                    "Malformed MoQ endpoint URL '${roomInfo.endpoint}': ${t.message}",
+                    "Malformed MoQ endpoint URL '${room.endpoint}': ${t.message}",
                     t,
                 )
             return failedListener(state)
@@ -90,7 +92,7 @@ suspend fun connectNestsListener(
 
     val webTransport =
         try {
-            transport.connect(authority = authority, path = path, bearerToken = roomInfo.token)
+            transport.connect(authority = authority, path = path, bearerToken = token)
         } catch (t: WebTransportException) {
             state.value =
                 NestsListenerState.Failed(
@@ -118,10 +120,15 @@ suspend fun connectNestsListener(
             return failedListener(state)
         }
 
-    state.value = NestsListenerState.Connected(roomInfo, negotiatedVersion)
+    state.value = NestsListenerState.Connected(room, negotiatedVersion)
     return DefaultNestsListener(
         session = moq,
-        roomNamespace = TrackNamespace.of("nests", roomId),
+        // moq-auth's JWT claim is `root: "<moqNamespace>"` — the simplest
+        // wire-level mapping is a 1-segment TrackNamespace whose only
+        // element is that exact string. Phase-3 interop test will
+        // confirm; if the real relay expects a multi-segment tuple
+        // (e.g. split on `/` or `:`), adjust here.
+        roomNamespace = TrackNamespace.of(room.moqNamespace()),
         mutableState = state,
     )
 }
@@ -160,8 +167,7 @@ suspend fun connectNestsSpeaker(
     httpClient: NestsClient,
     transport: WebTransportFactory,
     scope: CoroutineScope,
-    serviceBase: String,
-    roomId: String,
+    room: NestsRoomConfig,
     signer: NostrSigner,
     speakerPubkeyHex: String,
     captureFactory: () -> AudioCapture,
@@ -173,11 +179,11 @@ suspend fun connectNestsSpeaker(
             NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.ResolvingRoom),
         )
 
-    val roomInfo =
+    val token =
         try {
-            httpClient.resolveRoom(serviceBase = serviceBase, roomId = roomId, signer = signer)
+            httpClient.mintToken(room = room, publish = true, signer = signer)
         } catch (t: NestsException) {
-            state.value = NestsSpeakerState.Failed("Room resolution failed: ${t.message}", t)
+            state.value = NestsSpeakerState.Failed("Auth failed: ${t.message}", t)
             return failedSpeaker(state)
         }
 
@@ -185,11 +191,11 @@ suspend fun connectNestsSpeaker(
 
     val (authority, path) =
         try {
-            parseEndpoint(roomInfo.endpoint)
+            parseEndpoint(room.endpoint)
         } catch (t: Throwable) {
             state.value =
                 NestsSpeakerState.Failed(
-                    "Malformed MoQ endpoint URL '${roomInfo.endpoint}': ${t.message}",
+                    "Malformed MoQ endpoint URL '${room.endpoint}': ${t.message}",
                     t,
                 )
             return failedSpeaker(state)
@@ -197,7 +203,7 @@ suspend fun connectNestsSpeaker(
 
     val webTransport =
         try {
-            transport.connect(authority = authority, path = path, bearerToken = roomInfo.token)
+            transport.connect(authority = authority, path = path, bearerToken = token)
         } catch (t: WebTransportException) {
             state.value =
                 NestsSpeakerState.Failed(
@@ -225,10 +231,11 @@ suspend fun connectNestsSpeaker(
             return failedSpeaker(state)
         }
 
-    state.value = NestsSpeakerState.Connected(roomInfo, negotiatedVersion)
+    state.value = NestsSpeakerState.Connected(room, negotiatedVersion)
     return DefaultNestsSpeaker(
         session = moq,
-        roomNamespace = TrackNamespace.of("nests", roomId),
+        // Same single-segment shape as the listener path; see comment there.
+        roomNamespace = TrackNamespace.of(room.moqNamespace()),
         speakerTrackName = speakerPubkeyHex.encodeToByteArray(),
         captureFactory = captureFactory,
         encoderFactory = encoderFactory,

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomViewModel
+import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.OkHttpNestsClient
 import com.vitorpamplona.nestsclient.audio.AudioRecordCapture
 import com.vitorpamplona.nestsclient.audio.AudioTrackPlayer
@@ -40,8 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
  */
 internal class AudioRoomViewModelFactory(
     private val signer: NostrSigner,
-    private val serviceBase: String,
-    private val roomId: String,
+    private val room: NestsRoomConfig,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -51,8 +51,7 @@ internal class AudioRoomViewModelFactory(
             decoderFactory = { MediaCodecOpusDecoder() },
             playerFactory = { AudioTrackPlayer() },
             signer = signer,
-            serviceBase = serviceBase,
-            roomId = roomId,
+            room = room,
             captureFactory = { AudioRecordCapture() },
             encoderFactory = { MediaCodecOpusEncoder() },
         ) as T

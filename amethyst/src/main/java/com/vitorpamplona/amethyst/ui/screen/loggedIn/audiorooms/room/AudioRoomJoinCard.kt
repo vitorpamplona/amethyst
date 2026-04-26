@@ -74,11 +74,17 @@ private fun AudioRoomJoinCardContent(
     accountViewModel: AccountViewModel,
 ) {
     val serviceBase = event.service()
+    val endpoint = event.endpoint()
     val roomId = event.address().dTag
-    if (serviceBase.isNullOrBlank() || roomId.isBlank()) return
+    // Need the auth base, MoQ endpoint, and the room creator's pubkey to
+    // mint a JWT scoped to this namespace. Skip rendering Join when any
+    // are missing — those rooms aren't joinable on the audio plane.
+    if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
     val context = LocalContext.current
     val addressValue = remember(event) { event.address().toValue() }
+    val hostPubkey = event.pubKey
+    val kind = event.kind
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -106,8 +112,11 @@ private fun AudioRoomJoinCardContent(
                     AudioRoomActivity.launch(
                         context = context,
                         addressValue = addressValue,
-                        serviceBase = serviceBase,
+                        authBaseUrl = serviceBase,
+                        endpoint = endpoint,
+                        hostPubkey = hostPubkey,
                         roomId = roomId,
+                        kind = kind,
                     )
                 }) {
                     Text(stringRes(R.string.audio_room_join))

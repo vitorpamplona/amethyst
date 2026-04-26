@@ -35,21 +35,25 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
  */
 interface NestsClient {
     /**
-     * Fetch [NestsRoomInfo] for a specific room.
+     * Mint a JWT scoped to one MoQ namespace. Posts a NIP-98-signed
+     * request to `<authBase>/auth` per the nostrnests reference server
+     * (`moq-auth/src/index.ts`); the returned token is the bearer the
+     * MoQ relay validates against the auth sidecar's JWKS endpoint.
      *
-     * @param serviceBase value of the NIP-53 kind 30312 `service` tag
-     *     (e.g. `https://nostrnests.com/api/v1/nests`)
-     * @param roomId the event's `d` tag
-     * @param signer signs the NIP-98 auth event that the server uses to verify
-     *     the caller owns the pubkey it claims
-     * @throws NestsException on transport errors, non-2xx responses, or malformed
-     *     JSON
+     * @param room per-room config carrying authBase, host pubkey, room id.
+     * @param publish `true` if the caller wants publish rights for their
+     *     own pubkey under this namespace; `false` for listen-only.
+     * @param signer signs the NIP-98 auth event. The server verifies the
+     *     event binds to this exact (url, method, body-hash) tuple, so
+     *     the JWT cannot be replayed against a different request.
+     * @throws NestsException on transport errors, non-2xx responses, or
+     *     malformed JSON.
      */
-    suspend fun resolveRoom(
-        serviceBase: String,
-        roomId: String,
+    suspend fun mintToken(
+        room: NestsRoomConfig,
+        publish: Boolean,
         signer: NostrSigner,
-    ): NestsRoomInfo
+    ): String
 }
 
 /**

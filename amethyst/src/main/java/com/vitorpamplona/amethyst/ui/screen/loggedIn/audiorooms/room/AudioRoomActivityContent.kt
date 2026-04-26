@@ -60,8 +60,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun AudioRoomActivityContent(
     addressValue: String,
-    serviceBase: String,
-    roomId: String,
+    room: com.vitorpamplona.nestsclient.NestsRoomConfig,
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
     onMuteState: (Boolean) -> Unit,
@@ -82,8 +81,7 @@ internal fun AudioRoomActivityContent(
         val event = addressableNote.event as? MeetingSpaceEvent ?: return@LoadAddressableNote
         AudioRoomActivityBody(
             event = event,
-            serviceBase = serviceBase,
-            roomId = roomId,
+            room = room,
             accountViewModel = accountViewModel,
             isInPipMode = isInPipMode,
             onMuteState = onMuteState,
@@ -97,8 +95,7 @@ internal fun AudioRoomActivityContent(
 @Composable
 private fun AudioRoomActivityBody(
     event: MeetingSpaceEvent,
-    serviceBase: String,
-    roomId: String,
+    room: com.vitorpamplona.nestsclient.NestsRoomConfig,
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
     onMuteState: (Boolean) -> Unit,
@@ -124,13 +121,12 @@ private fun AudioRoomActivityBody(
 
     val viewModel: AudioRoomViewModel =
         viewModel(
-            key = "$serviceBase|$roomId",
+            key = "${room.authBaseUrl}|${room.roomId}",
             factory =
-                remember(serviceBase, roomId, signer) {
+                remember(room, signer) {
                     AudioRoomViewModelFactory(
                         signer = signer,
-                        serviceBase = serviceBase,
-                        roomId = roomId,
+                        room = room,
                     )
                 },
         )

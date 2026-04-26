@@ -20,86 +20,52 @@
  */
 package com.vitorpamplona.nestsclient.interop
 
-import com.vitorpamplona.nestsclient.NestsAuth
+import com.vitorpamplona.nestsclient.NestsRoomConfig
+import com.vitorpamplona.nestsclient.OkHttpNestsClient
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * Phase-1 interop smoke test. Brings up a real nostrnests stack (auth
- * sidecar + MoQ relay + strfry) via Docker Compose, then exercises the
- * `/auth` endpoint with a hand-rolled NIP-98 request that matches what
- * the server actually expects.
- *
- * Doesn't yet use [com.vitorpamplona.nestsclient.NestsClient] —
- * `OkHttpNestsClient`'s wire shape (GET `<base>/<roomId>` with no body,
- * expecting `{endpoint, token}` back) doesn't match the real server
- * (POST `<base>/auth` with `{namespace, publish}` body, returning just
- * `{token}`). Phase 2 of this audit refactors the production client to
- * match; until then this test documents the divergence on the wire.
+ * sidecar + MoQ relay + strfry) via Docker Compose, then drives the
+ * production [OkHttpNestsClient] against the real `/auth` endpoint to
+ * mint a JWT. Validates the wire format (POST `<base>/auth` with
+ * `{namespace, publish}` body + NIP-98 Authorization header, returning
+ * `{token}`) end-to-end.
  *
  * Skipped by default — set `-DnestsInterop=true` to enable.
  */
 class NostrNestsAuthInteropTest {
     @Test
-    fun auth_endpoint_returns_jwt_for_a_well_formed_nip98_request() =
+    fun production_OkHttpNestsClient_mints_a_jwt_against_real_moq_auth() =
         runBlocking {
             NostrNestsHarness.assumeNestsInterop()
             val harness = harnessOrNull ?: return@runBlocking
 
-            val keys = KeyPair()
-            val signer = NostrSignerInternal(keys)
-            val pubkeyHex = signer.pubKey
-
-            val authUrl = "${harness.authBaseUrl}/auth"
-            val roomId = "interop-${System.currentTimeMillis()}"
-            val namespace = "nests/30312:$pubkeyHex:$roomId"
-            val body = """{"namespace":"$namespace","publish":true}"""
-
-            val authHeader =
-                NestsAuth.header(
-                    signer = signer,
-                    url = authUrl,
-                    method = "POST",
-                    payload = body.toByteArray(),
+            val signer = NostrSignerInternal(KeyPair())
+            val client = OkHttpNestsClient()
+            val room =
+                NestsRoomConfig(
+                    authBaseUrl = harness.authBaseUrl,
+                    endpoint = harness.moqEndpoint,
+                    hostPubkey = signer.pubKey,
+                    roomId = "interop-${System.currentTimeMillis()}",
                 )
 
-            val request =
-                Request
-                    .Builder()
-                    .url(authUrl)
-                    .post(body.toRequestBody("application/json".toMediaType()))
-                    .header("Authorization", authHeader)
-                    .build()
+            val token = client.mintToken(room = room, publish = true, signer = signer)
 
-            val (status, responseBody) =
-                http.newCall(request).execute().use { response ->
-                    response.code to (response.body.string())
-                }
-
-            assertEquals(
-                200,
-                status,
-                "POST /auth should return 200 with a valid NIP-98 + namespace; got $status: $responseBody",
-            )
-            // moq-auth's response is `{"token":"<jwt>"}` per its index.ts.
-            assertTrue(
-                responseBody.contains("\"token\":\""),
-                "Expected JWT in `token` field, got: $responseBody",
-            )
+            // moq-auth signs JWS tokens with three base64url-encoded
+            // segments separated by dots.
+            assertTrue(token.count { it == '.' } == 2, "Expected JWT (3 segments), got: $token")
+            assertTrue(token.isNotBlank(), "JWT must be non-empty")
         }
 
     companion object {
-        private val http = OkHttpClient()
         private var harnessOrNull: NostrNestsHarness? = null
 
         @BeforeClass

@@ -95,13 +95,13 @@ sealed class NestsSpeakerState {
 
     /** Connection live; ready for [NestsSpeaker.startBroadcasting]. */
     data class Connected(
-        val roomInfo: NestsRoomInfo,
+        val room: NestsRoomConfig,
         val negotiatedMoqVersion: Long,
     ) : NestsSpeakerState()
 
     /** Currently announcing + emitting OBJECT_DATAGRAMs for our track. */
     data class Broadcasting(
-        val roomInfo: NestsRoomInfo,
+        val room: NestsRoomConfig,
         val negotiatedMoqVersion: Long,
         val isMuted: Boolean,
     ) : NestsSpeakerState()
@@ -161,7 +161,7 @@ class DefaultNestsSpeaker internal constructor(
             broadcaster.start()
             mutableState.value =
                 NestsSpeakerState.Broadcasting(
-                    roomInfo = current.roomInfo,
+                    room = current.room,
                     negotiatedMoqVersion = current.negotiatedMoqVersion,
                     isMuted = false,
                 )
@@ -187,7 +187,7 @@ class DefaultNestsSpeaker internal constructor(
         val current = mutableState.value
         if (current is NestsSpeakerState.Broadcasting) {
             mutableState.value =
-                NestsSpeakerState.Connected(current.roomInfo, current.negotiatedMoqVersion)
+                NestsSpeakerState.Connected(current.room, current.negotiatedMoqVersion)
         }
     }
 

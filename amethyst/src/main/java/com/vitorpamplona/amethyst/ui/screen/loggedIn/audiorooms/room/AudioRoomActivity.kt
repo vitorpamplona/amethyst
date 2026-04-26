@@ -98,9 +98,18 @@ class AudioRoomActivity : AppCompatActivity() {
 
         val accountViewModel = AudioRoomBridge.accountViewModel
         val addressValue = intent.getStringExtra(EXTRA_ADDRESS)
-        val serviceBase = intent.getStringExtra(EXTRA_SERVICE_BASE)
+        val authBaseUrl = intent.getStringExtra(EXTRA_AUTH_BASE_URL)
+        val endpoint = intent.getStringExtra(EXTRA_ENDPOINT)
+        val hostPubkey = intent.getStringExtra(EXTRA_HOST_PUBKEY)
         val roomId = intent.getStringExtra(EXTRA_ROOM_ID)
-        if (accountViewModel == null || addressValue == null || serviceBase == null || roomId == null) {
+        val kind = intent.getIntExtra(EXTRA_KIND, com.vitorpamplona.nestsclient.NestsRoomConfig.MEETING_SPACE_KIND)
+        if (accountViewModel == null ||
+            addressValue == null ||
+            authBaseUrl == null ||
+            endpoint == null ||
+            hostPubkey == null ||
+            roomId == null
+        ) {
             // After process death the bridge is empty (the previous
             // process's AccountViewModel is gone). Bounce the user back to
             // MainActivity so they land on the lobby instead of a black
@@ -138,8 +147,14 @@ class AudioRoomActivity : AppCompatActivity() {
             AmethystTheme {
                 AudioRoomActivityContent(
                     addressValue = addressValue,
-                    serviceBase = serviceBase,
-                    roomId = roomId,
+                    room =
+                        com.vitorpamplona.nestsclient.NestsRoomConfig(
+                            authBaseUrl = authBaseUrl,
+                            endpoint = endpoint,
+                            hostPubkey = hostPubkey,
+                            roomId = roomId,
+                            kind = kind,
+                        ),
                     accountViewModel = accountViewModel,
                     isInPipMode = isInPipMode.value,
                     onMuteState = { muted ->
@@ -237,8 +252,11 @@ class AudioRoomActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_ADDRESS = "com.vitorpamplona.amethyst.AUDIO_ROOM_ADDRESS"
-        const val EXTRA_SERVICE_BASE = "com.vitorpamplona.amethyst.AUDIO_ROOM_SERVICE_BASE"
+        const val EXTRA_AUTH_BASE_URL = "com.vitorpamplona.amethyst.AUDIO_ROOM_AUTH_BASE_URL"
+        const val EXTRA_ENDPOINT = "com.vitorpamplona.amethyst.AUDIO_ROOM_ENDPOINT"
+        const val EXTRA_HOST_PUBKEY = "com.vitorpamplona.amethyst.AUDIO_ROOM_HOST_PUBKEY"
         const val EXTRA_ROOM_ID = "com.vitorpamplona.amethyst.AUDIO_ROOM_ROOM_ID"
+        const val EXTRA_KIND = "com.vitorpamplona.amethyst.AUDIO_ROOM_KIND"
         private const val ACTION_PIP_TOGGLE_MUTE = "com.vitorpamplona.amethyst.AUDIO_ROOM_PIP_MUTE"
         private const val ACTION_PIP_LEAVE = "com.vitorpamplona.amethyst.AUDIO_ROOM_PIP_LEAVE"
         private const val PIP_MUTE_REQ = 0x6A001
@@ -247,15 +265,21 @@ class AudioRoomActivity : AppCompatActivity() {
         fun launch(
             context: Context,
             addressValue: String,
-            serviceBase: String,
+            authBaseUrl: String,
+            endpoint: String,
+            hostPubkey: String,
             roomId: String,
+            kind: Int,
         ) {
             context.startActivity(
                 Intent(context, AudioRoomActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     putExtra(EXTRA_ADDRESS, addressValue)
-                    putExtra(EXTRA_SERVICE_BASE, serviceBase)
+                    putExtra(EXTRA_AUTH_BASE_URL, authBaseUrl)
+                    putExtra(EXTRA_ENDPOINT, endpoint)
+                    putExtra(EXTRA_HOST_PUBKEY, hostPubkey)
                     putExtra(EXTRA_ROOM_ID, roomId)
+                    putExtra(EXTRA_KIND, kind)
                 },
             )
         }

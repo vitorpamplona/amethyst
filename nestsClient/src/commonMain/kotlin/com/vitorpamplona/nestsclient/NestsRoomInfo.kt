@@ -20,30 +20,51 @@
  */
 package com.vitorpamplona.nestsclient
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 
 /**
- * Information returned by a nests audio-room backend when a client
- * authenticates against `<service>/api/v1/nests/<roomId>`.
+ * Per-room configuration that orchestration needs to connect. Built from
+ * the NIP-53 kind 30312 [MeetingSpaceEvent] by the caller (UI / VM)
+ * before invoking `connectNestsListener` / `connectNestsSpeaker`:
  *
- * Field names mirror the nests reference server payload:
- * ```
- * { "endpoint": "...", "token": "...", "codec": "opus", "sample_rate": 48000 }
- * ```
- * All fields except [endpoint] are optional so the client can negotiate with
- * alternate nests implementations that omit codec/token metadata.
+ *   - [authBaseUrl] — the event's `service` tag (e.g. `https://nostrnests.com/api/v1/nests`).
+ *     Note: the real moq-auth API is rooted at this base; the client posts
+ *     to `<authBaseUrl>/auth` to mint a JWT.
+ *   - [endpoint] — the event's `endpoint` tag (e.g. `https://relay.nostrnests.com:4443/anon`).
+ *     The MoQ relay's WebTransport URL.
+ *   - [hostPubkey] — the event author's pubkey. Goes into the
+ *     [NestsAuth.MOQ_NAMESPACE_PREFIX] to scope the JWT to this room.
+ *   - [roomId] — the event's `d` tag.
+ *   - [kind] — the NIP-53 event kind (30312 for meeting spaces).
+ */
+data class NestsRoomConfig(
+    val authBaseUrl: String,
+    val endpoint: String,
+    val hostPubkey: String,
+    val roomId: String,
+    val kind: Int = MEETING_SPACE_KIND,
+) {
+    /**
+     * MoQ namespace string for this room, in the format moq-auth expects:
+     * `nests/<kind>:<host_pubkey_hex>:<roomId>`.
+     */
+    fun moqNamespace(): String = "nests/$kind:$hostPubkey:$roomId"
+
+    companion object {
+        const val MEETING_SPACE_KIND: Int = 30312
+    }
+}
+
+/**
+ * Response shape from `POST <authBase>/auth`. The reference server
+ * (`nostrnests/nests/moq-auth/src/index.ts`) returns `{"token":"<jwt>"}`
+ * — that JWT is then passed as the WebTransport bearer token to the
+ * MoQ relay.
  */
 @Serializable
-data class NestsRoomInfo(
-    val endpoint: String,
-    val token: String? = null,
-    val codec: String? = null,
-    @SerialName("sample_rate") val sampleRate: Int? = null,
-    val transport: String? = null,
-    val extra: Map<String, JsonElement> = emptyMap(),
+data class NestsTokenResponse(
+    val token: String,
 ) {
     companion object {
         private val json =
@@ -52,23 +73,15 @@ data class NestsRoomInfo(
                 explicitNulls = false
             }
 
-        fun parse(body: String): NestsRoomInfo = json.decodeFromString(serializer(), body)
+        fun parse(body: String): NestsTokenResponse = json.decodeFromString(serializer(), body)
     }
 }
 
 /**
- * Build the URL a client should call to resolve [NestsRoomInfo] for a specific
- * room. [serviceBase] comes from the `service` tag of the NIP-53 kind 30312
- * event; [roomId] is the event's `d` tag.
+ * Build the auth URL for a given service base. Trims trailing slashes
+ * and appends `/auth`.
  *
- * Example: `https://nostrnests.com/api/v1/nests` + `abc-123` →
- * `https://nostrnests.com/api/v1/nests/abc-123`.
+ * Example: `https://nostrnests.com/api/v1/nests` →
+ * `https://nostrnests.com/api/v1/nests/auth`.
  */
-fun nestsRoomInfoUrl(
-    serviceBase: String,
-    roomId: String,
-): String {
-    val trimmed = serviceBase.trimEnd('/')
-    val encoded = roomId.trim()
-    return "$trimmed/$encoded"
-}
+fun nestsAuthUrl(authBase: String): String = authBase.trimEnd('/') + "/auth"

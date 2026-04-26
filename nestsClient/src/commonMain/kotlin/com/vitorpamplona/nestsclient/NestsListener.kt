@@ -82,9 +82,9 @@ sealed class NestsListenerState {
         }
     }
 
-    /** Connection is live. [roomInfo] reflects the resolved server metadata. */
+    /** Connection is live. [room] reflects the (auth, endpoint, room) we connected to. */
     data class Connected(
-        val roomInfo: NestsRoomInfo,
+        val room: NestsRoomConfig,
         val negotiatedMoqVersion: Long,
     ) : NestsListenerState()
 

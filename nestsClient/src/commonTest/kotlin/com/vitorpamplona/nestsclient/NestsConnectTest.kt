@@ -41,17 +41,19 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class NestsConnectTest {
+    private val room =
+        NestsRoomConfig(
+            authBaseUrl = "https://relay.example.com/api/v1/nests",
+            endpoint = "https://relay.example.com/moq",
+            hostPubkey = "0".repeat(64),
+            roomId = "abc",
+        )
+
     @Test
-    fun connect_walks_resolveRoom_then_transport_then_moq_handshake() =
+    fun connect_walks_mintToken_then_transport_then_moq_handshake() =
         runTest {
             val (clientSide, serverSide) = FakeWebTransport.pair()
-            val httpClient =
-                FakeNestsClient(
-                    NestsRoomInfo(
-                        endpoint = "https://relay.example.com/moq",
-                        token = "tok-abc",
-                    ),
-                )
+            val httpClient = FakeNestsClient(token = "tok-abc")
             val transport = ConstantWebTransportFactory(clientSide)
 
             // Server-side raw peer answers SETUP.
@@ -67,31 +69,29 @@ class NestsConnectTest {
                     httpClient = httpClient,
                     transport = transport,
                     scope = this,
-                    serviceBase = "https://relay.example.com/api/v1/nests",
-                    roomId = "abc",
+                    room = room,
                     signer = NostrSignerInternal(KeyPair()),
                 )
             server.await()
 
             val connected = assertIs<NestsListenerState.Connected>(listener.state.value)
-            assertEquals("https://relay.example.com/moq", connected.roomInfo.endpoint)
+            assertEquals(room, connected.room)
             assertEquals(MoqVersion.DRAFT_17, connected.negotiatedMoqVersion)
 
             assertEquals("relay.example.com", transport.lastConnectedAuthority)
             assertEquals("/moq", transport.lastConnectedPath)
             assertEquals("tok-abc", transport.lastBearer)
 
+            assertEquals(false, httpClient.lastPublishFlag, "listener mints with publish=false")
+
             listener.close()
             assertIs<NestsListenerState.Closed>(listener.state.value)
         }
 
     @Test
-    fun resolveRoom_failure_short_circuits_to_Failed() =
+    fun mintToken_failure_short_circuits_to_Failed() =
         runTest {
-            val httpClient =
-                ThrowingNestsClient(
-                    NestsException("server returned 500", status = 500),
-                )
+            val httpClient = ThrowingNestsClient(NestsException("server returned 500", status = 500))
             val transport = NeverConnectFactory()
 
             val listener =
@@ -99,13 +99,12 @@ class NestsConnectTest {
                     httpClient = httpClient,
                     transport = transport,
                     scope = this,
-                    serviceBase = "https://relay.example.com/api/v1/nests",
-                    roomId = "abc",
+                    room = room,
                     signer = NostrSignerInternal(KeyPair()),
                 )
 
             val failed = assertIs<NestsListenerState.Failed>(listener.state.value)
-            assertTrue("Room resolution failed" in failed.reason)
+            assertTrue("Auth failed" in failed.reason)
             assertTrue("500" in failed.reason || (failed.cause as? NestsException)?.status == 500)
             assertEquals(0, transport.connectCallCount, "transport must not be reached")
         }
@@ -113,8 +112,7 @@ class NestsConnectTest {
     @Test
     fun transport_handshake_failure_short_circuits_to_Failed() =
         runTest {
-            val httpClient =
-                FakeNestsClient(NestsRoomInfo(endpoint = "https://relay.example.com/moq"))
+            val httpClient = FakeNestsClient(token = "tok")
             val transport =
                 ThrowingTransportFactory(
                     WebTransportException(
@@ -128,8 +126,7 @@ class NestsConnectTest {
                     httpClient = httpClient,
                     transport = transport,
                     scope = this,
-                    serviceBase = "https://relay.example.com/api/v1/nests",
-                    roomId = "abc",
+                    room = room,
                     signer = NostrSignerInternal(KeyPair()),
                 )
 
@@ -140,16 +137,13 @@ class NestsConnectTest {
     @Test
     fun malformed_endpoint_url_short_circuits_to_Failed() =
         runTest {
-            val httpClient =
-                FakeNestsClient(NestsRoomInfo(endpoint = "not-a-url"))
-
+            val badRoom = room.copy(endpoint = "not-a-url")
             val listener =
                 connectNestsListener(
-                    httpClient = httpClient,
+                    httpClient = FakeNestsClient(token = "tok"),
                     transport = NeverConnectFactory(),
                     scope = this,
-                    serviceBase = "https://relay.example.com/api/v1/nests",
-                    roomId = "abc",
+                    room = badRoom,
                     signer = NostrSignerInternal(KeyPair()),
                 )
 
@@ -180,23 +174,29 @@ class NestsConnectTest {
     // ---------------------------------------------------------- fakes
 
     private class FakeNestsClient(
-        private val info: NestsRoomInfo,
+        private val token: String,
     ) : NestsClient {
-        override suspend fun resolveRoom(
-            serviceBase: String,
-            roomId: String,
+        var lastPublishFlag: Boolean? = null
+            private set
+
+        override suspend fun mintToken(
+            room: NestsRoomConfig,
+            publish: Boolean,
             signer: NostrSigner,
-        ): NestsRoomInfo = info
+        ): String {
+            lastPublishFlag = publish
+            return token
+        }
     }
 
     private class ThrowingNestsClient(
         private val toThrow: NestsException,
     ) : NestsClient {
-        override suspend fun resolveRoom(
-            serviceBase: String,
-            roomId: String,
+        override suspend fun mintToken(
+            room: NestsRoomConfig,
+            publish: Boolean,
             signer: NostrSigner,
-        ): NestsRoomInfo = throw toThrow
+        ): String = throw toThrow
     }
 
     private class ConstantWebTransportFactory(

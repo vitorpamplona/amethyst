@@ -24,7 +24,7 @@ import com.vitorpamplona.nestsclient.NestsClient
 import com.vitorpamplona.nestsclient.NestsException
 import com.vitorpamplona.nestsclient.NestsListener
 import com.vitorpamplona.nestsclient.NestsListenerState
-import com.vitorpamplona.nestsclient.NestsRoomInfo
+import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.audio.AudioPlayer
 import com.vitorpamplona.nestsclient.audio.OpusDecoder
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
@@ -93,7 +93,7 @@ class AudioRoomViewModelTest {
 
             // Connector resolves with the listener; it's still Idle until we
             // emit something. Drive it Connected directly.
-            fakeListener.emit(NestsListenerState.Connected(roomInfo = ROOM_INFO, negotiatedMoqVersion = 0xff000011))
+            fakeListener.emit(NestsListenerState.Connected(room = ROOM_CONFIG, negotiatedMoqVersion = 0xff000011))
 
             assertEquals(ConnectionUiState.Connected, vm.uiState.value.connection)
         }
@@ -161,7 +161,7 @@ class AudioRoomViewModelTest {
             val vm = newViewModel { fakeListener }
 
             vm.connect()
-            fakeListener.emit(NestsListenerState.Connected(ROOM_INFO, 0xff000011))
+            fakeListener.emit(NestsListenerState.Connected(ROOM_CONFIG, 0xff000011))
             assertEquals(ConnectionUiState.Connected, vm.uiState.value.connection)
 
             vm.disconnect()
@@ -195,7 +195,7 @@ class AudioRoomViewModelTest {
             val vm = newViewModel { fakeListener }
 
             vm.connect()
-            fakeListener.emit(NestsListenerState.Connected(ROOM_INFO, 0xff000011))
+            fakeListener.emit(NestsListenerState.Connected(ROOM_CONFIG, 0xff000011))
             // Speaking-now is empty until an object arrives — exercising the
             // timeout-based clearing requires a live SubscribeHandle, which is
             // covered in nestsClient's pipe tests. Here we just verify the
@@ -219,10 +219,9 @@ class AudioRoomViewModelTest {
             decoderFactory = { NoopOpusDecoder },
             playerFactory = { NoopAudioPlayer() },
             signer = NoopSigner,
-            serviceBase = "https://example.test/api/v1/nests",
-            roomId = "test-room",
+            room = ROOM_CONFIG,
             connector =
-                NestsListenerConnector { _, _, scope, _, _, _ ->
+                NestsListenerConnector { _, _, scope, _, _ ->
                     connect(scope)
                 },
             // Wire to the test's backgroundScope so close calls run during
@@ -249,11 +248,11 @@ class AudioRoomViewModelTest {
     }
 
     private object NoopNestsClient : NestsClient {
-        override suspend fun resolveRoom(
-            serviceBase: String,
-            roomId: String,
+        override suspend fun mintToken(
+            room: NestsRoomConfig,
+            publish: Boolean,
             signer: NostrSigner,
-        ): NestsRoomInfo = error("resolveRoom not used (connector seam bypasses it)")
+        ): String = error("mintToken not used (connector seam bypasses it)")
     }
 
     private object NoopWebTransportFactory : WebTransportFactory {
@@ -318,6 +317,12 @@ class AudioRoomViewModelTest {
     }
 
     companion object {
-        private val ROOM_INFO = NestsRoomInfo(endpoint = "https://relay.example.test/moq")
+        private val ROOM_CONFIG =
+            NestsRoomConfig(
+                authBaseUrl = "https://relay.example.test/api/v1/nests",
+                endpoint = "https://relay.example.test/moq",
+                hostPubkey = "0".repeat(64),
+                roomId = "test-room",
+            )
     }
 }

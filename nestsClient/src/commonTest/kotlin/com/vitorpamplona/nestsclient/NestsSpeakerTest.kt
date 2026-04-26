@@ -63,7 +63,7 @@ class NestsSpeakerTest {
             val state =
                 MutableStateFlow<NestsSpeakerState>(
                     NestsSpeakerState.Connected(
-                        roomInfo = NestsRoomInfo(endpoint = "https://relay.example/moq"),
+                        room = TEST_ROOM,
                         negotiatedMoqVersion = speakerSession.selectedVersion!!,
                     ),
                 )
@@ -118,7 +118,7 @@ class NestsSpeakerTest {
             val state =
                 MutableStateFlow<NestsSpeakerState>(
                     NestsSpeakerState.Connected(
-                        roomInfo = NestsRoomInfo(endpoint = "https://relay.example/moq"),
+                        room = TEST_ROOM,
                         negotiatedMoqVersion = speakerSession.selectedVersion!!,
                     ),
                 )
@@ -166,5 +166,15 @@ class NestsSpeakerTest {
         override fun encode(pcm: ShortArray): ByteArray = byteArrayOf(0xAA.toByte(), 0xBB.toByte())
 
         override fun release() {}
+    }
+
+    companion object {
+        private val TEST_ROOM =
+            NestsRoomConfig(
+                authBaseUrl = "https://relay.example/api/v1/nests",
+                endpoint = "https://relay.example/moq",
+                hostPubkey = "0".repeat(64),
+                roomId = "test-room",
+            )
     }
 }

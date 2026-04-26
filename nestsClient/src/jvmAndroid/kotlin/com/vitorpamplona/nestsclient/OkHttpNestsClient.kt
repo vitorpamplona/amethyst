@@ -23,8 +23,10 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
 /**
@@ -35,19 +37,35 @@ import java.io.IOException
 class OkHttpNestsClient(
     private val http: OkHttpClient = OkHttpClient(),
 ) : NestsClient {
-    override suspend fun resolveRoom(
-        serviceBase: String,
-        roomId: String,
+    override suspend fun mintToken(
+        room: NestsRoomConfig,
+        publish: Boolean,
         signer: NostrSigner,
-    ): NestsRoomInfo {
-        val url = nestsRoomInfoUrl(serviceBase, roomId)
-        val authHeader = NestsAuth.header(signer = signer, url = url, method = "GET")
+    ): String {
+        val url = nestsAuthUrl(room.authBaseUrl)
+        val bodyJson =
+            buildString {
+                append('{')
+                append("\"namespace\":\"").append(room.moqNamespace()).append('"')
+                append(",\"publish\":").append(publish)
+                append('}')
+            }
+        val bodyBytes = bodyJson.encodeToByteArray()
+        // NIP-98 binds the signed event to (url, method, body-hash) so the
+        // server can reject a token replayed against a different request.
+        val authHeader =
+            NestsAuth.header(
+                signer = signer,
+                url = url,
+                method = "POST",
+                payload = bodyBytes,
+            )
 
         val request =
             Request
                 .Builder()
                 .url(url)
-                .get()
+                .post(bodyJson.toRequestBody(JSON_MEDIA_TYPE))
                 .header("Authorization", authHeader)
                 .header("Accept", "application/json")
                 .build()
@@ -59,12 +77,12 @@ class OkHttpNestsClient(
                     val body = response.body.string()
                     if (!response.isSuccessful) {
                         throw NestsException(
-                            "nests server returned ${response.code} for $url",
+                            "nests server returned ${response.code} for $url: $body",
                             status = response.code,
                         )
                     }
                     try {
-                        NestsRoomInfo.parse(body)
+                        NestsTokenResponse.parse(body).token
                     } catch (e: IOException) {
                         throw NestsException("Malformed nests response from $url", e)
                     } catch (e: IllegalArgumentException) {
@@ -74,5 +92,9 @@ class OkHttpNestsClient(
                     }
                 }
         }
+    }
+
+    private companion object {
+        private val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }

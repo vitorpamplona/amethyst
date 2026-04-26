@@ -28,6 +28,7 @@ import com.vitorpamplona.nestsclient.BroadcastHandle
 import com.vitorpamplona.nestsclient.NestsClient
 import com.vitorpamplona.nestsclient.NestsListener
 import com.vitorpamplona.nestsclient.NestsListenerState
+import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.NestsSpeaker
 import com.vitorpamplona.nestsclient.NestsSpeakerState
 import com.vitorpamplona.nestsclient.audio.AudioCapture
@@ -95,8 +96,7 @@ class AudioRoomViewModel(
     private val decoderFactory: () -> OpusDecoder,
     private val playerFactory: () -> AudioPlayer,
     private val signer: NostrSigner,
-    private val serviceBase: String,
-    private val roomId: String,
+    private val room: NestsRoomConfig,
     // Speaker-side audio capture/encode actuals. Optional — desktop and
     // listener-only callers pass null and the speaker UI hides the talk
     // button. Android passes `{ AudioRecordCapture() }` /
@@ -240,8 +240,7 @@ class AudioRoomViewModel(
                             httpClient = httpClient,
                             transport = transport,
                             scope = viewModelScope,
-                            serviceBase = serviceBase,
-                            roomId = roomId,
+                            room = room,
                             signer = signer,
                             speakerPubkeyHex = speakerPubkeyHex,
                             captureFactory = captureFactory!!,
@@ -486,8 +485,7 @@ class AudioRoomViewModel(
                             httpClient = httpClient,
                             transport = transport,
                             scope = viewModelScope,
-                            serviceBase = serviceBase,
-                            roomId = roomId,
+                            room = room,
                             signer = signer,
                         )
                     if (closed) {
@@ -844,20 +842,18 @@ fun interface NestsListenerConnector {
         httpClient: NestsClient,
         transport: WebTransportFactory,
         scope: CoroutineScope,
-        serviceBase: String,
-        roomId: String,
+        room: NestsRoomConfig,
         signer: NostrSigner,
     ): NestsListener
 }
 
 private val DefaultNestsListenerConnector =
-    NestsListenerConnector { httpClient, transport, scope, serviceBase, roomId, signer ->
+    NestsListenerConnector { httpClient, transport, scope, room, signer ->
         connectNestsListener(
             httpClient = httpClient,
             transport = transport,
             scope = scope,
-            serviceBase = serviceBase,
-            roomId = roomId,
+            room = room,
             signer = signer,
         )
     }
@@ -868,8 +864,7 @@ fun interface NestsSpeakerConnector {
         httpClient: NestsClient,
         transport: WebTransportFactory,
         scope: CoroutineScope,
-        serviceBase: String,
-        roomId: String,
+        room: NestsRoomConfig,
         signer: NostrSigner,
         speakerPubkeyHex: String,
         captureFactory: () -> AudioCapture,
@@ -878,13 +873,12 @@ fun interface NestsSpeakerConnector {
 }
 
 private val DefaultNestsSpeakerConnector =
-    NestsSpeakerConnector { httpClient, transport, scope, serviceBase, roomId, signer, pubkey, capF, encF ->
+    NestsSpeakerConnector { httpClient, transport, scope, room, signer, pubkey, capF, encF ->
         connectNestsSpeaker(
             httpClient = httpClient,
             transport = transport,
             scope = scope,
-            serviceBase = serviceBase,
-            roomId = roomId,
+            room = room,
             signer = signer,
             speakerPubkeyHex = pubkey,
             captureFactory = capF,
