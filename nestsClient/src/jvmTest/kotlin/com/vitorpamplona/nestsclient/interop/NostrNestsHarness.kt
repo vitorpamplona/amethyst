@@ -154,6 +154,13 @@ class NostrNestsHarness private constructor(
             try {
                 waitForPort("127.0.0.1", AUTH_HOST_PORT, PORT_READY_TIMEOUT_MS)
                 waitForPort("127.0.0.1", MOQ_HOST_PORT, PORT_READY_TIMEOUT_MS)
+                // moq-auth's Node runtime opens the listen socket
+                // before its handlers are wired, so the first POST that
+                // arrives in the gap can RST-on-write. Wait for /health
+                // to actually return 200 — that proves the request
+                // pipeline is live and avoids the SocketException that
+                // otherwise hits the first test of the second class.
+                waitForHealth("http://127.0.0.1:$AUTH_HOST_PORT/health", PORT_READY_TIMEOUT_MS)
             } catch (t: Throwable) {
                 // If readiness probe fails, tear down so we don't leak the
                 // stack into the next test run.
@@ -297,6 +304,42 @@ class NostrNestsHarness private constructor(
             }
             throw IllegalStateException(
                 "Port $host:$port did not become ready within ${timeoutMs}ms",
+                lastError,
+            )
+        }
+
+        /**
+         * Poll [healthUrl] until it returns 200. moq-auth opens its
+         * listen socket before its handlers are ready; without this,
+         * the first POST that arrives during that window gets a TCP
+         * RST. Uses HttpURLConnection so we don't pull a heavy HTTP
+         * client into the harness.
+         */
+        private fun waitForHealth(
+            healthUrl: String,
+            timeoutMs: Long,
+        ) {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            var lastError: Throwable? = null
+            val url = java.net.URI(healthUrl).toURL()
+            while (System.currentTimeMillis() < deadline) {
+                try {
+                    val conn = url.openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 1_000
+                    conn.readTimeout = 1_000
+                    conn.requestMethod = "GET"
+                    try {
+                        if (conn.responseCode == 200) return
+                    } finally {
+                        conn.disconnect()
+                    }
+                } catch (t: Throwable) {
+                    lastError = t
+                }
+                Thread.sleep(PORT_PROBE_INTERVAL_MS)
+            }
+            throw IllegalStateException(
+                "$healthUrl did not return 200 within ${timeoutMs}ms",
                 lastError,
             )
         }

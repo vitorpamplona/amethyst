@@ -27,7 +27,10 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.EOFException
 import java.io.IOException
+import java.net.SocketException
 
 /**
  * OkHttp-backed [NestsClient] used on JVM + Android. A shared [OkHttpClient]
@@ -71,8 +74,7 @@ class OkHttpNestsClient(
                 .build()
 
         return withContext(Dispatchers.IO) {
-            runCatching { http.newCall(request).execute() }
-                .getOrElse { throw NestsException("Failed to reach $url", it) }
+            executeWithTransportRetry(request, url)
                 .use { response ->
                     val body = response.body.string()
                     if (!response.isSuccessful) {
@@ -92,6 +94,44 @@ class OkHttpNestsClient(
                     }
                 }
         }
+    }
+
+    /**
+     * Send [request] and tolerate one transport-layer hiccup. OkHttp's
+     * built-in `retryOnConnectionFailure` does NOT retry POSTs once any
+     * byte of the request body has been written — but a stale pooled
+     * connection can RST or EOF *exactly* in that window, especially on
+     * mobile networks (and during interop test runs after an idle gap
+     * between test classes). One retry on `SocketException` /
+     * `EOFException` / `IOException` recovers cleanly because
+     * `Request` builders are immutable; OkHttp opens a fresh
+     * connection on the second try.
+     *
+     * Anything that's not a transient transport failure (HTTP 4xx /
+     * 5xx, malformed response) is left to the caller as before.
+     */
+    private fun executeWithTransportRetry(
+        request: Request,
+        url: String,
+    ): Response {
+        var lastError: Throwable? = null
+        repeat(2) { attempt ->
+            try {
+                return http.newCall(request).execute()
+            } catch (e: SocketException) {
+                lastError = e
+            } catch (e: EOFException) {
+                lastError = e
+            } catch (e: IOException) {
+                // OkHttp wraps a wide variety of transport faults
+                // (StreamResetException, ConnectionShutdownException,
+                // …) under IOException. Retry once; second pass either
+                // succeeds against a fresh connection or surfaces the
+                // real error.
+                lastError = e
+            }
+        }
+        throw NestsException("Failed to reach $url", lastError)
     }
 
     private companion object {
