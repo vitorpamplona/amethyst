@@ -101,10 +101,16 @@ enum class MoqLiteAnnounceStatus(
 }
 
 /**
- * Type byte at the head of a [MoqLiteSubscribeResponse] payload.
+ * Type discriminator at the head of a SubscribeResponse on the response
+ * side of a Subscribe bidi. Wire layout (Lite-03+):
  *
- * Source: `rs/moq-lite/src/lite/subscribe.rs:271-328`,
- * `@moq/lite/lite/subscribe.js:264-282`.
+ *   type   varint  (0 = Ok, 1 = Drop)
+ *   body   size-prefixed bytes
+ *
+ * The type sits OUTSIDE the body size prefix — see
+ * `rs/moq-lite/src/lite/subscribe.rs::SubscribeResponse::encode` (the
+ * `_` arm covers Lite03+). Earlier drafts wrapped type+body in one
+ * outer size prefix; Lite03 split them.
  */
 enum class MoqLiteSubscribeResponseType(
     val code: Long,

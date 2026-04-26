@@ -300,12 +300,12 @@ class MoqLiteSessionTest {
                 ),
             )
 
-            // Step 2: we reply SubscribeOk.
+            // Step 2: we reply SubscribeOk. moq-lite-03's SubscribeResponse
+            // is `[type][size][body]` with the type discriminator OUTSIDE
+            // the size prefix — no outer wrap to strip, the chunk itself
+            // is the wire form decodeSubscribeResponse expects.
             val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
-            val resp =
-                MoqLiteCodec.decodeSubscribeResponse(
-                    MoqLiteFrameBuffer().apply { push(ackChunk) }.readSizePrefixed()!!,
-                )
+            val resp = MoqLiteCodec.decodeSubscribeResponse(ackChunk)
             assertIs<MoqLiteCodec.SubscribeResponse.Ok>(resp)
 
             // Step 3: publisher pushes one frame, which opens a uni

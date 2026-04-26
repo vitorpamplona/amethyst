@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient.moq.lite
 
 import com.vitorpamplona.nestsclient.moq.MoqCodecException
+import com.vitorpamplona.nestsclient.moq.MoqWriter
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
@@ -514,29 +515,64 @@ class MoqLiteSession internal constructor(
     }
 
     /**
-     * Read the single size-prefixed subscribe response off a fresh
-     * subscribe bidi. moq-lite's subscribe-response is one wire write,
-     * so the first chunk we receive contains the entire payload (matches
-     * what the IETF [com.vitorpamplona.nestsclient.moq.MoqSession] does
-     * during its SETUP read).
+     * Read a moq-lite-03 SubscribeResponse off the bidi response side.
+     * The wire format is `[type_varint][body_size_varint][body_bytes]`
+     * — type lives OUTSIDE the size prefix (see
+     * `rs/moq-lite/src/lite/subscribe.rs::SubscribeResponse::encode`).
      *
-     * Throws [MoqLiteSubscribeException] if the bidi closes before any
-     * chunk arrives.
+     * Walks chunks into [buffer] until both the type discriminator and
+     * the size-prefixed body have arrived, then returns the contiguous
+     * `type+size+body` byte slab so [MoqLiteCodec.decodeSubscribeResponse]
+     * can parse it self-contained.
+     *
+     * Throws [MoqLiteSubscribeException] if the bidi closes before a
+     * full message arrives — that's the relay rejecting the subscribe
+     * with FIN instead of a SubscribeDrop reply.
      */
     private suspend fun readSubscribeResponseFromBidi(
         incoming: kotlinx.coroutines.flow.Flow<ByteArray>,
         buffer: MoqLiteFrameBuffer,
         id: Long,
     ): ByteArray {
-        val chunk =
-            incoming.firstOrNull()
-                ?: throw MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id")
-        buffer.push(chunk)
-        return buffer.readSizePrefixed()
-            ?: throw MoqLiteSubscribeException(
-                "first chunk on subscribe response did not carry a complete size-prefixed payload " +
-                    "(id=$id, chunkSize=${chunk.size})",
+        // Snapshot the buffer's pos before each varint so we can roll
+        // back if not enough bytes have arrived yet — without this, a
+        // partial varint advances `pos` and the next chunk's bytes
+        // can't reconstitute it.
+        var typeCode: Long? = null
+        var body: ByteArray? = null
+        try {
+            // Some bytes may already be buffered (extra arrived with a
+            // prior message); try first without waiting for new chunks.
+            typeCode = buffer.readVarint()
+            if (typeCode != null) body = buffer.readSizePrefixed()
+            if (body != null) throw EarlyExit
+            incoming.collect { chunk ->
+                buffer.push(chunk)
+                if (typeCode == null) typeCode = buffer.readVarint()
+                if (typeCode != null && body == null) body = buffer.readSizePrefixed()
+                if (body != null) throw EarlyExit
+            }
+        } catch (_: EarlyExit) {
+            // expected
+        } catch (ce: CancellationException) {
+            throw ce
+        }
+        if (typeCode == null) {
+            throw MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id")
+        }
+        if (body == null) {
+            throw MoqLiteSubscribeException(
+                "subscribe stream FIN mid-body for id=$id (type=$typeCode)",
             )
+        }
+        // Re-emit the contiguous `[type][size][body]` slab so
+        // [MoqLiteCodec.decodeSubscribeResponse] can parse it
+        // self-contained.
+        val out = MoqWriter()
+        out.writeVarint(typeCode!!)
+        out.writeVarint(body!!.size.toLong())
+        out.writeBytes(body!!)
+        return out.toByteArray()
     }
 
     private class ListenerSubscription(

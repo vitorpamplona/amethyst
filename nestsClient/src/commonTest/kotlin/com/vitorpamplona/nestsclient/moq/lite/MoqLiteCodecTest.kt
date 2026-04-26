@@ -177,7 +177,10 @@ class MoqLiteCodecTest {
                 startGroup = null,
                 endGroup = null,
             )
-        val payload = peelSizePrefix(MoqLiteCodec.encodeSubscribeOk(msg))
+        // moq-lite-03 SubscribeResponse is `[type][size][body]` with the
+        // type discriminator OUTSIDE the size prefix — the encoder no
+        // longer emits an outer wrap, so feed the bytes through directly.
+        val payload = MoqLiteCodec.encodeSubscribeOk(msg)
         val resp = MoqLiteCodec.decodeSubscribeResponse(payload)
         val ok = assertIs<MoqLiteCodec.SubscribeResponse.Ok>(resp)
         assertEquals(msg, ok.ok)
@@ -186,7 +189,7 @@ class MoqLiteCodecTest {
     @Test
     fun subscribeDrop_round_trips() {
         val msg = MoqLiteSubscribeDrop(errorCode = 0x12L, reasonPhrase = "publisher gone")
-        val payload = peelSizePrefix(MoqLiteCodec.encodeSubscribeDrop(msg))
+        val payload = MoqLiteCodec.encodeSubscribeDrop(msg)
         val resp = MoqLiteCodec.decodeSubscribeResponse(payload)
         val drop = assertIs<MoqLiteCodec.SubscribeResponse.Dropped>(resp)
         assertEquals(msg, drop.drop)

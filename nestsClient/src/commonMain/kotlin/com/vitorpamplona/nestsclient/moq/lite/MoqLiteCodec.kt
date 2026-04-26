@@ -126,21 +126,37 @@ object MoqLiteCodec {
 
     fun encodeSubscribeOk(msg: MoqLiteSubscribeOk): ByteArray {
         val body = MoqWriter()
-        body.writeVarint(MoqLiteSubscribeResponseType.Ok.code)
         body.writeByte(msg.priority)
         body.writeByte(if (msg.ordered) 1 else 0)
         body.writeVarint(msg.maxLatencyMillis)
         body.writeVarint(encodeOptionalGroup(msg.startGroup))
         body.writeVarint(encodeOptionalGroup(msg.endGroup))
-        return wrapSizePrefixed(body)
+        return prefixWithType(MoqLiteSubscribeResponseType.Ok.code, body)
     }
 
     fun encodeSubscribeDrop(msg: MoqLiteSubscribeDrop): ByteArray {
         val body = MoqWriter()
-        body.writeVarint(MoqLiteSubscribeResponseType.Drop.code)
         body.writeVarint(msg.errorCode)
         body.writeLengthPrefixedString(msg.reasonPhrase)
-        return wrapSizePrefixed(body)
+        return prefixWithType(MoqLiteSubscribeResponseType.Drop.code, body)
+    }
+
+    /**
+     * moq-lite-03 SubscribeResponse framing: a top-level type
+     * discriminator varint, then a size-prefixed body. The type sits
+     * OUTSIDE the size prefix — see
+     * `rs/moq-lite/src/lite/subscribe.rs::SubscribeResponse::encode`
+     * (the `_` arm covers Lite03+). Earlier drafts size-prefixed the
+     * whole thing, but Lite03 uses this two-piece framing.
+     */
+    private fun prefixWithType(
+        typeCode: Long,
+        body: MoqWriter,
+    ): ByteArray {
+        val out = MoqWriter()
+        out.writeVarint(typeCode)
+        out.writeBytes(wrapSizePrefixed(body))
+        return out.toByteArray()
     }
 
     /**
@@ -157,20 +173,29 @@ object MoqLiteCodec {
         ) : SubscribeResponse()
     }
 
+    /**
+     * Decode `[type_varint][body_size_varint][body]` as produced by
+     * [encodeSubscribeOk] / [encodeSubscribeDrop]. The body itself is
+     * size-prefixed; the type discriminator sits OUTSIDE that size
+     * prefix — see [prefixWithType] for the wire-format rationale.
+     */
     fun decodeSubscribeResponse(payload: ByteArray): SubscribeResponse {
         val r = MoqReader(payload)
         val typeCode = r.readVarint()
         val type =
             MoqLiteSubscribeResponseType.fromCode(typeCode)
                 ?: throw MoqCodecException("unknown moq-lite SubscribeResponse type: $typeCode")
+        val body = r.readLengthPrefixedBytes()
+        ensureFullyConsumed(r, "SubscribeResponse(type=$type)")
+        val br = MoqReader(body)
         return when (type) {
             MoqLiteSubscribeResponseType.Ok -> {
-                val priority = r.readByte()
-                val ordered = decodeOrderedByte(r.readByte())
-                val maxLatencyMillis = r.readVarint()
-                val startGroup = decodeOptionalGroup(r.readVarint())
-                val endGroup = decodeOptionalGroup(r.readVarint())
-                ensureFullyConsumed(r, "SubscribeOk")
+                val priority = br.readByte()
+                val ordered = decodeOrderedByte(br.readByte())
+                val maxLatencyMillis = br.readVarint()
+                val startGroup = decodeOptionalGroup(br.readVarint())
+                val endGroup = decodeOptionalGroup(br.readVarint())
+                ensureFullyConsumed(br, "SubscribeOk")
                 SubscribeResponse.Ok(
                     MoqLiteSubscribeOk(
                         priority = priority,
@@ -183,9 +208,9 @@ object MoqLiteCodec {
             }
 
             MoqLiteSubscribeResponseType.Drop -> {
-                val errorCode = r.readVarint()
-                val reason = r.readLengthPrefixedString()
-                ensureFullyConsumed(r, "SubscribeDrop")
+                val errorCode = br.readVarint()
+                val reason = br.readLengthPrefixedString()
+                ensureFullyConsumed(br, "SubscribeDrop")
                 SubscribeResponse.Dropped(
                     MoqLiteSubscribeDrop(errorCode = errorCode, reasonPhrase = reason),
                 )
