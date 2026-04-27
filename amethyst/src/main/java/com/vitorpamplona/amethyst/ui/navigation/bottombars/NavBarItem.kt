@@ -55,6 +55,7 @@ enum class NavBarItem {
     FOLLOW_PACKS,
     LIVE_STREAMS,
     NESTS,
+    MEETING_ROOMS,
     LONGS,
     POLLS,
     BADGES,
@@ -219,6 +220,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Mic,
                 resolveRoute = { Route.Nests },
             ),
+        NavBarItem.MEETING_ROOMS to
+            NavBarItemDef(
+                id = NavBarItem.MEETING_ROOMS,
+                labelRes = R.string.meeting_rooms,
+                icon = MaterialSymbols.Groups,
+                resolveRoute = { Route.MeetingRooms },
+            ),
         NavBarItem.LONGS to
             NavBarItemDef(
                 id = NavBarItem.LONGS,
@@ -306,6 +314,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.FOLLOW_PACKS,
         NavBarItem.LIVE_STREAMS,
         if (isDebug) NavBarItem.NESTS else null,
+        if (isDebug) NavBarItem.MEETING_ROOMS else null,
         NavBarItem.LONGS,
         NavBarItem.POLLS,
         NavBarItem.BADGES,

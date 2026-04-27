@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.meetingrooms.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -34,18 +34,21 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 
 /**
- * Drawer feed for NIP-53 kind 30312 (Interactive Rooms / audio spaces).
+ * Drawer feed for NIP-53 kind 30313 (Meeting). Pulls
+ * [MeetingRoomEvent]s out of `LocalCache.liveChatChannels` — which is
+ * the same backing store the Live Streams and Nests feeds walk —
+ * and presents them in their own drawer entry so the audio-rooms
+ * surface (kind 30312) doesn't mix scheduled meetings into its list.
  *
- * Shares LocalCache.liveChatChannels with the Live Streams feed, narrowed
- * to MeetingSpaceEvent (30312) so the Clubhouse-style audio-room surface
- * is independent of video live streams. Kind 30313 (NIP-53 meetings) lives
- * in a sibling drawer entry — see [com.vitorpamplona.amethyst.ui.screen.loggedIn.meetingrooms.dal.MeetingRoomsFeedFilter].
+ * Required-field gate: a kind-30313 with a blank title is
+ * unrenderable, so it's skipped at the feed level — same UX rule
+ * the Nests feed applies to its own missing-fields case.
  */
-class NestsFeedFilter(
+class MeetingRoomsFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
@@ -63,8 +66,8 @@ class NestsFeedFilter(
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     override fun feed(): List<Note> {
-        val allRoomNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
-        return sort(innerApplyFilter(allRoomNotes))
+        val allNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
+        return sort(innerApplyFilter(allNotes))
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -77,27 +80,10 @@ class NestsFeedFilter(
             )
 
         return collection.filterTo(HashSet()) {
-            val noteEvent = it.event as? MeetingSpaceEvent ?: return@filterTo false
-            hasMinimumNestFields(noteEvent) && filterParams.match(noteEvent, it.relays)
+            val noteEvent = it.event as? MeetingRoomEvent ?: return@filterTo false
+            !noteEvent.title().isNullOrBlank() && filterParams.match(noteEvent, it.relays)
         }
     }
-
-    /**
-     * EGG-01 rule 2: a kind:30312 with any of `room`, `status`, `service`,
-     * `endpoint` missing MUST be treated as un-joinable. Apply that as a
-     * feed-filter gate so rooms-with-no-content (the d-tag-only events
-     * relays sometimes leak) don't render an empty card with a broken
-     * Join button.
-     *
-     * Closed rooms with all four fields ARE rendered — they may carry a
-     * recording (EGG-11) and the listen-back card is the audience's
-     * only path to that audio post-close.
-     */
-    private fun hasMinimumNestFields(event: MeetingSpaceEvent): Boolean =
-        !event.room().isNullOrBlank() &&
-            event.status() != null &&
-            !event.service().isNullOrBlank() &&
-            !event.endpoint().isNullOrBlank()
 
     override fun sort(items: Set<Note>): List<Note> {
         val topFilter = account.liveLiveStreamsFollowLists.value
@@ -122,20 +108,25 @@ class NestsFeedFilter(
         return items
             .sortedWith(
                 compareBy(
-                    { convertStatusToOrder(it.event as? MeetingSpaceEvent) },
+                    { convertStatusToOrder(it.event as? MeetingRoomEvent) },
                     { participantCounts[it] },
                     { allParticipants[it] },
-                    { it.createdAt() },
+                    {
+                        when (val e = it.event) {
+                            is MeetingRoomEvent -> e.starts() ?: it.createdAt()
+                            else -> it.createdAt()
+                        }
+                    },
                     { it.idHex },
                 ),
             ).reversed()
     }
 
-    private fun convertStatusToOrder(event: MeetingSpaceEvent?): Int =
+    private fun convertStatusToOrder(event: MeetingRoomEvent?): Int =
         when (event?.status()) {
-            StatusTag.STATUS.OPEN -> 2
-            StatusTag.STATUS.PRIVATE -> 1
-            StatusTag.STATUS.CLOSED -> 0
+            StatusTag.STATUS.LIVE -> 2
+            StatusTag.STATUS.PLANNED -> 1
+            StatusTag.STATUS.ENDED -> 0
             else -> 0
         }
 }
