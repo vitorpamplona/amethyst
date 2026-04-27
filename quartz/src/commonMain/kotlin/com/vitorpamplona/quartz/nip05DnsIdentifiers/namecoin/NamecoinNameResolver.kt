@@ -154,6 +154,135 @@ class NamecoinNameResolver(
         }
 
         /**
+         * Split a `.bit` host into the registered Namecoin name and the
+         * subdomain path beneath it.
+         *
+         * The Namecoin `d/` namespace is single-label per ifa-0001
+         * (`d/example`, not `d/foo.example`). Multi-label `.bit` hosts are
+         * realised through the `map` field of the parent name's value.
+         *
+         * Examples:
+         *   - `testls.bit`             → `("d/testls", [])`
+         *   - `relay.testls.bit`       → `("d/testls", ["relay"])`
+         *   - `a.b.c.testls.bit`       → `("d/testls", ["a", "b", "c"])`
+         *   - `"".bit`, `.bit`, `bit`  → `null`
+         *
+         * The returned subdomain list is in DNS order: index 0 is the
+         * label closest to the leaf (most-specific). The companion walker
+         * [walkSubdomain] consumes labels in this order.
+         *
+         * For non-`.bit` hosts and the bare `.bit` TLD this returns `null`
+         * — callers should treat the input as opaque in that case.
+         */
+        fun parseHostFlat(host: String): ParsedHostFlat? {
+            val lower = host.trim().lowercase().trimEnd('.')
+            if (!lower.endsWith(".bit")) return null
+            val withoutTld = lower.removeSuffix(".bit")
+            if (withoutTld.isEmpty()) return null
+            val labels = withoutTld.split('.').filter { it.isNotEmpty() }
+            if (labels.isEmpty()) return null
+            // Last DNS label is the registered Namecoin name; everything
+            // before it is a subdomain path (DNS order, most-specific first).
+            val registered = labels.last()
+            val subdomain = labels.dropLast(1)
+            return ParsedHostFlat(
+                namecoinName = "d/$registered",
+                subdomainLabels = subdomain,
+            )
+        }
+
+        /**
+         * Walk a Namecoin domain object's [`map`][ifa-0001] tree to find the
+         * effective Domain Name Object for [subdomainLabels].
+         *
+         * Lookup at each level, in order:
+         *   1. Exact label match: `map[label]`.
+         *   2. Wildcard match:    `map["*"]`.
+         *   3. No match → return `null`.
+         *
+         * A `""` (empty-string) key at any level acts as a fallback whose
+         * items merge into the parent; we apply that rule before recursing
+         * deeper, so the returned object has the merged view at that level.
+         *
+         * The walk also accepts the string-shorthand form `"map": { "sub": "1.2.3.4" }`
+         * by promoting the string to `{ "ip": [<string>] }` per ifa-0001.
+         *
+         * Pass an empty list to get the top-level object back unchanged.
+         *
+         * Note: returns the JsonObject AT the requested subdomain. It does
+         * NOT inherit `tls` / `relay` / etc. from ancestors — inheritance is
+         * not part of the Namecoin spec for these item types and would let
+         * a parent name silently authorise a subdomain it didn't create. The
+         * `""` empty-key default handling is the only spec-defined merging.
+         */
+        fun walkSubdomain(
+            rootObj: JsonObject,
+            subdomainLabels: List<String>,
+        ): JsonObject? {
+            var current: JsonObject = mergeEmptyKeyDefaults(rootObj)
+            // Walk from the parent down to the leaf (reverse of DNS order).
+            for (label in subdomainLabels.asReversed()) {
+                val map = current["map"] as? JsonObject ?: return null
+                val rawChild =
+                    map[label]
+                        ?: map["*"]
+                        ?: return null
+                val childObj = promoteShorthand(rawChild) ?: return null
+                current = mergeEmptyKeyDefaults(childObj)
+            }
+            return current
+        }
+
+        /**
+         * Implements the ifa-0001 "\"\"\" empty-key default rule:
+         *   any item present at the top of [obj] takes precedence over the
+         *   same item under `obj.map[""]`. Everything else under
+         *   `obj.map[""]` is exposed as if it had been declared at [obj]'s
+         *   top level.
+         */
+        private fun mergeEmptyKeyDefaults(obj: JsonObject): JsonObject {
+            val map = obj["map"] as? JsonObject ?: return obj
+            val defaults = map[""] as? JsonObject ?: return obj
+            // Spec: only items NOT already present at the parent take effect.
+            val merged = obj.toMutableMap()
+            for ((k, v) in defaults) {
+                if (!merged.containsKey(k)) merged[k] = v
+            }
+            return JsonObject(merged)
+        }
+
+        /**
+         * Per ifa-0001 "map": a string value inside `map` is shorthand for
+         * `{ "ip": [<string>] }`. Returns the canonical object form, or
+         * `null` if [el] is neither a string nor an object.
+         */
+        private fun promoteShorthand(el: JsonElement): JsonObject? =
+            when (el) {
+                is JsonObject -> {
+                    el
+                }
+
+                is JsonPrimitive -> {
+                    if (el.isString) {
+                        JsonObject(
+                            mapOf(
+                                "ip" to
+                                    kotlinx.serialization.json.JsonArray(
+                                        listOf(JsonPrimitive(el.content)),
+                                    ),
+                            ),
+                        )
+                    } else {
+                        null
+                    }
+                }
+
+                else -> {
+                    null
+                }
+            }
+
+        /**
          * Parse a Namecoin `d/<name>` value JSON for any Nostr relay URLs.
          *
          * Recognises (in priority order):
@@ -165,10 +294,23 @@ class NamecoinNameResolver(
          *
          * URLs are de-duplicated, returned in priority order, and only those
          * with a `ws://` or `wss://` scheme are kept.
+         *
+         * Pass [subdomainLabels] (DNS order, most-specific first) to look up
+         * a subdomain instead of the top-level object. For example, to read
+         * the relay record at `relay.testls.bit` from `d/testls`, pass
+         * `["relay"]`. The walk follows the Namecoin `ifa-0001` `map` rules:
+         * exact label → wildcard `*` → default `""`. If no subdomain node
+         * exists, returns an empty list (the parent's relay records do NOT
+         * leak into subdomains; they apply only to the parent host itself).
          */
-        fun parseRelayUrls(rawValueJson: String): List<String> =
+        fun parseRelayUrls(
+            rawValueJson: String,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<String> =
             try {
-                collectRelayUrls(SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject)
+                val root = SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject
+                val target = walkSubdomain(root, subdomainLabels) ?: return emptyList()
+                collectRelayUrls(target)
             } catch (_: Exception) {
                 emptyList()
             }
@@ -229,16 +371,24 @@ class NamecoinNameResolver(
          *                   not the hex form used in DNS textual TLSA RRs).
          *
          * The Namecoin spec also accepts `tls` nested under per-port subdomains
-         * (e.g. `map._443._tcp.tls`); to keep this resolver focused on the common
-         * "all services on this host" shape used by Nostr relays, we only read
-         * the top-level `tls` array. Records with malformed shape are skipped.
+         * (e.g. `map._443._tcp.tls`). [subdomainLabels] is consulted in DNS
+         * order (most-specific first); the walk follows `ifa-0001` `map` rules:
+         * exact label → wildcard `*` → default `""`. Pass an empty list (the
+         * default) to read the top-level `tls` array — the original behaviour.
+         *
+         * Records with malformed shape are skipped.
          *
          * @return list of [TlsaRecord] in declaration order, empty if `tls` is
          *         absent or contains no valid records.
          */
-        fun parseTlsaRecords(rawValueJson: String): List<TlsaRecord> =
+        fun parseTlsaRecords(
+            rawValueJson: String,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<TlsaRecord> =
             try {
-                collectTlsaRecords(SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject)
+                val root = SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject
+                val target = walkSubdomain(root, subdomainLabels) ?: return emptyList()
+                collectTlsaRecords(target)
             } catch (_: Exception) {
                 emptyList()
             }
@@ -327,6 +477,16 @@ class NamecoinNameResolver(
         val namecoinName: String,
         val localPart: String,
         val isIdentityNamespace: Boolean,
+    )
+
+    /**
+     * Output of [parseHostFlat]: the registered Namecoin name (single label,
+     * `d/<label>`) and any subdomain labels beneath it in DNS order
+     * (most-specific first).
+     */
+    data class ParsedHostFlat(
+        val namecoinName: String,
+        val subdomainLabels: List<String>,
     )
 
     /**

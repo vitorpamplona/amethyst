@@ -281,6 +281,180 @@ class BitRelayResolverTest {
             assertNotNull(resolver.cachedTlsaFor("Example.BIT"))
         }
 
+    // ── Subdomain resolution via map tree ───────────────────────────────
+
+    @Test
+    fun `resolves relay testls bit through d testls map relay`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {
+                          "map": {
+                            "relay": {
+                              "relay": "wss://relay.testls.bit/",
+                              "tls":   [[2,1,1,"RELAY_HASH"]]
+                            }
+                          }
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+            assertTrue("expected Resolved, got $outcome", outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            assertEquals("wss://relay.testls.bit", outcome.originalUrl)
+            assertEquals("wss://relay.testls.bit/", outcome.resolvedUrl)
+            assertEquals(1, outcome.tlsaRecords.size)
+            assertEquals("RELAY_HASH", outcome.tlsaRecords[0].associationDataBase64)
+            // Looks up the parent name once.
+            assertEquals(1, client.callCount)
+        }
+
+    @Test
+    fun `resolves relay testls bit through wildcard subdomain`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {
+                          "map": {
+                            "*": {
+                              "relay": "wss://wildcard.testls.bit/",
+                              "tls":   [[2,1,1,"WILDCARD"]]
+                            }
+                          }
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+            assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            assertEquals("wss://wildcard.testls.bit/", outcome.resolvedUrl)
+            assertEquals("WILDCARD", outcome.tlsaRecords[0].associationDataBase64)
+        }
+
+    @Test
+    fun `bare testls bit still hits the top-level relay field`() =
+        runTest {
+            // Backward-compat: the original single-label .bit path keeps working.
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {
+                          "relay": "wss://testls.bit/",
+                          "tls":   [[2,1,1,"TOP"]],
+                          "map":   {"relay":{"ip":["1.2.3.4"]}}
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://testls.bit")
+            assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            assertEquals("wss://testls.bit/", outcome.resolvedUrl)
+            assertEquals("TOP", outcome.tlsaRecords[0].associationDataBase64)
+        }
+
+    @Test
+    fun `subdomain not in map returns NotFound rather than top-level fallback`() =
+        runTest {
+            // Spec safety: the parent's `relay` MUST NOT silently authorise
+            // an unrelated subdomain. relay.testls.bit is not the same
+            // service as testls.bit; a user typing the wrong host should
+            // get a clear NotFound, not a misrouted connection.
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """{"relay":"wss://testls.bit/","map":{}}""",
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+            assertTrue("expected NotFound, got $outcome", outcome is BitRelayResolver.Resolution.NotFound)
+        }
+
+    @Test
+    fun `subdomain cache is keyed independently of parent`() =
+        runTest {
+            // Two different subdomains of the same parent should issue
+            // their own ElectrumX call (today) but cache independently so
+            // a bust of one doesn't disturb the other. (Future work could
+            // share the underlying name_show; not in this change.)
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {
+                          "map": {
+                            "relay": {"relay":"wss://relay.testls.bit/"},
+                            "mqtt":  {"relay":"wss://mqtt.testls.bit/"}
+                          }
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            val a = resolver.resolveRaw("wss://relay.testls.bit")
+            val b = resolver.resolveRaw("wss://mqtt.testls.bit")
+            assertTrue(a is BitRelayResolver.Resolution.Resolved)
+            assertTrue(b is BitRelayResolver.Resolution.Resolved)
+            assertEquals(
+                "wss://relay.testls.bit/",
+                (a as BitRelayResolver.Resolution.Resolved).resolvedUrl,
+            )
+            assertEquals(
+                "wss://mqtt.testls.bit/",
+                (b as BitRelayResolver.Resolution.Resolved).resolvedUrl,
+            )
+            // Independent cache hit on re-query.
+            resolver.resolveRaw("wss://relay.testls.bit")
+            resolver.resolveRaw("wss://mqtt.testls.bit")
+            assertEquals(2, client.callCount)
+        }
+
+    @Test
+    fun `cachedTlsaFor returns subdomain-specific records`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {
+                          "map": {
+                            "relay": {"relay":"wss://x/","tls":[[2,1,1,"RELAY"]]},
+                            "mqtt":  {"relay":"wss://y/","tls":[[3,1,1,"MQTT"]]}
+                          }
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            resolver.resolveRaw("wss://relay.testls.bit")
+            resolver.resolveRaw("wss://mqtt.testls.bit")
+            assertEquals(
+                "RELAY",
+                resolver.cachedTlsaFor("relay.testls.bit")?.first()?.associationDataBase64,
+            )
+            assertEquals(
+                "MQTT",
+                resolver.cachedTlsaFor("mqtt.testls.bit")?.first()?.associationDataBase64,
+            )
+        }
+
     // ── Helpers ────────────────────────────────────────────────────────
 
     private fun newResolver(client: IElectrumXClient): BitRelayResolver =

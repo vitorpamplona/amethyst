@@ -9,7 +9,7 @@ adding `.bit` Nostr relays directly to the relay pool.
 | File | Role |
 |---|---|
 | `IElectrumXClient.kt` | Abstract `name_show` lookup (real impl in `jvmAndroid`/`ios` source sets). |
-| `NamecoinNameResolver.kt` | NIP-05-style identity resolution: `alice@example.bit` → pubkey + per-pubkey relays. Hosts the shared low-level helpers reused by every Namecoin path: `lookupNameDetailed` (timeout + exception → outcome translation around `name_show`), `parseRelayUrls` (value-JSON → relay URLs), `parseTlsaRecords` (value-JSON → TLSA records, RFC 6698), and `toNamecoinName` (identifier → `d/<name>` mapping). |
+| `NamecoinNameResolver.kt` | NIP-05-style identity resolution: `alice@example.bit` → pubkey + per-pubkey relays. Hosts the shared low-level helpers reused by every Namecoin path: `lookupNameDetailed` (timeout + exception → outcome translation around `name_show`), `parseRelayUrls` / `parseTlsaRecords` (value-JSON → records, with optional subdomain path that walks the `map` tree per `ifa-0001` §"map"), `parseHostFlat` / `walkSubdomain` (multi-label `.bit` host → effective Domain Name Object), `toNamecoinName` (identifier → `d/<name>`). |
 | `NamecoinLookupCache.kt` | TTL'd in-memory cache for identity resolution. |
 | **`BitRelayResolver.kt`** | **Resolves `.bit` Nostr relay URLs to their underlying real `wss://` endpoint.** Thin policy layer that delegates URL parsing to `UriParser`, identifier mapping + ElectrumX dispatch + relay-URL/TLSA parsing to `NamecoinNameResolver`, and only adds an in-memory cache and a small "first usable URL" picking policy. The cache also exposes `cachedTlsaFor(host)` so the TLS path can pin without a second ElectrumX call. |
 | **`TlsaVerifier.kt`** | **Spec-compliant matching policy for the Namecoin `tls` field (RFC 6698 / `ifa-0001`).** Pure Kotlin in `commonMain`; takes pre-extracted DER + SPKI from the platform's TLS layer and decides whether the chain matches the published TLSA records. |
@@ -78,6 +78,64 @@ If the resolved URL has no path component, the original `.bit` URL's
 path/query is preserved (so per-room scoping like
 `wss://example.bit/room/foo` still works when the record only points
 at the host).
+
+## Subdomain resolution via the `map` tree
+
+The Namecoin `d/` namespace is single-label per `ifa-0001`: there is
+`d/testls` but not `d/relay.testls`. Multi-label `.bit` hosts are
+realised through the `map` field of the parent record.
+
+For `wss://relay.testls.bit`, `BitRelayResolver` does:
+
+  1. `parseHostFlat("relay.testls.bit")` → `("d/testls", ["relay"])`.
+  2. ElectrumX `name_show "d/testls"` (one call — same lookup that
+     would have been used for the bare `testls.bit` host).
+  3. `walkSubdomain(value, ["relay"])` walks `value.map.relay`, falling
+     back to `value.map["*"]` if no exact label, falling through to
+     `null` if neither exists. The walk also honours the `""` empty-key
+     default rule from `ifa-0001` §"map".
+  4. `relay` / `relays` / `nostr.relay` / `nostr.relays` and `tls` are
+     read FROM THAT NODE only. They are NOT inherited from ancestors:
+     a parent that publishes `"relay": "wss://example.bit/"` does
+     **not** silently authorise `wss://sub.example.bit/`.
+
+Example record covering both the bare host and a `relay` subdomain:
+
+```jsonc
+{
+  "ip": "107.152.38.155",
+  "relay": "wss://example.bit/",
+  "tls":   [[2,1,1,"<sha256 of CA SPKI, base64>"]],
+  "map": {
+    "relay": {
+      "relay": "wss://relay.example.bit/",
+      "tls":   [[2,1,1,"<same or different hash>"]]
+    },
+    "*": {
+      "tls": [[2,1,1,"<wildcard hash>"]]
+    }
+  }
+}
+```
+
+Using this single Namecoin record, three different relays resolve correctly:
+
+  - `wss://example.bit/`            → top-level `relay` field.
+  - `wss://relay.example.bit/`      → `map.relay.relay`.
+  - `wss://anything.example.bit/`   → falls back to `map["*"]` (which
+                                       in this example only carries
+                                       TLSA, no `relay`, so this would
+                                       resolve as `NotFound` for the
+                                       relay URL while still being TLS-
+                                       pinned if a `relay` were added).
+
+When reading the live `d/testls` value with the wildcard-only TLSA
+shape (`map["*"].tls` but no `map["*"].relay`), `relay.testls.bit`
+resolves under `map.relay`. If `map.relay` exists with a `relay`
+field but no `tls`, the connection succeeds without TLSA pinning —
+because the exact-label match precludes the wildcard fallback. To
+get both pinning AND a relay URL for `relay.testls.bit`, publish
+`map.relay.relay` AND `map.relay.tls` together.
 
 ## TLS Pinning via the Namecoin Blockchain (RFC 6698 / `ifa-0001`)
 

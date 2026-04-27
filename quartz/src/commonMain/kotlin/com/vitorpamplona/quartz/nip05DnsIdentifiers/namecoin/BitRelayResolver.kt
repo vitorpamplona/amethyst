@@ -135,9 +135,19 @@ class BitRelayResolver(
         if (scheme != "ws" && scheme != "wss") return Resolution.NotABitHost
         if (!host.endsWith(".bit")) return Resolution.NotABitHost
 
-        val namecoinName =
-            NamecoinNameResolver.toNamecoinName(host)
+        // Split the host into the registered Namecoin name (single label) and
+        // a subdomain path beneath it.  `relay.testls.bit` -> (`d/testls`,
+        // ["relay"]); `testls.bit` -> (`d/testls`, []).  We then look up the
+        // registered name once and walk the value JSON's `map` tree to find
+        // the effective Domain Name Object for this subdomain. This matches
+        // the Namecoin `ifa-0001` `map` semantics that browsers / Encaya use
+        // for DNS-style subdomain expression and lets a single `d/<root>`
+        // record host any number of `<sub>.<root>.bit` relays.
+        val parsedHost =
+            NamecoinNameResolver.parseHostFlat(host)
                 ?: return Resolution.Error(host, "Cannot map `$host` to a Namecoin name")
+        val namecoinName = parsedHost.namecoinName
+        val subdomainLabels = parsedHost.subdomainLabels
 
         // Cache lookup
         mutex.withLock {
@@ -176,15 +186,24 @@ class BitRelayResolver(
             }
 
         // Reuse the shared relay-URL parser from NamecoinNameResolver instead
-        // of re-implementing the JSON shape walk here.
-        val candidates = NamecoinNameResolver.parseRelayUrls(nameResult.value)
+        // of re-implementing the JSON shape walk here. For subdomains we
+        // pass the labels so the parser walks `map` to the right node before
+        // collecting; passing an empty list yields the original top-level
+        // behaviour.
+        val candidates = NamecoinNameResolver.parseRelayUrls(nameResult.value, subdomainLabels)
         // Same JSON, same parser — pull the TLSA list out of the value so the
         // caller can pin the rewritten handshake without paying for a second
         // ElectrumX round-trip.
-        val tlsaRecords = NamecoinNameResolver.parseTlsaRecords(nameResult.value)
+        val tlsaRecords = NamecoinNameResolver.parseTlsaRecords(nameResult.value, subdomainLabels)
         if (candidates.isEmpty()) {
-            cachePut(host, emptyList(), tlsaRecords, "No `relay` field in Namecoin record")
-            return Resolution.NotFound(host, "No relay record for `$namecoinName`")
+            val msg =
+                if (subdomainLabels.isEmpty()) {
+                    "No `relay` field in Namecoin record for `$namecoinName`"
+                } else {
+                    "No `relay` field at subdomain `${subdomainLabels.joinToString(".")}` of `$namecoinName`"
+                }
+            cachePut(host, emptyList(), tlsaRecords, msg)
+            return Resolution.NotFound(host, msg)
         }
 
         cachePut(host, candidates, tlsaRecords, null)
