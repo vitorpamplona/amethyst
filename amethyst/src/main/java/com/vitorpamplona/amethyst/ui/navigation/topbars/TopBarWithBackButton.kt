@@ -25,13 +25,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarWithBackButton(
     caption: String,
-    popBack: () -> Unit,
+    nav: INav,
 ) {
     ShorterTopAppBar(
         title = {
@@ -42,8 +43,13 @@ fun TopBarWithBackButton(
             )
         },
         navigationIcon = {
-            IconButton(popBack) {
-                ArrowBackIcon()
+            // Suppress the back arrow when this is the bottom of the back stack
+            // (i.e. the user landed here via the bottom nav, which clears the stack
+            // with popUpTo(route) { inclusive = true }).
+            if (nav.canPop()) {
+                IconButton(nav::popBack) {
+                    ArrowBackIcon()
+                }
             }
         },
     )

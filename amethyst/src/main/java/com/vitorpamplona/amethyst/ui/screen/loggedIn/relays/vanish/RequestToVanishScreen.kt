@@ -149,7 +149,7 @@ fun RequestToVanishScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.request_to_vanish), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.request_to_vanish), nav)
         },
     ) { padding ->
         Column(

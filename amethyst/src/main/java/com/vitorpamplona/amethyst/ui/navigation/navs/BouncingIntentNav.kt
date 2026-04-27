@@ -98,6 +98,8 @@ class BouncingIntentNav(
 
     override fun navBottomBar(route: Route) = nav(route)
 
+    override fun canPop(): Boolean = false
+
     override fun popBack() {
         // No-op: this nav is for in-Activity chat navigation that
         // exclusively forwards to MainActivity. There's no back stack

@@ -43,6 +43,8 @@ interface INav {
 
     fun navBottomBar(route: Route)
 
+    fun canPop(): Boolean
+
     fun popBack()
 
     fun <T : Route> popUpTo(

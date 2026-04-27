@@ -143,7 +143,7 @@ fun ProfileBadgesScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.profile_badges_title), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.profile_badges_title), nav)
         },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {

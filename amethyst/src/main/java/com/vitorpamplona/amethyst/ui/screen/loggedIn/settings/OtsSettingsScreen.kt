@@ -65,7 +65,7 @@ fun OtsSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.ots_explorer_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.ots_explorer_settings), nav)
         },
     ) {
         Column(

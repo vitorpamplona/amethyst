@@ -46,6 +46,8 @@ class EmptyNav : INav {
 
     override fun navBottomBar(route: Route) {}
 
+    override fun canPop(): Boolean = false
+
     override fun popBack() {}
 
     override fun <T : Route> popUpTo(

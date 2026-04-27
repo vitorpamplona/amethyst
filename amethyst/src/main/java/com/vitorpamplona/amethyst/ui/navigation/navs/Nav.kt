@@ -89,6 +89,8 @@ class Nav(
         }
     }
 
+    override fun canPop(): Boolean = controller.previousBackStackEntry != null
+
     override fun popBack() {
         navigationScope.launch {
             controller.navigateUp()

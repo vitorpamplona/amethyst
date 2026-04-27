@@ -107,7 +107,7 @@ fun NewHlsVideoScreen(
         topBar = {
             TopBarWithBackButton(
                 caption = stringResource(R.string.share_hls_video),
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { padding ->

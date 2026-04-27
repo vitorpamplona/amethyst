@@ -93,7 +93,7 @@ private fun RenderPinnedNotesScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.pinned_notes), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.pinned_notes), nav)
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->

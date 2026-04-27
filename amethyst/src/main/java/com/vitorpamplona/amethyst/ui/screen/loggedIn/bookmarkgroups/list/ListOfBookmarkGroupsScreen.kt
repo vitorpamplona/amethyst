@@ -109,7 +109,7 @@ fun ListOfBookmarkGroupsFeed(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav)
         },
         floatingActionButton = {
             BookmarkGroupFab(onAddGroup = addBookmarkGroup)

@@ -88,7 +88,7 @@ private fun EmojiPackSelectionView(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.emoji_pack_management_title), nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.emoji_pack_management_title), nav)
         },
     ) { contentPadding ->
         Column(

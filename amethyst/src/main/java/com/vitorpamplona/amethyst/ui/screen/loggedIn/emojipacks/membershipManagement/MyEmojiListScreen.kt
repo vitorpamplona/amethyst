@@ -97,7 +97,7 @@ private fun MyEmojiListView(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.my_emoji_list_title), nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.my_emoji_list_title), nav)
         },
     ) { contentPadding ->
         val packAddresses by observeNoteEventAndMap<EmojiPackSelectionEvent, List<Address>>(
