@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -30,12 +31,17 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import coil3.asDrawable
 import coil3.compose.AsyncImage
+import coil3.imageLoader
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Apply a [RoomTheme] (NIP-53 `c` / `bg` tags) to the room body
@@ -102,24 +108,68 @@ internal fun AudioRoomThemedScope(
     MaterialTheme(colorScheme = themed, typography = themedTypography) {
         Box(modifier = Modifier.fillMaxSize()) {
             theme.backgroundImageUrl?.let { url ->
-                AsyncImage(
-                    model = url,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale =
-                        when (theme.backgroundMode) {
-                            RoomTheme.BackgroundMode.COVER -> ContentScale.Crop
+                when (theme.backgroundMode) {
+                    RoomTheme.BackgroundMode.COVER -> {
+                        AsyncImage(
+                            model = url,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
 
-                            // True repeat-tile would need a custom Modifier;
-                            // FillBounds is a safe v1 fallback that doesn't
-                            // crop and visually approximates a tile when the
-                            // image is small + repeating.
-                            RoomTheme.BackgroundMode.TILE -> ContentScale.FillBounds
-                        },
-                )
+                    RoomTheme.BackgroundMode.TILE -> {
+                        TiledRoomBackground(url = url)
+                    }
+                }
             }
             content()
         }
+    }
+}
+
+/**
+ * Repeating-tile background. Compose's [AsyncImage] doesn't have a
+ * tile-mode option, so we fetch the bitmap via Coil into a
+ * [ImageBitmap] and wrap it in an [ImageShader]+[ShaderBrush] —
+ * that's the canonical way to get the platform's native repeat
+ * sampler. While the load is in flight (or on failure) the scope
+ * paints nothing so the underlying material surface shows through.
+ */
+@Composable
+private fun TiledRoomBackground(url: String) {
+    val context = LocalContext.current
+    val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, url) {
+        value =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val request =
+                        coil3.request.ImageRequest
+                            .Builder(context)
+                            .data(url)
+                            .build()
+                    val drawable =
+                        context
+                            .imageLoader
+                            .execute(request)
+                            .image
+                            ?.asDrawable(context.resources) as? android.graphics.drawable.BitmapDrawable
+                    drawable?.bitmap?.asImageBitmap()
+                }.getOrNull()
+            }
+    }
+    bitmap?.let { bmp ->
+        val brush =
+            remember(bmp) {
+                androidx.compose.ui.graphics.ShaderBrush(
+                    androidx.compose.ui.graphics.ImageShader(
+                        image = bmp,
+                        tileModeX = androidx.compose.ui.graphics.TileMode.Repeated,
+                        tileModeY = androidx.compose.ui.graphics.TileMode.Repeated,
+                    ),
+                )
+            }
+        Box(modifier = Modifier.fillMaxSize().background(brush))
     }
 }
 
