@@ -64,7 +64,7 @@ fun ProductsScreen(
             ProductsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Products, accountViewModel) { route ->
+            AppBottomBar(Route.Products, nav, accountViewModel) { route ->
                 if (route == Route.Products) {
                     productsFeedContentState.sendToTop()
                 } else {

@@ -65,7 +65,7 @@ fun LiveStreamsScreen(
             LiveStreamsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.LiveStreams, accountViewModel) { route ->
+            AppBottomBar(Route.LiveStreams, nav, accountViewModel) { route ->
                 if (route == Route.LiveStreams) {
                     liveStreamsFeedContentState.sendToTop()
                 } else {

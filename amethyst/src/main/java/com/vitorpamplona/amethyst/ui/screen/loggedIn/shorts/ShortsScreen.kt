@@ -65,7 +65,7 @@ fun ShortsScreen(
             ShortsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Shorts, accountViewModel) { route ->
+            AppBottomBar(Route.Shorts, nav, accountViewModel) { route ->
                 if (route == Route.Shorts) {
                     shortsFeedContentState.sendToTop()
                 } else {

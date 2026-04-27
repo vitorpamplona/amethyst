@@ -82,7 +82,7 @@ fun CommunitiesScreen(
             CommunitiesTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Communities, accountViewModel) { route ->
+            AppBottomBar(Route.Communities, nav, accountViewModel) { route ->
                 if (route == Route.Communities) {
                     feedContentState.sendToTop()
                 } else {

@@ -33,7 +33,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -55,6 +57,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,10 +69,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +87,8 @@ fun WalletScreen(
     walletViewModel.init(accountViewModel)
 
     val hasWallet by walletViewModel.hasWalletSetup.collectAsState()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -107,6 +114,15 @@ fun WalletScreen(
                 },
             )
         },
+        bottomBar = {
+            AppBottomBar(Route.Wallet, nav, accountViewModel) { route ->
+                if (route == Route.Wallet) {
+                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
+        },
     ) { padding ->
         if (!hasWallet) {
             NoWalletSetup(
@@ -117,6 +133,7 @@ fun WalletScreen(
             MultiWalletHomeContent(
                 walletViewModel = walletViewModel,
                 modifier = Modifier.padding(padding),
+                listState = listState,
                 nav = nav,
             )
         }
@@ -161,6 +178,7 @@ private fun NoWalletSetup(
 private fun MultiWalletHomeContent(
     walletViewModel: WalletViewModel,
     modifier: Modifier,
+    listState: LazyListState,
     nav: INav,
 ) {
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
@@ -173,6 +191,7 @@ private fun MultiWalletHomeContent(
     }
 
     LazyColumn(
+        state = listState,
         modifier =
             modifier
                 .fillMaxSize()

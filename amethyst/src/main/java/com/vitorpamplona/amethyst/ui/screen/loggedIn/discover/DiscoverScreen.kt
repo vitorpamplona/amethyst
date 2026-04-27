@@ -239,7 +239,7 @@ private fun DiscoverPages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Discover, accountViewModel) { route ->
+            AppBottomBar(Route.Discover, nav, accountViewModel) { route ->
                 if (route == Route.Discover) {
                     val currentPage = pagerState.currentPage
                     if (currentPage >= 0 && currentPage < feedTabs.size) {

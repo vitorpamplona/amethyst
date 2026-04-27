@@ -65,7 +65,7 @@ fun PicturesScreen(
             PicturesTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Pictures, accountViewModel) { route ->
+            AppBottomBar(Route.Pictures, nav, accountViewModel) { route ->
                 if (route == Route.Pictures) {
                     picturesFeedContentState.sendToTop()
                 } else {

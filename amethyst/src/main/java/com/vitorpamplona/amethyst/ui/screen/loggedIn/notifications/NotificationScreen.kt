@@ -79,7 +79,7 @@ fun NotificationScreen(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Notification(), accountViewModel) { route ->
+            AppBottomBar(Route.Notification(), nav, accountViewModel) { route ->
                 if (route is Route.Notification) {
                     notifFeedContentState.invalidateDataAndSendToTop(true)
                 } else {
