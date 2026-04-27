@@ -346,6 +346,11 @@ dependencies {
     playImplementation libs.google.mlkit.genai.prompt
     playImplementation libs.google.mlkit.genai.rewriting
 
+    // On-device alt-text suggestions: genai image description (preferred, descriptive sentences)
+    // with image-labeling as a keyword-join fallback for devices without AICore.
+    playImplementation libs.google.mlkit.genai.image.description
+    playImplementation libs.google.mlkit.image.labeling
+
     // PushNotifications
     playImplementation platform(libs.firebase.bom)
     playImplementation libs.firebase.messaging

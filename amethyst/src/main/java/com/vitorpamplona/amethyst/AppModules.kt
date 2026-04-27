@@ -525,10 +525,16 @@ class AppModules(
             }
         }
 
-        // initializes diskcache on an IO thread.
+        // Warms the video cache off the main thread. SimpleCache's constructor opens a SQLite
+        // index over StandaloneDatabaseProvider and walks every cached span on disk — up to a
+        // few hundred ms on a populated 4 GB cache — so leaving it for the first session's
+        // onGetSession would do that work on the main thread. The short delay keeps the IO
+        // dispatcher free for the urgent first-paint work above (account load, image loader,
+        // ui state, robohash) while still landing the warmup well before a typical user can
+        // scroll to and tap a video. The previous 10 s delay was long enough that a fast user
+        // (or a deep link) could lose the lazy { } race and trigger main-thread init.
         applicationIOScope.launch {
-            // Prepares video cache later
-            delay(10_000)
+            delay(1_500)
             videoCache
         }
     }

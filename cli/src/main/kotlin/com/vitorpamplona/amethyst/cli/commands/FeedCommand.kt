@@ -142,7 +142,7 @@ object FeedCommand {
      * an arbitrary `--author` we have no idea where they publish, so we
      * widen to the bootstrap union.
      */
-    private fun relaysForReadingFeed(
+    private suspend fun relaysForReadingFeed(
         ctx: Context,
         mode: String,
     ): Set<NormalizedRelayUrl> =

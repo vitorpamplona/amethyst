@@ -75,12 +75,10 @@ fun DisplayRelaySet(
 ) {
     val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
-    val relays by
+    val relays =
         remember(noteEvent) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.relays().toImmutableList(),
-                ),
+            RelayListCard(
+                noteEvent.relays().toImmutableList(),
             )
         }
 
@@ -89,10 +87,12 @@ fun DisplayRelaySet(
             noteEvent.tags.firstTagValueFor("title", "name") ?: "#${noteEvent.dTag()}"
         }
 
+    val description = remember(noteEvent) { noteEvent.description() }
+
     DisplayRelaySet(
         relays,
         relayListName,
-        noteEvent.description(),
+        description,
         backgroundColor,
         accountViewModel,
         nav,
@@ -108,21 +108,17 @@ fun DisplayNIP65RelayList(
 ) {
     val noteEvent = baseNote.event as? AdvertisedRelayListEvent ?: return
 
-    val writeRelays by
-        remember(baseNote) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.writeRelaysNorm() ?: emptyList(),
-                ),
+    val writeRelays =
+        remember(noteEvent) {
+            RelayListCard(
+                noteEvent.writeRelaysNorm() ?: emptyList(),
             )
         }
 
-    val readRelays by
-        remember(baseNote) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.readRelaysNorm() ?: emptyList(),
-                ),
+    val readRelays =
+        remember(noteEvent) {
+            RelayListCard(
+                noteEvent.readRelaysNorm() ?: emptyList(),
             )
         }
 
@@ -154,12 +150,10 @@ fun DisplayDMRelayList(
 ) {
     val noteEvent = baseNote.event as? ChatMessageRelayListEvent ?: return
 
-    val relays by
-        remember(baseNote) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.relays(),
-                ),
+    val relays =
+        remember(noteEvent) {
+            RelayListCard(
+                noteEvent.relays(),
             )
         }
 

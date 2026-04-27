@@ -837,7 +837,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="always_on_notif_title">Amethyst-Benachrichtigungen aktiv</string>
     <string name="always_on_notif_connected">Mit %1$d Inbox-Relays verbunden</string>
     <string name="always_on_notif_connecting">Verbinde mit Inbox-Relays\u2026</string>
-    <string name="always_on_notif_stop">Pausieren</string>
     <string name="always_on_notif_setting_title">Dauerhafter Benachrichtigungsdienst</string>
     <string name="always_on_notif_setting_description">Hält eine dauerhafte Verbindung zu deinen Inbox-Relays für sofortige Benachrichtigungen aufrecht. Zeigt eine fortlaufende Benachrichtigung an. Verbraucht mehr Akku, stellt aber sicher, dass du keine Nachricht verpasst.</string>
     <string name="battery_optimization_title">Akkuoptimierung aktiv</string>

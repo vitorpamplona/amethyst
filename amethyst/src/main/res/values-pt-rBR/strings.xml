@@ -832,7 +832,6 @@
     <string name="always_on_notif_title">Notificações do Amethyst ativas</string>
     <string name="always_on_notif_connected">Conectado a %1$d relays de caixa de entrada</string>
     <string name="always_on_notif_connecting">Conectando aos relays de caixa de entrada\u2026</string>
-    <string name="always_on_notif_stop">Pausar</string>
     <string name="always_on_notif_setting_title">Serviço de notificações sempre ativo</string>
     <string name="always_on_notif_setting_description">Mantém uma conexão persistente com seus relays de caixa de entrada para entrega instantânea de notificações. Mostra uma notificação contínua. Usa mais bateria, mas garante que você nunca perca uma mensagem.</string>
     <string name="battery_optimization_title">Otimização de bateria ativa</string>

@@ -847,7 +847,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="always_on_notif_title">Amethyst obvestila so aktivna</string>
     <string name="always_on_notif_connected">Povezan z %1$d vhodnimi releji</string>
     <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
-    <string name="always_on_notif_stop">Premor</string>
     <string name="always_on_notif_setting_title">Vedno aktivna obvestila</string>
     <string name="always_on_notif_setting_description">Ohranja stalno povezavo z vašimi releji za takojšnjo dostavo obvestil. Prikazuje trajno obvestilo. Porabi več baterije, a zagotavlja, da ne zamudite nobenega sporočila.</string>
     <string name="battery_optimization_title">Optimizacija baterije je aktivna</string>

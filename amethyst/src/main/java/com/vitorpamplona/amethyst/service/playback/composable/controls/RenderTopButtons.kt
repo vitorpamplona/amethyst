@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import kotlinx.collections.immutable.toImmutableList
 
 @Preview
 @Composable
@@ -105,7 +106,7 @@ fun RenderTopButtons(
     accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
-    val isLive = isLiveStreaming(mediaData.videoUri)
+    val isLive = remember(mediaData.videoUri) { isLiveStreaming(mediaData.videoUri) }
     val pipSupported =
         remember {
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -212,17 +213,22 @@ fun RenderTopButtons(
         }
 
     val canFullscreen = onZoomClick != null
+    // ImmutableList so Compose can treat the action lists as stable parameters when they're
+    // passed through to AnimatedOverflowMenuButton — a plain List is unstable and forces the
+    // overflow tree to recompose whenever any unrelated parent state ticks.
     val topBarActions =
         remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.TopBar && isAvailable(it.action) }
                 .map { it.action }
+                .toImmutableList()
         }
     val overflowActions =
         remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.OverflowMenu && isAvailable(it.action) }
                 .map { it.action }
+                .toImmutableList()
         }
 
     Row(modifier) {

@@ -833,7 +833,6 @@
     <string name="always_on_notif_title">Powiadomienia Ametyst Aktywne</string>
     <string name="always_on_notif_connected">Połączono z %1$d transmiterami odbiorczymi</string>
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
-    <string name="always_on_notif_stop">Pauza</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
     <string name="battery_optimization_title">Optymalizacja baterii aktywna</string>
@@ -1147,8 +1146,8 @@
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać satosze</string>
     <string name="zap_split_weight">Procentowo</string>
     <string name="zap_split_weight_placeholder">25</string>
-    <string name="splitting_zaps_with">Podziel zapsy z</string>
-    <string name="forwarding_zaps_to">Przesyłanie zapasów do</string>
+    <string name="splitting_zaps_with">Podziel zapy z</string>
+    <string name="forwarding_zaps_to">Przesyłanie zapów do</string>
     <string name="lightning_wallets_not_found2">Nie znaleziono portfeli Lightning</string>
     <string name="paid">Zapłacone</string>
     <string name="wallet_number">Portfel %1$s</string>
@@ -2196,6 +2195,8 @@
     <string name="ai_writing_help">Pomoc w pisaniu z użyciem AI</string>
     <string name="ai_writing_setting_title">Zaproponuj poprawki w tekście</string>
     <string name="ai_writing_setting_description">Używa modelu sztucznej inteligencji wbudowanego w urządzenie, proponując poprawki tekstu i zmiany tonu wypowiedzi.</string>
+    <string name="tracked_broadcasts_setting_title">Monitorowane transmisje</string>
+    <string name="tracked_broadcasts_setting_description">Podczas wysyłania zdarzeń korzystaj z monitora transmisji. Pokazuje postęp na żywo i status transmisji podczas nadawania.</string>
     <string name="ai_writing_use_this">Użyj tego</string>
     <string name="ai_writing_dismiss">Ignoruj</string>
     <string name="ai_tone_correct">Popraw</string>

@@ -99,7 +99,7 @@ open class FsEventStore(
     // Insert
     // ------------------------------------------------------------------
 
-    override fun insert(event: Event) =
+    override suspend fun insert(event: Event) =
         lockManager.withWriteLock {
             insertLocked(event)
         }
@@ -263,7 +263,7 @@ open class FsEventStore(
         }
     }
 
-    override fun transaction(body: IEventStore.ITransaction.() -> Unit) =
+    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) =
         lockManager.withWriteLock {
             val txn =
                 object : IEventStore.ITransaction {
@@ -277,13 +277,13 @@ open class FsEventStore(
     // ------------------------------------------------------------------
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Event> query(filter: Filter): List<T> {
+    override suspend fun <T : Event> query(filter: Filter): List<T> {
         val out = mutableListOf<T>()
         query<T>(filter) { out.add(it) }
         return out
     }
 
-    override fun <T : Event> query(filters: List<Filter>): List<T> {
+    override suspend fun <T : Event> query(filters: List<Filter>): List<T> {
         val seen = HashSet<HexKey>()
         val out = mutableListOf<T>()
         filters.forEach { f ->
@@ -292,7 +292,7 @@ open class FsEventStore(
         return out
     }
 
-    override fun <T : Event> query(
+    override suspend fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
     ) {
@@ -311,7 +311,7 @@ open class FsEventStore(
         }
     }
 
-    override fun <T : Event> query(
+    override suspend fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
     ) {
@@ -321,13 +321,13 @@ open class FsEventStore(
         }
     }
 
-    override fun count(filter: Filter): Int {
+    override suspend fun count(filter: Filter): Int {
         var n = 0
         query<Event>(filter) { n++ }
         return n
     }
 
-    override fun count(filters: List<Filter>): Int {
+    override suspend fun count(filters: List<Filter>): Int {
         var n = 0
         query<Event>(filters) { n++ }
         return n
@@ -343,7 +343,7 @@ open class FsEventStore(
      * entire store. This is asymmetric with `query(Filter())` which
      * intentionally returns every event — same contract as `SQLiteEventStore`.
      */
-    override fun delete(filter: Filter) =
+    override suspend fun delete(filter: Filter) =
         lockManager.withWriteLock {
             if (filter.isEmpty()) return@withWriteLock
             val ids = ArrayList<HexKey>()
@@ -352,7 +352,7 @@ open class FsEventStore(
         }
 
     /** See [delete] for the empty-filter contract. */
-    override fun delete(filters: List<Filter>) =
+    override suspend fun delete(filters: List<Filter>) =
         lockManager.withWriteLock {
             val nonEmpty = filters.filterNot { it.isEmpty() }
             if (nonEmpty.isEmpty()) return@withWriteLock
@@ -362,7 +362,7 @@ open class FsEventStore(
         }
 
     /** Delete an event by id. Returns 1 if a file was removed, 0 otherwise. */
-    fun delete(id: HexKey): Int =
+    suspend fun delete(id: HexKey): Int =
         lockManager.withWriteLock {
             deleteLocked(id)
         }
@@ -408,7 +408,10 @@ open class FsEventStore(
                 if (parsed.first < event.createdAt) toDelete.add(parsed.second)
             }
         }
-        toDelete.forEach { delete(it) }
+        // Already inside the writer lock (insertLocked → processVanish);
+        // call the locked variant to avoid trying to re-suspend on the
+        // public `delete(id)` from a non-suspend body.
+        toDelete.forEach { deleteLocked(it) }
     }
 
     /**
@@ -416,7 +419,7 @@ open class FsEventStore(
      * filenames, and deletes any entry whose `exp < now`. Matches SQLite's
      * `expiration < unixepoch()` predicate (note: strict `<`, not `<=`).
      */
-    override fun deleteExpiredEvents() =
+    override suspend fun deleteExpiredEvents() =
         lockManager.withWriteLock {
             if (!Files.isDirectory(layout.idxExpiresAt)) return@withWriteLock
             val now = now()

@@ -836,7 +836,6 @@
     <string name="always_on_notif_title">Amethyst értesítések aktíválva</string>
     <string name="always_on_notif_connected">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</string>
     <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
-    <string name="always_on_notif_stop">Szüneteltetés</string>
     <string name="always_on_notif_setting_title">Folyamatos értesítési szolgáltatás</string>
     <string name="always_on_notif_setting_description">Folyamatos kapcsolatot tart fenn a beérkező üzenetek átjátszóival az értesítések azonnali kézbesítése érdekében. Megjeleníti a folyamatban lévő értesítéseket. Több akkumulátort fogyaszt, de így biztosan nem marad le egyetlen üzenetről sem.</string>
     <string name="battery_optimization_title">Akkumulátor-optimalizálás aktív</string>
@@ -2199,6 +2198,8 @@
     <string name="ai_writing_help">Súgó az LLM-alapú íráshoz</string>
     <string name="ai_writing_setting_title">Javaslatok a szöveg javítására</string>
     <string name="ai_writing_setting_description">Az eszközön futó LLM-modell segítségével szövegjavításokkal és hangnemváltoztatásokkal kapcsolatos javaslatokat kaphat.</string>
+    <string name="tracked_broadcasts_setting_title">Nyomon követhető közvetítések</string>
+    <string name="tracked_broadcasts_setting_description">Nyomon követhető közvetítők használata az események küldesékor. Közvetítés közben megjeleníti a jelenlegi előrehaladást és az egyes átjátszók állapotát.</string>
     <string name="ai_writing_use_this">Ennek használata</string>
     <string name="ai_writing_dismiss">Eltüntetés</string>
     <string name="ai_tone_correct">Javítás</string>

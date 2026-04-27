@@ -280,7 +280,7 @@ fun FeedScreen(
     val followedUsers by localCache.followedUsers.collectAsState()
 
     // Available relay URLs — subscribe triggers connection on-demand
-    val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
+    val allRelayUrls = relayStatuses.keys
 
     // Feed relays from relay categories (NIP-65 outbox, minus blocked, with fallback)
     val relayCategories = LocalRelayCategories.current

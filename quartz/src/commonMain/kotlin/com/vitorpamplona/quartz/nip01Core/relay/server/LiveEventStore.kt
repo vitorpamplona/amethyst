@@ -46,7 +46,7 @@ class LiveEventStore(
             onBufferOverflow = BufferOverflow.DROP_LATEST, // Default behavior
         )
 
-    fun insert(event: Event) {
+    suspend fun insert(event: Event) {
         store.insert(event)
         newEventStream.tryEmit(event)
     }
@@ -70,5 +70,5 @@ class LiveEventStore(
         }
     }
 
-    fun count(filters: List<Filter>) = store.count(filters)
+    suspend fun count(filters: List<Filter>) = store.count(filters)
 }

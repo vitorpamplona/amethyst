@@ -31,11 +31,9 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
-import kotlinx.coroutines.CancellationException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.regex.Pattern
 
 @Immutable
 data class ResultOrError(
@@ -45,21 +43,16 @@ data class ResultOrError(
 )
 
 object LanguageTranslatorService {
-    var executorService: ExecutorService = Executors.newCachedThreadPool()
+    private val executorService: ExecutorService =
+        Executors.newFixedThreadPool(maxOf(2, Runtime.getRuntime().availableProcessors() / 2))
 
-    private val options =
+    private val identificationOptions =
         LanguageIdentificationOptions
             .Builder()
             .setExecutor(executorService)
             .setConfidenceThreshold(0.6f)
             .build()
-    private val languageIdentification = LanguageIdentification.getClient(options)
-    val lnRegex: Pattern = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
-    val tagRegex: Pattern =
-        Pattern.compile(
-            "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)",
-            Pattern.CASE_INSENSITIVE,
-        )
+    private val languageIdentification = LanguageIdentification.getClient(identificationOptions)
 
     private val translators =
         object : LruCache<TranslatorOptions, Translator>(3) {
@@ -75,8 +68,20 @@ object LanguageTranslatorService {
             }
         }
 
+    private data class InFlightKey(
+        val text: String,
+        val translateTo: String,
+        val dontTranslateFrom: Set<String>,
+    )
+
+    // Coalesces concurrent translation requests for the same (content, settings) — the same note
+    // shown in N composables (reposts, notifications) only fires one ML Kit pipeline.
+    private val inFlight = ConcurrentHashMap<InFlightKey, Task<ResultOrError>>()
+
     fun clear() {
         translators.evictAll()
+        inFlight.clear()
+        TranslationsCache.clear()
     }
 
     fun identifyLanguage(text: String): Task<String> = languageIdentification.identifyLanguage(text)
@@ -107,108 +112,51 @@ object LanguageTranslatorService {
         return translator.downloadModelIfNeeded().onSuccessTask(executorService) {
             checkNotInMainThread()
 
-            val tasks = mutableListOf<Task<String>>()
-            val dict = lnDictionary(text) + urlDictionary(text) + tagDictionary(text)
+            val dict = TranslationDictionary.build(text)
+            val encoded = TranslationDictionary.encode(text, dict)
 
-            for (paragraph in encodeDictionary(text, dict).split("\n")) {
-                tasks.add(translator.translate(paragraph))
-            }
-
-            Tasks.whenAll(tasks).continueWith(executorService) {
-                checkNotInMainThread()
-
-                val results: MutableList<String> = ArrayList()
-                for (task in tasks) {
-                    val fixedText =
-                        task.result.replace("# [", "#[") // fixes tags that always return with a space
-                    results.add(decodeDictionary(fixedText, dict))
-                }
-                ResultOrError(results.joinToString("\n"), source, target)
+            translator.translate(encoded).continueWith(executorService) { task ->
+                task.exception?.let { throw it }
+                ResultOrError(TranslationDictionary.decode(task.result, dict), source, target)
             }
         }
-    }
-
-    private fun encodeDictionary(
-        text: String,
-        dict: Map<String, String>,
-    ): String {
-        var newText = text
-        for (pair in dict) {
-            newText = newText.replace(pair.value, pair.key, true)
-        }
-        return newText
-    }
-
-    private fun decodeDictionary(
-        text: String,
-        dict: Map<String, String>,
-    ): String {
-        var newText = text
-        for (pair in dict) {
-            newText = newText.replace(pair.key, pair.value, true)
-        }
-        return newText
-    }
-
-    private fun tagDictionary(text: String): Map<String, String> {
-        val matcher = tagRegex.matcher(text)
-        val returningList = mutableMapOf<String, String>()
-        var counter = 0
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group()
-                val short = "C$counter"
-                counter++
-                returningList.put(short, tag)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-        return returningList
-    }
-
-    private fun lnDictionary(text: String): Map<String, String> {
-        val matcher = lnRegex.matcher(text)
-        val returningList = mutableMapOf<String, String>()
-        var counter = 0
-        while (matcher.find()) {
-            try {
-                val lnInvoice = matcher.group()
-                val short = "A$counter"
-                counter++
-                returningList.put(short, lnInvoice)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-        return returningList
-    }
-
-    private fun urlDictionary(text: String): Map<String, String> {
-        val urlsInText = UrlDetector(text).detect()
-
-        var counter = 0
-
-        return urlsInText
-            .filter { !it.originalUrl.contains("，") && !it.originalUrl.contains("。") }
-            .associate {
-                counter++
-                "B$counter" to it.originalUrl
-            }
     }
 
     fun autoTranslate(
         text: String,
         dontTranslateFrom: Set<String>,
         translateTo: String,
-    ): Task<ResultOrError> =
-        identifyLanguage(text).onSuccessTask(executorService) {
-            if (it.equals(translateTo, true)) {
-                Tasks.forCanceled()
-            } else if (it != "und" && !dontTranslateFrom.contains(it)) {
-                translate(text, it, translateTo)
-            } else {
-                Tasks.forCanceled()
+    ): Task<ResultOrError> {
+        if (!TranslationDictionary.isWorthTranslating(text)) return Tasks.forCanceled()
+        return dedupe(InFlightKey(text, translateTo, dontTranslateFrom)) {
+            identifyLanguage(text).onSuccessTask(executorService) { detected ->
+                translateOrSkip(text, detected, dontTranslateFrom, translateTo)
             }
         }
+    }
+
+    private fun translateOrSkip(
+        text: String,
+        detected: String,
+        dontTranslateFrom: Set<String>,
+        translateTo: String,
+    ): Task<ResultOrError> =
+        when {
+            detected == "und" -> Tasks.forCanceled()
+            detected.equals(translateTo, ignoreCase = true) -> Tasks.forCanceled()
+            detected in dontTranslateFrom -> Tasks.forCanceled()
+            else -> translate(text, detected, translateTo)
+        }
+
+    private inline fun dedupe(
+        key: InFlightKey,
+        factory: () -> Task<ResultOrError>,
+    ): Task<ResultOrError> {
+        inFlight[key]?.let { return it }
+        val candidate = factory()
+        // putIfAbsent guards against a racing caller: keep the winner, drop the loser.
+        val winner = inFlight.putIfAbsent(key, candidate) ?: candidate
+        winner.addOnCompleteListener(executorService) { inFlight.remove(key, winner) }
+        return winner
+    }
 }

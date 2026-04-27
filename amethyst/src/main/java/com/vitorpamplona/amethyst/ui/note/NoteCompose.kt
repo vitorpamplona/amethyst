@@ -1513,7 +1513,7 @@ fun SecondUserInfoRow(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        Column(modifier = remember { Modifier.weight(1f) }) {
+        Column(modifier = Modifier.weight(1f)) {
             if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
                 ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
             } else {

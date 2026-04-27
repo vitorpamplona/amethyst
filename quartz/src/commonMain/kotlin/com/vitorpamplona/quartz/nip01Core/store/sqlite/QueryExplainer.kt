@@ -22,10 +22,10 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.SQLiteConnection
 
-fun SQLiteEventStore.explainQuery(
+suspend fun SQLiteEventStore.explainQuery(
     sql: String,
     args: Array<Any> = emptyArray(),
-) = connection.explainQuery(sql, args.map { it.toString() }.toTypedArray())
+): String = pool.useReader { it.explainQuery(sql, args.map { a -> a.toString() }.toTypedArray()) }
 
 fun SQLiteConnection.explainQuery(
     sql: String,

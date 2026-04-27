@@ -80,10 +80,39 @@ store.query(
 )
 ```
 
+## Concurrency
+
+`androidx.sqlite.SQLiteConnection` is not thread-safe — same contract as
+`sqlite3*` in the C API. To support concurrent inserts and reads from
+multiple coroutines, `SQLiteEventStore` owns a Room-style
+[`SQLiteConnectionPool`](SQLiteConnectionPool.kt):
+
+- **One writer connection**, guarded by a coroutine `Mutex`. SQLite only
+  allows one writer at the file level anyway, so serialising here costs
+  nothing — it just queues callers cooperatively instead of crashing
+  them on `BEGIN IMMEDIATE`.
+- **N reader connections** (default 4), handed out from a `Channel` that
+  doubles as a semaphore. Under WAL (`PRAGMA journal_mode = WAL`)
+  readers run in parallel with the writer and with each other.
+
+For in-memory databases (`dbName == null`) the pool degrades to a
+single shared connection — every fresh `:memory:` connection would
+otherwise be a *separate* DB. Writes still serialise correctly; reads
+just take the same writer mutex.
+
+The whole public API on `EventStore` / `SQLiteEventStore` is therefore
+`suspend`. Callers must be in a coroutine; on Android, schedule
+maintenance work as a `CoroutineWorker`.
+
+`Mutex` is non-reentrant: do not call `eventStore.query(...)` from
+inside a `transaction { ... }` body. The transaction body itself
+already holds the writer connection — query against the
+`SQLiteConnection` handed to your block instead.
+
 ## How to Use
 
 The `EventStore` class provides a high-level interface for interacting with the event database.
-It is initialized with a `SQLiteDatabase` instance, and it manages the underlying tables and query planning.
+It owns the underlying [`SQLiteConnectionPool`](SQLiteConnectionPool.kt) and the query planner.
 
 ### Initialization
 
@@ -95,7 +124,7 @@ val eventStore = EventStore("dbname.db", relayUrlIdentifier)
 
 ### Querying Events
 
-To query events, use the `query` method with one or more `Filter` objects:
+To query events, use the `query` method with one or more `Filter` objects (in a coroutine):
 
 ```kotlin
 val filters = listOf(
@@ -129,6 +158,18 @@ Insert a single event using the `insert` method:
 eventStore.insert(event)
 ```
 
+For batch inserts, prefer a single `transaction` — one `BEGIN`/`COMMIT`
+per batch is roughly an order of magnitude faster on WAL than one per
+event:
+
+```kotlin
+eventStore.transaction {
+    insert(event1)
+    insert(event2)
+    insert(event3)
+}
+```
+
 ### Deleting Events
 
 Events should be deleted by adding a DeletionRequest or a VanishRequest to the db, but to manually
@@ -154,11 +195,13 @@ The store exposes a `deleteExpiredEvents` to be used in a periodic clean up proc
 should use a WorkManager or a coroutine to periodically call `store.deleteExpiredEvents()`. We
 recommend a 15-minute window to remove recently expired events from the database.
 
-Here's an example of a Worker that should be added to your application class.
+Here's an example of a Worker that should be added to your application class. Use
+`CoroutineWorker` (not `Worker`) — `deleteExpiredEvents()` is a `suspend` function.
 
 ```kotlin
-class ExpirationWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
-    override fun doWork(): Result {
+class ExpirationWorker(appContext: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(appContext, workerParams) {
+    override suspend fun doWork(): Result {
         YourApplication.store.deleteExpiredEvents()
         return Result.success()
     }

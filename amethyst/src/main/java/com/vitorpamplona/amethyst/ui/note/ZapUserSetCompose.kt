@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -78,7 +77,7 @@ fun ZapUserSetCompose(
                     modifier = Size55Modifier,
                 ) {
                     ZappedIcon(
-                        remember { Modifier.size(Size25dp).align(Alignment.TopEnd) },
+                        Modifier.size(Size25dp).align(Alignment.TopEnd),
                     )
                 }
             }
@@ -103,7 +102,7 @@ fun ZapUserSetCompose(
                         nav = nav,
                     )
 
-                    Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
+                    Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(zapSetCard.user, accountViewModel = accountViewModel) }
 
                         AboutDisplay(zapSetCard.user, accountViewModel)

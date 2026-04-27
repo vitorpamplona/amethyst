@@ -332,7 +332,7 @@ fun RenderZapGallery(
             modifier = WidthAuthorPictureModifier,
         ) {
             ZappedIcon(
-                modifier = remember { Modifier.size(Size25dp).align(Alignment.TopEnd) },
+                modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
             )
         }
 
@@ -353,7 +353,7 @@ fun RenderBoostGallery(
             modifier = NotificationIconModifierSmaller,
         ) {
             RepostedIcon(
-                modifier = remember { Modifier.size(Size20dp).align(Alignment.TopEnd) },
+                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
             )
         }
 
@@ -374,7 +374,7 @@ fun RenderBoostGallery(
             modifier = NotificationIconModifierSmaller,
         ) {
             RepostedIcon(
-                modifier = remember { Modifier.size(Size20dp).align(Alignment.TopEnd) },
+                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
             )
         }
 

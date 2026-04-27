@@ -115,7 +115,7 @@ fun NotificationsScreen(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
+    val connectedRelays = relayStatuses.keys
     val scope = rememberCoroutineScope()
     val notificationState =
         remember {

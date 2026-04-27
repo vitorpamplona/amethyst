@@ -24,14 +24,34 @@ import android.util.LruCache
 import com.vitorpamplona.amethyst.ui.components.TranslationConfig
 
 object TranslationsCache {
-    val cache = LruCache<String, TranslationConfig>(100)
+    private const val MAX_ENTRIES = 500
 
-    fun get(content: String): TranslationConfig = cache.get(content) ?: TranslationConfig(content, null, null, false)
+    // Keying on the language settings as well prevents serving stale translations after the user
+    // changes "Translate to" or "Don't translate from".
+    private data class Key(
+        val content: String,
+        val translateTo: String,
+        val dontTranslateFrom: Set<String>,
+    )
+
+    private val cache = LruCache<Key, TranslationConfig>(MAX_ENTRIES)
+
+    fun get(
+        content: String,
+        translateTo: String,
+        dontTranslateFrom: Set<String>,
+    ): TranslationConfig? = cache.get(Key(content, translateTo, dontTranslateFrom))
 
     fun set(
         content: String,
+        translateTo: String,
+        dontTranslateFrom: Set<String>,
         config: TranslationConfig,
     ) {
-        cache.put(content, config)
+        cache.put(Key(content, translateTo, dontTranslateFrom), config)
+    }
+
+    fun clear() {
+        cache.evictAll()
     }
 }

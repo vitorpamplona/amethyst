@@ -128,6 +128,11 @@ lock — atomic-rename writes mean readers see either the pre- or
 post-mutation state, and `NoSuchFileException` on a just-unlinked
 candidate is silently skipped.
 
+The `IEventStore` API is `suspend`. The flock manager itself is
+synchronous (`ReentrantLock` + `FileChannel.lock`); each suspend
+public method just brackets its work in `lockManager.withWriteLock {
+... }`, which is `inline` so suspend bodies pass through.
+
 ## Usage
 
 ### Initialisation
@@ -301,7 +306,7 @@ Tests live under
 | `FsExpirationTest`   | NIP-40 future / past / equal-now / sweep / non-positive |
 | `FsVanishTest`       | NIP-62 cascade / block / strongest-cutoff-wins / per-relay scoping |
 | `FsSearchTest`       | tokenizer behaviour, single-token / AND-of-tokens, ordering, reopen |
-| `FsMaintenanceTest`  | flock, transaction commit + propagated exceptions, re-entrant lock, scrub, compact, two-thread concurrency |
+| `FsMaintenanceTest`  | flock, transaction commit + propagated exceptions, re-entrant lock, scrub, compact, concurrent inserts from multiple coroutines on `Dispatchers.IO` |
 | `FsParityTest`       | drive both this store and SQLite with identical streams and assert results match |
 
 ```bash

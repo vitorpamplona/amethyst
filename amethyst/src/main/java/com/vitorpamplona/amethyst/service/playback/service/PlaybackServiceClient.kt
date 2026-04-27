@@ -36,7 +36,15 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 object PlaybackServiceClient {
-    val executorService: ExecutorService = Executors.newCachedThreadPool()
+    // Runs the MediaController.buildAsync() completion callbacks. The work per callback is
+    // trivial in the steady state (Future.get() on an already-completed future + a non-blocking
+    // trySend into this video's own callbackFlow channel), so the IPC bind itself dominates and
+    // happens on Media3's own threads regardless. We size the pool small enough to stay bounded
+    // under churn but parallel enough that one stuck listener (e.g. the defensive 5s get()
+    // timeout actually firing) can't stall the rest of the videos onscreen behind it. The
+    // original newCachedThreadPool was unbounded and could spin up a thread per concurrent
+    // video, each lingering for the 60s keep-alive afterwards.
+    val executorService: ExecutorService = Executors.newFixedThreadPool(4)
 
     fun shutdown() {
         executorService.shutdown()
@@ -56,11 +64,15 @@ object PlaybackServiceClient {
             Bundle().apply {
                 // link the id with the client's id to make sure it can return the
                 // same session on background media.
-                putString("id", id)
-                putBoolean("keepPlaying", keepPlaying)
+                putString(PlaybackService.HINT_ID, id)
+                putBoolean(PlaybackService.HINT_KEEP_PLAYING, keepPlaying)
                 proxyPort?.let {
-                    putInt("proxyPort", it)
+                    putInt(PlaybackService.HINT_PROXY_PORT, it)
                 }
+                // Carry the URI so the service can ask the player pool for an existing warm
+                // (paused-with-buffer) ExoPlayer that already holds this MediaItem. Falls back
+                // gracefully — if no warm match exists, the pool returns a cold player.
+                putString(PlaybackService.HINT_VIDEO_URI, videoUri)
             }
 
         val session = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
