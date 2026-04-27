@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.makeLiveActivitiesFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -50,7 +49,7 @@ class NestsSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
-        return makeLiveActivitiesFilter(feedSettings, since, key.feedStates.nestsFeed.lastNoteCreatedAtIfFilled())
+        return makeNestsFilter(feedSettings, since, key.feedStates.nestsFeed.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: NestsQueryState) = key.account.userProfile()

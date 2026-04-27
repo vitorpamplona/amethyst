@@ -18,37 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
-fun filterLiveActivitiesAllCommunities(
+fun filterNestsByCommunity(
     relay: NormalizedRelayUrl,
-    communities: Set<String>,
+    community: String,
+    authors: Set<String>?,
     since: Long? = null,
 ): List<RelayBasedFilter> {
-    val communityList = communities.sorted()
-
+    val authors = authors?.sorted()
     return listOf(
         // approved
         RelayBasedFilter(
             relay = relay,
             filter =
                 Filter(
+                    authors = authors,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
-                            "a" to communityList,
-                            "k" to listOf(LiveActivitiesChatMessageEvent.KIND.toString(), LiveActivitiesEvent.KIND.toString(), MeetingSpaceEvent.KIND.toString(), MeetingRoomEvent.KIND.toString()),
+                            "a" to listOf(community),
+                            "k" to listOf(MeetingSpaceEvent.KIND.toString(), MeetingRoomEvent.KIND.toString()),
                         ),
                     limit = 300,
                     since = since,
@@ -59,8 +58,9 @@ fun filterLiveActivitiesAllCommunities(
             relay = relay,
             filter =
                 Filter(
-                    tags = mapOf("k" to listOf("5300"), "a" to communityList),
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
+                    authors = authors,
+                    tags = mapOf("k" to listOf("5300"), "a" to listOf(community)),
+                    kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,
                     since = since,
                 ),
@@ -68,8 +68,8 @@ fun filterLiveActivitiesAllCommunities(
     )
 }
 
-fun filterLiveActivitiesByAllCommunities(
-    communitySet: AllCommunitiesTopNavPerRelayFilterSet,
+fun filterNestsByCommunity(
+    communitySet: SingleCommunityTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
@@ -77,9 +77,10 @@ fun filterLiveActivitiesByAllCommunities(
 
     return communitySet.set
         .mapNotNull {
-            filterLiveActivitiesAllCommunities(
+            filterNestsByCommunity(
                 relay = it.key,
-                communities = it.value.communities,
+                community = it.value.community,
+                authors = it.value.authors,
                 since = since?.get(it.key)?.time ?: defaultSince,
             )
         }.flatten()

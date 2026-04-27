@@ -18,69 +18,87 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
-fun filterLiveActivitiesAllCommunities(
+fun filterNestsAuthors(
     relay: NormalizedRelayUrl,
-    communities: Set<String>,
+    authors: Set<HexKey>,
     since: Long? = null,
 ): List<RelayBasedFilter> {
-    val communityList = communities.sorted()
-
+    val authorList = authors.sorted()
     return listOf(
-        // approved
         RelayBasedFilter(
             relay = relay,
             filter =
                 Filter(
-                    kinds = CommunityPostApprovalEvent.KIND_LIST,
-                    tags =
-                        mapOf(
-                            "a" to communityList,
-                            "k" to listOf(LiveActivitiesChatMessageEvent.KIND.toString(), LiveActivitiesEvent.KIND.toString(), MeetingSpaceEvent.KIND.toString(), MeetingRoomEvent.KIND.toString()),
-                        ),
+                    authors = authorList,
+                    kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,
                     since = since,
                 ),
         ),
-        // not approved
+        // authors are participating in the live event.
         RelayBasedFilter(
             relay = relay,
             filter =
                 Filter(
-                    tags = mapOf("k" to listOf("5300"), "a" to communityList),
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
-                    limit = 300,
+                    tags = mapOf("p" to authorList),
+                    kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
+                    limit = 100,
                     since = since,
                 ),
         ),
     )
 }
 
-fun filterLiveActivitiesByAllCommunities(
-    communitySet: AllCommunitiesTopNavPerRelayFilterSet,
+fun filterNestsByAuthors(
+    authorSet: AuthorsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
-    if (communitySet.set.isEmpty()) return emptyList()
+    if (authorSet.set.isEmpty()) return emptyList()
 
-    return communitySet.set
+    return authorSet.set
         .mapNotNull {
-            filterLiveActivitiesAllCommunities(
-                relay = it.key,
-                communities = it.value.communities,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterNestsAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
+}
+
+fun filterNestsByAuthors(
+    authorSet: MutedAuthorsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (authorSet.set.isEmpty()) return emptyList()
+
+    return authorSet.set
+        .mapNotNull {
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterNestsAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
         }.flatten()
 }

@@ -18,49 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
-fun filterLiveActivitiesAllCommunities(
+fun filterNestsByGeohash(
     relay: NormalizedRelayUrl,
-    communities: Set<String>,
+    geotags: Set<String>,
     since: Long? = null,
 ): List<RelayBasedFilter> {
-    val communityList = communities.sorted()
+    if (geotags.isEmpty()) return emptyList()
+
+    val geoHashes = geotags.sorted()
 
     return listOf(
-        // approved
         RelayBasedFilter(
             relay = relay,
             filter =
                 Filter(
-                    kinds = CommunityPostApprovalEvent.KIND_LIST,
-                    tags =
-                        mapOf(
-                            "a" to communityList,
-                            "k" to listOf(LiveActivitiesChatMessageEvent.KIND.toString(), LiveActivitiesEvent.KIND.toString(), MeetingSpaceEvent.KIND.toString(), MeetingRoomEvent.KIND.toString()),
-                        ),
-                    limit = 300,
-                    since = since,
-                ),
-        ),
-        // not approved
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    tags = mapOf("k" to listOf("5300"), "a" to communityList),
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
+                    kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
+                    tags = mapOf("g" to geoHashes),
                     limit = 300,
                     since = since,
                 ),
@@ -68,19 +51,23 @@ fun filterLiveActivitiesAllCommunities(
     )
 }
 
-fun filterLiveActivitiesByAllCommunities(
-    communitySet: AllCommunitiesTopNavPerRelayFilterSet,
+fun filterNestsByGeohash(
+    geoSet: LocationTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
-    if (communitySet.set.isEmpty()) return emptyList()
+    if (geoSet.set.isEmpty()) return emptyList()
 
-    return communitySet.set
+    return geoSet.set
         .mapNotNull {
-            filterLiveActivitiesAllCommunities(
-                relay = it.key,
-                communities = it.value.communities,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
+            if (it.value.geotags.isEmpty()) {
+                null
+            } else {
+                filterNestsByGeohash(
+                    relay = it.key,
+                    geotags = it.value.geotags,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
         }.flatten()
 }

@@ -47,7 +47,6 @@ import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresence
 @Stable
 class NestRoomQueryState(
     val roomATag: String,
-    val localPubkey: String,
     val account: Account,
 )
 
@@ -102,7 +101,7 @@ class NestRoomFilterSubAssembler(
                     filter =
                         Filter(
                             kinds = listOf(AdminCommandEvent.KIND),
-                            tags = mapOf("a" to listOf(key.roomATag), "p" to listOf(key.localPubkey)),
+                            tags = mapOf("a" to listOf(key.roomATag), "p" to listOf(key.account.pubKey)),
                             since = since?.get(relay)?.time,
                         ),
                 ),
@@ -110,7 +109,7 @@ class NestRoomFilterSubAssembler(
         }
     }
 
-    override fun id(key: NestRoomQueryState): String = "${key.roomATag}|${key.localPubkey}"
+    override fun id(key: NestRoomQueryState): String = key.roomATag
 }
 
 @Stable
@@ -137,11 +136,9 @@ class NestRoomFilterAssembler(
 @Composable
 fun NestRoomFilterAssemblerSubscription(
     roomATag: String,
-    localPubkey: String,
     accountViewModel: AccountViewModel,
 ) = NestRoomFilterAssemblerSubscription(
     roomATag,
-    localPubkey,
     accountViewModel.account,
     accountViewModel.dataSources().nestRoom,
 )
@@ -149,13 +146,12 @@ fun NestRoomFilterAssemblerSubscription(
 @Composable
 fun NestRoomFilterAssemblerSubscription(
     roomATag: String,
-    localPubkey: String,
     account: Account,
     filterAssembler: NestRoomFilterAssembler,
 ) {
     val state =
-        remember(roomATag, localPubkey) {
-            NestRoomQueryState(roomATag, localPubkey, account)
+        remember(roomATag, account.pubKey) {
+            NestRoomQueryState(roomATag, account)
         }
     KeyDataSourceSubscription(state, filterAssembler)
 }

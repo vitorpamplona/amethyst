@@ -18,20 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
-fun filterLiveActivitiesAllCommunities(
+fun filterNestsAllCommunities(
     relay: NormalizedRelayUrl,
     communities: Set<String>,
     since: Long? = null,
@@ -48,7 +47,7 @@ fun filterLiveActivitiesAllCommunities(
                     tags =
                         mapOf(
                             "a" to communityList,
-                            "k" to listOf(LiveActivitiesChatMessageEvent.KIND.toString(), LiveActivitiesEvent.KIND.toString(), MeetingSpaceEvent.KIND.toString(), MeetingRoomEvent.KIND.toString()),
+                            "k" to listOf(LiveActivitiesEvent.KIND.toString(), MeetingSpaceEvent.KIND.toString(), MeetingRoomEvent.KIND.toString()),
                         ),
                     limit = 300,
                     since = since,
@@ -60,7 +59,7 @@ fun filterLiveActivitiesAllCommunities(
             filter =
                 Filter(
                     tags = mapOf("k" to listOf("5300"), "a" to communityList),
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
+                    kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,
                     since = since,
                 ),
@@ -68,7 +67,7 @@ fun filterLiveActivitiesAllCommunities(
     )
 }
 
-fun filterLiveActivitiesByAllCommunities(
+fun filterNestsByAllCommunities(
     communitySet: AllCommunitiesTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
@@ -77,7 +76,7 @@ fun filterLiveActivitiesByAllCommunities(
 
     return communitySet.set
         .mapNotNull {
-            filterLiveActivitiesAllCommunities(
+            filterNestsAllCommunities(
                 relay = it.key,
                 communities = it.value.communities,
                 since = since?.get(it.key)?.time ?: defaultSince,
