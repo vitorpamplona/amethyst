@@ -41,6 +41,13 @@ const val SKIP_SLIDE_ANIMATION_KEY = "skipSlideAnimation"
 
 fun NavBackStackEntry.skipsSlideAnimation(): Boolean = savedStateHandle.get<Boolean>(SKIP_SLIDE_ANIMATION_KEY) == true
 
+// Per-entry hint stamped by Nav.navBottomBar marking that the entry was
+// reached via a bottom-nav tab. Used by Nav.canPop so top bars can hide
+// the back arrow on tab roots even though Home sits below them.
+const val BOTTOM_NAV_ROOT_KEY = "bottomNavRoot"
+
+fun NavBackStackEntry.isBottomNavRoot(): Boolean = savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) == true
+
 inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
     composable<T>(
         enterTransition = { if (targetState.skipsSlideAnimation()) null else slideInHorizontallyFromEnd },

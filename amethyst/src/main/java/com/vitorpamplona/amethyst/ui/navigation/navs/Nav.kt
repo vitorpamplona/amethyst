@@ -24,9 +24,10 @@ import android.annotation.SuppressLint
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Stable
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
 import com.vitorpamplona.amethyst.ui.navigation.SKIP_SLIDE_ANIMATION_KEY
+import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
@@ -79,22 +80,28 @@ class Nav(
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
             controller.navigate(route) {
-                // Clear the back stack down to and including the graph's start
-                // destination so a bottom-nav tap leaves only the new route in
-                // the stack. Without inclusive=true, Home would remain below
-                // the new tab and canPop() would wrongly show a back arrow.
-                popUpTo(controller.graph.findStartDestination().id) {
-                    inclusive = true
+                // Clear sibling bottom-nav entries but keep Home (the start
+                // destination) below, so back-swipe from any tab returns to
+                // Home and back-swipe from Home leaves the app.
+                popUpTo(Route.Home) {
+                    inclusive = false
                 }
                 launchSingleTop = true
             }
-            // Stamp the entry so composableFromEnd's transition lambdas can
-            // skip the slide animation when this entry enters or exits.
-            controller.getBackStackEntry(route).savedStateHandle[SKIP_SLIDE_ANIMATION_KEY] = true
+            val entry = controller.getBackStackEntry(route)
+            // Skip the horizontal slide for composableFromEnd transitions.
+            entry.savedStateHandle[SKIP_SLIDE_ANIMATION_KEY] = true
+            // Mark this entry as a tab root so canPop hides the back arrow
+            // even though Home sits below it.
+            entry.savedStateHandle[BOTTOM_NAV_ROOT_KEY] = true
         }
     }
 
-    override fun canPop(): Boolean = controller.previousBackStackEntry != null
+    override fun canPop(): Boolean {
+        val current = controller.currentBackStackEntry ?: return false
+        if (current.isBottomNavRoot()) return false
+        return controller.previousBackStackEntry != null
+    }
 
     override fun popBack() {
         navigationScope.launch {
