@@ -160,6 +160,18 @@ class AudioRoomViewModel(
     val recentReactions: StateFlow<Map<String, List<RoomReaction>>> = _recentReactions.asStateFlow()
 
     /**
+     * moq-lite `catalog.json` payload per speaker pubkey. Populated
+     * lazily as the per-speaker subscriptions land — listeners
+     * without catalog support (IETF reference path) leave this map
+     * empty. The participant context sheet reads this to surface
+     * codec / sample-rate info; future commits could use it for
+     * "speaker is broadcasting" indicators independent of the
+     * actively-emitting `speakingNow` set.
+     */
+    private val _speakerCatalogs = MutableStateFlow<Map<String, RoomSpeakerCatalog>>(emptyMap())
+    val speakerCatalogs: StateFlow<Map<String, RoomSpeakerCatalog>> = _speakerCatalogs.asStateFlow()
+
+    /**
      * `true` once the local user has been kicked (#5) — the platform
      * layer flips this on a valid kind-4312 from a host/moderator and
      * the UI can show a toast + finish the activity. Set-once; never
@@ -616,10 +628,39 @@ class AudioRoomViewModel(
         if (_uiState.value.speakingNow.contains(slot.pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow - slot.pubkey).toPersistentSet()) }
         }
+        if (_speakerCatalogs.value.containsKey(slot.pubkey)) {
+            _speakerCatalogs.update { it - slot.pubkey }
+        }
         if (roomPlayer != null || handle != null) {
             viewModelScope.launch {
                 roomPlayer?.runCatching { stop() }
                 handle?.runCatching { unsubscribe() }
+            }
+        }
+    }
+
+    /**
+     * Open the speaker's `catalog.json` track in the background, parse
+     * the first frame, and stash it in [speakerCatalogs]. Best-effort —
+     * any failure (IETF listener throws UnsupportedOperationException,
+     * the publisher doesn't publish a catalog, the JSON is malformed)
+     * is silent. The catalog channel uses the same re-issuing pump
+     * the audio path does, so it survives reconnects.
+     */
+    private fun fetchSpeakerCatalog(
+        l: NestsListener,
+        pubkey: String,
+    ) {
+        viewModelScope.launch {
+            val handle = runCatching { l.subscribeCatalog(pubkey) }.getOrNull() ?: return@launch
+            try {
+                handle.objects.collect { obj ->
+                    if (closed) return@collect
+                    val parsed = RoomSpeakerCatalog.parseOrNull(obj.payload) ?: return@collect
+                    _speakerCatalogs.update { it + (pubkey to parsed) }
+                }
+            } finally {
+                runCatching { handle.unsubscribe() }
             }
         }
     }
@@ -632,6 +673,9 @@ class AudioRoomViewModel(
         if (closed || activeSubscriptions[pubkey] !== slot) return
         try {
             val handle = l.subscribeSpeaker(pubkey)
+            // Parallel catalog fetch — best-effort, doesn't gate audio
+            // playback. Cancelled implicitly when the VM scope is cancelled.
+            fetchSpeakerCatalog(l, pubkey)
             // Re-check after the suspending subscribeSpeaker — the user
             // may have removed this speaker via updateSpeakers / disconnected
             // while the SUBSCRIBE was in flight. If so, abandon the handle

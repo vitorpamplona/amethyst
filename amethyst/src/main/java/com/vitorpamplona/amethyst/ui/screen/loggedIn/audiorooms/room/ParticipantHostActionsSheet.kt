@@ -83,6 +83,7 @@ internal fun ParticipantHostActionsSheet(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     isLocalUserHost: Boolean = accountViewModel.account.signer.pubKey == event.pubKey,
+    catalog: com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -121,6 +122,17 @@ internal fun ParticipantHostActionsSheet(
                 text = target.take(8) + "…",
                 style = MaterialTheme.typography.titleSmall,
             )
+            // moq-lite catalog summary, when the speaker has published
+            // one. Tells the audience what codec / sample rate / channel
+            // count this broadcast carries — visible cue that the seat
+            // is actually a live audio source vs a silent stage slot.
+            catalog?.primaryAudio()?.describe()?.let { line ->
+                Text(
+                    text = line,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             // View Profile — AudioRoomActivity is a separate Android
             // Activity without its own nav stack, so the deep-link

@@ -208,12 +208,14 @@ internal fun AudioRoomFullScreen(
                 reactionsByPubkey = reactionsByPubkey,
                 onLongPressParticipant = onLongPressParticipant,
             )
+            val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
             hostMenuTarget?.let { target ->
                 ParticipantHostActionsSheet(
                     target = target,
                     event = event,
                     accountViewModel = accountViewModel,
                     onDismiss = { hostMenuTarget = null },
+                    catalog = speakerCatalogs[target],
                 )
             }
 
