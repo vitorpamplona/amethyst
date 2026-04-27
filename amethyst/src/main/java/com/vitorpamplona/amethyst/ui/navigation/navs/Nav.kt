@@ -26,7 +26,6 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Stable
 import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
-import com.vitorpamplona.amethyst.ui.navigation.SKIP_SLIDE_ANIMATION_KEY
 import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
@@ -88,12 +87,9 @@ class Nav(
                 }
                 launchSingleTop = true
             }
-            val entry = controller.getBackStackEntry(route)
-            // Skip the horizontal slide for composableFromEnd transitions.
-            entry.savedStateHandle[SKIP_SLIDE_ANIMATION_KEY] = true
-            // Mark this entry as a tab root so canPop hides the back arrow
-            // even though Home sits below it.
-            entry.savedStateHandle[BOTTOM_NAV_ROOT_KEY] = true
+            // Mark this entry as a tab root: hides the back arrow in canPop
+            // and skips the horizontal slide in composableFromEnd.
+            controller.getBackStackEntry(route).savedStateHandle[BOTTOM_NAV_ROOT_KEY] = true
         }
     }
 

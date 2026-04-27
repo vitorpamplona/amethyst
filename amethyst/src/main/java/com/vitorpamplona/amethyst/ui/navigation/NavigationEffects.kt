@@ -34,26 +34,22 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 
-// Per-entry hint stored on NavBackStackEntry.savedStateHandle by
-// Nav.navBottomBar. When present, composableFromEnd skips the horizontal
-// slide so bottom-bar taps fall back to the NavHost-level fade.
-const val SKIP_SLIDE_ANIMATION_KEY = "skipSlideAnimation"
-
-fun NavBackStackEntry.skipsSlideAnimation(): Boolean = savedStateHandle.get<Boolean>(SKIP_SLIDE_ANIMATION_KEY) == true
-
 // Per-entry hint stamped by Nav.navBottomBar marking that the entry was
-// reached via a bottom-nav tab. Used by Nav.canPop so top bars can hide
-// the back arrow on tab roots even though Home sits below them.
+// reached via a bottom-nav tab. Used in two places:
+//   - composableFromEnd skips the horizontal slide on tab entries so
+//     bottom-bar taps fall back to the NavHost-level fade.
+//   - Nav.canPop hides the back arrow on tab roots even though Home
+//     sits below them in the stack.
 const val BOTTOM_NAV_ROOT_KEY = "bottomNavRoot"
 
 fun NavBackStackEntry.isBottomNavRoot(): Boolean = savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) == true
 
 inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
     composable<T>(
-        enterTransition = { if (targetState.skipsSlideAnimation()) null else slideInHorizontallyFromEnd },
-        exitTransition = { if (targetState.skipsSlideAnimation()) null else scaleOut },
-        popEnterTransition = { if (initialState.skipsSlideAnimation()) null else scaleIn },
-        popExitTransition = { if (initialState.skipsSlideAnimation()) null else slideOutHorizontallyToEnd },
+        enterTransition = { if (targetState.isBottomNavRoot()) null else slideInHorizontallyFromEnd },
+        exitTransition = { if (targetState.isBottomNavRoot()) null else scaleOut },
+        popEnterTransition = { if (initialState.isBottomNavRoot()) null else scaleIn },
+        popExitTransition = { if (initialState.isBottomNavRoot()) null else slideOutHorizontallyToEnd },
         content = content,
     )
 }
