@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -120,6 +121,20 @@ private fun ParticipantsSection(
     onLongPressParticipant: ((String) -> Unit)?,
 ) {
     val ringColor = MaterialTheme.colorScheme.primary
+    // Hoist the size/spacing modifiers — same Dp values for every
+    // cell, so allocating them once per section beats allocating
+    // per-cell-recompose with N speakers.
+    val gridModifier =
+        remember(avatarSize) {
+            Modifier
+                .fillMaxWidth()
+                .height(avatarSize + 48.dp)
+                .padding(top = 4.dp)
+        }
+    val cellWidthModifier = remember(avatarSize) { Modifier.width(avatarSize + 16.dp) }
+    val absentAlphaModifier = remember { Modifier.alpha(0.5f) }
+    val speakingBorderModifier = remember(ringColor) { Modifier.border(2.dp, ringColor, CircleShape) }
+    val spinnerModifier = remember(avatarSize) { Modifier.size(avatarSize - 8.dp) }
     Column(modifier = Modifier.padding(top = 8.dp)) {
         Text(
             text = title,
@@ -132,28 +147,36 @@ private fun ParticipantsSection(
         // bubble vertically without clipping.
         LazyHorizontalGrid(
             rows = GridCells.Fixed(1),
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(avatarSize + 48.dp)
-                    .padding(top = 4.dp),
+            modifier = gridModifier,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             items(items = members, key = { it.pubkey }) { member ->
                 val isSpeaking = member.pubkey in speakingNow
                 val avatarModifier =
-                    Modifier
-                        .let { if (isSpeaking) it.border(2.dp, ringColor, CircleShape) else it }
-                        .let { if (member.absent) it.alpha(0.5f) else it }
+                    when {
+                        isSpeaking && member.absent -> speakingBorderModifier.then(absentAlphaModifier)
+                        isSpeaking -> speakingBorderModifier
+                        member.absent -> absentAlphaModifier
+                        else -> Modifier
+                    }
                 val user =
-                    androidx.compose.runtime.remember(member.pubkey) {
+                    remember(member.pubkey) {
                         com.vitorpamplona.amethyst.model.LocalCache
                             .getOrCreateUser(member.pubkey)
+                    }
+                // Cache the long-click adapter per (pubkey, callback)
+                // tuple — `onLongPressParticipant?.let { cb -> { hex -> cb(hex) } }`
+                // would otherwise allocate a fresh lambda on every
+                // recompose, which adds up across N members during a
+                // connectingSpeakers / speakingNow flip.
+                val onLongClick =
+                    remember(member.pubkey, onLongPressParticipant) {
+                        onLongPressParticipant?.let { cb -> { hex: String -> cb(hex) } }
                     }
                 val isConnecting = member.pubkey in connectingSpeakers
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(avatarSize + 16.dp),
+                    modifier = cellWidthModifier,
                 ) {
                     androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
                         ClickableUserPicture(
@@ -161,7 +184,7 @@ private fun ParticipantsSection(
                             size = avatarSize,
                             accountViewModel = accountViewModel,
                             modifier = avatarModifier,
-                            onLongClick = onLongPressParticipant?.let { cb -> { hex -> cb(hex) } },
+                            onLongClick = onLongClick,
                         )
                         if (isConnecting) {
                             // Pre-roll buffering overlay — visible
@@ -171,7 +194,7 @@ private fun ParticipantsSection(
                             // the avatar so the user picture stays
                             // recognisable underneath.
                             androidx.compose.material3.CircularProgressIndicator(
-                                modifier = Modifier.size(avatarSize - 8.dp),
+                                modifier = spinnerModifier,
                                 strokeWidth = 2.dp,
                                 color = MaterialTheme.colorScheme.primary,
                             )
