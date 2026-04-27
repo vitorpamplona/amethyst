@@ -586,6 +586,8 @@
     <string name="use_direct_url">使用直接链接</string>
     <string name="content_description">内容描述</string>
     <string name="content_description_example">日落时分，白色沙滩上的蓝色小船</string>
+    <string name="ai_suggested_alt_text_hint">AI建议的，编辑我</string>
+    <string name="ai_suggested_alt_text_dismiss">忽略 AI 建议</string>
     <string name="zap_type">打闪类型</string>
     <string name="zap_type_explainer">所有选项的打闪类型</string>
     <string name="zap_type_public">公开</string>

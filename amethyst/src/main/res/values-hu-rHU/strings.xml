@@ -586,6 +586,8 @@
     <string name="use_direct_url">Közvetlen webcím használata</string>
     <string name="content_description">Tartalmi leírás</string>
     <string name="content_description_example">Egy kék csónak a fehér homokos tengerparton naplementekor</string>
+    <string name="ai_suggested_alt_text_hint">LLM által javasolt, szerkessze bátran</string>
+    <string name="ai_suggested_alt_text_dismiss">LLM-javaslatok eltüntetése</string>
     <string name="zap_type">Zap-típus</string>
     <string name="zap_type_explainer">Zap-típus minden lehetőséghez</string>
     <string name="zap_type_public">Nyilvános</string>
