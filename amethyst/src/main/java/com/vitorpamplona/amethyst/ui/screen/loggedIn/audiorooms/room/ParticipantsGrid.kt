@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -120,17 +121,16 @@ private fun ParticipantsSection(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        // Single-row horizontal grid — visually identical to the
-        // existing LazyRow layout but uses LazyHorizontalGrid so
-        // adding a second row (e.g. names below avatars) is a
-        // one-line change later. Cell size matches avatarSize +
-        // padding for the reaction overlay below.
+        // Single-row horizontal grid. Cell height = avatar +
+        // reaction overlay headroom + a username line below; the
+        // grid auto-fits the avatar + name + (optional) reaction
+        // bubble vertically without clipping.
         LazyHorizontalGrid(
             rows = GridCells.Fixed(1),
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(avatarSize + 32.dp)
+                    .height(avatarSize + 48.dp)
                     .padding(top = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -140,13 +140,26 @@ private fun ParticipantsSection(
                     Modifier
                         .let { if (isSpeaking) it.border(2.dp, ringColor, CircleShape) else it }
                         .let { if (member.absent) it.alpha(0.5f) else it }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                val user =
+                    androidx.compose.runtime.remember(member.pubkey) {
+                        com.vitorpamplona.amethyst.model.LocalCache
+                            .getOrCreateUser(member.pubkey)
+                    }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(avatarSize + 16.dp),
+                ) {
                     ClickableUserPicture(
                         baseUserHex = member.pubkey,
                         size = avatarSize,
                         accountViewModel = accountViewModel,
                         modifier = avatarModifier,
                         onLongClick = onLongPressParticipant?.let { cb -> { hex -> cb(hex) } },
+                    )
+                    com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
+                        baseUser = user,
+                        weight = Modifier.fillMaxWidth(),
+                        accountViewModel = accountViewModel,
                     )
                     val reactions = reactionsByPubkey[member.pubkey].orEmpty()
                     if (reactions.isNotEmpty()) {
