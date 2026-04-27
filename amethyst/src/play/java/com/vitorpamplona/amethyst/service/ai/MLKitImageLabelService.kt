@@ -25,10 +25,12 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import com.google.mlkit.genai.common.FeatureStatus
+import com.google.mlkit.genai.imagedescription.ImageDescriber
 import com.google.mlkit.genai.imagedescription.ImageDescriberOptions
 import com.google.mlkit.genai.imagedescription.ImageDescription
 import com.google.mlkit.genai.imagedescription.ImageDescriptionRequest
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeler
 import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import kotlinx.coroutines.Dispatchers
@@ -45,24 +47,33 @@ import kotlin.coroutines.resume
 class MLKitImageLabelService(
     private val context: Context,
 ) {
-    private val labeler by lazy {
-        ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
-    }
+    private var labeler: ImageLabeler? = null
+    private var describer: ImageDescriber? = null
 
-    private val describer by lazy {
-        runCatching {
-            ImageDescription.getClient(
-                ImageDescriberOptions.builder(context).build(),
-            )
-        }.getOrNull()
-    }
+    // FeatureStatus is an Int enum. Cached per-instance — describer availability does not flip
+    // mid-session in practice, and one composer mount only needs to ask AICore once.
+    @Volatile private var cachedGenAiStatus: Int? = null
+
+    private fun ensureLabeler(): ImageLabeler =
+        labeler ?: ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS).also { labeler = it }
+
+    private fun ensureDescriber(): ImageDescriber? =
+        describer
+            ?: try {
+                ImageDescription
+                    .getClient(ImageDescriberOptions.builder(context).build())
+                    .also { describer = it }
+            } catch (_: Exception) {
+                null
+            }
 
     suspend fun labelImage(uri: Uri): List<Pair<String, Float>> =
         withContext(Dispatchers.IO) {
             try {
                 val image = InputImage.fromFilePath(context, uri)
+                val client = ensureLabeler()
                 suspendCancellableCoroutine { cont ->
-                    labeler
+                    client
                         .process(image)
                         .addOnSuccessListener { labels ->
                             cont.resume(labels.map { it.text to it.confidence })
@@ -79,14 +90,19 @@ class MLKitImageLabelService(
 
     private suspend fun describeWithGenAi(uri: Uri): String? =
         withContext(Dispatchers.IO) {
-            val client = describer ?: return@withContext null
+            val client = ensureDescriber() ?: return@withContext null
             try {
-                val status = client.checkFeatureStatus().get()
+                val status =
+                    cachedGenAiStatus ?: client.checkFeatureStatus().get().also { cachedGenAiStatus = it }
                 if (status != FeatureStatus.AVAILABLE) return@withContext null
-                val bitmap = loadBitmap(uri) ?: return@withContext null
+                val bitmap = loadDownscaledBitmap(uri) ?: return@withContext null
                 val request = ImageDescriptionRequest.builder(bitmap).build()
-                val description = client.runInference(request).get().description
-                description?.trim()?.takeIf { it.isNotEmpty() }
+                client
+                    .runInference(request)
+                    .get()
+                    .description
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
             } catch (_: Exception) {
                 null
             }
@@ -99,20 +115,44 @@ class MLKitImageLabelService(
         return confident.take(MAX_LABELS).joinToString(", ")
     }
 
-    private fun loadBitmap(uri: Uri): Bitmap? =
+    // Two-pass decode keeps a 12 MP camera shot from blowing past 40 MB of ARGB_8888 — the
+    // on-device describer downscales internally anyway, so a ~1024 px input is plenty.
+    private fun loadDownscaledBitmap(uri: Uri): Bitmap? =
         try {
-            context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            val opts =
+                BitmapFactory.Options().apply {
+                    inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, TARGET_DIM_PX)
+                }
+            context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
         } catch (_: Exception) {
             null
         }
 
+    private fun sampleSizeFor(
+        width: Int,
+        height: Int,
+        target: Int,
+    ): Int {
+        if (width <= 0 || height <= 0) return 1
+        var sample = 1
+        var maxDim = maxOf(width, height)
+        while (maxDim / sample > target) sample *= 2
+        return sample
+    }
+
     fun close() {
-        labeler.close()
+        labeler?.close()
+        labeler = null
         describer?.close()
+        describer = null
+        cachedGenAiStatus = null
     }
 
     companion object {
         private const val MIN_CONFIDENCE = 0.6f
         private const val MAX_LABELS = 5
+        private const val TARGET_DIM_PX = 1024
     }
 }

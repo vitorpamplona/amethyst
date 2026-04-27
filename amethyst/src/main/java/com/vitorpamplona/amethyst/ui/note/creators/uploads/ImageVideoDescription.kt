@@ -127,8 +127,12 @@ fun ImageVideoDescription(
     LaunchedEffect(firstImageUri) {
         if (firstImageUri == null || message.isNotEmpty()) return@LaunchedEffect
         isLabeling = true
-        val suggestion = labelService.suggestAltText(firstImageUri)
-        isLabeling = false
+        val suggestion =
+            try {
+                labelService.suggestAltText(firstImageUri)
+            } finally {
+                isLabeling = false
+            }
         if (suggestion != null && message.isEmpty()) {
             message = suggestion
             aiSuggested = true
