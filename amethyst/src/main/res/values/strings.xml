@@ -489,6 +489,8 @@
     <string name="follow_packs">Follow Packs</string>
     <string name="live_streams">Live Streams</string>
     <string name="nests">Nests</string>
+    <string name="meeting_room_in_space">In %1$s</string>
+    <string name="meeting_room_in_space_unknown">a Nest</string>
     <string name="nest_stage">Stage</string>
     <string name="nest_audience">Audience</string>
     <string name="nest_raise_hand">Raise hand</string>

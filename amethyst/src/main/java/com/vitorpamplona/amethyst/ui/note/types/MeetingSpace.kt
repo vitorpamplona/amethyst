@@ -249,6 +249,15 @@ fun RenderMeetingRoomEventInner(
     val status = remember(eventUpdates) { noteEvent.status() }
     val starts = remember(eventUpdates) { noteEvent.starts() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
+    val interactiveRoom = remember(eventUpdates) { noteEvent.interactiveRoom() }
+
+    interactiveRoom?.let { spaceTag ->
+        ParentMeetingSpaceLink(
+            spaceAddress = spaceTag.address,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -291,6 +300,59 @@ fun RenderMeetingRoomEventInner(
     }
 
     RenderParticipants(participants, accountViewModel, nav)
+}
+
+/**
+ * Small "In <Space Name>" row rendered above a kind-30313
+ * [MeetingRoomEvent] so users see which kind-30312 space the
+ * meeting belongs to. Resolves the addressable note for the parent
+ * space; if the kind-30312 hasn't been seen yet the link still
+ * renders with a placeholder name and tapping navigates to its
+ * thread (which auto-fetches the event). When the parent address
+ * doesn't resolve to a kind-30312 we render nothing — keeping the
+ * card free of broken links.
+ */
+@Composable
+private fun ParentMeetingSpaceLink(
+    spaceAddress: com.vitorpamplona.quartz.nip01Core.core.Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (spaceAddress.kind != MeetingSpaceEvent.KIND) return
+
+    com.vitorpamplona.amethyst.ui.note.LoadAddressableNote(
+        address = spaceAddress,
+        accountViewModel = accountViewModel,
+    ) { spaceNote ->
+        spaceNote ?: return@LoadAddressableNote
+        val spaceEvent = spaceNote.event as? MeetingSpaceEvent
+        val spaceName =
+            spaceEvent?.room()?.ifBlank { null }
+                ?: stringRes(R.string.meeting_room_in_space_unknown)
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        nav.nav {
+                            com.vitorpamplona.amethyst.ui.navigation.routes.routeFor(
+                                spaceNote,
+                                accountViewModel.account,
+                            )
+                        }
+                    }.padding(vertical = 4.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.meeting_room_in_space, spaceName),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 /**
