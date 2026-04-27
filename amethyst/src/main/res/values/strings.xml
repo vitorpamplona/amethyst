@@ -529,6 +529,7 @@
     <string name="nest_notification_text">Tap to return.</string>
     <string name="nest_notification_stop">Stop</string>
     <string name="nest_join">Join nest</string>
+    <string name="nest_lobby_host_label">Host</string>
     <string name="nest_leave">Leave</string>
     <string name="nest_leave_host_title">End this nest?</string>
     <string name="nest_leave_host_body">You\'re the host. Closing the room will disconnect everyone. Choose \"Just leave\" if you want to come back later — the room will auto-close after 8 hours of inactivity.</string>

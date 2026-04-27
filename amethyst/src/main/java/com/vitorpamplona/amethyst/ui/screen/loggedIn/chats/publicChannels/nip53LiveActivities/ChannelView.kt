@@ -130,7 +130,7 @@ fun LiveActivityChannelView(
                     .weight(1f, true),
         ) {
             ShowVideoStreaming(channel, accountViewModel)
-            NestJoinCard(channel, accountViewModel)
+            NestJoinCard(channel, accountViewModel, nav)
             LiveStreamTopZappers(channel, accountViewModel, nav)
             LiveStreamGoalHeader(channel, accountViewModel, nav)
             RefreshingChatroomFeedView(
