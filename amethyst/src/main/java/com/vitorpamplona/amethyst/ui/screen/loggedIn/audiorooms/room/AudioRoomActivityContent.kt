@@ -245,7 +245,13 @@ private fun AudioRoomActivityBody(
     // Push mute + connected state up so the Activity can rebuild PIP
     // RemoteActions and gate `enterPictureInPictureMode` on Connected.
     LaunchedEffect(ui.isMuted) { onMuteState(ui.isMuted) }
-    val isConnectedNow = ui.connection is ConnectionUiState.Connected
+    // PIP entry gate — treat Reconnecting as "still in the room" so a
+    // mid-room network blip doesn't lock the user out of PIP. The
+    // listener's hot SubscribeHandle pump preserves audio across the
+    // cutover; PIP would otherwise un-arm and re-arm spuriously.
+    val isConnectedNow =
+        ui.connection is ConnectionUiState.Connected ||
+            ui.connection is ConnectionUiState.Reconnecting
     LaunchedEffect(isConnectedNow) { onConnectedChange(isConnectedNow) }
 
     // Forward PIP-overlay mute taps into the VM. Per-Activity SharedFlow
@@ -323,13 +329,22 @@ private fun AudioRoomActivityBody(
 
     // Foreground service lifecycle — the Activity is the lifecycle anchor;
     // the service exists for screen-locked / activity-stopped audio.
+    // Treat Reconnecting as "still live" so a transient transport blip
+    // doesn't drop the wake-lock + foreground type. On Android 14+
+    // re-promoting to FOREGROUND_SERVICE_TYPE_MICROPHONE after losing
+    // it isn't always allowed; keeping the service running across the
+    // wrapper's recovery window is both gentler on the user (no audio
+    // dropout from the OS killing us) and safer against the platform
+    // permission model.
     val context = LocalContext.current
-    val isConnected = ui.connection is ConnectionUiState.Connected
+    val isLive =
+        ui.connection is ConnectionUiState.Connected ||
+            ui.connection is ConnectionUiState.Reconnecting
     val isBroadcasting = ui.broadcast is BroadcastUiState.Broadcasting
-    LaunchedEffect(isConnected, isBroadcasting) {
+    LaunchedEffect(isLive, isBroadcasting) {
         when {
-            isConnected && isBroadcasting -> AudioRoomForegroundService.promoteToMicrophone(context)
-            isConnected -> AudioRoomForegroundService.startListening(context)
+            isLive && isBroadcasting -> AudioRoomForegroundService.promoteToMicrophone(context)
+            isLive -> AudioRoomForegroundService.startListening(context)
             else -> AudioRoomForegroundService.stop(context)
         }
     }

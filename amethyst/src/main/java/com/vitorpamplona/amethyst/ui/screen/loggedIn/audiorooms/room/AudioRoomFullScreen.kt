@@ -368,7 +368,16 @@ private fun TalkRow(
     ui: AudioRoomUiState,
     speakerPubkeyHex: String,
 ) {
-    if (ui.connection !is ConnectionUiState.Connected) return
+    // Render whenever the user can act on broadcast state. The
+    // speaker session is independent of the listener: a transient
+    // listener Reconnecting must NOT hide the mic-mute / Stop
+    // controls if the broadcast is in flight, otherwise the user
+    // can't pause their own mic during a network blip.
+    val canAct =
+        ui.connection is ConnectionUiState.Connected ||
+            ui.broadcast is BroadcastUiState.Broadcasting ||
+            ui.broadcast is BroadcastUiState.Connecting
+    if (!canAct) return
     val context = LocalContext.current
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher =
