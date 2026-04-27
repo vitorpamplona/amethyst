@@ -84,7 +84,7 @@ class RoomThemeTest {
                     ),
                 ),
             )
-        assertEquals(0xFFFF0000L, theme.backgroundArgb)
+        assertNull(theme.backgroundArgb)
     }
 
     @Test
@@ -99,7 +99,7 @@ class RoomThemeTest {
                 ),
             )
         assertNull(theme.backgroundArgb)
-        assertEquals(0xFF101010L, theme.textArgb)
+        assertNull(theme.textArgb)
     }
 
     @Test
