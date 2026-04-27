@@ -133,9 +133,13 @@ fun WatchAccountForAudioRoomsScreen(
     accountViewModel: AccountViewModel,
 ) {
     val listState by accountViewModel.account.liveLiveStreamsFollowLists.collectAsStateWithLifecycle()
-    val hiddenUsers =
-        accountViewModel.account.hiddenUsers.flow
-            .collectAsStateWithLifecycle()
+    // Use `by` to unwrap the StateFlow's value into the LaunchedEffect
+    // key — without it, the State<T> object is reference-stable across
+    // recompositions and the effect never re-fires when the user
+    // mutes someone, leaving the rooms feed stale until a manual
+    // refresh.
+    val hiddenUsers by accountViewModel.account.hiddenUsers.flow
+        .collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState, hiddenUsers) {
         audioRoomsFeedState.checkKeysInvalidateDataAndSendToTop()
