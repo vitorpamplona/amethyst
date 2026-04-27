@@ -48,13 +48,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderC
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import java.io.Serializable
 
 @Composable
 fun ChatroomListFeedView(
@@ -139,10 +138,11 @@ private fun FeedLoaded(
 }
 
 // Stable per-chatroom key — derived from chatroom identity, not the latest
-// message id, so reorders move the row instead of recreating it. Uses a
-// sealed wrapper around an existing String/RoomId/ChatroomKey to avoid the
-// StringBuilder + concatenation allocations of a typed-prefix string key.
-private sealed interface ChatroomLazyKey
+// message id, so reorders move the row instead of recreating it. Compose
+// stores LazyColumn item keys in a SaveableStateHolder, which on Android
+// requires Bundle-storable types, so each variant is Serializable and only
+// holds primitives.
+private sealed interface ChatroomLazyKey : Serializable
 
 private data class MarmotChatroomLazyKey(
     val groupId: HexKey,
@@ -153,11 +153,12 @@ private data class PublicChannelLazyKey(
 ) : ChatroomLazyKey
 
 private data class EphemeralChannelLazyKey(
-    val roomId: RoomId,
+    val id: String,
+    val relayUrl: String,
 ) : ChatroomLazyKey
 
 private data class PrivateChatLazyKey(
-    val key: ChatroomKey,
+    val key: String,
 ) : ChatroomLazyKey
 
 private data class FallbackChatroomLazyKey(
@@ -186,12 +187,12 @@ private fun chatroomLazyKey(
         }
 
         is EphemeralChatEvent -> {
-            event.roomId()?.let { EphemeralChannelLazyKey(it) }
+            event.roomId()?.let { EphemeralChannelLazyKey(it.id, it.relayUrl.url) }
                 ?: FallbackChatroomLazyKey(item.idHex)
         }
 
         is ChatroomKeyable -> {
-            PrivateChatLazyKey(event.chatroomKey(myPubKey))
+            PrivateChatLazyKey(event.chatroomKey(myPubKey).users.sorted().joinToString(","))
         }
 
         else -> {
