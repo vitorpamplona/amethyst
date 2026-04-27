@@ -31,71 +31,53 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.clearText
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.send.NestEditFieldRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.send.NestNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
-import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
-import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 
 /**
  * In-room chat panel. Renders the kind-1311 transcript that the
  * [NestViewModel] is collecting (`viewModel.chat`) using the same
  * per-message renderer that NIP-53 live-stream chat uses
- * ([ChatroomMessageCompose]) and the same composer primitives
- * ([ThinPaddingTextField] + [ThinSendButton]) so visually it matches
- * the rest of Amethyst's chat surfaces.
+ * ([ChatroomMessageCompose]).
  *
- * Data flow stays inside [NestViewModel]: messages come from
- * `viewModel.chat`; sends route through `accountViewModel.account
- * .signAndComputeBroadcast` which is the same path the listener
- * subscribes to via `RoomChatFilterAssemblerSubscription` in
- * [NestActivityContent]. We deliberately do NOT spin up a parallel
- * `ChannelFeedViewModel` / `ChannelNewMessageViewModel` here — keeping
- * the VM single-source-of-truth means screen extras (presence,
- * reactions, hand-raise) and chat are aggregated under the same
- * lifecycle.
+ * The composer is owned by a separate [NestNewMessageViewModel] —
+ * scoped to *editing and sending* chat messages only — so we get
+ * @-mention picker, file/image/video upload, reply preview, NIP-37
+ * draft auto-save, emoji suggestions, content warnings, expiration,
+ * geohash, and zap-split forwarding for the nest chat field. The
+ * message list itself is still driven from the [NestViewModel] so
+ * presence / reactions / chat all share a single lifecycle.
  *
- * Navigation: the activity has no Compose NavHost in scope. Taps that
- * resolve to a NIP-19 entity (profile, quoted note, hashtag, addressable
- * channel) are dispatched through [BouncingIntentNav] — a `nostr:` URI
- * Intent at MainActivity. Anything that doesn't have a `nostr:` URI is
- * a no-op for now. The audio room keeps running in its own task while
- * the user explores; back from MainActivity returns to the room.
- *
- * Composer is intentionally slim for v1: text-only, no draft handling,
- * no media attachments, no @-mention picker, no reply preview. Those
- * affordances live in `EditFieldRow` / `ChannelNewMessageViewModel`
- * which are pinned to the channel-VM model — out of scope here.
+ * Navigation: the activity has no Compose NavHost in scope. Taps
+ * that resolve to a NIP-19 entity (profile, quoted note, hashtag,
+ * addressable channel) are dispatched through [BouncingIntentNav]
+ * — a `nostr:` URI Intent at MainActivity. Anything that doesn't
+ * have a `nostr:` URI is a no-op for now. The audio room keeps
+ * running in its own task while the user explores; back from
+ * MainActivity returns to the room.
  */
 @Composable
 internal fun ColumnScope.NestChatPanel(
@@ -109,16 +91,12 @@ internal fun ColumnScope.NestChatPanel(
     val scope = rememberCoroutineScope()
     val nav = remember(context, scope) { BouncingIntentNav(context, scope) }
 
-    val roomATag =
-        remember(event) {
-            ATag(
-                kind = event.kind,
-                pubKeyHex = event.pubKey,
-                dTag = event.dTag(),
-                relay = null,
-            )
-        }
     val routeForLastRead = remember(event) { "NestChat/${event.address().toValue()}" }
+
+    val nestScreenModel: NestNewMessageViewModel =
+        composeViewModel(key = "Nest/${event.address().toValue()}")
+    nestScreenModel.init(accountViewModel)
+    nestScreenModel.load(event)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth().weight(1f, fill = true)) {
@@ -135,15 +113,18 @@ internal fun ColumnScope.NestChatPanel(
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    onWantsToReply = nestScreenModel::reply,
                 )
             }
         }
 
         Spacer(Modifier.height(8.dp))
 
-        NestChatComposer(
-            roomATag = roomATag,
+        NestEditFieldRow(
+            nestScreenModel = nestScreenModel,
             accountViewModel = accountViewModel,
+            onSendNewMessage = {},
+            nav = nav,
         )
     }
 }
@@ -154,6 +135,7 @@ private fun NestChatMessageList(
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: BouncingIntentNav,
+    onWantsToReply: (Note) -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -192,79 +174,11 @@ private fun NestChatMessageList(
                 routeForLastRead = routeForLastRead,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onWantsToReply = NEST_CHAT_NO_OP_NOTE,
+                onWantsToReply = onWantsToReply,
                 onWantsToEditDraft = NEST_CHAT_NO_OP_NOTE,
             )
         }
     }
 }
 
-@Composable
-private fun NestChatComposer(
-    roomATag: ATag,
-    accountViewModel: AccountViewModel,
-) {
-    val state = remember { TextFieldState() }
-    var isSending by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    Column(modifier = EditFieldModifier) {
-        ThinPaddingTextField(
-            state = state,
-            modifier = Modifier.fillMaxWidth(),
-            shape = EditFieldBorder,
-            enabled = !isSending,
-            placeholder = {
-                Text(
-                    text = stringRes(R.string.nest_chat_placeholder),
-                    color = MaterialTheme.colorScheme.placeholderText,
-                )
-            },
-            trailingIcon = {
-                ThinSendButton(
-                    isActive = state.text.isNotBlank() && !isSending,
-                    modifier = EditFieldTrailingIconModifier,
-                ) {
-                    val toSend = state.text.toString().trim()
-                    if (toSend.isEmpty()) return@ThinSendButton
-                    isSending = true
-                    scope.launch {
-                        val result =
-                            runCatching {
-                                accountViewModel.account.signAndComputeBroadcast(
-                                    LiveActivitiesChatMessageEvent.message(
-                                        post = toSend,
-                                        activity = roomATag,
-                                    ),
-                                )
-                            }
-                        isSending = false
-                        if (result.isSuccess) {
-                            // Clear ONLY on success so a network failure
-                            // doesn't lose the user's text — they can retry
-                            // without retyping.
-                            state.clearText()
-                        } else {
-                            val why =
-                                result.exceptionOrNull()?.message
-                                    ?: result.exceptionOrNull()?.let { it::class.simpleName }
-                                    ?: "unknown error"
-                            accountViewModel.toastManager.toast(
-                                R.string.nest_chat_send_failed_title,
-                                why,
-                                user = null,
-                            )
-                        }
-                    }
-                }
-            },
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
-        )
-    }
-}
-
-private val NEST_CHAT_NO_OP_NOTE: (com.vitorpamplona.amethyst.model.Note) -> Unit = {}
+private val NEST_CHAT_NO_OP_NOTE: (Note) -> Unit = {}
