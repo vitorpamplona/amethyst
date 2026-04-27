@@ -130,8 +130,10 @@ private fun RenderWebBookmarksScreen(
                     Text(text = stringRes(id = R.string.web_bookmarks))
                 },
                 navigationIcon = {
-                    IconButton(onClick = nav::popBack) {
-                        ArrowBackIcon()
+                    if (nav.canPop()) {
+                        IconButton(onClick = nav::popBack) {
+                            ArrowBackIcon()
+                        }
                     }
                 },
             )

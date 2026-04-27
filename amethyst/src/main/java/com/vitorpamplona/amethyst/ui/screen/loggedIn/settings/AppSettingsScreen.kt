@@ -93,7 +93,7 @@ fun SettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.application_preferences), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.application_preferences), nav)
         },
     ) {
         Column(Modifier.padding(it)) {

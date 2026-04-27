@@ -143,7 +143,7 @@ fun ShowQRScreen(
         topBar = {
             TopBarWithBackButton(
                 "",
-                nav::popBack,
+                nav,
             )
         },
     ) { pad ->

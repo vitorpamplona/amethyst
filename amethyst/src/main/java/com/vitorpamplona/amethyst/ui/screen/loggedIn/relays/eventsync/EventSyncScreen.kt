@@ -93,7 +93,7 @@ fun EventSyncScreen(
         topBar = {
             TopBarWithBackButton(
                 caption = stringRes(R.string.event_sync_title),
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { padding ->

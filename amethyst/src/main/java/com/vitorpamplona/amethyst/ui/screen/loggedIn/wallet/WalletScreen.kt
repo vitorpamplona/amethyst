@@ -88,11 +88,13 @@ fun WalletScreen(
             TopAppBar(
                 title = { Text(stringRes(R.string.wallet)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
-                        )
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = stringRes(R.string.back),
+                            )
+                        }
                     }
                 },
                 actions = {

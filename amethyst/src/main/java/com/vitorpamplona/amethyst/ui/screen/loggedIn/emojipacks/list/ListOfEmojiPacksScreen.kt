@@ -105,7 +105,7 @@ fun ListOfEmojiPacksFeed(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.emoji_packs_title), nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.emoji_packs_title), nav)
         },
         floatingActionButton = {
             EmojiPackFab(onAddPack = addEmojiPack)

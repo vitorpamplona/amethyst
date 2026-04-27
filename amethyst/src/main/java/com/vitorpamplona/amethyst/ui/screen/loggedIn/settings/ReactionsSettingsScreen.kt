@@ -90,7 +90,7 @@ fun ReactionsSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.reactions_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.reactions_settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {

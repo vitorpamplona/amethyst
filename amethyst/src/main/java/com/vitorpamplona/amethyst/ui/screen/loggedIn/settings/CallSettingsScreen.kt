@@ -69,7 +69,7 @@ fun CallSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav)
         },
     ) { padding ->
         Column(

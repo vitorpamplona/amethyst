@@ -91,7 +91,7 @@ fun BottomBarSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.bottom_bar_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.bottom_bar_settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {

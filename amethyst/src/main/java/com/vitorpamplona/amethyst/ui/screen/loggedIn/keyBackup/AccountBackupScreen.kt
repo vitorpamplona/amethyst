@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
@@ -110,7 +111,7 @@ fun AccountBackupScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    AccountBackupScreenContent(accountViewModel, nav::popBack)
+    AccountBackupScreenContent(accountViewModel, nav)
 }
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
@@ -119,7 +120,8 @@ fun AccountBackupScreenPreview() {
     ThemeComparisonRow {
         AccountBackupScreenContent(
             mockAccountViewModel(),
-        ) {}
+            EmptyNav(),
+        )
     }
 }
 
@@ -127,13 +129,13 @@ fun AccountBackupScreenPreview() {
 @Composable
 private fun AccountBackupScreenContent(
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
+    nav: INav,
 ) {
     Scaffold(
         topBar = {
             TopBarWithBackButton(
                 stringRes(R.string.backup_keys),
-                popBack = onClose,
+                nav = nav,
             )
         },
     ) {
