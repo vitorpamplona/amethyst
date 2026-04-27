@@ -68,6 +68,7 @@ fun ShortLiveActivityChannelHeader(
         name = channel.toBestDisplayName(),
         creator = channel.creator,
         liveActivitiesEvent = channel.info,
+        addressableNote = LocalCache.getAddressableNoteIfExists(channel.address),
         showFlag = showFlag,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -79,6 +80,7 @@ fun ShortLiveActivityChannelHeader(
     name: String,
     creator: User?,
     liveActivitiesEvent: LiveActivitiesEvent?,
+    addressableNote: com.vitorpamplona.amethyst.model.Note?,
     showFlag: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -110,7 +112,10 @@ fun ShortLiveActivityChannelHeader(
             }
         }
 
-        liveActivitiesEvent?.let {
+        // Live flag is stream-specific (kind:30311) — needs the
+        // streaming URL to ping. Only render it when we actually
+        // have a [LiveActivitiesEvent].
+        if (showFlag && liveActivitiesEvent != null) {
             Row(
                 modifier =
                     Modifier
@@ -118,8 +123,59 @@ fun ShortLiveActivityChannelHeader(
                         .padding(start = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LiveChannelActionOptions(it, showFlag, accountViewModel, nav)
+                LiveChannelLiveFlag(liveActivitiesEvent, accountViewModel)
             }
+        }
+
+        // Likes + zaps are addressable-event reactions (kind:7 +
+        // kind:9735) — they work for any kind that registers an
+        // addressable note, not just kind:30311. Pulling them out
+        // of the `liveActivitiesEvent?.let` gate above lets Nests
+        // (kind:30312) and Meeting Rooms (kind:30313) show the same
+        // reaction row that streams already have.
+        addressableNote?.let {
+            Row(
+                modifier =
+                    Modifier
+                        .height(Size35dp)
+                        .padding(start = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = RowColSpacing,
+            ) {
+                LikeReaction(
+                    baseNote = it,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+                Spacer(modifier = StdHorzSpacer)
+                ZapReaction(
+                    baseNote = it,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Just the LIVE / OFFLINE flag for a stream; no reaction icons.
+ * Pulled out of [LiveChannelActionOptions] so the reaction row in
+ * [ShortLiveActivityChannelHeader] can render independently of
+ * whether we hold a [LiveActivitiesEvent].
+ */
+@Composable
+private fun LiveChannelLiveFlag(
+    activity: LiveActivitiesEvent,
+    accountViewModel: AccountViewModel,
+) {
+    val isLive by remember(activity) { derivedStateOf { activity.isLive() } }
+    val url = activity.streaming()
+    if (isLive && url != null) {
+        CheckIfVideoIsOnline(url, accountViewModel) { isOnline ->
+            if (isOnline) LiveFlag() else OfflineFlag()
         }
     }
 }
@@ -131,17 +187,8 @@ fun LiveChannelActionOptions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isLive by remember(activity) { derivedStateOf { activity.isLive() } }
-    val url = activity.streaming()
-
-    if (showFlag && isLive && url != null) {
-        CheckIfVideoIsOnline(url, accountViewModel) { isOnline ->
-            if (isOnline) {
-                LiveFlag()
-            } else {
-                OfflineFlag()
-            }
-        }
+    if (showFlag) {
+        LiveChannelLiveFlag(activity, accountViewModel)
         Spacer(modifier = StdHorzSpacer)
     }
 

@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.RenderLiveActivityThumb
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -47,11 +47,12 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEve
 
 /**
  * Read-only list of NIP-53 kind 30313 [MeetingRoomEvent]s. Each row
- * uses the existing [RenderMeetingRoomEvent] thumbnail composable
- * for visual parity with the in-feed render; tapping a row opens
- * the standard thread view (`routeFor(note, account)`) so the user
- * can see the meeting's full details, participants, and any
- * `streaming` URL.
+ * mirrors the Discovery card UI ([RenderLiveActivityThumb]) — cover
+ * image with status flag, participant gallery overlay, and the
+ * channel header (creator, name, like + zap reactions) at the
+ * bottom. Tapping a row opens the standard thread view via
+ * `routeFor` so the user can see the meeting's full details and
+ * any `streaming` URL.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -100,7 +101,7 @@ private fun MeetingRoomFeedCard(
             },
     ) {
         Column(StdPadding) {
-            RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
+            RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         }
     }
 }
