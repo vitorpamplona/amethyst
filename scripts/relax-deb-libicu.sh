@@ -26,16 +26,18 @@ for deb in "$@"; do
     fi
 
     work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
     dpkg-deb -R "$deb" "$work/pkg"
     control="$work/pkg/DEBIAN/control"
 
     if grep -qE 'libicu[0-9]+' "$control"; then
         sed -i -E "s/libicu[0-9]+([[:space:]]*\\|[[:space:]]*libicu[0-9]+)*/${ALT}/g" "$control"
-        dpkg-deb -b "$work/pkg" "$deb" >/dev/null
+        dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$deb" >/dev/null
         echo "Relaxed libicu dep: $deb"
     else
         echo "No libicu dep, leaving as-is: $deb"
     fi
 
     rm -rf "$work"
+    trap - EXIT
 done
