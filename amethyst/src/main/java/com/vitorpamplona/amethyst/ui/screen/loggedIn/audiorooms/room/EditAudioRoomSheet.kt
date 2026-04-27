@@ -43,8 +43,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -79,6 +81,32 @@ fun EditAudioRoomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    var confirmCloseOpen by remember { mutableStateOf(false) }
+    if (confirmCloseOpen) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmCloseOpen = false },
+            title = { Text(stringRes(R.string.audio_room_close_room_confirm_title)) },
+            text = { Text(stringRes(R.string.audio_room_close_room_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    onClick = {
+                        confirmCloseOpen = false
+                        scope.launch {
+                            if (viewModel.closeRoom()) onDismiss()
+                        }
+                    },
+                ) {
+                    Text(stringRes(R.string.audio_room_close_room_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmCloseOpen = false }) {
+                    Text(stringRes(R.string.audio_room_create_cancel))
+                }
+            },
+        )
+    }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -135,15 +163,13 @@ fun EditAudioRoomSheet(
             Spacer(Modifier.height(4.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 // Destructive — flips status to CLOSED with the same d-tag
-                // so subscribers see the room go dark.
+                // so subscribers see the room go dark. Confirm prompt
+                // gates the actual publish so a misclick on the
+                // edit-sheet's bottom row doesn't kill the room.
                 TextButton(
                     enabled = !state.isPublishing,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    onClick = {
-                        scope.launch {
-                            if (viewModel.closeRoom()) onDismiss()
-                        }
-                    },
+                    onClick = { confirmCloseOpen = true },
                 ) {
                     Text(stringRes(R.string.audio_room_close_action))
                 }

@@ -121,6 +121,20 @@ class CreateAudioRoomViewModel : ViewModel() {
             _state.update { it.copy(error = "Pick a start time for the scheduled room.") }
             return null
         }
+        // The host may want to backdate a "scheduled" announcement
+        // for a room that already started elsewhere — but more often
+        // a past timestamp means the picker landed on the wrong day
+        // and the host didn't notice. Guard against the misfire.
+        // (Audience-side render is already past-aware: SCHEDULED
+        // chips suppress the "Starts <date>" subline once `now` >
+        // starts.)
+        val nowSec =
+            com.vitorpamplona.quartz.utils.TimeUtils
+                .now()
+        if (current.scheduled && current.scheduledStartUnix < nowSec) {
+            _state.update { it.copy(error = "Pick a future start time.") }
+            return null
+        }
 
         _state.update { it.copy(isPublishing = true, error = null) }
         val accountModel = account.account

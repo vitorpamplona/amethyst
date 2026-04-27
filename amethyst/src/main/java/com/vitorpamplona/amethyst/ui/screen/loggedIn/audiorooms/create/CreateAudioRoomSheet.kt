@@ -253,6 +253,10 @@ private fun ScheduleStartPicker(
             .atZone(java.time.ZoneId.systemDefault())
             .toLocalDateTime()
 
+    // Re-key the picker state on `unixSeconds` so the dialog opens
+    // pre-populated with the COMMITTED value. Without this key, a
+    // mid-edit Cancel would leave the in-dialog state reflecting
+    // the half-typed cancelled choice on the next reopen.
     val datePickerState =
         androidx.compose.material3.rememberDatePickerState(
             initialSelectedDateMillis = initialMillis,
@@ -264,6 +268,16 @@ private fun ScheduleStartPicker(
             is24Hour = false,
         )
 
+    // On dismiss (Cancel or back-press), restore the picker states
+    // to the committed `unixSeconds`. rememberDatePickerState /
+    // TimePickerState are reference-stable across recompositions
+    // and survive `cancel`, so we have to rewind them by hand.
+    fun resetPickersToCommitted() {
+        datePickerState.selectedDateMillis = initialMillis
+        timePickerState.hour = initialLocal.hour
+        timePickerState.minute = initialLocal.minute
+    }
+
     androidx.compose.material3.OutlinedButton(
         onClick = { showDate = true },
         modifier = Modifier.fillMaxWidth(),
@@ -273,7 +287,10 @@ private fun ScheduleStartPicker(
 
     if (showDate) {
         androidx.compose.material3.DatePickerDialog(
-            onDismissRequest = { showDate = false },
+            onDismissRequest = {
+                resetPickersToCommitted()
+                showDate = false
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showDate = false
@@ -281,7 +298,10 @@ private fun ScheduleStartPicker(
                 }) { Text(stringRes(R.string.next)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDate = false }) {
+                TextButton(onClick = {
+                    resetPickersToCommitted()
+                    showDate = false
+                }) {
                     Text(stringRes(R.string.audio_room_create_cancel))
                 }
             },
@@ -293,7 +313,10 @@ private fun ScheduleStartPicker(
     if (showTime) {
         androidx.compose.material3.TimePickerDialog(
             title = { Text(stringRes(R.string.audio_room_create_when)) },
-            onDismissRequest = { showTime = false },
+            onDismissRequest = {
+                resetPickersToCommitted()
+                showTime = false
+            },
             confirmButton = {
                 TextButton(onClick = {
                     val dayMillisUtc = datePickerState.selectedDateMillis
@@ -320,7 +343,10 @@ private fun ScheduleStartPicker(
                 }) { Text(stringRes(R.string.audio_room_create_submit)) }
             },
             dismissButton = {
-                TextButton(onClick = { showTime = false }) {
+                TextButton(onClick = {
+                    resetPickersToCommitted()
+                    showTime = false
+                }) {
                     Text(stringRes(R.string.audio_room_create_cancel))
                 }
             },

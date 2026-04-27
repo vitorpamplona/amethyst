@@ -172,7 +172,7 @@ fun RenderMeetingSpaceEventInner(
     ) {
         if (status == MeetingSpaceStatusTag.STATUS.CLOSED) {
             recording?.let {
-                ListenToRecordingButton(url = it)
+                ListenToRecordingButton(url = it, accountViewModel = accountViewModel)
             }
         } else {
             com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.JoinAudioRoomButton(
@@ -191,14 +191,26 @@ fun RenderMeetingSpaceEventInner(
  * purpose — Amethyst doesn't ship its own audio player surface.
  */
 @Composable
-private fun ListenToRecordingButton(url: String) {
+private fun ListenToRecordingButton(
+    url: String,
+    accountViewModel: AccountViewModel,
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val noAppMessage = stringRes(R.string.audio_room_no_app_to_open_link)
     androidx.compose.material3.OutlinedButton(onClick = {
-        runCatching {
-            context.startActivity(
-                android.content
-                    .Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+        val launched =
+            runCatching {
+                context.startActivity(
+                    android.content
+                        .Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }.isSuccess
+        if (!launched) {
+            accountViewModel.toastManager.toast(
+                R.string.audio_room_chat_send_failed_title,
+                noAppMessage,
+                user = null,
             )
         }
     }) {

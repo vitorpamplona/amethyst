@@ -145,20 +145,29 @@ internal fun ParticipantHostActionsSheet(
             // audio-room foreground service keeps audio alive while
             // the user is on the profile screen.
             val context = LocalContext.current
+            val noAppMessage = stringRes(R.string.audio_room_no_app_to_open_link)
             ActionRow(stringRes(R.string.audio_room_participant_view_profile)) {
                 val npub = NPub.create(target)
-                runCatching {
-                    context.startActivity(
-                        android.content
-                            .Intent(android.content.Intent.ACTION_VIEW)
-                            .apply {
-                                data = android.net.Uri.parse("nostr:$npub")
-                                setClass(context, MainActivity::class.java)
-                                addFlags(
-                                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                                        android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
-                                )
-                            },
+                val launched =
+                    runCatching {
+                        context.startActivity(
+                            android.content
+                                .Intent(android.content.Intent.ACTION_VIEW)
+                                .apply {
+                                    data = android.net.Uri.parse("nostr:$npub")
+                                    setClass(context, MainActivity::class.java)
+                                    addFlags(
+                                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                            android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+                                    )
+                                },
+                        )
+                    }.isSuccess
+                if (!launched) {
+                    accountViewModel.toastManager.toast(
+                        R.string.audio_room_chat_send_failed_title,
+                        noAppMessage,
+                        user = null,
                     )
                 }
                 onDismiss()
