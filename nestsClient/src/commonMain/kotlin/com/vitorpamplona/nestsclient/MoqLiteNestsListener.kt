@@ -43,9 +43,12 @@ import java.util.concurrent.atomic.AtomicLong
  * `@moq/publish/screen-B680RFft.js:5641`):
  *   - subscribeSpeaker(pubkey) → MoqLiteSession.subscribe(
  *         broadcast = pubkey, track = "audio/data")
- *   - the catalog (`"catalog.json"`) is not required for audio-only
- *     listening; we'll add a parallel subscribe in a follow-up if
- *     speaker-state metadata becomes useful.
+ *   - subscribeCatalog(pubkey) → MoqLiteSession.subscribe(
+ *         broadcast = pubkey, track = "catalog.json"). The catalog
+ *     publishes one JSON object per group describing the broadcast
+ *     (codec, sample rate, optional speaker-side hints). Not
+ *     required for audio-only listening — the API exists so a
+ *     consumer can show codec / live indicators when wanted.
  *
  * Frame adaptation: each [com.vitorpamplona.nestsclient.moq.lite.MoqLiteFrame]
  * is wrapped in a [MoqObject] so existing decoder / player code keeps
@@ -132,9 +135,8 @@ class MoqLiteNestsListener internal constructor(
 
         /**
          * Catalog track name moq-lite watchers subscribe to first to
-         * receive a JSON description of the broadcast. Audio-only
-         * listening doesn't need it; reserved here for the nests
-         * speaker-metadata follow-up.
+         * receive a JSON description of the broadcast. Used by
+         * [subscribeCatalog].
          */
         const val CATALOG_TRACK: String = "catalog.json"
     }
