@@ -31,16 +31,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -66,6 +62,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -322,14 +320,14 @@ fun ImageVideoDescription(
                         label = { Text(text = stringRes(R.string.ai_suggested_alt_text_hint)) },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.AutoAwesome,
+                                symbol = MaterialSymbols.AutoAwesome,
                                 contentDescription = null,
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )
                         },
                         trailingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                symbol = MaterialSymbols.Close,
                                 contentDescription = stringRes(R.string.ai_suggested_alt_text_dismiss),
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )
