@@ -9,10 +9,10 @@ adding `.bit` Nostr relays directly to the relay pool.
 | File | Role |
 |---|---|
 | `IElectrumXClient.kt` | Abstract `name_show` lookup (real impl in `jvmAndroid`/`ios` source sets). |
-| `NamecoinNameResolver.kt` | NIP-05-style identity resolution: `alice@example.bit` → pubkey + per-pubkey relays. Hosts the shared low-level helpers reused by every Namecoin path: `lookupNameDetailed` (timeout + exception → outcome translation around `name_show`), `parseRelayUrls` / `parseTlsaRecords` (value-JSON → records, with optional subdomain path that walks the `map` tree per `ifa-0001` §"map"), `parseHostFlat` / `walkSubdomain` (multi-label `.bit` host → effective Domain Name Object), `toNamecoinName` (identifier → `d/<name>`). |
+| `NamecoinNameResolver.kt` | NIP-05-style identity resolution: `alice@example.bit` → pubkey + per-pubkey relays. Hosts the shared low-level helpers reused by every Namecoin path: `lookupNameDetailed` (timeout + exception → outcome translation around `name_show`), `parseRelayUrls` / `parseTlsaRecords` (value-JSON → records, with optional subdomain path that walks the `map` tree per [ifa-0001](https://github.com/namecoin/proposals/blob/master/ifa-0001.md) §"map"), `parseHostFlat` / `walkSubdomain` (multi-label `.bit` host → effective Domain Name Object), `toNamecoinName` (identifier → `d/<name>`). |
 | `NamecoinLookupCache.kt` | TTL'd in-memory cache for identity resolution. |
 | **`BitRelayResolver.kt`** | **Resolves `.bit` Nostr relay URLs to their underlying real `wss://` endpoint.** Thin policy layer that delegates URL parsing to `UriParser`, identifier mapping + ElectrumX dispatch + relay-URL/TLSA parsing to `NamecoinNameResolver`, and only adds an in-memory cache and a small "first usable URL" picking policy. The cache also exposes `cachedTlsaFor(host)` so the TLS path can pin without a second ElectrumX call. |
-| **`TlsaVerifier.kt`** | **Spec-compliant matching policy for the Namecoin `tls` field (RFC 6698 / `ifa-0001`).** Pure Kotlin in `commonMain`; takes pre-extracted DER + SPKI from the platform's TLS layer and decides whether the chain matches the published TLSA records. |
+| **`TlsaVerifier.kt`** | **Spec-compliant matching policy for the Namecoin `tls` field (RFC 6698 / [ifa-0001](https://github.com/namecoin/proposals/blob/master/ifa-0001.md)).** Pure Kotlin in `commonMain`; takes pre-extracted DER + SPKI from the platform's TLS layer and decides whether the chain matches the published TLSA records. |
 | `ElectrumXServer.kt` | ElectrumX server descriptor, default server lists (clearnet + Tor), `name_show` result, exception types. |
 
 ## `.bit` Relay Record Format
@@ -81,7 +81,7 @@ at the host).
 
 ## Subdomain resolution via the `map` tree
 
-The Namecoin `d/` namespace is single-label per `ifa-0001`: there is
+The Namecoin `d/` namespace is single-label per [ifa-0001](https://github.com/namecoin/proposals/blob/master/ifa-0001.md): there is
 `d/testls` but not `d/relay.testls`. Multi-label `.bit` hosts are
 realised through the `map` field of the parent record.
 
@@ -93,7 +93,7 @@ For `wss://relay.testls.bit`, `BitRelayResolver` does:
   3. `walkSubdomain(value, ["relay"])` walks `value.map.relay`, falling
      back to `value.map["*"]` if no exact label, falling through to
      `null` if neither exists. The walk also honours the `""` empty-key
-     default rule from `ifa-0001` §"map".
+     default rule from [ifa-0001](https://github.com/namecoin/proposals/blob/master/ifa-0001.md) §"map".
   4. `relay` / `relays` / `nostr.relay` / `nostr.relays` and `tls` are
      read FROM THAT NODE only. They are NOT inherited from ancestors:
      a parent that publishes `"relay": "wss://example.bit/"` does
@@ -180,7 +180,7 @@ The instance parser preserves them as written so callers who hand-pass
 raw Namecoin keys keep the existing semantics. Only `host.bit` and
 `<localPart>@host.bit` inputs go through the multi-label split.
 
-## TLS Pinning via the Namecoin Blockchain (RFC 6698 / `ifa-0001`)
+## TLS Pinning via the Namecoin Blockchain (RFC 6698 / [ifa-0001](https://github.com/namecoin/proposals/blob/master/ifa-0001.md))
 
 Resolving `wss://example.bit` to `wss://relay.example.com` is only half
 of the story — by itself, the rewritten handshake is no safer than a
