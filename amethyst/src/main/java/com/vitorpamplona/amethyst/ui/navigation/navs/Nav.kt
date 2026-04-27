@@ -24,6 +24,7 @@ import android.annotation.SuppressLint
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Stable
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
 import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
@@ -96,6 +97,11 @@ class Nav(
     override fun canPop(): Boolean {
         val current = controller.currentBackStackEntry ?: return false
         if (current.isBottomNavRoot()) return false
+        // Home is the graph's start destination and nothing can sit below it
+        // (navBottomBar pops up to Home with inclusive=false). Short-circuit
+        // here so a stale previousBackStackEntry left behind by a back-swipe
+        // transition can't put a back arrow on Home.
+        if (current.destination.id == controller.graph.findStartDestination().id) return false
         return controller.previousBackStackEntry != null
     }
 
