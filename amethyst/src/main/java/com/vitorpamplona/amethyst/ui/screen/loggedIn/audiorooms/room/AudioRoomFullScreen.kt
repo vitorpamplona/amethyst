@@ -307,6 +307,19 @@ private fun ConnectionRow(
                 )
             }
 
+            is ConnectionUiState.Reconnecting -> {
+                // The wrapper retries on its own; the user typically
+                // doesn't need to do anything. Keep the mute toggle
+                // hidden during this window — there's no live session
+                // to apply mute against, and showing it implies a
+                // healthier connection than we have.
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(stringRes(R.string.audio_room_reconnecting)) },
+                )
+            }
+
             is ConnectionUiState.Connected -> {
                 AssistChip(
                     onClick = {},
