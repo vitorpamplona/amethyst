@@ -101,6 +101,7 @@ fun RenderMeetingSpaceEventInner(
     val summary = remember(eventUpdates) { noteEvent.summary() }
     val status = remember(eventUpdates) { noteEvent.status() }
     val starts = remember(eventUpdates) { noteEvent.starts() }
+    val recording = remember(eventUpdates) { noteEvent.recording() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
 
     Row(
@@ -160,22 +161,48 @@ fun RenderMeetingSpaceEventInner(
 
     RenderParticipants(participants, accountViewModel, nav)
 
-    // In-feed Join button — closes the deep-link loop. A
-    // `nostr:naddr1...` for a kind-30312 lands here through
-    // MainActivity's URI handler → Route.Note(addressTag) → this
-    // renderer; without a button the user has no path into the
-    // audio room. JoinAudioRoomButton hides itself when the
-    // event lacks service / endpoint / d-tag.
-    if (status != MeetingSpaceStatusTag.STATUS.CLOSED) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
+    // In-feed CTA. Live / scheduled rooms get a Join button; closed
+    // rooms with a recording get a "Listen to recording" button so
+    // audience members who missed the live session can listen back.
+    // Closed rooms without a recording stay button-less — there's
+    // nothing to enter.
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        if (status == MeetingSpaceStatusTag.STATUS.CLOSED) {
+            recording?.let {
+                ListenToRecordingButton(url = it)
+            }
+        } else {
             com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.JoinAudioRoomButton(
                 event = noteEvent,
                 accountViewModel = accountViewModel,
             )
         }
+    }
+}
+
+/**
+ * Hand off a kind-30312 `recording` URL to the system media
+ * player via ACTION_VIEW. Most users have a podcast / audio app
+ * registered for `https://...mp3`-style URLs; the system picker
+ * lets them choose. Stays out of the in-app audio path on
+ * purpose — Amethyst doesn't ship its own audio player surface.
+ */
+@Composable
+private fun ListenToRecordingButton(url: String) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.material3.OutlinedButton(onClick = {
+        runCatching {
+            context.startActivity(
+                android.content
+                    .Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }) {
+        Text(stringRes(R.string.audio_room_listen_to_recording))
     }
 }
 

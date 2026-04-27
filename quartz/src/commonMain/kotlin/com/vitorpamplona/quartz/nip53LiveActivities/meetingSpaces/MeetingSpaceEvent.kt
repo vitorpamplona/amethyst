@@ -94,6 +94,15 @@ class MeetingSpaceEvent(
     fun font() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.FontTag::parse)
 
     /**
+     * Optional URL to a post-room recording. Hosts that record a
+     * room re-publish the kind-30312 with `status=closed` and
+     * `["recording", url]` so audience members who missed the live
+     * session can listen back. Returns null when no recording is
+     * available.
+     */
+    fun recording() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RecordingTag::parse)
+
+    /**
      * Scheduled start time as unix seconds, only meaningful when
      * [status] is [StatusTag.STATUS.PLANNED]. Returns null on
      * malformed or absent tag — the room-list renderer falls back
