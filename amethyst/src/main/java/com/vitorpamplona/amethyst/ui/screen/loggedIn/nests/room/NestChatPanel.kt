@@ -20,209 +20,104 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 
 /**
- * Live-chat panel (T1 #2) — renders the kind-1311 transcript for
- * the room and provides a send field. Messages flow from
- * [NestViewModel.chat] (populated by the LocalCache observer
- * in [NestActivityContent]); send routes through
- * `account.signAndComputeBroadcast` directly so the VM stays free
- * of platform / signing dependencies.
+ * In-room chat panel. Reuses the same `ChannelFeedViewModel` +
+ * `RefreshingChatroomFeedView` + `EditFieldRow` stack that powers
+ * NIP-53 live-stream chat (`LiveActivityChannelView`) so a Nest's
+ * kind-1311 transcript renders with full Amethyst chat features —
+ * mentions, embedded media, reply previews, draft handling, NIP-21
+ * link rendering, etc. — instead of the bare-text v1 list.
+ *
+ * The kind-30312 address registers a [com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel]
+ * inside [LocalCache.liveChatChannels] (see `LocalCache.consume(LiveActivitiesChatMessageEvent)`),
+ * so we can hand the channel straight to `ChannelFeedViewModel`
+ * without a kind-30311-specific path. The relay subscription that
+ * populates the channel is the one started by
+ * `RoomChatFilterAssemblerSubscription` in [NestActivityContent];
+ * we don't need a second `ChannelFilterAssemblerSubscription` here
+ * (it would be a no-op for kind-30312 channels because their
+ * `LiveActivitiesChannel.info` is null and `relays()` is empty).
+ *
+ * Embedded inside the room screen's verticalScroll Column with a
+ * fixed height — a LazyColumn child cannot share its parent's
+ * scroll. The screen-level layout intentionally stays unchanged
+ * (top section is fine; only the chat surface migrates).
  */
 @Composable
 internal fun NestChatPanel(
-    roomATag: ATag,
-    viewModel: NestViewModel,
+    event: MeetingSpaceEvent,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val messages by viewModel.chat.collectAsState()
-    val listState = rememberLazyListState()
+    val channel =
+        remember(event) {
+            LocalCache.getOrCreateLiveChannel(event.address())
+        }
 
-    // Only auto-scroll when the user is already pinned near the
-    // bottom — otherwise a new message yanks them away from the
-    // history they're scrolling through. Standard chat-app pattern.
-    val isAtBottom by remember(messages.size) {
-        derivedStateOf {
-            val lastIdx = messages.lastIndex
-            if (lastIdx < 0) {
-                true
-            } else {
-                listState.firstVisibleItemIndex >= (lastIdx - PINNED_TO_BOTTOM_TOLERANCE)
-            }
-        }
-    }
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty() && isAtBottom) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
-    }
+    val feedViewModel: ChannelFeedViewModel =
+        viewModel(
+            key = event.address().toValue() + "NestChannelFeedViewModel",
+            factory =
+                ChannelFeedViewModel.Factory(
+                    channel,
+                    accountViewModel.account,
+                ),
+        )
+
+    val newPostModel: ChannelNewMessageViewModel =
+        viewModel(key = event.address().toValue() + "NestChannelNewMessageViewModel")
+    newPostModel.init(accountViewModel)
+    newPostModel.load(channel)
+
+    WatchLifecycleAndUpdateModel(feedViewModel)
+
+    // The NestActivity is a separate Android Activity; it has no
+    // Compose nav graph. Pass an EmptyNav so the chat composables
+    // render correctly (their navigation taps become no-ops). A
+    // future patch can plumb a deep-link-bouncing nav if we want
+    // profile / quote-note taps inside chat to land in the main app.
+    val nav = remember { EmptyNav() }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        if (messages.isEmpty()) {
-            Text(
-                text = stringRes(R.string.nest_chat_empty),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 12.dp),
+        Box(modifier = Modifier.fillMaxWidth().height(NEST_CHAT_PANEL_HEIGHT)) {
+            RefreshingChatroomFeedView(
+                feedContentState = feedViewModel.feedState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = "Channel/${channel.address.toValue()}",
+                avoidDraft = newPostModel.draftTag,
+                onWantsToReply = newPostModel::reply,
+                onWantsToEditDraft = newPostModel::editFromDraft,
             )
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxWidth().height(220.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(messages, key = { it.id }) { msg ->
-                    ChatRow(msg, accountViewModel)
-                }
-            }
         }
-
         Spacer(Modifier.height(8.dp))
-        ChatComposer(roomATag, accountViewModel)
-    }
-}
-
-@Composable
-private fun ChatRow(
-    msg: LiveActivitiesChatMessageEvent,
-    accountViewModel: AccountViewModel,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
-    ) {
-        ClickableUserPicture(
-            baseUserHex = msg.pubKey,
-            size = Size35dp,
+        EditFieldRow(
+            channelScreenModel = newPostModel,
             accountViewModel = accountViewModel,
+            onSendNewMessage = feedViewModel.feedState::sendToTop,
+            nav = nav,
         )
-        Spacer(Modifier.width(8.dp))
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Same author-name pattern the rest of Amethyst's chat
-            // surfaces use — LoadUser kicks the metadata fetch and
-            // UsernameDisplay observes its kind-0 flow, falling back
-            // to a truncated npub while the metadata is in flight or
-            // missing. Replaces the "first 8 hex chars of pubkey"
-            // placeholder the v1 chat panel shipped with.
-            LoadUser(baseUserHex = msg.pubKey, accountViewModel = accountViewModel) { user ->
-                if (user != null) {
-                    UsernameDisplay(
-                        baseUser = user,
-                        fontWeight = FontWeight.Bold,
-                        textColor = MaterialTheme.colorScheme.primary,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
-            Text(
-                text = msg.content,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
     }
 }
 
-@Composable
-private fun ChatComposer(
-    roomATag: ATag,
-    accountViewModel: AccountViewModel,
-) {
-    var draft by remember { mutableStateOf("") }
-    var isSending by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            modifier = Modifier.weight(1f),
-            placeholder = { Text(stringRes(R.string.nest_chat_placeholder)) },
-            singleLine = false,
-            maxLines = 4,
-            enabled = !isSending,
-        )
-        Spacer(Modifier.width(8.dp))
-        TextButton(
-            enabled = draft.isNotBlank() && !isSending,
-            onClick = {
-                val toSend = draft.trim()
-                if (toSend.isEmpty()) return@TextButton
-                isSending = true
-                scope.launch {
-                    val result =
-                        runCatching {
-                            accountViewModel.account.signAndComputeBroadcast(
-                                LiveActivitiesChatMessageEvent.message(
-                                    post = toSend,
-                                    activity = roomATag,
-                                ),
-                            )
-                        }
-                    isSending = false
-                    if (result.isSuccess) {
-                        // Clear ONLY on success so a network failure
-                        // doesn't lose the user's text — they can retry
-                        // without retyping.
-                        draft = ""
-                    } else {
-                        val why =
-                            result.exceptionOrNull()?.message
-                                ?: result.exceptionOrNull()?.let { it::class.simpleName }
-                                ?: "unknown error"
-                        accountViewModel.toastManager.toast(
-                            R.string.nest_chat_send_failed_title,
-                            why,
-                            user = null,
-                        )
-                    }
-                }
-            },
-        ) {
-            Text(stringRes(R.string.nest_chat_send))
-        }
-    }
-}
-
-private const val PINNED_TO_BOTTOM_TOLERANCE = 1
+private val NEST_CHAT_PANEL_HEIGHT = 420.dp

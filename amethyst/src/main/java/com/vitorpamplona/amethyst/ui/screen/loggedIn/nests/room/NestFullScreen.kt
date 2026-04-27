@@ -324,14 +324,7 @@ internal fun NestFullScreen(
             }
 
             NestChatPanel(
-                roomATag =
-                    ATag(
-                        kind = event.kind,
-                        pubKeyHex = event.pubKey,
-                        dTag = event.dTag(),
-                        relay = null,
-                    ),
-                viewModel = viewModel,
+                event = event,
                 accountViewModel = accountViewModel,
                 modifier = Modifier.padding(top = 12.dp),
             )
