@@ -455,6 +455,85 @@ class BitRelayResolverTest {
             )
         }
 
+    // ── Regression: only the parent name is queried, NEVER d/<sub>.<parent> ──
+
+    @Test
+    fun `relay testls bit queries d testls and never d relay testls`() =
+        runTest {
+            // The parser used to map `relay.testls.bit` to `d/relay.testls`,
+            // which is non-spec (the `d/` namespace is single-label per
+            // ifa-0001). This test pins the new behaviour: the resolver MUST
+            // ONLY ever query the registered single-label parent (`d/testls`)
+            // and find the subdomain via the value's `map` field.
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {"map":{"relay":{"relay":"wss://relay.testls.bit/",
+                                          "tls":[[2,1,1,"H"]]}}}
+                        """.trimIndent(),
+                    )
+                    // If the resolver ever falls back to a multi-label query,
+                    // we want the fake to RESPOND so the test can detect it.
+                    register(
+                        "d/relay.testls",
+                        """{"relay":"wss://wrong.example.com/"}""",
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+
+            // Must resolve through d/testls -> map.relay, NOT through d/relay.testls.
+            assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            assertEquals("wss://relay.testls.bit/", outcome.resolvedUrl)
+
+            // Critically: d/relay.testls was NEVER queried.
+            assertEquals(
+                "only the registered single-label parent should be queried",
+                listOf("d/testls"),
+                client.queriedNames,
+            )
+        }
+
+    @Test
+    fun `relay testls bit does not fall back to d relay testls when d testls is missing`() =
+        runTest {
+            // Even if d/testls doesn't exist, we MUST NOT silently try a
+            // multi-label fallback. NotFound is the correct outcome.
+            val client = FakeElectrumXClient() // nothing registered
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+            assertTrue(
+                "expected NotFound when d/testls is missing, got $outcome",
+                outcome is BitRelayResolver.Resolution.NotFound,
+            )
+            assertEquals(listOf("d/testls"), client.queriedNames)
+        }
+
+    @Test
+    fun `deeply nested host queries only the leaf parent label`() =
+        runTest {
+            // a.b.c.testls.bit MUST map to d/testls and walk
+            // map.c.map.b.map.a; it MUST NOT try d/c.testls or d/b.c.testls
+            // or d/a.b.c.testls.
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {"map":{"c":{"map":{"b":{"map":{"a":
+                          {"relay":"wss://deep.testls.bit/"}}}}}}}
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://a.b.c.testls.bit")
+            assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
+            assertEquals(listOf("d/testls"), client.queriedNames)
+        }
+
     // ── Helpers ────────────────────────────────────────────────────────
 
     private fun newResolver(client: IElectrumXClient): BitRelayResolver =
@@ -476,6 +555,13 @@ class BitRelayResolverTest {
         var callCount = 0
             private set
 
+        /**
+         * Names that have been passed to [nameShowWithFallback], in order.
+         * Used by the regression tests that pin "only `d/<parent>` is
+         * queried, never `d/<sub>.<parent>`".
+         */
+        val queriedNames: MutableList<String> = mutableListOf()
+
         fun register(
             name: String,
             value: String,
@@ -488,6 +574,7 @@ class BitRelayResolverTest {
             servers: List<ElectrumxServer>,
         ): NameShowResult? {
             callCount++
+            queriedNames += identifier
             failureFor[identifier]?.let { throw it }
             val value = records[identifier] ?: return null
             return NameShowResult(name = identifier, value = value)

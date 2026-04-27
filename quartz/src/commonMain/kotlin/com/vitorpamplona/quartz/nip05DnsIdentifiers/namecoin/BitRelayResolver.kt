@@ -34,13 +34,21 @@ import kotlinx.coroutines.sync.withLock
  * This is a thin policy layer over existing infrastructure:
  *   - [UriParser] parses the URL and gives us scheme + host + path
  *     (uses `java.net.URI` on JVM, platform-native parsers on iOS).
- *   - [NamecoinNameResolver.toNamecoinName] maps `.bit` host → `d/<name>` key.
+ *   - [NamecoinNameResolver.parseHostFlat] splits a `.bit` host into the
+ *     **single-label** registered Namecoin name (`d/<label>`) and the
+ *     subdomain path beneath it. The resolver only ever looks up the
+ *     registered name; multi-label hosts (`relay.testls.bit`) are
+ *     realised through the parent's `map` field per ifa-0001 §"map",
+ *     never as a separate `d/relay.testls` query.
  *   - [NamecoinNameResolver.lookupNameDetailed] performs the `name_show`
  *     lookup with the standard timeout + exception translation. Reuses
  *     the same client AppModules already builds for NIP-05.
- *   - [NamecoinNameResolver.parseRelayUrls] extracts relay URLs from the
- *     value JSON (supports `relay`, `relays`, `nostr.relay`, `nostr.relays`,
- *     and pubkey-keyed `nostr.relays[<pubkey>]`).
+ *   - [NamecoinNameResolver.walkSubdomain] walks the value JSON's `map`
+ *     tree (exact → wildcard → `""` defaults) to find the effective
+ *     Domain Name Object for the subdomain.
+ *   - [NamecoinNameResolver.parseRelayUrls] / [NamecoinNameResolver.parseTlsaRecords]
+ *     extract relay URLs and TLSA records from THAT node only —
+ *     ancestors do NOT leak `relay`/`tls` into descendants.
  *
  * All this resolver adds is: in-memory caching with separate positive/
  * negative TTLs, and a small policy that picks the first usable URL
