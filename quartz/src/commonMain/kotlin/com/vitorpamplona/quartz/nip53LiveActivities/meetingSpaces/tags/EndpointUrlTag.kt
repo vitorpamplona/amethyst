@@ -27,9 +27,17 @@ class EndpointUrlTag {
     companion object Companion {
         const val TAG_NAME = "endpoint"
 
+        /**
+         * Legacy alias used by first-generation nostrnests web clients,
+         * which reused the NIP-53 streaming-event tag name for the
+         * kind-30312 MoQ relay URL. Accepted on read; we always emit
+         * the canonical [TAG_NAME].
+         */
+        const val LEGACY_TAG_NAME = "streaming"
+
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[0] == TAG_NAME || tag[0] == LEGACY_TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }

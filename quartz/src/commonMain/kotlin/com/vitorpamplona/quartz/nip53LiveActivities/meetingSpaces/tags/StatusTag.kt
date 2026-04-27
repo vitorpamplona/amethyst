@@ -40,9 +40,22 @@ class StatusTag {
             fun parse(code: String): STATUS? =
                 when (code) {
                     PLANNED.code -> PLANNED
+
                     OPEN.code -> OPEN
+
                     PRIVATE.code -> PRIVATE
+
                     CLOSED.code -> CLOSED
+
+                    // Legacy aliases used by first-generation nostrnests
+                    // web clients that reused NIP-53 streaming-event
+                    // status values for kind-30312 meeting spaces.
+                    // Accept on read to preserve interop; we always emit
+                    // the canonical EGG-01 codes.
+                    "live" -> OPEN
+
+                    "ended" -> CLOSED
+
                     else -> null
                 }
         }
