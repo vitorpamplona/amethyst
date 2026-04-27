@@ -48,6 +48,10 @@ Three optional tags on `kind:30312`:
   WEBP).
 - The mode is `cover` (scale to fill, crop overflow) or `tile` (repeat
   on both axes). Unknown modes MUST fall back to `cover`.
+- Hosts SHOULD keep the asset under 1 MB and 4096 px on its longest
+  edge. Receivers MUST cap any asset they fetch at 8 MB and 8192 px on
+  its longest edge; over-cap assets MUST be discarded with a fall-through
+  to the `background` color so a malicious host cannot OOM clients.
 
 ## Behavior
 

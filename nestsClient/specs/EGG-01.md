@@ -26,7 +26,7 @@ Every other EGG layers on top of this event.
     ["status", "open" | "private" | "closed" | "planned"],
     ["service", "<https URL of moq-auth sidecar>"],
     ["endpoint", "<https URL of moq-relay WebTransport>"],
-    ["relays", "<wss relay 1>", "<wss relay 2>", ...],
+    ["relays", "<wss relay 1>", "<wss relay 2>", ...],   // ONE tag, multiple values
     ["p", "<pubkey>", "<relay hint>", "host" | "admin" | "speaker"],
     ...
   ],
@@ -37,6 +37,12 @@ Every other EGG layers on top of this event.
 
 The `d` tag is the room id; `(pubkey, kind, d)` is the addressable identity.
 
+The `relays` tag is encoded as a SINGLE tag whose first element is `"relays"`
+and whose remaining elements are wss URLs. Implementers MUST NOT emit one
+`["relays", url]` tag per relay; receivers MUST treat such input as a
+malformed event and MAY repair it by concatenating the values, but
+publishers that emit it are non-conformant.
+
 ## Behavior
 
 1. Hosts MUST emit exactly one `kind:30312` event per room. Updating the room
@@ -46,15 +52,21 @@ The `d` tag is the room id; `(pubkey, kind, d)` is the addressable identity.
    client receiving an event without all four MUST treat the room as
    un-joinable.
 3. The `service` value MUST be the base URL of an EGG-02 auth sidecar (do
-   not include the `/auth` suffix).
+   not include the `/auth` suffix). Receivers MUST normalize the value by
+   stripping a single trailing `/` before constructing sub-paths.
 4. The `endpoint` value MUST be the base URL of a WebTransport-capable
    moq-relay implementing EGG-03.
 5. The `p` tag MUST list the host as the first participant. Additional
    `p` tags grant roles (EGG-07).
 6. Status semantics:
-   - `open` — room is live, anyone can join.
-   - `private` — room is live, an out-of-band invitation gate applies (relay
-     enforces; client behavior identical to `open`).
+   - `open` — room is live, anyone can join. The auth sidecar MUST mint a
+     listener token to any well-formed NIP-98 request.
+   - `private` — room is live, but the auth sidecar applies an out-of-band
+     allowlist. The allowlist mechanism is implementation-defined; this
+     spec only mandates that a non-allowlisted requester receives `403`
+     (see EGG-02 error taxonomy). Clients without a path to acquire access
+     MUST render `private` rooms as un-joinable rather than attempt to
+     connect blind.
    - `closed` — room is over, audio plane SHOULD be torn down server-side.
    - `planned` — room hasn't started; see EGG-08.
 7. A host MAY treat a room as auto-closed after 8 h of `created_at` staleness
@@ -63,6 +75,20 @@ The `d` tag is the room id; `(pubkey, kind, d)` is the addressable identity.
 8. An empty `content` field is REQUIRED. Future EGGs MAY define structured
    content; until then, peers MUST ignore non-empty content rather than
    rejecting the event.
+9. The `d` tag MUST contain only characters from `[A-Za-z0-9._-]`. Colons,
+   slashes, whitespace, and percent-encoded sequences are forbidden because
+   the `d` is interpolated unescaped into the moq-auth namespace
+   `nests/<kind>:<host pubkey hex>:<d>` (EGG-02). Receivers MUST reject
+   events whose `d` violates this charset.
+10. **Relay discovery.** Hosts SHOULD publish the `kind:30312` event to (a)
+    every relay listed in the event's own `relays` tag, AND (b) their
+    NIP-65 (`kind:10002`) write relays. Receivers SHOULD subscribe to the
+    same union to track room metadata changes (rename, status flip,
+    role grants).
+11. **Tie-break on identical `created_at`.** When two `kind:30312` events
+    share `(pubkey, d)` AND `created_at`, receivers MUST keep the event
+    with the lexicographically SMALLEST `id` and discard the other (per
+    NIP-01 replaceable-event tie-break).
 
 ## Example
 

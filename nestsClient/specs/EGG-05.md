@@ -47,6 +47,12 @@ The `content` field carries the plaintext (UTF-8) message.
 7. A peer SHOULD NOT publish chat events while `status` of the
    `kind:30312` is `closed` — but receivers MUST tolerate them gracefully
    in case of a race against the host's close.
+8. **Content size.** Senders SHOULD keep `content` under 8 KB of UTF-8.
+   Receivers MUST tolerate up to 64 KB and MAY truncate or drop messages
+   above that threshold (with a visible "[message truncated]" marker).
+9. **Rate limiting.** Receivers SHOULD render at most 3 messages per
+   second per author in the live chat panel; over-quota messages remain
+   visible on scroll-back but do NOT animate / scroll the panel.
 
 ## Example
 

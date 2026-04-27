@@ -20,8 +20,8 @@ sidecar; the `endpoint` tag is the relay.
 
 ```
 POST <service>/auth
-Authorization: Nostr <base64(NIP-98 kind:27235 event)>
-Content-Type:  application/json
+Authorization: Nostr <base64(NIP-98 kind:27235 event JSON)>
+Content-Type:  application/json; charset=utf-8
 
 { "namespace": "nests/<kind>:<host_pubkey_hex>:<room_d>",
   "publish":   <boolean> }
@@ -29,8 +29,41 @@ Content-Type:  application/json
 
 `<kind>` is `30312` for nests audio rooms (EGG-01).
 
-The NIP-98 event MUST bind to this exact URL, method `POST`, and the SHA-256
-hash of the request body.
+The `<service>` URL is the EGG-01 `service` tag value with any trailing `/`
+stripped, then `/auth` appended literally.
+
+The body is a single-line UTF-8 JSON object — the server hashes the **exact
+bytes sent** to compare against NIP-98's `payload` tag, so producers MUST
+NOT pretty-print or re-order keys after signing.
+
+The `<host_pubkey_hex>` is the host's pubkey, lowercase hex. The `<room_d>`
+is the EGG-01 `d` tag (which by EGG-01 rule 9 cannot contain `:`, so the
+namespace is unambiguous without escaping).
+
+#### NIP-98 event shape
+
+The signed kind 27235 event MUST carry exactly these tags (NIP-98 §1):
+
+```json
+{
+  "kind": 27235,
+  "pubkey": "<requester pubkey hex>",
+  "created_at": <unix seconds>,
+  "tags": [
+    ["u",       "<service>/auth"],   // exact request URL, scheme included
+    ["method",  "POST"],
+    ["payload", "<sha256 of request body, lowercase hex>"]
+  ],
+  "content": "",
+  "id":  "<...>",
+  "sig": "<...>"
+}
+```
+
+The event JSON is then serialized (NIP-01 canonical form), encoded as
+**RFC 4648 standard Base64** (NOT base64url; pad with `=`), prefixed with
+`Nostr ` (literal, including the trailing space), and placed in the
+`Authorization` header.
 
 ### Step 2 — token response
 
@@ -50,6 +83,36 @@ The JWT carries (at minimum):
 | `put`   | Publish-allowed sub-paths. For listeners: `[]`. For speakers: `[<own pubkey hex>]`. |
 | `iat`   | Unix seconds; issuance.                                       |
 | `exp`   | Unix seconds; expiry. MUST be `iat + 600` for nests today.    |
+
+#### JWT signing
+
+The JWT MUST be signed with `alg: "ES256"` (ECDSA on the NIST P-256 curve,
+RFC 7518 §3.4). The auth sidecar MUST publish its public verification keys
+as a JWKS at:
+
+```
+GET <service>/.well-known/jwks.json
+```
+
+The response is an `application/json` body shaped per RFC 7517:
+
+```json
+{
+  "keys": [
+    {
+      "kty": "EC", "crv": "P-256", "alg": "ES256",
+      "use": "sig", "kid": "<key id>",
+      "x": "<base64url x>", "y": "<base64url y>"
+    }
+  ]
+}
+```
+
+The relay (EGG-03 endpoint) MUST verify inbound JWTs against this JWKS.
+Relays SHOULD cache the JWKS for at most 5 minutes so a key rotation
+propagates without requiring a relay restart. A relay that cannot reach
+the JWKS endpoint MUST refuse new sessions rather than fall through to
+"trust the unverified token".
 
 ### Step 3 — WebTransport CONNECT
 
@@ -86,6 +149,43 @@ header is used at this step.
    accepted on a session opened against namespace B.
 7. A peer MUST NOT log the JWT or include it in error reports. The token is a
    bearer credential.
+
+## Error taxonomy
+
+The auth sidecar MUST use the following HTTP status codes for `POST /auth`.
+Bodies are `application/json` and follow the shape
+`{ "error": "<machine slug>", "reason": "<human string>" }`. Receivers
+MAY ignore `reason` but MUST surface `error` to user-facing error toasts.
+
+| status | `error` slug         | when                                                                |
+|--------|----------------------|---------------------------------------------------------------------|
+| 200    | —                    | success; body is `{ "token": "<jwt>" }`                              |
+| 400    | `bad_request`        | malformed JSON body, missing `namespace`, unknown content-type       |
+| 400    | `bad_namespace`      | namespace does not match `nests/<kind>:<hexpubkey>:<d>`              |
+| 401    | `bad_nip98`          | Authorization header missing, malformed, or `id`/`sig` invalid       |
+| 401    | `wrong_url`          | NIP-98 `u` tag does not match the actual request URL                 |
+| 401    | `wrong_method`       | NIP-98 `method` tag is not `POST`                                    |
+| 401    | `wrong_payload`      | NIP-98 `payload` tag does not match sha256 of the body bytes         |
+| 401    | `stale`              | NIP-98 `created_at` outside the ±60 s tolerance                      |
+| 403    | `room_closed`        | room status is `closed` (EGG-01) or `planned` (EGG-08)               |
+| 403    | `not_invited`        | room status is `private` and requester is not on the allowlist       |
+| 403    | `publish_forbidden`  | `publish: true` requested but caller is not a speaker per EGG-07     |
+| 410    | `unknown_room`       | no `kind:30312` known to the sidecar for `(host, d)`                 |
+| 429    | `rate_limited`       | per-pubkey or per-IP rate limit; `Retry-After` header SHOULD be set |
+| 5xx    | `internal`           | sidecar internal error                                               |
+
+Receivers MUST treat unknown 4xx slugs as "fatal, do not retry" and
+unknown 5xx slugs as "transient, retry with exponential backoff".
+
+The relay (EGG-03 endpoint) signals authorization failures through
+WebTransport CONNECT response codes, NOT through the auth-sidecar table:
+
+| WT status | meaning                                                                |
+|-----------|------------------------------------------------------------------------|
+| 200       | session established                                                    |
+| 401       | JWT signature invalid, expired, or fails the JWKS check                |
+| 403       | JWT `root` does not match the path namespace, or `put` claim missing for a publishing peer |
+| 404       | path namespace unknown to the relay                                    |
 
 ## Example
 

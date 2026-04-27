@@ -43,10 +43,12 @@ The `a` tag is REQUIRED and points at the room defined in EGG-01.
 
 1. A participant MUST emit a `kind:10312` event:
    - on entering the room,
-   - every 30 s while in the room,
+   - every 30 s ± 5 s of jitter while in the room,
    - immediately when any flag (`hand`, `muted`, `publishing`, `onstage`)
      changes,
    - one final time on leaving, with `publishing="0"` and `onstage="0"`.
+   The ±5 s jitter is REQUIRED. Synchronised heartbeats from a
+   thousand-listener room would otherwise trigger relay bursts every 30 s.
 2. Receivers MUST treat a participant as departed if no presence has been
    observed in `> 6 minutes`. (One missed heartbeat plus a 5 minute
    tolerance window.)
@@ -69,6 +71,17 @@ The `a` tag is REQUIRED and points at the room defined in EGG-01.
 9. Hosts and clients displaying the participant grid MUST hide presences
    from `kind:10312` events whose `created_at` is older than the staleness
    window in rule (2).
+10. The flag values `"0"` and `"1"` are **strings**, not JSON booleans —
+    they appear inside a Nostr tag array which is `[string, string, ...]`
+    by NIP-01. Parsers MUST accept strings only; integers, booleans, or
+    any other JSON type for these positions MUST be treated as malformed.
+11. **Single-room rule.** Because the `d`-tag is fixed (rule 7), a
+    participant has exactly one current presence event, scoped to one
+    room. Receivers MUST keep only the most recent `kind:10312` per
+    pubkey (replaceable-event semantics) and apply NIP-01 tie-break on
+    identical `created_at`. A buggy peer that publishes presences for
+    two rooms in rapid succession is presumed to be in whichever room
+    the most recent presence references.
 
 ## Example
 

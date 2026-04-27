@@ -42,9 +42,11 @@ is room-wide (renders centered on the room canvas).
 
 1. Reactors MUST emit `kind:7` events with at least one `a`-tag matching
    EGG-01 and a non-empty `content` field.
-2. Receivers MUST apply a 30-second sliding window: a reaction is rendered
-   from the moment it is observed until 30 seconds after its `created_at`,
-   then dropped from the floating overlay.
+2. Receivers MUST apply a 30-second sliding window measured against the
+   reaction's `created_at`: a reaction is rendered from the moment it is
+   observed until `created_at + 30 s` (wall-clock unix seconds), then
+   dropped from the floating overlay. A reaction that arrives already
+   older than 30 s MUST be dropped on receipt without ever being shown.
 3. Receivers SHOULD throttle their reaction-overlay updates to at most 4 Hz
    (250 ms minimum between repaints). At ~30 reactions per second a naive
    recomposition can starve the audio decoder.

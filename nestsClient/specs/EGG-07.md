@@ -80,6 +80,9 @@ the 60-second validity window defined below.
    - The event's `created_at` MUST be within the last 60 s.
    - The `a`-tag MUST match the room the receiver is in.
    - The `["action", "kick"]` element MUST be present.
+   - The event's `id` MUST NOT have been seen in the last 120 s (replay
+     protection — relays may re-deliver the same event from multiple
+     peers, but a single kick MUST act exactly once per receiver).
    Events failing any gate MUST be silently discarded.
 8. The TARGET of a kick MUST disconnect from the audio plane (close the
    moq-lite session) and tear down the in-room UI.

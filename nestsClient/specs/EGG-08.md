@@ -54,8 +54,11 @@ nearest second.
    preserved so receivers can label the cancellation
    ("Cancelled — was scheduled for ...").
 5. Planned rooms MUST NOT mint moq-auth tokens (EGG-02). The auth sidecar
-   SHOULD reject `POST /auth` requests targeting a `(host, room d)` whose
-   most-recent `kind:30312` is `status="planned"`.
+   MUST reject `POST /auth` requests targeting a `(host, room d)` whose
+   most-recent `kind:30312` is `status="planned"`, returning HTTP 403
+   with `{"error":"room_closed"}` per the EGG-02 error taxonomy. (The
+   auth path becomes available the moment the host re-publishes with
+   `status="open"`; clients SHOULD NOT pre-mint tokens against `starts`.)
 6. Listing UIs SHOULD sort planned rooms ahead of live ones until 5
    minutes before `starts`, then promote the room to the same surface as
    live rooms (the host is unlikely to be more than 5 minutes late).
