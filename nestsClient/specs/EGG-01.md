@@ -89,6 +89,27 @@ publishers that emit it are non-conformant.
     share `(pubkey, d)` AND `created_at`, receivers MUST keep the event
     with the lexicographically SMALLEST `id` and discard the other (per
     NIP-01 replaceable-event tie-break).
+12. **Publish-before-mint ordering.** A peer MUST NOT request a JWT
+    (EGG-02) for a room before that room's `kind:30312` event has
+    propagated to relays the auth sidecar can read. The auth sidecar
+    looks up the most-recent `kind:30312` by `(pubkey, kind, d)` to
+    validate the room exists and to enforce status-based gates
+    (EGG-08 rule 5). For hosts: this means publishing the freshly-
+    composed event BEFORE minting their own `publish: true` token.
+    For listeners: this means waiting until the event is visible on
+    the listener's own relay set (an unknown room cannot be joined).
+    Auth sidecars that cannot find the room MUST return HTTP 410
+    `unknown_room` (EGG-02 error taxonomy); peers SHOULD retry with
+    1 s / 2 s / 4 s exponential backoff before surfacing the error.
+13. **Service / endpoint selection (host-side guidance).** When
+    composing a new room, hosts SHOULD pre-fill `service` and
+    `endpoint` from the FIRST entry of their own `kind:10112` user
+    server list (EGG-09). When the host has no `kind:10112`, the
+    client MAY ship a built-in default URL but MUST allow user
+    override. Both `service` and `endpoint` MUST be `https://` URLs;
+    `http://` MUST be rejected at compose time (mirrors EGG-09
+    rule 1). The `service` and `endpoint` MAY be the same base URL
+    (a single deployment serving both is the common case).
 
 ## Example
 

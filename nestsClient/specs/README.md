@@ -154,6 +154,87 @@ get me to first audio frame". Every step references the EGG that defines it.
 Token lifetime is 600 s. Re-mint a fresh token (steps 3 + 4) before the
 old one expires. Relays MUST close sessions within 30 s past `exp`.
 
+## Hosting a new room
+
+A normative walkthrough for "I am a host; create a fresh room and start
+broadcasting". Symmetrical to the joining sequence above but starts one
+step earlier — the host has to bring the `kind:30312` into existence
+before anyone (including themselves) can authenticate against it.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ 1. Pick service + endpoint (EGG-01, EGG-09)                          │
+│    Default: FIRST entry of host's own kind:10112 (EGG-09)            │
+│    Both MUST be https://; http:// is rejected (EGG-09 rule 1)        │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 2. Compose kind:30312 (EGG-01)                                       │
+│    - status = "open" (or "planned" + starts tag, EGG-08)             │
+│    - d = fresh room id, charset [A-Za-z0-9._-] (EGG-01 rule 9)       │
+│    - first p-tag = ["p", <own pubkey>, <relay hint>, "host"]         │
+│    - relays / image / summary / theme tags as desired                │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 3. Sign + publish to relays (EGG-01 rule 10)                         │
+│    Target set = `relays` tag ∪ host's NIP-65 outbox                  │
+│    The auth sidecar's inbound relay pool MUST overlap this set,      │
+│    otherwise step 4 will 410 `unknown_room` indefinitely.            │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 4. Mint publish JWT (EGG-02)                                         │
+│    POST <service>/auth, body = {namespace, "publish": true}          │
+│    NIP-98 Authorization signed by host pubkey.                       │
+│    On 410 `unknown_room`: relay-propagation lag — retry up to 3      │
+│    times with backoff (1s / 2s / 4s) before surfacing.               │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 5. Open WebTransport + run moq-lite Setup (EGG-02 step 3)            │
+│    Same as listener flow.                                            │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 6. Announce own broadcast (EGG-03)                                   │
+│    Announce { suffix=<own pubkey hex>, status=Active, hops=0 }       │
+│    Then AnnouncePlease prefix="" to also receive other speakers.     │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 7. Publish own presence (EGG-04)                                     │
+│    publishing="1", onstage="1", muted="0"; heartbeat per EGG-04.     │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 8. Stream Opus (EGG-03)                                              │
+│    One unidirectional QUIC stream per Group, one Opus packet per     │
+│    Frame, 20 ms cadence.                                             │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Ongoing host duties:
+
+- **Add a speaker:** re-publish kind:30312 with the new `["p", _, _,
+  "speaker"]` tag (EGG-07).
+- **Promote to admin / demote / remove:** re-publish kind:30312 with
+  updated role markers (EGG-07).
+- **Kick:** sign and broadcast a kind:4312 ephemeral (EGG-07).
+- **Edit metadata** (rename, image, theme): re-publish kind:30312 with
+  higher `created_at` (EGG-01 rule 1).
+- **Close the room:** re-publish kind:30312 with `status="closed"`
+  (EGG-01 rule 6). The audio plane SHOULD be torn down server-side.
+- **Publish recording** after close: re-publish closed event with
+  `["recording", url]` tag (EGG-11).
+
 ## Filing changes
 
 Edit a single EGG per pull request. Include a wire-format example showing the

@@ -51,6 +51,32 @@ the 60-second validity window defined below.
 
 ## Behavior
 
+### Audio publish authorisation
+
+The auth sidecar (EGG-02) MUST grant a `publish: true` JWT — with the
+caller's pubkey hex listed in the JWT's `put` claim — to any peer that
+is one of:
+
+- the **host** (i.e. the author of the most-recent `kind:30312` event
+  for the requested `(kind, d)`), regardless of whether the host's own
+  `p`-tag carries a `"host"`, `"speaker"`, or no role marker. The host's
+  speaker capability is implicit in event authorship — clients MUST NOT
+  require the host to add themselves as `["p", _, _, "speaker"]` in
+  order to broadcast,
+- a peer marked `["p", <self>, _, "speaker"]` in that same event,
+- a peer marked `["p", <self>, _, "admin"]` in that same event.
+
+Other callers requesting `publish: true` MUST receive HTTP 403
+`publish_forbidden` per the EGG-02 error taxonomy. A `publish: false`
+(listener) request MUST be accepted from any well-formed NIP-98 caller
+when the room is `open` (per EGG-01 rule 6).
+
+The relay (EGG-03 endpoint) is independently authorised by the JWT's
+`put` claim — it does NOT re-read the `kind:30312` event. Demoting a
+speaker therefore does NOT terminate their existing audio session;
+the speaker keeps publishing until either their JWT expires or the
+host kicks them via EGG-07's kick command.
+
 ### Promote / demote
 
 1. To promote a listener to speaker, the host or an admin MUST re-publish
