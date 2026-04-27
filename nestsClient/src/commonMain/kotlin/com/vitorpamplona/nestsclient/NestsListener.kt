@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
 
 /**
  * High-level listener handle for an audio-room. Hides the layered HTTP +
@@ -82,20 +81,26 @@ interface NestsListener {
      * independent of the kind-10312 `publishing` presence tag —
      * the JS reference's `useRoomAnnouncements` consumes this.
      *
-     * Default body throws [UnsupportedOperationException] on the
-     * IETF reference path (`MoqSession` doesn't define an
-     * announce-prefix subscription that fits this shape). Callers
-     * mixing the two should `runCatching` the collect.
+     * The flow is COLD (re-collected starts a fresh subscription)
+     * — different from [subscribeSpeaker], which returns a hot
+     * SubscribeHandle backed by a fan-out [kotlinx.coroutines.flow.MutableSharedFlow].
+     * The asymmetry is intentional: announce data is room-state
+     * (one consumer, no buffered replay), while audio is per-frame
+     * playout (multi-collect resilient, drop-oldest fan-out).
+     *
+     * Throws on the IETF reference path because moq-transport-17
+     * doesn't define an announce-prefix flow. Throws at call time
+     * (not at first collect) so callers can `runCatching` the
+     * single call rather than wrapping every collect — same
+     * timing as [subscribeCatalog].
      *
      * @throws UnsupportedOperationException on the IETF listener.
      * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
      */
     fun announces(): Flow<RoomAnnouncement> =
-        flow {
-            throw UnsupportedOperationException(
-                "announces() is moq-lite-only; IETF listener has no announce-prefix flow.",
-            )
-        }
+        throw UnsupportedOperationException(
+            "announces() is moq-lite-only; IETF listener has no announce-prefix flow.",
+        )
 
     /** Tear down the MoQ session + underlying transport. Idempotent. */
     suspend fun close()

@@ -55,17 +55,17 @@ class NestsListenerCatalogTest {
         }
 
     @Test
-    fun ietfDefaultListenerAnnouncesFlowThrowsOnCollect() =
+    fun ietfDefaultListenerAnnouncesFlowThrowsAtCallTime() =
         runTest {
             // The announce-prefix channel is moq-lite only as well —
             // the IETF reference path's announces() default body
-            // throws UnsupportedOperationException at collect time.
-            // Callers mixing the two protocols can `runCatching` the
-            // collect to no-op cleanly.
+            // throws UnsupportedOperationException at CALL time,
+            // matching subscribeCatalog's timing. Callers can
+            // `runCatching { listener.announces() }` once per session
+            // rather than wrapping every collect.
             val listener = IetfStyleListener()
-            val flow = listener.announces()
             assertFailsWith<UnsupportedOperationException> {
-                flow.collect { /* unreachable */ }
+                listener.announces()
             }
         }
 }

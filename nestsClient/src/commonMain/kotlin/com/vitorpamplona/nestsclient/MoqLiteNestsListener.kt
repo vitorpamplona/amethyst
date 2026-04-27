@@ -80,10 +80,11 @@ class MoqLiteNestsListener internal constructor(
             try {
                 session.subscribe(broadcast = broadcast, track = track)
             } catch (e: MoqLiteSubscribeException) {
-                // The IETF SubscribeHandle path conventionally surfaces
-                // protocol-level rejections through the same exception
-                // shape MoqProtocolException uses, so wrapping here
-                // avoids leaking moq-lite types into UI consumers.
+                // Surface protocol-level rejections (audio OR catalog)
+                // through MoqProtocolException, matching the IETF
+                // listener's contract — keeps moq-lite types out of
+                // UI / VM consumers regardless of which track was
+                // refused.
                 throw com.vitorpamplona.nestsclient.moq.MoqProtocolException(
                     "moq-lite subscribe rejected: ${e.message}",
                     e,
