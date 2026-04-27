@@ -325,6 +325,7 @@ internal fun NestFullScreen(
 
             NestChatPanel(
                 event = event,
+                viewModel = viewModel,
                 accountViewModel = accountViewModel,
                 modifier = Modifier.padding(top = 12.dp),
             )
