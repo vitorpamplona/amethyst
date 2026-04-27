@@ -28,12 +28,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -41,11 +38,18 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconToggleButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,7 +59,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
@@ -98,263 +104,307 @@ internal fun NestFullScreen(
 ) {
     val roomTheme = androidx.compose.runtime.remember(event) { RoomTheme.from(event) }
     NestThemedScope(theme = roomTheme, accountViewModel = accountViewModel) {
-        // Outer column owns the safeDrawing inset; the top metadata
-        // section and the chat panel are weighted siblings.
-        //
-        // The top section uses `weight(1f, fill = false)` so it never
-        // exceeds half the screen and scrolls internally if it would.
-        // The chat uses `weight(1f, fill = true)` so it always takes
-        // its full allocation — the user explicitly wanted chat to
-        // dominate the screen rather than ride a fixed-height box at
-        // the bottom of the metadata scroll.
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.safeDrawing),
-        ) {
-            var showEditSheet by rememberSaveable { mutableStateOf(false) }
-            var showHostMenu by rememberSaveable { mutableStateOf(false) }
-            var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
-            val isHost = accountViewModel.account.signer.pubKey == event.pubKey
-            val leaveScope = rememberCoroutineScope()
+        var showEditSheet by rememberSaveable { mutableStateOf(false) }
+        var showHostMenu by rememberSaveable { mutableStateOf(false) }
+        var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
+        val isHost = accountViewModel.account.signer.pubKey == event.pubKey
+        val leaveScope = rememberCoroutineScope()
+        val topBarContext = LocalContext.current
 
+        // Scaffold owns safeDrawing insets via its `contentWindowInsets`
+        // default, so we don't manage them manually anymore. The
+        // container is transparent because NestThemedScope's outer
+        // Surface already paints the themed background (and overlays
+        // the optional `bg` image on top of it); painting again here
+        // would double up.
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            topBar = {
+                NestTopAppBar(
+                    title = event.room().orEmpty(),
+                    isHost = isHost,
+                    showHostMenu = showHostMenu,
+                    onMenuOpen = { showHostMenu = true },
+                    onMenuDismiss = { showHostMenu = false },
+                    onShare = {
+                        showHostMenu = false
+                        shareRoomNaddr(topBarContext, event)
+                    },
+                    onEdit = {
+                        showHostMenu = false
+                        showEditSheet = true
+                    },
+                )
+            },
+        ) { padding ->
+            // Inner column is just the two weighted siblings — top
+            // metadata (scrolls internally if overflow) and the chat
+            // panel (takes the rest). Title and overflow menu live in
+            // the TopAppBar above.
             Column(
                 modifier =
                     Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 16.dp),
+                        .fillMaxSize()
+                        .padding(padding),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top,
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp)
+                            .padding(top = 8.dp),
                 ) {
-                    event.room()?.let {
+                    event.summary()?.let {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
-                    // Overflow menu — visible to everyone (Share); host-only
-                    // rows (Edit) are gated inside.
-                    Box {
-                        androidx.compose.material3.IconButton(onClick = { showHostMenu = true }) {
-                            Icon(
-                                symbol = MaterialSymbols.MoreVert,
-                                contentDescription = stringRes(R.string.nest_overflow_menu),
-                            )
-                        }
-                        val context = androidx.compose.ui.platform.LocalContext.current
-                        androidx.compose.material3.DropdownMenu(
-                            expanded = showHostMenu,
-                            onDismissRequest = { showHostMenu = false },
-                        ) {
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text(stringRes(R.string.nest_share_action)) },
-                                onClick = {
-                                    showHostMenu = false
-                                    shareRoomNaddr(context, event)
-                                },
-                            )
-                            if (isHost) {
-                                androidx.compose.material3.DropdownMenuItem(
-                                    text = { Text(stringRes(R.string.nest_edit_title)) },
-                                    onClick = {
-                                        showHostMenu = false
-                                        showEditSheet = true
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-                if (showEditSheet) {
-                    EditNestSheet(
-                        accountViewModel = accountViewModel,
-                        event = event,
-                        onDismiss = { showEditSheet = false },
-                    )
-                }
-                event.summary()?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
 
-                // Listener counter — counts every active kind-10312 presence
-                // in the room. Hidden until the aggregator has at least one
-                // entry so the placeholder doesn't flash on entry.
-                val presences by viewModel.presences.collectAsState()
-                val listenerCount = presences.size
-                if (listenerCount > 0) {
-                    Text(
-                        text =
-                            androidx.compose.ui.res.pluralStringResource(
-                                R.plurals.nest_listener_count,
-                                listenerCount,
-                                listenerCount,
-                            ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-
-                val reactionsByPubkey by viewModel.recentReactions.collectAsState()
-                var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
-                // Long-press opens the participant context sheet for ANYONE
-                // (T2 #2). The sheet's own gating decides which rows to show
-                // (follow/mute always; promote/demote/kick host-only).
-                val onLongPressParticipant: ((String) -> Unit) = { target ->
-                    if (target != accountViewModel.account.signer.pubKey) hostMenuTarget = target
-                }
-                // Tier-2 #1: replace the two LazyRow sections with a single
-                // pure-projection ParticipantGrid. The `absent` flag (member
-                // promoted in the kind-30312 but never emitted a kind-10312)
-                // greys out at 50 % alpha, matching nostrnests' web client.
-                val participantGrid =
-                    androidx.compose.runtime.remember(event, presences) {
-                        com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid(
-                            participants = event.participants(),
-                            presences = presences,
-                        )
-                    }
-                ParticipantsGrid(
-                    grid = participantGrid,
-                    speakingNow = ui.speakingNow,
-                    accountViewModel = accountViewModel,
-                    onStageLabel = stringRes(R.string.nest_stage),
-                    audienceLabel = stringRes(R.string.nest_audience),
-                    reactionsByPubkey = reactionsByPubkey,
-                    connectingSpeakers = ui.connectingSpeakers,
-                    onLongPressParticipant = onLongPressParticipant,
-                )
-                val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
-                hostMenuTarget?.let { target ->
-                    ParticipantHostActionsSheet(
-                        target = target,
-                        event = event,
-                        accountViewModel = accountViewModel,
-                        onDismiss = { hostMenuTarget = null },
-                        catalog = speakerCatalogs[target],
-                    )
-                }
-
-                if (isHost) {
-                    HandRaiseQueueSection(
-                        event = event,
-                        viewModel = viewModel,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-
-                ConnectionRow(viewModel = viewModel, ui = ui)
-
-                val myPubkey = accountViewModel.account.signer.pubKey
-                if (viewModel.canBroadcast && onStage.any { it.pubKey == myPubkey }) {
-                    TalkRow(viewModel = viewModel, ui = ui, speakerPubkeyHex = myPubkey)
-                }
-
-                var showReactionPicker by rememberSaveable { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    FilledTonalIconToggleButton(
-                        checked = handRaised,
-                        onCheckedChange = onHandRaisedChange,
-                    ) {
-                        Icon(
-                            symbol = MaterialSymbols.PanTool,
-                            contentDescription =
-                                stringRes(
-                                    if (handRaised) R.string.nest_lower_hand else R.string.nest_raise_hand,
+                    // Listener counter — counts every active kind-10312 presence
+                    // in the room. Hidden until the aggregator has at least one
+                    // entry so the placeholder doesn't flash on entry.
+                    val presences by viewModel.presences.collectAsState()
+                    val listenerCount = presences.size
+                    if (listenerCount > 0) {
+                        Text(
+                            text =
+                                androidx.compose.ui.res.pluralStringResource(
+                                    R.plurals.nest_listener_count,
+                                    listenerCount,
+                                    listenerCount,
                                 ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
-                    OutlinedButton(onClick = { showReactionPicker = true }) {
-                        Text(stringRes(R.string.nest_reactions_button))
+
+                    val reactionsByPubkey by viewModel.recentReactions.collectAsState()
+                    var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
+                    // Long-press opens the participant context sheet for ANYONE
+                    // (T2 #2). The sheet's own gating decides which rows to show
+                    // (follow/mute always; promote/demote/kick host-only).
+                    val onLongPressParticipant: ((String) -> Unit) = { target ->
+                        if (target != accountViewModel.account.signer.pubKey) hostMenuTarget = target
                     }
-                    OutlinedButton(
-                        onClick = {
-                            if (isHost) {
-                                showHostLeaveConfirm = true
-                            } else {
-                                onLeave()
-                            }
-                        },
+                    // Tier-2 #1: replace the two LazyRow sections with a single
+                    // pure-projection ParticipantGrid. The `absent` flag (member
+                    // promoted in the kind-30312 but never emitted a kind-10312)
+                    // greys out at 50 % alpha, matching nostrnests' web client.
+                    val participantGrid =
+                        androidx.compose.runtime.remember(event, presences) {
+                            com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid(
+                                participants = event.participants(),
+                                presences = presences,
+                            )
+                        }
+                    ParticipantsGrid(
+                        grid = participantGrid,
+                        speakingNow = ui.speakingNow,
+                        accountViewModel = accountViewModel,
+                        onStageLabel = stringRes(R.string.nest_stage),
+                        audienceLabel = stringRes(R.string.nest_audience),
+                        reactionsByPubkey = reactionsByPubkey,
+                        connectingSpeakers = ui.connectingSpeakers,
+                        onLongPressParticipant = onLongPressParticipant,
+                    )
+                    val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
+                    hostMenuTarget?.let { target ->
+                        ParticipantHostActionsSheet(
+                            target = target,
+                            event = event,
+                            accountViewModel = accountViewModel,
+                            onDismiss = { hostMenuTarget = null },
+                            catalog = speakerCatalogs[target],
+                        )
+                    }
+
+                    if (isHost) {
+                        HandRaiseQueueSection(
+                            event = event,
+                            viewModel = viewModel,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+
+                    ConnectionRow(viewModel = viewModel, ui = ui)
+
+                    val myPubkey = accountViewModel.account.signer.pubKey
+                    if (viewModel.canBroadcast && onStage.any { it.pubKey == myPubkey }) {
+                        TalkRow(viewModel = viewModel, ui = ui, speakerPubkeyHex = myPubkey)
+                    }
+
+                    var showReactionPicker by rememberSaveable { mutableStateOf(false) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringRes(R.string.nest_leave))
+                        FilledTonalIconToggleButton(
+                            checked = handRaised,
+                            onCheckedChange = onHandRaisedChange,
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.PanTool,
+                                contentDescription =
+                                    stringRes(
+                                        if (handRaised) R.string.nest_lower_hand else R.string.nest_raise_hand,
+                                    ),
+                            )
+                        }
+                        OutlinedButton(onClick = { showReactionPicker = true }) {
+                            Text(stringRes(R.string.nest_reactions_button))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                if (isHost) {
+                                    showHostLeaveConfirm = true
+                                } else {
+                                    onLeave()
+                                }
+                            },
+                        ) {
+                            Text(stringRes(R.string.nest_leave))
+                        }
+                    }
+                    if (showReactionPicker) {
+                        RoomReactionPickerSheet(
+                            onPick = { emoji ->
+                                accountViewModel.reactToOrDelete(roomNote, emoji)
+                            },
+                            onDismiss = { showReactionPicker = false },
+                        )
+                    }
+
+                    if (showHostLeaveConfirm) {
+                        AlertDialog(
+                            onDismissRequest = { showHostLeaveConfirm = false },
+                            title = { Text(stringRes(R.string.nest_leave_host_title)) },
+                            text = { Text(stringRes(R.string.nest_leave_host_body)) },
+                            confirmButton = {
+                                TextButton(
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                    onClick = {
+                                        showHostLeaveConfirm = false
+                                        leaveScope.launch {
+                                            val ok = closeMeetingSpace(accountViewModel, event)
+                                            if (!ok) {
+                                                accountViewModel.toastManager.toast(
+                                                    R.string.nests,
+                                                    R.string.nest_leave_host_close_failed,
+                                                )
+                                            }
+                                            onLeave()
+                                        }
+                                    },
+                                ) {
+                                    Text(stringRes(R.string.nest_leave_host_close))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = {
+                                        showHostLeaveConfirm = false
+                                        onLeave()
+                                    },
+                                ) {
+                                    Text(stringRes(R.string.nest_leave_host_just_leave))
+                                }
+                            },
+                        )
                     }
                 }
-                if (showReactionPicker) {
-                    RoomReactionPickerSheet(
-                        onPick = { emoji ->
-                            accountViewModel.reactToOrDelete(roomNote, emoji)
-                        },
-                        onDismiss = { showReactionPicker = false },
-                    )
-                }
 
-                if (showHostLeaveConfirm) {
-                    AlertDialog(
-                        onDismissRequest = { showHostLeaveConfirm = false },
-                        title = { Text(stringRes(R.string.nest_leave_host_title)) },
-                        text = { Text(stringRes(R.string.nest_leave_host_body)) },
-                        confirmButton = {
-                            TextButton(
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                onClick = {
-                                    showHostLeaveConfirm = false
-                                    leaveScope.launch {
-                                        val ok = closeMeetingSpace(accountViewModel, event)
-                                        if (!ok) {
-                                            accountViewModel.toastManager.toast(
-                                                R.string.nests,
-                                                R.string.nest_leave_host_close_failed,
-                                            )
-                                        }
-                                        onLeave()
-                                    }
-                                },
-                            ) {
-                                Text(stringRes(R.string.nest_leave_host_close))
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(
-                                onClick = {
-                                    showHostLeaveConfirm = false
-                                    onLeave()
-                                },
-                            ) {
-                                Text(stringRes(R.string.nest_leave_host_just_leave))
-                            }
-                        },
-                    )
-                }
+                NestChatPanel(
+                    event = event,
+                    viewModel = viewModel,
+                    accountViewModel = accountViewModel,
+                    modifier =
+                        Modifier
+                            .weight(1f, fill = true)
+                            .padding(horizontal = 16.dp)
+                            .padding(top = 12.dp, bottom = 16.dp),
+                )
             }
+        }
 
-            NestChatPanel(
-                event = event,
-                viewModel = viewModel,
+        // EditNestSheet renders as a ModalBottomSheet — placement in
+        // the tree doesn't affect layout, but keeping it adjacent to
+        // the Scaffold makes the dialog/sheet boundary obvious.
+        if (showEditSheet) {
+            EditNestSheet(
                 accountViewModel = accountViewModel,
-                modifier =
-                    Modifier
-                        .weight(1f, fill = true)
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 12.dp, bottom = 16.dp),
+                event = event,
+                onDismiss = { showEditSheet = false },
             )
         }
     }
+}
+
+/**
+ * TopAppBar for the room screen — hosts the room name and the
+ * overflow menu (Share for everyone, Edit for the host). The menu
+ * state lives at the screen level so the EditNestSheet can be
+ * triggered from here and rendered alongside the Scaffold.
+ *
+ * Container color is transparent so the themed background painted
+ * by [NestThemedScope]'s Surface (and any optional `bg` image) shows
+ * through cleanly.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NestTopAppBar(
+    title: String,
+    isHost: Boolean,
+    showHostMenu: Boolean,
+    onMenuOpen: () -> Unit,
+    onMenuDismiss: () -> Unit,
+    onShare: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        actions = {
+            Box {
+                IconButton(onClick = onMenuOpen) {
+                    Icon(
+                        symbol = MaterialSymbols.MoreVert,
+                        contentDescription = stringRes(R.string.nest_overflow_menu),
+                    )
+                }
+                DropdownMenu(
+                    expanded = showHostMenu,
+                    onDismissRequest = onMenuDismiss,
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringRes(R.string.nest_share_action)) },
+                        onClick = onShare,
+                    )
+                    if (isHost) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.nest_edit_title)) },
+                            onClick = onEdit,
+                        )
+                    }
+                }
+            }
+        },
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+            ),
+    )
 }
 
 @Composable
