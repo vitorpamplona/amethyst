@@ -158,7 +158,7 @@ private data class EphemeralChannelLazyKey(
 ) : ChatroomLazyKey
 
 private data class PrivateChatLazyKey(
-    val key: String,
+    val users: HashSet<HexKey>,
 ) : ChatroomLazyKey
 
 private data class FallbackChatroomLazyKey(
@@ -192,13 +192,10 @@ private fun chatroomLazyKey(
         }
 
         is ChatroomKeyable -> {
-            PrivateChatLazyKey(
-                event
-                    .chatroomKey(myPubKey)
-                    .users
-                    .sorted()
-                    .joinToString(","),
-            )
+            // ChatroomKey.users may be a kotlinx PersistentOrderedSet, which
+            // is not Serializable. Copy into a HashSet so the key survives
+            // Bundle round-trips; Set equality stays order-independent.
+            PrivateChatLazyKey(HashSet(event.chatroomKey(myPubKey).users))
         }
 
         else -> {
