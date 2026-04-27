@@ -103,6 +103,13 @@ jobs:
           timeout_minutes: 15
           command: ./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}
 
+      - name: Relax libicu dependency in .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Build portable archives (windows + linux-portable)
         if: matrix.family == 'windows' || matrix.family == 'linux-portable'
         run: |

@@ -159,6 +159,13 @@ jobs:
       - name: Build Desktop Distribution
         run: ./gradlew :desktopApp:${{ matrix.task }}
 
+      - name: Relax libicu dependency in .deb
+        if: matrix.task == 'packageDeb'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main/deb/*.deb
+
       - name: Stop Gradle Daemon
         if: always()
         run: ./gradlew --stop
