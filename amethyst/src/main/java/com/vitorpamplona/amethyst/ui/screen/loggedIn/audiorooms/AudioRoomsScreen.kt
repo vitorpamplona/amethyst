@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms
 
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.create.CreateAudioRoomSheet
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.create.CreateAudioRoomViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.AudioRoomsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -69,7 +73,10 @@ fun AudioRoomsScreen(
     WatchAccountForAudioRoomsScreen(audioRoomsFeedState = audioRoomsFeedContentState, accountViewModel = accountViewModel)
     AudioRoomsFilterAssemblerSubscription(accountViewModel)
 
+    val nestsServers by accountViewModel.account.nestsServers.flow
+        .collectAsStateWithLifecycle()
     var showCreateSheet by remember { mutableStateOf(false) }
+    var showSetupDialog by remember { mutableStateOf(false) }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -87,7 +94,13 @@ fun AudioRoomsScreen(
         },
         floatingButton = {
             FloatingActionButton(
-                onClick = { showCreateSheet = true },
+                onClick = {
+                    if (nestsServers.any { it.startsWith("http") }) {
+                        showCreateSheet = true
+                    } else {
+                        showSetupDialog = true
+                    }
+                },
                 shape = CircleShape,
             ) {
                 Icon(
@@ -119,12 +132,58 @@ fun AudioRoomsScreen(
         }
     }
 
+    if (showSetupDialog) {
+        SetUpAudioServerDialog(
+            defaultUrl = CreateAudioRoomViewModel.DEFAULT_SERVICE_URL,
+            onDismiss = { showSetupDialog = false },
+            onConfirm = {
+                showSetupDialog = false
+                accountViewModel.launchSigner {
+                    try {
+                        accountViewModel.account.sendNestsServersList(
+                            listOf(CreateAudioRoomViewModel.DEFAULT_SERVICE_URL),
+                        )
+                        showCreateSheet = true
+                    } catch (_: Throwable) {
+                        accountViewModel.toastManager.toast(
+                            R.string.audio_rooms,
+                            R.string.audio_room_no_server_save_failed,
+                        )
+                    }
+                }
+            },
+        )
+    }
+
     if (showCreateSheet) {
         CreateAudioRoomSheet(
             accountViewModel = accountViewModel,
             onDismiss = { showCreateSheet = false },
         )
     }
+}
+
+@Composable
+private fun SetUpAudioServerDialog(
+    defaultUrl: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.audio_room_no_server_title)) },
+        text = { Text(stringRes(R.string.audio_room_no_server_body, defaultUrl)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(R.string.audio_room_no_server_use_default))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.audio_room_no_server_cancel))
+            }
+        },
+    )
 }
 
 @Composable

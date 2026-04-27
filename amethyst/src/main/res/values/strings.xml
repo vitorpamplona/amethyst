@@ -556,6 +556,11 @@
     <string name="audio_room_participant_unmute">Unmute</string>
     <string name="audio_room_share_action">Share room</string>
     <string name="audio_room_create_fab">Start space</string>
+    <string name="audio_room_no_server_title">Set up an audio server</string>
+    <string name="audio_room_no_server_body">You haven\'t picked an audio server yet. Add %1$s to your server list and continue?\n\nYou can change this later in Settings.</string>
+    <string name="audio_room_no_server_use_default">Use default</string>
+    <string name="audio_room_no_server_cancel">Cancel</string>
+    <string name="audio_room_no_server_save_failed">Couldn\'t save your audio server list. Try again.</string>
     <string name="audio_room_create_title">Start a new audio room</string>
     <string name="audio_room_create_field_room">Room name</string>
     <string name="audio_room_create_field_summary">What\'s it about?</string>
