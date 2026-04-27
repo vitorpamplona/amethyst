@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,6 +84,15 @@ fun BrowseEmojiSetsScreen(
         isInvertedLayout = false,
         topBar = {
             BrowseEmojiSetsTopBar(accountViewModel, nav)
+        },
+        bottomBar = {
+            AppBottomBar(Route.BrowseEmojiSets, nav, accountViewModel) { route ->
+                if (route == Route.BrowseEmojiSets) {
+                    feedContentState.sendToTop()
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
         },
         accountViewModel = accountViewModel,
     ) {

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
@@ -53,13 +54,14 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 fun AllPeopleListFeedView(
     peopleListModel: PeopleListViewModel,
     followPackModel: FollowPackViewModel,
+    listState: LazyListState = rememberLazyListState(),
     nav: INav,
 ) {
     val peopleListFeedState by peopleListModel.listFlow().collectAsStateWithLifecycle()
     val followPackFeedState by followPackModel.listFlow().collectAsStateWithLifecycle()
 
     LazyColumn(
-        state = rememberLazyListState(),
+        state = listState,
         contentPadding = FeedPadding,
     ) {
         stickyHeader {

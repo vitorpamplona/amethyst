@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -44,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -59,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -70,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 @Composable
 fun ListOfEmojiPacksScreen(
@@ -88,7 +92,8 @@ fun ListOfEmojiPacksScreen(
                 accountViewModel.account.deleteOwnedEmojiPack(pack.identifier)
             }
         },
-        nav,
+        accountViewModel = accountViewModel,
+        nav = nav,
     )
 }
 
@@ -101,11 +106,24 @@ fun ListOfEmojiPacksFeed(
     openEmojiPack: (OwnedEmojiPack) -> Unit,
     editEmojiPack: (OwnedEmojiPack) -> Unit,
     deleteEmojiPack: (OwnedEmojiPack) -> Unit,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val gridState = rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
             TopBarWithBackButton(caption = stringRes(R.string.emoji_packs_title), nav)
+        },
+        bottomBar = {
+            AppBottomBar(Route.EmojiPacks, nav, accountViewModel) { route ->
+                if (route == Route.EmojiPacks) {
+                    coroutineScope.launch { gridState.animateScrollToItem(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
         },
         floatingActionButton = {
             EmojiPackFab(onAddPack = addEmojiPack)
@@ -125,6 +143,7 @@ fun ListOfEmojiPacksFeed(
                 openItem = openEmojiPack,
                 editItem = editEmojiPack,
                 deleteItem = deleteEmojiPack,
+                gridState = gridState,
             )
         }
     }
@@ -138,6 +157,7 @@ fun ListOfEmojiPacksFeedView(
     openItem: (OwnedEmojiPack) -> Unit,
     editItem: (OwnedEmojiPack) -> Unit,
     deleteItem: (OwnedEmojiPack) -> Unit,
+    gridState: LazyGridState = rememberLazyGridState(),
 ) {
     val feedState by listSource.collectAsStateWithLifecycle()
     val selectedPacks by selectedPacksFlow.collectAsStateWithLifecycle()
@@ -158,7 +178,7 @@ fun ListOfEmojiPacksFeedView(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 160.dp),
-                state = rememberLazyGridState(),
+                state = gridState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding =
                     androidx.compose.foundation.layout

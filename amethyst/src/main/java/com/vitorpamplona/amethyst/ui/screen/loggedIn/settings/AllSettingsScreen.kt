@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -90,13 +91,23 @@ fun AllSettingsScreen(
     val scope = rememberCoroutineScope()
     var showResetMarmotDialog by remember { mutableStateOf(false) }
     var isResettingMarmot by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.settings), nav)
         },
+        bottomBar = {
+            AppBottomBar(Route.AllSettings, nav, accountViewModel) { route ->
+                if (route == Route.AllSettings) {
+                    scope.launch { scrollState.animateScrollTo(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
+        },
     ) { padding ->
-        Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.padding(padding).verticalScroll(scrollState)) {
             SettingsSectionHeader(R.string.account_settings)
             SettingsNavigationRow(
                 title = R.string.relay_setup,
