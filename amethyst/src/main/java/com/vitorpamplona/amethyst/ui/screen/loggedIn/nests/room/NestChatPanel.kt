@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -97,7 +98,7 @@ import kotlinx.coroutines.launch
  * which are pinned to the channel-VM model — out of scope here.
  */
 @Composable
-internal fun NestChatPanel(
+internal fun ColumnScope.NestChatPanel(
     event: MeetingSpaceEvent,
     viewModel: NestViewModel,
     accountViewModel: AccountViewModel,
@@ -120,7 +121,7 @@ internal fun NestChatPanel(
     val routeForLastRead = remember(event) { "NestChat/${event.address().toValue()}" }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.fillMaxWidth().height(NEST_CHAT_PANEL_HEIGHT)) {
+        Box(modifier = Modifier.fillMaxWidth().weight(1f, fill = true)) {
             if (messages.isEmpty()) {
                 Text(
                     text = stringRes(R.string.nest_chat_empty),
@@ -265,7 +266,5 @@ private fun NestChatComposer(
         )
     }
 }
-
-private val NEST_CHAT_PANEL_HEIGHT = 420.dp
 
 private val NEST_CHAT_NO_OP_NOTE: (com.vitorpamplona.amethyst.model.Note) -> Unit = {}
