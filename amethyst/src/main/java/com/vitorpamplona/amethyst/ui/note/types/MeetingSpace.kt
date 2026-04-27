@@ -99,6 +99,7 @@ fun RenderMeetingSpaceEventInner(
     val roomName = remember(eventUpdates) { noteEvent.room() }
     val summary = remember(eventUpdates) { noteEvent.summary() }
     val status = remember(eventUpdates) { noteEvent.status() }
+    val starts = remember(eventUpdates) { noteEvent.starts() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
 
     Row(
@@ -135,10 +136,7 @@ fun RenderMeetingSpaceEventInner(
                 }
 
                 MeetingSpaceStatusTag.STATUS.PLANNED -> {
-                    // Planned audio rooms reuse the "open" badge for
-                    // the v1 list; a future commit can render a
-                    // dedicated "Scheduled — starts at HH:MM" chip.
-                    MeetingSpaceOpenFlag()
+                    MeetingSpacePlannedFlag(startsUnixSec = starts)
                 }
 
                 null -> {}
@@ -334,4 +332,45 @@ fun MeetingSpaceClosedFlag() {
                     .padding(horizontal = 5.dp)
             },
     )
+}
+
+/**
+ * Status badge for kind-30312 rooms with `status=planned`. Renders
+ * "SCHEDULED" plus a localized "Starts <human-time>" subline when
+ * the event ships a `["starts", "<unix-seconds>"]` tag. Falls back
+ * to just "SCHEDULED" when the start time is missing or in the
+ * past — matches nostrnests' web client (which also pivots to
+ * "Live now" once the moment passes).
+ */
+@Composable
+fun MeetingSpacePlannedFlag(startsUnixSec: Long?) {
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            text = stringRes(id = R.string.meeting_space_planned_tag),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier =
+                remember {
+                    Modifier
+                        .clip(SmallBorder)
+                        .background(Color(0xFF1E88E5))
+                        .padding(horizontal = 5.dp)
+                },
+        )
+        val now = System.currentTimeMillis() / 1000L
+        if (startsUnixSec != null && startsUnixSec > now) {
+            val pretty =
+                remember(startsUnixSec) {
+                    java.text.DateFormat
+                        .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                        .format(java.util.Date(startsUnixSec * 1000L))
+                }
+            Text(
+                text = stringRes(R.string.meeting_space_planned_starts_at, pretty),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

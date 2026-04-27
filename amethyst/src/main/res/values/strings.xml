@@ -1180,6 +1180,8 @@
     <string name="meeting_space_open_tag">OPEN</string>
     <string name="meeting_space_private_tag">PRIVATE</string>
     <string name="meeting_space_closed_tag">CLOSED</string>
+    <string name="meeting_space_planned_tag">SCHEDULED</string>
+    <string name="meeting_space_planned_starts_at">Starts %1$s</string>
     <string name="are_you_sure_you_want_to_log_out">Logging out deletes all your local information. Make sure to have your private keys backed up to avoid losing your account. Do you want to continue?</string>
     <string name="followed_tags">Followed Tags</string>
 
