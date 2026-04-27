@@ -139,6 +139,13 @@ fun AllSettingsScreen(
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.nests_servers_title,
+                icon = MaterialSymbols.CloudUpload,
+                tint = tint,
+                onClick = { nav.nav(Route.EditNestsServers) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.profile_badges_title,
                 icon = MaterialSymbols.MilitaryTech,
                 tint = tint,

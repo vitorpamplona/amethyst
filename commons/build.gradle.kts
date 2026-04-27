@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.serialization)
 }
 
 kotlin {
@@ -47,6 +48,11 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(project(":quartz"))
+                // Audio-rooms ViewModel needs the listener orchestration + audio
+                // pipeline types (NestsListener, AudioRoomPlayer, AudioPlayer
+                // interface). Concrete OkHttp/Quic/MediaCodec/AudioTrack actuals
+                // stay in :nestsClient's platform source sets.
+                implementation(project(":nestsClient"))
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)

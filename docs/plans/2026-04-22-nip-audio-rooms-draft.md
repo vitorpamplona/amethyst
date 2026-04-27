@@ -2,6 +2,12 @@
 
 `draft` `optional`
 
+> **Revision 2026-04-26.** Replaces the IETF MoQ-transport / `GET <service>/<room-d-tag>`
+> sketch from the original draft. The wire described here matches the
+> `nostrnests/nests` + `kixelated/moq` reference deployment running in
+> production today, and is what `amethyst/nestsClient` implements.
+> See "Reconciliation with previous spec drafts" near the bottom.
+
 ## Abstract
 
 This NIP specifies the client/server control plane and real-time audio
@@ -10,9 +16,10 @@ or speaker. It closes the gap between NIP-53's room discovery (which
 defines only *what* a room is) and what an audio-capable client must do
 to actually hear and speak in it.
 
-A standard, vendor-neutral profile lets multiple server implementations
-interoperate with multiple clients. A client that follows this NIP will
-work against any server that advertises compliance, and vice versa.
+The transport is **moq-lite Lite-03** over WebTransport with a thin
+NIP-98-authenticated HTTP `/auth` endpoint that mints an ES256 JWT. A
+client that follows this NIP will work against any server speaking the
+same wire shape.
 
 ## Dependencies
 
@@ -21,9 +28,12 @@ work against any server that advertises compliance, and vice versa.
   and kind `1311` (Live Activity Chat).
 - [NIP-98: HTTP Auth](https://github.com/nostr-protocol/nips/blob/master/98.md)
   defines kind `27235` and the `Authorization: Nostr <base64-event>` header.
-- [IETF `moq-transport`](https://datatracker.ietf.org/doc/draft-ietf-moq-transport/)
-  and [IETF `webtransport-http3`](https://datatracker.ietf.org/doc/draft-ietf-webtrans-http3/)
-  provide the audio transport substrate.
+- [IETF `webtransport-http3`](https://datatracker.ietf.org/doc/draft-ietf-webtrans-http3/)
+  carries the audio transport.
+- **moq-lite Lite-03** (kixelated/moq) — the application-level framing
+  on top of WebTransport. Selected by ALPN `"moq-lite-03"`. Wire spec:
+  `kixelated/moq-rs/rs/moq-lite/src/`. NOT to be confused with IETF
+  `draft-ietf-moq-transport`, which is wire-incompatible.
 
 ## Terminology
 
@@ -72,27 +82,62 @@ publish audio via the MoQ session.
 Used per NIP-53 with no changes. Each room's chat is scoped by the `a` tag
 pointing at the `30312` event.
 
+### Kind 4312 (Admin Command) — moderation
+
+Ephemeral event used by hosts and admins to issue moderation actions:
+
+```
+{ "kind": 4312, "content": "",
+  "tags": [
+    ["a", "30312:<host-pubkey>:<room-d-tag>"],
+    ["p", "<target-pubkey>"],
+    ["action", "kick" | ...] ] }
+```
+
+Recipients matching the `p` tag MUST verify the signer is a `host` or
+`admin` per the room's current `30312` event before acting. The
+target self-disconnects on `action=kick`. The host SHOULD also
+re-publish the `30312` with the target's `p`-tag removed so any
+future joiner sees the updated roster.
+
+### Kind 10112 (Audio-room server list)
+
+Replaceable event listing a user's preferred MoQ host servers. Wire
+shape mirrors NIP-B7's BlossomServersEvent (kind 10063):
+
+```
+{ "kind": 10112,
+  "tags": [
+    ["alt", "Audio-room (nests) MoQ servers used by the author"],
+    ["server", "https://moq.nostrnests.com"],
+    ["server", "https://moq.example.org"],
+    ... ],
+  "content": "" }
+```
+
+Each `["server", <baseUrl>]` URL is a moq-auth + moq-relay base URL.
+Clients SHOULD consume this event when "starting a new space" to
+default the `service` / `endpoint` tag fields on the kind-30312
+event they're about to publish.
+
 ## HTTP control plane
 
 ### Base URL
 
-The `service` tag from the kind `30312` event is the base URL. All control-
-plane requests are constructed as:
+The `service` tag from the kind `30312` event is the base URL of the
+auth sidecar (a.k.a. `moq-auth`). It exposes exactly two routes:
 
 ```
-GET  <service>/<room-d-tag>            — room-info / join
+POST <service>/auth                      — mint a JWT for one room+role
+GET  <service>/.well-known/jwks.json     — public keys for JWT verification
 ```
 
-where `<room-d-tag>` is the `d` tag value of the kind `30312` event,
-URL-path-encoded.
-
-The server MAY expose additional paths under the same base (e.g.
-`<service>/` for server metadata, `<service>/.well-known/nostr-audio-rooms`
-for discovery). This NIP only specifies `<service>/<room-d-tag>`.
+The server SHOULD also expose `GET <service>/health` returning
+`{"status":"ok"}` for liveness probes. Anything else SHOULD return 404.
 
 ### Authentication
 
-Every request MUST carry a NIP-98 `Authorization` header:
+Every `POST /auth` request MUST carry a NIP-98 `Authorization` header:
 
 ```
 Authorization: Nostr <base64(kind-27235-event)>
@@ -101,154 +146,190 @@ Authorization: Nostr <base64(kind-27235-event)>
 The kind `27235` event MUST have:
 
 - `["u", "<fully-qualified-URL-being-requested>"]`
-- `["method", "GET"]` (or `POST`, `DELETE`, etc. matching the request verb)
+- `["method", "POST"]`
+- `["payload", "<sha256-hex of the request body>"]` (NIP-98 §2.2)
 - `created_at` within 60 s of the server's clock
 - A valid signature
 
-The server SHOULD reject requests older than 60 s with `401 Unauthorized`.
-Servers MAY also reject requests whose signer isn't allowed in the room
-(e.g. the room is `private` and the signer isn't on the allow-list).
+The server MUST reject requests older than 60 s with `401 Unauthorized`.
 
 ### Join / room-info response
 
-`GET <service>/<room-d-tag>` with a valid NIP-98 header returns a JSON body
-with `Content-Type: application/json`:
+`POST <service>/auth` body:
 
 ```json
-{
-  "endpoint": "https://relay.example.com:4443/moq",
-  "token": "eyJhbGciOi…",
-  "transport": "webtransport",
-  "codec": "opus",
-  "sample_rate": 48000,
-  "frame_duration_ms": 20,
-  "moq_version": "draft-17"
-}
+{ "namespace": "nests/30312:<host-pubkey>:<room-d-tag>", "publish": false }
 ```
 
-Fields:
+The `namespace` MUST match the regex
+`^nests/\d+:[0-9a-f]{64}:[a-zA-Z0-9._-]+$`
+(`<event-kind>:<host-pubkey>:<d-tag>`, where `<event-kind>` is `30312`
+for now). `publish` is `true` for a host/speaker minting a publish
+token, `false` (or omitted) for a listener.
 
-| Field | Type | Required | Meaning |
-|---|---|---|---|
-| `endpoint` | string (https URL) | yes | WebTransport URL the client connects to. |
-| `token` | string | yes | Opaque bearer token the client passes to the WebTransport layer (see below). |
-| `transport` | string | no, defaults to `"webtransport"` | Reserved for future transports. Clients MUST fail closed on unknown values. |
-| `codec` | string | no, defaults to `"opus"` | Audio codec name. Reserved for future codecs. Clients MUST fail closed on unknown values. |
-| `sample_rate` | integer | no, defaults to `48000` | Samples per second. |
-| `frame_duration_ms` | integer | no, defaults to `20` | Audio frame duration. |
-| `moq_version` | string | no, defaults to server's preferred | Identifier of the MoQ-transport draft the server speaks (e.g. `"draft-17"`). Clients MUST include this version (and nothing else) in CLIENT_SETUP. |
+Response on success:
 
-Unknown fields MUST be ignored by the client to allow forward-compatible
-server extensions.
+```json
+{ "token": "eyJhbGciOi…" }
+```
 
-Error responses are standard HTTP status codes with an optional JSON body
-`{"error": "<short-code>", "reason": "<human-readable>"}`:
+The `token` is an ES256 JWT signed by the `service` server's keypair;
+its public key is available at `<service>/.well-known/jwks.json`. The
+relay (`moq-relay`) refreshes the JWKS every 30 s.
+
+JWT claims:
+
+| Claim | Meaning |
+|---|---|
+| `root` | Echoed `namespace` value. The relay matches this against the WT URL path. |
+| `get` | `[""]` — listener may subscribe to anything under `root`. |
+| `put` | `[<requester's pubkey>]` — publisher may only `ANNOUNCE` under `root/<pubkey>`. Present only when `publish: true`. |
+| `iat` / `exp` | Standard. Token lifetime is **600 s**; clients re-mint on expiry. |
+
+Error responses:
 
 | Status | When |
 |---|---|
-| `401` | NIP-98 missing, expired, or signature invalid. |
-| `403` | Signer isn't allowed in this room (e.g. room `closed`, signer blocked). |
-| `404` | Room `d` tag unknown to this server. |
-| `410` | Room has ended. |
-| `503` | Server is healthy but audio backend is unavailable. |
+| `400` | Body missing / malformed JSON / `namespace` fails the regex. |
+| `401` | Authorization missing, signature invalid, `u`/`method`/`payload` mismatch, or `created_at` outside ±60 s. |
+| `429` | Rate-limited (≥ 20 mint requests per IP per 60 s). |
+
+There is **no per-room HTTP info endpoint, no `/permissions`, no
+`/recording*`** — the only mutable per-room state lives in Nostr
+events (kind 30312 for the room, 10312 for presence, 1311 for chat,
+etc.).
 
 ## Audio transport
 
 ### WebTransport
 
-Clients open a WebTransport session against the `endpoint` URL using the
-Extended CONNECT handshake ([RFC 9220](https://www.rfc-editor.org/rfc/rfc9220)
-+ the [WebTransport-HTTP/3 draft](https://datatracker.ietf.org/doc/draft-ietf-webtrans-http3/)).
-The HTTP CONNECT request MUST carry:
+Clients open a WebTransport session against the `endpoint` URL using
+the Extended CONNECT handshake
+([RFC 9220](https://www.rfc-editor.org/rfc/rfc9220) +
+[`webtransport-http3`](https://datatracker.ietf.org/doc/draft-ietf-webtrans-http3/)):
 
 ```
 :method: CONNECT
 :protocol: webtransport
 :scheme: https
 :authority: <host[:port] from endpoint>
-:path: <path from endpoint>
-Authorization: Bearer <token from room-info response>
+:path: /<namespace>?jwt=<token>
 ```
 
-Servers MUST:
+The path component is the **`namespace`** the JWT was minted for —
+i.e. exactly the value sent in the `POST /auth` body. The relay
+matches it against `claims.root` and rejects any mismatch with HTTP
+401 (`IncorrectRoot`). The token is delivered as the **`?jwt=`** query
+parameter; the relay does **not** inspect the `Authorization` header.
 
-- advertise `SETTINGS_ENABLE_CONNECT_PROTOCOL = 1` ([RFC 8441](https://www.rfc-editor.org/rfc/rfc8441)),
-- advertise `SETTINGS_ENABLE_WEBTRANSPORT = 1`,
-- advertise `SETTINGS_H3_DATAGRAM = 1` ([RFC 9297](https://www.rfc-editor.org/rfc/rfc9297)).
+Servers MUST advertise `SETTINGS_ENABLE_CONNECT_PROTOCOL = 1`,
+`SETTINGS_ENABLE_WEBTRANSPORT = 1`, and `SETTINGS_H3_DATAGRAM = 1`.
 
-### MoQ session
+### moq-lite session
 
-After the WebTransport session is open, the client opens its first
-bidirectional stream as the MoQ control stream and sends `CLIENT_SETUP`
-advertising the `moq_version` from the room-info response. The server replies
-with `SERVER_SETUP` selecting that version, or closes the session.
+The application-level framing is **moq-lite Lite-03** (kixelated/moq).
+The variant is selected by the WebTransport ALPN — clients SHOULD
+advertise `"moq-lite-03"` (and MAY include the legacy `"moql"`).
 
-### Track namespace + name
+There is **no in-band SETUP message** in Lite-03 — the WebTransport
+handshake itself is the handshake. After the WT session opens, both
+sides go straight to opening per-purpose streams.
 
-A speaker's audio track is published by the server and subscribed-to by
-clients under:
+### Per-bidi `ControlType` discriminator
+
+Every client-initiated bidi opens with a single varint
+`ControlType` byte that selects the message family:
+
+| Code | Name |
+|---|---|
+| 1 | Announce (subscriber-of-announces ↔ publisher) |
+| 2 | Subscribe (subscriber → publisher) |
+| 3 | Fetch (decl. only; not used for live audio) |
+| 4 | Probe (bitrate hint) |
+
+Body framing on every bidi/uni stream is `varint(size) + payload bytes`.
+Strings are `varint(length) + UTF-8`. Integers are RFC 9000 §16
+varints.
+
+### Speaker — publisher path
+
+The relay opens both `Announce` and `Subscribe` bidis **to** the
+publisher (publisher accepts inbound bidis). For each:
+
+- `Announce` body: `AnnouncePlease { prefix: string }`. The publisher
+  replies `Announce { status: u8 (0=Ended,1=Active), suffix: string,
+  hops: u62 }` with `status=1`, `suffix=<own pubkey>`. Publishers
+  MUST emit `status=0` on graceful shutdown.
+- `Subscribe` body: `Subscribe { id: u62, broadcast: string,
+  track: string, priority: u8, ordered: u8, maxLatencyMillis: varint,
+  startGroup: varint, endGroup: varint }`. The publisher replies
+  `SubscribeOk { priority, ordered, maxLatencyMillis, startGroup,
+  endGroup }`.
+
+Per-group audio bytes flow on **client-initiated uni streams** the
+publisher opens. Each uni stream has the layout:
 
 ```
-track_namespace = [ <room-d-tag> ]
-track_name      = <speaker-pubkey-hex>     (64 lowercase hex chars)
+DataType varint = 0 (Group)
+GroupHeader (size-prefixed): { subscribe: u62, sequence: u62 }
+frames until QUIC FIN: { size: varint, payload: <Opus packet> }
 ```
 
-The namespace is a **one-element tuple** containing the room's `d` tag. It is
-intentionally vendor-neutral: there is no `"nests"` or server-brand prefix.
+### Listener — subscriber path
 
-Rationale: the namespace is uniquely keyed by the NIP-53 room id and is
-sufficient for a client to subscribe without knowing anything about the
-server's brand. Multiple servers hosting rooms with the same `d` tag is
-already not a concern — a `d` tag is unique under a host pubkey, and the
-room-info response identifies exactly which server's MoQ endpoint the
-client must connect to.
+A listener opens its own client-initiated bidis to the relay:
 
-### Audio objects
+- `Announce` (ControlType=1) with
+  `AnnouncePlease { prefix: <empty or namespace prefix> }` to receive
+  a flow of `Announce` updates from the relay (one per active
+  publisher).
+- `Subscribe` (ControlType=2) per `(broadcast, track)` pair the listener
+  wants. The relay replies `SubscribeOk` and forwards group uni
+  streams as the publisher emits them.
 
-Each OBJECT on a speaker's track carries one Opus packet as its payload:
+For a nests audio room the listener's wire usage per speaker is:
 
-- Opus encapsulated in **raw packet form** (no Ogg / no TOC-prefix), as
-  produced by `libopus` / Android `MediaCodec("audio/opus")` encoder output.
-- `sample_rate` from the room-info response (default 48 000 Hz).
-- `frame_duration_ms` from the room-info response (default 20 ms).
-- Mono (single channel), signed 16-bit PCM domain, VBR encoding.
+| Field | Value |
+|---|---|
+| `broadcast` | `<speaker-pubkey-hex>` (single string, no `nests/` prefix) |
+| `track` | `"audio/data"` |
+| Optional metadata track | `"catalog.json"` (JSON description of the broadcast — clients MAY skip and just subscribe to `audio/data`). |
 
-Object delivery MAY use either:
+Path normalisation (strip leading/trailing/duplicate `/`) is
+**mandatory** on every wire boundary; `"/foo//bar/"` and `"foo/bar"`
+MUST round-trip identically.
 
-- **OBJECT_DATAGRAM** (lowest latency, lossy) — recommended for live audio.
-- **STREAM_HEADER_SUBGROUP** uni-streams (reliable) — MAY be used by servers
-  that need delivery guarantees; clients MUST support receiving both.
+### Audio frame format
 
-`group_id` on each object is the speaker's monotonic group counter (one
-group per speaker session). `object_id` is the zero-based Opus packet index
-within the group. `publisher_priority` is `0x80` unless the server has
-reason to vary it.
+Each frame payload on the `audio/data` track is one **Opus packet** in
+raw form (no Ogg, no TOC prefix), as produced by `libopus` /
+Android `MediaCodec("audio/opus")` output:
 
-### Server-to-client vs. client-to-server audio
+- 48 000 Hz, mono, signed-16-bit PCM domain, 20 ms frame duration, VBR.
 
-A **listener** SUBSCRIBEs to each speaker's track namespace + track name.
-The server MUST accept SUBSCRIBEs from any authenticated client (subject to
-its access control).
+There is **no per-frame envelope** beyond the size varint — no
+timestamp, no codec config, no flags. Receivers reconstruct timing
+from frame arrival + the group sequence.
 
-A **speaker** ANNOUNCEs `[ <room-d-tag> ]` and publishes objects on track
-name `<speaker-pubkey-hex>`. The server MUST verify that the announcing
-pubkey is listed in the room's `p` tag set with role `host` or `speaker`
-**at the current moment** (the room event is replaceable — the set can
-change). On role revocation, the server MUST close the publisher's track.
+### Unsubscribe / close
 
-### Leaving
+There is **no UNSUBSCRIBE message**: a subscriber FINs the send side
+of the subscribe bidi and the relay tears down. A publisher closes by
+emitting `Announce { status: 0=Ended }` on every active announce bidi
+and FINing the current group's uni stream.
 
-To leave, the client SHOULD:
+Errors on any stream are conveyed by `RESET_STREAM` with a u32 error
+code; there is no SUBSCRIBE_ERROR / ANNOUNCE_ERROR message.
 
-1. UNSUBSCRIBE every track it had open.
-2. If it was a speaker, send UNANNOUNCE + `SubscribeDone` for its own track.
-3. Publish a final kind `10312` presence event (optional, improves UX for
-   other peers) with `["muted","1"]` and without `["hand","1"]`.
-4. Close the WebTransport session with capsule type `0x2843`
+### Leaving the room (Nostr-side)
+
+In addition to the wire-level cleanup above, a leaving client SHOULD:
+
+1. Publish a final kind `10312` presence event with
+   `["muted","1"]`, `["onstage","0"]`, no `["hand","1"]` to flush
+   stale UI on other peers.
+2. Close the WebTransport session with capsule type `0x2843`
    (`WT_CLOSE_SESSION`, code `0`).
-
-The server SHOULD treat 30 s without a kind `10312` refresh (per NIP-53) as
-"left" for UI purposes.
 
 ## Chat
 
@@ -291,26 +372,31 @@ A client claiming this NIP MUST:
 
 ## Reference implementation
 
-A compliant Kotlin/Android reference client is in development at
-[`amethyst/nestsClient`](../..) — see `docs/plans/2026-04-22-pure-kotlin-quic-webtransport-plan.md`
-for the transport work-in-progress.
+A compliant Kotlin/Android reference client ships in
+[`amethyst/nestsClient`](../..). The reference server is the
+nostrnests stack:
+[`nostrnests/nests`](https://github.com/nostrnests/nests) (auth
+sidecar) +
+[`kixelated/moq`](https://github.com/kixelated/moq) (relay).
 
-## Known divergences from current nostrnests/nests servers
+This NIP describes the wire as the reference server speaks it — there
+is no "vendor-neutral" alternative being trialled. Any server claiming
+compliance MUST speak the moq-lite Lite-03 framing detailed above and
+the `POST /auth` HTTP shape verbatim.
 
-At the time of writing, existing `nostrnests/nests` deployments use:
+## Reconciliation with previous spec drafts
 
-- MoQ track namespace `[ "nests", <d-tag> ]` (two elements, `"nests"` prefix).
-  This NIP specifies `[ <d-tag> ]` (one element). Existing nests servers
-  SHOULD accept both for a transition period; new deployments SHOULD use the
-  one-element form.
-- A `/api/v1/nests/<d-tag>` path convention. This NIP leaves the path
-  entirely to the `service` tag — servers are free to pick any path.
+Earlier drafts of this NIP described the audio transport in terms of
+IETF `draft-ietf-moq-transport` (CLIENT_SETUP / SERVER_SETUP, namespace
+tuples, OBJECT_DATAGRAM) and a `GET <service>/<room-d-tag>` HTTP
+control plane returning `{endpoint, token, codec, sample_rate, …}`.
 
-A "compliance" phase is proposed where a server can advertise
-`"nip_xx": true` in its room-info JSON response to signal it implements
-this NIP verbatim. Clients MAY use that flag to choose the vendor-neutral
-namespace when present, and fall back to the legacy nests convention when
-absent.
+Both have been **superseded**. nostrnests's reference deployment uses
+`POST /auth` with a `{namespace, publish}` body returning `{token}`,
+and runs moq-lite Lite-03 (single-string broadcast/track names, group-
+per-uni-stream framing, no in-band SETUP). IETF MoQ-transport remains
+a possible future ALPN, but no audio-rooms server implements it today
+and this NIP no longer specifies it.
 
 ## Security considerations
 

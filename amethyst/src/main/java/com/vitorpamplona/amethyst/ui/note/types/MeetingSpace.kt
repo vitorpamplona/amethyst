@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -99,6 +100,8 @@ fun RenderMeetingSpaceEventInner(
     val roomName = remember(eventUpdates) { noteEvent.room() }
     val summary = remember(eventUpdates) { noteEvent.summary() }
     val status = remember(eventUpdates) { noteEvent.status() }
+    val starts = remember(eventUpdates) { noteEvent.starts() }
+    val recording = remember(eventUpdates) { noteEvent.recording() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
 
     Row(
@@ -134,6 +137,10 @@ fun RenderMeetingSpaceEventInner(
                     MeetingSpaceClosedFlag()
                 }
 
+                MeetingSpaceStatusTag.STATUS.PLANNED -> {
+                    MeetingSpacePlannedFlag(startsUnixSec = starts)
+                }
+
                 null -> {}
             }
         }
@@ -153,6 +160,62 @@ fun RenderMeetingSpaceEventInner(
     }
 
     RenderParticipants(participants, accountViewModel, nav)
+
+    // In-feed CTA. Live / scheduled rooms get a Join button; closed
+    // rooms with a recording get a "Listen to recording" button so
+    // audience members who missed the live session can listen back.
+    // Closed rooms without a recording stay button-less — there's
+    // nothing to enter.
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        if (status == MeetingSpaceStatusTag.STATUS.CLOSED) {
+            recording?.let {
+                ListenToRecordingButton(url = it, accountViewModel = accountViewModel)
+            }
+        } else {
+            com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.JoinNestButton(
+                event = noteEvent,
+                accountViewModel = accountViewModel,
+            )
+        }
+    }
+}
+
+/**
+ * Hand off a kind-30312 `recording` URL to the system media
+ * player via ACTION_VIEW. Most users have a podcast / audio app
+ * registered for `https://...mp3`-style URLs; the system picker
+ * lets them choose. Stays out of the in-app audio path on
+ * purpose — Amethyst doesn't ship its own audio player surface.
+ */
+@Composable
+private fun ListenToRecordingButton(
+    url: String,
+    accountViewModel: AccountViewModel,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val noAppMessage = stringRes(R.string.nest_no_app_to_open_link)
+    androidx.compose.material3.OutlinedButton(onClick = {
+        val launched =
+            runCatching {
+                context.startActivity(
+                    android.content
+                        .Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }.isSuccess
+        if (!launched) {
+            accountViewModel.toastManager.toast(
+                R.string.nest_chat_send_failed_title,
+                noAppMessage,
+                user = null,
+            )
+        }
+    }) {
+        Text(stringRes(R.string.nest_listen_to_recording))
+    }
 }
 
 @Composable
@@ -186,6 +249,15 @@ fun RenderMeetingRoomEventInner(
     val status = remember(eventUpdates) { noteEvent.status() }
     val starts = remember(eventUpdates) { noteEvent.starts() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
+    val interactiveRoom = remember(eventUpdates) { noteEvent.interactiveRoom() }
+
+    interactiveRoom?.let { spaceTag ->
+        ParentMeetingSpaceLink(
+            spaceAddress = spaceTag.address,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -228,6 +300,125 @@ fun RenderMeetingRoomEventInner(
     }
 
     RenderParticipants(participants, accountViewModel, nav)
+}
+
+/**
+ * Small "In <Space Name>" row rendered above a kind-30313
+ * [MeetingRoomEvent] so users see which kind-30312 space the
+ * meeting belongs to. Resolves the addressable note for the parent
+ * space; if the kind-30312 hasn't been seen yet the link still
+ * renders with a placeholder name and tapping navigates to its
+ * thread (which auto-fetches the event). When the parent address
+ * doesn't resolve to a kind-30312 we render nothing — keeping the
+ * card free of broken links.
+ */
+@Composable
+private fun ParentMeetingSpaceLink(
+    spaceAddress: com.vitorpamplona.quartz.nip01Core.core.Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (spaceAddress.kind != MeetingSpaceEvent.KIND) return
+
+    com.vitorpamplona.amethyst.ui.note.LoadAddressableNote(
+        address = spaceAddress,
+        accountViewModel = accountViewModel,
+    ) { spaceNote ->
+        spaceNote ?: return@LoadAddressableNote
+        val spaceEvent = spaceNote.event as? MeetingSpaceEvent
+        val spaceName =
+            spaceEvent?.room()?.ifBlank { null }
+                ?: stringRes(R.string.meeting_room_in_space_unknown)
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        nav.nav {
+                            com.vitorpamplona.amethyst.ui.navigation.routes.routeFor(
+                                spaceNote,
+                                accountViewModel.account,
+                            )
+                        }
+                    }.padding(vertical = 4.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.meeting_room_in_space, spaceName),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * Inline renderer for kind-10312 [MeetingRoomPresenceEvent] events.
+ * The event's `content` is empty; the interesting bits are the
+ * presence flags. Render a one-line italic status — "@user · raised
+ * their hand" — so a presence event that leaks into a feed surface
+ * outside the room (search results, thread view of a quoted
+ * presence, …) renders as a status note instead of an empty card.
+ *
+ * The active room's chat panel does NOT render presence events at
+ * all — `ChannelFeedFilter` filters them out so the chat stays
+ * just chat. This composable is the fallback for everything else.
+ */
+@Composable
+fun RenderMeetingRoomPresence(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent ?: return
+
+    val handRaised = remember(event) { event.handRaised() == true }
+    val publishing = remember(event) { event.publishing() == true }
+    val onstage = remember(event) { event.onstage() == true }
+
+    val stateRes =
+        when {
+            !publishing && !onstage && !handRaised -> R.string.nest_presence_left
+            handRaised -> R.string.nest_presence_raised_hand
+            onstage && publishing -> R.string.nest_presence_speaking
+            onstage -> R.string.nest_presence_on_stage
+            else -> R.string.nest_presence_listening
+        }
+
+    val user =
+        remember(event.pubKey) {
+            com.vitorpamplona.amethyst.model.LocalCache
+                .getOrCreateUser(event.pubKey)
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clickable { nav.nav(routeFor(user)) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ClickableUserPicture(user, 20.dp, accountViewModel)
+        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+        UsernameDisplay(
+            baseUser = user,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+            accountViewModel = accountViewModel,
+        )
+        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+        Text(
+            text = stringRes(stateRes),
+            style =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                ),
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
 }
 
 @Composable
@@ -327,4 +518,45 @@ fun MeetingSpaceClosedFlag() {
         fontSize = 16.sp,
         modifier = MeetingSpaceClosedModifier,
     )
+}
+
+/**
+ * Status badge for kind-30312 rooms with `status=planned`. Renders
+ * "SCHEDULED" plus a localized "Starts <human-time>" subline when
+ * the event ships a `["starts", "<unix-seconds>"]` tag. Falls back
+ * to just "SCHEDULED" when the start time is missing or in the
+ * past — matches nostrnests' web client (which also pivots to
+ * "Live now" once the moment passes).
+ */
+@Composable
+fun MeetingSpacePlannedFlag(startsUnixSec: Long?) {
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            text = stringRes(id = R.string.meeting_space_planned_tag),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier =
+                remember {
+                    Modifier
+                        .clip(SmallBorder)
+                        .background(Color(0xFF1E88E5))
+                        .padding(horizontal = 5.dp)
+                },
+        )
+        val now = System.currentTimeMillis() / 1000L
+        if (startsUnixSec != null && startsUnixSec > now) {
+            val pretty =
+                remember(startsUnixSec) {
+                    java.text.DateFormat
+                        .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                        .format(java.util.Date(startsUnixSec * 1000L))
+                }
+            Text(
+                text = stringRes(R.string.meeting_space_planned_starts_at, pretty),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

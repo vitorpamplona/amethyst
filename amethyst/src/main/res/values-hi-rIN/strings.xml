@@ -458,11 +458,11 @@
     <string name="public_chats">सार्वजनिक चर्चा</string>
     <string name="follow_packs">अनुचरण पोटलियाँ</string>
     <string name="live_streams">सीधा प्रसारण</string>
-    <string name="audio_rooms">ध्वनि शाला</string>
-    <string name="audio_room_stage">मंच</string>
-    <string name="audio_room_audience">श्रोतागण</string>
-    <string name="audio_room_raise_hand">हाथ उठाएँ</string>
-    <string name="audio_room_lower_hand">हाथ नीचे करें</string>
+    <string name="nests">ध्वनि शाला</string>
+    <string name="nest_stage">मंच</string>
+    <string name="nest_audience">श्रोतागण</string>
+    <string name="nest_raise_hand">हाथ उठाएँ</string>
+    <string name="nest_lower_hand">हाथ नीचे करें</string>
     <string name="longs">चलचित्र</string>
     <string name="articles">लेख</string>
     <string name="private_bookmarks">निजी स्मर्तव्य</string>

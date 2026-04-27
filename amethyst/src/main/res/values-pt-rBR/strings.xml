@@ -456,11 +456,11 @@
     <string name="public_chats">Chats públicos</string>
     <string name="follow_packs">Pacotes de seguidos</string>
     <string name="live_streams">Transmissões ao vivo</string>
-    <string name="audio_rooms">Salas de áudio</string>
-    <string name="audio_room_stage">Palco</string>
-    <string name="audio_room_audience">Plateia</string>
-    <string name="audio_room_raise_hand">Levantar mão</string>
-    <string name="audio_room_lower_hand">Abaixar mão</string>
+    <string name="nests">Salas de áudio</string>
+    <string name="nest_stage">Palco</string>
+    <string name="nest_audience">Plateia</string>
+    <string name="nest_raise_hand">Levantar mão</string>
+    <string name="nest_lower_hand">Abaixar mão</string>
     <string name="longs">Vídeos</string>
     <string name="articles">Artigos</string>
     <string name="private_bookmarks">Itens Salvos Privados</string>

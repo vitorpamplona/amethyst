@@ -79,6 +79,18 @@ class QuicWebTransportFactory(
      * the Extended CONNECT request stream before giving up with HandshakeFailed.
      */
     private val connectTimeoutMillis: Long = 10_000L,
+    /**
+     * WebTransport sub-protocols to advertise on the Extended CONNECT request,
+     * via the `wt-available-protocols` header (RFC 8941 Structured Field List
+     * of strings — see draft-ietf-webtrans-http3-14 §3.3).
+     *
+     * For nests, this MUST contain `moq-lite-03`; without it, moq-relay falls
+     * back to the legacy in-band SETUP exchange (moq-lite-02) and our first
+     * post-CONNECT message is decoded as SETUP_CLIENT, producing
+     * `connection closed err=invalid value` on the relay side and a stalled
+     * subscribe / `subscribe stream FIN before reply` on the client side.
+     */
+    private val webTransportSubProtocols: List<String> = listOf("moq-lite-03"),
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,
@@ -136,7 +148,13 @@ class QuicWebTransportFactory(
 
             // Open the Extended CONNECT request stream.
             val requestStream = conn.openBidiStream()
-            val headers = buildExtendedConnectHeaders(authority, path, bearerToken)
+            val extraHeaders =
+                if (webTransportSubProtocols.isNotEmpty()) {
+                    listOf("wt-available-protocols" to encodeSfStringList(webTransportSubProtocols))
+                } else {
+                    emptyList()
+                }
+            val headers = buildExtendedConnectHeaders(authority, path, bearerToken, extraHeaders)
             requestStream.send.enqueue(encodeHeadersFrame(headers))
             driver.wakeup()
 
@@ -214,6 +232,21 @@ class QuicWebTransportFactory(
         val status: Int,
     ) : RuntimeException()
 
+    /**
+     * Encode [items] as an RFC 8941 Structured Field List of bare strings
+     * (the format `wt-available-protocols` requires per draft-ietf-webtrans-http3
+     * §3.3). Each entry becomes `"value"`; the items are comma-separated.
+     *
+     * The values we emit (e.g. `moq-lite-03`) are bare ASCII so we don't
+     * need to handle escaping — assert it instead of silently mis-emitting.
+     */
+    private fun encodeSfStringList(items: List<String>): String {
+        require(items.all { p -> p.all { it in 0x20.toChar()..0x7e.toChar() && it != '"' && it != '\\' } }) {
+            "wt-available-protocols entry contains characters that need RFC 8941 escaping: $items"
+        }
+        return items.joinToString(", ") { "\"$it\"" }
+    }
+
     private fun splitAuthority(authority: String): Pair<String, Int> {
         val idx = authority.lastIndexOf(':')
         if (idx <= 0) return authority to 443
@@ -234,6 +267,11 @@ class QuicWebTransportSession(
         return QuicBidiStreamAdapter(s, state.driver)
     }
 
+    override suspend fun openUniStream(): WebTransportWriteStream {
+        val s = state.openUniStream()
+        return QuicUniWriteStreamAdapter(s, state.driver)
+    }
+
     override fun incomingUniStreams(): Flow<WebTransportReadStream> =
         flow {
             // Surface only unidirectional WT streams whose prefix bytes
@@ -243,6 +281,18 @@ class QuicWebTransportSession(
             state.incomingStrippedStreams.collect { stripped ->
                 if (stripped.isUnidirectional) {
                     emit(StrippedWtReadStreamAdapter(stripped))
+                }
+            }
+        }
+
+    override fun incomingBidiStreams(): Flow<WebTransportBidiStream> =
+        flow {
+            // Surface only peer-initiated bidi streams whose WT_BIDI_STREAM
+            // prefix has been stripped by the demux. send/finish are
+            // wired through the driver wakeup.
+            state.incomingStrippedStreams.collect { stripped ->
+                if (!stripped.isUnidirectional) {
+                    emit(StrippedWtBidiStreamAdapter(stripped))
                 }
             }
         }
@@ -292,9 +342,62 @@ private class QuicReadStreamAdapter(
     override fun incoming(): Flow<ByteArray> = stream.incoming
 }
 
+/**
+ * Write-only adapter over a locally-opened uni QUIC stream. The
+ * underlying [QuicWebTransportSessionState.openUniStream] has already
+ * pushed the WT framing prefix (0x54 + quarter session id), so the
+ * caller's [write] payload goes straight onto the wire.
+ */
+private class QuicUniWriteStreamAdapter(
+    private val stream: QuicStream,
+    private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver,
+) : WebTransportWriteStream {
+    override suspend fun write(chunk: ByteArray) {
+        stream.send.enqueue(chunk)
+        driver.wakeup()
+    }
+
+    override suspend fun finish() {
+        stream.send.finish()
+        driver.wakeup()
+    }
+}
+
 /** Adapter for a WT peer-initiated uni stream whose prefix has been stripped. */
 private class StrippedWtReadStreamAdapter(
     private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = stripped.data
+}
+
+/**
+ * Adapter for a peer-initiated bidi WT stream whose WT_BIDI_STREAM prefix
+ * has been stripped. Routes [write] / [finish] through the demux's
+ * driver-aware closures so application bytes actually leave the
+ * connection.
+ */
+private class StrippedWtBidiStreamAdapter(
+    private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
+) : WebTransportBidiStream {
+    init {
+        check(!stripped.isUnidirectional) {
+            "StrippedWtBidiStreamAdapter requires a bidi stream, got uni"
+        }
+    }
+
+    override fun incoming(): Flow<ByteArray> = stripped.data
+
+    override suspend fun write(chunk: ByteArray) {
+        val send =
+            stripped.send
+                ?: error("peer-initiated bidi stream has no send half — demux didn't wire one")
+        send(chunk)
+    }
+
+    override suspend fun finish() {
+        val finish =
+            stripped.finish
+                ?: error("peer-initiated bidi stream has no finish — demux didn't wire one")
+        finish()
+    }
 }

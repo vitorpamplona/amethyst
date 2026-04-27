@@ -458,11 +458,11 @@
     <string name="public_chats">Nyilvános csevegések</string>
     <string name="follow_packs">Követési csomagok</string>
     <string name="live_streams">Élő közvetítések</string>
-    <string name="audio_rooms">Hangszobák</string>
-    <string name="audio_room_stage">Állapot</string>
-    <string name="audio_room_audience">Közönség</string>
-    <string name="audio_room_raise_hand">Kéz felemelése</string>
-    <string name="audio_room_lower_hand">Kéz leengedése</string>
+    <string name="nests">Hangszobák</string>
+    <string name="nest_stage">Állapot</string>
+    <string name="nest_audience">Közönség</string>
+    <string name="nest_raise_hand">Kéz felemelése</string>
+    <string name="nest_lower_hand">Kéz leengedése</string>
     <string name="longs">Videók</string>
     <string name="articles">Cikkek</string>
     <string name="private_bookmarks">Privát könyvjelzők</string>

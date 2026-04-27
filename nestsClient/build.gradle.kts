@@ -86,3 +86,16 @@ kotlin {
         }
     }
 }
+
+// Forward the nostrnests interop opt-in property from the Gradle JVM
+// to test workers. Without this, `-DnestsInterop=true` on the Gradle
+// command line never reaches `NostrNestsHarness.isEnabled()` (which
+// reads it via `System.getProperty`), so every interop test silently
+// skips. See `nestsClient/src/jvmTest/.../interop/NostrNestsHarness.kt`.
+tasks.withType<Test>().configureEach {
+    System.getProperty("nestsInterop")?.let { systemProperty("nestsInterop", it) }
+    System.getProperty("nestsInteropRev")?.let { systemProperty("nestsInteropRev", it) }
+    System.getProperty("nestsInteropMoqRev")?.let { systemProperty("nestsInteropMoqRev", it) }
+    System.getProperty("nestsInteropExternal")?.let { systemProperty("nestsInteropExternal", it) }
+    System.getProperty("nestsInteropDebug")?.let { systemProperty("nestsInteropDebug", it) }
+}

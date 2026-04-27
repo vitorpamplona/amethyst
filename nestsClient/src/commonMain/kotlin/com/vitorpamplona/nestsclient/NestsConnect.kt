@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.nestsclient
 
-import com.vitorpamplona.nestsclient.moq.MoqSession
-import com.vitorpamplona.nestsclient.moq.MoqVersion
+import com.vitorpamplona.nestsclient.audio.AudioCapture
+import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
-import com.vitorpamplona.nestsclient.moq.TrackNamespace
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import com.vitorpamplona.nestsclient.transport.WebTransportException
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
+import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,41 +35,44 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * Walk the full join-as-listener handshake against a nests-compatible audio
  * server:
  *
- *   1. Resolve the room — POST/GET `<serviceBase>/<roomId>` with NIP-98 auth,
- *      returning [NestsRoomInfo] (the MoQ endpoint + bearer token).
- *   2. Open a [com.vitorpamplona.nestsclient.transport.WebTransportSession]
- *      against the endpoint via [transport].
- *   3. Run the MoQ SETUP handshake.
+ *   1. Mint a JWT — POST `<authBase>/auth` with NIP-98 + namespace body
+ *      (see [NestsClient.mintToken]).
+ *   2. Open a [WebTransportSession] against the [room.endpoint] via
+ *      [transport]. The path is `/<moqNamespace>?jwt=<token>` — moq-rs
+ *      treats the URL path as `claims.root` and reads the JWT from
+ *      `?jwt=`.
+ *   3. Wrap the WT session in a [MoqLiteSession]. moq-lite Lite-03 has
+ *      NO in-band SETUP message — the WT handshake itself is the
+ *      handshake, version is selected by the ALPN `moq-lite-03`.
  *
  * The returned [NestsListener] is in state [NestsListenerState.Connected];
  * if any step fails, the listener is returned in
  * [NestsListenerState.Failed] with the underlying cause attached and the
  * transport torn down.
  *
- * @param signer NIP-98 signer for the resolveRoom HTTP call.
- * @param scope where the [MoqSession] pumps live (typically the caller's
+ * @param room per-room config built from the NIP-53 kind 30312 event by
+ *   the caller (UI / VM).
+ * @param signer NIP-98 signer for the mintToken HTTP call.
+ * @param scope where the moq-lite pumps live (typically the caller's
  *   ViewModel scope so they cancel when the screen leaves).
- * @param supportedMoqVersions in preference order; defaults to draft-17.
  */
 suspend fun connectNestsListener(
     httpClient: NestsClient,
     transport: WebTransportFactory,
     scope: CoroutineScope,
-    serviceBase: String,
-    roomId: String,
+    room: NestsRoomConfig,
     signer: NostrSigner,
-    supportedMoqVersions: List<Long> = listOf(MoqVersion.DRAFT_17),
 ): NestsListener {
     val state =
         MutableStateFlow<NestsListenerState>(
             NestsListenerState.Connecting(NestsListenerState.Connecting.ConnectStep.ResolvingRoom),
         )
 
-    val roomInfo =
+    val token =
         try {
-            httpClient.resolveRoom(serviceBase = serviceBase, roomId = roomId, signer = signer)
+            httpClient.mintToken(room = room, publish = false, signer = signer)
         } catch (t: NestsException) {
-            state.value = NestsListenerState.Failed("Room resolution failed: ${t.message}", t)
+            state.value = NestsListenerState.Failed("Auth failed: ${t.message}", t)
             return failedListener(state)
         }
 
@@ -76,11 +80,11 @@ suspend fun connectNestsListener(
 
     val (authority, path) =
         try {
-            parseEndpoint(roomInfo.endpoint)
+            buildRelayConnectTarget(room.endpoint, room.moqNamespace(), token)
         } catch (t: Throwable) {
             state.value =
                 NestsListenerState.Failed(
-                    "Malformed MoQ endpoint URL '${roomInfo.endpoint}': ${t.message}",
+                    "Malformed MoQ endpoint URL '${room.endpoint}': ${t.message}",
                     t,
                 )
             return failedListener(state)
@@ -88,7 +92,9 @@ suspend fun connectNestsListener(
 
     val webTransport =
         try {
-            transport.connect(authority = authority, path = path, bearerToken = roomInfo.token)
+            // moq-rs reads the JWT from the `?jwt=` query parameter and
+            // ignores the Authorization header — bearer must be null here.
+            transport.connect(authority = authority, path = path, bearerToken = null)
         } catch (t: WebTransportException) {
             state.value =
                 NestsListenerState.Failed(
@@ -100,29 +106,33 @@ suspend fun connectNestsListener(
 
     state.value = NestsListenerState.Connecting(NestsListenerState.Connecting.ConnectStep.MoqHandshake)
 
+    // moq-lite Lite-03 has NO setup message — the WebTransport handshake
+    // itself is the handshake, version is selected by the ALPN
+    // `moq-lite-03`.
     val moq =
         try {
-            MoqSession.client(webTransport, scope).also { it.setup(supportedMoqVersions) }
+            MoqLiteSession.client(webTransport, scope)
         } catch (t: Throwable) {
-            runCatching { webTransport.close(0, "moq setup failed") }
-            state.value = NestsListenerState.Failed("MoQ handshake failed: ${t.message}", t)
+            runCatching { webTransport.close(0, "moq-lite session init failed") }
+            state.value = NestsListenerState.Failed("moq-lite session init failed: ${t.message}", t)
             return failedListener(state)
         }
 
-    val negotiatedVersion =
-        moq.selectedVersion ?: run {
-            runCatching { moq.close() }
-            state.value = NestsListenerState.Failed("MoQ session reported no negotiated version")
-            return failedListener(state)
-        }
-
-    state.value = NestsListenerState.Connected(roomInfo, negotiatedVersion)
-    return DefaultNestsListener(
+    state.value = NestsListenerState.Connected(room, MOQ_LITE_03_VERSION)
+    return MoqLiteNestsListener(
         session = moq,
-        roomNamespace = TrackNamespace.of("nests", roomId),
         mutableState = state,
     )
 }
+
+/**
+ * Synthetic version code reported on [NestsListenerState.Connected.negotiatedMoqVersion]
+ * for moq-lite Lite-03 sessions. moq-lite negotiates the wire version
+ * via ALPN rather than an in-band SETUP exchange, so there is no real
+ * "version" the peer reports back. The constant carries the ALPN suffix
+ * `-03` in the low bytes for diagnostic display.
+ */
+const val MOQ_LITE_03_VERSION: Long = 0x6D71_6C03L
 
 /**
  * Build a no-op [NestsListener] in a Failed state for callers that want a
@@ -140,6 +150,138 @@ private fun failedListener(state: MutableStateFlow<NestsListenerState>): NestsLi
             }
         }
     }
+
+/**
+ * Speaker / host counterpart of [connectNestsListener]. Walks the same
+ * three-step HTTP → WebTransport → moq-lite session sequence the
+ * listener does; the difference is downstream: [NestsSpeaker.startBroadcasting]
+ * claims a broadcast suffix on the moq-lite session and starts pumping
+ * Opus frames out as one uni stream per group.
+ *
+ * @param speakerPubkeyHex this user's pubkey hex. Used as the moq-lite
+ *   broadcast suffix the relay routes to subscribers
+ *   (`MoqLiteSubscribe.broadcast == speakerPubkeyHex`); the JS reference
+ *   mints the same value via `Path.from(identity)`
+ *   (`@moq/publish/screen-B680RFft.js`).
+ * @param captureFactory builds an [AudioCapture] (one per broadcast).
+ *   Android passes `{ AudioRecordCapture() }`.
+ * @param encoderFactory builds an [OpusEncoder] (one per broadcast).
+ *   Android passes `{ MediaCodecOpusEncoder() }`.
+ */
+suspend fun connectNestsSpeaker(
+    httpClient: NestsClient,
+    transport: WebTransportFactory,
+    scope: CoroutineScope,
+    room: NestsRoomConfig,
+    signer: NostrSigner,
+    speakerPubkeyHex: String,
+    captureFactory: () -> AudioCapture,
+    encoderFactory: () -> OpusEncoder,
+): NestsSpeaker {
+    val state =
+        MutableStateFlow<NestsSpeakerState>(
+            NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.ResolvingRoom),
+        )
+
+    val token =
+        try {
+            httpClient.mintToken(room = room, publish = true, signer = signer)
+        } catch (t: NestsException) {
+            state.value = NestsSpeakerState.Failed("Auth failed: ${t.message}", t)
+            return failedSpeaker(state)
+        }
+
+    state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.OpeningTransport)
+
+    val (authority, path) =
+        try {
+            buildRelayConnectTarget(room.endpoint, room.moqNamespace(), token)
+        } catch (t: Throwable) {
+            state.value =
+                NestsSpeakerState.Failed(
+                    "Malformed MoQ endpoint URL '${room.endpoint}': ${t.message}",
+                    t,
+                )
+            return failedSpeaker(state)
+        }
+
+    val webTransport =
+        try {
+            // moq-rs reads the JWT from the `?jwt=` query parameter and
+            // ignores the Authorization header — bearer must be null here.
+            transport.connect(authority = authority, path = path, bearerToken = null)
+        } catch (t: WebTransportException) {
+            state.value =
+                NestsSpeakerState.Failed(
+                    "WebTransport ${t.kind.name}: ${t.message}",
+                    t,
+                )
+            return failedSpeaker(state)
+        }
+
+    state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.MoqHandshake)
+
+    // moq-lite Lite-03 has NO setup message. Same logic as the listener
+    // path — version is selected by the `moq-lite-03` ALPN.
+    val moq =
+        try {
+            MoqLiteSession.client(webTransport, scope)
+        } catch (t: Throwable) {
+            runCatching { webTransport.close(0, "moq-lite session init failed") }
+            state.value = NestsSpeakerState.Failed("moq-lite session init failed: ${t.message}", t)
+            return failedSpeaker(state)
+        }
+
+    state.value = NestsSpeakerState.Connected(room, MOQ_LITE_03_VERSION)
+    return MoqLiteNestsSpeaker(
+        session = moq,
+        speakerPubkeyHex = speakerPubkeyHex,
+        captureFactory = captureFactory,
+        encoderFactory = encoderFactory,
+        scope = scope,
+        mutableState = state,
+    )
+}
+
+/** Mirror of [failedListener] for the speaker path. */
+private fun failedSpeaker(state: MutableStateFlow<NestsSpeakerState>): NestsSpeaker =
+    object : NestsSpeaker {
+        override val state = state
+
+        override suspend fun startBroadcasting(): BroadcastHandle = error("speaker never connected: ${state.value}")
+
+        override suspend fun close() {
+            if (state.value !is NestsSpeakerState.Closed) {
+                state.value = NestsSpeakerState.Closed
+            }
+        }
+    }
+
+/**
+ * Build the WebTransport connect target for a nests room.
+ *
+ *   - **Authority** comes from the kind-30312 `endpoint` URL (host + port).
+ *   - **Path** is `/<moqNamespace>?jwt=<token>`. The JS reference client
+ *     overwrites `relayUrl.pathname` with the namespace literal — moq-rs
+ *     compares this path to `claims.root` for ANNOUNCE / SUBSCRIBE
+ *     authorisation, so any other path on the relay returns
+ *     `401 IncorrectRoot`.
+ *   - **Token** is delivered as the `?jwt=` query parameter (NOT an
+ *     `Authorization` header — moq-rs only reads the query param). Per the
+ *     ES256 JWT alphabet (base64url `[A-Za-z0-9_-]` + `.`) the token never
+ *     contains characters reserved in a query string, so no encoding is
+ *     applied. The path itself contains `:` and `/`, both legal in
+ *     `pchar` per RFC 3986.
+ */
+internal fun buildRelayConnectTarget(
+    endpoint: String,
+    namespace: String,
+    token: String,
+): Pair<String, String> {
+    val (authority, _) = parseEndpoint(endpoint)
+    val path = "/" + namespace + "?jwt=" + token
+    return authority to path
+}
 
 /**
  * Split a typical nests endpoint URL such as `https://relay.example.com/moq`

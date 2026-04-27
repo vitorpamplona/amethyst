@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.HandRaisedTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.MutedTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.OnstageTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.PublishingTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -56,6 +58,12 @@ class MeetingRoomPresenceEvent(
     fun handRaised() = tags.firstNotNullOfOrNull(HandRaisedTag::parse)
 
     fun muted() = tags.firstNotNullOfOrNull(MutedTag::parse)
+
+    /** True when the peer is actively pushing audio packets to the relay. */
+    fun publishing() = tags.firstNotNullOfOrNull(PublishingTag::parse)
+
+    /** True when the peer holds a speaker slot (vs. pure audience). */
+    fun onstage() = tags.firstNotNullOfOrNull(OnstageTag::parse)
 
     companion object Companion {
         const val KIND = 10312
@@ -93,6 +101,8 @@ class MeetingRoomPresenceEvent(
             root: MeetingSpaceEvent,
             handRaised: Boolean? = null,
             muted: Boolean? = null,
+            publishing: Boolean? = null,
+            onstage: Boolean? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MeetingRoomPresenceEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -102,6 +112,8 @@ class MeetingRoomPresenceEvent(
 
             handRaised?.let { handRaised(it) }
             muted?.let { muted(it) }
+            publishing?.let { publishing(it) }
+            onstage?.let { onstage(it) }
             initializer()
         }
     }

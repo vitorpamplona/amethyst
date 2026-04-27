@@ -63,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.AudioRoomsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award.AwardBadgeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.ProfileBadgesScreen
@@ -128,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.PeopleL
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
@@ -245,7 +245,7 @@ fun BuildNavigation(
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
-        composableFromEnd<Route.AudioRooms> { AudioRoomsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
@@ -319,6 +319,10 @@ fun BuildNavigation(
         composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
         composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.EditNestsServers> {
+            com.vitorpamplona.amethyst.ui.actions.nestsServers
+                .NestsServersScreen(accountViewModel, nav)
+        }
         composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }

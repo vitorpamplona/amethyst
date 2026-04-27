@@ -89,7 +89,7 @@ sealed class Route {
 
     @Serializable object LiveStreams : Route()
 
-    @Serializable object AudioRooms : Route()
+    @Serializable object Nests : Route()
 
     @Serializable object Longs : Route()
 
@@ -250,6 +250,8 @@ sealed class Route {
     @Serializable object VanishEvents : Route()
 
     @Serializable object EditMediaServers : Route()
+
+    @Serializable object EditNestsServers : Route()
 
     @Serializable object EditFavoriteAlgoFeeds : Route()
 

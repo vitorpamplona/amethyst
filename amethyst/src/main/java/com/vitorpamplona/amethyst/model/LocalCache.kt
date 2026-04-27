@@ -175,6 +175,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -1547,6 +1548,35 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    /**
+     * Audio-room presence (kind-10312) — addressable storage AND
+     * attach the version note to the room's [LiveActivitiesChannel].
+     * The home live-bubble surfaces a room when a follow is
+     * publishing in it; that fan-out walks `channel.notes`, so the
+     * presence event needs to be in there alongside chat. Without
+     * this, presence-driven inclusion can't see follows broadcasting
+     * in the room (only chat-driven inclusion would fire).
+     */
+    fun consume(
+        event: MeetingRoomPresenceEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+
+        // The replaceable cache keys this on the AUTHOR's address
+        // (kind=10312, pubkey, fixed-d-tag) — independent of the
+        // room. To wire the room bubble we also attach the version
+        // note to the room's channel keyed by its kind-30312 address.
+        val roomAddress = event.interactiveRoom()?.address ?: return new
+        if (roomAddress.kind != MeetingSpaceEvent.KIND) return new
+        val channel = getOrCreateLiveChannel(roomAddress)
+        val versionNote = getOrCreateNote(event.id)
+        channel.addNote(versionNote, relay)
+
+        return new
+    }
+
     fun consume(
         event: LiveActivitiesRaidEvent,
         relay: NormalizedRelayUrl?,
@@ -2677,157 +2707,613 @@ object LocalCache : ILocalCache, ICacheProvider {
     ): Boolean =
         try {
             when (event) {
-                is AcceptedBadgeSetEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AdvertisedRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AppDefinitionEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AppRecommendationEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AppSpecificDataEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AttestationEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AttestationRequestEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AttestorRecommendationEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AttestorProficiencyEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AudioHeaderEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is AudioTrackEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is BadgeAwardEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is BadgeDefinitionEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is BlockedRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is BlossomServersEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is BroadcastRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is BookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is OldBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CalendarEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CalendarDateSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CalendarTimeSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CalendarRSVPEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CallAnswerEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is CallHangupEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is CallIceCandidateEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is CallOfferEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is CallRejectEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is CallRenegotiateEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is ChannelCreateEvent -> consume(event, relay, wasVerified)
-                is ChannelListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ChannelHideMessageEvent -> consume(event, relay, wasVerified)
-                is ChannelMessageEvent -> consume(event, relay, wasVerified)
-                is ChannelMetadataEvent -> consume(event, relay, wasVerified)
-                is ChannelMuteUserEvent -> consume(event, relay, wasVerified)
-                is ChatMessageEncryptedFileHeaderEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is ChatMessageEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is ChatMessageRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ClassifiedsEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CommentEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is CommunityDefinitionEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CommunityListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is CommunityPostApprovalEvent -> consume(event, relay, wasVerified)
-                is ContactListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is DeletionEvent -> consume(event, relay, wasVerified)
-                is DraftWrapEvent -> consume(event, relay, wasVerified)
-                is EmojiPackEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is EmojiPackSelectionEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is EphemeralChatEvent -> consume(event, relay, wasVerified)
-                is EphemeralChatListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ExternalIdentitiesEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is GenericRepostEvent -> consume(event, relay, wasVerified)
-                is FhirResourceEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is FileHeaderEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is ProfileGalleryEntryEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is FileServersEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is FileStorageEvent -> consume(event, relay, wasVerified)
-                is FileStorageHeaderEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is FollowListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is GeohashListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is GoalEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is GiftWrapEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is GroupEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is GitIssueEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is GitReplyEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is GitPatchEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is GitRepositoryEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is RootSiteEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is NamedSiteEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ChessGameEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is RelayFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is JesterEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is KeyPackageEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is KeyPackageRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LiveChessGameChallengeEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LiveChessGameAcceptEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LiveChessMoveEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LiveChessGameEndEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LiveChessDrawOfferEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is HashtagListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is FavoriteAlgoFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is HighlightEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is IndexerRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is InteractiveStoryPrologueEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is InteractiveStorySceneEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is InteractiveStoryReadingStateEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is InterestSetEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LabeledBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LiveActivitiesEvent -> consume(event, relay, wasVerified)
-                is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
-                is LiveActivitiesRaidEvent -> consume(event, relay, wasVerified)
-                is LiveActivitiesClipEvent -> consume(event, relay, wasVerified)
-                is MeetingSpaceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is MeetingRoomEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is MeetingRoomPresenceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is LnZapEvent -> consume(event, relay, wasVerified)
-                is LnZapRequestEvent -> consume(event, relay, wasVerified)
-                is NIP90StatusEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is NIP90ContentDiscoveryResponseEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is NIP90ContentDiscoveryRequestEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is NIP90UserDiscoveryResponseEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is NIP90UserDiscoveryRequestEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is LnZapPaymentRequestEvent -> consume(event, relay, wasVerified)
-                is LnZapPaymentResponseEvent -> consume(event, relay, wasVerified)
-                is LongTextNoteEvent -> consume(event, relay, wasVerified)
-                is MetadataEvent -> consume(event, relay, wasVerified)
-                is MuteListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is NNSEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is NipTextEvent -> consume(event, relay, wasVerified)
-                is OtsEvent -> consume(event, relay, wasVerified)
-                is PictureEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is PrivateDmEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is PrivateOutboxRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ProfileBadgesEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ProxyRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is PinListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is PublicMessageEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is PeopleListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is RequestToVanishEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is CodeSnippetEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is ZapPollEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is ChatEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is PollEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is PollResponseEvent -> consume(event, relay, wasVerified)
-                is RelayDiscoveryEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is RelayMonitorEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ReactionEvent -> consume(event, relay, wasVerified)
-                is ContactCardEvent -> consume(event, relay, wasVerified)
-                is RelaySetEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ReportEvent -> consume(event, relay, wasVerified)
-                is RepostEvent -> consume(event, relay, wasVerified)
-                is SealedRumorEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is SearchRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is StatusEvent -> consume(event, relay, wasVerified)
-                is TextNoteEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is TextNoteModificationEvent -> consume(event, relay, wasVerified)
-                is TorrentEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is TorrentCommentEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is TrustedRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is TrustProviderListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is VideoHorizontalEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is VideoNormalEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is VideoVerticalEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is VideoShortEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is VoiceEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is VoiceReplyEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is WakeUpEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is WebBookmarkEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is WelcomeEvent -> consumeRegularEvent(event, relay, wasVerified)
-                is WikiNoteEvent -> consume(event, relay, wasVerified)
-                is PaymentTargetsEvent -> consume(event, relay, wasVerified)
-                else -> Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                is AcceptedBadgeSetEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AdvertisedRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AppDefinitionEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AppRecommendationEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AppSpecificDataEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AttestationEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AttestationRequestEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AttestorRecommendationEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AttestorProficiencyEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AudioHeaderEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is AudioTrackEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is BadgeAwardEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is BadgeDefinitionEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is BlockedRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is BlossomServersEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NestsServersEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is BroadcastRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is BookmarkListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is OldBookmarkListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CalendarEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CalendarDateSlotEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CalendarTimeSlotEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CalendarRSVPEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CallAnswerEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CallHangupEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CallIceCandidateEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CallOfferEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CallRejectEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CallRenegotiateEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ChannelCreateEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ChannelListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ChannelHideMessageEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ChannelMessageEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ChannelMetadataEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ChannelMuteUserEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ChatMessageEncryptedFileHeaderEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ChatMessageEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ChatMessageRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ClassifiedsEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CommentEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CommunityDefinitionEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CommunityListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CommunityPostApprovalEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ContactListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is DeletionEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is DraftWrapEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is EmojiPackEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is EmojiPackSelectionEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is EphemeralChatEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is EphemeralChatListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ExternalIdentitiesEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GenericRepostEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is FhirResourceEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is FileHeaderEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ProfileGalleryEntryEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is FileServersEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is FileStorageEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is FileStorageHeaderEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is FollowListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GeohashListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GoalEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GiftWrapEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GroupEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitIssueEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitReplyEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitPatchEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitRepositoryEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is RootSiteEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NamedSiteEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ChessGameEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is RelayFeedsListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is JesterEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is KeyPackageEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is KeyPackageRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is LiveChessGameChallengeEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is LiveChessGameAcceptEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is LiveChessMoveEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is LiveChessGameEndEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is LiveChessDrawOfferEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is HashtagListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is FavoriteAlgoFeedsListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is HighlightEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is IndexerRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is InteractiveStoryPrologueEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is InteractiveStorySceneEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is InteractiveStoryReadingStateEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is InterestSetEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is LabeledBookmarkListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is LiveActivitiesEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LiveActivitiesChatMessageEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LiveActivitiesRaidEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LiveActivitiesClipEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is MeetingSpaceEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is MeetingRoomEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is MeetingRoomPresenceEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LnZapEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LnZapRequestEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is NIP90StatusEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is NIP90ContentDiscoveryResponseEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is NIP90ContentDiscoveryRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is NIP90UserDiscoveryResponseEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is NIP90UserDiscoveryRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is LnZapPaymentRequestEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LnZapPaymentResponseEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LongTextNoteEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is MetadataEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is MuteListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NNSEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NipTextEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is OtsEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is PictureEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PrivateDmEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PrivateOutboxRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ProfileBadgesEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ProxyRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is PinListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is PublicMessageEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PeopleListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is RequestToVanishEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CodeSnippetEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ZapPollEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ChatEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PollEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PollResponseEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is RelayDiscoveryEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is RelayMonitorEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ReactionEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ContactCardEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is RelaySetEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is ReportEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is RepostEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is SealedRumorEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is SearchRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is StatusEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is TextNoteEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is TextNoteModificationEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is TorrentEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is TorrentCommentEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is TrustedRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is TrustProviderListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is VideoHorizontalEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is VideoNormalEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is VideoVerticalEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is VideoShortEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is VoiceEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is VoiceReplyEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is WakeUpEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is WebBookmarkEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is WelcomeEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is WikiNoteEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is PaymentTargetsEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                else -> {
+                    Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

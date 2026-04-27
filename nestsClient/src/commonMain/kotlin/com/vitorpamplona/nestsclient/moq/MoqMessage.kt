@@ -21,17 +21,19 @@
 package com.vitorpamplona.nestsclient.moq
 
 /**
- * Subset of the MoQ-transport control-plane messages needed for a listener
- * talking to a nests server. Per draft-ietf-moq-transport, control messages
- * on the control stream share the wire layout:
+ * Subset of the **IETF `draft-ietf-moq-transport-17`** control-plane
+ * messages. Wire layout per the IETF draft: control messages on the
+ * single bidi share
  *
  *   message_type (varint) | message_length (varint) | payload...
  *
- * Listener-side messages (CLIENT/SERVER_SETUP, SUBSCRIBE, SUBSCRIBE_OK /
- * SUBSCRIBE_ERROR, UNSUBSCRIBE) are implemented. Publisher-side messages
- * (ANNOUNCE / ANNOUNCE_OK / SUBSCRIBE-receiving / SUBSCRIBE_DONE) are not
- * yet implemented; see `nestsClient/plans/2026-04-26-audio-rooms-completion.md`
- * (Phase M5).
+ * Wire-protocol scope: this is the IETF MoQ-transport flavour. The
+ * nostrnests reference relay speaks **moq-lite** (kixelated's variant)
+ * which uses a wire-incompatible shape — no SETUP message, ControlType
+ * discriminator on each fresh bidi stream, single-string broadcast +
+ * track names rather than tuples. See
+ * `nestsClient/plans/2026-04-26-moq-lite-gap.md` for the full spec and
+ * the planned moq-lite parallel codec.
  */
 sealed class MoqMessage {
     abstract val type: MoqMessageType

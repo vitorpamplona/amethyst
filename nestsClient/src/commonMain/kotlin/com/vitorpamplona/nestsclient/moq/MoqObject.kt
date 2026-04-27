@@ -21,20 +21,25 @@
 package com.vitorpamplona.nestsclient.moq
 
 /**
- * A single MoQ object — a protocol-level unit of publisher-produced data
- * (one Opus frame for nests audio) identified by its (track, group, object)
- * coordinates and carrying application bytes.
+ * A single object in **IETF `draft-ietf-moq-transport-17`** — a
+ * publisher-produced unit identified by `(track_alias, group_id,
+ * object_id)` coordinates with a `publisher_priority` and a `status`
+ * varint, carrying app bytes.
  *
- * MoQ objects are delivered in three ways per draft-ietf-moq-transport:
+ * Per the IETF draft, objects are delivered three ways:
  *
  *   1. OBJECT_DATAGRAM — one object per QUIC datagram. Lowest latency, no
- *      retransmits. Used by nests for real-time audio.
+ *      retransmits.
  *   2. STREAM_HEADER_SUBGROUP — multiple objects per uni stream, reliable.
  *   3. FETCH_HEADER — historical objects over a bidi stream.
  *
- * Today the listener path implements only (1) — OBJECT_DATAGRAM — which is
- * what nests uses for live audio. (2) and (3) are reserved for future
- * stream-delivered media; see the audio-rooms completion plan.
+ * This shape is **not** what nostrnests's relay (moq-lite) uses on the
+ * wire. moq-lite delivers media as *frames within groups within uni
+ * streams*: one uni stream per group, each with `(subscribe_id, group_seq)`
+ * header and then a sequence of `(size_varint, payload)` frames; no
+ * datagram path, no `track_alias`, no `publisher_priority`/`status`
+ * envelope. See `nestsClient/plans/2026-04-26-moq-lite-gap.md` §5 for
+ * the moq-lite frame layout.
  */
 data class MoqObject(
     val trackAlias: Long,

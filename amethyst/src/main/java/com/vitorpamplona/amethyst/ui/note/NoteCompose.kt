@@ -1039,6 +1039,11 @@ private fun RenderNoteRow(
             RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
         }
 
+        is com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent -> {
+            com.vitorpamplona.amethyst.ui.note.types
+                .RenderMeetingRoomPresence(baseNote, accountViewModel, nav)
+        }
+
         is GitRepositoryEvent -> {
             RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
         }

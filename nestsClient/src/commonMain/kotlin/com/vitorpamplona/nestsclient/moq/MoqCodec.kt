@@ -24,7 +24,8 @@ import com.vitorpamplona.nestsclient.moq.MoqCodec.encode
 import com.vitorpamplona.quic.Varint
 
 /**
- * Encode/decode MoQ control-stream messages per draft-ietf-moq-transport.
+ * Encode/decode IETF `draft-ietf-moq-transport-17` control-stream
+ * messages.
  *
  * Wire format for every control message:
  *
@@ -32,6 +33,10 @@ import com.vitorpamplona.quic.Varint
  *
  * The payload layout is per-message. Payload encoders here produce only the
  * payload; [encode] wraps it with type+length for on-the-wire use.
+ *
+ * Wire-protocol scope: IETF MoQ-transport, NOT moq-lite. nostrnests's
+ * reference relay uses moq-lite — see
+ * `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
  */
 object MoqCodec {
     /**

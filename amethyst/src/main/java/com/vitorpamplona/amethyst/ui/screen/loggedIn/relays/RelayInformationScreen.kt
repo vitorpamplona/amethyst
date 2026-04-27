@@ -200,6 +200,7 @@ import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -543,6 +544,7 @@ fun kindDisplayName(kind: Int): Int =
         BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
         BlockedRelayListEvent.KIND -> R.string.kind_blocked_relays
         BlossomServersEvent.KIND -> R.string.kind_blossom_servers
+        NestsServersEvent.KIND -> R.string.kind_nests_servers
         BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
         BroadcastRelayListEvent.KIND -> R.string.kind_broadcast_relays
         BookmarkListEvent.KIND -> R.string.kind_bookmark_list

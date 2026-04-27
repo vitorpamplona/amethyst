@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.nestsclient
 
+import com.vitorpamplona.nestsclient.moq.MoqProtocolException
 import com.vitorpamplona.nestsclient.moq.MoqSession
 import com.vitorpamplona.nestsclient.moq.SubscribeFilter
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.moq.TrackNamespace
+import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,15 +48,79 @@ interface NestsListener {
      * Opus stream under the namespace `["nests", <roomId>]` with the
      * speaker's pubkey hex as the track name.
      *
-     * @throws com.vitorpamplona.nestsclient.moq.MoqProtocolException if the
-     *   publisher rejects the subscription.
+     * @throws MoqProtocolException if the publisher rejects the subscription.
      * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
      */
     suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle
 
+    /**
+     * Subscribe to a speaker's `catalog.json` track — moq-lite's
+     * canonical channel for "what is this broadcast publishing" JSON
+     * metadata (codec, sample rate, optional speaker-side hints).
+     * The publisher emits one JSON object per group; consumers
+     * typically read the latest frame and parse it.
+     *
+     * Throws on the IETF reference path because moq-transport-17
+     * doesn't define a catalog convention. Callers that want
+     * cross-protocol behavior should `runCatching` this.
+     *
+     * @throws UnsupportedOperationException on the IETF listener.
+     * @throws MoqProtocolException if the publisher rejects the subscription.
+     * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
+     */
+    suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle =
+        throw UnsupportedOperationException(
+            "subscribeCatalog is moq-lite-only; IETF listener has no catalog channel.",
+        )
+
+    /**
+     * Cold flow of moq-lite ANNOUNCE updates for the room's
+     * namespace. Each emission represents a publisher transitioning
+     * Active (broadcast started) or inactive (broadcast ended).
+     * Lets clients render an "actively broadcasting" indicator
+     * independent of the kind-10312 `publishing` presence tag —
+     * the JS reference's `useRoomAnnouncements` consumes this.
+     *
+     * The flow is COLD (re-collected starts a fresh subscription)
+     * — different from [subscribeSpeaker], which returns a hot
+     * SubscribeHandle backed by a fan-out [kotlinx.coroutines.flow.MutableSharedFlow].
+     * The asymmetry is intentional: announce data is room-state
+     * (one consumer, no buffered replay), while audio is per-frame
+     * playout (multi-collect resilient, drop-oldest fan-out).
+     *
+     * Throws on the IETF reference path because moq-transport-17
+     * doesn't define an announce-prefix flow. Throws at call time
+     * (not at first collect) so callers can `runCatching` the
+     * single call rather than wrapping every collect — same
+     * timing as [subscribeCatalog].
+     *
+     * @throws UnsupportedOperationException on the IETF listener.
+     * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
+     */
+    fun announces(): Flow<RoomAnnouncement> =
+        throw UnsupportedOperationException(
+            "announces() is moq-lite-only; IETF listener has no announce-prefix flow.",
+        )
+
     /** Tear down the MoQ session + underlying transport. Idempotent. */
     suspend fun close()
 }
+
+/**
+ * One moq-lite ANNOUNCE update. The JS reference uses these to
+ * drive the "live now" badge on each speaker's avatar.
+ *
+ * @param pubkey the suffix of the announce path — for nests
+ *   audio rooms this is the speaker's pubkey hex (the broadcast
+ *   path `<roomId>/<pubkey>` minus the `<roomId>` prefix the
+ *   listener already established).
+ * @param active true on the `Active` status (broadcast came up);
+ *   false on `Ended` (broadcast went down).
+ */
+data class RoomAnnouncement(
+    val pubkey: String,
+    val active: Boolean,
+)
 
 /**
  * Lifecycle states of a [NestsListener].
@@ -82,10 +149,25 @@ sealed class NestsListenerState {
         }
     }
 
-    /** Connection is live. [roomInfo] reflects the resolved server metadata. */
+    /** Connection is live. [room] reflects the (auth, endpoint, room) we connected to. */
     data class Connected(
-        val roomInfo: NestsRoomInfo,
+        val room: NestsRoomConfig,
         val negotiatedMoqVersion: Long,
+    ) : NestsListenerState()
+
+    /**
+     * The previous session dropped and the reconnect orchestrator
+     * is waiting [delayMs] before trying again. [attempt] is
+     * 1-indexed (1 = first retry after the original session
+     * failed). UI shows a "Reconnecting…" chip; the session does
+     * NOT retry while the listener stays in this state — the
+     * orchestrator transitions through [Connecting] for the next
+     * attempt and back to [Failed] / [Connected] once the open
+     * call resolves.
+     */
+    data class Reconnecting(
+        val attempt: Int,
+        val delayMs: Long,
     ) : NestsListenerState()
 
     /** A connect attempt or live session failed. UI shows [reason] to the user. */
@@ -99,12 +181,15 @@ sealed class NestsListenerState {
 }
 
 /**
- * Default [NestsListener] implementation that delegates to a [MoqSession]
- * already set up on a [com.vitorpamplona.nestsclient.transport.WebTransportSession].
+ * IETF `draft-ietf-moq-transport-17` [NestsListener] reference
+ * implementation. **Not used in production** — the production listener
+ * path uses [MoqLiteNestsListener] over moq-lite Lite-03 (see
+ * `nestsClient/plans/2026-04-26-moq-lite-gap.md`). Kept for the IETF
+ * unit-test suite (`MoqSession`, `MoqCodec`) and for any future IETF
+ * MoQ-transport target.
  *
- * Construction does NOT open the transport — call [connectNestsListener] to
- * walk the full HTTP + transport + MoQ handshake; this class just owns the
- * resulting session and exposes the listener API on top.
+ * Delegates to a [MoqSession] already set up on a
+ * [WebTransportSession]; construction does NOT open the transport.
  */
 class DefaultNestsListener internal constructor(
     private val session: MoqSession,

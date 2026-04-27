@@ -46,6 +46,7 @@ class FakeWebTransport private constructor(
     private val outboundBidiStreams: Channel<FakeBidiStream>,
     private val inboundBidiStreams: Channel<FakeBidiStream>,
     private val inboundUniStreams: Channel<WebTransportReadStream>,
+    private val outboundUniStreams: Channel<WebTransportReadStream>,
 ) : WebTransportSession {
     private val stateLock = Mutex()
     private var open = true
@@ -64,6 +65,20 @@ class FakeWebTransport private constructor(
     }
 
     override fun incomingUniStreams(): Flow<WebTransportReadStream> = inboundUniStreams.receiveAsFlow()
+
+    override fun incomingBidiStreams(): Flow<WebTransportBidiStream> = inboundBidiStreams.receiveAsFlow()
+
+    /**
+     * Open a uni stream toward the paired peer — production flow used by
+     * the moq-lite publisher path to push group data. The peer side
+     * receives the new stream via [incomingUniStreams].
+     */
+    override suspend fun openUniStream(): WebTransportWriteStream {
+        stateLock.withLock { check(open) { "session closed" } }
+        val pipe = Channel<ByteArray>(Channel.BUFFERED)
+        outboundUniStreams.send(FakeReadStream(pipe))
+        return ChannelWriteStream(pipe)
+    }
 
     override suspend fun sendDatagram(payload: ByteArray): Boolean {
         if (!open) return false
@@ -86,6 +101,7 @@ class FakeWebTransport private constructor(
         outboundBidiStreams.close()
         inboundBidiStreams.close()
         inboundUniStreams.close()
+        outboundUniStreams.close()
     }
 
     /**
@@ -115,6 +131,7 @@ class FakeWebTransport private constructor(
                     outboundBidiStreams = aToBBidi,
                     inboundBidiStreams = bToABidi,
                     inboundUniStreams = bToAUni,
+                    outboundUniStreams = aToBUni,
                 )
             val b =
                 FakeWebTransport(
@@ -123,6 +140,7 @@ class FakeWebTransport private constructor(
                     outboundBidiStreams = bToABidi,
                     inboundBidiStreams = aToBBidi,
                     inboundUniStreams = aToBUni,
+                    outboundUniStreams = bToAUni,
                 )
             return a to b
         }
@@ -148,4 +166,22 @@ class FakeReadStream internal constructor(
     private val read: Channel<ByteArray>,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = read.receiveAsFlow()
+}
+
+/**
+ * Write-only adapter over a [Channel]. Backs both
+ * [FakeWebTransport.openUniStream] (production: locally-opened uni
+ * stream that the paired peer reads via incomingUniStreams) and any
+ * test that wants to drive uni-stream bytes through a known channel.
+ */
+private class ChannelWriteStream(
+    private val channel: Channel<ByteArray>,
+) : WebTransportWriteStream {
+    override suspend fun write(chunk: ByteArray) {
+        channel.send(chunk)
+    }
+
+    override suspend fun finish() {
+        channel.close()
+    }
 }

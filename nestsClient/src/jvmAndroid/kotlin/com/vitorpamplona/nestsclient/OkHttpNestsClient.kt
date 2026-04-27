@@ -23,9 +23,14 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.EOFException
 import java.io.IOException
+import java.net.SocketException
 
 /**
  * OkHttp-backed [NestsClient] used on JVM + Android. A shared [OkHttpClient]
@@ -35,36 +40,51 @@ import java.io.IOException
 class OkHttpNestsClient(
     private val http: OkHttpClient = OkHttpClient(),
 ) : NestsClient {
-    override suspend fun resolveRoom(
-        serviceBase: String,
-        roomId: String,
+    override suspend fun mintToken(
+        room: NestsRoomConfig,
+        publish: Boolean,
         signer: NostrSigner,
-    ): NestsRoomInfo {
-        val url = nestsRoomInfoUrl(serviceBase, roomId)
-        val authHeader = NestsAuth.header(signer = signer, url = url, method = "GET")
+    ): String {
+        val url = nestsAuthUrl(room.authBaseUrl)
+        val bodyJson =
+            buildString {
+                append('{')
+                append("\"namespace\":\"").append(room.moqNamespace()).append('"')
+                append(",\"publish\":").append(publish)
+                append('}')
+            }
+        val bodyBytes = bodyJson.encodeToByteArray()
+        // NIP-98 binds the signed event to (url, method, body-hash) so the
+        // server can reject a token replayed against a different request.
+        val authHeader =
+            NestsAuth.header(
+                signer = signer,
+                url = url,
+                method = "POST",
+                payload = bodyBytes,
+            )
 
         val request =
             Request
                 .Builder()
                 .url(url)
-                .get()
+                .post(bodyJson.toRequestBody(JSON_MEDIA_TYPE))
                 .header("Authorization", authHeader)
                 .header("Accept", "application/json")
                 .build()
 
         return withContext(Dispatchers.IO) {
-            runCatching { http.newCall(request).execute() }
-                .getOrElse { throw NestsException("Failed to reach $url", it) }
+            executeWithTransportRetry(request, url)
                 .use { response ->
                     val body = response.body.string()
                     if (!response.isSuccessful) {
                         throw NestsException(
-                            "nests server returned ${response.code} for $url",
+                            "nests server returned ${response.code} for $url: $body",
                             status = response.code,
                         )
                     }
                     try {
-                        NestsRoomInfo.parse(body)
+                        NestsTokenResponse.parse(body).token
                     } catch (e: IOException) {
                         throw NestsException("Malformed nests response from $url", e)
                     } catch (e: IllegalArgumentException) {
@@ -74,5 +94,47 @@ class OkHttpNestsClient(
                     }
                 }
         }
+    }
+
+    /**
+     * Send [request] and tolerate one transport-layer hiccup. OkHttp's
+     * built-in `retryOnConnectionFailure` does NOT retry POSTs once any
+     * byte of the request body has been written — but a stale pooled
+     * connection can RST or EOF *exactly* in that window, especially on
+     * mobile networks (and during interop test runs after an idle gap
+     * between test classes). One retry on `SocketException` /
+     * `EOFException` / `IOException` recovers cleanly because
+     * `Request` builders are immutable; OkHttp opens a fresh
+     * connection on the second try.
+     *
+     * Anything that's not a transient transport failure (HTTP 4xx /
+     * 5xx, malformed response) is left to the caller as before.
+     */
+    private fun executeWithTransportRetry(
+        request: Request,
+        url: String,
+    ): Response {
+        var lastError: Throwable? = null
+        repeat(2) { attempt ->
+            try {
+                return http.newCall(request).execute()
+            } catch (e: SocketException) {
+                lastError = e
+            } catch (e: EOFException) {
+                lastError = e
+            } catch (e: IOException) {
+                // OkHttp wraps a wide variety of transport faults
+                // (StreamResetException, ConnectionShutdownException,
+                // …) under IOException. Retry once; second pass either
+                // succeeds against a fresh connection or surfaces the
+                // real error.
+                lastError = e
+            }
+        }
+        throw NestsException("Failed to reach $url", lastError)
+    }
+
+    private companion object {
+        private val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }

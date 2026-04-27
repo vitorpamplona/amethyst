@@ -219,6 +219,16 @@
             tools:ignore="DiscouragedApi" />
 
         <activity
+            android:name=".ui.screen.loggedIn.nests.room.NestActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:supportsPictureInPicture="true"
+            android:launchMode="singleTask"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.Amethyst" />
+
+        <activity
             android:name=".ui.call.CallActivity"
             android:autoRemoveFromRecents="true"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
@@ -258,6 +268,12 @@
             android:name=".service.call.CallForegroundService"
             android:foregroundServiceType="microphone|camera|phoneCall"
             android:stopWithTask="false"
+            android:exported="false" />
+
+        <service
+            android:name=".service.nests.NestForegroundService"
+            android:foregroundServiceType="mediaPlayback|microphone"
+            android:stopWithTask="true"
             android:exported="false" />
 
         <provider
