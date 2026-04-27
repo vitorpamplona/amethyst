@@ -20,16 +20,24 @@
  */
 package com.vitorpamplona.nestsclient
 
+import com.vitorpamplona.nestsclient.moq.MoqObject
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
+import com.vitorpamplona.nestsclient.moq.SubscribeOk
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * `connectNestsListener` plus a transport-loss reconnect loop with
@@ -44,13 +52,13 @@ import kotlinx.coroutines.launch
  * session.
  *
  * **Subscribe-handle re-issuance** — caller-owned [SubscribeHandle]s
- * are NOT preserved across a reconnect. The listener's
- * `subscribeSpeaker` returns a handle bound to the SESSION; once
- * the session is replaced, that handle's flow stops. Callers can
- * either re-subscribe in their own
- * `state.collectLatest { if (Connected) sub() }` loop, or wait for
- * the future `MutableSharedFlow`-buffered upgrade flagged in the
- * Tier-4 plan.
+ * survive a reconnect. `subscribeSpeaker` returns a handle backed
+ * by a [MutableSharedFlow]; the orchestrator opens an underlying
+ * subscription against each fresh session and forwards its frames
+ * into the shared flow, so the consumer's collector keeps emitting
+ * even after a transport drop. The handle's [SubscribeHandle.unsubscribe]
+ * cancels the pump and best-effort cancels the live underlying
+ * subscription.
  *
  * Cancellation: cancelling [scope] (typically the room screen's
  * VM scope) cancels the reconnect loop and closes the active
@@ -93,22 +101,24 @@ suspend fun connectReconnectingNestsListener(
                         null
                     }
                 if (listener != null) {
-                    // Forward state until the listener terminates.
-                    listener.state.collect { s ->
-                        state.value = s
-                        if (s is NestsListenerState.Failed && !isUserCancelled(s)) {
-                            // Transport-side failure → reconnect.
-                            attempt++
-                            if (policy.isExhausted(attempt)) return@collect
+                    // Mirror state until the listener terminates.
+                    // `return@collect` does NOT break a StateFlow's
+                    // collect (it just returns from the lambda for one
+                    // emission), so we use `onEach { mirror } + first`
+                    // to wait deterministically for a terminal state.
+                    val terminal =
+                        listener.state
+                            .onEach { state.value = it }
+                            .first { s ->
+                                s is NestsListenerState.Failed || s is NestsListenerState.Closed
+                            }
+                    if (terminal is NestsListenerState.Failed && !isUserCancelled(terminal)) {
+                        // Transport-side failure → schedule a reconnect.
+                        attempt++
+                        if (!policy.isExhausted(attempt)) {
                             val delayMs = policy.delayForAttempt(attempt)
                             state.value = NestsListenerState.Reconnecting(attempt, delayMs)
-                            return@collect
                         }
-                        if (s is NestsListenerState.Closed) {
-                            // User-driven close — exit the loop entirely.
-                            return@collect
-                        }
-                        // Connecting / Connected / Reconnecting (transient) — continue.
                     }
                 }
                 val terminal = state.value
@@ -125,7 +135,7 @@ suspend fun connectReconnectingNestsListener(
             }
         }
 
-    return ReconnectingHandle(state, activeListener, orchestrator)
+    return ReconnectingHandle(state, activeListener, orchestrator, scope)
 }
 
 private fun isUserCancelled(state: NestsListenerState.Failed): Boolean {
@@ -142,14 +152,75 @@ private class ReconnectingHandle(
     private val mutableState: MutableStateFlow<NestsListenerState>,
     private val activeListener: MutableStateFlow<NestsListener?>,
     private val orchestrator: Job,
+    private val scope: CoroutineScope,
 ) : NestsListener {
     override val state: StateFlow<NestsListenerState> = mutableState.asStateFlow()
 
     override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle {
-        val live =
-            activeListener.value
-                ?: error("no live session — wait for state == Connected before subscribing")
-        return live.subscribeSpeaker(speakerPubkeyHex)
+        // Require a live (or just-connected) session at call time —
+        // matches the existing IETF / moq-lite listener contract so
+        // a caller can't accidentally subscribe in Idle and stall
+        // waiting for a session that may never arrive.
+        activeListener.value
+            ?: error("no live session — wait for state == Connected before subscribing")
+
+        val frames = MutableSharedFlow<MoqObject>(extraBufferCapacity = SUBSCRIBE_BUFFER)
+        val liveHandleRef = AtomicReference<SubscribeHandle?>(null)
+
+        // Re-subscribe pump: every time activeListener changes, drop
+        // the prior subscription (collectLatest cancels the inner
+        // body) and open a new one against the fresh session.
+        // Wait for the inner listener to reach Connected before
+        // calling subscribeSpeaker — IETF + moq-lite listeners both
+        // throw IllegalStateException if subscribed before Connected,
+        // and a fresh session may go through Connecting first.
+        val pumpJob =
+            scope.launch {
+                activeListener.collectLatest { listener ->
+                    if (listener == null) return@collectLatest
+                    val terminalOrConnected =
+                        listener.state.first { state ->
+                            state is NestsListenerState.Connected ||
+                                state is NestsListenerState.Closed ||
+                                state is NestsListenerState.Failed
+                        }
+                    if (terminalOrConnected !is NestsListenerState.Connected) return@collectLatest
+                    val handle =
+                        runCatching { listener.subscribeSpeaker(speakerPubkeyHex) }
+                            .getOrNull() ?: return@collectLatest
+                    liveHandleRef.set(handle)
+                    try {
+                        handle.objects.collect { frames.emit(it) }
+                    } finally {
+                        // Either the inner session ended, or we're
+                        // being replaced because activeListener
+                        // changed. Drop the dead reference; the
+                        // inner unsubscribe is handled by the
+                        // session's own teardown.
+                        if (liveHandleRef.get() === handle) liveHandleRef.set(null)
+                    }
+                }
+            }
+
+        return SubscribeHandle(
+            // Synthetic ids — the consumer-facing handle is logical,
+            // not bound to any one session's wire ids. -1 is a
+            // reserved sentinel callers shouldn't compare against.
+            subscribeId = -1L,
+            trackAlias = -1L,
+            ok = SYNTH_OK,
+            objects = frames.asSharedFlow(),
+            unsubscribeAction = {
+                // Capture the live underlying handle BEFORE cancelling
+                // the pump — the pump's finally clears `liveHandleRef`
+                // on cancellation, and we need a stable reference to
+                // forward the user-initiated unsubscribe to the live
+                // session's wire SUBSCRIBE_DONE.
+                val live = liveHandleRef.getAndSet(null)
+                pumpJob.cancel()
+                live?.let { runCatching { it.unsubscribe() } }
+            },
+        )
     }
 
     override suspend fun close() {
@@ -158,5 +229,22 @@ private class ReconnectingHandle(
         if (mutableState.value !is NestsListenerState.Closed) {
             mutableState.value = NestsListenerState.Closed
         }
+    }
+
+    companion object {
+        // Buffer enough Opus frames to ride out a brief downstream
+        // stall during reconnect. Frames are ~20 ms each, so 64 ≈ 1.3 s
+        // of audio — long enough for a typical re-handshake without
+        // dropping speech, short enough that a slow consumer doesn't
+        // grow the queue unbounded.
+        private const val SUBSCRIBE_BUFFER = 64
+
+        private val SYNTH_OK =
+            SubscribeOk(
+                subscribeId = -1L,
+                expiresMs = 0L,
+                groupOrder = 0x01,
+                contentExists = false,
+            )
     }
 }
