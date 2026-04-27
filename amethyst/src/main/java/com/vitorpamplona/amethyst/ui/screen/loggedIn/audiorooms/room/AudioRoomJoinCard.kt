@@ -107,21 +107,48 @@ private fun AudioRoomJoinCardContent(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Button(onClick = {
-                    AudioRoomBridge.set(accountViewModel)
-                    AudioRoomActivity.launch(
-                        context = context,
-                        addressValue = addressValue,
-                        authBaseUrl = serviceBase,
-                        endpoint = endpoint,
-                        hostPubkey = hostPubkey,
-                        roomId = roomId,
-                        kind = kind,
-                    )
-                }) {
-                    Text(stringRes(R.string.audio_room_join))
-                }
+                JoinAudioRoomButton(event = event, accountViewModel = accountViewModel)
             }
         }
+    }
+}
+
+/**
+ * Standalone "Join audio room" button. Reusable from any composable
+ * that has a [MeetingSpaceEvent] in hand — the lobby card, the
+ * in-feed note renderer (so a `nostr:naddr1...` deep-link to a
+ * kind-30312 lands one tap away from the room), and any future
+ * room-list surface. Renders nothing for events without a
+ * service / endpoint / d-tag — those rooms can't be joined on
+ * the audio plane.
+ */
+@Composable
+fun JoinAudioRoomButton(
+    event: MeetingSpaceEvent,
+    accountViewModel: AccountViewModel,
+) {
+    val serviceBase = event.service()
+    val endpoint = event.endpoint()
+    val roomId = event.address().dTag
+    if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
+
+    val context = LocalContext.current
+    val addressValue = remember(event) { event.address().toValue() }
+    val hostPubkey = event.pubKey
+    val kind = event.kind
+
+    Button(onClick = {
+        AudioRoomBridge.set(accountViewModel)
+        AudioRoomActivity.launch(
+            context = context,
+            addressValue = addressValue,
+            authBaseUrl = serviceBase,
+            endpoint = endpoint,
+            hostPubkey = hostPubkey,
+            roomId = roomId,
+            kind = kind,
+        )
+    }) {
+        Text(stringRes(R.string.audio_room_join))
     }
 }

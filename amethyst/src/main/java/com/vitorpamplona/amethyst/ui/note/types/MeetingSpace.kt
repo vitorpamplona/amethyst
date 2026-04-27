@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -158,6 +159,24 @@ fun RenderMeetingSpaceEventInner(
     }
 
     RenderParticipants(participants, accountViewModel, nav)
+
+    // In-feed Join button — closes the deep-link loop. A
+    // `nostr:naddr1...` for a kind-30312 lands here through
+    // MainActivity's URI handler → Route.Note(addressTag) → this
+    // renderer; without a button the user has no path into the
+    // audio room. JoinAudioRoomButton hides itself when the
+    // event lacks service / endpoint / d-tag.
+    if (status != MeetingSpaceStatusTag.STATUS.CLOSED) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.JoinAudioRoomButton(
+                event = noteEvent,
+                accountViewModel = accountViewModel,
+            )
+        }
+    }
 }
 
 @Composable
