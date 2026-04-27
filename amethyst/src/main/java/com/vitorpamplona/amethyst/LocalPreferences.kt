@@ -133,6 +133,7 @@ private object PrefKeys {
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
     const val LATEST_TRUST_PROVIDER_LIST = "latestTrustProviderList"
     const val CALLS_ENABLED = "calls_enabled"
+    const val SMART_REPLY_ENABLED = "smart_reply_enabled"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
@@ -410,6 +411,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
                     putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
+                    putBoolean(PrefKeys.SMART_REPLY_ENABLED, settings.smartReplyEnabled.value)
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
 
                     // migrating from previous design
@@ -515,6 +517,7 @@ object LocalPreferences {
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                     val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
+                    val smartReplyEnabled = getBoolean(PrefKeys.SMART_REPLY_ENABLED, true)
                     val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
@@ -665,6 +668,7 @@ object LocalPreferences {
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
                         callsEnabled = MutableStateFlow(callsEnabled),
+                        smartReplyEnabled = MutableStateFlow(smartReplyEnabled),
                     )
                 }
             }

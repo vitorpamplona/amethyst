@@ -190,6 +190,11 @@ fun PrivateMessageEditFieldRow(
         if (missingRelays.isNotEmpty()) {
             RecipientMissingRelaysWarning(missingRelays, accountViewModel, nav)
         } else {
+            val suggestions by channelScreenModel.smartReplySuggestions.collectAsStateWithLifecycle()
+            SmartReplySuggestionRow(
+                suggestions = suggestions,
+                onSuggestionClick = channelScreenModel::applySmartReplySuggestion,
+            )
             EditField(channelScreenModel, onSendNewMessage, accountViewModel)
         }
     }

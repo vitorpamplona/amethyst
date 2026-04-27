@@ -41,6 +41,7 @@ genaiProofreading = "1.0.0-beta1"
 genaiPrompt = "1.0.0-beta2"
 genaiRewriting = "1.0.0-beta1"
 languageId = "17.0.6"
+smartReply = "17.0.4"
 lifecycleRuntimeKtx = "2.10.0"
 lightcompressor-enhanced = "2.2.1"
 markdown = "f92ef49c9d"
@@ -149,6 +150,7 @@ google-mlkit-genai-proofreading = { group = "com.google.mlkit", name = "genai-pr
 google-mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "genaiPrompt" }
 google-mlkit-genai-rewriting = { group = "com.google.mlkit", name = "genai-rewriting", version.ref = "genaiRewriting" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
+google-mlkit-smart-reply = { group = "com.google.mlkit", name = "smart-reply", version.ref = "smartReply" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }

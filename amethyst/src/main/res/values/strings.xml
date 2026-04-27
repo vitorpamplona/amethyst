@@ -2483,6 +2483,9 @@
     <string name="ai_tone_punchy">Punchy</string>
     <string name="ai_tone_emojify">+ Emoji</string>
 
+    <string name="smart_reply_setting_title">Smart Reply suggestions</string>
+    <string name="smart_reply_setting_description">Show on-device AI quick-reply suggestions above the chat input in direct messages.</string>
+
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji Packs</string>
     <string name="emoji_pack_management_title">Add to Emoji List</string>

@@ -201,6 +201,7 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val smartReplyEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -1072,6 +1073,13 @@ class AccountSettings(
     fun changeCallsEnabled(enabled: Boolean) {
         if (callsEnabled.value != enabled) {
             callsEnabled.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeSmartReplyEnabled(enabled: Boolean) {
+        if (smartReplyEnabled.value != enabled) {
+            smartReplyEnabled.tryEmit(enabled)
             saveAccountSettings()
         }
     }

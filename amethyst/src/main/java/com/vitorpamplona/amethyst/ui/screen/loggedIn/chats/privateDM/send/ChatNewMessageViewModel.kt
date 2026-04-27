@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.ai.MLKitSmartReplyService
+import com.vitorpamplona.amethyst.service.ai.SmartReplyMessage
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -101,15 +103,21 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -195,6 +203,47 @@ class ChatNewMessageViewModel :
             )
 
     val replyTo = mutableStateOf<Note?>(null)
+
+    private val smartReplyService = MLKitSmartReplyService()
+
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    val smartReplySuggestions: StateFlow<List<String>> =
+        room
+            .flatMapLatest { roomKey ->
+                if (roomKey == null) {
+                    flowOf(emptyList())
+                } else {
+                    val chatroom = account.chatroomList.getOrCreatePrivateChatroom(roomKey)
+                    val ticks = merge(flowOf(Unit), chatroom.changesFlow().map { Unit })
+                    combine(account.settings.smartReplyEnabled, ticks) { enabled, _ -> enabled }
+                        .debounce(200)
+                        .map { enabled ->
+                            if (!enabled) emptyList() else smartReplyService.suggestReplies(buildSmartReplyHistory(chatroom))
+                        }
+                }
+            }.flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun buildSmartReplyHistory(chatroom: com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom): List<SmartReplyMessage> {
+        val myPubkeyHex = account.userProfile().pubkeyHex
+        return chatroom.messages
+            .asSequence()
+            .filter { it.event != null }
+            .sortedBy { it.createdAt() ?: 0L }
+            .toList()
+            .takeLast(10)
+            .mapNotNull { note ->
+                val event = note.event ?: return@mapNotNull null
+                val text = account.cachedDecryptContent(event)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val authorHex = note.author?.pubkeyHex ?: event.pubKey
+                SmartReplyMessage(
+                    text = text,
+                    timestampMs = (note.createdAt() ?: event.createdAt) * 1000L,
+                    isLocalUser = authorHex == myPubkeyHex,
+                    remoteUserId = authorHex,
+                )
+            }
+    }
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
 
@@ -797,8 +846,14 @@ class ChatNewMessageViewModel :
         urlPreviews.update(message.text.toString())
     }
 
+    fun applySmartReplySuggestion(suggestion: String) {
+        message.insertUrlAtCursor(suggestion)
+        onMessageChanged()
+    }
+
     override fun onCleared() {
         super.onCleared()
+        smartReplyService.close()
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 

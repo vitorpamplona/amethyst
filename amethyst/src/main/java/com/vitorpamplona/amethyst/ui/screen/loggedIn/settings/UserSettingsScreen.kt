@@ -47,6 +47,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -110,6 +111,8 @@ fun UserSettingsScreen(
                 DontTranslateFromSetting(accountViewModel)
                 HorizontalDivider(thickness = DividerThickness)
                 LanguagePreferencesSetting(accountViewModel)
+                HorizontalDivider(thickness = DividerThickness)
+                SmartReplySetting(accountViewModel)
             }
         }
     }
@@ -350,6 +353,22 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
                 onDismiss = { showAddPair = false },
             )
         }
+    }
+}
+
+@Composable
+fun SmartReplySetting(accountViewModel: AccountViewModel) {
+    val enabled by accountViewModel.account.settings.smartReplyEnabled
+        .collectAsStateWithLifecycle()
+
+    SettingsRow(
+        name = R.string.smart_reply_setting_title,
+        description = R.string.smart_reply_setting_description,
+    ) {
+        Switch(
+            checked = enabled,
+            onCheckedChange = { accountViewModel.account.settings.changeSmartReplyEnabled(it) },
+        )
     }
 }
 
