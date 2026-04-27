@@ -103,6 +103,15 @@ jobs:
           timeout_minutes: 15
           command: ./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}
 
+      # jpackage pins libicu to the build host's version (libicu74 on
+      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax libicu dependency in .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Build portable archives (windows + linux-portable)
         if: matrix.family == 'windows' || matrix.family == 'linux-portable'
         run: |
@@ -247,6 +256,15 @@ jobs:
           max_attempts: 2
           timeout_minutes: 15
           command: ./gradlew --no-daemon :cli:${{ matrix.tasks }}
+
+      # jpackage pins libicu to the build host's version (libicu74 on
+      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax libicu dependency in .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh cli/build/jpackage/*.deb
 
       - name: Collect + rename assets
         run: |
