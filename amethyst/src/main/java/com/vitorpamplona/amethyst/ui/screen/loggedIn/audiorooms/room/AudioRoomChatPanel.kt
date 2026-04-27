@@ -38,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,11 +46,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomViewModel
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -74,9 +78,21 @@ internal fun AudioRoomChatPanel(
     val messages by viewModel.chat.collectAsState()
     val listState = rememberLazyListState()
 
-    // Auto-scroll to bottom on new message arrival.
+    // Only auto-scroll when the user is already pinned near the
+    // bottom — otherwise a new message yanks them away from the
+    // history they're scrolling through. Standard chat-app pattern.
+    val isAtBottom by remember(messages.size) {
+        derivedStateOf {
+            val lastIdx = messages.lastIndex
+            if (lastIdx < 0) {
+                true
+            } else {
+                listState.firstVisibleItemIndex >= (lastIdx - PINNED_TO_BOTTOM_TOLERANCE)
+            }
+        }
+    }
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
+        if (messages.isNotEmpty() && isAtBottom) {
             listState.animateScrollToItem(messages.size - 1)
         }
     }
@@ -122,14 +138,22 @@ private fun ChatRow(
         )
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Truncated pubkey as the inline name placeholder. A future
-            // pass can resolve to the user's NIP-01 display name; for
-            // the v1 chat panel we keep the dependency surface tight.
-            Text(
-                text = msg.pubKey.take(8),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            // Same author-name pattern the rest of Amethyst's chat
+            // surfaces use — LoadUser kicks the metadata fetch and
+            // UsernameDisplay observes its kind-0 flow, falling back
+            // to a truncated npub while the metadata is in flight or
+            // missing. Replaces the "first 8 hex chars of pubkey"
+            // placeholder the v1 chat panel shipped with.
+            LoadUser(baseUserHex = msg.pubKey, accountViewModel = accountViewModel) { user ->
+                if (user != null) {
+                    UsernameDisplay(
+                        baseUser = user,
+                        fontWeight = FontWeight.Bold,
+                        textColor = MaterialTheme.colorScheme.primary,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
             Text(
                 text = msg.content,
                 style = MaterialTheme.typography.bodyMedium,
@@ -144,6 +168,7 @@ private fun ChatComposer(
     accountViewModel: AccountViewModel,
 ) {
     var draft by remember { mutableStateOf("") }
+    var isSending by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -156,21 +181,40 @@ private fun ChatComposer(
             placeholder = { Text(stringRes(R.string.audio_room_chat_placeholder)) },
             singleLine = false,
             maxLines = 4,
+            enabled = !isSending,
         )
         Spacer(Modifier.width(8.dp))
         TextButton(
-            enabled = draft.isNotBlank(),
+            enabled = draft.isNotBlank() && !isSending,
             onClick = {
                 val toSend = draft.trim()
                 if (toSend.isEmpty()) return@TextButton
-                draft = ""
+                isSending = true
                 scope.launch {
-                    runCatching {
-                        accountViewModel.account.signAndComputeBroadcast(
-                            LiveActivitiesChatMessageEvent.message(
-                                post = toSend,
-                                activity = roomATag,
-                            ),
+                    val result =
+                        runCatching {
+                            accountViewModel.account.signAndComputeBroadcast(
+                                LiveActivitiesChatMessageEvent.message(
+                                    post = toSend,
+                                    activity = roomATag,
+                                ),
+                            )
+                        }
+                    isSending = false
+                    if (result.isSuccess) {
+                        // Clear ONLY on success so a network failure
+                        // doesn't lose the user's text — they can retry
+                        // without retyping.
+                        draft = ""
+                    } else {
+                        val why =
+                            result.exceptionOrNull()?.message
+                                ?: result.exceptionOrNull()?.let { it::class.simpleName }
+                                ?: "unknown error"
+                        accountViewModel.toastManager.toast(
+                            R.string.audio_room_chat_send_failed_title,
+                            why,
+                            user = null,
                         )
                     }
                 }
@@ -180,3 +224,5 @@ private fun ChatComposer(
         }
     }
 }
+
+private const val PINNED_TO_BOTTOM_TOLERANCE = 1

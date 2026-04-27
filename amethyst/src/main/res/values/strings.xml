@@ -504,6 +504,12 @@
     <string name="audio_room_connected">Audio connected</string>
     <string name="audio_room_reconnecting">Reconnecting…</string>
     <string name="audio_room_listen_to_recording">Listen to recording</string>
+    <string name="audio_room_chat_send_failed_title">Couldn\'t send message</string>
+    <string name="audio_room_no_app_to_open_link">No app installed to open this link.</string>
+    <string name="audio_room_close_room_confirm_title">Close this room?</string>
+    <string name="audio_room_close_room_confirm_body">All attendees will be disconnected. The room will show as CLOSED in the feed.</string>
+    <string name="audio_room_close_room_confirm_action">Close room</string>
+    <string name="audio_room_create_when_in_past">Pick a future start time.</string>
     <string name="audio_room_audio_failed">Audio failed: %1$s</string>
     <string name="audio_room_audio_unavailable">Audio is not available for this room</string>
     <string name="audio_room_talk">Talk</string>
