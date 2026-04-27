@@ -534,6 +534,124 @@ class BitRelayResolverTest {
             assertEquals(listOf("d/testls"), client.queriedNames)
         }
 
+    // ── Tor / .onion endpoint surfacing ─────────────────────────────────
+
+    @Test
+    fun `resolved outcome surfaces onion endpoints from _tor txt`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {
+                          "relay": "wss://relay.testls.bit/",
+                          "_tor":  { "txt": "dhflg7a7etr77hwt4eerwoovhg7b5bivt2jem4366dt4psgnl5diyiyd.onion" }
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://testls.bit")
+            assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            // Default `resolvedUrl` stays clearnet.
+            assertEquals("wss://relay.testls.bit/", outcome.resolvedUrl)
+            // But the onion endpoint is exposed for callers that prefer Tor.
+            assertEquals(1, outcome.onionEndpoints.size)
+            assertTrue(outcome.onionEndpoints[0].endsWith(".onion/"))
+        }
+
+    @Test
+    fun `cachedOnionEndpointsFor returns the parsed list`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """{"relay":"wss://x/","tor":"abcdef1234567890.onion"}""",
+                    )
+                }
+            val resolver = newResolver(client)
+            // Cache miss before resolve.
+            assertEquals(null, resolver.cachedOnionEndpointsFor("testls.bit"))
+            resolver.resolveRaw("wss://testls.bit")
+            val cached = resolver.cachedOnionEndpointsFor("testls.bit")
+            assertNotNull(cached)
+            assertEquals(1, cached!!.size)
+            // Subsequent calls hit the cache, no extra ElectrumX query.
+            assertEquals(1, client.callCount)
+        }
+
+    @Test
+    fun `subdomain onion is read from map node, not parent`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {
+                          "_tor": { "txt": "parent3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3.onion" },
+                          "map": {
+                            "relay": {
+                              "relay": "wss://relay.testls.bit/",
+                              "_tor":  { "txt": "sub01010101010101010101010101010101010101010101010101.onion" }
+                            }
+                          }
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+            assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            assertEquals(1, outcome.onionEndpoints.size)
+            // Must be the subdomain's onion, not the parent's.
+            assertTrue(outcome.onionEndpoints[0].contains("sub01010101"))
+        }
+
+    @Test
+    fun `record with only onion endpoints still resolves`() =
+        runTest {
+            // A pure-Tor relay with no clearnet relay field. Without our
+            // change this would have been NotFound because parseRelayUrls
+            // returned empty; now we accept it as a Resolved with onion-only.
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """{"_tor":{"txt":"abcdef1234567890.onion"}}""",
+                    )
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://testls.bit")
+            assertTrue("expected Resolved, got $outcome", outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            assertEquals(0, outcome.candidates.size)
+            assertEquals(1, outcome.onionEndpoints.size)
+            // resolvedUrl falls back to the onion URL (the rewriter will
+            // see that and route via Tor; without Tor the connect fails
+            // loudly rather than silently).
+            assertTrue(outcome.resolvedUrl.contains(".onion"))
+        }
+
+    @Test
+    fun `record with neither relay nor onion is NotFound`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/testls", """{"ip":["1.2.3.4"]}""")
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://testls.bit")
+            assertTrue(
+                "expected NotFound, got $outcome",
+                outcome is BitRelayResolver.Resolution.NotFound,
+            )
+        }
+
     // ── Helpers ────────────────────────────────────────────────────────
 
     private fun newResolver(client: IElectrumXClient): BitRelayResolver =

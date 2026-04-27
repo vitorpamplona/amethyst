@@ -109,6 +109,15 @@ class BitRelayResolver(
              * TLS handshake to [resolvedUrl] (RFC 6698 / Namecoin `ifa-0001`).
              */
             val tlsaRecords: List<NamecoinNameResolver.TlsaRecord> = emptyList(),
+            /**
+             * `ws[s]://...onion[...]` URLs declared at the same Namecoin node,
+             * usually under a `tor` or `_tor.txt` field. Empty if the record
+             * does not advertise a Tor hidden service. Callers that have Tor
+             * routing enabled SHOULD prefer one of these over [resolvedUrl];
+             * callers without Tor should ignore them (the underlying
+             * `.onion` cannot be reached over clearnet).
+             */
+            val onionEndpoints: List<String> = emptyList(),
         ) : Resolution()
 
         /** The `.bit` name does not exist or has no relay record. */
@@ -127,6 +136,7 @@ class BitRelayResolver(
     private data class CachedRelayResolution(
         val candidates: List<String>,
         val tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
+        val onionEndpoints: List<String>,
         val message: String?,
         val timestamp: Long = TimeUtils.now(),
     )
@@ -180,7 +190,7 @@ class BitRelayResolver(
                 }
 
                 is NamecoinNameResolver.NameLookupOutcome.NotFound -> {
-                    cachePut(host, emptyList(), emptyList(), "Name not found")
+                    cachePut(host, emptyList(), emptyList(), emptyList(), "Name not found")
                     return Resolution.NotFound(host, "Namecoin name `${outcome.name}` not found")
                 }
 
@@ -199,23 +209,24 @@ class BitRelayResolver(
         // collecting; passing an empty list yields the original top-level
         // behaviour.
         val candidates = NamecoinNameResolver.parseRelayUrls(nameResult.value, subdomainLabels)
-        // Same JSON, same parser — pull the TLSA list out of the value so the
-        // caller can pin the rewritten handshake without paying for a second
-        // ElectrumX round-trip.
+        // Same JSON, same parser — pull the TLSA list and Tor endpoints out
+        // of the value so the caller can pin / route without paying for a
+        // second ElectrumX round-trip.
         val tlsaRecords = NamecoinNameResolver.parseTlsaRecords(nameResult.value, subdomainLabels)
-        if (candidates.isEmpty()) {
+        val onionEndpoints = NamecoinNameResolver.parseTorEndpoints(nameResult.value, subdomainLabels)
+        if (candidates.isEmpty() && onionEndpoints.isEmpty()) {
             val msg =
                 if (subdomainLabels.isEmpty()) {
-                    "No `relay` field in Namecoin record for `$namecoinName`"
+                    "No `relay` or `tor` field in Namecoin record for `$namecoinName`"
                 } else {
-                    "No `relay` field at subdomain `${subdomainLabels.joinToString(".")}` of `$namecoinName`"
+                    "No `relay` or `tor` field at subdomain `${subdomainLabels.joinToString(".")}` of `$namecoinName`"
                 }
-            cachePut(host, emptyList(), tlsaRecords, msg)
+            cachePut(host, emptyList(), tlsaRecords, emptyList(), msg)
             return Resolution.NotFound(host, msg)
         }
 
-        cachePut(host, candidates, tlsaRecords, null)
-        return resolutionFromCandidates(rawUrl, host, candidates, tlsaRecords)
+        cachePut(host, candidates, tlsaRecords, onionEndpoints, null)
+        return resolutionFromCandidates(rawUrl, host, candidates, tlsaRecords, onionEndpoints)
     }
 
     private fun cachedResolution(
@@ -223,8 +234,8 @@ class BitRelayResolver(
         host: String,
         entry: CachedRelayResolution,
     ): Resolution =
-        if (entry.candidates.isNotEmpty()) {
-            resolutionFromCandidates(rawUrl, host, entry.candidates, entry.tlsaRecords)
+        if (entry.candidates.isNotEmpty() || entry.onionEndpoints.isNotEmpty()) {
+            resolutionFromCandidates(rawUrl, host, entry.candidates, entry.tlsaRecords, entry.onionEndpoints)
         } else {
             Resolution.NotFound(host, entry.message ?: "No relay record")
         }
@@ -234,13 +245,21 @@ class BitRelayResolver(
         host: String,
         candidates: List<String>,
         tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
+        onionEndpoints: List<String>,
     ): Resolution {
-        val first = candidates.firstOrNull() ?: return Resolution.NotFound(host, "No relay record")
+        // Pick a clearnet candidate by default. The rewriter decides per
+        // connection whether to swap it for an onion endpoint based on the
+        // user's live Tor settings (which the resolver itself doesn't see).
+        val first =
+            candidates.firstOrNull()
+                ?: onionEndpoints.firstOrNull()
+                ?: return Resolution.NotFound(host, "No relay record")
         return Resolution.Resolved(
             originalUrl = rawUrl,
             resolvedUrl = mergeOriginalPath(rawUrl, first),
             candidates = candidates,
             tlsaRecords = tlsaRecords,
+            onionEndpoints = onionEndpoints,
         )
     }
 
@@ -271,10 +290,11 @@ class BitRelayResolver(
         host: String,
         candidates: List<String>,
         tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
+        onionEndpoints: List<String>,
         message: String?,
     ) {
         mutex.withLock {
-            cache.put(host, CachedRelayResolution(candidates, tlsaRecords, message))
+            cache.put(host, CachedRelayResolution(candidates, tlsaRecords, onionEndpoints, message))
         }
     }
 
@@ -293,6 +313,23 @@ class BitRelayResolver(
         val key = host.lowercase()
         return mutex.withLock {
             cache[key]?.tlsaRecords
+        }
+    }
+
+    /**
+     * Look up the cached `.onion` endpoints for a `.bit` host that has
+     * previously been resolved through [resolve]. Returns `null` if the
+     * host has not been resolved, an empty list if it has been resolved
+     * but the Namecoin record advertises no Tor hidden service.
+     *
+     * Used by the URL rewriter to swap the resolved clearnet handshake
+     * for an onion endpoint when the user has Tor routing enabled. Same
+     * cache as the relay-URL/TLSA path — no extra ElectrumX call.
+     */
+    suspend fun cachedOnionEndpointsFor(host: String): List<String>? {
+        val key = host.lowercase()
+        return mutex.withLock {
+            cache[key]?.onionEndpoints
         }
     }
 

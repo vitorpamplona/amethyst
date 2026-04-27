@@ -302,7 +302,19 @@ class AppModules(
                 val useTor = torEvaluatorFlow.flow.value.useTor(url)
                 okHttpClientForRelays.getHttpClient(useTor)
             },
-            urlRewriter = BitRelayUrlRewriter(bitRelayResolver),
+            urlRewriter =
+                BitRelayUrlRewriter(
+                    resolver = bitRelayResolver,
+                    // Prefer the Namecoin record's `.onion` alias when the
+                    // user has Tor enabled and onion routing for relays is
+                    // on. Re-evaluated on every connect so toggling the
+                    // setting takes effect on the next reconnect.
+                    preferOnion = { _ ->
+                        val settings = torEvaluatorFlow.torSettings.value
+                        settings.torType != com.vitorpamplona.amethyst.ui.tor.TorType.OFF &&
+                            settings.onionRelaysViaTor
+                    },
+                ),
             clientDecorator = tlsaConnectionPolicy::decorate,
         )
 

@@ -440,6 +440,88 @@ class NamecoinNameResolver(
                 )
             }
         }
+
+        /**
+         * Parse a Namecoin `d/<name>` value JSON for Tor `.onion` aliases
+         * advertised at the (optionally walked) subdomain.
+         *
+         * Two shapes are accepted, both observed in the wild:
+         *   1. `"tor": "<onion>"` or `"tor": ["<onion-1>", "<onion-2>"]`.
+         *   2. `"_tor": { "txt": "<onion>" }` (the live `d/testls` shape,
+         *      mirroring the `_tor` synthetic-subdomain DNS convention).
+         *
+         * Bare hostnames are promoted to `ws://<hostname>/`. Pre-formed
+         * `ws[s]://...onion[...]` URLs pass through. Anything else is
+         * dropped.
+         *
+         * Pass [subdomainLabels] to walk the parent's `map` tree before
+         * collecting, the same convention as [parseRelayUrls].
+         */
+        fun parseTorEndpoints(
+            rawValueJson: String,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<String> =
+            try {
+                val root = SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject
+                val target = walkSubdomain(root, subdomainLabels) ?: return emptyList()
+                collectTorEndpoints(target)
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+        private fun collectTorEndpoints(obj: JsonObject): List<String> {
+            val out = mutableListOf<String>()
+            pushOnionField(obj["tor"], out)
+            val torSub = obj["_tor"] as? JsonObject
+            if (torSub != null) {
+                pushOnionField(torSub["txt"], out)
+                pushOnionField(torSub["tor"], out)
+            }
+            return out.distinct()
+        }
+
+        private fun pushOnionField(
+            value: JsonElement?,
+            out: MutableList<String>,
+        ) {
+            if (value == null) return
+            if (value is JsonPrimitive && value.isString) {
+                normalizeOnionUrl(value.content)?.let { out += it }
+                return
+            }
+            // Otherwise treat it as an array of strings; non-arrays fall through.
+            runCatching {
+                value.jsonArray.forEach { entry ->
+                    if (entry is JsonPrimitive && entry.isString) {
+                        normalizeOnionUrl(entry.content)?.let { out += it }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Promote a bare `.onion` hostname to a `ws://...onion/` URL, or
+         * pass through a `ws[s]://...onion[...]` URL as-is. Returns null
+         * for inputs that do not look like a Tor hidden service.
+         */
+        private fun normalizeOnionUrl(raw: String): String? {
+            val trimmed = raw.trim()
+            if (trimmed.isEmpty()) return null
+            if (RelayUrlNormalizer.isRelayUrl(trimmed)) {
+                return if (trimmed.contains(".onion")) trimmed else null
+            }
+            val bareHost =
+                trimmed
+                    .removePrefix("http://")
+                    .removePrefix("https://")
+                    .substringBefore('/')
+                    .trimEnd('.')
+                    .lowercase()
+            if (!bareHost.endsWith(".onion")) return null
+            val label = bareHost.removeSuffix(".onion")
+            if (label.isEmpty() || label.contains('.')) return null
+            return "ws://$bareHost/"
+        }
     }
 
     /** RFC 6698 TLSA Certificate Usage Field. */

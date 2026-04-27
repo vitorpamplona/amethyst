@@ -405,4 +405,123 @@ class NamecoinSubdomainTest {
         assertEquals(1, recs.size)
         assertEquals("RELAY_HASH", recs[0].associationDataBase64)
     }
+
+    // ── parseTorEndpoints ──────────────────────────────────────
+
+    @Test
+    fun `parseTorEndpoints reads bare onion under _tor txt`() {
+        // The shape live d/testls already uses.
+        val v = """{"_tor":{"txt":"dhflg7a7etr77hwt4eerwoovhg7b5bivt2jem4366dt4psgnl5diyiyd.onion"}}"""
+        assertEquals(
+            listOf("ws://dhflg7a7etr77hwt4eerwoovhg7b5bivt2jem4366dt4psgnl5diyiyd.onion/"),
+            NamecoinNameResolver.parseTorEndpoints(v),
+        )
+    }
+
+    @Test
+    fun `parseTorEndpoints reads array under _tor txt`() {
+        val v =
+            """
+            {"_tor":{"txt":[
+              "a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion",
+              "vvv2jhqv2zluby56cjm66xqfd6kg2ouehgg7omrr5w4f5jjy2ezfxgad.onion"
+            ]}}
+            """.trimIndent()
+        val r = NamecoinNameResolver.parseTorEndpoints(v)
+        assertEquals(2, r.size)
+        assertTrue(r.all { it.startsWith("ws://") && it.endsWith(".onion/") })
+    }
+
+    @Test
+    fun `parseTorEndpoints reads top-level tor field as string`() {
+        val v = """{"tor":"a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion"}"""
+        assertEquals(1, NamecoinNameResolver.parseTorEndpoints(v).size)
+    }
+
+    @Test
+    fun `parseTorEndpoints accepts pre-formed wss onion url`() {
+        val v =
+            """{"tor":"wss://a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion:8443/v1/nostr"}"""
+        assertEquals(
+            listOf("wss://a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion:8443/v1/nostr"),
+            NamecoinNameResolver.parseTorEndpoints(v),
+        )
+    }
+
+    @Test
+    fun `parseTorEndpoints rejects non-onion strings`() {
+        // Hostnames that don't end in .onion must be dropped — we don't
+        // want a malicious record to redirect a Tor connection to clearnet.
+        val v = """{"_tor":{"txt":"evil.example.com"}}"""
+        assertTrue(NamecoinNameResolver.parseTorEndpoints(v).isEmpty())
+    }
+
+    @Test
+    fun `parseTorEndpoints rejects multi-label onion subdomains`() {
+        // .onion services are exactly one label by spec; "foo.bar.onion"
+        // would be ambiguous and indicates a publishing error.
+        val v = """{"_tor":{"txt":"foo.deadbeef.onion"}}"""
+        assertTrue(NamecoinNameResolver.parseTorEndpoints(v).isEmpty())
+    }
+
+    @Test
+    fun `parseTorEndpoints walks subdomain tree`() {
+        val v =
+            """
+            {
+              "map": {
+                "relay": {
+                  "_tor": { "txt": "a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion" }
+                }
+              }
+            }
+            """.trimIndent()
+        // Top-level: empty.
+        assertTrue(NamecoinNameResolver.parseTorEndpoints(v).isEmpty())
+        // Subdomain: one entry.
+        assertEquals(1, NamecoinNameResolver.parseTorEndpoints(v, listOf("relay")).size)
+    }
+
+    @Test
+    fun `parseTorEndpoints does NOT inherit parent tor field into subdomain`() {
+        // Mirror of the relay/tls anti-inheritance assertion: a parent's
+        // .onion alias MUST NOT silently authorise a subdomain that didn't
+        // declare its own.
+        val v =
+            """
+            {
+              "_tor": { "txt": "parent3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3xx3.onion" },
+              "map": { "relay": { "ip": ["1.2.3.4"] } }
+            }
+            """.trimIndent()
+        assertTrue(NamecoinNameResolver.parseTorEndpoints(v, listOf("relay")).isEmpty())
+    }
+
+    @Test
+    fun `parseTorEndpoints deduplicates`() {
+        // tor at top level + _tor.txt with same value: should appear once.
+        val v =
+            """
+            {
+              "tor":  "a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion",
+              "_tor": { "txt": "a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion" }
+            }
+            """.trimIndent()
+        assertEquals(1, NamecoinNameResolver.parseTorEndpoints(v).size)
+    }
+
+    @Test
+    fun `parseTorEndpoints handles malformed JSON gracefully`() {
+        assertTrue(NamecoinNameResolver.parseTorEndpoints("not json at all").isEmpty())
+        assertTrue(NamecoinNameResolver.parseTorEndpoints("").isEmpty())
+        assertTrue(NamecoinNameResolver.parseTorEndpoints("{\"_tor\":").isEmpty())
+    }
+
+    @Test
+    fun `parseTorEndpoints handles tor field shaped as object`() {
+        // {"_tor": "..."} (string at top level under _tor) and
+        // {"tor": {"txt":"..."}} would be unusual shapes; we don't crash.
+        val v = """{"_tor":"some-string"}"""
+        assertTrue(NamecoinNameResolver.parseTorEndpoints(v).isEmpty())
+    }
 }

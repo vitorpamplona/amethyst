@@ -245,6 +245,59 @@ The ElectrumX servers themselves still use Amethyst's existing pinned
 self-signed cert store (see `ElectrumXClient.PINNED_ELECTRUMX_CERTS`)
 for their own TLS, independent of any TLSA published in `tls`.
 
+## Tor / `.onion` resolution
+
+A Namecoin record can advertise a Tor hidden-service alias alongside
+the clearnet relay. Two shapes are accepted (mirroring DNS / ncdns
+convention):
+
+```jsonc
+// Direct: a `tor` item carrying one or more onion hostnames or full URLs.
+{ "tor": "a3ngmczmrdjkk4i7yyfusyxjd2qpmzs5fnrh34xkzqkpvuw5stz25had.onion" }
+{ "tor": ["a3ng...had.onion", "vvv2...gad.onion"] }
+{ "tor": "wss://a3ng...had.onion:8443/v1/nostr" }
+
+// _tor synthetic-subdomain: a TXT-style payload under a `_tor` key.
+// This is the shape used by ncdns / Encaya browsers and by the
+// existing live d/testls record.
+{ "_tor": { "txt": "a3ng...had.onion" } }
+{ "_tor": { "txt": ["a3ng...had.onion"] } }
+```
+
+Bare hostnames are promoted to `ws://<host>/`. Pre-formed
+`ws[s]://...onion[...]` URLs pass through. Anything that doesn't end
+in `.onion`, or that has multi-label `.onion` subdomains (`foo.x.onion`),
+is dropped — a malicious record must not be able to redirect a Tor
+connection back to clearnet.
+
+[`BitRelayResolver`](./BitRelayResolver.kt) parses the same `map`-walked
+node for both `relay` (clearnet) and `tor`/`_tor.txt` (onion) endpoints,
+and exposes both on `Resolution.Resolved`:
+
+```kotlin
+outcome.resolvedUrl       // clearnet by default
+outcome.candidates         // all `relay`/`relays`/`nostr.relay` entries
+outcome.tlsaRecords        // RFC 6698 TLSA records
+outcome.onionEndpoints     // ws[s]://...onion[...] URLs
+```
+
+On the Amethyst side, `BitRelayUrlRewriter` decides per-connection
+whether to swap `resolvedUrl` for an onion endpoint. The default policy
+in `AppModules` is:
+
+  - Tor enabled (`torType != OFF`) AND `onionRelaysViaTor` true
+    → prefer the first onion endpoint, route through SOCKS.
+  - Otherwise → use the clearnet `resolvedUrl`.
+
+A pure-Tor record (no `relay`, only `tor`/`_tor`) is also supported.
+The resolver returns the onion as `resolvedUrl` so the client gets a
+clear connect failure when Tor is disabled, rather than silently
+routing nowhere. With Tor enabled it works out of the box.
+
+Anti-inheritance: a parent record's `tor` does NOT silently authorise
+a subdomain that hasn't declared its own — same safety property as
+the `relay` and `tls` walks.
+
 ## Caching
 
 `BitRelayResolver` keeps a small in-memory cache:
@@ -256,6 +309,11 @@ for their own TLS, independent of any TLSA published in `tls`.
 
 Call `BitRelayResolver.invalidate(host)` to drop a single entry, or
 `clear()` to evict everything.
+
+The cache stores the full set of resolution outputs together — relay
+URLs, TLSA records, and onion endpoints — so a single ElectrumX
+round-trip serves the URL rewriter, the TLS pinner, and the Tor
+routing decision.
 
 ## Privacy
 

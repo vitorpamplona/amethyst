@@ -34,15 +34,34 @@ import kotlinx.coroutines.runBlocking
  * Call site is `OkHttpWebSocket.connect()`, which runs on the relay-pool IO
  * dispatcher. Using [runBlocking] there is acceptable because:
  *   - The thread is already an IO worker.
- *   - The underlying [com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver.lookupNameDetailed]
+ *   - The underlying
+ *     [com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver.lookupNameDetailed]
  *     call is timeout-bounded.
  *   - Resolutions are cached, so steady-state cost is zero.
  *
- * On any error or for non-`.bit` URLs, the original URL is returned unchanged
- * so connection behaviour is identical to the pre-feature path.
+ * Tor-aware routing
+ * -----------------
+ * If the Namecoin record advertises an `.onion` alias (via `tor` or
+ * `_tor.txt` field), the rewriter will swap the resolved clearnet URL
+ * for the onion endpoint when [preferOnion] returns `true`. The check is
+ * re-evaluated per call so that toggling Tor settings while the app is
+ * running takes effect on the next reconnect.
+ *
+ * On any error or for non-`.bit` URLs, the original URL is returned
+ * unchanged so connection behaviour is identical to the pre-feature path.
  */
 class BitRelayUrlRewriter(
     private val resolver: BitRelayResolver,
+    /**
+     * Returns `true` when this connection should prefer an `.onion`
+     * endpoint advertised in the Namecoin record over the clearnet
+     * `relay` endpoint. Typically wired to the user's live Tor settings
+     * (`torType != OFF && onionRelaysViaTor`).
+     *
+     * Defaults to `false` so callers that don't care about onion routing
+     * keep the previous clearnet-only behaviour.
+     */
+    private val preferOnion: (NormalizedRelayUrl) -> Boolean = { false },
 ) : (NormalizedRelayUrl) -> String {
     override fun invoke(url: NormalizedRelayUrl): String {
         if (!BitRelayResolver.isBitRelay(url)) return url.url
@@ -50,10 +69,14 @@ class BitRelayUrlRewriter(
             runBlocking(Dispatchers.IO) {
                 when (val outcome = resolver.resolve(url)) {
                     is BitRelayResolver.Resolution.Resolved -> {
+                        val target = pickEndpoint(url, outcome)
                         Log.d("BitRelayUrlRewriter") {
-                            ".bit relay ${url.url} -> ${outcome.resolvedUrl} (${outcome.candidates.size} candidate(s))"
+                            val routing = if (target != outcome.resolvedUrl) " (Tor onion)" else ""
+                            ".bit relay ${url.url} -> $target$routing" +
+                                " (${outcome.candidates.size} clearnet candidate(s)," +
+                                " ${outcome.onionEndpoints.size} onion endpoint(s))"
                         }
-                        outcome.resolvedUrl
+                        target
                     }
 
                     is BitRelayResolver.Resolution.NotFound -> {
@@ -81,5 +104,29 @@ class BitRelayUrlRewriter(
             }
             url.url
         }
+    }
+
+    /**
+     * Choose the wire URL we'll actually hand to OkHttp.
+     *
+     *   - If Tor is preferred AND the record has an onion endpoint, use it.
+     *     The user's existing Tor settings (per-relay `useTor` evaluation)
+     *     will then route the resulting `ws://...onion/` connection
+     *     through the SOCKS proxy on the Tor service.
+     *   - Otherwise return [BitRelayResolver.Resolution.Resolved.resolvedUrl]
+     *     unchanged. If the record only has onion endpoints (no clearnet
+     *     relay) and Tor is not preferred, the resolver has already set
+     *     `resolvedUrl` to the first onion endpoint as a last resort, and
+     *     we return that \u2014 connecting will fail without Tor, but the user
+     *     gets a clear error rather than a silent no-op.
+     */
+    private fun pickEndpoint(
+        url: NormalizedRelayUrl,
+        outcome: BitRelayResolver.Resolution.Resolved,
+    ): String {
+        if (outcome.onionEndpoints.isNotEmpty() && preferOnion(url)) {
+            return outcome.onionEndpoints.first()
+        }
+        return outcome.resolvedUrl
     }
 }
