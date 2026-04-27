@@ -836,7 +836,6 @@
     <string name="always_on_notif_title">Amethyst 通知活跃</string>
     <string name="always_on_notif_connected">已连接到 %1$d 个收件箱中继</string>
     <string name="always_on_notif_connecting">正在连接到收件箱中继\u2026</string>
-    <string name="always_on_notif_stop">暂停</string>
     <string name="always_on_notif_setting_title">始终开启通知服务</string>
     <string name="always_on_notif_setting_description">保持与收件箱中继的持续连接以便即时发送通知。 显示正在进行的通知。使用更多电量，但确保您永远不会错过消息。</string>
     <string name="battery_optimization_title">电池优化已启用</string>

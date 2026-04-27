@@ -78,7 +78,6 @@ class NotificationRelayService : Service() {
         private const val NOTIFICATION_ID = 9832
 
         private const val ACTION_START = "com.vitorpamplona.amethyst.START_NOTIFICATION_SERVICE"
-        private const val ACTION_STOP = "com.vitorpamplona.amethyst.STOP_NOTIFICATION_SERVICE"
 
         const val ACTION_AUTO_RESTART = "com.vitorpamplona.amethyst.AUTO_RESTART_NOTIFICATION_SERVICE"
 
@@ -129,21 +128,11 @@ class NotificationRelayService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
-        when (intent?.action) {
-            ACTION_STOP -> {
-                Log.d(TAG, "Stopping service")
-                stopSelf()
-                return START_NOT_STICKY
-            }
-
-            else -> {
-                Log.d(TAG, "Starting service")
-                // Safety: also call startForeground from onStartCommand in case
-                // onCreate didn't complete before onStartCommand fired (ntfy #1520)
-                initializeForeground()
-                startRelayConnection()
-            }
-        }
+        Log.d(TAG, "Starting service")
+        // Safety: also call startForeground from onStartCommand in case
+        // onCreate didn't complete before onStartCommand fired (ntfy #1520)
+        initializeForeground()
+        startRelayConnection()
         return START_STICKY
     }
 
@@ -288,25 +277,12 @@ class NotificationRelayService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        val stopIntent =
-            Intent(this, NotificationRelayService::class.java).apply {
-                action = ACTION_STOP
-            }
-        val stopPendingIntent =
-            PendingIntent.getService(
-                this,
-                1,
-                stopIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.always_on_notif_title))
             .setContentText(contentText)
             .setSmallIcon(R.drawable.amethyst)
             .setContentIntent(pendingIntent)
-            .addAction(0, getString(R.string.always_on_notif_stop), stopPendingIntent)
             .setOngoing(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

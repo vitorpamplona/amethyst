@@ -833,7 +833,6 @@
     <string name="always_on_notif_title">Powiadomienia Ametyst Aktywne</string>
     <string name="always_on_notif_connected">Połączono z %1$d transmiterami odbiorczymi</string>
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
-    <string name="always_on_notif_stop">Pauza</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
     <string name="battery_optimization_title">Optymalizacja baterii aktywna</string>
