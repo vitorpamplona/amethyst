@@ -346,6 +346,9 @@ dependencies {
     playImplementation libs.google.mlkit.genai.prompt
     playImplementation libs.google.mlkit.genai.rewriting
 
+    // On-device image labeling for alt-text suggestions
+    playImplementation libs.google.mlkit.image.labeling
+
     // PushNotifications
     playImplementation platform(libs.firebase.bom)
     playImplementation libs.firebase.messaging
