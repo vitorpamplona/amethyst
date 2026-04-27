@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.UriParser
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Resolves Nostr relay URLs whose host is a Namecoin `.bit` domain
@@ -65,6 +68,12 @@ class BitRelayResolver(
 ) {
     private val cache = LruCache<String, CachedRelayResolution>(maxEntries)
     private val mutex = Mutex()
+
+    private val sharedJson =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
     companion object {
         /** Returns true iff [url] is a `ws[s]://` relay URL whose host ends in `.bit`. */
@@ -203,17 +212,34 @@ class BitRelayResolver(
                 }
             }
 
+        // Per ifa-0001 §"import": expand any `import` items on the parent
+        // record before walking subdomains. This lets a record point at
+        // another name for shared boilerplate (e.g. a stable `nostr.names`
+        // block, or a common TLSA pin) and still have all `relay`/`tls`/
+        // `_tor` fields read cleanly from the merged view. We use a
+        // pre-parsed [JsonObject] here and pass it to the JsonObject
+        // overloads of the parsers, so the value JSON is parsed once.
+        val parsedRoot =
+            runCatching { sharedJson.parseToJsonElement(nameResult.value).jsonObject }
+                .getOrElse {
+                    return Resolution.Error(host, "Malformed Namecoin record JSON for `$namecoinName`")
+                }
+        val effectiveRoot: JsonObject =
+            NamecoinImportResolver.expandImports(parsedRoot) { name ->
+                nameResolver.fetchValueForImport(name)
+            }
+
         // Reuse the shared relay-URL parser from NamecoinNameResolver instead
         // of re-implementing the JSON shape walk here. For subdomains we
         // pass the labels so the parser walks `map` to the right node before
         // collecting; passing an empty list yields the original top-level
         // behaviour.
-        val candidates = NamecoinNameResolver.parseRelayUrls(nameResult.value, subdomainLabels)
+        val candidates = NamecoinNameResolver.parseRelayUrls(effectiveRoot, subdomainLabels)
         // Same JSON, same parser — pull the TLSA list and Tor endpoints out
         // of the value so the caller can pin / route without paying for a
         // second ElectrumX round-trip.
-        val tlsaRecords = NamecoinNameResolver.parseTlsaRecords(nameResult.value, subdomainLabels)
-        val onionEndpoints = NamecoinNameResolver.parseTorEndpoints(nameResult.value, subdomainLabels)
+        val tlsaRecords = NamecoinNameResolver.parseTlsaRecords(effectiveRoot, subdomainLabels)
+        val onionEndpoints = NamecoinNameResolver.parseTorEndpoints(effectiveRoot, subdomainLabels)
         if (candidates.isEmpty() && onionEndpoints.isEmpty()) {
             val msg =
                 if (subdomainLabels.isEmpty()) {
