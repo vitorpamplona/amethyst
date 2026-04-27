@@ -31,12 +31,15 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag as MeetingSpaceStatusTag
 
 @Composable
 fun LiveStatusIndicator(
@@ -80,17 +83,28 @@ private suspend fun checkChannelIsOnline(
         try {
             when (channel) {
                 is LiveActivitiesChannel -> {
-                    // Check if streaming URL is online, fall back to relay check
-                    val streamingUrl = channel.info?.streaming()
-                    if (!streamingUrl.isNullOrBlank()) {
-                        accountViewModel.checkVideoIsOnline(streamingUrl)
+                    // Audio rooms (kind-30312) ride the same channel
+                    // model but channel.info is null (typed to
+                    // LiveActivitiesEvent). Their "is live" signal is
+                    // the addressable kind-30312's status — surface
+                    // the red dot whenever the room is OPEN/PRIVATE.
+                    if (channel.address.kind == MeetingSpaceEvent.KIND) {
+                        val room = LocalCache.getAddressableNoteIfExists(channel.address)?.event as? MeetingSpaceEvent
+                        room?.status() == MeetingSpaceStatusTag.STATUS.OPEN ||
+                            room?.status() == MeetingSpaceStatusTag.STATUS.PRIVATE
                     } else {
-                        // Check relay connection
-                        val relayUrl = channel.relayHintUrl()
-                        if (relayUrl != null) {
-                            OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
+                        // Check if streaming URL is online, fall back to relay check
+                        val streamingUrl = channel.info?.streaming()
+                        if (!streamingUrl.isNullOrBlank()) {
+                            accountViewModel.checkVideoIsOnline(streamingUrl)
                         } else {
-                            false
+                            // Check relay connection
+                            val relayUrl = channel.relayHintUrl()
+                            if (relayUrl != null) {
+                                OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
+                            } else {
+                                false
+                            }
                         }
                     }
                 }

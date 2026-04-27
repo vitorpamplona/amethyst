@@ -26,16 +26,22 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelNoteAuthors
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomBridge
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 
 @Composable
 fun RenderLiveActivityBubble(
@@ -43,10 +49,49 @@ fun RenderLiveActivityBubble(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Audio rooms (kind-30312) share the kind-1311 chat infra with
+    // streams (kind-30311), so they ride the same `LiveActivitiesChannel`
+    // pump. But channel.info is null for audio rooms (typed to
+    // LiveActivitiesEvent), so toBestDisplayName() would fall back
+    // to the truncated bech32. Read the kind-30312 addressable
+    // directly when the channel's address points to one and use the
+    // room name + a launch path that goes straight to AudioRoomActivity.
+    val meetingEvent =
+        remember(channel.address) {
+            if (channel.address.kind == MeetingSpaceEvent.KIND) {
+                LocalCache.getAddressableNoteIfExists(channel.address)?.event as? MeetingSpaceEvent
+            } else {
+                null
+            }
+        }
+    val context = LocalContext.current
     FilledTonalButton(
         contentPadding = PaddingValues(start = 8.dp, end = 10.dp, bottom = 0.dp, top = 0.dp),
         onClick = {
-            nav.nav { routeFor(channel) }
+            if (meetingEvent != null) {
+                val service = meetingEvent.service()
+                val endpoint = meetingEvent.endpoint()
+                val dTag = meetingEvent.address().dTag
+                if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
+                    AudioRoomBridge.set(accountViewModel)
+                    AudioRoomActivity.launch(
+                        context = context,
+                        addressValue = meetingEvent.address().toValue(),
+                        authBaseUrl = service,
+                        endpoint = endpoint,
+                        hostPubkey = meetingEvent.pubKey,
+                        roomId = dTag,
+                        kind = meetingEvent.kind,
+                    )
+                } else {
+                    // Fall back to the channel route so the user
+                    // still lands somewhere — same as a malformed
+                    // streaming kind-30311.
+                    nav.nav { routeFor(channel) }
+                }
+            } else {
+                nav.nav { routeFor(channel) }
+            }
         },
     ) {
         LiveStatusIndicatorForChannel(
@@ -58,7 +103,10 @@ fun RenderLiveActivityBubble(
         RenderUsers(channel, accountViewModel, nav)
         Spacer(StdHorzSpacer)
         Text(
-            channel.toBestDisplayName(),
+            // Audio rooms have a real `room()` name on the addressable;
+            // pick that up so the bubble reads "Lounge" instead of
+            // "naddr1abc…".
+            meetingEvent?.room() ?: channel.toBestDisplayName(),
         )
     }
 }

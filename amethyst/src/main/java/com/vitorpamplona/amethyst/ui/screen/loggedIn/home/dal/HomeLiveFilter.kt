@@ -38,8 +38,11 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag as MeetingSpaceStatusTag
 
 class HomeLiveFilter(
     val account: Account,
@@ -160,10 +163,40 @@ class HomeLiveFilter(
         val noteEvent = note.event
 
         if (noteEvent is LiveActivitiesChatMessageEvent) {
-            val stream = noteEvent.activityAddress() ?: return false
-            val streamChannel = LocalCache.getLiveActivityChannelIfExists(stream) ?: return false
+            val activity = noteEvent.activityAddress() ?: return false
 
-            if (streamChannel.info?.status() != StatusTag.STATUS.LIVE) return false
+            // Two flavors of "live" share the same kind-1311 chat
+            // channel: streaming (kind-30311, status=LIVE) and audio
+            // rooms (kind-30312, status=OPEN/PRIVATE). The chat
+            // surfaces in liveChatChannels for both because
+            // consume(LiveActivitiesChatMessageEvent) just keys on
+            // the a-tag — but the channel.info field only ever
+            // gets populated for streaming. Read the audio-room
+            // status straight off the addressable instead so the
+            // bubble surfaces while a follow is chatting in a
+            // currently-open kind-30312.
+            when (activity.kind) {
+                LiveActivitiesEvent.KIND -> {
+                    val streamChannel = LocalCache.getLiveActivityChannelIfExists(activity) ?: return false
+                    if (streamChannel.info?.status() != StatusTag.STATUS.LIVE) return false
+                }
+
+                MeetingSpaceEvent.KIND -> {
+                    val room =
+                        LocalCache.getAddressableNoteIfExists(activity)?.event as? MeetingSpaceEvent
+                            ?: return false
+                    val status = room.status()
+                    if (status != MeetingSpaceStatusTag.STATUS.OPEN &&
+                        status != MeetingSpaceStatusTag.STATUS.PRIVATE
+                    ) {
+                        return false
+                    }
+                }
+
+                else -> {
+                    return false
+                }
+            }
         }
 
         return (noteEvent is EphemeralChatEvent || noteEvent is LiveActivitiesChatMessageEvent) &&
