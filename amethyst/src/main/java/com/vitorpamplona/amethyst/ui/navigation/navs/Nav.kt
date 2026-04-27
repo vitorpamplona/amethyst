@@ -24,6 +24,7 @@ import android.annotation.SuppressLint
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Stable
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.ui.navigation.SKIP_SLIDE_ANIMATION_KEY
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -78,7 +79,11 @@ class Nav(
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
             controller.navigate(route) {
-                popUpTo(route) {
+                // Clear the back stack down to and including the graph's start
+                // destination so a bottom-nav tap leaves only the new route in
+                // the stack. Without inclusive=true, Home would remain below
+                // the new tab and canPop() would wrongly show a back arrow.
+                popUpTo(controller.graph.findStartDestination().id) {
                     inclusive = true
                 }
                 launchSingleTop = true
