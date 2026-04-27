@@ -222,10 +222,10 @@ fun CreateAudioRoomSheet(
 
 /**
  * Schedule-start picker. Shows the currently-selected start time
- * as a chip; tapping it opens a Material3 DatePickerDialog. Time
- * defaults to 00:00 of the selected date — finer granularity is a
- * follow-up (Material3's TimePicker is a separate dialog and
- * stitching the two needs an extra state machine).
+ * as a button; tapping it opens a Material3 DatePicker → TimePicker
+ * chain (same shape as [com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker]
+ * — hour + minute resolved in the local zone, then converted to
+ * UTC unix seconds via the system zone offset).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -233,7 +233,9 @@ private fun ScheduleStartPicker(
     unixSeconds: Long,
     onChange: (Long) -> Unit,
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showDate by remember { mutableStateOf(false) }
+    var showTime by remember { mutableStateOf(false) }
+
     val pretty =
         if (unixSeconds <= 0L) {
             stringRes(R.string.audio_room_create_when)
@@ -243,35 +245,87 @@ private fun ScheduleStartPicker(
                 .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                 .format(instant)
         }
+
+    val initialMillis = if (unixSeconds > 0L) unixSeconds * 1000L else System.currentTimeMillis()
+    val initialLocal =
+        java.time.Instant
+            .ofEpochMilli(initialMillis)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDateTime()
+
+    val datePickerState =
+        androidx.compose.material3.rememberDatePickerState(
+            initialSelectedDateMillis = initialMillis,
+        )
+    val timePickerState =
+        androidx.compose.material3.rememberTimePickerState(
+            initialHour = initialLocal.hour,
+            initialMinute = initialLocal.minute,
+            is24Hour = false,
+        )
+
     androidx.compose.material3.OutlinedButton(
-        onClick = { showDialog = true },
+        onClick = { showDate = true },
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(pretty)
     }
-    if (showDialog) {
-        val initial = if (unixSeconds > 0L) unixSeconds * 1000L else System.currentTimeMillis()
-        val datePickerState =
-            androidx.compose.material3.rememberDatePickerState(
-                initialSelectedDateMillis = initial,
-            )
+
+    if (showDate) {
         androidx.compose.material3.DatePickerDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showDate = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { onChange(it / 1000L) }
-                    showDialog = false
-                }) {
-                    Text(stringRes(R.string.audio_room_create_submit))
-                }
+                    showDate = false
+                    showTime = true
+                }) { Text(stringRes(R.string.next)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = { showDate = false }) {
                     Text(stringRes(R.string.audio_room_create_cancel))
                 }
             },
         ) {
             androidx.compose.material3.DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTime) {
+        androidx.compose.material3.TimePickerDialog(
+            title = { Text(stringRes(R.string.audio_room_create_when)) },
+            onDismissRequest = { showTime = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val dayMillisUtc = datePickerState.selectedDateMillis
+                    if (dayMillisUtc != null) {
+                        // DatePicker hands back UTC midnight of the selected
+                        // calendar date. Add the picked hour:minute (local)
+                        // to its seconds, then subtract the local offset to
+                        // land on the correct UTC unix second — same shape
+                        // as ExpirationDatePicker.
+                        val localSeconds =
+                            dayMillisUtc / 1000L +
+                                timePickerState.hour * 3600L +
+                                timePickerState.minute * 60L
+                        val offsetSec =
+                            java.time.ZoneId
+                                .systemDefault()
+                                .rules
+                                .getOffset(java.time.Instant.now())
+                                .totalSeconds
+                                .toLong()
+                        onChange(localSeconds - offsetSec)
+                    }
+                    showTime = false
+                }) { Text(stringRes(R.string.audio_room_create_submit)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTime = false }) {
+                    Text(stringRes(R.string.audio_room_create_cancel))
+                }
+            },
+        ) {
+            androidx.compose.material3.TimePicker(state = timePickerState)
         }
     }
 }
