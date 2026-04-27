@@ -45,11 +45,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomAdminCommandsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomChatFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomPresenceFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomReactionsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
@@ -111,10 +108,7 @@ class RelaySubscriptionsCoordinator(
     val publicChats = PublicChatsFilterAssembler(client)
     val liveStreams = LiveStreamsFilterAssembler(client)
     val nests = NestsFilterAssembler(client)
-    val roomPresence = RoomPresenceFilterAssembler(client)
-    val roomChat = RoomChatFilterAssembler(client)
-    val roomReactions = RoomReactionsFilterAssembler(client)
-    val roomAdminCommands = RoomAdminCommandsFilterAssembler(client)
+    val nestRoom = NestRoomFilterAssembler(client)
     val longs = LongsFilterAssembler(client)
     val articles = ArticlesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
@@ -140,6 +134,7 @@ class RelaySubscriptionsCoordinator(
             followPacksList,
             liveStreams,
             nests,
+            nestRoom,
             longs,
             articles,
             badges,

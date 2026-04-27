@@ -39,10 +39,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.nests.NestForegroundService
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomAdminCommandsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomChatFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomPresenceFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomReactionsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
 import com.vitorpamplona.quartz.experimental.nests.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -145,12 +142,19 @@ private fun NestActivityBody(
 
     LaunchedEffect(viewModel, onStageKeys) { viewModel.updateSpeakers(onStageKeys) }
 
-    // Per-room kind-10312 presence: open the wire sub for the duration
-    // of this Composable, observe matching events from LocalCache, feed
-    // them into the VM's aggregator. Drives the listener counter +
-    // (Tier 2) participant grid + (T1 #5) hand-raise queue.
+    // Single per-room wire subscription. NestRoomFilterAssembler bundles
+    // every #a-tagged kind we need (chat 1311, presence 10312,
+    // reactions 7, admin commands 4312) into one REQ per relay — see
+    // its docstring. Replaces the four parallel subscriptions this
+    // composable used to open. The LaunchedEffect collectors below
+    // still fan-out per-kind because each one feeds a different VM
+    // hook; the wire side is what got collapsed.
     val roomATag = remember(event) { event.address().toValue() }
-    RoomPresenceFilterAssemblerSubscription(roomATag, accountViewModel)
+    val localPubkey = accountViewModel.account.signer.pubKey
+    NestRoomFilterAssemblerSubscription(roomATag, localPubkey, accountViewModel)
+
+    // Per-room kind-10312 presence — drives the listener counter,
+    // participant grid, and hand-raise queue.
     LaunchedEffect(viewModel, roomATag) {
         val filter =
             Filter(
@@ -171,10 +175,7 @@ private fun NestActivityBody(
         }
     }
 
-    // Per-room kind-1311 live chat: open the wire sub for the duration
-    // of this Composable, observe matching events from LocalCache, feed
-    // them into the VM's chat ledger.
-    RoomChatFilterAssemblerSubscription(roomATag, accountViewModel)
+    // Per-room kind-1311 live chat — feeds the VM's chat ledger.
     LaunchedEffect(viewModel, roomATag) {
         val filter =
             Filter(
@@ -186,11 +187,10 @@ private fun NestActivityBody(
         }
     }
 
-    // Per-room kind-7 reactions: same shape as chat. The VM's
-    // sliding-window aggregator drops entries older than 30 s; the
-    // 1-s tick below drives the eviction so the floating-up overlay
-    // animation timing is one-place rather than per-component.
-    RoomReactionsFilterAssemblerSubscription(roomATag, accountViewModel)
+    // Per-room kind-7 reactions. The VM's sliding-window aggregator
+    // drops entries older than 30 s; the 1-s tick below drives the
+    // eviction so the floating-up overlay animation timing is one-
+    // place rather than per-component.
     LaunchedEffect(viewModel, roomATag) {
         val filter =
             Filter(
@@ -214,8 +214,6 @@ private fun NestActivityBody(
     // (not in the relay) — only honour kicks where the signer's
     // ParticipantTag.canSpeak() returns true on the active
     // kind-30312. nostrnests' UI does the same gating.
-    val localPubkey = accountViewModel.account.signer.pubKey
-    RoomAdminCommandsFilterAssemblerSubscription(roomATag, localPubkey, accountViewModel)
     LaunchedEffect(viewModel, roomATag, localPubkey) {
         val filter =
             Filter(
