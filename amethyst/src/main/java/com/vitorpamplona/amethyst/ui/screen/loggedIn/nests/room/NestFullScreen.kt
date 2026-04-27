@@ -28,9 +28,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -95,10 +98,17 @@ internal fun NestFullScreen(
 ) {
     val roomTheme = androidx.compose.runtime.remember(event) { RoomTheme.from(event) }
     NestThemedScope(theme = roomTheme, accountViewModel = accountViewModel) {
+        // Inset the room content inside the system bars so the title
+        // doesn't slide under the status bar and the Leave / chat
+        // composer don't sit beneath the gesture / nav bar. The
+        // themed background color and `bg` image still paint
+        // edge-to-edge — they live on NestThemedScope's outer Box,
+        // which is intentionally outside this padding.
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
