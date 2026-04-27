@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Moq-lite-backed [NestsListener]. Wraps a connected [MoqLiteSession]
  * and exposes the same listener API the IETF [DefaultNestsListener]
  * does, so [connectNestsListener] can swap the framing layer without
- * changing the public surface that [com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomViewModel]
+ * changing the public surface that [com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel]
  * and downstream UI consume.
  *
  * Subscription mapping per the audio-rooms NIP draft + nests JS

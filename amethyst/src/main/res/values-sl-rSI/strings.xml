@@ -469,11 +469,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="public_chats">Javni klepeti</string>
     <string name="follow_packs">Paketi sledenih</string>
     <string name="live_streams">Posnetki v živo</string>
-    <string name="audio_rooms">Zvočne sobe</string>
-    <string name="audio_room_stage">Prizorišče</string>
-    <string name="audio_room_audience">Občinstvo</string>
-    <string name="audio_room_raise_hand">Dvigni roko</string>
-    <string name="audio_room_lower_hand">Spusti roko</string>
+    <string name="nests">Zvočne sobe</string>
+    <string name="nest_stage">Prizorišče</string>
+    <string name="nest_audience">Občinstvo</string>
+    <string name="nest_raise_hand">Dvigni roko</string>
+    <string name="nest_lower_hand">Spusti roko</string>
     <string name="longs">Videoposnetki</string>
     <string name="articles">Članki</string>
     <string name="private_bookmarks">Privatni zaznamki</string>

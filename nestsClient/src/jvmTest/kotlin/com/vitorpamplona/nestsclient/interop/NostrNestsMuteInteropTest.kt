@@ -51,7 +51,7 @@ import kotlin.test.fail
  *   - the broadcaster keeps the capture pump running while muted (so
  *     unmute is sample-accurate)
  *   - frames pushed during mute do NOT reach subscribers (`if (muted)
- *     continue` in [com.vitorpamplona.nestsclient.audio.AudioRoomMoqLiteBroadcaster])
+ *     continue` in [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster])
  *   - frames pushed before / after the muted window DO reach
  *     subscribers, with the muted ones missing entirely (no silent
  *     placeholder frames)

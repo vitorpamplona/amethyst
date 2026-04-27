@@ -21,7 +21,7 @@
 package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.audio.AudioCapture
-import com.vitorpamplona.nestsclient.audio.AudioRoomBroadcaster
+import com.vitorpamplona.nestsclient.audio.NestBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.MoqProtocolException
 import com.vitorpamplona.nestsclient.moq.MoqSession
@@ -133,7 +133,7 @@ sealed class NestsSpeakerState {
  * unit-test suite (`NestsSpeakerTest`) and for any future IETF
  * MoQ-transport target.
  *
- * Wraps a connected [MoqSession] and plumbs an [AudioRoomBroadcaster]
+ * Wraps a connected [MoqSession] and plumbs an [NestBroadcaster]
  * through it on [startBroadcasting]. Construction does NOT open the
  * transport.
  */
@@ -168,7 +168,7 @@ class DefaultNestsSpeaker internal constructor(
                     throw t
                 }
             val broadcaster =
-                AudioRoomBroadcaster(
+                NestBroadcaster(
                     capture = captureFactory(),
                     encoder = encoderFactory(),
                     publisher = publisher,
@@ -236,7 +236,7 @@ class DefaultNestsSpeaker internal constructor(
 }
 
 internal class DefaultBroadcastHandle(
-    private val broadcaster: AudioRoomBroadcaster,
+    private val broadcaster: NestBroadcaster,
     private val announce: MoqSession.AnnounceHandle,
     private val parent: DefaultNestsSpeaker,
 ) : BroadcastHandle {

@@ -28,11 +28,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.AudioRoomsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomAdminCommandsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomChatFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomPresenceFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.RoomReactionsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
@@ -50,6 +45,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomAdminCommandsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomChatFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomPresenceFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.RoomReactionsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
@@ -110,7 +110,7 @@ class RelaySubscriptionsCoordinator(
     val shorts = ShortsFilterAssembler(client)
     val publicChats = PublicChatsFilterAssembler(client)
     val liveStreams = LiveStreamsFilterAssembler(client)
-    val audioRooms = AudioRoomsFilterAssembler(client)
+    val nests = NestsFilterAssembler(client)
     val roomPresence = RoomPresenceFilterAssembler(client)
     val roomChat = RoomChatFilterAssembler(client)
     val roomReactions = RoomReactionsFilterAssembler(client)
@@ -139,7 +139,7 @@ class RelaySubscriptionsCoordinator(
             publicChats,
             followPacksList,
             liveStreams,
-            audioRooms,
+            nests,
             longs,
             articles,
             badges,

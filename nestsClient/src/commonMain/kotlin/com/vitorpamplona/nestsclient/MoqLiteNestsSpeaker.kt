@@ -21,7 +21,7 @@
 package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.audio.AudioCapture
-import com.vitorpamplona.nestsclient.audio.AudioRoomMoqLiteBroadcaster
+import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
@@ -76,7 +76,7 @@ class MoqLiteNestsSpeaker internal constructor(
                     throw t
                 }
             val broadcaster =
-                AudioRoomMoqLiteBroadcaster(
+                NestMoqLiteBroadcaster(
                     capture = captureFactory(),
                     encoder = encoderFactory(),
                     publisher = publisher,
@@ -139,7 +139,7 @@ class MoqLiteNestsSpeaker internal constructor(
 }
 
 internal class MoqLiteBroadcastHandle(
-    private val broadcaster: AudioRoomMoqLiteBroadcaster,
+    private val broadcaster: NestMoqLiteBroadcaster,
     private val publisher: MoqLitePublisherHandle,
     private val parent: MoqLiteNestsSpeaker,
 ) : BroadcastHandle {

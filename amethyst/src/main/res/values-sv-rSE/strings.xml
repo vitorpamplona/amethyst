@@ -456,11 +456,11 @@
     <string name="public_chats">Offentliga chattar</string>
     <string name="follow_packs">Följpaket</string>
     <string name="live_streams">Livesändningar</string>
-    <string name="audio_rooms">Ljudrum</string>
-    <string name="audio_room_stage">Scen</string>
-    <string name="audio_room_audience">Publik</string>
-    <string name="audio_room_raise_hand">Räck upp handen</string>
-    <string name="audio_room_lower_hand">Sänk handen</string>
+    <string name="nests">Ljudrum</string>
+    <string name="nest_stage">Scen</string>
+    <string name="nest_audience">Publik</string>
+    <string name="nest_raise_hand">Räck upp handen</string>
+    <string name="nest_lower_hand">Sänk handen</string>
     <string name="longs">Videor</string>
     <string name="articles">Artiklar</string>
     <string name="private_bookmarks">Privata Bokmärken</string>

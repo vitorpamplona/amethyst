@@ -175,7 +175,7 @@ fun RenderMeetingSpaceEventInner(
                 ListenToRecordingButton(url = it, accountViewModel = accountViewModel)
             }
         } else {
-            com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.JoinAudioRoomButton(
+            com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.JoinNestButton(
                 event = noteEvent,
                 accountViewModel = accountViewModel,
             )
@@ -196,7 +196,7 @@ private fun ListenToRecordingButton(
     accountViewModel: AccountViewModel,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val noAppMessage = stringRes(R.string.audio_room_no_app_to_open_link)
+    val noAppMessage = stringRes(R.string.nest_no_app_to_open_link)
     androidx.compose.material3.OutlinedButton(onClick = {
         val launched =
             runCatching {
@@ -208,13 +208,13 @@ private fun ListenToRecordingButton(
             }.isSuccess
         if (!launched) {
             accountViewModel.toastManager.toast(
-                R.string.audio_room_chat_send_failed_title,
+                R.string.nest_chat_send_failed_title,
                 noAppMessage,
                 user = null,
             )
         }
     }) {
-        Text(stringRes(R.string.audio_room_listen_to_recording))
+        Text(stringRes(R.string.nest_listen_to_recording))
     }
 }
 

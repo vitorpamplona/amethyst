@@ -462,11 +462,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="public_chats">Öffentliche Chats</string>
     <string name="follow_packs">Follow-Pakete</string>
     <string name="live_streams">Live-Streams</string>
-    <string name="audio_rooms">Audioräume</string>
-    <string name="audio_room_stage">Bühne</string>
-    <string name="audio_room_audience">Publikum</string>
-    <string name="audio_room_raise_hand">Hand heben</string>
-    <string name="audio_room_lower_hand">Hand senken</string>
+    <string name="nests">Audioräume</string>
+    <string name="nest_stage">Bühne</string>
+    <string name="nest_audience">Publikum</string>
+    <string name="nest_raise_hand">Hand heben</string>
+    <string name="nest_lower_hand">Hand senken</string>
     <string name="longs">Videos</string>
     <string name="articles">Artikel</string>
     <string name="private_bookmarks">Private Lesezeichen</string>

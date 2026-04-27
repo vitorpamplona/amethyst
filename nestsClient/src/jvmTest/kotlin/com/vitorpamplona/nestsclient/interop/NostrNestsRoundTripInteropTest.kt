@@ -23,7 +23,7 @@ package com.vitorpamplona.nestsclient.interop
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.OkHttpNestsClient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
-import com.vitorpamplona.nestsclient.audio.AudioRoomMoqLiteBroadcaster
+import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.connectNestsListener
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
@@ -57,7 +57,7 @@ import kotlin.test.fail
  * (`MoqLitePublisherHandle`), the listener subscribes by speaker
  * pubkey (`broadcast=pubkey`, `track="audio/data"`), the speaker
  * pushes deterministic Opus-shaped payloads through the
- * [AudioRoomMoqLiteBroadcaster] pipeline, and the listener collects
+ * [NestMoqLiteBroadcaster] pipeline, and the listener collects
  * them via [SubscribeHandle.objects] (which the moq-lite adapter
  * wraps over `MoqLiteFrame` so existing decoder / player code keeps
  * working).

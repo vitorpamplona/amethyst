@@ -50,7 +50,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *     }
  *
  * The `server` URL points at the moq-rs / moq-auth deployment's base
- * URL — Amethyst's `CreateAudioRoomSheet` uses it for both the
+ * URL — Amethyst's `CreateNestSheet` uses it for both the
  * `service` (auth sidecar) and `endpoint` (WebTransport relay) tags
  * on the kind-30312 event, since nostrnests's reference deployment
  * co-locates them. A future revision can split the two into separate

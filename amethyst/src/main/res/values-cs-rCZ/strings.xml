@@ -456,11 +456,11 @@
     <string name="public_chats">Veřejné chaty</string>
     <string name="follow_packs">Seznamy sledování</string>
     <string name="live_streams">Živé vysílání</string>
-    <string name="audio_rooms">Audio místnosti</string>
-    <string name="audio_room_stage">Pódium</string>
-    <string name="audio_room_audience">Publikum</string>
-    <string name="audio_room_raise_hand">Přihlásit se</string>
-    <string name="audio_room_lower_hand">Dát ruku dolů</string>
+    <string name="nests">Audio místnosti</string>
+    <string name="nest_stage">Pódium</string>
+    <string name="nest_audience">Publikum</string>
+    <string name="nest_raise_hand">Přihlásit se</string>
+    <string name="nest_lower_hand">Dát ruku dolů</string>
     <string name="longs">Videa</string>
     <string name="articles">Články</string>
     <string name="private_bookmarks">Soukromé záložky</string>

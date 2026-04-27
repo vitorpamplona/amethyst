@@ -455,11 +455,11 @@
     <string name="public_chats">Czaty publiczne</string>
     <string name="follow_packs">Pakiety subskrybentów</string>
     <string name="live_streams">Transmisje na żywo</string>
-    <string name="audio_rooms">Pokoje audio</string>
-    <string name="audio_room_stage">Scena</string>
-    <string name="audio_room_audience">Publiczność</string>
-    <string name="audio_room_raise_hand">Podnieś rękę</string>
-    <string name="audio_room_lower_hand">Opuść rękę</string>
+    <string name="nests">Pokoje audio</string>
+    <string name="nest_stage">Scena</string>
+    <string name="nest_audience">Publiczność</string>
+    <string name="nest_raise_hand">Podnieś rękę</string>
+    <string name="nest_lower_hand">Opuść rękę</string>
     <string name="longs">Filmy wideo</string>
     <string name="articles">Artykuły</string>
     <string name="private_bookmarks">Prywatne Zakładki</string>

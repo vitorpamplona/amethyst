@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.stateIn
  *   - [saveNestsServersList] — build + sign a new replaceable kind 10112
  *     event (preserving prior tags' alt etc.)
  *
- * The list is consumed by `CreateAudioRoomViewModel` to default the
+ * The list is consumed by `CreateNestViewModel` to default the
  * "MoQ service URL" / "MoQ endpoint URL" fields when starting a new
  * space, and by the Settings screen for edit / add / remove.
  */

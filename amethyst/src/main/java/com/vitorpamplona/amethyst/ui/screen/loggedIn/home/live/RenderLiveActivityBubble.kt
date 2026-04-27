@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestBridge
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 
@@ -55,7 +55,7 @@ fun RenderLiveActivityBubble(
     // LiveActivitiesEvent), so toBestDisplayName() would fall back
     // to the truncated bech32. Read the kind-30312 addressable
     // directly when the channel's address points to one and use the
-    // room name + a launch path that goes straight to AudioRoomActivity.
+    // room name + a launch path that goes straight to NestActivity.
     val meetingEvent =
         remember(channel.address) {
             if (channel.address.kind == MeetingSpaceEvent.KIND) {
@@ -73,8 +73,8 @@ fun RenderLiveActivityBubble(
                 val endpoint = meetingEvent.endpoint()
                 val dTag = meetingEvent.address().dTag
                 if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
-                    AudioRoomBridge.set(accountViewModel)
-                    AudioRoomActivity.launch(
+                    NestBridge.set(accountViewModel)
+                    NestActivity.launch(
                         context = context,
                         addressValue = meetingEvent.address().toValue(),
                         authBaseUrl = service,

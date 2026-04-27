@@ -458,11 +458,11 @@
     <string name="public_chats">公共聊天</string>
     <string name="follow_packs">关注包</string>
     <string name="live_streams">直播</string>
-    <string name="audio_rooms">音频室</string>
-    <string name="audio_room_stage">阶段</string>
-    <string name="audio_room_audience">观众</string>
-    <string name="audio_room_raise_hand">举手</string>
-    <string name="audio_room_lower_hand">放下手</string>
+    <string name="nests">音频室</string>
+    <string name="nest_stage">阶段</string>
+    <string name="nest_audience">观众</string>
+    <string name="nest_raise_hand">举手</string>
+    <string name="nest_lower_hand">放下手</string>
     <string name="longs">视频</string>
     <string name="articles">文章</string>
     <string name="private_bookmarks">私人书签</string>
