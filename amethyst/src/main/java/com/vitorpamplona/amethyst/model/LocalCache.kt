@@ -1548,6 +1548,35 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    /**
+     * Audio-room presence (kind-10312) — addressable storage AND
+     * attach the version note to the room's [LiveActivitiesChannel].
+     * The home live-bubble surfaces a room when a follow is
+     * publishing in it; that fan-out walks `channel.notes`, so the
+     * presence event needs to be in there alongside chat. Without
+     * this, presence-driven inclusion can't see follows broadcasting
+     * in the room (only chat-driven inclusion would fire).
+     */
+    fun consume(
+        event: MeetingRoomPresenceEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+
+        // The replaceable cache keys this on the AUTHOR's address
+        // (kind=10312, pubkey, fixed-d-tag) — independent of the
+        // room. To wire the room bubble we also attach the version
+        // note to the room's channel keyed by its kind-30312 address.
+        val roomAddress = event.interactiveRoom()?.address ?: return new
+        if (roomAddress.kind != MeetingSpaceEvent.KIND) return new
+        val channel = getOrCreateLiveChannel(roomAddress)
+        val versionNote = getOrCreateNote(event.id)
+        channel.addNote(versionNote, relay)
+
+        return new
+    }
+
     fun consume(
         event: LiveActivitiesRaidEvent,
         relay: NormalizedRelayUrl?,
@@ -3055,7 +3084,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is MeetingRoomPresenceEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
+                    consume(event, relay, wasVerified)
                 }
 
                 is LnZapEvent -> {
