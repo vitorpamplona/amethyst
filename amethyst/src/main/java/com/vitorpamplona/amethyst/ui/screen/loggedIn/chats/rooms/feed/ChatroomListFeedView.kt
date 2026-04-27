@@ -192,7 +192,13 @@ private fun chatroomLazyKey(
         }
 
         is ChatroomKeyable -> {
-            PrivateChatLazyKey(event.chatroomKey(myPubKey).users.sorted().joinToString(","))
+            PrivateChatLazyKey(
+                event
+                    .chatroomKey(myPubKey)
+                    .users
+                    .sorted()
+                    .joinToString(","),
+            )
         }
 
         else -> {
