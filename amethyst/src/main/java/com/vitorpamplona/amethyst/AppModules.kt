@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.namecoin.BitRelayUrlRewriter
+import com.vitorpamplona.amethyst.service.namecoin.TlsaConnectionPolicy
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
@@ -288,6 +289,12 @@ class AppModules(
         BitRelayResolver(nameResolver = namecoinResolver)
     }
 
+    // Pins the TLS handshake of `.bit` relay connections to the TLSA records
+    // published in the same Namecoin record we already used to rewrite the
+    // URL. No extra ElectrumX call: [BitRelayResolver] already cached the
+    // records when the rewriter ran.
+    val tlsaConnectionPolicy = TlsaConnectionPolicy(bitRelayResolver)
+
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder(
@@ -296,6 +303,7 @@ class AppModules(
                 okHttpClientForRelays.getHttpClient(useTor)
             },
             urlRewriter = BitRelayUrlRewriter(bitRelayResolver),
+            clientDecorator = tlsaConnectionPolicy::decorate,
         )
 
     // Caches all events in Memory

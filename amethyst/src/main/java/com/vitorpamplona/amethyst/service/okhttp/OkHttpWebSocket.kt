@@ -49,6 +49,17 @@ class OkHttpWebSocket(
      * Defaults to identity (no rewrite).
      */
     val urlRewriter: (NormalizedRelayUrl) -> String = { it.url },
+    /**
+     * Optional client decorator invoked after the URL rewriter runs but
+     * before the WebSocket handshake. Lets a caller swap in a
+     * `sslSocketFactory` (etc.) for a specific connection without changing
+     * the shared [httpClient] factory.
+     *
+     * The default is a no-op so non-decorated callers keep behaving
+     * identically to the pre-decorator path. The expected production user
+     * is `.bit` relay TLSA pinning.
+     */
+    val clientDecorator: (NormalizedRelayUrl, OkHttpClient) -> OkHttpClient = { _, c -> c },
 ) : WebSocket {
     private var usingOkHttp: OkHttpClient? = null
     private var socket: okhttp3.WebSocket? = null
@@ -79,7 +90,10 @@ class OkHttpWebSocket(
     }
 
     override fun connect() {
-        usingOkHttp = httpClient(url)
+        // Order matters here: the URL rewriter runs FIRST so any per-URL
+        // resolution side-effect (e.g. populating the BitRelayResolver TLSA
+        // cache) has happened before the client decorator is asked to look
+        // up its pinning data.
         connectUrl =
             try {
                 val rewritten = urlRewriter(url)
@@ -90,6 +104,15 @@ class OkHttpWebSocket(
             } catch (t: Throwable) {
                 Log.w("OkHttpWebSocket") { "URL rewriter failed for ${url.url}: ${t.message}" }
                 url.url
+            }
+
+        val baseClient = httpClient(url)
+        usingOkHttp =
+            try {
+                clientDecorator(url, baseClient)
+            } catch (t: Throwable) {
+                Log.w("OkHttpWebSocket") { "Client decorator failed for ${url.url}: ${t.message}" }
+                baseClient
             }
         socket = usingOkHttp?.newWebSocket(buildRequest(), OkHttpWebsocketListener(out))
     }
@@ -157,12 +180,19 @@ class OkHttpWebSocket(
         val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
         /** Optional URL rewriter (e.g. for `.bit` relay resolution). */
         val urlRewriter: (NormalizedRelayUrl) -> String = { it.url },
+        /**
+         * Optional client decorator (e.g. for `.bit` TLSA pinning). Composed
+         * AFTER [httpClient] and AFTER [urlRewriter] so per-URL state
+         * populated by the rewriter (such as the resolver TLSA cache) is
+         * visible by the time we run.
+         */
+        val clientDecorator: (NormalizedRelayUrl, OkHttpClient) -> OkHttpClient = { _, c -> c },
     ) : WebsocketBuilder {
         // Called when connecting.
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
-        ) = OkHttpWebSocket(url, httpClient, out, urlRewriter)
+        ) = OkHttpWebSocket(url, httpClient, out, urlRewriter, clientDecorator)
     }
 
     override fun disconnect() {

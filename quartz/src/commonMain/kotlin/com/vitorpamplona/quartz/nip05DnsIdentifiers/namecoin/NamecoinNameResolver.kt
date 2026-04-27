@@ -26,6 +26,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
@@ -215,7 +216,111 @@ class NamecoinNameResolver(
                 // not an array; ignore
             }
         }
+
+        /**
+         * Parse a Namecoin `d/<name>` value JSON for `tls` (TLSA) records, as
+         * defined by [namecoin/proposals ifa-0001] (mirrors RFC 6698 TLSA RRs).
+         *
+         * Each record is a 4-element array `[usage, selector, matchingType, base64]`:
+         *   - usage:        RFC 6698 §2.1.1 (0=PKIX-TA, 1=PKIX-EE, 2=DANE-TA, 3=DANE-EE)
+         *   - selector:     RFC 6698 §2.1.2 (0=full cert, 1=SubjectPublicKeyInfo)
+         *   - matchingType: RFC 6698 §2.1.3 (0=exact, 1=SHA-256, 2=SHA-512)
+         *   - base64:       RFC 6698 §2.1.4 association data (Namecoin uses base64,
+         *                   not the hex form used in DNS textual TLSA RRs).
+         *
+         * The Namecoin spec also accepts `tls` nested under per-port subdomains
+         * (e.g. `map._443._tcp.tls`); to keep this resolver focused on the common
+         * "all services on this host" shape used by Nostr relays, we only read
+         * the top-level `tls` array. Records with malformed shape are skipped.
+         *
+         * @return list of [TlsaRecord] in declaration order, empty if `tls` is
+         *         absent or contains no valid records.
+         */
+        fun parseTlsaRecords(rawValueJson: String): List<TlsaRecord> =
+            try {
+                collectTlsaRecords(SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject)
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+        private fun collectTlsaRecords(obj: JsonObject): List<TlsaRecord> {
+            val tlsArray = obj["tls"]?.let { runCatching { it.jsonArray }.getOrNull() } ?: return emptyList()
+            return tlsArray.mapNotNull { entry ->
+                val arr = runCatching { entry.jsonArray }.getOrNull() ?: return@mapNotNull null
+                if (arr.size < 4) return@mapNotNull null
+                val usage = (arr[0] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
+                val selector = (arr[1] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
+                val matchType = (arr[2] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
+                val data = (arr[3] as? JsonPrimitive)?.content?.trim() ?: return@mapNotNull null
+                if (usage !in 0..255 || selector !in 0..255 || matchType !in 0..255) return@mapNotNull null
+                if (data.isEmpty()) return@mapNotNull null
+                TlsaRecord(
+                    usage = TlsaUsage.fromCode(usage),
+                    selector = TlsaSelector.fromCode(selector),
+                    matchingType = TlsaMatchingType.fromCode(matchType),
+                    associationDataBase64 = data,
+                )
+            }
+        }
     }
+
+    /** RFC 6698 TLSA Certificate Usage Field. */
+    enum class TlsaUsage(
+        val code: Int,
+    ) {
+        PKIX_TA(0),
+        PKIX_EE(1),
+        DANE_TA(2),
+        DANE_EE(3),
+        UNKNOWN(-1),
+        ;
+
+        companion object {
+            fun fromCode(code: Int): TlsaUsage = entries.firstOrNull { it.code == code } ?: UNKNOWN
+        }
+    }
+
+    /** RFC 6698 TLSA Selector Field. */
+    enum class TlsaSelector(
+        val code: Int,
+    ) {
+        FULL_CERT(0),
+        SUBJECT_PUBLIC_KEY_INFO(1),
+        UNKNOWN(-1),
+        ;
+
+        companion object {
+            fun fromCode(code: Int): TlsaSelector = entries.firstOrNull { it.code == code } ?: UNKNOWN
+        }
+    }
+
+    /** RFC 6698 TLSA Matching Type Field. */
+    enum class TlsaMatchingType(
+        val code: Int,
+    ) {
+        EXACT(0),
+        SHA_256(1),
+        SHA_512(2),
+        UNKNOWN(-1),
+        ;
+
+        companion object {
+            fun fromCode(code: Int): TlsaMatchingType = entries.firstOrNull { it.code == code } ?: UNKNOWN
+        }
+    }
+
+    /**
+     * One TLSA record from a Namecoin `d/<name>` value, per
+     * [namecoin/proposals ifa-0001](https://github.com/namecoin/proposals/blob/master/ifa-0001.md)
+     * (semantically equivalent to RFC 6698).
+     */
+    data class TlsaRecord(
+        val usage: TlsaUsage,
+        val selector: TlsaSelector,
+        val matchingType: TlsaMatchingType,
+        /** Base64-encoded association data, per Namecoin spec (NOT hex like DNS textual). */
+        val associationDataBase64: String,
+    )
 
     /** Flat parsed identifier surface used by [toNamecoinName] and the instance parser. */
     data class ParsedIdentifierFlat(

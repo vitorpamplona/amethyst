@@ -199,6 +199,88 @@ class BitRelayResolverTest {
             assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
         }
 
+    // ── TLSA passthrough ───────────────────────────────────────────────
+
+    @Test
+    fun `tlsa records flow through to Resolved outcome`() =
+        runTest {
+            // Real-world shape: a publisher who declares both their relay and
+            // the SHA-256 of their leaf SPKI as a DANE-EE record.
+            val json =
+                """
+                {
+                  "relay": "wss://relay.example.com/",
+                  "tls": [
+                    [3, 1, 1, "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="]
+                  ]
+                }
+                """.trimIndent()
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/example", json)
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://example.bit")
+            assertTrue(outcome is BitRelayResolver.Resolution.Resolved)
+            outcome as BitRelayResolver.Resolution.Resolved
+            assertEquals(1, outcome.tlsaRecords.size)
+            val rec = outcome.tlsaRecords.single()
+            assertEquals(NamecoinNameResolver.TlsaUsage.DANE_EE, rec.usage)
+            assertEquals(NamecoinNameResolver.TlsaSelector.SUBJECT_PUBLIC_KEY_INFO, rec.selector)
+            assertEquals(NamecoinNameResolver.TlsaMatchingType.SHA_256, rec.matchingType)
+        }
+
+    @Test
+    fun `cachedTlsaFor returns records after resolve`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/example",
+                        """{"relay":"wss://relay.example.com/","tls":[[3,1,1,"AA=="]]}""",
+                    )
+                }
+            val resolver = newResolver(client)
+            // Cache miss before resolve.
+            assertEquals(null, resolver.cachedTlsaFor("example.bit"))
+            resolver.resolveRaw("wss://example.bit")
+            val cached = resolver.cachedTlsaFor("example.bit")
+            assertNotNull(cached)
+            assertEquals(1, cached!!.size)
+            assertEquals(NamecoinNameResolver.TlsaUsage.DANE_EE, cached[0].usage)
+            // Cache hit MUST NOT issue a new ElectrumX call.
+            assertEquals(1, client.callCount)
+        }
+
+    @Test
+    fun `cachedTlsaFor returns empty list for record without tls field`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/example", """{"relay":"wss://relay.example.com/"}""")
+                }
+            val resolver = newResolver(client)
+            resolver.resolveRaw("wss://example.bit")
+            // Resolved successfully, but the publisher has no `tls` field.
+            // Distinguish that from "never resolved" (which is null).
+            val cached = resolver.cachedTlsaFor("example.bit")
+            assertNotNull("resolved hosts must be cached even with empty TLSA", cached)
+            assertEquals(0, cached!!.size)
+        }
+
+    @Test
+    fun `cachedTlsaFor is case-insensitive for the host key`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/example", """{"relay":"wss://relay.example.com/","tls":[[3,1,1,"AA=="]]}""")
+                }
+            val resolver = newResolver(client)
+            resolver.resolveRaw("wss://EXAMPLE.BIT")
+            assertNotNull(resolver.cachedTlsaFor("example.bit"))
+            assertNotNull(resolver.cachedTlsaFor("Example.BIT"))
+        }
+
     // ── Helpers ────────────────────────────────────────────────────────
 
     private fun newResolver(client: IElectrumXClient): BitRelayResolver =

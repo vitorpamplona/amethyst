@@ -95,6 +95,12 @@ class BitRelayResolver(
             val resolvedUrl: String,
             /** All relay URLs found in the record (resolved first, then fallbacks). */
             val candidates: List<String>,
+            /**
+             * TLSA records pulled from the same Namecoin value JSON, in declaration
+             * order. Empty if the record has no `tls` field. Use these to pin the
+             * TLS handshake to [resolvedUrl] (RFC 6698 / Namecoin `ifa-0001`).
+             */
+            val tlsaRecords: List<NamecoinNameResolver.TlsaRecord> = emptyList(),
         ) : Resolution()
 
         /** The `.bit` name does not exist or has no relay record. */
@@ -112,6 +118,7 @@ class BitRelayResolver(
 
     private data class CachedRelayResolution(
         val candidates: List<String>,
+        val tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
         val message: String?,
         val timestamp: Long = TimeUtils.now(),
     )
@@ -155,7 +162,7 @@ class BitRelayResolver(
                 }
 
                 is NamecoinNameResolver.NameLookupOutcome.NotFound -> {
-                    cachePut(host, emptyList(), "Name not found")
+                    cachePut(host, emptyList(), emptyList(), "Name not found")
                     return Resolution.NotFound(host, "Namecoin name `${outcome.name}` not found")
                 }
 
@@ -171,13 +178,17 @@ class BitRelayResolver(
         // Reuse the shared relay-URL parser from NamecoinNameResolver instead
         // of re-implementing the JSON shape walk here.
         val candidates = NamecoinNameResolver.parseRelayUrls(nameResult.value)
+        // Same JSON, same parser — pull the TLSA list out of the value so the
+        // caller can pin the rewritten handshake without paying for a second
+        // ElectrumX round-trip.
+        val tlsaRecords = NamecoinNameResolver.parseTlsaRecords(nameResult.value)
         if (candidates.isEmpty()) {
-            cachePut(host, emptyList(), "No `relay` field in Namecoin record")
+            cachePut(host, emptyList(), tlsaRecords, "No `relay` field in Namecoin record")
             return Resolution.NotFound(host, "No relay record for `$namecoinName`")
         }
 
-        cachePut(host, candidates, null)
-        return resolutionFromCandidates(rawUrl, host, candidates)
+        cachePut(host, candidates, tlsaRecords, null)
+        return resolutionFromCandidates(rawUrl, host, candidates, tlsaRecords)
     }
 
     private fun cachedResolution(
@@ -186,7 +197,7 @@ class BitRelayResolver(
         entry: CachedRelayResolution,
     ): Resolution =
         if (entry.candidates.isNotEmpty()) {
-            resolutionFromCandidates(rawUrl, host, entry.candidates)
+            resolutionFromCandidates(rawUrl, host, entry.candidates, entry.tlsaRecords)
         } else {
             Resolution.NotFound(host, entry.message ?: "No relay record")
         }
@@ -195,12 +206,14 @@ class BitRelayResolver(
         rawUrl: String,
         host: String,
         candidates: List<String>,
+        tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
     ): Resolution {
         val first = candidates.firstOrNull() ?: return Resolution.NotFound(host, "No relay record")
         return Resolution.Resolved(
             originalUrl = rawUrl,
             resolvedUrl = mergeOriginalPath(rawUrl, first),
             candidates = candidates,
+            tlsaRecords = tlsaRecords,
         )
     }
 
@@ -230,10 +243,29 @@ class BitRelayResolver(
     private suspend fun cachePut(
         host: String,
         candidates: List<String>,
+        tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
         message: String?,
     ) {
         mutex.withLock {
-            cache.put(host, CachedRelayResolution(candidates, message))
+            cache.put(host, CachedRelayResolution(candidates, tlsaRecords, message))
+        }
+    }
+
+    /**
+     * Look up the cached TLSA records for a `.bit` host that has previously
+     * been resolved through [resolve]. Returns `null` if the host has not been
+     * resolved (or has been evicted), an empty list if it has been resolved
+     * but the Namecoin record has no `tls` field.
+     *
+     * The TLS-pinning code path needs the records keyed by the original
+     * `.bit` host. Bypassing the cache here would either issue duplicate
+     * ElectrumX lookups or force the rewriter to push the records into the
+     * OkHttp factory through a side channel.
+     */
+    suspend fun cachedTlsaFor(host: String): List<NamecoinNameResolver.TlsaRecord>? {
+        val key = host.lowercase()
+        return mutex.withLock {
+            cache[key]?.tlsaRecords
         }
     }
 
