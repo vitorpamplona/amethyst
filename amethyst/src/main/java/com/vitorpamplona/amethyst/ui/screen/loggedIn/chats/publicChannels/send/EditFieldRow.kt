@@ -63,16 +63,13 @@ fun EditFieldRow(
     accountViewModel: AccountViewModel,
     onSendNewMessage: suspend () -> Unit,
     nav: INav,
-    interceptBackPress: Boolean = true,
 ) {
-    if (interceptBackPress) {
-        BackHandler {
-            accountViewModel.launchSigner {
-                channelScreenModel.sendDraftSync()
-                channelScreenModel.cancel()
-            }
-            nav.popBack()
+    BackHandler {
+        accountViewModel.launchSigner {
+            channelScreenModel.sendDraftSync()
+            channelScreenModel.cancel()
         }
+        nav.popBack()
     }
 
     StrippingFailureDialog(channelScreenModel.strippingFailureConfirmation)
