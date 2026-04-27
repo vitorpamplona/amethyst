@@ -84,7 +84,7 @@ fun NestsScreen(
             NestsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Nests, accountViewModel) { route ->
+            AppBottomBar(Route.Nests, nav, accountViewModel) { route ->
                 if (route == Route.Nests) {
                     nestsFeedContentState.sendToTop()
                 } else {

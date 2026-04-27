@@ -65,7 +65,7 @@ fun BadgesScreen(
             BadgesTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Badges, accountViewModel) { route ->
+            AppBottomBar(Route.Badges, nav, accountViewModel) { route ->
                 if (route == Route.Badges) {
                     feedContentState.sendToTop()
                 } else {

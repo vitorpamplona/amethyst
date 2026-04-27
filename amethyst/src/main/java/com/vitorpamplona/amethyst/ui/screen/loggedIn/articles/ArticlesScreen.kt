@@ -65,7 +65,7 @@ fun ArticlesScreen(
             ArticlesTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Articles, accountViewModel) { route ->
+            AppBottomBar(Route.Articles, nav, accountViewModel) { route ->
                 if (route == Route.Articles) {
                     articlesFeedContentState.sendToTop()
                 } else {

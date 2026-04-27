@@ -65,7 +65,7 @@ fun FollowPacksScreen(
             FollowPacksTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.FollowPacks, accountViewModel) { route ->
+            AppBottomBar(Route.FollowPacks, nav, accountViewModel) { route ->
                 if (route == Route.FollowPacks) {
                     followPacksFeedContentState.sendToTop()
                 } else {

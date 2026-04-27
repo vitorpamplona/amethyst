@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -56,9 +57,14 @@ import com.vitorpamplona.amethyst.ui.theme.Size27dp
 @Composable
 fun AppBottomBar(
     selectedRoute: Route?,
+    nav: INav,
     accountViewModel: AccountViewModel,
-    nav: (Route) -> Unit,
+    onClick: (Route) -> Unit,
 ) {
+    // Hide the bar on entries that aren't a tab root (drawer or in-app
+    // pushes). Mirrors the back-arrow rule in canPop().
+    if (nav.canPop()) return
+
     val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
         .collectAsStateWithLifecycle()
     if (items.isEmpty()) {
@@ -73,7 +79,7 @@ fun AppBottomBar(
     }
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
-        RenderBottomMenu(items, selectedRoute, accountViewModel, nav)
+        RenderBottomMenu(items, selectedRoute, accountViewModel, onClick)
     }
 }
 
