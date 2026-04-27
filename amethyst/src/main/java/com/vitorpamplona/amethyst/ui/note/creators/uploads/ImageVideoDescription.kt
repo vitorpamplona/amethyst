@@ -31,15 +31,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,12 +59,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -99,6 +110,34 @@ fun ImageVideoDescription(
     }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val firstImageUri =
+        remember(uris) {
+            uris.first().takeIf { it.media.isImage() == true && it.media.isGif().not() }?.media?.uri
+        }
+    val labelService = remember { MLKitImageLabelService(context.applicationContext) }
+    var isLabeling by remember { mutableStateOf(false) }
+    var aiSuggested by remember { mutableStateOf(false) }
+
+    DisposableEffect(labelService) {
+        onDispose { labelService.close() }
+    }
+
+    LaunchedEffect(firstImageUri) {
+        if (firstImageUri == null || message.isNotEmpty()) return@LaunchedEffect
+        isLabeling = true
+        val suggestion =
+            try {
+                labelService.suggestAltText(firstImageUri)
+            } finally {
+                isLabeling = false
+            }
+        if (suggestion != null && message.isEmpty()) {
+            message = suggestion
+            aiSuggested = true
+        }
+    }
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by remember {
@@ -238,18 +277,61 @@ fun ImageVideoDescription(
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                     value = message,
-                    onValueChange = { message = it },
+                    onValueChange = {
+                        message = it
+                        aiSuggested = false
+                    },
                     placeholder = {
                         Text(
                             text = stringRes(R.string.content_description_example),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
+                    trailingIcon = {
+                        if (isLabeling) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    },
                     keyboardOptions =
                         KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.Sentences,
                         ),
                 )
+            }
+
+            if (aiSuggested) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                ) {
+                    AssistChip(
+                        onClick = {
+                            message = ""
+                            aiSuggested = false
+                        },
+                        label = { Text(text = stringRes(R.string.ai_suggested_alt_text_hint)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(AssistChipDefaults.IconSize),
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringRes(R.string.ai_suggested_alt_text_dismiss),
+                                modifier = Modifier.size(AssistChipDefaults.IconSize),
+                            )
+                        },
+                    )
+                }
             }
 
             // Hide privacy toggle when any selected video will be compressed (compression already strips metadata)

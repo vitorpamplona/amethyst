@@ -633,6 +633,8 @@
 
     <string name="content_description">Description of the contents</string>
     <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
+    <string name="ai_suggested_alt_text_hint">AI-suggested, edit me</string>
+    <string name="ai_suggested_alt_text_dismiss">Dismiss AI suggestion</string>
 
     <string name="zap_type">Zap Type</string>
     <string name="zap_type_explainer">Zap Type for all options</string>
