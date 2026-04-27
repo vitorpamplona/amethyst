@@ -23,11 +23,14 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.nestsclient.moq.MoqObject
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.moq.SubscribeOk
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteAnnounceStatus
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSubscribeException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.util.concurrent.atomic.AtomicLong
 
@@ -107,6 +110,30 @@ class MoqLiteNestsListener internal constructor(
             unsubscribeAction = { handle.unsubscribe() },
         )
     }
+
+    override fun announces(): Flow<RoomAnnouncement> =
+        flow {
+            check(state.value is NestsListenerState.Connected) {
+                "NestsListener.announces requires Connected state, was ${state.value}"
+            }
+            // Empty prefix → the relay sends every active broadcast
+            // under our session's namespace (one per speaker). The
+            // suffix is the broadcast's path component within the
+            // room — for nests this is the speaker pubkey hex.
+            val handle = session.announce(prefix = "")
+            try {
+                handle.updates.collect { announce ->
+                    emit(
+                        RoomAnnouncement(
+                            pubkey = announce.suffix,
+                            active = announce.status == MoqLiteAnnounceStatus.Active,
+                        ),
+                    )
+                }
+            } finally {
+                runCatching { handle.close() }
+            }
+        }
 
     override suspend fun close() {
         if (state.value is NestsListenerState.Closed) return

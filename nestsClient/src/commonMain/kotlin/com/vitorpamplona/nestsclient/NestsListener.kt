@@ -26,9 +26,11 @@ import com.vitorpamplona.nestsclient.moq.SubscribeFilter
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.moq.TrackNamespace
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 
 /**
  * High-level listener handle for an audio-room. Hides the layered HTTP +
@@ -72,9 +74,48 @@ interface NestsListener {
             "subscribeCatalog is moq-lite-only; IETF listener has no catalog channel.",
         )
 
+    /**
+     * Cold flow of moq-lite ANNOUNCE updates for the room's
+     * namespace. Each emission represents a publisher transitioning
+     * Active (broadcast started) or inactive (broadcast ended).
+     * Lets clients render an "actively broadcasting" indicator
+     * independent of the kind-10312 `publishing` presence tag —
+     * the JS reference's `useRoomAnnouncements` consumes this.
+     *
+     * Default body throws [UnsupportedOperationException] on the
+     * IETF reference path (`MoqSession` doesn't define an
+     * announce-prefix subscription that fits this shape). Callers
+     * mixing the two should `runCatching` the collect.
+     *
+     * @throws UnsupportedOperationException on the IETF listener.
+     * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
+     */
+    fun announces(): Flow<RoomAnnouncement> =
+        flow {
+            throw UnsupportedOperationException(
+                "announces() is moq-lite-only; IETF listener has no announce-prefix flow.",
+            )
+        }
+
     /** Tear down the MoQ session + underlying transport. Idempotent. */
     suspend fun close()
 }
+
+/**
+ * One moq-lite ANNOUNCE update. The JS reference uses these to
+ * drive the "live now" badge on each speaker's avatar.
+ *
+ * @param pubkey the suffix of the announce path — for nests
+ *   audio rooms this is the speaker's pubkey hex (the broadcast
+ *   path `<roomId>/<pubkey>` minus the `<roomId>` prefix the
+ *   listener already established).
+ * @param active true on the `Active` status (broadcast came up);
+ *   false on `Ended` (broadcast went down).
+ */
+data class RoomAnnouncement(
+    val pubkey: String,
+    val active: Boolean,
+)
 
 /**
  * Lifecycle states of a [NestsListener].

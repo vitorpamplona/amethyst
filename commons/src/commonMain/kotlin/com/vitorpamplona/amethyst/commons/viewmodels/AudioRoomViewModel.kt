@@ -172,6 +172,24 @@ class AudioRoomViewModel(
     val speakerCatalogs: StateFlow<Map<String, RoomSpeakerCatalog>> = _speakerCatalogs.asStateFlow()
 
     /**
+     * Pubkeys the moq-lite relay has announced as actively
+     * broadcasting in this room. Populated by [observeAnnounces]
+     * once the listener is Connected; an Active announce adds the
+     * pubkey, an Ended announce removes it. Independent of the
+     * kind-10312 `publishing` flag — announces come straight from
+     * the relay's view of who has an open broadcast track, while
+     * presence is the speaker's self-reported state. The two
+     * usually agree but the announce flow is the more authoritative
+     * "is this broadcast really live" signal.
+     *
+     * Empty when the listener doesn't expose announces (IETF
+     * reference path); the UI falls back to `publishingNow` from
+     * presence in that case.
+     */
+    private val _announcedSpeakers = MutableStateFlow<Set<String>>(emptySet())
+    val announcedSpeakers: StateFlow<Set<String>> = _announcedSpeakers.asStateFlow()
+
+    /**
      * `true` once the local user has been kicked (#5) — the platform
      * layer flips this on a valid kind-4312 from a host/moderator and
      * the UI can show a toast + finish the activity. Set-once; never
@@ -198,6 +216,7 @@ class AudioRoomViewModel(
     private var listener: NestsListener? = null
     private var connectJob: Job? = null
     private var stateObserverJob: Job? = null
+    private var announcesJob: Job? = null
 
     // Last in-flight `listener.close()` launched by teardown(). A subsequent
     // connect() awaits this before opening a fresh transport so two QUIC
@@ -505,6 +524,31 @@ class AudioRoomViewModel(
         _uiState.update { it.copy(broadcast = targetState) }
     }
 
+    /**
+     * Drain the moq-lite ANNOUNCE flow into [announcedSpeakers].
+     * Each Active emission adds the speaker pubkey; an inactive
+     * emission removes it. Best-effort — listeners that don't
+     * support announces (IETF reference path) throw on the first
+     * `collect` and we silently leave the set empty (the UI falls
+     * back to presence's `publishingNow` flag).
+     */
+    private fun observeAnnounces(l: NestsListener) {
+        announcesJob?.cancel()
+        announcesJob =
+            viewModelScope.launch {
+                runCatching {
+                    l.announces().collect { ann ->
+                        if (closed) return@collect
+                        if (ann.active) {
+                            _announcedSpeakers.update { it + ann.pubkey }
+                        } else {
+                            _announcedSpeakers.update { it - ann.pubkey }
+                        }
+                    }
+                }
+            }
+    }
+
     private fun observeListenerState(l: NestsListener) {
         stateObserverJob?.cancel()
         stateObserverJob =
@@ -583,6 +627,7 @@ class AudioRoomViewModel(
                     }
                     listener = l
                     observeListenerState(l)
+                    observeAnnounces(l)
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
@@ -746,6 +791,11 @@ class AudioRoomViewModel(
         connectJob = null
         stateObserverJob?.cancel()
         stateObserverJob = null
+        announcesJob?.cancel()
+        announcesJob = null
+        if (_announcedSpeakers.value.isNotEmpty()) {
+            _announcedSpeakers.value = emptySet()
+        }
         // Detach + suspend-stop each player on the cleanup scope. The
         // listener.close() below tears down the MoQ session and drops
         // every active subscription, so we don't need to call

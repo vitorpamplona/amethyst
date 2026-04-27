@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -204,6 +206,32 @@ private class ReconnectingHandle(
     override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = reissuingSubscribe { listener -> listener.subscribeSpeaker(speakerPubkeyHex) }
 
     override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = reissuingSubscribe { listener -> listener.subscribeCatalog(speakerPubkeyHex) }
+
+    /**
+     * The announce flow is a cold per-collect stream rather than a
+     * SubscribeHandle, so it doesn't go through [reissuingSubscribe].
+     * Instead, restart the inner collect on every activeListener
+     * change — `collectLatest` cancels the prior collection and
+     * re-runs against the fresh session. Best-effort: an inner
+     * listener that throws (IETF reference path) is logged-and-
+     * swallowed so a future moq-lite session keeps emitting.
+     */
+    override fun announces(): Flow<RoomAnnouncement> =
+        flow {
+            activeListener.collectLatest { listener ->
+                if (listener == null) return@collectLatest
+                val terminalOrConnected =
+                    listener.state.first { state ->
+                        state is NestsListenerState.Connected ||
+                            state is NestsListenerState.Closed ||
+                            state is NestsListenerState.Failed
+                    }
+                if (terminalOrConnected !is NestsListenerState.Connected) return@collectLatest
+                runCatching {
+                    listener.announces().collect { emit(it) }
+                }
+            }
+        }
 
     /**
      * Open a SubscribeHandle whose `objects` flow survives session
