@@ -27,6 +27,7 @@ import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -250,7 +251,16 @@ private class ReconnectingHandle(
         activeListener.value
             ?: error("no live session — wait for state == Connected before subscribing")
 
-        val frames = MutableSharedFlow<MoqObject>(extraBufferCapacity = SUBSCRIBE_BUFFER)
+        // DROP_OLDEST so a stalled consumer doesn't back-pressure the
+        // pump → underlying handle → relay. For Opus audio the user
+        // wants playback to stay "live" rather than catch up on
+        // minutes-stale buffered frames after a UI hiccup or
+        // foreground/background transition.
+        val frames =
+            MutableSharedFlow<MoqObject>(
+                extraBufferCapacity = SUBSCRIBE_BUFFER,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         val liveHandleRef = AtomicReference<SubscribeHandle?>(null)
 
         // Re-subscribe pump: every time activeListener changes, drop
