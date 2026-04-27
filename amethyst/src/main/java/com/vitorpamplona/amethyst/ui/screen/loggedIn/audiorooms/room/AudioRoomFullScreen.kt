@@ -88,7 +88,7 @@ internal fun AudioRoomFullScreen(
     onLeave: () -> Unit,
 ) {
     val roomTheme = androidx.compose.runtime.remember(event) { RoomTheme.from(event) }
-    AudioRoomThemedScope(theme = roomTheme) {
+    AudioRoomThemedScope(theme = roomTheme, accountViewModel = accountViewModel) {
         Column(
             modifier =
                 Modifier

@@ -25,13 +25,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
  * Apply a [RoomTheme] (NIP-53 `c` / `bg` tags) to the room body
@@ -47,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
 @Composable
 internal fun AudioRoomThemedScope(
     theme: RoomTheme,
+    accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
     val original = MaterialTheme.colorScheme
@@ -65,9 +70,28 @@ internal fun AudioRoomThemedScope(
         }
 
     val originalTypography = MaterialTheme.typography
+
+    // URL-based font loading. produceState fetches + caches on
+    // Dispatchers.IO; until the download completes (or if it
+    // fails), we fall back to the system-font-name mapping below.
+    // Same URL → same SHA-256 cache key → no repeat downloads
+    // across launches.
+    val context = LocalContext.current
+    val urlFont by produceState<FontFamily?>(null, theme.fontUrl) {
+        val url = theme.fontUrl
+        value =
+            if (url.isNullOrBlank()) {
+                null
+            } else {
+                RoomFontLoader.load(url, context, accountViewModel.httpClientBuilder::okHttpClientForImage)
+            }
+    }
     val themedTypography =
-        remember(theme.fontFamily, originalTypography) {
-            val family = systemFontFamilyFor(theme.fontFamily)
+        remember(theme.fontFamily, urlFont, originalTypography) {
+            // Prefer the URL-loaded font when available; fall back
+            // to the system-font-name mapping ("sans-serif" etc.)
+            // while the download is in flight or after a failure.
+            val family = urlFont ?: systemFontFamilyFor(theme.fontFamily)
             if (family == null) {
                 originalTypography
             } else {
@@ -101,12 +125,10 @@ internal fun AudioRoomThemedScope(
 
 /**
  * Map a kind-30312 `["f", family]` value to a Compose [FontFamily].
- * Only the four CSS-style generic-family names are honoured today —
+ * Only the four CSS-style generic-family names are honoured —
  * arbitrary names (e.g. "Inter") fall back to platform default
- * unless a downloader is wired up. URL-based loading
- * (RoomTheme.fontUrl) is the natural follow-up: fetch + cache
- * via OkHttp, then build a FontFamily from a local file. Until
- * then, an unknown family is silently a no-op.
+ * unless the room ships a [RoomTheme.fontUrl] (handled by
+ * [RoomFontLoader] above).
  */
 private fun systemFontFamilyFor(name: String?): FontFamily? =
     when (name?.trim()?.lowercase()) {
