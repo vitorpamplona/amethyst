@@ -106,7 +106,15 @@ internal fun NestThemedScope(
         }
 
     MaterialTheme(colorScheme = themed, typography = themedTypography) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Paint the themed background COLOR on the Box itself so a room
+        // that ships `["c", hex, "background"]` but no `bg` image still
+        // visibly tints the room screen — without this, only consumers
+        // that explicitly read `MaterialTheme.colorScheme.background`
+        // would pick the override up, and the room would visually fall
+        // back to the platform surface. The `bg` image, when present,
+        // paints on top per EGG-10 rule 3 ("image overlays the color");
+        // a partially-transparent image lets the color show through.
+        Box(modifier = Modifier.fillMaxSize().background(themed.background)) {
             theme.backgroundImageUrl?.let { url ->
                 when (theme.backgroundMode) {
                     RoomTheme.BackgroundMode.COVER -> {
