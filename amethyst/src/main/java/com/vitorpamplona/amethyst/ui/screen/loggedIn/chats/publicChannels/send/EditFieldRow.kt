@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -116,6 +117,7 @@ fun EditFieldRow(
         ThinPaddingTextField(
             state = channelScreenModel.message,
             onTextChanged = { channelScreenModel.onMessageChanged() },
+            inputTransformation = MentionPreservingInputTransformation,
             keyboardOptions =
                 KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Sentences,

@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -530,6 +531,7 @@ fun SendDirectMessageTo(
             ThinPaddingTextField(
                 state = postViewModel.toUsers,
                 onTextChanged = postViewModel::onToUsersChanged,
+                inputTransformation = MentionPreservingInputTransformation,
                 modifier =
                     Modifier
                         .weight(1f)
@@ -572,6 +574,7 @@ fun SendDirectMessageTo(
             ThinPaddingTextField(
                 state = postViewModel.subject,
                 onTextChanged = { postViewModel.onSubjectChanged() },
+                inputTransformation = MentionPreservingInputTransformation,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(

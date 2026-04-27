@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -70,6 +71,7 @@ fun MessageField(
         state = viewModel.message,
         onTextChanged = viewModel::onMessageChanged,
         onContentReceived = onContentReceived,
+        inputTransformation = MentionPreservingInputTransformation,
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
