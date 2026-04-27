@@ -206,6 +206,7 @@ internal fun AudioRoomFullScreen(
                 onStageLabel = stringRes(R.string.audio_room_stage),
                 audienceLabel = stringRes(R.string.audio_room_audience),
                 reactionsByPubkey = reactionsByPubkey,
+                connectingSpeakers = ui.connectingSpeakers,
                 onLongPressParticipant = onLongPressParticipant,
             )
             val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
@@ -72,6 +73,7 @@ internal fun ParticipantsGrid(
     audienceLabel: String,
     modifier: Modifier = Modifier,
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
+    connectingSpeakers: ImmutableSet<String> = kotlinx.collections.immutable.persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -81,6 +83,7 @@ internal fun ParticipantsGrid(
                 members = grid.onStage,
                 avatarSize = Size40dp,
                 speakingNow = speakingNow,
+                connectingSpeakers = connectingSpeakers,
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = reactionsByPubkey,
                 onLongPressParticipant = onLongPressParticipant,
@@ -92,10 +95,11 @@ internal fun ParticipantsGrid(
                 title = audienceLabel,
                 members = grid.audience,
                 avatarSize = Size35dp,
-                // Audience rows don't get the speaking-ring — only
-                // members with a live broadcast track do. Pass an
-                // empty set rather than thread a per-section bool.
+                // Audience rows don't get the speaking-ring or
+                // buffering overlay — only members with a live
+                // broadcast subscription do.
                 speakingNow = kotlinx.collections.immutable.persistentSetOf(),
+                connectingSpeakers = kotlinx.collections.immutable.persistentSetOf(),
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = emptyMap(),
                 onLongPressParticipant = onLongPressParticipant,
@@ -110,6 +114,7 @@ private fun ParticipantsSection(
     members: List<RoomMember>,
     avatarSize: androidx.compose.ui.unit.Dp,
     speakingNow: ImmutableSet<String>,
+    connectingSpeakers: ImmutableSet<String>,
     accountViewModel: AccountViewModel,
     reactionsByPubkey: Map<String, List<RoomReaction>>,
     onLongPressParticipant: ((String) -> Unit)?,
@@ -145,17 +150,33 @@ private fun ParticipantsSection(
                         com.vitorpamplona.amethyst.model.LocalCache
                             .getOrCreateUser(member.pubkey)
                     }
+                val isConnecting = member.pubkey in connectingSpeakers
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.width(avatarSize + 16.dp),
                 ) {
-                    ClickableUserPicture(
-                        baseUserHex = member.pubkey,
-                        size = avatarSize,
-                        accountViewModel = accountViewModel,
-                        modifier = avatarModifier,
-                        onLongClick = onLongPressParticipant?.let { cb -> { hex -> cb(hex) } },
-                    )
+                    androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                        ClickableUserPicture(
+                            baseUserHex = member.pubkey,
+                            size = avatarSize,
+                            accountViewModel = accountViewModel,
+                            modifier = avatarModifier,
+                            onLongClick = onLongPressParticipant?.let { cb -> { hex -> cb(hex) } },
+                        )
+                        if (isConnecting) {
+                            // Pre-roll buffering overlay — visible
+                            // between SUBSCRIBE_OK and the first
+                            // decoded frame (typically 0.5-2 s on a
+                            // fresh subscription). Sized smaller than
+                            // the avatar so the user picture stays
+                            // recognisable underneath.
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(avatarSize - 8.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
                     com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
                         baseUser = user,
                         weight = Modifier.fillMaxWidth(),

@@ -628,6 +628,9 @@ class AudioRoomViewModel(
         if (_uiState.value.speakingNow.contains(slot.pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow - slot.pubkey).toPersistentSet()) }
         }
+        if (_uiState.value.connectingSpeakers.contains(slot.pubkey)) {
+            _uiState.update { it.copy(connectingSpeakers = (it.connectingSpeakers - slot.pubkey).toPersistentSet()) }
+        }
         if (_speakerCatalogs.value.containsKey(slot.pubkey)) {
             _speakerCatalogs.update { it - slot.pubkey }
         }
@@ -710,6 +713,12 @@ class AudioRoomViewModel(
                 roomPlayer.play(instrumented, onError = { /* swallow per-packet decoder errors */ })
                 slot.attach(handle, roomPlayer, player)
                 publishActiveSpeakers()
+                // Enter the buffering window — UI renders a spinner
+                // overlay until the first audio frame triggers
+                // `onSpeakerActivity` and clears the entry.
+                _uiState.update {
+                    it.copy(connectingSpeakers = (it.connectingSpeakers + pubkey).toPersistentSet())
+                }
             } catch (t: Throwable) {
                 // Either CancellationException (scope cancelled mid-construction)
                 // or an unexpected throw — release the half-built pipeline and
@@ -792,6 +801,11 @@ class AudioRoomViewModel(
     private fun onSpeakerActivity(pubkey: String) {
         if (closed) return
         speakingExpiryJobs[pubkey]?.cancel()
+        // First frame for this subscription — clear the buffering
+        // overlay. Subsequent frames are no-ops here.
+        if (_uiState.value.connectingSpeakers.contains(pubkey)) {
+            _uiState.update { it.copy(connectingSpeakers = (it.connectingSpeakers - pubkey).toPersistentSet()) }
+        }
         if (!_uiState.value.speakingNow.contains(pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow + pubkey).toPersistentSet()) }
         }
@@ -914,6 +928,18 @@ data class AudioRoomUiState(
     val activeSpeakers: ImmutableSet<String> = persistentSetOf(),
     /** Pubkeys whose audio track delivered an object in the last [SPEAKING_TIMEOUT_MS]. */
     val speakingNow: ImmutableSet<String> = persistentSetOf(),
+    /**
+     * Pubkeys we have an open subscription for but no audio frame has
+     * arrived yet — the pre-roll window between SUBSCRIBE_OK and the
+     * first decoded packet. Typically 0.5-2 s on a fresh join. The UI
+     * shows a buffering overlay here so the user knows audio is on
+     * its way (vs the speaker sitting silent on stage).
+     *
+     * Membership is set-once-per-subscription: once a frame arrives
+     * the pubkey moves out of this set and stays out, even if the
+     * speaker subsequently goes quiet. Cleared on speaker removal.
+     */
+    val connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     /** Speaker / publisher state — only relevant when [AudioRoomViewModel.canBroadcast]. */
     val broadcast: BroadcastUiState = BroadcastUiState.Idle,
     /**
