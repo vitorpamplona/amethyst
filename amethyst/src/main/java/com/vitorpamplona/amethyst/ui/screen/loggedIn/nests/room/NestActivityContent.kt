@@ -21,47 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
-import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
-import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.nests.NestForegroundService
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
-import com.vitorpamplona.quartz.experimental.nests.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 /**
- * Top-level composable for [NestActivity]. Observes the room event +
- * VM, auto-connects on entry, runs the kind-10312 presence loop, drives
- * the foreground service, and flips between full-screen and PIP layouts.
- *
- * The [NestActivity] supplies [isInPipMode] (a Compose state observed
- * via the activity's `mutableStateOf`) and [onLeave] which finishes the
- * activity. Everything else is local to this composable's scope.
+ * Top-level composable for [NestActivity]. Resolves the kind-30312
+ * note from the address extra, then hands control to
+ * [NestActivityBody].
  */
 @Composable
 internal fun NestActivityContent(
@@ -76,9 +53,9 @@ internal fun NestActivityContent(
 ) {
     val parsedAddress = remember(addressValue) { Address.parse(addressValue) }
     if (parsedAddress == null) {
-        // Malformed address — bail. The Activity will receive a Closed signal
-        // through the VM teardown when the user finishes; until then we just
-        // render nothing.
+        // Malformed address — bail. The Activity will receive a Closed
+        // signal through the VM teardown when the user finishes; until
+        // then we just render nothing.
         return
     }
 
@@ -99,6 +76,17 @@ internal fun NestActivityContent(
     }
 }
 
+/**
+ * Per-room orchestration. Wires the [NestViewModel] to:
+ *   - the relay subscription that feeds LocalCache
+ *   - LocalCache → VM event collectors (presence, chat, reactions, kicks)
+ *   - the system bridges (PIP, foreground service)
+ *   - the kind-10312 presence publisher
+ *
+ * Each concern is one named composable from a sibling file. This
+ * function stays a list of well-labelled wiring calls so the
+ * room's lifecycle is readable end-to-end at a glance.
+ */
 @Composable
 private fun NestActivityBody(
     event: MeetingSpaceEvent,
@@ -111,242 +99,53 @@ private fun NestActivityBody(
     pipMuteSignal: SharedFlow<Unit>,
     onLeave: () -> Unit,
 ) {
-    val participants = remember(event) { event.participants() }
-    val hosts = remember(participants) { participants.filter { it.role.equals(ROLE.HOST.code, true) } }
-    val speakers = remember(participants) { participants.filter { it.role.equals(ROLE.SPEAKER.code, true) } }
-    // The grid renderer derives audience from `event.participants()` +
-    // the kind-10312 presence aggregator (see ParticipantsGrid /
-    // buildParticipantGrid). This composable only needs the on-stage
-    // subset for the talk-row gate + PIP renderer.
-    val onStage = remember(hosts, speakers) { hosts + speakers }
+    val account = accountViewModel.account
+    val localPubkey = account.signer.pubKey
+    val roomATag = remember(event) { event.address().toValue() }
+
+    // Static room layout: hosts + speakers from the kind-30312 `p`-tags.
+    // The grid renderer derives audience from the kind-10312 presence
+    // aggregator (see ParticipantsGrid / buildParticipantGrid); this
+    // composable only needs the on-stage subset for the talk-row gate
+    // and the PIP renderer.
+    val onStage =
+        remember(event) {
+            event.participants().filter {
+                it.role.equals(ROLE.HOST.code, true) || it.role.equals(ROLE.SPEAKER.code, true)
+            }
+        }
     val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
 
-    val account = accountViewModel.account
-    val signer = account.signer
+    val viewModel = rememberNestViewModel(room, account.signer)
+    AutoConnectAndTrackSpeakers(viewModel, onStageKeys)
 
-    val viewModel: NestViewModel =
-        viewModel(
-            key = "${room.authBaseUrl}|${room.roomId}",
-            factory =
-                remember(room, signer) {
-                    NestViewModelFactory(
-                        signer = signer,
-                        room = room,
-                    )
-                },
-        )
-
-    // Auto-connect on activity entry. The VM guards against duplicate
-    // connect() calls if the screen recomposes.
-    LaunchedEffect(viewModel) { viewModel.connect() }
-
-    LaunchedEffect(viewModel, onStageKeys) { viewModel.updateSpeakers(onStageKeys) }
-
-    // Single per-room wire subscription. NestRoomFilterAssembler bundles
-    // every #a-tagged kind we need (chat 1311, presence 10312,
-    // reactions 7, admin commands 4312) into one REQ per relay — see
-    // its docstring. Replaces the four parallel subscriptions this
-    // composable used to open. The LaunchedEffect collectors below
-    // still fan-out per-kind because each one feeds a different VM
-    // hook; the wire side is what got collapsed.
-    val roomATag = remember(event) { event.address().toValue() }
-    val localPubkey = accountViewModel.account.signer.pubKey
+    // Single REQ per relay covering chat, presence, reactions, admin
+    // commands. See NestRoomFilterAssembler for the filter shape.
     NestRoomFilterAssemblerSubscription(roomATag, localPubkey, accountViewModel)
 
-    // Per-room kind-10312 presence — drives the listener counter,
-    // participant grid, and hand-raise queue.
-    LaunchedEffect(viewModel, roomATag) {
-        val filter =
-            Filter(
-                kinds = listOf(MeetingRoomPresenceEvent.KIND),
-                tags = mapOf("a" to listOf(roomATag)),
-            )
-        LocalCache.observeEvents<MeetingRoomPresenceEvent>(filter).collect { events ->
-            events.forEach { viewModel.onPresenceEvent(it) }
-        }
-    }
-    // Eviction tick — drop peers silent for >6 min (one missed
-    // 30-s heartbeat plus a 5-min "still here" tolerance window so
-    // a transient relay hiccup doesn't drop everyone).
-    LaunchedEffect(viewModel) {
-        while (isActive) {
-            delay(PRESENCE_EVICT_INTERVAL_MS)
-            viewModel.evictStalePresences(System.currentTimeMillis() / 1000 - PRESENCE_STALE_THRESHOLD_SEC)
-        }
-    }
+    // Read side: LocalCache → VM. Each kind has its own collector
+    // (different VM hook per kind) plus the two eviction tickers.
+    NestRoomEventCollectors(viewModel, event, roomATag, localPubkey)
 
-    // Per-room kind-1311 live chat — feeds the VM's chat ledger.
-    LaunchedEffect(viewModel, roomATag) {
-        val filter =
-            Filter(
-                kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                tags = mapOf("a" to listOf(roomATag)),
-            )
-        LocalCache.observeEvents<LiveActivitiesChatMessageEvent>(filter).collect { events ->
-            events.forEach { viewModel.onChatEvent(it) }
-        }
-    }
-
-    // Per-room kind-7 reactions. The VM's sliding-window aggregator
-    // drops entries older than 30 s; the 1-s tick below drives the
-    // eviction so the floating-up overlay animation timing is one-
-    // place rather than per-component.
-    LaunchedEffect(viewModel, roomATag) {
-        val filter =
-            Filter(
-                kinds = listOf(ReactionEvent.KIND),
-                tags = mapOf("a" to listOf(roomATag)),
-            )
-        LocalCache.observeEvents<ReactionEvent>(filter).collect { events ->
-            val nowSec = System.currentTimeMillis() / 1000
-            events.forEach { viewModel.onReactionEvent(it, nowSec) }
-        }
-    }
-    LaunchedEffect(viewModel) {
-        while (isActive) {
-            delay(REACTIONS_TICK_MS)
-            viewModel.evictReactions(System.currentTimeMillis() / 1000 - REACTION_WINDOW_SEC_LOCAL)
-        }
-    }
-
-    // Per-room kind-4312 admin commands targeting THIS user. The
-    // signer-must-be-host-or-moderator authority check happens here
-    // (not in the relay) — only honour kicks where the signer's
-    // ParticipantTag.canSpeak() returns true on the active
-    // kind-30312. nostrnests' UI does the same gating.
-    LaunchedEffect(viewModel, roomATag, localPubkey) {
-        val filter =
-            Filter(
-                kinds = listOf(AdminCommandEvent.KIND),
-                tags = mapOf("a" to listOf(roomATag), "p" to listOf(localPubkey)),
-            )
-        LocalCache.observeNewEvents<AdminCommandEvent>(filter).collect { cmd ->
-            if (cmd.action() != AdminCommandEvent.Action.KICK) return@collect
-            if (cmd.targetPubkey() != localPubkey) return@collect
-            // Authority: the signer must currently hold a
-            // host/moderator role on the kind-30312 we joined.
-            // Falling back to "is the signer the room's pubkey"
-            // (the original host) covers the case where the host
-            // sends from the same key that wrote the room event.
-            val signerIsAuthorised =
-                cmd.pubKey == event.pubKey ||
-                    event.participants().any { it.pubKey == cmd.pubKey && (it.isHost() || it.isModerator()) }
-            if (!signerIsAuthorised) return@collect
-            viewModel.onKick()
-        }
-    }
-    val wasKicked by viewModel.wasKicked.collectAsState()
-    LaunchedEffect(wasKicked) { if (wasKicked) onLeave() }
+    // Kick → leave the activity.
+    LeaveOnKick(viewModel, onLeave)
 
     val ui by viewModel.uiState.collectAsState()
 
-    // Push mute + connected state up so the Activity can rebuild PIP
-    // RemoteActions and gate `enterPictureInPictureMode` on Connected.
-    LaunchedEffect(ui.isMuted) { onMuteState(ui.isMuted) }
-    // PIP entry gate — treat Reconnecting as "still in the room" so a
-    // mid-room network blip doesn't lock the user out of PIP. The
-    // listener's hot SubscribeHandle pump preserves audio across the
-    // cutover; PIP would otherwise un-arm and re-arm spuriously.
-    val isConnectedNow =
-        ui.connection is ConnectionUiState.Connected ||
-            ui.connection is ConnectionUiState.Reconnecting
-    LaunchedEffect(isConnectedNow) { onConnectedChange(isConnectedNow) }
+    // System bridges: PIP overlay actions + foreground service.
+    PipBridge(ui, pipMuteSignal, viewModel, onMuteState, onConnectedChange)
+    NestForegroundServiceLifecycle(ui)
 
-    // Forward PIP-overlay mute taps into the VM. Per-Activity SharedFlow
-    // so a stale emission from a previous Activity instance can't leak
-    // into a new one.
-    LaunchedEffect(viewModel) {
-        pipMuteSignal.collect {
-            viewModel.setMuted(!viewModel.uiState.value.isMuted)
-        }
-    }
-
-    var handRaised by rememberSaveable(event.address().toValue()) { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    // Presence: kind 10312 every 30 s while the activity is composed.
-    val micMutedTag: Boolean? =
-        when (val b = ui.broadcast) {
-            is BroadcastUiState.Broadcasting -> b.isMuted
-            else -> null
-        }
-    val publishingTag: Boolean = ui.publishingNow
-    val onstageTag: Boolean = ui.onStageNow
-    // Heartbeat loop — publishes once on enter / hand-raise / onstage
-    // change, then every 30 s. micMutedTag and publishingTag are
-    // intentionally NOT keys here: every mute toggle would otherwise
-    // trigger a presence publish + relay round trip (audit Android #11).
-    // The next heartbeat picks up the latest mic / publishing state up
-    // to 30 s later, which is well within the user's "did the peer see
-    // my mute" tolerance.
-    LaunchedEffect(event.address().toValue(), handRaised, onstageTag) {
-        publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
-        while (isActive) {
-            delay(PRESENCE_REFRESH_MS)
-            publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
-        }
-    }
-    // Debounced state-change publisher: after a mute toggle, wait
-    // PRESENCE_DEBOUNCE_MS for further changes before sending a fresh
-    // presence event. The LaunchedEffect's auto-cancel on key change
-    // serves as the debounce mechanism.
-    //
-    // Skip when `micMutedTag` is null (we're not broadcasting) — otherwise
-    // the FIRST composition would publish twice within 500 ms (heartbeat
-    // immediately + debounce-publisher 500 ms later, both with muted=null).
-    // Audit round-2 Android #10.
-    if (micMutedTag != null) {
-        LaunchedEffect(micMutedTag) {
-            delay(PRESENCE_DEBOUNCE_MS)
-            publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
-        }
-    }
-    DisposableEffect(event.address().toValue()) {
-        onDispose {
-            // Final "leaving" presence runs on a non-cancellable scope so
-            // it survives the composable's scope being cancelled mid-
-            // network. Without this the leave event almost never reaches
-            // the relay (audit Android #12). publishing=false / onstage=false
-            // tells aggregating peers to drop us from the participant grid
-            // immediately rather than wait out the staleness window.
-            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-                runCatching {
-                    publishPresence(
-                        account = account,
-                        event = event,
-                        handRaised = false,
-                        micMuted = null,
-                        publishing = false,
-                        onstage = false,
-                    )
-                }
-            }
-        }
-    }
-
-    // Foreground service lifecycle — the Activity is the lifecycle anchor;
-    // the service exists for screen-locked / activity-stopped audio.
-    // Treat Reconnecting as "still live" so a transient transport blip
-    // doesn't drop the wake-lock + foreground type. On Android 14+
-    // re-promoting to FOREGROUND_SERVICE_TYPE_MICROPHONE after losing
-    // it isn't always allowed; keeping the service running across the
-    // wrapper's recovery window is both gentler on the user (no audio
-    // dropout from the OS killing us) and safer against the platform
-    // permission model.
-    val context = LocalContext.current
-    val isLive =
-        ui.connection is ConnectionUiState.Connected ||
-            ui.connection is ConnectionUiState.Reconnecting
-    val isBroadcasting = ui.broadcast is BroadcastUiState.Broadcasting
-    LaunchedEffect(isLive, isBroadcasting) {
-        when {
-            isLive && isBroadcasting -> NestForegroundService.promoteToMicrophone(context)
-            isLive -> NestForegroundService.startListening(context)
-            else -> NestForegroundService.stop(context)
-        }
-    }
-    DisposableEffect(Unit) { onDispose { NestForegroundService.stop(context) } }
+    // Hand-raise is screen-local UI state; presence-publish picks it
+    // up via the heartbeat and emits onstage / muted / publishing
+    // alongside.
+    var handRaised by rememberSaveable(roomATag) { mutableStateOf(false) }
+    NestPresencePublisher(
+        account = account,
+        event = event,
+        ui = ui,
+        handRaised = handRaised,
+    )
 
     if (isInPipMode) {
         NestPipScreen(
@@ -366,39 +165,6 @@ private fun NestActivityBody(
             handRaised = handRaised,
             onHandRaisedChange = { handRaised = it },
             onLeave = onLeave,
-        )
-    }
-}
-
-private const val PRESENCE_REFRESH_MS = 30_000L
-private const val PRESENCE_DEBOUNCE_MS = 500L
-private const val PRESENCE_EVICT_INTERVAL_MS = 60_000L
-private const val PRESENCE_STALE_THRESHOLD_SEC = 6L * 60L
-private const val REACTIONS_TICK_MS = 1_000L
-
-// Mirror of [com.vitorpamplona.amethyst.commons.viewmodels.REACTION_WINDOW_SEC]
-// — the platform layer doesn't import from commons here, and a
-// duplicate constant is cheaper than another import. If these
-// drift, the 1-s tick still self-heals within one window length.
-private const val REACTION_WINDOW_SEC_LOCAL = 30L
-
-private suspend fun publishPresence(
-    account: com.vitorpamplona.amethyst.model.Account,
-    event: MeetingSpaceEvent,
-    handRaised: Boolean,
-    micMuted: Boolean?,
-    publishing: Boolean? = null,
-    onstage: Boolean? = null,
-) {
-    runCatching {
-        account.signAndComputeBroadcast(
-            MeetingRoomPresenceEvent.build(
-                root = event,
-                handRaised = handRaised,
-                muted = micMuted,
-                publishing = publishing,
-                onstage = onstage,
-            ),
         )
     }
 }
