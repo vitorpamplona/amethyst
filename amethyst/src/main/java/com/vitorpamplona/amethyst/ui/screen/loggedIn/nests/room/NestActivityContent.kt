@@ -27,9 +27,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
+import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
@@ -43,7 +48,6 @@ import kotlinx.coroutines.flow.SharedFlow
 @Composable
 internal fun NestActivityContent(
     addressValue: String,
-    room: com.vitorpamplona.nestsclient.NestsRoomConfig,
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
     onMuteState: (Boolean) -> Unit,
@@ -61,18 +65,37 @@ internal fun NestActivityContent(
 
     LoadAddressableNote(parsedAddress, accountViewModel) { addressableNote ->
         addressableNote ?: return@LoadAddressableNote
-        val event = addressableNote.event as? MeetingSpaceEvent ?: return@LoadAddressableNote
-        NestActivityBody(
-            event = event,
-            roomNote = addressableNote,
-            room = room,
-            accountViewModel = accountViewModel,
-            isInPipMode = isInPipMode,
-            onMuteState = onMuteState,
-            onConnectedChange = onConnectedChange,
-            pipMuteSignal = pipMuteSignal,
-            onLeave = onLeave,
-        )
+        val event by observeNoteEvent<MeetingSpaceEvent>(addressableNote, accountViewModel)
+
+        event?.let {
+            val service = it.service()
+            val endPoint = it.endpoint()
+            if (service != null && endPoint != null) {
+                val viewModel =
+                    rememberNestViewModel(
+                        NestsRoomConfig(
+                            authBaseUrl = service,
+                            endpoint = endPoint,
+                            hostPubkey = it.pubKey,
+                            roomId = it.dTag(),
+                            kind = it.kind,
+                        ),
+                        accountViewModel.account.signer,
+                    )
+
+                NestActivityBody(
+                    event = it,
+                    roomNote = addressableNote,
+                    viewModel = viewModel,
+                    accountViewModel = accountViewModel,
+                    isInPipMode = isInPipMode,
+                    onMuteState = onMuteState,
+                    onConnectedChange = onConnectedChange,
+                    pipMuteSignal = pipMuteSignal,
+                    onLeave = onLeave,
+                )
+            }
+        }
     }
 }
 
@@ -90,8 +113,8 @@ internal fun NestActivityContent(
 @Composable
 private fun NestActivityBody(
     event: MeetingSpaceEvent,
-    roomNote: com.vitorpamplona.amethyst.model.AddressableNote,
-    room: com.vitorpamplona.nestsclient.NestsRoomConfig,
+    roomNote: AddressableNote,
+    viewModel: NestViewModel,
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
     onMuteState: (Boolean) -> Unit,
@@ -101,7 +124,7 @@ private fun NestActivityBody(
 ) {
     val account = accountViewModel.account
     val localPubkey = account.signer.pubKey
-    val roomATag = remember(event) { event.address().toValue() }
+    val roomATag = roomNote.idHex
 
     // Static room layout: hosts + speakers from the kind-30312 `p`-tags.
     // The grid renderer derives audience from the kind-10312 presence
@@ -116,7 +139,6 @@ private fun NestActivityBody(
         }
     val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
 
-    val viewModel = rememberNestViewModel(room, account.signer)
     AutoConnectAndTrackSpeakers(viewModel, onStageKeys)
 
     // Single REQ per relay covering chat, presence, reactions, admin

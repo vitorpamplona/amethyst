@@ -296,10 +296,6 @@ fun JoinNestButton(
     if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
     val context = LocalContext.current
-    val addressValue = remember(event) { event.address().toValue() }
-    val hostPubkey = event.pubKey
-    val kind = event.kind
-
     val colors =
         if (primaryColorOverride != null) {
             androidx.compose.material3.ButtonDefaults
@@ -314,12 +310,7 @@ fun JoinNestButton(
             NestBridge.set(accountViewModel)
             NestActivity.launch(
                 context = context,
-                addressValue = addressValue,
-                authBaseUrl = serviceBase,
-                endpoint = endpoint,
-                hostPubkey = hostPubkey,
-                roomId = roomId,
-                kind = kind,
+                addressValue = event.address().toValue(),
             )
         },
         colors = colors,

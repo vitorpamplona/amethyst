@@ -28,7 +28,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -60,10 +59,13 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import kotlinx.collections.immutable.ImmutableSet
 
 /**
@@ -155,7 +157,7 @@ private fun ParticipantsSection(
     val absentAlphaModifier = remember { Modifier.alpha(0.5f) }
     val speakingBorderModifier = remember(ringColor) { Modifier.border(2.dp, ringColor, CircleShape) }
     val spinnerModifier = remember(avatarSize) { Modifier.size(avatarSize - 8.dp) }
-    Column(modifier = Modifier.padding(top = 8.dp)) {
+    Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = SpacedBy5dp) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelMedium,
@@ -168,7 +170,7 @@ private fun ParticipantsSection(
         LazyHorizontalGrid(
             rows = GridCells.Fixed(1),
             modifier = gridModifier,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = SpacedBy5dp,
         ) {
             items(items = members, key = { it.pubkey }) { member ->
                 val isSpeaking = member.pubkey in speakingNow
@@ -196,6 +198,7 @@ private fun ParticipantsSection(
                 val isConnecting = member.pubkey in connectingSpeakers
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = SpacedBy10dp,
                     modifier = cellWidthModifier,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -234,7 +237,7 @@ private fun ParticipantsSection(
                             )
                         }
                     }
-                    com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
+                    UsernameDisplay(
                         baseUser = user,
                         weight = Modifier.fillMaxWidth(),
                         accountViewModel = accountViewModel,

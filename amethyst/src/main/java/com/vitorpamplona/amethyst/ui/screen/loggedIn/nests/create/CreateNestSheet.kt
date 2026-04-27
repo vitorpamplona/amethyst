@@ -195,11 +195,6 @@ fun CreateNestSheet(
                             NestActivity.launch(
                                 context = context,
                                 addressValue = launchInfo.addressValue,
-                                authBaseUrl = launchInfo.authBaseUrl,
-                                endpoint = launchInfo.endpoint,
-                                hostPubkey = launchInfo.hostPubkey,
-                                roomId = launchInfo.roomId,
-                                kind = launchInfo.kind,
                             )
                             onDismiss()
                         }

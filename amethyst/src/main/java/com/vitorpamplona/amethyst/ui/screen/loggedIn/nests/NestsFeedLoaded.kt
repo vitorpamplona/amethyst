@@ -149,11 +149,6 @@ private fun NestFeedCard(
                     NestActivity.launch(
                         context = context,
                         addressValue = meetingEvent.address().toValue(),
-                        authBaseUrl = service,
-                        endpoint = endpoint,
-                        hostPubkey = meetingEvent.pubKey,
-                        roomId = dTag,
-                        kind = meetingEvent.kind,
                     )
                 } else {
                     nav.nav { routeFor(baseNote, accountViewModel.account) }

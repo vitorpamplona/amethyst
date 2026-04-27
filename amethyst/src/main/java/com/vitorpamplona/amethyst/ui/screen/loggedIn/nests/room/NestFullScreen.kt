@@ -48,7 +48,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -72,6 +71,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
+import com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -151,17 +152,15 @@ internal fun NestFullScreen(
                 Column(
                     modifier =
                         Modifier
-                            .weight(1f, fill = false)
+                            .weight(1f)
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 8.dp),
+                            .padding(horizontal = 16.dp),
                 ) {
                     event.summary()?.let {
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
 
@@ -169,20 +168,6 @@ internal fun NestFullScreen(
                     // in the room. Hidden until the aggregator has at least one
                     // entry so the placeholder doesn't flash on entry.
                     val presences by viewModel.presences.collectAsState()
-                    val listenerCount = presences.size
-                    if (listenerCount > 0) {
-                        Text(
-                            text =
-                                androidx.compose.ui.res.pluralStringResource(
-                                    R.plurals.nest_listener_count,
-                                    listenerCount,
-                                    listenerCount,
-                                ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
 
                     val reactionsByPubkey by viewModel.recentReactions.collectAsState()
                     var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
@@ -198,7 +183,7 @@ internal fun NestFullScreen(
                     // greys out at 50 % alpha, matching nostrnests' web client.
                     val participantGrid =
                         androidx.compose.runtime.remember(event, presences) {
-                            com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid(
+                            buildParticipantGrid(
                                 participants = event.participants(),
                                 presences = presences,
                             )
@@ -324,11 +309,7 @@ internal fun NestFullScreen(
                     event = event,
                     viewModel = viewModel,
                     accountViewModel = accountViewModel,
-                    modifier =
-                        Modifier
-                            .weight(1f, fill = true)
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 12.dp, bottom = 16.dp),
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -367,7 +348,7 @@ private fun NestTopAppBar(
     onShare: () -> Unit,
     onEdit: () -> Unit,
 ) {
-    TopAppBar(
+    ShorterTopAppBar(
         title = {
             Text(
                 text = title,

@@ -98,18 +98,7 @@ class NestActivity : AppCompatActivity() {
 
         val accountViewModel = NestBridge.accountViewModel
         val addressValue = intent.getStringExtra(EXTRA_ADDRESS)
-        val authBaseUrl = intent.getStringExtra(EXTRA_AUTH_BASE_URL)
-        val endpoint = intent.getStringExtra(EXTRA_ENDPOINT)
-        val hostPubkey = intent.getStringExtra(EXTRA_HOST_PUBKEY)
-        val roomId = intent.getStringExtra(EXTRA_ROOM_ID)
-        val kind = intent.getIntExtra(EXTRA_KIND, com.vitorpamplona.nestsclient.NestsRoomConfig.MEETING_SPACE_KIND)
-        if (accountViewModel == null ||
-            addressValue == null ||
-            authBaseUrl == null ||
-            endpoint == null ||
-            hostPubkey == null ||
-            roomId == null
-        ) {
+        if (accountViewModel == null || addressValue == null) {
             // After process death the bridge is empty (the previous
             // process's AccountViewModel is gone). Bounce the user back to
             // MainActivity so they land on the lobby instead of a black
@@ -147,14 +136,6 @@ class NestActivity : AppCompatActivity() {
             AmethystTheme {
                 NestActivityContent(
                     addressValue = addressValue,
-                    room =
-                        com.vitorpamplona.nestsclient.NestsRoomConfig(
-                            authBaseUrl = authBaseUrl,
-                            endpoint = endpoint,
-                            hostPubkey = hostPubkey,
-                            roomId = roomId,
-                            kind = kind,
-                        ),
                     accountViewModel = accountViewModel,
                     isInPipMode = isInPipMode.value,
                     onMuteState = { muted ->
@@ -252,11 +233,6 @@ class NestActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_ADDRESS = "com.vitorpamplona.amethyst.NEST_ADDRESS"
-        const val EXTRA_AUTH_BASE_URL = "com.vitorpamplona.amethyst.NEST_AUTH_BASE_URL"
-        const val EXTRA_ENDPOINT = "com.vitorpamplona.amethyst.NEST_ENDPOINT"
-        const val EXTRA_HOST_PUBKEY = "com.vitorpamplona.amethyst.NEST_HOST_PUBKEY"
-        const val EXTRA_ROOM_ID = "com.vitorpamplona.amethyst.NEST_ROOM_ID"
-        const val EXTRA_KIND = "com.vitorpamplona.amethyst.NEST_KIND"
         private const val ACTION_PIP_TOGGLE_MUTE = "com.vitorpamplona.amethyst.NEST_PIP_MUTE"
         private const val ACTION_PIP_LEAVE = "com.vitorpamplona.amethyst.NEST_PIP_LEAVE"
         private const val PIP_MUTE_REQ = 0x6A001
@@ -265,21 +241,11 @@ class NestActivity : AppCompatActivity() {
         fun launch(
             context: Context,
             addressValue: String,
-            authBaseUrl: String,
-            endpoint: String,
-            hostPubkey: String,
-            roomId: String,
-            kind: Int,
         ) {
             context.startActivity(
                 Intent(context, NestActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     putExtra(EXTRA_ADDRESS, addressValue)
-                    putExtra(EXTRA_AUTH_BASE_URL, authBaseUrl)
-                    putExtra(EXTRA_ENDPOINT, endpoint)
-                    putExtra(EXTRA_HOST_PUBKEY, hostPubkey)
-                    putExtra(EXTRA_ROOM_ID, roomId)
-                    putExtra(EXTRA_KIND, kind)
                 },
             )
         }

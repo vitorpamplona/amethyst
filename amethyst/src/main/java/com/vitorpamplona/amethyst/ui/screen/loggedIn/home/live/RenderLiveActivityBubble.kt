@@ -77,11 +77,6 @@ fun RenderLiveActivityBubble(
                     NestActivity.launch(
                         context = context,
                         addressValue = meetingEvent.address().toValue(),
-                        authBaseUrl = service,
-                        endpoint = endpoint,
-                        hostPubkey = meetingEvent.pubKey,
-                        roomId = dTag,
-                        kind = meetingEvent.kind,
                     )
                 } else {
                     // Fall back to the channel route so the user
