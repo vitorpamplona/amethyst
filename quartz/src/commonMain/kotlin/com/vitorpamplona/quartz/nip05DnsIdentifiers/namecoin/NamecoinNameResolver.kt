@@ -337,11 +337,24 @@ class NamecoinNameResolver(
         ): List<String> =
             try {
                 val root = SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject
-                val target = walkSubdomain(root, subdomainLabels) ?: return emptyList()
-                collectRelayUrls(target)
+                parseRelayUrls(root, subdomainLabels)
             } catch (_: Exception) {
                 emptyList()
             }
+
+        /**
+         * As [parseRelayUrls] but accepts a pre-parsed root [JsonObject].
+         * Use this when the caller has already expanded `import` items via
+         * [NamecoinImportResolver] and does not want to re-parse / re-walk
+         * the (possibly already merged) value.
+         */
+        fun parseRelayUrls(
+            rootObject: JsonObject,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<String> {
+            val target = walkSubdomain(rootObject, subdomainLabels) ?: return emptyList()
+            return collectRelayUrls(target)
+        }
 
         private fun collectRelayUrls(obj: JsonObject): List<String> {
             val out = mutableListOf<String>()
@@ -415,11 +428,23 @@ class NamecoinNameResolver(
         ): List<TlsaRecord> =
             try {
                 val root = SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject
-                val target = walkSubdomain(root, subdomainLabels) ?: return emptyList()
-                collectTlsaRecords(target)
+                parseTlsaRecords(root, subdomainLabels)
             } catch (_: Exception) {
                 emptyList()
             }
+
+        /**
+         * As [parseTlsaRecords] but accepts a pre-parsed root [JsonObject].
+         * Use this when the caller has already expanded `import` items via
+         * [NamecoinImportResolver].
+         */
+        fun parseTlsaRecords(
+            rootObject: JsonObject,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<TlsaRecord> {
+            val target = walkSubdomain(rootObject, subdomainLabels) ?: return emptyList()
+            return collectTlsaRecords(target)
+        }
 
         private fun collectTlsaRecords(obj: JsonObject): List<TlsaRecord> {
             val tlsArray = obj["tls"]?.let { runCatching { it.jsonArray }.getOrNull() } ?: return emptyList()
@@ -463,11 +488,23 @@ class NamecoinNameResolver(
         ): List<String> =
             try {
                 val root = SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject
-                val target = walkSubdomain(root, subdomainLabels) ?: return emptyList()
-                collectTorEndpoints(target)
+                parseTorEndpoints(root, subdomainLabels)
             } catch (_: Exception) {
                 emptyList()
             }
+
+        /**
+         * As [parseTorEndpoints] but accepts a pre-parsed root [JsonObject].
+         * Use this when the caller has already expanded `import` items via
+         * [NamecoinImportResolver].
+         */
+        fun parseTorEndpoints(
+            rootObject: JsonObject,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<String> {
+            val target = walkSubdomain(rootObject, subdomainLabels) ?: return emptyList()
+            return collectTorEndpoints(target)
+        }
 
         private fun collectTorEndpoints(obj: JsonObject): List<String> {
             val out = mutableListOf<String>()
@@ -649,6 +686,27 @@ class NamecoinNameResolver(
     }
 
     /**
+     * Fetcher that satisfies the [NamecoinImportResolver.NameValueFetcher]
+     * contract by delegating to [lookupNameDetailed]. Failures (not found,
+     * unreachable, timeout) are absorbed and reported as `null`, so a
+     * broken import does not poison the whole resolution path.
+     *
+     * Exposed as a method (rather than building a one-off lambda at every
+     * call site) so the same fetcher implementation is used by both the
+     * relay flow and the NIP-05 flow, which keeps import behaviour
+     * identical between them and makes it trivial to stub for tests.
+     */
+    suspend fun fetchValueForImport(namecoinName: String): String? =
+        when (val outcome = lookupNameDetailed(namecoinName)) {
+            is NameLookupOutcome.Found -> outcome.result.value
+
+            is NameLookupOutcome.NotFound,
+            is NameLookupOutcome.ServersUnreachable,
+            NameLookupOutcome.Timeout,
+            -> null
+        }
+
+    /**
      * Run a `name_show` lookup with the standard timeout + exception
      * translation used throughout this package.
      *
@@ -761,9 +819,21 @@ class NamecoinNameResolver(
                 }
             }
 
-        val valueJson =
+        val parsedRoot =
             tryParseJson(nameResult.value)
                 ?: return NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+
+        // Per ifa-0001 §"import": expand any `import` items on the parent
+        // record before consulting the value. Imports happen at the value
+        // level, so subdomain walking sees the fully merged view. Failures
+        // inside an import (name not found, unreachable, malformed JSON)
+        // are absorbed by [fetchValueForImport] and treated as the empty
+        // object, so a transient ElectrumX hiccup on an imported name
+        // doesn't break unrelated identity resolution.
+        val valueJson =
+            NamecoinImportResolver.expandImports(parsedRoot) { name ->
+                fetchValueForImport(name)
+            }
 
         // For multi-label `.bit` inputs (e.g. alice@relay.testls.bit) we
         // never query a separate `d/relay.testls`. Instead we walk the
