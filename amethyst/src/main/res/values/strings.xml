@@ -514,6 +514,7 @@
     <string name="nest_audio_unavailable">Audio is not available for this room</string>
     <string name="nest_talk">Talk</string>
     <string name="nest_stop_talking">Stop talking</string>
+    <string name="nest_leave_stage">Leave stage</string>
     <string name="nest_mic_mute">Mute mic</string>
     <string name="nest_mic_unmute">Unmute mic</string>
     <string name="nest_broadcast_connecting">Going live…</string>

@@ -468,6 +468,9 @@ private fun TalkRow(
                 }) {
                     Text(stringRes(R.string.nest_talk))
                 }
+                OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
+                    Text(stringRes(R.string.nest_leave_stage))
+                }
                 if (showDenialWarning) {
                     Text(
                         text = stringRes(R.string.nest_record_permission_required),
@@ -528,6 +531,12 @@ private fun TalkRow(
                 }
                 OutlinedButton(onClick = { viewModel.stopBroadcast() }) {
                     Text(stringRes(R.string.nest_stop_talking))
+                }
+                OutlinedButton(onClick = {
+                    viewModel.stopBroadcast()
+                    viewModel.setOnStage(false)
+                }) {
+                    Text(stringRes(R.string.nest_leave_stage))
                 }
             }
 

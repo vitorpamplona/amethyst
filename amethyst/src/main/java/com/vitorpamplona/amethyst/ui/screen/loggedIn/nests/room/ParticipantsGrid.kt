@@ -20,12 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,16 +45,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import kotlinx.collections.immutable.ImmutableSet
@@ -85,6 +101,7 @@ internal fun ParticipantsGrid(
                 avatarSize = Size40dp,
                 speakingNow = speakingNow,
                 connectingSpeakers = connectingSpeakers,
+                showMicBadge = true,
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = reactionsByPubkey,
                 onLongPressParticipant = onLongPressParticipant,
@@ -96,11 +113,13 @@ internal fun ParticipantsGrid(
                 title = audienceLabel,
                 members = grid.audience,
                 avatarSize = Size35dp,
-                // Audience rows don't get the speaking-ring or
-                // buffering overlay — only members with a live
-                // broadcast subscription do.
+                // Audience rows don't get the speaking-ring, mic-state
+                // pill, or buffering overlay — only members with a
+                // live broadcast subscription do. Hand-raise badge
+                // still renders (audience is the queue).
                 speakingNow = kotlinx.collections.immutable.persistentSetOf(),
                 connectingSpeakers = kotlinx.collections.immutable.persistentSetOf(),
+                showMicBadge = false,
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = emptyMap(),
                 onLongPressParticipant = onLongPressParticipant,
@@ -113,9 +132,10 @@ internal fun ParticipantsGrid(
 private fun ParticipantsSection(
     title: String,
     members: List<RoomMember>,
-    avatarSize: androidx.compose.ui.unit.Dp,
+    avatarSize: Dp,
     speakingNow: ImmutableSet<String>,
     connectingSpeakers: ImmutableSet<String>,
+    showMicBadge: Boolean,
     accountViewModel: AccountViewModel,
     reactionsByPubkey: Map<String, List<RoomReaction>>,
     onLongPressParticipant: ((String) -> Unit)?,
@@ -178,7 +198,7 @@ private fun ParticipantsSection(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = cellWidthModifier,
                 ) {
-                    androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                    Box(contentAlignment = Alignment.Center) {
                         ClickableUserPicture(
                             baseUserHex = member.pubkey,
                             size = avatarSize,
@@ -199,6 +219,20 @@ private fun ParticipantsSection(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
+                        if (member.handRaised) {
+                            HandRaiseBadge(
+                                avatarSize = avatarSize,
+                                modifier = Modifier.align(Alignment.TopEnd),
+                            )
+                        }
+                        if (showMicBadge && member.publishing) {
+                            MicStateBadge(
+                                isSpeaking = isSpeaking,
+                                isMuted = member.muted == true,
+                                avatarSize = avatarSize,
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                            )
+                        }
                     }
                     com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
                         baseUser = user,
@@ -217,3 +251,91 @@ private fun ParticipantsSection(
         }
     }
 }
+
+/**
+ * Hand-raise indicator overlaid on the avatar — yellow circle with
+ * a hand glyph at the top-right, animated in a subtle vertical
+ * bounce so the eye catches it across a busy room. Mirrors
+ * nostrnests' `animate-bounce` Tailwind utility on
+ * `ParticipantAvatar`.
+ */
+@Composable
+private fun HandRaiseBadge(
+    avatarSize: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val transition = rememberInfiniteTransition(label = "hand-raise-bounce")
+    val offsetY by
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = -3f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "hand-raise-bounce-y",
+        )
+    val badgeSize = (avatarSize.value * 0.42f).dp
+    Box(
+        modifier =
+            modifier
+                .offset(x = 2.dp, y = (-2).dp + offsetY.dp)
+                .size(badgeSize)
+                .background(NEST_HAND_RAISE_COLOR, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.PanTool,
+            contentDescription = stringRes(R.string.nest_raise_hand),
+            tint = Color.White,
+            modifier = Modifier.size(badgeSize - 4.dp),
+        )
+    }
+}
+
+/**
+ * Mic-state pill anchored to the bottom-center of an on-stage
+ * speaker's avatar. Color encodes whether the mic is currently
+ * carrying audio:
+ *   - green   — speaker is speaking right now (in `speakingNow`)
+ *   - red     — speaker is publishing but their `muted` flag is set
+ *   - primary — speaker is publishing but silent (mic open, no audio)
+ *
+ * Audience members never get this badge (the parent gates render
+ * with `showMicBadge`); a speaker who isn't `publishing` doesn't
+ * get one either — they're on stage but not on air.
+ */
+@Composable
+private fun MicStateBadge(
+    isSpeaking: Boolean,
+    isMuted: Boolean,
+    avatarSize: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val color =
+        when {
+            isSpeaking -> NEST_SPEAKING_COLOR
+            isMuted -> MaterialTheme.colorScheme.error
+            else -> MaterialTheme.colorScheme.primary
+        }
+    val badgeSize = (avatarSize.value * 0.42f).dp
+    Box(
+        modifier =
+            modifier
+                .offset(y = 2.dp)
+                .size(badgeSize)
+                .background(color, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = if (isMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(badgeSize - 4.dp),
+        )
+    }
+}
+
+private val NEST_HAND_RAISE_COLOR = Color(0xFFEAB308) // tailwind yellow-500
+private val NEST_SPEAKING_COLOR = Color(0xFF22C55E) // tailwind green-500
