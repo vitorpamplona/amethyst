@@ -33,17 +33,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,7 +68,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
+import kotlinx.coroutines.launch
 
 /**
  * Full-screen layout for [AudioRoomActivity]. Renders title + summary,
@@ -98,7 +104,9 @@ internal fun AudioRoomFullScreen(
         ) {
             var showEditSheet by rememberSaveable { mutableStateOf(false) }
             var showHostMenu by rememberSaveable { mutableStateOf(false) }
+            var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
             val isHost = accountViewModel.account.signer.pubKey == event.pubKey
+            val leaveScope = rememberCoroutineScope()
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -256,7 +264,15 @@ internal fun AudioRoomFullScreen(
                 OutlinedButton(onClick = { showReactionPicker = true }) {
                     Text(stringRes(R.string.audio_room_reactions_button))
                 }
-                OutlinedButton(onClick = onLeave) {
+                OutlinedButton(
+                    onClick = {
+                        if (isHost) {
+                            showHostLeaveConfirm = true
+                        } else {
+                            onLeave()
+                        }
+                    },
+                ) {
                     Text(stringRes(R.string.audio_room_leave))
                 }
             }
@@ -266,6 +282,44 @@ internal fun AudioRoomFullScreen(
                         accountViewModel.reactToOrDelete(roomNote, emoji)
                     },
                     onDismiss = { showReactionPicker = false },
+                )
+            }
+
+            if (showHostLeaveConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showHostLeaveConfirm = false },
+                    title = { Text(stringRes(R.string.audio_room_leave_host_title)) },
+                    text = { Text(stringRes(R.string.audio_room_leave_host_body)) },
+                    confirmButton = {
+                        TextButton(
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            onClick = {
+                                showHostLeaveConfirm = false
+                                leaveScope.launch {
+                                    val ok = closeMeetingSpace(accountViewModel, event)
+                                    if (!ok) {
+                                        accountViewModel.toastManager.toast(
+                                            R.string.audio_rooms,
+                                            R.string.audio_room_leave_host_close_failed,
+                                        )
+                                    }
+                                    onLeave()
+                                }
+                            },
+                        ) {
+                            Text(stringRes(R.string.audio_room_leave_host_close))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                showHostLeaveConfirm = false
+                                onLeave()
+                            },
+                        ) {
+                            Text(stringRes(R.string.audio_room_leave_host_just_leave))
+                        }
+                    },
                 )
             }
 
@@ -495,6 +549,42 @@ private fun TalkRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * Re-publish the host's [event] with `status="closed"`, preserving every
+ * other field verbatim (room name, summary, image, service, endpoint,
+ * participants). Returns true on success.
+ *
+ * Reuses [EditAudioRoomViewModel.buildEditTemplate] so the close-on-leave
+ * path emits the same shape as the explicit Edit → Close room action.
+ * Decoupled from [EditAudioRoomViewModel] state so the host's unsaved
+ * edits in the Edit sheet (if any) cannot accidentally leak into the
+ * close payload.
+ */
+private suspend fun closeMeetingSpace(
+    accountViewModel: AccountViewModel,
+    event: MeetingSpaceEvent,
+): Boolean {
+    val verbatim =
+        EditAudioRoomViewModel.FormState(
+            dTag = event.dTag(),
+            roomName = event.room().orEmpty(),
+            summary = event.summary().orEmpty(),
+            imageUrl = event.image().orEmpty(),
+            endpointUrl = event.endpoint().orEmpty(),
+            serviceUrl = event.service().orEmpty(),
+            isPublishing = false,
+            error = null,
+        )
+    return try {
+        val template =
+            EditAudioRoomViewModel.buildEditTemplate(event, verbatim, StatusTag.STATUS.CLOSED)
+        accountViewModel.account.signAndComputeBroadcast(template)
+        true
+    } catch (_: Throwable) {
+        false
     }
 }
 

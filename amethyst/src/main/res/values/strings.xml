@@ -529,6 +529,11 @@
     <string name="audio_room_notification_stop">Stop</string>
     <string name="audio_room_join">Join audio room</string>
     <string name="audio_room_leave">Leave</string>
+    <string name="audio_room_leave_host_title">End this audio room?</string>
+    <string name="audio_room_leave_host_body">You\'re the host. Closing the room will disconnect everyone. Choose \"Just leave\" if you want to come back later — the room will auto-close after 8 hours of inactivity.</string>
+    <string name="audio_room_leave_host_close">Close room</string>
+    <string name="audio_room_leave_host_just_leave">Just leave</string>
+    <string name="audio_room_leave_host_close_failed">Couldn\'t mark room as closed. Leaving anyway — room will auto-close.</string>
     <plurals name="audio_room_listener_count">
         <item quantity="one">%1$d listener</item>
         <item quantity="other">%1$d listeners</item>
