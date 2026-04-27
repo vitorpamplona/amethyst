@@ -59,16 +59,20 @@ class MoqLiteNestsListener internal constructor(
 ) : NestsListener {
     override val state: StateFlow<NestsListenerState> = mutableState.asStateFlow()
 
-    override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle {
+    override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = AUDIO_TRACK)
+
+    override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = CATALOG_TRACK)
+
+    private suspend fun wrapSubscription(
+        broadcast: String,
+        track: String,
+    ): SubscribeHandle {
         check(state.value is NestsListenerState.Connected) {
-            "NestsListener.subscribeSpeaker requires Connected state, was ${state.value}"
+            "NestsListener.subscribe requires Connected state, was ${state.value}"
         }
         val handle =
             try {
-                session.subscribe(
-                    broadcast = speakerPubkeyHex,
-                    track = AUDIO_TRACK,
-                )
+                session.subscribe(broadcast = broadcast, track = track)
             } catch (e: MoqLiteSubscribeException) {
                 // The IETF SubscribeHandle path conventionally surfaces
                 // protocol-level rejections through the same exception

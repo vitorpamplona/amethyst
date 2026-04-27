@@ -52,6 +52,26 @@ interface NestsListener {
      */
     suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle
 
+    /**
+     * Subscribe to a speaker's `catalog.json` track — moq-lite's
+     * canonical channel for "what is this broadcast publishing" JSON
+     * metadata (codec, sample rate, optional speaker-side hints).
+     * The publisher emits one JSON object per group; consumers
+     * typically read the latest frame and parse it.
+     *
+     * Throws on the IETF reference path because moq-transport-17
+     * doesn't define a catalog convention. Callers that want
+     * cross-protocol behavior should `runCatching` this.
+     *
+     * @throws UnsupportedOperationException on the IETF listener.
+     * @throws MoqProtocolException if the publisher rejects the subscription.
+     * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
+     */
+    suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle =
+        throw UnsupportedOperationException(
+            "subscribeCatalog is moq-lite-only; IETF listener has no catalog channel.",
+        )
+
     /** Tear down the MoQ session + underlying transport. Idempotent. */
     suspend fun close()
 }
