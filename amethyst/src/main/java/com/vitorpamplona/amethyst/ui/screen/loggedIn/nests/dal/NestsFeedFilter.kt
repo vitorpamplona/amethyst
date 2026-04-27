@@ -77,11 +77,46 @@ class NestsFeedFilter(
             )
 
         return collection.filterTo(HashSet()) {
-            val noteEvent = it.event
-            (noteEvent is MeetingSpaceEvent || noteEvent is MeetingRoomEvent) &&
-                filterParams.match(noteEvent, it.relays)
+            val noteEvent = it.event ?: return@filterTo false
+            when (noteEvent) {
+                is MeetingSpaceEvent -> {
+                    hasMinimumNestFields(noteEvent) && filterParams.match(noteEvent, it.relays)
+                }
+
+                is MeetingRoomEvent -> {
+                    hasMinimumSubRoomFields(noteEvent) && filterParams.match(noteEvent, it.relays)
+                }
+
+                else -> {
+                    false
+                }
+            }
         }
     }
+
+    /**
+     * EGG-01 rule 2: a kind:30312 with any of `room`, `status`, `service`,
+     * `endpoint` missing MUST be treated as un-joinable. Apply that as a
+     * feed-filter gate so rooms-with-no-content (the d-tag-only events
+     * relays sometimes leak) don't render an empty card with a broken
+     * Join button.
+     *
+     * Closed rooms with all four fields ARE rendered — they may carry a
+     * recording (EGG-11) and the listen-back card is the audience's
+     * only path to that audio post-close.
+     */
+    private fun hasMinimumNestFields(event: MeetingSpaceEvent): Boolean =
+        !event.room().isNullOrBlank() &&
+            event.status() != null &&
+            !event.service().isNullOrBlank() &&
+            !event.endpoint().isNullOrBlank()
+
+    /**
+     * Sub-room (kind:30313) gate. The interactive-room concept inside a
+     * meeting space needs at least a title to render meaningfully — a
+     * sub-room with no title is unrenderable in a list.
+     */
+    private fun hasMinimumSubRoomFields(event: MeetingRoomEvent): Boolean = !event.title().isNullOrBlank()
 
     override fun sort(items: Set<Note>): List<Note> {
         val topFilter = account.liveLiveStreamsFollowLists.value
