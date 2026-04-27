@@ -293,6 +293,72 @@ fun RenderMeetingRoomEventInner(
     RenderParticipants(participants, accountViewModel, nav)
 }
 
+/**
+ * Inline renderer for kind-10312 [MeetingRoomPresenceEvent] events.
+ * The event's `content` is empty; the interesting bits are the
+ * presence flags. Render a one-line italic status — "@user · raised
+ * their hand" — so a presence event that leaks into a feed surface
+ * outside the room (search results, thread view of a quoted
+ * presence, …) renders as a status note instead of an empty card.
+ *
+ * The active room's chat panel does NOT render presence events at
+ * all — `ChannelFeedFilter` filters them out so the chat stays
+ * just chat. This composable is the fallback for everything else.
+ */
+@Composable
+fun RenderMeetingRoomPresence(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent ?: return
+
+    val handRaised = remember(event) { event.handRaised() == true }
+    val publishing = remember(event) { event.publishing() == true }
+    val onstage = remember(event) { event.onstage() == true }
+
+    val stateRes =
+        when {
+            !publishing && !onstage && !handRaised -> R.string.nest_presence_left
+            handRaised -> R.string.nest_presence_raised_hand
+            onstage && publishing -> R.string.nest_presence_speaking
+            onstage -> R.string.nest_presence_on_stage
+            else -> R.string.nest_presence_listening
+        }
+
+    val user =
+        remember(event.pubKey) {
+            com.vitorpamplona.amethyst.model.LocalCache
+                .getOrCreateUser(event.pubKey)
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clickable { nav.nav(routeFor(user)) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ClickableUserPicture(user, 20.dp, accountViewModel)
+        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+        UsernameDisplay(
+            baseUser = user,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+            accountViewModel = accountViewModel,
+        )
+        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+        Text(
+            text = stringRes(stateRes),
+            style =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                ),
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
+}
+
 @Composable
 private fun RenderParticipants(
     participants: List<ParticipantTag>,
