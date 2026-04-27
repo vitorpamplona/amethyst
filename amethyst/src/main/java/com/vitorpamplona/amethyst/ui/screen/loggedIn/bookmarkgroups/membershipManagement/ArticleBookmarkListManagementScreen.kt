@@ -77,7 +77,7 @@ private fun ListManagementView(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.article_bookmark_management_title), nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.article_bookmark_management_title), nav)
         },
         floatingActionButton = {
             NewListButton { nav.nav(Route.BookmarkGroupMetadataEdit()) }

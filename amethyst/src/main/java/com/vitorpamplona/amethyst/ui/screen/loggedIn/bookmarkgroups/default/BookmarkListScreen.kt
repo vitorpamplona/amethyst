@@ -129,7 +129,7 @@ private fun RenderBookmarkScreen(
         isInvertedLayout = false,
         topBar = {
             Column {
-                TopBarWithBackButton(stringRes(id = R.string.bookmarks_title), nav::popBack)
+                TopBarWithBackButton(stringRes(id = R.string.bookmarks_title), nav)
                 SecondaryTabRow(
                     containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,

@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
@@ -92,6 +93,33 @@ fun ProfileHeader(
 
     Box {
         DrawBanner(baseUser, accountViewModel)
+
+        if (nav.canPop()) {
+            Box(
+                modifier =
+                    Modifier
+                        .statusBarsPadding()
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                        .size(40.dp)
+                        .align(Alignment.TopStart),
+            ) {
+                Button(
+                    modifier =
+                        Modifier
+                            .size(30.dp)
+                            .align(Alignment.Center),
+                    onClick = nav::popBack,
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                        ),
+                    contentPadding = ZeroPadding,
+                ) {
+                    ArrowBackIcon(tint = MaterialTheme.colorScheme.placeholderText)
+                }
+            }
+        }
 
         Box(
             modifier =

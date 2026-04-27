@@ -63,7 +63,7 @@ fun ListOfInterestSetsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.interest_sets_title), nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.interest_sets_title), nav)
         },
         floatingActionButton = {
             InterestSetFab(onAdd = { nav.nav(Route.InterestSetMetadataEdit()) })

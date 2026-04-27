@@ -91,7 +91,7 @@ fun VideoPlayerSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.video_player_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.video_player_settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {

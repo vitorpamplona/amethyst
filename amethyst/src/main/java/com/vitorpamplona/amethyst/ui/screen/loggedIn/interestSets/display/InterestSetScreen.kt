@@ -67,7 +67,7 @@ fun InterestSetScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = set?.title ?: stringRes(R.string.interest_sets_title), nav::popBack)
+            TopBarWithBackButton(caption = set?.title ?: stringRes(R.string.interest_sets_title), nav)
         },
     ) { paddingValues ->
         if (set == null) {

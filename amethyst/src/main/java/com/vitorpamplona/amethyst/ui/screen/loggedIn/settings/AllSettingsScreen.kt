@@ -93,7 +93,7 @@ fun AllSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {

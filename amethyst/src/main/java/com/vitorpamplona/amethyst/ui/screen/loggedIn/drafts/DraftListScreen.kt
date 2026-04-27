@@ -129,8 +129,10 @@ private fun RenderDraftListScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = nav::popBack) {
-                        ArrowBackIcon()
+                    if (nav.canPop()) {
+                        IconButton(onClick = nav::popBack) {
+                            ArrowBackIcon()
+                        }
                     }
                 },
                 actions = {

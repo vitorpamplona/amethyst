@@ -62,7 +62,7 @@ fun ListOfPeopleListsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
+            TopBarWithBackButton(stringRes(R.string.my_lists), nav)
         },
     ) { paddingValues ->
         Column(

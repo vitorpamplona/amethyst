@@ -77,7 +77,7 @@ fun VanishEventsScreen(
         topBar = {
             TopBarWithBackButton(
                 stringRes(id = R.string.vanish_events_title),
-                nav::popBack,
+                nav,
             )
         },
     ) { padding ->

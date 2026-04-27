@@ -77,7 +77,7 @@ fun FavoriteAlgoFeedsListScreen(
         topBar = {
             TopBarWithBackButton(
                 caption = stringRes(R.string.favorite_dvms_title),
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { padding ->
