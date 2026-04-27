@@ -51,8 +51,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.send.NestEditFieldRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.send.NestNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -63,45 +63,21 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
  * per-message renderer that NIP-53 live-stream chat uses
  * ([ChatroomMessageCompose]).
  *
- * Composer is the same [EditFieldRow] used by every other public-chat
- * surface in the app, so we get @-mention picker, file/image/video
- * upload, reply preview, draft auto-save, emoji suggestions, content
- * warnings, expiration, geohash, and zap-split forwarding for free.
+ * The composer is owned by a separate [NestNewMessageViewModel] —
+ * scoped to *editing and sending* chat messages only — so we get
+ * @-mention picker, file/image/video upload, reply preview, NIP-37
+ * draft auto-save, emoji suggestions, content warnings, expiration,
+ * geohash, and zap-split forwarding for the nest chat field. The
+ * message list itself is still driven from the [NestViewModel] so
+ * presence / reactions / chat all share a single lifecycle.
  *
- * To stay aligned with the rest of the app, the composer is backed by
- * a [ChannelNewMessageViewModel] loaded with a [LiveActivitiesChannel]
- * keyed by the meeting space's address. `ChannelNewMessageViewModel.
- * createTemplate()` already handles the `LiveActivitiesChannel` →
- * `LiveActivitiesChatMessageEvent` path: when `channel.info` is null
- * (we never populate it for kind-30312 — it's typed to the kind-30311
- * `LiveActivitiesEvent`), it falls through to the
- * `LiveActivitiesChatMessageEvent.message(message, channel.toATag())`
- * branch, which produces exactly the same event the original slim
- * composer was emitting.
- *
- * Data flow: messages still arrive via the existing nest pipeline
- * (`RoomChatFilterAssemblerSubscription` → `NestViewModel.onChatEvent`
- * → `viewModel.chat`). The composer emits via
- * `account.signAndSendPrivately(template, channelRelays)` inside
- * `ChannelNewMessageViewModel.sendPostSync`, which lands on the same
- * relays the listener subscribes to, so the user sees their own
- * message immediately when it round-trips. Drafts are stored as
- * NIP-37 wrap events through the standard account draft pipeline —
- * they do not pollute `viewModel.chat` because that flow only accepts
- * kind-1311 events.
- *
- * Navigation: the activity has no Compose NavHost in scope. Taps that
- * resolve to a NIP-19 entity (profile, quoted note, hashtag, addressable
- * channel) are dispatched through [BouncingIntentNav] — a `nostr:` URI
- * Intent at MainActivity. Anything that doesn't have a `nostr:` URI is
- * a no-op for now. The audio room keeps running in its own task while
- * the user explores; back from MainActivity returns to the room.
- *
- * The composer's default back-press handler from [EditFieldRow] would
- * try to `nav.popBack()` (a no-op on [BouncingIntentNav]) and clear
- * the field — both wrong inside an Activity-scoped chat panel where
- * back means "leave the room". We pass `interceptBackPress = false`
- * so system back continues to flow to the activity.
+ * Navigation: the activity has no Compose NavHost in scope. Taps
+ * that resolve to a NIP-19 entity (profile, quoted note, hashtag,
+ * addressable channel) are dispatched through [BouncingIntentNav]
+ * — a `nostr:` URI Intent at MainActivity. Anything that doesn't
+ * have a `nostr:` URI is a no-op for now. The audio room keeps
+ * running in its own task while the user explores; back from
+ * MainActivity returns to the room.
  */
 @Composable
 internal fun ColumnScope.NestChatPanel(
@@ -115,16 +91,12 @@ internal fun ColumnScope.NestChatPanel(
     val scope = rememberCoroutineScope()
     val nav = remember(context, scope) { BouncingIntentNav(context, scope) }
 
-    val channel =
-        remember(event) {
-            accountViewModel.checkGetOrCreateLiveActivityChannel(event.address())
-        }
     val routeForLastRead = remember(event) { "NestChat/${event.address().toValue()}" }
 
-    val channelScreenModel: ChannelNewMessageViewModel =
+    val nestScreenModel: NestNewMessageViewModel =
         composeViewModel(key = "Nest/${event.address().toValue()}")
-    channelScreenModel.init(accountViewModel)
-    channelScreenModel.load(channel)
+    nestScreenModel.init(accountViewModel)
+    nestScreenModel.load(event)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth().weight(1f, fill = true)) {
@@ -141,19 +113,18 @@ internal fun ColumnScope.NestChatPanel(
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
                     nav = nav,
-                    onWantsToReply = channelScreenModel::reply,
+                    onWantsToReply = nestScreenModel::reply,
                 )
             }
         }
 
         Spacer(Modifier.height(8.dp))
 
-        EditFieldRow(
-            channelScreenModel = channelScreenModel,
+        NestEditFieldRow(
+            nestScreenModel = nestScreenModel,
             accountViewModel = accountViewModel,
             onSendNewMessage = {},
             nav = nav,
-            interceptBackPress = false,
         )
     }
 }

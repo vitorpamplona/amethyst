@@ -297,7 +297,11 @@ open class NestNewMessageViewModel :
         val version = draftTag.current
         cancel()
 
-        accountViewModel.account.signAndSendPrivately(template, emptySet())
+        // Broadcast to the user's default relays — the nest has no
+        // dedicated relay set the way a public-chat channel does, so
+        // this matches what the original slim composer was doing via
+        // `account.signAndComputeBroadcast(...)`.
+        accountViewModel.account.signAndComputeBroadcast(template)
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
