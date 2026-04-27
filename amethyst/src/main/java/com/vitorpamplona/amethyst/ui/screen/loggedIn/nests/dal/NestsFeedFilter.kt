@@ -40,10 +40,12 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 /**
  * Drawer feed for NIP-53 kind 30312 (Interactive Rooms / audio spaces).
  *
- * Shares LocalCache.liveChatChannels with the Live Streams feed, narrowed
- * to MeetingSpaceEvent (30312) so the Clubhouse-style audio-room surface
- * is independent of video live streams. Kind 30313 (NIP-53 meetings) lives
- * in a sibling drawer entry — see [com.vitorpamplona.amethyst.ui.screen.loggedIn.meetingrooms.dal.MeetingRoomsFeedFilter].
+ * Shares LocalCache.liveChatChannels with the Live Streams feed,
+ * narrowed to MeetingSpaceEvent (30312) so the audio-room surface
+ * is independent of video live streams. Kind 30313 (NIP-53 meetings)
+ * intentionally does NOT surface here — the room concept and the
+ * meeting concept render on the standard NoteCompose / thread paths
+ * outside the Nests drawer.
  */
 class NestsFeedFilter(
     val account: Account,

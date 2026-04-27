@@ -91,8 +91,6 @@ sealed class Route {
 
     @Serializable object Nests : Route()
 
-    @Serializable object MeetingRooms : Route()
-
     @Serializable object Longs : Route()
 
     @Serializable object Articles : Route()

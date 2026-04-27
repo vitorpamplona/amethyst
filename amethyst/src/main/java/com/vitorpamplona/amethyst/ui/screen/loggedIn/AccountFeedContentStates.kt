@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.dal.LiveStreamsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.dal.LongsFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.meetingrooms.dal.MeetingRoomsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
@@ -103,7 +102,6 @@ class AccountFeedContentStates(
     val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache)
     val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache)
     val nestsFeed = FeedContentState(NestsFeedFilter(account), scope, LocalCache)
-    val meetingRoomsFeed = FeedContentState(MeetingRoomsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
 
@@ -171,7 +169,6 @@ class AccountFeedContentStates(
         followPacksFeed.updateFeedWith(newNotes)
         liveStreamsFeed.updateFeedWith(newNotes)
         nestsFeed.updateFeedWith(newNotes)
-        meetingRoomsFeed.updateFeedWith(newNotes)
         longsFeed.updateFeedWith(newNotes)
         articlesFeed.updateFeedWith(newNotes)
 
@@ -219,7 +216,6 @@ class AccountFeedContentStates(
         followPacksFeed.deleteFromFeed(newNotes)
         liveStreamsFeed.deleteFromFeed(newNotes)
         nestsFeed.deleteFromFeed(newNotes)
-        meetingRoomsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
         articlesFeed.deleteFromFeed(newNotes)
 
