@@ -125,32 +125,60 @@ class NamecoinNameResolver(
         /**
          * Pure (no-IO) parser shared by the instance lookup path and external
          * callers like the `.bit` relay resolver.
+         *
+         * Multi-label `.bit` inputs (e.g. `alice@relay.testls.bit`) are split
+         * into the **single-label** registered Namecoin name (`d/testls`) and
+         * a subdomain path (`["relay"]`) per ifa-0001. The instance lookup
+         * walks the parent's `map` tree to find the effective Domain Name
+         * Object before reading `nostr.names.<localPart>` from it; it does
+         * NOT issue a separate `d/<sub>.<parent>` query, because that form
+         * is non-spec and would never resolve.
+         *
+         * For `d/<x>` and `id/<x>` literal inputs, no splitting is performed
+         * — those forms target the literal name as written.
          */
         fun parseIdentifierFlat(raw: String): ParsedIdentifierFlat? {
             val input = raw.trim()
 
             if (input.startsWith("d/", ignoreCase = true)) {
-                return ParsedIdentifierFlat(input.lowercase(), "_", isIdentityNamespace = false)
+                return ParsedIdentifierFlat(
+                    namecoinName = input.lowercase(),
+                    localPart = "_",
+                    subdomainLabels = emptyList(),
+                    isIdentityNamespace = false,
+                )
             }
             if (input.startsWith("id/", ignoreCase = true)) {
-                return ParsedIdentifierFlat(input.lowercase(), "_", isIdentityNamespace = true)
+                return ParsedIdentifierFlat(
+                    namecoinName = input.lowercase(),
+                    localPart = "_",
+                    subdomainLabels = emptyList(),
+                    isIdentityNamespace = true,
+                )
             }
             // Lowercase early so `.bit` suffix-strip is safe regardless of original casing.
             val lower = input.lowercase()
-            if (lower.contains("@") && lower.endsWith(".bit")) {
-                val parts = lower.split("@", limit = 2)
-                if (parts.size != 2) return null
-                val localPart = parts[0].ifEmpty { "_" }
-                val domain = parts[1].removeSuffix(".bit")
-                if (domain.isEmpty()) return null
-                return ParsedIdentifierFlat("d/$domain", localPart, isIdentityNamespace = false)
-            }
-            if (lower.endsWith(".bit")) {
-                val domain = lower.removeSuffix(".bit")
-                if (domain.isEmpty()) return null
-                return ParsedIdentifierFlat("d/$domain", "_", isIdentityNamespace = false)
-            }
-            return null
+            val (localPart, hostPart) =
+                if (lower.contains("@") && lower.endsWith(".bit")) {
+                    val parts = lower.split("@", limit = 2)
+                    if (parts.size != 2) return null
+                    val lp = parts[0].ifEmpty { "_" }
+                    lp to parts[1]
+                } else if (lower.endsWith(".bit")) {
+                    "_" to lower
+                } else {
+                    return null
+                }
+            // Reuse parseHostFlat so multi-label .bit hosts split exactly the
+            // same way they do on the relay path: registered single-label
+            // parent + subdomain labels.
+            val host = parseHostFlat(hostPart) ?: return null
+            return ParsedIdentifierFlat(
+                namecoinName = host.namecoinName,
+                localPart = localPart,
+                subdomainLabels = host.subdomainLabels,
+                isIdentityNamespace = false,
+            )
         }
 
         /**
@@ -472,10 +500,18 @@ class NamecoinNameResolver(
         val associationDataBase64: String,
     )
 
-    /** Flat parsed identifier surface used by [toNamecoinName] and the instance parser. */
+    /**
+     * Flat parsed identifier surface used by [toNamecoinName] and the
+     * instance parser. [namecoinName] is the **single-label** registered
+     * name to query; [subdomainLabels] is the path beneath it in DNS order
+     * (most-specific first, same convention as [parseHostFlat]). Walk the
+     * parent's `map` tree with [walkSubdomain] to find the effective
+     * Domain Name Object before reading `nostr.names.<localPart>` from it.
+     */
     data class ParsedIdentifierFlat(
         val namecoinName: String,
         val localPart: String,
+        val subdomainLabels: List<String> = emptyList(),
         val isIdentityNamespace: Boolean,
     )
 
@@ -585,6 +621,13 @@ class NamecoinNameResolver(
          *  For d/ names: the user part (or "_" for root).
          *  For id/ names: always "_". */
         val localPart: String,
+        /**
+         * Subdomain labels beneath [namecoinName], DNS order (most-specific
+         * first). Empty for bare-host inputs like `alice@example.bit`.
+         * Non-empty for inputs like `alice@relay.testls.bit` (`["relay"]`)
+         * — the resolver walks `map` to that node before reading `nostr`.
+         */
+        val subdomainLabels: List<String>,
         /** Which namespace: DOMAIN or IDENTITY */
         val namespace: Namespace,
     )
@@ -609,6 +652,7 @@ class NamecoinNameResolver(
         return ParsedIdentifier(
             namecoinName = flat.namecoinName,
             localPart = flat.localPart,
+            subdomainLabels = flat.subdomainLabels,
             namespace = if (flat.isIdentityNamespace) Namespace.IDENTITY else Namespace.DOMAIN,
         )
     }
@@ -639,10 +683,22 @@ class NamecoinNameResolver(
             tryParseJson(nameResult.value)
                 ?: return NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
 
+        // For multi-label `.bit` inputs (e.g. alice@relay.testls.bit) we
+        // never query a separate `d/relay.testls`. Instead we walk the
+        // parent record's `map` tree to find the effective Domain Name
+        // Object for the subdomain, and read `nostr` from THAT node only.
+        // No inheritance: a parent's `nostr.names.<localPart>` does NOT
+        // silently authorise the same localPart on every subdomain.
+        // The empty-labels case returns the root object unchanged, so the
+        // bare-host code path is unaffected.
+        val effectiveValue =
+            walkSubdomain(valueJson, parsed.subdomainLabels)
+                ?: return NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+
         val nostrResult =
             when (parsed.namespace) {
-                Namespace.DOMAIN -> extractFromDomainValue(valueJson, parsed)
-                Namespace.IDENTITY -> extractFromIdentityValue(valueJson, parsed)
+                Namespace.DOMAIN -> extractFromDomainValue(effectiveValue, parsed)
+                Namespace.IDENTITY -> extractFromIdentityValue(effectiveValue, parsed)
             }
 
         return if (nostrResult != null) {

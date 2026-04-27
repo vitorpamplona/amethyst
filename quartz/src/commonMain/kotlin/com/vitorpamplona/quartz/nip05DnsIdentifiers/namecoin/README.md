@@ -137,6 +137,49 @@ because the exact-label match precludes the wildcard fallback. To
 get both pinning AND a relay URL for `relay.testls.bit`, publish
 `map.relay.relay` AND `map.relay.tls` together.
 
+### NIP-05 identity uses the same walk
+
+The NIP-05 identity path (`alice@relay.testls.bit`) uses the same
+single-label-parent + `map`-walk convention as the relay path. Behind
+the scenes:
+
+  1. `parseIdentifierFlat("alice@relay.testls.bit")` →
+     `(namecoinName="d/testls", localPart="alice", subdomainLabels=["relay"])`.
+  2. ElectrumX `name_show "d/testls"` (one call — SAME lookup the relay
+     path would do for the same host, so a client that loads both the
+     identity and the relay benefits from the resolver's cache hitting).
+  3. `walkSubdomain(value, ["relay"])` produces the effective Domain
+     Name Object at `map.relay` (or `map["*"]`).
+  4. `nostr.names.alice` is read from THAT node only. A parent that
+     publishes `nostr.names.alice` does NOT silently authorise
+     `alice@<sub>.<parent>.bit`.
+
+A combined identity + relay record looks like:
+
+```jsonc
+{
+  "map": {
+    "relay": {
+      "relay": "wss://relay.example.bit/",
+      "tls":   [[2,1,1,"<hash>"]],
+      "nostr": {
+        "names": { "_": "<root-pubkey-hex>", "alice": "<alice-pubkey-hex>" }
+      }
+    }
+  }
+}
+```
+
+With that one record:
+  - `wss://relay.example.bit/`         resolves and is TLS-pinned.
+  - `alice@relay.example.bit`          verifies as the alice pubkey.
+  - `relay.example.bit` (no localPart) verifies as the `"_"` pubkey.
+
+Note: legacy literal inputs (`d/relay.testls`, `id/foo`) are NOT split.
+The instance parser preserves them as written so callers who hand-pass
+raw Namecoin keys keep the existing semantics. Only `host.bit` and
+`<localPart>@host.bit` inputs go through the multi-label split.
+
 ## TLS Pinning via the Namecoin Blockchain (RFC 6698 / `ifa-0001`)
 
 Resolving `wss://example.bit` to `wss://relay.example.com` is only half
