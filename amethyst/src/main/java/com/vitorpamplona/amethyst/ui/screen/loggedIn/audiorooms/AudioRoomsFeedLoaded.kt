@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,15 +31,22 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.RenderLiveActivityThumb
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -56,11 +65,9 @@ fun AudioRoomsFeedLoaded(
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             Row(Modifier.fillMaxWidth().animateItem()) {
-                ChannelCardCompose(
+                AudioRoomFeedCard(
                     baseNote = item,
-                    routeForLastRead = "AudioRoomsFeed",
                     modifier = Modifier.fillMaxWidth(),
-                    forceEventKind = MeetingSpaceEvent.KIND,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -69,6 +76,52 @@ fun AudioRoomsFeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+        }
+    }
+}
+
+/**
+ * Audio-rooms list card. Mirrors [RenderLiveActivityThumb] visually but
+ * routes a tap straight into [AudioRoomActivity] when the underlying event
+ * is a [MeetingSpaceEvent], instead of the thread view that the generic
+ * `ChannelCardCompose` → `ClickableNote` chain would otherwise open.
+ */
+@Composable
+private fun AudioRoomFeedCard(
+    baseNote: Note,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val meetingEvent = baseNote.event as? MeetingSpaceEvent ?: return
+    val context = LocalContext.current
+
+    val onClick =
+        remember(meetingEvent) {
+            {
+                val service = meetingEvent.service()
+                val endpoint = meetingEvent.endpoint()
+                val dTag = meetingEvent.address().dTag
+                if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
+                    AudioRoomBridge.set(accountViewModel)
+                    AudioRoomActivity.launch(
+                        context = context,
+                        addressValue = meetingEvent.address().toValue(),
+                        authBaseUrl = service,
+                        endpoint = endpoint,
+                        hostPubkey = meetingEvent.pubKey,
+                        roomId = dTag,
+                        kind = meetingEvent.kind,
+                    )
+                } else {
+                    nav.nav { routeFor(baseNote, accountViewModel.account) }
+                }
+            }
+        }
+
+    Column(modifier.clickable(onClick = onClick)) {
+        Column(StdPadding) {
+            RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         }
     }
 }
