@@ -89,10 +89,29 @@ data class RoomTheme(
                     ?.hex
                     ?.let { hexToOpaqueArgb(it) }
 
+            val backgroundArgb = pickHex(ColorTag.Target.BACKGROUND)
+            val textArgb = pickHex(ColorTag.Target.TEXT)
+            val primaryArgb = pickHex(ColorTag.Target.PRIMARY)
+
+            // EGG-10 lets each `["c", hex, role]` tag stand alone, but
+            // a half-applied palette (themed bg + platform text, or
+            // themed text + platform bg) collides with whichever
+            // system theme — light or dark — the user is on. A room
+            // that ships ONLY `background=#FFE4B5` (a light cream)
+            // ends up with platform-default white text on dark theme;
+            // unreadable.
+            //
+            // Gate ALL three color overrides on having a complete
+            // bg + text pair. When either is missing we drop the
+            // whole palette and fall back to the platform theme;
+            // background image (`bg`) and font tags still flow
+            // through (they don't break contrast on their own).
+            val hasReadablePalette = backgroundArgb != null && textArgb != null
+
             return RoomTheme(
-                backgroundArgb = pickHex(ColorTag.Target.BACKGROUND),
-                textArgb = pickHex(ColorTag.Target.TEXT),
-                primaryArgb = pickHex(ColorTag.Target.PRIMARY),
+                backgroundArgb = if (hasReadablePalette) backgroundArgb else null,
+                textArgb = if (hasReadablePalette) textArgb else null,
+                primaryArgb = if (hasReadablePalette) primaryArgb else null,
                 backgroundImageUrl = bg?.url,
                 backgroundMode =
                     when (bg?.mode) {
