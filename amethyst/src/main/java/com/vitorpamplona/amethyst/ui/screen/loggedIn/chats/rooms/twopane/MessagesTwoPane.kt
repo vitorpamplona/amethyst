@@ -79,7 +79,7 @@ fun MessagesTwoPane(
             UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
         },
         bottomBar = {
-            AppBottomBar(Route.Message, accountViewModel) { route ->
+            AppBottomBar(Route.Message, nav, accountViewModel) { route ->
                 if (route == Route.Message) {
                     knownFeedContentState.sendToTop()
                     newFeedContentState.sendToTop()

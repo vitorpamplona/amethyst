@@ -199,7 +199,7 @@ private fun HomePages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Home, accountViewModel) { route ->
+            AppBottomBar(Route.Home, nav, accountViewModel) { route ->
                 if (route == Route.Home) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {

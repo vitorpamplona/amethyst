@@ -65,7 +65,7 @@ fun PublicChatsScreen(
             PublicChatsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.PublicChats, accountViewModel) { route ->
+            AppBottomBar(Route.PublicChats, nav, accountViewModel) { route ->
                 if (route == Route.PublicChats) {
                     publicChatsFeedContentState.sendToTop()
                 } else {

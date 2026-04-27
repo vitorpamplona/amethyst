@@ -82,7 +82,7 @@ fun VideoScreen(
             StoriesTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Video, accountViewModel) { route ->
+            AppBottomBar(Route.Video, nav, accountViewModel) { route ->
                 if (route == Route.Video) {
                     videoFeedContentState.sendToTop()
                 } else {

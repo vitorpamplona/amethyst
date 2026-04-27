@@ -142,7 +142,7 @@ fun SearchScreen(
             SearchBar(searchBarViewModel, accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Search, accountViewModel) { route ->
+            AppBottomBar(Route.Search, nav, accountViewModel) { route ->
                 nav.navBottomBar(route)
             }
         },

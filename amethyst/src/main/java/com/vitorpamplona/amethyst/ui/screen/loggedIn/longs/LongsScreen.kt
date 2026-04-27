@@ -65,7 +65,7 @@ fun LongsScreen(
             LongsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Longs, accountViewModel) { route ->
+            AppBottomBar(Route.Longs, nav, accountViewModel) { route ->
                 if (route == Route.Longs) {
                     longsFeedContentState.sendToTop()
                 } else {

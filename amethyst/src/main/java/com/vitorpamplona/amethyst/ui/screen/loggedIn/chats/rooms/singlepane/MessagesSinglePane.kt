@@ -82,7 +82,7 @@ fun MessagesSinglePane(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Message, accountViewModel) { route ->
+            AppBottomBar(Route.Message, nav, accountViewModel) { route ->
                 if (route == Route.Message) {
                     tabs[pagerState.currentPage].feedContentState.sendToTop()
                 } else {

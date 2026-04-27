@@ -65,7 +65,7 @@ fun AudioRoomsScreen(
             AudioRoomsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.AudioRooms, accountViewModel) { route ->
+            AppBottomBar(Route.AudioRooms, nav, accountViewModel) { route ->
                 if (route == Route.AudioRooms) {
                     audioRoomsFeedContentState.sendToTop()
                 } else {

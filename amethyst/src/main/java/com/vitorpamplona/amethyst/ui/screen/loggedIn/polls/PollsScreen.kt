@@ -147,7 +147,7 @@ private fun PollsPages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Polls, accountViewModel) { route ->
+            AppBottomBar(Route.Polls, nav, accountViewModel) { route ->
                 if (route == Route.Polls) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {
