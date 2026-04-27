@@ -114,7 +114,11 @@ fun ImageVideoDescription(
     val context = LocalContext.current
     val firstImageUri =
         remember(uris) {
-            uris.first().takeIf { it.media.isImage() == true && it.media.isGif().not() }?.media?.uri
+            uris
+                .first()
+                .takeIf { it.media.isImage() == true && it.media.isGif().not() }
+                ?.media
+                ?.uri
         }
     val labelService = remember { MLKitImageLabelService(context.applicationContext) }
     var isLabeling by remember { mutableStateOf(false) }

@@ -54,8 +54,7 @@ class MLKitImageLabelService(
     // mid-session in practice, and one composer mount only needs to ask AICore once.
     @Volatile private var cachedGenAiStatus: Int? = null
 
-    private fun ensureLabeler(): ImageLabeler =
-        labeler ?: ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS).also { labeler = it }
+    private fun ensureLabeler(): ImageLabeler = labeler ?: ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS).also { labeler = it }
 
     private fun ensureDescriber(): ImageDescriber? =
         describer

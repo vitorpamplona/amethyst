@@ -831,7 +831,6 @@
     <string name="always_on_notif_title">Amethyst-notifieringar aktiva</string>
     <string name="always_on_notif_connected">Ansluten till %1$d inbox-relän</string>
     <string name="always_on_notif_connecting">Ansluter till inbox-relän\u2026</string>
-    <string name="always_on_notif_stop">Pausa</string>
     <string name="always_on_notif_setting_title">Alltid på-notifieringstjänst</string>
     <string name="always_on_notif_setting_description">Upprätthåller en konstant anslutning till dina inbox-relän för omedelbar leverans av notifieringar. Visar en pågående notifiering. Använder mer batteri men säkerställer att du aldrig missar ett meddelande.</string>
     <string name="battery_optimization_title">Batterioptimering aktiv</string>

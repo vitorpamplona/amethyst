@@ -836,7 +836,6 @@
     <string name="always_on_notif_title">Amethyst értesítések aktíválva</string>
     <string name="always_on_notif_connected">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</string>
     <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
-    <string name="always_on_notif_stop">Szüneteltetés</string>
     <string name="always_on_notif_setting_title">Folyamatos értesítési szolgáltatás</string>
     <string name="always_on_notif_setting_description">Folyamatos kapcsolatot tart fenn a beérkező üzenetek átjátszóival az értesítések azonnali kézbesítése érdekében. Megjeleníti a folyamatban lévő értesítéseket. Több akkumulátort fogyaszt, de így biztosan nem marad le egyetlen üzenetről sem.</string>
     <string name="battery_optimization_title">Akkumulátor-optimalizálás aktív</string>
