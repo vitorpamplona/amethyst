@@ -583,6 +583,8 @@
     <string name="use_direct_url">Użyj bezpośredniego adresu URL</string>
     <string name="content_description">Opis zawartości</string>
     <string name="content_description_example">Błękitna łódź na białej piaszczystej plaży o zachodzie słońca</string>
+    <string name="ai_suggested_alt_text_hint">AI zasugerował, edytuj mnie</string>
+    <string name="ai_suggested_alt_text_dismiss">Zignoruj propozycję AI</string>
     <string name="zap_type">Typ Zap-a</string>
     <string name="zap_type_explainer">Typ Zap-a dla wszystkich opcji</string>
     <string name="zap_type_public">Publiczny</string>
