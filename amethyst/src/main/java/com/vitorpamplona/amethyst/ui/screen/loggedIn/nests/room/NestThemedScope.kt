@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -106,32 +107,44 @@ internal fun NestThemedScope(
         }
 
     MaterialTheme(colorScheme = themed, typography = themedTypography) {
-        // Paint the themed background COLOR on the Box itself so a room
-        // that ships `["c", hex, "background"]` but no `bg` image still
-        // visibly tints the room screen — without this, only consumers
-        // that explicitly read `MaterialTheme.colorScheme.background`
-        // would pick the override up, and the room would visually fall
-        // back to the platform surface. The `bg` image, when present,
-        // paints on top per EGG-10 rule 3 ("image overlays the color");
-        // a partially-transparent image lets the color show through.
-        Box(modifier = Modifier.fillMaxSize().background(themed.background)) {
-            theme.backgroundImageUrl?.let { url ->
-                when (theme.backgroundMode) {
-                    RoomTheme.BackgroundMode.COVER -> {
-                        AsyncImage(
-                            model = url,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                        )
-                    }
+        // Wrap in a Surface so LocalContentColor flips to
+        // `themed.onBackground` for everything inside content().
+        // Without this, default Text() composables fall through to
+        // CompositionLocal's default `Color.Black` and become
+        // unreadable on dark theme — AmethystTheme installs
+        // MaterialTheme but doesn't itself wrap in a Surface, so any
+        // screen that doesn't use Scaffold inherits that default.
+        //
+        // Surface also paints the background color, which preserves
+        // the previous behavior (a room with `["c", hex, "background"]`
+        // visibly tints the screen). The `bg` image, when present,
+        // paints on top of Surface per EGG-10 rule 3 ("image overlays
+        // the color"); a partially-transparent image lets the color
+        // show through.
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = themed.background,
+            contentColor = themed.onBackground,
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                theme.backgroundImageUrl?.let { url ->
+                    when (theme.backgroundMode) {
+                        RoomTheme.BackgroundMode.COVER -> {
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
 
-                    RoomTheme.BackgroundMode.TILE -> {
-                        TiledRoomBackground(url = url)
+                        RoomTheme.BackgroundMode.TILE -> {
+                            TiledRoomBackground(url = url)
+                        }
                     }
                 }
+                content()
             }
-            content()
         }
     }
 }
