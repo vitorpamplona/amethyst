@@ -226,6 +226,16 @@ class AudioRoomViewModel(
 
     private val activeSubscriptions = mutableMapOf<String, ActiveSubscription>()
     private val speakingExpiryJobs = mutableMapOf<String, Job>()
+
+    /**
+     * Per-speaker catalog-fetch coroutines. Each entry is the
+     * background `subscribeCatalog` collector launched in
+     * [fetchSpeakerCatalog]; cancelled in [closeSubscription] so
+     * removing a speaker doesn't leave a zombie subscription that
+     * keeps re-adding the catalog entry on every wrapper-side
+     * session swap.
+     */
+    private val catalogJobs = mutableMapOf<String, Job>()
     private var requestedSpeakers: Set<String> = emptySet()
     private var closed = false
 
@@ -670,6 +680,12 @@ class AudioRoomViewModel(
     private fun closeSubscription(slot: ActiveSubscription) {
         val (roomPlayer, handle) = slot.detach()
         speakingExpiryJobs.remove(slot.pubkey)?.cancel()
+        // Cancel + drop the catalog collector BEFORE removing the
+        // map entry. Otherwise the still-running collector could
+        // re-add the entry on the next emission (the wrapper's
+        // re-issuance pump keeps the underlying subscription alive
+        // across session swaps).
+        catalogJobs.remove(slot.pubkey)?.cancel()
         if (_uiState.value.speakingNow.contains(slot.pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow - slot.pubkey).toPersistentSet()) }
         }
@@ -699,18 +715,23 @@ class AudioRoomViewModel(
         l: NestsListener,
         pubkey: String,
     ) {
-        viewModelScope.launch {
-            val handle = runCatching { l.subscribeCatalog(pubkey) }.getOrNull() ?: return@launch
-            try {
-                handle.objects.collect { obj ->
-                    if (closed) return@collect
-                    val parsed = RoomSpeakerCatalog.parseOrNull(obj.payload) ?: return@collect
-                    _speakerCatalogs.update { it + (pubkey to parsed) }
+        // Cancel any in-flight catalog collector for this pubkey
+        // before launching a fresh one — guards against a re-add
+        // racing with closeSubscription's cancel.
+        catalogJobs.remove(pubkey)?.cancel()
+        catalogJobs[pubkey] =
+            viewModelScope.launch {
+                val handle = runCatching { l.subscribeCatalog(pubkey) }.getOrNull() ?: return@launch
+                try {
+                    handle.objects.collect { obj ->
+                        if (closed) return@collect
+                        val parsed = RoomSpeakerCatalog.parseOrNull(obj.payload) ?: return@collect
+                        _speakerCatalogs.update { it + (pubkey to parsed) }
+                    }
+                } finally {
+                    runCatching { handle.unsubscribe() }
                 }
-            } finally {
-                runCatching { handle.unsubscribe() }
             }
-        }
     }
 
     private suspend fun openSubscription(
@@ -721,9 +742,6 @@ class AudioRoomViewModel(
         if (closed || activeSubscriptions[pubkey] !== slot) return
         try {
             val handle = l.subscribeSpeaker(pubkey)
-            // Parallel catalog fetch — best-effort, doesn't gate audio
-            // playback. Cancelled implicitly when the VM scope is cancelled.
-            fetchSpeakerCatalog(l, pubkey)
             // Re-check after the suspending subscribeSpeaker — the user
             // may have removed this speaker via updateSpeakers / disconnected
             // while the SUBSCRIBE was in flight. If so, abandon the handle
@@ -764,6 +782,12 @@ class AudioRoomViewModel(
                 _uiState.update {
                     it.copy(connectingSpeakers = (it.connectingSpeakers + pubkey).toPersistentSet())
                 }
+                // Parallel catalog fetch — best-effort, doesn't gate
+                // audio playback. Tracked in catalogJobs; cancelled
+                // by closeSubscription so a removed speaker doesn't
+                // leave the catalog collector running on the
+                // wrapper's still-live re-issuing handle.
+                fetchSpeakerCatalog(l, pubkey)
             } catch (t: Throwable) {
                 // Either CancellationException (scope cancelled mid-construction)
                 // or an unexpected throw — release the half-built pipeline and
@@ -795,6 +819,16 @@ class AudioRoomViewModel(
         announcesJob = null
         if (_announcedSpeakers.value.isNotEmpty()) {
             _announcedSpeakers.value = emptySet()
+        }
+        // Cancel every per-speaker catalog collector — these are
+        // launched on viewModelScope but track the OLD listener's
+        // re-issuing handle. Without explicit cancel they'd survive
+        // until onCleared and pile up across reconnect / room
+        // swaps. Drop the catalog map at the same time.
+        catalogJobs.values.forEach { it.cancel() }
+        catalogJobs.clear()
+        if (_speakerCatalogs.value.isNotEmpty()) {
+            _speakerCatalogs.value = emptyMap()
         }
         // Detach + suspend-stop each player on the cleanup scope. The
         // listener.close() below tears down the MoQ session and drops
@@ -830,6 +864,7 @@ class AudioRoomViewModel(
                 connection = targetState,
                 activeSpeakers = persistentSetOf(),
                 speakingNow = persistentSetOf(),
+                connectingSpeakers = persistentSetOf(),
             )
         }
     }
