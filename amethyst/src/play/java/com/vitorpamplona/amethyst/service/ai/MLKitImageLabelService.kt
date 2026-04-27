@@ -21,7 +21,13 @@
 package com.vitorpamplona.amethyst.service.ai
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import com.google.mlkit.genai.common.FeatureStatus
+import com.google.mlkit.genai.imagedescription.ImageDescriberOptions
+import com.google.mlkit.genai.imagedescription.ImageDescription
+import com.google.mlkit.genai.imagedescription.ImageDescriptionRequest
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
@@ -30,11 +36,25 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
+/**
+ * Unified alt-text suggestion service.
+ *
+ * Prefers Gemini-Nano-backed `genai-image-description` for full descriptive sentences when
+ * the device supports AICore; falls back to the legacy keyword `image-labeling` model otherwise.
+ */
 class MLKitImageLabelService(
     private val context: Context,
 ) {
     private val labeler by lazy {
         ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
+    }
+
+    private val describer by lazy {
+        runCatching {
+            ImageDescription.getClient(
+                ImageDescriberOptions.builder(context).build(),
+            )
+        }.getOrNull()
     }
 
     suspend fun labelImage(uri: Uri): List<Pair<String, Float>> =
@@ -55,15 +75,40 @@ class MLKitImageLabelService(
             }
         }
 
-    suspend fun suggestAltText(uri: Uri): String? {
+    suspend fun suggestAltText(uri: Uri): String? = describeWithGenAi(uri) ?: labelKeywords(uri)
+
+    private suspend fun describeWithGenAi(uri: Uri): String? =
+        withContext(Dispatchers.IO) {
+            val client = describer ?: return@withContext null
+            try {
+                val status = client.checkFeatureStatus().get()
+                if (status != FeatureStatus.AVAILABLE) return@withContext null
+                val bitmap = loadBitmap(uri) ?: return@withContext null
+                val request = ImageDescriptionRequest.builder(bitmap).build()
+                val description = client.runInference(request).get().description
+                description?.trim()?.takeIf { it.isNotEmpty() }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+    private suspend fun labelKeywords(uri: Uri): String? {
         val labels = labelImage(uri)
         val confident = labels.filter { it.second >= MIN_CONFIDENCE }.map { it.first }
         if (confident.isEmpty()) return null
         return confident.take(MAX_LABELS).joinToString(", ")
     }
 
+    private fun loadBitmap(uri: Uri): Bitmap? =
+        try {
+            context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) {
+            null
+        }
+
     fun close() {
         labeler.close()
+        describer?.close()
     }
 
     companion object {
