@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -72,6 +73,18 @@ suspend fun connectReconnectingNestsListener(
     signer: NostrSigner,
     policy: NestsReconnectPolicy = NestsReconnectPolicy(),
     /**
+     * Proactive JWT refresh window. moq-auth issues bearer tokens
+     * with a 600 s lifetime; once the token expires the relay
+     * tears down the WebTransport session and we'd otherwise
+     * recover via the regular reconnect path with a brief audible
+     * dropout. By recycling the session a minute before expiry we
+     * stay ahead of the relay's tear-down: the new session opens,
+     * the [SubscribeHandle] re-issuance pump cuts subs over to
+     * it, and the listener never enters the user-visible
+     * Reconnecting state. Set to 0 or negative to disable.
+     */
+    tokenRefreshAfterMs: Long = 540_000L,
+    /**
      * Test seam — defaults to the production
      * [connectNestsListener]. Tests pass a fake that returns a
      * scripted [NestsListener] so the reconnect state machine can
@@ -100,19 +113,43 @@ suspend fun connectReconnectingNestsListener(
                         state.value = NestsListenerState.Failed("connect failed: ${it.message}", it)
                         null
                     }
+                var refreshTriggered = false
                 if (listener != null) {
-                    // Mirror state until the listener terminates.
+                    // Wait for either a terminal state OR the proactive
+                    // JWT-refresh deadline. withTimeoutOrNull returns
+                    // null when the timer fires first; we then close
+                    // the (still-healthy) listener and loop to mint a
+                    // fresh JWT via openOnce(). The SubscribeHandle
+                    // re-issuance pump cuts subs over to the new
+                    // session without surfacing Reconnecting to the UI.
+                    //
                     // `return@collect` does NOT break a StateFlow's
                     // collect (it just returns from the lambda for one
                     // emission), so we use `onEach { mirror } + first`
                     // to wait deterministically for a terminal state.
-                    val terminal =
+                    val terminalAwait: suspend () -> NestsListenerState = {
                         listener.state
                             .onEach { state.value = it }
                             .first { s ->
                                 s is NestsListenerState.Failed || s is NestsListenerState.Closed
                             }
-                    if (terminal is NestsListenerState.Failed && !isUserCancelled(terminal)) {
+                    }
+                    val terminal =
+                        if (tokenRefreshAfterMs > 0L) {
+                            withTimeoutOrNull(tokenRefreshAfterMs) { terminalAwait() }
+                        } else {
+                            terminalAwait()
+                        }
+                    if (terminal == null) {
+                        // Refresh deadline hit before any terminal state —
+                        // planned recycle, not a failure. Close the old
+                        // listener; don't bump `attempt` (it's not a
+                        // backoff event) so the next openOnce() runs
+                        // immediately.
+                        runCatching { listener.close() }
+                        attempt = 0
+                        refreshTriggered = true
+                    } else if (terminal is NestsListenerState.Failed && !isUserCancelled(terminal)) {
                         // Transport-side failure → schedule a reconnect.
                         attempt++
                         if (!policy.isExhausted(attempt)) {
@@ -120,6 +157,14 @@ suspend fun connectReconnectingNestsListener(
                             state.value = NestsListenerState.Reconnecting(attempt, delayMs)
                         }
                     }
+                }
+                if (refreshTriggered) {
+                    // Skip the reconnect-schedule path entirely — a
+                    // refresh is a planned cutover, not a backoff
+                    // event. The next iteration's openOnce() runs
+                    // immediately and the wrapper's outward state
+                    // never enters Reconnecting.
+                    continue
                 }
                 val terminal = state.value
                 if (terminal is NestsListenerState.Closed) break

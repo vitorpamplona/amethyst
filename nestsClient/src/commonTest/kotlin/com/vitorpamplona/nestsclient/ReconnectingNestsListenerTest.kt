@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -261,6 +262,79 @@ class ReconnectingNestsListenerTest {
                 handle.unsubscribe()
                 assertEquals(1, first.unsubscribeCount)
 
+                reconnecting.close()
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun proactive_token_refresh_recycles_listener_without_failure_state() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob())
+            try {
+                val first = ScriptedListener(room)
+                val second = ScriptedListener(room)
+                val third = ScriptedListener(room)
+                val listenersInOrder = mutableListOf(first, second, third)
+
+                // Track every state the wrapper surfaces. The contract
+                // for proactive refresh is that we recycle WITHOUT
+                // ever flipping to Reconnecting / Failed — the new
+                // session is up before the old one's token would have
+                // expired.
+                val seenStates = mutableListOf<NestsListenerState>()
+
+                val reconnecting =
+                    connectReconnectingNestsListener(
+                        httpClient = httpClient,
+                        transport = transport,
+                        scope = scope,
+                        room = room,
+                        signer = signer,
+                        // 50 ms refresh window — small enough for the
+                        // test to fire it immediately, large enough
+                        // that the orchestrator's first Connected
+                        // observation lands before the timeout.
+                        tokenRefreshAfterMs = 50L,
+                        connector = { listenersInOrder.removeAt(0) },
+                    )
+
+                // Watch state transitions — must NOT see Reconnecting
+                // or Failed at any point during a clean refresh.
+                val watcher =
+                    scope.launch {
+                        reconnecting.state.collect { seenStates += it }
+                    }
+
+                withTimeout(5_000L) {
+                    reconnecting.state.first { it is NestsListenerState.Connected }
+                }
+
+                // Wait for at least 2 underlying listeners (one for
+                // initial, one after first refresh).
+                withTimeout(5_000L) {
+                    while (listenersInOrder.size > 1) kotlinx.coroutines.delay(10)
+                }
+
+                // Verify: the wrapper's outward state never went to
+                // Reconnecting or Failed during the refresh — the
+                // user-visible UI stays Connected throughout.
+                val sawReconnecting = seenStates.any { it is NestsListenerState.Reconnecting }
+                val sawFailed = seenStates.any { it is NestsListenerState.Failed }
+                assertTrue(
+                    !sawReconnecting && !sawFailed,
+                    "proactive refresh must not surface Reconnecting/Failed; saw=$seenStates",
+                )
+
+                // Verify: the previous listener was actually closed
+                // (state.value should reach Closed for first/second
+                // before the test ends).
+                withTimeout(5_000L) {
+                    first.state.first { it is NestsListenerState.Closed }
+                }
+
+                watcher.cancel()
                 reconnecting.close()
             } finally {
                 scope.cancel()
