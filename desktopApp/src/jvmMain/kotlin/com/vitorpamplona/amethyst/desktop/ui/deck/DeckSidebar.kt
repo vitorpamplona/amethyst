@@ -52,6 +52,7 @@ fun DeckSidebar(
     allAccounts: ImmutableList<AccountInfo>,
     onSwitchAccount: (String) -> Unit,
     onAddAccount: () -> Unit,
+    onRemoveAccount: (String) -> Unit,
     onAddColumn: () -> Unit,
     onOpenSettings: () -> Unit,
     signerConnectionState: SignerConnectionState,
@@ -74,6 +75,7 @@ fun DeckSidebar(
             allAccounts = allAccounts,
             onSwitchAccount = onSwitchAccount,
             onAddAccount = onAddAccount,
+            onRemoveAccount = onRemoveAccount,
         )
 
         Spacer(Modifier.size(16.dp))

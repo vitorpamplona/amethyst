@@ -1020,6 +1020,8 @@ fun MainContent(
                     LayoutMode.DECK -> {
                         if (!isImmersive) {
                             val allAccountsState by accountManager.allAccounts.collectAsState()
+                            var showAddAccountDialog by remember { mutableStateOf(false) }
+
                             DeckSidebar(
                                 activeNpub = accountManager.currentAccount()?.npub,
                                 allAccounts = allAccountsState,
@@ -1028,8 +1030,11 @@ fun MainContent(
                                         accountManager.switchAccount(npub)
                                     }
                                 },
-                                onAddAccount = {
-                                    // TODO: Show add account dialog
+                                onAddAccount = { showAddAccountDialog = true },
+                                onRemoveAccount = { npub ->
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.removeAccountFromStorage(npub)
+                                    }
                                 },
                                 onAddColumn = onShowAppDrawer,
                                 onOpenSettings = {
@@ -1045,6 +1050,19 @@ fun MainContent(
                             )
 
                             VerticalDivider()
+
+                            if (showAddAccountDialog) {
+                                com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog(
+                                    accountManager = accountManager,
+                                    onDismiss = { showAddAccountDialog = false },
+                                    onAccountAdded = {
+                                        showAddAccountDialog = false
+                                        scope.launch(Dispatchers.IO) {
+                                            accountManager.refreshAccountList()
+                                        }
+                                    },
+                                )
+                            }
                         }
 
                         DeckLayout(

@@ -22,11 +22,16 @@ package com.vitorpamplona.amethyst.desktop.ui.account
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -34,11 +39,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,9 +61,11 @@ fun AccountSwitcherDropdown(
     allAccounts: ImmutableList<AccountInfo>,
     onSwitchAccount: (String) -> Unit,
     onAddAccount: () -> Unit,
+    onRemoveAccount: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var confirmLogoutNpub by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier) {
         IconButton(
@@ -75,18 +84,12 @@ fun AccountSwitcherDropdown(
             onDismissRequest = { expanded = false },
             offset = DpOffset(x = 48.dp, y = 0.dp),
         ) {
-            if (allAccounts.isEmpty()) {
+            allAccounts.forEach { account ->
+                val isActive = account.npub == activeNpub
                 DropdownMenuItem(
-                    text = { Text("No accounts") },
-                    onClick = {},
-                    enabled = false,
-                )
-            } else {
-                allAccounts.forEach { account ->
-                    val isActive = account.npub == activeNpub
-                    DropdownMenuItem(
-                        text = {
-                            Column {
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     account.npub.take(16) + "...",
                                     maxLines = 1,
@@ -107,22 +110,36 @@ fun AccountSwitcherDropdown(
                                     )
                                 }
                             }
-                        },
-                        trailingIcon = {
                             if (isActive) {
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = "Active",
                                     tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            IconButton(
+                                onClick = {
+                                    expanded = false
+                                    confirmLogoutNpub = account.npub
+                                },
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove account",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp),
                                 )
                             }
-                        },
-                        onClick = {
-                            expanded = false
-                            if (!isActive) onSwitchAccount(account.npub)
-                        },
-                    )
-                }
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        if (!isActive) onSwitchAccount(account.npub)
+                    },
+                )
             }
             HorizontalDivider()
             DropdownMenuItem(
@@ -134,5 +151,32 @@ fun AccountSwitcherDropdown(
                 },
             )
         }
+    }
+
+    // Logout confirmation dialog
+    val logoutNpub = confirmLogoutNpub
+    if (logoutNpub != null) {
+        AlertDialog(
+            onDismissRequest = { confirmLogoutNpub = null },
+            title = { Text("Remove Account") },
+            text = {
+                Text("Remove ${logoutNpub.take(16)}...? This will delete the account from this device.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmLogoutNpub = null
+                        onRemoveAccount(logoutNpub)
+                    },
+                ) {
+                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmLogoutNpub = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
