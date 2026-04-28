@@ -145,6 +145,77 @@ class NamecoinNameResolverTest {
         assertNull(result)
     }
 
+    // ── Value format: single-identity form in d/ ──────────────────────
+    //
+    // ifa-0001 doesn't mandate that domain records use the `nostr.names`
+    // sub-dictionary. A `d/` record can also publish a single identity using
+    // the same shape that `id/` uses:
+    //   { "nostr": { "pubkey": "hex", "relays": [...] } }
+    // This is the natural "this name = this one pubkey" convention; only the
+    // root local-part (`_`) is resolvable from this shape.
+
+    @Test
+    fun `parses single-identity object form from domain value`() {
+        val value = """{
+            "nostr": {
+                "pubkey": "43185edecb675892824b1a37a57f3e407fbde2eda7201a3829b8cf4ba7c5b4f0",
+                "relays": ["wss://relay.testls.bit/", "wss://relay.nostr.wine/"]
+            }
+        }"""
+
+        val result = extractNostrFromValue(value, "d/mstrofnone", "_")
+        assertNotNull(result)
+        assertEquals(
+            "43185edecb675892824b1a37a57f3e407fbde2eda7201a3829b8cf4ba7c5b4f0",
+            result!!.pubkey,
+        )
+        assertEquals("_", result.localPart)
+        assertEquals(
+            listOf("wss://relay.testls.bit/", "wss://relay.nostr.wine/"),
+            result.relays,
+        )
+    }
+
+    @Test
+    fun `single-identity object form does NOT resolve non-root local-part`() {
+        // The single-identity shape has no `names` map, so a request for
+        // `alice@example.bit` must fall through to null — we don't silently
+        // pretend the root pubkey owns every sub-identity.
+        val value = """{
+            "nostr": {
+                "pubkey": "43185edecb675892824b1a37a57f3e407fbde2eda7201a3829b8cf4ba7c5b4f0"
+            }
+        }"""
+
+        val result = extractNostrFromValue(value, "d/mstrofnone", "alice")
+        assertNull(result)
+    }
+
+    @Test
+    fun `single-identity object form without relays still resolves`() {
+        val value = """{
+            "nostr": {
+                "pubkey": "43185edecb675892824b1a37a57f3e407fbde2eda7201a3829b8cf4ba7c5b4f0"
+            }
+        }"""
+
+        val result = extractNostrFromValue(value, "d/mstrofnone", "_")
+        assertNotNull(result)
+        assertEquals(emptyList<String>(), result!!.relays)
+    }
+
+    @Test
+    fun `single-identity form with malformed pubkey is rejected`() {
+        val value = """{
+            "nostr": {
+                "pubkey": "not-a-hex-pubkey"
+            }
+        }"""
+
+        val result = extractNostrFromValue(value, "d/mstrofnone", "_")
+        assertNull(result)
+    }
+
     // ── Value format: id/ namespace ────────────────────────────────────
 
     @Test
@@ -238,7 +309,32 @@ class NamecoinNameResolverTest {
 
         // Extended form
         if (nostrField is kotlinx.serialization.json.JsonObject) {
-            val names = nostrField["names"]?.jsonObject ?: return null
+            // Helper for single-identity form { "pubkey": "hex", "relays": [...] }
+            fun extractSingleIdentity(): NamecoinNostrResult? {
+                if (localPart != "_") return null
+                val pk =
+                    (nostrField["pubkey"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                        ?: return null
+                if (!pk.matches(Regex("^[0-9a-fA-F]{64}$"))) return null
+                val r =
+                    try {
+                        nostrField["relays"]?.jsonArray?.mapNotNull {
+                            (it as? kotlinx.serialization.json.JsonPrimitive)?.content
+                        } ?: emptyList()
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                return NamecoinNostrResult(
+                    pubkey = pk.lowercase(),
+                    relays = r,
+                    namecoinName = namecoinName,
+                    localPart = "_",
+                )
+            }
+
+            val names =
+                nostrField["names"]?.jsonObject
+                    ?: return extractSingleIdentity()
 
             // Resolve: exact match → "_" root → first entry (root lookups only)
             val resolvedLocalPart: String
@@ -270,8 +366,17 @@ class NamecoinNameResolverTest {
                     pubkey = (firstEntry.value as kotlinx.serialization.json.JsonPrimitive).content
                 }
 
-                else -> {
+                localPart != "_" -> {
+                    // Non-root lookup: don't silently fall back to bare
+                    // `pubkey` — that would hand `alice@example.bit` the
+                    // root operator's identity.
                     return null
+                }
+
+                else -> {
+                    // Root lookup, names present but no usable entry: fall
+                    // through to single-identity.
+                    return extractSingleIdentity()
                 }
             }
 
