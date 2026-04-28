@@ -64,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
 import com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -108,240 +107,237 @@ internal fun NestFullScreen(
     onHandRaisedChange: (Boolean) -> Unit,
     onLeave: () -> Unit,
 ) {
-    val roomTheme = remember(event) { RoomTheme.from(event) }
-    NestThemedScope(theme = roomTheme, accountViewModel = accountViewModel) {
-        var showEditSheet by rememberSaveable { mutableStateOf(false) }
-        var showHostMenu by rememberSaveable { mutableStateOf(false) }
-        var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
-        var showReactionPicker by rememberSaveable { mutableStateOf(false) }
-        var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
-        // Tab selection survives configuration changes and PIP transitions.
-        // Stored as ordinal so rememberSaveable can persist it without a
-        // custom Saver.
-        var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    var showEditSheet by rememberSaveable { mutableStateOf(false) }
+    var showHostMenu by rememberSaveable { mutableStateOf(false) }
+    var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
+    var showReactionPicker by rememberSaveable { mutableStateOf(false) }
+    var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    // Tab selection survives configuration changes and PIP transitions.
+    // Stored as ordinal so rememberSaveable can persist it without a
+    // custom Saver.
+    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
 
-        val isHost = accountViewModel.account.signer.pubKey == event.pubKey
-        val myPubkey = accountViewModel.account.signer.pubKey
-        val isOnStageMe = remember(onStage, myPubkey) { onStage.any { it.pubKey == myPubkey } }
-        val leaveScope = rememberCoroutineScope()
-        val topBarContext = LocalContext.current
+    val isHost = accountViewModel.account.signer.pubKey == event.pubKey
+    val myPubkey = accountViewModel.account.signer.pubKey
+    val isOnStageMe = remember(onStage, myPubkey) { onStage.any { it.pubKey == myPubkey } }
+    val leaveScope = rememberCoroutineScope()
+    val topBarContext = LocalContext.current
 
-        val presences by viewModel.presences.collectAsState()
-        val reactionsByPubkey by viewModel.recentReactions.collectAsState()
-        val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
+    val presences by viewModel.presences.collectAsState()
+    val reactionsByPubkey by viewModel.recentReactions.collectAsState()
+    val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
 
-        val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
-        val participantGrid =
-            remember(event, presences) {
-                buildParticipantGrid(
-                    participants = event.participants(),
-                    presences = presences,
-                )
+    val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
+    val participantGrid =
+        remember(event, presences) {
+            buildParticipantGrid(
+                participants = event.participants(),
+                presences = presences,
+            )
+        }
+    // Same logic HandRaiseQueueSection uses internally — duplicated
+    // here so the tab label can show a count without coupling the
+    // section to the screen.
+    val handsCount =
+        remember(presences, onStageKeys) {
+            presences.values.count { it.handRaised && it.pubkey !in onStageKeys }
+        }
+    val showHandsTab = isHost && handsCount > 0
+
+    // Tab roster changes when the Hands tab appears/disappears.
+    // If the user was on Hands and the queue empties, fall back to
+    // Chat — kept as a stable default rather than Audience because
+    // chat is the room's primary engagement surface.
+    val tabs =
+        remember(showHandsTab) {
+            buildList {
+                add(NestTab.Chat)
+                add(NestTab.Audience)
+                if (showHandsTab) add(NestTab.Hands)
             }
-        // Same logic HandRaiseQueueSection uses internally — duplicated
-        // here so the tab label can show a count without coupling the
-        // section to the screen.
-        val handsCount =
-            remember(presences, onStageKeys) {
-                presences.values.count { it.handRaised && it.pubkey !in onStageKeys }
-            }
-        val showHandsTab = isHost && handsCount > 0
+        }
+    val effectiveTab = tabs.getOrNull(selectedTabIndex) ?: NestTab.Chat
 
-        // Tab roster changes when the Hands tab appears/disappears.
-        // If the user was on Hands and the queue empties, fall back to
-        // Chat — kept as a stable default rather than Audience because
-        // chat is the room's primary engagement surface.
-        val tabs =
-            remember(showHandsTab) {
-                buildList {
-                    add(NestTab.Chat)
-                    add(NestTab.Audience)
-                    if (showHandsTab) add(NestTab.Hands)
+    // Long-press on any participant opens the host-actions sheet
+    // (T2 #2). The sheet itself gates which rows render based on
+    // host status. Skip self.
+    val onLongPressParticipant: ((String) -> Unit) = { target ->
+        if (target != myPubkey) hostMenuTarget = target
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color.Transparent,
+        topBar = {
+            NestTopAppBar(
+                title = event.room().orEmpty(),
+                isHost = isHost,
+                showHostMenu = showHostMenu,
+                onMenuOpen = { showHostMenu = true },
+                onMenuDismiss = { showHostMenu = false },
+                onShare = {
+                    showHostMenu = false
+                    shareRoomNaddr(topBarContext, event)
+                },
+                onEdit = {
+                    showHostMenu = false
+                    showEditSheet = true
+                },
+            )
+        },
+        bottomBar = {
+            NestActionBar(
+                viewModel = viewModel,
+                ui = ui,
+                isOnStage = isOnStageMe,
+                canBroadcast = viewModel.canBroadcast,
+                speakerPubkeyHex = myPubkey,
+                handRaised = handRaised,
+                onHandRaisedChange = onHandRaisedChange,
+                onShowReactionPicker = { showReactionPicker = true },
+                onLeave = {
+                    if (isHost) {
+                        showHostLeaveConfirm = true
+                    } else {
+                        onLeave()
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        ) {
+            RoomHeaderStrip(
+                summary = event.summary(),
+                listenerCount = presences.size,
+            )
+            StageGrid(
+                members = participantGrid.onStage,
+                speakingNow = ui.speakingNow,
+                accountViewModel = accountViewModel,
+                reactionsByPubkey = reactionsByPubkey,
+                connectingSpeakers = ui.connectingSpeakers,
+                onLongPressParticipant = onLongPressParticipant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            NestTabRow(
+                tabs = tabs,
+                selectedTab = effectiveTab,
+                audienceCount = participantGrid.audience.size,
+                handsCount = handsCount,
+                onSelect = { tab -> selectedTabIndex = tabs.indexOf(tab).coerceAtLeast(0) },
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            when (effectiveTab) {
+                NestTab.Chat -> {
+                    NestChatPanel(
+                        event = event,
+                        viewModel = viewModel,
+                        accountViewModel = accountViewModel,
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(horizontal = 16.dp),
+                    )
+                }
+
+                NestTab.Audience -> {
+                    AudienceGrid(
+                        members = participantGrid.audience,
+                        accountViewModel = accountViewModel,
+                        onLongPressParticipant = onLongPressParticipant,
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(horizontal = 12.dp),
+                    )
+                }
+
+                NestTab.Hands -> {
+                    HandRaiseQueueSection(
+                        event = event,
+                        viewModel = viewModel,
+                        accountViewModel = accountViewModel,
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(horizontal = 16.dp),
+                    )
                 }
             }
-        val effectiveTab = tabs.getOrNull(selectedTabIndex) ?: NestTab.Chat
-
-        // Long-press on any participant opens the host-actions sheet
-        // (T2 #2). The sheet itself gates which rows render based on
-        // host status. Skip self.
-        val onLongPressParticipant: ((String) -> Unit) = { target ->
-            if (target != myPubkey) hostMenuTarget = target
         }
+    }
 
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color.Transparent,
-            topBar = {
-                NestTopAppBar(
-                    title = event.room().orEmpty(),
-                    isHost = isHost,
-                    showHostMenu = showHostMenu,
-                    onMenuOpen = { showHostMenu = true },
-                    onMenuDismiss = { showHostMenu = false },
-                    onShare = {
-                        showHostMenu = false
-                        shareRoomNaddr(topBarContext, event)
-                    },
-                    onEdit = {
-                        showHostMenu = false
-                        showEditSheet = true
-                    },
-                )
-            },
-            bottomBar = {
-                NestActionBar(
-                    viewModel = viewModel,
-                    ui = ui,
-                    isOnStage = isOnStageMe,
-                    canBroadcast = viewModel.canBroadcast,
-                    speakerPubkeyHex = myPubkey,
-                    handRaised = handRaised,
-                    onHandRaisedChange = onHandRaisedChange,
-                    onShowReactionPicker = { showReactionPicker = true },
-                    onLeave = {
-                        if (isHost) {
-                            showHostLeaveConfirm = true
-                        } else {
+    // Sheets and dialogs render alongside the Scaffold so they
+    // cover the room content (including the action bar) when
+    // open. ParticipantHostActionsSheet stays outside the Column
+    // for the same reason — modal bottom sheets are not affected
+    // by parent layout.
+    hostMenuTarget?.let { target ->
+        ParticipantHostActionsSheet(
+            target = target,
+            event = event,
+            accountViewModel = accountViewModel,
+            onDismiss = { hostMenuTarget = null },
+            catalog = speakerCatalogs[target],
+        )
+    }
+
+    if (showReactionPicker) {
+        RoomReactionPickerSheet(
+            onPick = { emoji -> accountViewModel.reactToOrDelete(roomNote, emoji) },
+            onDismiss = { showReactionPicker = false },
+        )
+    }
+
+    if (showHostLeaveConfirm) {
+        AlertDialog(
+            onDismissRequest = { showHostLeaveConfirm = false },
+            title = { Text(stringRes(R.string.nest_leave_host_title)) },
+            text = { Text(stringRes(R.string.nest_leave_host_body)) },
+            confirmButton = {
+                TextButton(
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    onClick = {
+                        showHostLeaveConfirm = false
+                        leaveScope.launch {
+                            val ok = closeMeetingSpace(accountViewModel, event)
+                            if (!ok) {
+                                accountViewModel.toastManager.toast(
+                                    R.string.nests,
+                                    R.string.nest_leave_host_close_failed,
+                                )
+                            }
                             onLeave()
                         }
                     },
-                )
-            },
-        ) { padding ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-            ) {
-                RoomHeaderStrip(
-                    summary = event.summary(),
-                    listenerCount = presences.size,
-                )
-                StageGrid(
-                    members = participantGrid.onStage,
-                    speakingNow = ui.speakingNow,
-                    accountViewModel = accountViewModel,
-                    reactionsByPubkey = reactionsByPubkey,
-                    connectingSpeakers = ui.connectingSpeakers,
-                    onLongPressParticipant = onLongPressParticipant,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                NestTabRow(
-                    tabs = tabs,
-                    selectedTab = effectiveTab,
-                    audienceCount = participantGrid.audience.size,
-                    handsCount = handsCount,
-                    onSelect = { tab -> selectedTabIndex = tabs.indexOf(tab).coerceAtLeast(0) },
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-                when (effectiveTab) {
-                    NestTab.Chat -> {
-                        NestChatPanel(
-                            event = event,
-                            viewModel = viewModel,
-                            accountViewModel = accountViewModel,
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 16.dp),
-                        )
-                    }
-
-                    NestTab.Audience -> {
-                        AudienceGrid(
-                            members = participantGrid.audience,
-                            accountViewModel = accountViewModel,
-                            onLongPressParticipant = onLongPressParticipant,
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 12.dp),
-                        )
-                    }
-
-                    NestTab.Hands -> {
-                        HandRaiseQueueSection(
-                            event = event,
-                            viewModel = viewModel,
-                            accountViewModel = accountViewModel,
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 16.dp),
-                        )
-                    }
+                ) {
+                    Text(stringRes(R.string.nest_leave_host_close))
                 }
-            }
-        }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showHostLeaveConfirm = false
+                        onLeave()
+                    },
+                ) {
+                    Text(stringRes(R.string.nest_leave_host_just_leave))
+                }
+            },
+        )
+    }
 
-        // Sheets and dialogs render alongside the Scaffold so they
-        // cover the room content (including the action bar) when
-        // open. ParticipantHostActionsSheet stays outside the Column
-        // for the same reason — modal bottom sheets are not affected
-        // by parent layout.
-        hostMenuTarget?.let { target ->
-            ParticipantHostActionsSheet(
-                target = target,
-                event = event,
-                accountViewModel = accountViewModel,
-                onDismiss = { hostMenuTarget = null },
-                catalog = speakerCatalogs[target],
-            )
-        }
-
-        if (showReactionPicker) {
-            RoomReactionPickerSheet(
-                onPick = { emoji -> accountViewModel.reactToOrDelete(roomNote, emoji) },
-                onDismiss = { showReactionPicker = false },
-            )
-        }
-
-        if (showHostLeaveConfirm) {
-            AlertDialog(
-                onDismissRequest = { showHostLeaveConfirm = false },
-                title = { Text(stringRes(R.string.nest_leave_host_title)) },
-                text = { Text(stringRes(R.string.nest_leave_host_body)) },
-                confirmButton = {
-                    TextButton(
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        onClick = {
-                            showHostLeaveConfirm = false
-                            leaveScope.launch {
-                                val ok = closeMeetingSpace(accountViewModel, event)
-                                if (!ok) {
-                                    accountViewModel.toastManager.toast(
-                                        R.string.nests,
-                                        R.string.nest_leave_host_close_failed,
-                                    )
-                                }
-                                onLeave()
-                            }
-                        },
-                    ) {
-                        Text(stringRes(R.string.nest_leave_host_close))
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showHostLeaveConfirm = false
-                            onLeave()
-                        },
-                    ) {
-                        Text(stringRes(R.string.nest_leave_host_just_leave))
-                    }
-                },
-            )
-        }
-
-        if (showEditSheet) {
-            EditNestSheet(
-                accountViewModel = accountViewModel,
-                event = event,
-                onDismiss = { showEditSheet = false },
-            )
-        }
+    if (showEditSheet) {
+        EditNestSheet(
+            accountViewModel = accountViewModel,
+            event = event,
+            onDismiss = { showEditSheet = false },
+        )
     }
 }
 
@@ -458,9 +454,8 @@ private enum class NestTab {
  * state lives at the screen level so the EditNestSheet can be
  * triggered from here and rendered alongside the Scaffold.
  *
- * Container color is transparent so the themed background painted
- * by [NestThemedScope]'s Surface (and any optional `bg` image) shows
- * through cleanly.
+ * Container color is transparent so the surface beneath the
+ * Scaffold (set by the activity / parent theme) shows through.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

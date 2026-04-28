@@ -39,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -70,11 +71,9 @@ import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.OfflineFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.PrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LiveActivityCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -87,8 +86,12 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -177,7 +180,8 @@ fun ObserveAndRenderSpace(
     val card by observeNoteAndMap(baseNote, accountViewModel) {
         when (val noteEvent = it.event) {
             is MeetingSpaceEvent -> {
-                LiveActivityCard(
+                println("AABBCC ${noteEvent.address()} ${noteEvent.status()}")
+                NestCard(
                     id = noteEvent.address(),
                     name = noteEvent.dTag(),
                     cover = noteEvent.image()?.ifBlank { null },
@@ -185,13 +189,7 @@ fun ObserveAndRenderSpace(
                     subject = noteEvent.room()?.ifBlank { null },
                     content = noteEvent.summary(),
                     participants = noteEvent.participants().toImmutableList(),
-                    status =
-                        when (noteEvent.status()) {
-                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.OPEN -> StatusTag.STATUS.LIVE
-                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.PRIVATE -> StatusTag.STATUS.PLANNED
-                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.CLOSED -> StatusTag.STATUS.ENDED
-                            else -> null
-                        },
+                    status = noteEvent.status(),
                     starts = null,
                 )
             }
@@ -212,9 +210,22 @@ fun ObserveAndRenderSpace(
     }
 }
 
+@Immutable
+data class NestCard(
+    val id: Address?,
+    val name: String,
+    val cover: String?,
+    val media: String?,
+    val subject: String?,
+    val content: String?,
+    val participants: ImmutableList<ParticipantTag>,
+    val status: StatusTag.STATUS?,
+    val starts: Long?,
+)
+
 @Composable
 fun RenderLiveSpacesThumb(
-    card: LiveActivityCard,
+    card: NestCard,
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -244,27 +255,20 @@ fun RenderLiveSpacesThumb(
             Box(Modifier.padding(10.dp)) {
                 CrossfadeIfEnabled(targetState = card.status, accountViewModel = accountViewModel) {
                     when (it) {
-                        StatusTag.STATUS.LIVE -> {
-                            val url = card.media
-                            if (url.isNullOrBlank()) {
-                                EndedFlag()
-                            } else {
-                                CheckIfVideoIsOnline(url, accountViewModel) { isOnline ->
-                                    if (isOnline) {
-                                        LiveFlag()
-                                    } else {
-                                        OfflineFlag()
-                                    }
-                                }
-                            }
+                        StatusTag.STATUS.OPEN -> {
+                            LiveFlag()
                         }
 
-                        StatusTag.STATUS.ENDED -> {
+                        StatusTag.STATUS.CLOSED -> {
                             EndedFlag()
                         }
 
                         StatusTag.STATUS.PLANNED -> {
                             ScheduledFlag(card.starts)
+                        }
+
+                        StatusTag.STATUS.PRIVATE -> {
+                            PrivateFlag()
                         }
 
                         else -> {
