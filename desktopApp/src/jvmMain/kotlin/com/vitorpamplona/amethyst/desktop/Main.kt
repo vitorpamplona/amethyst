@@ -648,11 +648,28 @@ fun App(
             ).also { it.startCleanupLoop() }
         }
 
-    // Clear cache and subscriptions on logout
+    // Clear cache and subscriptions on logout or account switch
+    var previousAccountPubKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(accountState) {
-        if (accountState is AccountState.LoggedOut) {
-            subscriptionsCoordinator.clear()
-            localCache.clear()
+        when (val state = accountState) {
+            is AccountState.LoggedOut -> {
+                subscriptionsCoordinator.clear()
+                localCache.clear()
+                previousAccountPubKey = null
+            }
+
+            is AccountState.LoggedIn -> {
+                val currentPubKey = state.pubKeyHex
+                if (previousAccountPubKey != null && previousAccountPubKey != currentPubKey) {
+                    // Account switched — clear old data so new feed loads fresh
+                    subscriptionsCoordinator.clear()
+                    localCache.clear()
+                    subscriptionsCoordinator.start()
+                }
+                previousAccountPubKey = currentPubKey
+            }
+
+            is AccountState.ConnectingRelays -> {}
         }
     }
 
