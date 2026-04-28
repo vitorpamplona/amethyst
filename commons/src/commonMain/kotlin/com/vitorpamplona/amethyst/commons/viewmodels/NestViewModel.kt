@@ -231,6 +231,21 @@ class NestViewModel(
         disconnect()
     }
 
+    /**
+     * Honor an inbound kind-4312 force-mute targeted at the local
+     * user. No-ops when we aren't broadcasting; otherwise routes
+     * through the existing [setMicMuted] path so the wire mute and
+     * UI state both flip in sync. Caller (the AdminCommandsCollector)
+     * is responsible for verifying the signer is host/moderator on
+     * the active kind-30312 — the relay does not enforce that.
+     */
+    fun onForceMuted() {
+        if (closed) return
+        if (broadcastHandle == null) return
+        if ((_uiState.value.broadcast as? BroadcastUiState.Broadcasting)?.isMuted == true) return
+        setMicMuted(true)
+    }
+
     private var listener: NestsListener? = null
     private var connectJob: Job? = null
     private var stateObserverJob: Job? = null
@@ -305,6 +320,31 @@ class NestViewModel(
         if (closed) return
         _uiState.update { it.copy(isMuted = muted) }
         activeSubscriptions.values.forEach { it.player?.setMutedSafe(muted) }
+    }
+
+    /**
+     * Locally silence (hush) one speaker without affecting the rest of
+     * the room. Independent of [setMuted] (room-wide). The hush is
+     * applied via [AudioPlayer.setVolume] so the network + decode
+     * pipeline keeps running — re-enabling is sample-accurate.
+     *
+     * The set survives subscription churn: re-subscribing to a hushed
+     * speaker re-applies the gain on the new player at attach time.
+     */
+    fun setLocalHushed(
+        pubkey: String,
+        hushed: Boolean,
+    ) {
+        if (closed) return
+        val updated =
+            _uiState.value.locallyHushed.let {
+                if (hushed) it + pubkey else it - pubkey
+            }
+        if (updated == _uiState.value.locallyHushed) return
+        _uiState.update { it.copy(locallyHushed = updated.toPersistentSet()) }
+        activeSubscriptions[pubkey]?.player?.runCatching {
+            setVolume(if (hushed) 0f else 1f)
+        }
     }
 
     /**
@@ -787,10 +827,14 @@ class NestViewModel(
                 }
             try {
                 val isMuted = _uiState.value.isMuted
+                val isHushed = pubkey in _uiState.value.locallyHushed
                 val roomPlayer = NestPlayer(decoder, player, viewModelScope)
-                // Apply current mute state before play() opens the device so the
-                // first frame respects it.
+                // Apply current mute + per-speaker hush state before play()
+                // opens the device so the first frame respects them.
                 player.setMutedSafe(isMuted)
+                if (isHushed) {
+                    runCatching { player.setVolume(0f) }
+                }
                 // Tap the object flow to drive the speaking-now indicator before
                 // the decoder consumes it.
                 val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
@@ -1114,6 +1158,14 @@ data class NestUiState(
      * `["onstage", "0|1"]` tag on emitted kind-10312 presence events.
      */
     val onStageNow: Boolean = true,
+    /**
+     * Pubkeys the local user has chosen to silence in their own
+     * playback ("hush"). Independent of [isMuted]. Persists across
+     * subscription churn so re-subscribing to a hushed speaker stays
+     * silent. Drives a "Hush this speaker locally" toggle in the
+     * participant context sheet.
+     */
+    val locallyHushed: ImmutableSet<String> = persistentSetOf(),
 ) {
     /**
      * Derived: are we currently pushing audio packets to the relay?

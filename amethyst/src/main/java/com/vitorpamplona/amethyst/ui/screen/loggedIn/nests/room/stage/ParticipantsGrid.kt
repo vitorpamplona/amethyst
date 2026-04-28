@@ -120,7 +120,6 @@ internal fun StageGrid(
     connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
 ) {
-    if (members.isEmpty()) return
     // Float currently-speaking members to the top so the listener can
     // see who they're hearing without scrolling. sortedBy is stable in
     // Kotlin — speakers retain relative order among themselves, as do
@@ -137,6 +136,23 @@ internal fun StageGrid(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 6.dp),
         )
+        if (members.isEmpty()) {
+            // Keep the strip visible so the room doesn't look broken
+            // when nobody is on stage yet — the title plus a quiet
+            // hint signals "waiting state" without taking the chat /
+            // audience tab's space below.
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringRes(R.string.nest_stage_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            return@Column
+        }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(STAGE_CELL_MIN),
             modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),

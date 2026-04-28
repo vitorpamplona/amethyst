@@ -290,6 +290,7 @@ internal fun NestFullScreen(
             target = target,
             event = event,
             accountViewModel = accountViewModel,
+            nestViewModel = viewModel,
             onDismiss = { hostMenuTarget = null },
             catalog = speakerCatalogs[target],
         )

@@ -173,13 +173,16 @@ private fun AdminCommandsCollector(
                 tags = mapOf("a" to listOf(roomATag), "p" to listOf(localPubkey)),
             )
         LocalCache.observeNewEvents<AdminCommandEvent>(filter).collect { cmd ->
-            if (cmd.action() != AdminCommandEvent.Action.KICK) return@collect
             if (cmd.targetPubkey() != localPubkey) return@collect
             val signerIsAuthorised =
                 cmd.pubKey == event.pubKey ||
                     event.participants().any { it.pubKey == cmd.pubKey && (it.isHost() || it.isModerator()) }
             if (!signerIsAuthorised) return@collect
-            viewModel.onKick()
+            when (cmd.action()) {
+                AdminCommandEvent.Action.KICK -> viewModel.onKick()
+                AdminCommandEvent.Action.MUTE -> viewModel.onForceMuted()
+                null -> Unit // unknown verb, ignore
+            }
         }
     }
 }

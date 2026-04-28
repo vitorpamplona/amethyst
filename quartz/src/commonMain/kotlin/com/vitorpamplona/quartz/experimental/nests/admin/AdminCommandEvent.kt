@@ -71,6 +71,16 @@ class AdminCommandEvent(
         val code: String,
     ) {
         KICK("kick"),
+
+        /**
+         * Force the target speaker's mic to muted. Honor-based: the
+         * target's client receives the command and flips its own
+         * presence-side mic-mute. A non-cooperating client could
+         * ignore the event and keep broadcasting — same trust model
+         * as KICK, which a misbehaving client could also ignore by
+         * not disconnecting.
+         */
+        MUTE("mute"),
         ;
 
         companion object {
@@ -92,6 +102,19 @@ class AdminCommandEvent(
             target: HexKey,
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate<AdminCommandEvent>(KIND, Action.KICK.code, createdAt) {
+            aTag(room)
+            add(PTag(target).toTagArray())
+        }
+
+        /**
+         * Build a force-mute command. Same envelope as [kick] —
+         * tagged for [room] + [target], action verb in content.
+         */
+        fun forceMute(
+            room: ATag,
+            target: HexKey,
+            createdAt: Long = TimeUtils.now(),
+        ) = eventTemplate<AdminCommandEvent>(KIND, Action.MUTE.code, createdAt) {
             aTag(room)
             add(PTag(target).toTagArray())
         }

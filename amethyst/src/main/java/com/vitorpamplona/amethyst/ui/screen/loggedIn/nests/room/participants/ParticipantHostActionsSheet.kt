@@ -33,6 +33,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,6 +83,7 @@ internal fun ParticipantHostActionsSheet(
     event: MeetingSpaceEvent,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
+    nestViewModel: com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel? = null,
     isLocalUserHost: Boolean = accountViewModel.account.signer.pubKey == event.pubKey,
     catalog: com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog? = null,
 ) {
@@ -252,6 +254,28 @@ internal fun ParticipantHostActionsSheet(
                 onDismiss()
             }
 
+            // Local hush — silences only this speaker in our own
+            // playback. Available to anyone (not host-only) since it
+            // affects nothing on the wire. Skip self because we don't
+            // subscribe to our own broadcast loopback.
+            if (nestViewModel != null && target != accountViewModel.account.signer.pubKey) {
+                val nestUi by nestViewModel.uiState.collectAsState()
+                val isHushedLocally = target in nestUi.locallyHushed
+                ActionRow(
+                    text =
+                        stringRes(
+                            if (isHushedLocally) {
+                                R.string.nest_hush_local_restore
+                            } else {
+                                R.string.nest_hush_local
+                            },
+                        ),
+                ) {
+                    nestViewModel.setLocalHushed(target, !isHushedLocally)
+                    onDismiss()
+                }
+            }
+
             // Host-only rows.
             if (isLocalUserHost && target != event.pubKey) {
                 Spacer(Modifier.height(4.dp))
@@ -259,8 +283,19 @@ internal fun ParticipantHostActionsSheet(
                     broadcast(RoomParticipantActions.setRole(event, target, ROLE.SPEAKER))
                     onDismiss()
                 }
+                ActionRow(stringRes(R.string.nest_promote_moderator)) {
+                    broadcast(RoomParticipantActions.setRole(event, target, ROLE.MODERATOR))
+                    onDismiss()
+                }
                 ActionRow(stringRes(R.string.nest_demote_listener)) {
                     broadcast(RoomParticipantActions.demoteToListener(event, target))
+                    onDismiss()
+                }
+                ActionRow(
+                    text = stringRes(R.string.nest_force_mute),
+                    color = MaterialTheme.colorScheme.error,
+                ) {
+                    broadcast(AdminCommandEvent.forceMute(roomATag, target))
                     onDismiss()
                 }
                 ActionRow(

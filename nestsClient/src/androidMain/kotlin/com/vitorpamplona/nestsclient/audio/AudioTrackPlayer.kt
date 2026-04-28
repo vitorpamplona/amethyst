@@ -42,6 +42,7 @@ class AudioTrackPlayer(
 ) : AudioPlayer {
     private var track: AudioTrack? = null
     private var muted: Boolean = false
+    private var volume: Float = 1f
 
     override fun start() {
         if (track != null) return
@@ -105,7 +106,7 @@ class AudioTrackPlayer(
                 t,
             )
         }
-        applyMuteVolume(newTrack, muted)
+        applyMuteVolume(newTrack)
         track = newTrack
     }
 
@@ -126,7 +127,12 @@ class AudioTrackPlayer(
 
     override fun setMuted(muted: Boolean) {
         this.muted = muted
-        track?.let { applyMuteVolume(it, muted) }
+        track?.let { applyMuteVolume(it) }
+    }
+
+    override fun setVolume(volume: Float) {
+        this.volume = volume.coerceIn(0f, 1f)
+        track?.let { applyMuteVolume(it) }
     }
 
     override fun stop() {
@@ -141,13 +147,14 @@ class AudioTrackPlayer(
     @Suppress("unused")
     val voiceCallUsage: Int get() = AudioManager.STREAM_VOICE_CALL // kept for documentation
 
-    private fun applyMuteVolume(
-        track: AudioTrack,
-        muted: Boolean,
-    ) {
+    private fun applyMuteVolume(track: AudioTrack) {
         // setVolume is preferred over pause(): it keeps the streaming pipeline
         // running so unmute is sample-accurate and there's no AudioTrack-restart
         // glitch. AudioTrack default gain is 1.0 (RFC: AudioTrack#setVolume).
-        runCatching { track.setVolume(if (muted) 0f else 1f) }
+        // Mute and per-stream volume compose multiplicatively — a muted stream
+        // is silent regardless of volume, and a stream at volume 0 is silent
+        // regardless of mute.
+        val gain = if (muted) 0f else volume
+        runCatching { track.setVolume(gain) }
     }
 }
