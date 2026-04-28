@@ -53,11 +53,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 
 /**
@@ -142,6 +144,19 @@ fun CreateNestSheet(
                 onValueChange = viewModel::onImageUrlChange,
                 label = { Text(stringRes(R.string.nest_create_field_image)) },
                 singleLine = true,
+                leadingIcon = {
+                    SelectSingleFromGallery(
+                        isUploading = state.isUploadingImage,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                        modifier = Modifier.padding(start = 5.dp),
+                    ) { media ->
+                        viewModel.uploadForImage(
+                            uri = media,
+                            context = context,
+                            onError = accountViewModel.toastManager::toast,
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
 
