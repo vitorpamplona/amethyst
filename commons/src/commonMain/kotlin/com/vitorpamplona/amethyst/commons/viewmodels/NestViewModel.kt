@@ -36,8 +36,8 @@ import com.vitorpamplona.nestsclient.audio.AudioPlayer
 import com.vitorpamplona.nestsclient.audio.NestPlayer
 import com.vitorpamplona.nestsclient.audio.OpusDecoder
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
-import com.vitorpamplona.nestsclient.connectNestsSpeaker
 import com.vitorpamplona.nestsclient.connectReconnectingNestsListener
+import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -1132,9 +1132,18 @@ fun interface NestsSpeakerConnector {
     ): NestsSpeaker
 }
 
+/**
+ * Production speaker factory — wraps each session in
+ * [connectReconnectingNestsSpeaker] so transport drops auto-retry
+ * with exponential backoff AND the moq-auth 600 s JWT TTL is
+ * proactively refreshed (default 540 s recycle window). The
+ * returned [BroadcastHandle] survives every refresh — the wrapper
+ * re-issues publishing onto each fresh session and replays the
+ * user's mute state on the new handle.
+ */
 private val DefaultNestsSpeakerConnector =
     NestsSpeakerConnector { httpClient, transport, scope, room, signer, pubkey, capF, encF ->
-        connectNestsSpeaker(
+        connectReconnectingNestsSpeaker(
             httpClient = httpClient,
             transport = transport,
             scope = scope,
