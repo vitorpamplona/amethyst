@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -62,21 +63,22 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 
-private val STAGE_CELL_MIN = 88.dp
-private val STAGE_AVATAR = 48.dp
-private val AUDIENCE_CELL_MIN = 76.dp
-private val AUDIENCE_AVATAR = Size40dp
+private val STAGE_CELL_MIN = 112.dp
+private val STAGE_AVATAR = 100.dp
+private val AUDIENCE_CELL_MIN = 112.dp
+private val AUDIENCE_AVATAR = 100.dp
 private val GRID_SPACING = 6.dp
+private val AVATAR_RING_WIDTH = 3.dp
 
 // Two rows visible by default. Each cell is roughly avatar + name +
-// reaction headroom, so this lifts to ~200dp on most phones — tall
-// enough to show 6-8 speakers without scrolling but small enough to
-// leave the chat / audience tab the majority of the viewport.
-private val STAGE_MAX_HEIGHT = 220.dp
+// reaction headroom; with a 100dp avatar one row lifts to ~140dp, so
+// two rows + label/padding lands near 320dp — tall enough to show a
+// handful of speakers without scrolling but small enough to leave the
+// chat / audience tab the majority of the viewport.
+private val STAGE_MAX_HEIGHT = 320.dp
 
 /**
  * Vertical adaptive grid for the on-stage section. Used as the
@@ -194,14 +196,21 @@ private fun MemberCell(
     accountViewModel: AccountViewModel,
     onLongPressParticipant: ((String) -> Unit)?,
 ) {
-    val ringColor = MaterialTheme.colorScheme.primary
-    val avatarModifier =
+    val mutedRingColor = MaterialTheme.colorScheme.error
+    // Tri-state ring around the avatar so a glance distinguishes:
+    //   - green ring: actively speaking right now
+    //   - red ring:   on stage and broadcasting but mic flagged muted
+    //   - no ring:    idle, audience, or unknown mute state
+    val ringColor =
         when {
-            isSpeaking && member.absent -> Modifier.border(2.dp, ringColor, CircleShape).then(Modifier.alpha(0.5f))
-            isSpeaking -> Modifier.border(2.dp, ringColor, CircleShape)
-            member.absent -> Modifier.alpha(0.5f)
-            else -> Modifier
+            isSpeaking -> NEST_SPEAKING_COLOR
+            showMicBadge && member.publishing && member.muted == true -> mutedRingColor
+            else -> null
         }
+    val avatarModifier =
+        Modifier
+            .let { if (ringColor != null) it.border(AVATAR_RING_WIDTH, ringColor, CircleShape) else it }
+            .let { if (member.absent) it.alpha(0.5f) else it }
     val user =
         remember(member.pubkey) {
             com.vitorpamplona.amethyst.model.LocalCache
@@ -251,6 +260,7 @@ private fun MemberCell(
         UsernameDisplay(
             baseUser = user,
             weight = Modifier.fillMaxWidth().padding(top = 4.dp),
+            textAlign = TextAlign.Center,
             accountViewModel = accountViewModel,
         )
         if (reactions.isNotEmpty()) {

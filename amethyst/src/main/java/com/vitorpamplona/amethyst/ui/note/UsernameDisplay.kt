@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -100,6 +101,7 @@ fun UsernameDisplay(
     weight: Modifier = Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
     textColor: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
     accountViewModel: AccountViewModel,
 ) {
     val userMetadata by observeUserInfo(baseUser, accountViewModel)
@@ -107,9 +109,9 @@ fun UsernameDisplay(
     CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
         val name = it?.info?.bestName()
         if (name != null) {
-            UserDisplay(name, it.tags, weight, fontWeight, textColor)
+            UserDisplay(name, it.tags, weight, fontWeight, textColor, textAlign)
         } else {
-            NPubDisplay(baseUser, weight, fontWeight, textColor)
+            NPubDisplay(baseUser, weight, fontWeight, textColor, textAlign)
         }
     }
 }
@@ -120,6 +122,7 @@ private fun NPubDisplay(
     modifier: Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
     textColor: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
 ) {
     Text(
         text = remember { user.pubkeyDisplayHex() },
@@ -128,6 +131,7 @@ private fun NPubDisplay(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         color = textColor,
+        textAlign = textAlign,
     )
 }
 
@@ -138,11 +142,13 @@ private fun UserDisplay(
     modifier: Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
     textColor: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
 ) {
     CreateTextWithEmoji(
         text = bestDisplayName,
         tags = tags,
         fontWeight = fontWeight,
+        textAlign = textAlign,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier,
