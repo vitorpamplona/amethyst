@@ -111,8 +111,8 @@ private fun ChatCollector(
                 kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                 tags = mapOf("a" to listOf(roomATag)),
             )
-        LocalCache.observeEvents<LiveActivitiesChatMessageEvent>(filter).collect { events ->
-            events.forEach { viewModel.onChatEvent(it) }
+        LocalCache.observeNotes(filter).collect { notes ->
+            notes.forEach { viewModel.onChatEvent(it) }
         }
     }
 }

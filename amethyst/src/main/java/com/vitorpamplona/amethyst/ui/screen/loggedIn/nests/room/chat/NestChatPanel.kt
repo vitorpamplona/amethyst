@@ -45,13 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 
@@ -112,6 +110,7 @@ internal fun ColumnScope.NestChatPanel(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     onWantsToReply = nestScreenModel::reply,
+                    onWantsToEditDraft = nestScreenModel::editFromDraft,
                 )
             }
         }
@@ -129,11 +128,12 @@ internal fun ColumnScope.NestChatPanel(
 
 @Composable
 private fun NestChatMessageList(
-    messages: List<LiveActivitiesChatMessageEvent>,
+    messages: List<Note>,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: BouncingIntentNav,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -150,33 +150,23 @@ private fun NestChatMessageList(
         }
     }
 
-    // viewModel.chat is sorted ascending by created_at (oldest first).
-    // reverseLayout=true puts index 0 at the bottom, so reverse the
-    // list here to keep newest-at-bottom rendering — same behavior
-    // LiveStream chat ships in ChatFeedLoaded.
-    val reversed = remember(messages) { messages.asReversed() }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = listState,
         reverseLayout = true,
     ) {
         items(
-            items = reversed,
-            key = { it.id },
-            contentType = { it.kind },
-        ) { event ->
-            val note = remember(event.id) { LocalCache.getOrCreateNote(event.id) }
+            items = messages,
+            key = { it.idHex },
+        ) { note ->
             ChatroomMessageCompose(
                 baseNote = note,
                 routeForLastRead = routeForLastRead,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 onWantsToReply = onWantsToReply,
-                onWantsToEditDraft = NEST_CHAT_NO_OP_NOTE,
+                onWantsToEditDraft = onWantsToEditDraft,
             )
         }
     }
 }
-
-private val NEST_CHAT_NO_OP_NOTE: (Note) -> Unit = {}

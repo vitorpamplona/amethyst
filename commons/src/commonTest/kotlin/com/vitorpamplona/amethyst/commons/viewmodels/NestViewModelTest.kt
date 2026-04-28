@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
+import com.sun.org.apache.xml.internal.serializer.utils.Utils.messages
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.nestsclient.NestsClient
 import com.vitorpamplona.nestsclient.NestsException
 import com.vitorpamplona.nestsclient.NestsListener
@@ -32,6 +34,7 @@ import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import kotlinx.coroutines.CoroutineScope
@@ -224,7 +227,7 @@ class NestViewModelTest {
                 id: String,
                 createdAt: Long,
                 body: String,
-            ) = com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent(
+            ) = LiveActivitiesChatMessageEvent(
                 id = id,
                 pubKey = alice,
                 createdAt = createdAt,
@@ -233,15 +236,21 @@ class NestViewModelTest {
                 sig = "0".repeat(128),
             )
 
+            fun note(event: LiveActivitiesChatMessageEvent): Note {
+                val note = Note(event.id)
+                note.event = event
+                return note
+            }
+
             // Out-of-order arrival on the relay must still produce a
             // chronological transcript on screen.
-            vm.onChatEvent(chat(id = "1".repeat(64), createdAt = 200L, body = "second"))
-            vm.onChatEvent(chat(id = "2".repeat(64), createdAt = 100L, body = "first"))
+            vm.onChatEvent(note(chat(id = "1".repeat(64), createdAt = 200L, body = "second")))
+            vm.onChatEvent(note(chat(id = "2".repeat(64), createdAt = 100L, body = "first")))
 
             val messages = vm.chat.value
             assertEquals(2, messages.size)
-            assertEquals("first", messages[0].content)
-            assertEquals("second", messages[1].content)
+            assertEquals("second", messages[0].event!!.content)
+            assertEquals("first", messages[1].event!!.content)
         }
 
     @Test
@@ -250,7 +259,7 @@ class NestViewModelTest {
             val vm = newViewModel { FakeNestsListener() }
             val alice = "a".repeat(64)
             val msg =
-                com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent(
+                LiveActivitiesChatMessageEvent(
                     id = "1".repeat(64),
                     pubKey = alice,
                     createdAt = 100L,
@@ -259,10 +268,13 @@ class NestViewModelTest {
                     sig = "0".repeat(128),
                 )
 
+            val note = Note(msg.id)
+            note.event = msg
+
             // Same id re-emitted by the relay on reconnect must not
             // produce a duplicate row.
-            vm.onChatEvent(msg)
-            vm.onChatEvent(msg)
+            vm.onChatEvent(note)
+            vm.onChatEvent(note)
 
             assertEquals(1, vm.chat.value.size)
         }
