@@ -195,6 +195,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -1004,6 +1006,14 @@ class Account(
 
         if (event is PollEvent) {
             relayList.addAll(event.relays())
+        }
+
+        if (event is MeetingSpaceEvent) {
+            relayList.addAll(event.allRelayUrls())
+        }
+
+        if (event is LiveActivitiesEvent) {
+            relayList.addAll(event.allRelayUrls())
         }
 
         relayList.addAll(computeRelaysForChannels(event))
