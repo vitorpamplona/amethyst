@@ -949,7 +949,7 @@ private fun OutboxEventsCard(eventIds: Set<HexKey>) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.Send,
                             contentDescription = null,
-                            modifier = Modifier.size(12.dp),
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onTertiaryContainer,
                         )
                         Text(

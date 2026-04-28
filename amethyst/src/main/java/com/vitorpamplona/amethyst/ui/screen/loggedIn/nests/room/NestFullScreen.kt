@@ -240,8 +240,7 @@ internal fun NestFullScreen(
                         accountViewModel = accountViewModel,
                         modifier =
                             Modifier
-                                .weight(1f)
-                                .padding(horizontal = 16.dp),
+                                .weight(1f),
                     )
                 }
 

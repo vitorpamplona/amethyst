@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
 
 @Composable
 fun ThinSendButton(
@@ -43,7 +43,7 @@ fun ThinSendButton(
         Icon(
             symbol = MaterialSymbols.AutoMirrored.Send,
             contentDescription = stringRes(id = R.string.accessibility_send),
-            modifier = Size20Modifier,
+            modifier = Size25Modifier,
         )
     }
 }

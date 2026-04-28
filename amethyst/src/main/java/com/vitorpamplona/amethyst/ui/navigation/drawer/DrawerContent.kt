@@ -123,6 +123,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22ModifierWith4Padding
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.TextStyleBottomNavBar
@@ -463,7 +464,7 @@ fun SendButton(
         Icon(
             symbol = MaterialSymbols.AutoMirrored.Send,
             null,
-            modifier = Size20Modifier,
+            modifier = Size25Modifier,
             tint = tint,
         )
     }
