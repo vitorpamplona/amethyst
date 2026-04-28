@@ -43,7 +43,7 @@ import kotlin.reflect.KClass
  * INav for screens that live inside a free-standing Activity (no Compose
  * NavHost in scope) and need to dispatch navigation requests back to
  * [MainActivity]'s nav graph — typically a chat surface inside the
- * audio-room ([com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity]).
+ * audio-room ([com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity]).
  *
  * Each [nav] / [newStack] / [navBottomBar] call is translated into a
  * `nostr:` URI (when the route maps to a NIP-19 entity) and dispatched

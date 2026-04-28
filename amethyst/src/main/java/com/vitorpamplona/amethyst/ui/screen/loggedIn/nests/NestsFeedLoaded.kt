@@ -74,8 +74,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.PrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
