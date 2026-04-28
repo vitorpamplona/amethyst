@@ -1,9 +1,10 @@
-# Listener-survives-publisher-recycle: resolution + open follow-ups
+# Listener-survives-publisher-recycle: resolution log
 
-**Status:** ✅ Resolved for the production-relevant case
-(publisher recycles, listener doesn't). One pre-existing test
-exposes a separate, narrower issue that is **out of scope here**
-— see "Open: session-swap test" below.
+**Status:** ✅ All three reconnecting-listener interop scenarios
+pass against the real moq-rs relay: happy-path, session-swap,
+and listener-survives-publisher-recycle. Two further fixes landed
+on top of `851045c6` to close the session-swap gap; see "Round 2"
+below.
 
 ## What was broken (recap)
 
@@ -44,70 +45,44 @@ test passes — single SubscribeHandle keeps emitting frames across
 multiple speaker JWT-refresh cycles. Speaker reconnect tests still
 pass too.
 
-## Open: session-swap test
+## Round 2 — closing the session-swap gap (commit `d8ab4fd9`)
 
-`NostrNestsReconnectingListenerInteropTest.reconnecting_wrapper_keeps_handle_alive_across_session_swap`
-still fails in interop runs (with both pre-existing and current
-code). Investigation revealed **two compounding issues**, only one
-of which my fix addresses:
+The `reconnecting_wrapper_keeps_handle_alive_across_session_swap`
+test exposed two compounding issues that round 1 didn't address:
 
-1. **Orchestrator break-on-Closed** (one cause): the orchestrator's
-   `if (terminal is NestsListenerState.Closed) break` exits whenever
-   the inner listener goes Closed for ANY reason. This includes
-   the test's `firstListener.close()` call. Pre-fix the orchestrator
-   stopped → no reconnect → `opens=1`. Removing the break (orchestrator
-   loops on Closed too) gets `opens=2`, but exposes the second
-   issue below. Decision: **keep the break-on-Closed for now** —
-   user-driven `reconnecting.close()` already cancels the
-   orchestrator coroutine separately, and removing the break would
-   fight a deeper publisher issue without a corresponding fix.
+1. **Orchestrator break-on-Closed** — `if (terminal is Closed) break`
+   in `ReconnectingNestsListener.kt` exited whenever the inner
+   listener went Closed for ANY reason, including the test's own
+   `firstListener.close()`. Removed the break: user-driven
+   `reconnecting.close()` already cancels the orchestrator
+   coroutine separately, so any other Closed (peer transport drop,
+   recycle) is now a reconnect trigger.
 
-2. **Publisher single-group architecture** (the deeper cause):
-   `NestMoqLiteBroadcaster` only ever calls `publisher.send(opus)`
-   — never `startGroup()` / `endGroup()`. So the entire broadcast
-   is one giant moq-lite group. A subscriber that joins
-   mid-broadcast (the test's listener-2 case) gets nothing because
-   moq-lite's "from-latest" subscribe semantics give the next
-   group's frames; if the publisher is in the middle of a
-   never-ending group, the new subscriber waits indefinitely.
+2. **Publisher single-group architecture** —
+   `NestMoqLiteBroadcaster` only ever called `publisher.send(opus)`,
+   never `endGroup()`. The entire broadcast was one giant moq-lite
+   group; a subscriber that joined mid-broadcast got nothing
+   because `from-latest` subscribe semantics give the NEXT group's
+   frames, and the publisher was in a never-ending group. Fixed by
+   adding `publisher.endGroup()` after each send — one Opus frame
+   per moq-lite group, mirroring the kixelated reference's audio
+   publish path.
 
-   The listener-survives-publisher-recycle path doesn't hit this
-   because each speaker JWT cycle creates a fresh publisher session
-   with a fresh group — the listener-side resubscribe naturally
-   lands on a new group.
+Three companion changes in `MoqLiteSession.kt` were needed to make
+those work cleanly:
 
-   Fixing this properly would require periodic group rotation in
-   `NestMoqLiteBroadcaster` (e.g. one group per second, or per N
-   frames). That's a substantive audio-pipeline change with its
-   own concerns (jitter buffer interaction, listener seek
-   semantics) — out of scope for the listener-survival work.
+- `ensureAnnounceWatchStarted()` runs synchronously before the
+  first subscribe, so the relay sees us as an audience member
+  before we ask to subscribe (otherwise it returns "not found").
+- `handleInboundBidi` refactored to a single long-running
+  collector with the varint `typeCode` hoisted outside `collect`
+  (an earlier draft re-read the body bytes as the type code on the
+  second collect pass).
+- `removeInboundSubscription(sub)` FINs the publisher's
+  `currentGroup` when an inbound subscribe bidi closes, so the next
+  send opens a fresh uni stream keyed off a live subscriber rather
+  than the dead one that was first in the inboundSubs set.
 
-The interop test's expectation — that closing the inner listener
-mid-stream forces a clean session swap with continuous frame flow
-— is unrealistic against the current publisher architecture. The
-test was passing pre-my-changes because the orchestrator broke on
-Closed (issue 1) BEFORE issue 2 could be observed; with the break
-in place, the test never gets to verify frame continuity, and
-fails earlier with `opens=1`. Either way, the test fails — it just
-fails for different reasons before vs. after issue 1 is fixed.
-
-For follow-up:
-
-- Consider rotating moq-lite groups in `NestMoqLiteBroadcaster`
-  on a fixed cadence so mid-stream listener subscribes work.
-- Once rotation lands, consider removing the
-  orchestrator's `break-on-Closed` so that listener-side recycles
-  via `firstListener.close()` (or analogous transport-peer-close
-  paths) trigger a wrapper-level reconnect. Today, the only
-  documented path for the wrapper to spin up a fresh inner listener
-  is via the JWT refresh window or a Failed terminal state.
-
-## Files relevant to follow-up
-
-- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/audio/NestMoqLiteBroadcaster.kt`
-  — where to add periodic `endGroup()` + new group on send.
-- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/ReconnectingNestsListener.kt:174`
-  — where the break-on-Closed lives.
-- `nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/interop/NostrNestsReconnectingListenerInteropTest.kt`
-  — `reconnecting_wrapper_keeps_handle_alive_across_session_swap`
-  is the failing-but-pre-existing test that captures both issues.
+The round-trip interop test's groupId assertion was updated from
+`groupId == 0` to `groupId == idx` to match the new
+one-group-per-frame contract.
