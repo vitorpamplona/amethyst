@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -74,7 +75,9 @@ fun ShortsScreen(
             }
         },
         floatingButton = {
-            NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop)
+            FabBottomBarPadded(nav) {
+                NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop)
+            }
         },
         accountViewModel = accountViewModel,
     ) {

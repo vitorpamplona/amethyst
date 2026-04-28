@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -253,12 +254,14 @@ private fun DiscoverPages(
         floatingButton = {
             val currentPage = pagerState.currentPage
             if (currentPage >= 0 && currentPage < feedTabs.size) {
-                if (feedTabs[currentPage].resource == R.string.discover_marketplace) {
-                    NewProductButton(accountViewModel, nav)
-                }
+                FabBottomBarPadded(nav) {
+                    if (feedTabs[currentPage].resource == R.string.discover_marketplace) {
+                        NewProductButton(accountViewModel, nav)
+                    }
 
-                if (feedTabs[currentPage].resource == R.string.discover_reads) {
-                    NewLongFormMarkdownButton(accountViewModel, nav)
+                    if (feedTabs[currentPage].resource == R.string.discover_reads) {
+                        NewLongFormMarkdownButton(accountViewModel, nav)
+                    }
                 }
             }
         },

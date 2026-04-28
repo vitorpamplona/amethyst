@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -80,7 +81,9 @@ private fun ListManagementView(
             TopBarWithBackButton(caption = stringRes(R.string.article_bookmark_management_title), nav)
         },
         floatingActionButton = {
-            NewListButton { nav.nav(Route.BookmarkGroupMetadataEdit()) }
+            FabBottomBarPadded(nav) {
+                NewListButton { nav.nav(Route.BookmarkGroupMetadataEdit()) }
+            }
         },
     ) { contentPadding ->
         Column(

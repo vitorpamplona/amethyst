@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -36,3 +37,18 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
  */
 @Composable
 fun Modifier.fabBottomBarPadding(nav: INav): Modifier = if (nav.canPop()) padding(bottom = AppBottomBarHeight) else this
+
+/**
+ * Convenience wrapper that places [content] in a [Box] with [fabBottomBarPadding] applied.
+ * Use this around `floatingActionButton` / `floatingButton` slots whose body is a reusable
+ * named FAB composable that does not accept a `modifier` parameter.
+ */
+@Composable
+fun FabBottomBarPadded(
+    nav: INav,
+    content: @Composable () -> Unit,
+) {
+    Box(modifier = Modifier.fabBottomBarPadding(nav)) {
+        content()
+    }
+}
