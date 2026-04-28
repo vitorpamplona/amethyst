@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -46,18 +51,24 @@ internal fun SpeakerReactionOverlay(
     reactions: List<RoomReaction>,
     modifier: Modifier = Modifier,
 ) {
-    if (reactions.isEmpty()) return
-    // Group by content so duplicate emojis collapse into a single
-    // "🔥 ×N" chip. Order by most recent so a fresh reaction lands
-    // at the front of the row.
-    val byContent = reactions.groupBy { it.content }
-    val ordered = byContent.toList().sortedByDescending { (_, list) -> list.maxOf { it.createdAtSec } }
-    Row(
+    // Wrap the row in AnimatedVisibility so the burst scales-and-fades
+    // in instead of snapping; a fading-out tail also smooths the
+    // 30 s eviction sweep instead of having chips just disappear.
+    AnimatedVisibility(
+        visible = reactions.isNotEmpty(),
+        enter = fadeIn() + scaleIn(initialScale = 0.6f),
+        exit = fadeOut() + scaleOut(targetScale = 0.6f),
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        ordered.forEach { (content, list) ->
-            ReactionChip(content = content, count = list.size)
+        // Group by content so duplicate emojis collapse into a single
+        // "🔥 ×N" chip. Order by most recent so a fresh reaction lands
+        // at the front of the row.
+        val byContent = reactions.groupBy { it.content }
+        val ordered = byContent.toList().sortedByDescending { (_, list) -> list.maxOf { it.createdAtSec } }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ordered.forEach { (content, list) ->
+                ReactionChip(content = content, count = list.size)
+            }
         }
     }
 }
@@ -67,14 +78,19 @@ private fun ReactionChip(
     content: String,
     count: Int,
 ) {
+    // Tonal Surface picks up the right elevation tint in both light
+    // and dark themes — softer than the flat secondaryContainer fill
+    // and keeps a tiny shadow so the chip reads as floating.
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
     ) {
         val label = if (count > 1) "$content ×$count" else content
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }

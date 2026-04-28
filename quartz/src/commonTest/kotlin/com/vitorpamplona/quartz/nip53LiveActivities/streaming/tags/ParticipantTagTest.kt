@@ -70,4 +70,25 @@ class ParticipantTagTest {
         assertEquals(ROLE.SPEAKER, tag("speaker").effectiveRole())
         assertEquals(ROLE.PARTICIPANT, tag("participant").effectiveRole())
     }
+
+    @Test
+    fun nostrnestsAdminRoleIsAcceptedAsModerator() {
+        // nostrnests' useAdminCommands.ts emits role="admin" on the
+        // p-tag; we must recognise it for promote/demote/kick interop.
+        assertEquals(ROLE.MODERATOR, tag("admin").effectiveRole())
+        assertTrue(tag("admin").isModerator())
+        assertTrue(tag("admin").canSpeak())
+        // Case-insensitive too, like everything else.
+        assertEquals(ROLE.MODERATOR, tag("Admin").effectiveRole())
+        assertEquals(ROLE.MODERATOR, tag("ADMIN").effectiveRole())
+    }
+
+    @Test
+    fun moderatorCodeEmitsAdminWireString() {
+        // After matching nostrnests / EGG-07 the wire string is "admin";
+        // any code that builds a kind-30312 p-tag from ROLE.MODERATOR.code
+        // must produce "admin", not the legacy "moderator".
+        assertEquals("admin", ROLE.MODERATOR.code)
+        assertEquals(listOf("moderator"), ROLE.MODERATOR.legacyCodes)
+    }
 }

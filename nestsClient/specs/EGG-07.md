@@ -170,3 +170,13 @@ moderation without speaking to the relay.
 
 Future EGGs MAY introduce additional `action` values (e.g. `"mute"`,
 `"warn"`). Implementers MUST treat unknown actions as no-ops.
+
+### Implemented extensions
+
+Amethyst additionally emits and honours `["action", "mute"]` as a
+host-issued *force-mute*: the targeted speaker's client flips its own
+mic-mute (the `["muted", "1"]` flag on its next kind:10312 heartbeat)
+and stops broadcasting audio. nostrnests' web client does not yet
+emit or recognise this verb, so cross-client force-mutes only land
+when both sides run a client that implements it. Authority gates,
+freshness window, and replay rules are identical to `kick`.

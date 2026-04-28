@@ -121,6 +121,21 @@ interface AudioPlayer {
      */
     fun setMuted(muted: Boolean)
 
+    /**
+     * Per-stream output gain, range `[0.0, 1.0]`. 1.0 is the device
+     * default; 0.0 silences this stream while leaving any other
+     * concurrent players untouched. Used to "hush" one speaker
+     * locally without affecting the rest of the room.
+     *
+     * Independent of [setMuted]: muted streams are silent regardless of
+     * gain, and an unmuted stream at gain 0 is still silent. The two
+     * controls compose multiplicatively. Default gain is 1.0.
+     *
+     * Default implementation is a no-op so existing fakes / capture-only
+     * actuals don't have to grow a method they'll never use.
+     */
+    fun setVolume(volume: Float) {}
+
     /** Stop playback and release resources. After this, the player is unusable. */
     fun stop()
 }

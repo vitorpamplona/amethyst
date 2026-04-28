@@ -190,6 +190,24 @@ class NestViewModel(
     val announcedSpeakers: StateFlow<Set<String>> = _announcedSpeakers.asStateFlow()
 
     /**
+     * Per-speaker peak audio amplitude for the most recent decoded
+     * frame, normalized to `[0, 1]`. Drives the live "voice ring"
+     * around speaker avatars: while a pubkey is in [NestUiState.speakingNow],
+     * the UI reads this map to throb the green border in time with
+     * the voice.
+     *
+     * Updated by [NestPlayer]'s `onLevel` callback at ~50 Hz per speaker
+     * (one frame per 20 ms Opus packet); the VM coalesces those raw
+     * updates into a single StateFlow emission every [LEVEL_TICK_MS]
+     * via [levelEmitterJob]. Empty when no speaker is being decoded;
+     * an entry drops when its subscription closes.
+     */
+    private val rawAudioLevels = mutableMapOf<String, Float>()
+    private val _audioLevels = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val audioLevels: StateFlow<Map<String, Float>> = _audioLevels.asStateFlow()
+    private var levelEmitterJob: Job? = null
+
+    /**
      * `true` once the local user has been kicked (#5) — the platform
      * layer flips this on a valid kind-4312 from a host/moderator and
      * the UI can show a toast + finish the activity. Set-once; never
@@ -211,6 +229,21 @@ class NestViewModel(
         if (_wasKicked.value) return
         _wasKicked.value = true
         disconnect()
+    }
+
+    /**
+     * Honor an inbound kind-4312 force-mute targeted at the local
+     * user. No-ops when we aren't broadcasting; otherwise routes
+     * through the existing [setMicMuted] path so the wire mute and
+     * UI state both flip in sync. Caller (the AdminCommandsCollector)
+     * is responsible for verifying the signer is host/moderator on
+     * the active kind-30312 — the relay does not enforce that.
+     */
+    fun onForceMuted() {
+        if (closed) return
+        if (broadcastHandle == null) return
+        if ((_uiState.value.broadcast as? BroadcastUiState.Broadcasting)?.isMuted == true) return
+        setMicMuted(true)
     }
 
     private var listener: NestsListener? = null
@@ -287,6 +320,31 @@ class NestViewModel(
         if (closed) return
         _uiState.update { it.copy(isMuted = muted) }
         activeSubscriptions.values.forEach { it.player?.setMutedSafe(muted) }
+    }
+
+    /**
+     * Locally silence (hush) one speaker without affecting the rest of
+     * the room. Independent of [setMuted] (room-wide). The hush is
+     * applied via [AudioPlayer.setVolume] so the network + decode
+     * pipeline keeps running — re-enabling is sample-accurate.
+     *
+     * The set survives subscription churn: re-subscribing to a hushed
+     * speaker re-applies the gain on the new player at attach time.
+     */
+    fun setLocalHushed(
+        pubkey: String,
+        hushed: Boolean,
+    ) {
+        if (closed) return
+        val updated =
+            _uiState.value.locallyHushed.let {
+                if (hushed) it + pubkey else it - pubkey
+            }
+        if (updated == _uiState.value.locallyHushed) return
+        _uiState.update { it.copy(locallyHushed = updated.toPersistentSet()) }
+        activeSubscriptions[pubkey]?.player?.runCatching {
+            setVolume(if (hushed) 0f else 1f)
+        }
     }
 
     /**
@@ -695,6 +753,9 @@ class NestViewModel(
         if (_speakerCatalogs.value.containsKey(slot.pubkey)) {
             _speakerCatalogs.update { it - slot.pubkey }
         }
+        if (rawAudioLevels.remove(slot.pubkey) != null) {
+            _audioLevels.value = rawAudioLevels.toMap()
+        }
         if (roomPlayer != null || handle != null) {
             viewModelScope.launch {
                 roomPlayer?.runCatching { stop() }
@@ -766,14 +827,22 @@ class NestViewModel(
                 }
             try {
                 val isMuted = _uiState.value.isMuted
+                val isHushed = pubkey in _uiState.value.locallyHushed
                 val roomPlayer = NestPlayer(decoder, player, viewModelScope)
-                // Apply current mute state before play() opens the device so the
-                // first frame respects it.
+                // Apply current mute + per-speaker hush state before play()
+                // opens the device so the first frame respects them.
                 player.setMutedSafe(isMuted)
+                if (isHushed) {
+                    runCatching { player.setVolume(0f) }
+                }
                 // Tap the object flow to drive the speaking-now indicator before
                 // the decoder consumes it.
                 val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
-                roomPlayer.play(instrumented, onError = { /* swallow per-packet decoder errors */ })
+                roomPlayer.play(
+                    instrumented,
+                    onError = { /* swallow per-packet decoder errors */ },
+                    onLevel = { onAudioLevel(pubkey, it) },
+                )
                 slot.attach(handle, roomPlayer, player)
                 publishActiveSpeakers()
                 // Enter the buffering window — UI renders a spinner
@@ -817,6 +886,12 @@ class NestViewModel(
         stateObserverJob = null
         announcesJob?.cancel()
         announcesJob = null
+        levelEmitterJob?.cancel()
+        levelEmitterJob = null
+        rawAudioLevels.clear()
+        if (_audioLevels.value.isNotEmpty()) {
+            _audioLevels.value = emptyMap()
+        }
         if (_announcedSpeakers.value.isNotEmpty()) {
             _announcedSpeakers.value = emptySet()
         }
@@ -906,6 +981,55 @@ class NestViewModel(
         if (_uiState.value.speakingNow.contains(pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow - pubkey).toPersistentSet()) }
         }
+        // Drop the latest level too — when the speaker goes quiet the
+        // ring should fall back to the static "in speakingNow" colour
+        // rather than freezing at the last loud peak.
+        if (rawAudioLevels.remove(pubkey) != null) {
+            _audioLevels.value = rawAudioLevels.toMap()
+        }
+    }
+
+    /**
+     * Record the latest decoded peak amplitude for [pubkey]. Called
+     * from the [NestPlayer] decode loop on the same dispatcher as the
+     * VM, so plain map mutation is safe. Boots the coalescing emitter
+     * on first activity; the emitter shuts itself down once all audio
+     * has gone quiet, so a long-idle room costs no scheduled work.
+     */
+    private fun onAudioLevel(
+        pubkey: String,
+        level: Float,
+    ) {
+        if (closed) return
+        rawAudioLevels[pubkey] = level
+        startLevelEmitter()
+    }
+
+    /**
+     * Tick every [LEVEL_TICK_MS] and publish the current map of
+     * per-speaker levels. Coalesces the high-frequency raw updates
+     * into ~10 Hz UI state so the speaking-ring animation has a
+     * smooth, lightweight signal to follow.
+     *
+     * Self-terminating: once a tick observes an empty raw map (and
+     * has flushed the empty snapshot to consumers) the loop exits.
+     * The next [onAudioLevel] restarts it. Idempotent — calling
+     * this while already active is a no-op.
+     */
+    private fun startLevelEmitter() {
+        if (levelEmitterJob?.isActive == true) return
+        levelEmitterJob =
+            viewModelScope.launch {
+                while (true) {
+                    delay(LEVEL_TICK_MS)
+                    if (closed) return@launch
+                    val snapshot = if (rawAudioLevels.isEmpty()) emptyMap() else rawAudioLevels.toMap()
+                    if (snapshot != _audioLevels.value) {
+                        _audioLevels.value = snapshot
+                    }
+                    if (snapshot.isEmpty()) return@launch
+                }
+            }
     }
 
     private class ActiveSubscription private constructor(
@@ -1034,6 +1158,14 @@ data class NestUiState(
      * `["onstage", "0|1"]` tag on emitted kind-10312 presence events.
      */
     val onStageNow: Boolean = true,
+    /**
+     * Pubkeys the local user has chosen to silence in their own
+     * playback ("hush"). Independent of [isMuted]. Persists across
+     * subscription churn so re-subscribing to a hushed speaker stays
+     * silent. Drives a "Hush this speaker locally" toggle in the
+     * participant context sheet.
+     */
+    val locallyHushed: ImmutableSet<String> = persistentSetOf(),
 ) {
     /**
      * Derived: are we currently pushing audio packets to the relay?
@@ -1073,6 +1205,16 @@ sealed class BroadcastUiState {
  * indicator flicker.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/**
+ * Coalescing interval for [NestViewModel.audioLevels]. The decode loop
+ * pushes a fresh peak every ~20 ms (one per Opus frame); we publish to
+ * the StateFlow at this cadence instead so the UI ring animates ~10 Hz
+ * instead of recomposing every frame. 100 ms is fast enough that the
+ * eye still reads the throb as live, slow enough that the cost across
+ * a busy stage stays trivial.
+ */
+const val LEVEL_TICK_MS: Long = 100L
 
 /**
  * How long a kind-7 reaction stays in

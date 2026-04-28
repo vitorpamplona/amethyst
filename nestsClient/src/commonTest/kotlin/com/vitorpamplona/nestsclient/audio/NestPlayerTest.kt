@@ -151,6 +151,50 @@ class NestPlayerTest {
         }
 
     @Test
+    fun on_level_reports_normalized_peak_per_decoded_frame() =
+        runTest {
+            // Decode each input byte to a single 16-bit sample with a
+            // known peak so we can assert the level math directly.
+            // 0x01 -> 1/32768 (~0), 0x40 -> 0x4000 (0.5), 0x7F -> 0x7FFF (max).
+            val decoder = FakeOpusDecoder { bytes -> ShortArray(1) { (bytes[0].toInt() shl 8).toShort() } }
+            val player = FakeAudioPlayer()
+            val levels = mutableListOf<Float>()
+
+            val sut = NestPlayer(decoder, player, this)
+            sut.play(
+                objects =
+                    flowOf(
+                        moqObject(byteArrayOf(0x40)),
+                        moqObject(byteArrayOf(0x7F)),
+                    ),
+                onLevel = { levels.add(it) },
+            )
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(2, levels.size)
+            // 0x40 << 8 = 0x4000 = 16384 → 16384/32768 = 0.5
+            assertTrue(levels[0] in 0.49f..0.51f, "expected ~0.5, got ${levels[0]}")
+            // 0x7F << 8 = 0x7F00 → 0x7F00/32768 ≈ 0.992
+            assertTrue(levels[1] > 0.98f, "expected near-max, got ${levels[1]}")
+            sut.stop()
+        }
+
+    @Test
+    fun on_level_is_skipped_when_decoder_returns_empty_pcm() =
+        runTest {
+            val decoder = FakeOpusDecoder { ShortArray(0) }
+            val levels = mutableListOf<Float>()
+            val sut = NestPlayer(decoder, FakeAudioPlayer(), this)
+            sut.play(
+                objects = flowOf(moqObject(byteArrayOf(0x01))),
+                onLevel = { levels.add(it) },
+            )
+            testScheduler.advanceUntilIdle()
+            assertEquals(0, levels.size)
+            sut.stop()
+        }
+
+    @Test
     fun objects_arriving_after_play_are_streamed_through_the_pipeline() =
         runTest {
             val channel = Channel<MoqObject>(capacity = 8)

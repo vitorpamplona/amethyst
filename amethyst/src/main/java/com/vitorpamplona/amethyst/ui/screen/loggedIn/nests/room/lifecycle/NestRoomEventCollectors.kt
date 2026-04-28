@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -167,22 +168,44 @@ private fun AdminCommandsCollector(
     localPubkey: String,
 ) {
     LaunchedEffect(viewModel, roomATag, localPubkey) {
+        // EGG-07 / nostrnests gate: ignore admin commands older than
+        // 60 s. The relay filter narrows the firehose; the per-cmd
+        // check below catches anything that slips through (cached
+        // events, system clock skew, etc.).
+        val sinceSec = TimeUtils.now() - ADMIN_COMMAND_FRESHNESS_SEC
         val filter =
             Filter(
                 kinds = listOf(AdminCommandEvent.KIND),
                 tags = mapOf("a" to listOf(roomATag), "p" to listOf(localPubkey)),
+                since = sinceSec,
             )
+        // Replay protection per EGG-07 #7: a single kick / mute must
+        // act exactly once even when re-delivered from multiple
+        // relays. Lifetime-of-collector dedup mirrors how nostrnests'
+        // useAdminCommands.ts uses a `processedRef` set.
+        val processed = mutableSetOf<String>()
         LocalCache.observeNewEvents<AdminCommandEvent>(filter).collect { cmd ->
-            if (cmd.action() != AdminCommandEvent.Action.KICK) return@collect
             if (cmd.targetPubkey() != localPubkey) return@collect
+            // Defensive freshness re-check: relay might have served a
+            // cached older event despite the `since` hint, or the
+            // user's clock might have jumped forward.
+            if (TimeUtils.now() - cmd.createdAt > ADMIN_COMMAND_FRESHNESS_SEC) return@collect
+            if (!processed.add(cmd.id)) return@collect
             val signerIsAuthorised =
                 cmd.pubKey == event.pubKey ||
                     event.participants().any { it.pubKey == cmd.pubKey && (it.isHost() || it.isModerator()) }
             if (!signerIsAuthorised) return@collect
-            viewModel.onKick()
+            when (cmd.action()) {
+                AdminCommandEvent.Action.KICK -> viewModel.onKick()
+                AdminCommandEvent.Action.MUTE -> viewModel.onForceMuted()
+                null -> Unit // unknown verb, ignore
+            }
         }
     }
 }
+
+/** Spec window from EGG-07 #7 — 60-second freshness gate on kind-4312. */
+private const val ADMIN_COMMAND_FRESHNESS_SEC: Long = 60L
 
 private const val PRESENCE_EVICT_INTERVAL_MS = 60_000L
 private const val PRESENCE_STALE_THRESHOLD_SEC = 6L * 60L
