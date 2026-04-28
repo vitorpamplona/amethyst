@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.ui.layouts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.HorizontalDivider
@@ -126,6 +128,7 @@ private fun ScaffoldLayout(
     floatingButton: (@Composable () -> Unit)?,
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
+    val navBarInsets = WindowInsets.navigationBars
     SubcomposeLayout { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
@@ -160,7 +163,15 @@ private fun ScaffoldLayout(
                     }
                 }.firstOrNull()?.measure(looseConstraints)
             }
-        val bottomHeight = bottomPlaceable?.height ?: 0
+        // When the bar lambda is provided but its content emits nothing (e.g. AppBottomBar
+        // hides itself on canPop entries), reserve the system-nav-bar inset so the FAB and
+        // content stay clear of the navigation bar instead of sliding under it. The
+        // `bottomBar == null` branch is already handled by navigationBarsPadding on
+        // rootModifier.
+        val bottomHeight =
+            (bottomPlaceable?.height ?: 0).let { measured ->
+                if (bottomBar != null && measured == 0) navBarInsets.getBottom(this) else measured
+            }
 
         // Publish the measured limits so the nested-scroll connection can clamp correctly.
         state.topHeightLimit = topHeight.toFloat()
