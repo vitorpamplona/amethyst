@@ -173,7 +173,7 @@ class MlsGroupTest {
 
         assertTrue(result.commitBytes.isNotEmpty(), "Commit bytes should not be empty")
         assertNotNull(result.welcomeBytes, "Welcome bytes should be present for Add")
-        assertTrue(result.welcomeBytes!!.isNotEmpty(), "Welcome bytes should not be empty")
+        assertTrue(result.welcomeBytes.isNotEmpty(), "Welcome bytes should not be empty")
 
         // After commit, epoch should advance
         assertEquals(1L, aliceGroup.epoch)
@@ -254,17 +254,18 @@ class MlsGroupTest {
         val groupInfoBytes = alice.groupInfo().toTlsBytes()
 
         // Zara joins via external commit (without a Welcome)
-        val (zara, commitBytes) =
+        val externalJoin =
             MlsGroup.externalJoin(
                 groupInfoBytes,
                 "zara".encodeToByteArray(),
             )
+        val zara = externalJoin.group
 
         // Zara is now in the group at epoch 1
         assertEquals(1L, zara.epoch)
 
         // Alice processes Zara's external commit
-        alice.processCommit(commitBytes, zara.leafIndex)
+        alice.processFramedCommit(externalJoin.framedCommitBytes)
         assertEquals(1L, alice.epoch)
         assertEquals(2, alice.memberCount)
     }
@@ -272,7 +273,7 @@ class MlsGroupTest {
     @Test
     fun testSelfRemove() {
         val group = MlsGroup.create("alice".encodeToByteArray())
-        val selfRemoveBytes = group.selfRemove()
+        val (selfRemoveBytes, _) = group.buildSelfRemoveProposalMessage()
         assertTrue(selfRemoveBytes.isNotEmpty())
     }
 

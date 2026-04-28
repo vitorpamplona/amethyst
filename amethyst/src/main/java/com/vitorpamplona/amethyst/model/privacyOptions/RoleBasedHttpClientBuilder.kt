@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.privacyOptions
 
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress

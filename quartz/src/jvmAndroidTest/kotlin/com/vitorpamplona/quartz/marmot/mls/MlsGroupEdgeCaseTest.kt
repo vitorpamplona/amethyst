@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.marmot.mls
 
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -225,10 +224,6 @@ class MlsGroupEdgeCaseTest {
     // 6. Multiple epochs of encrypt/decrypt
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — commit_secret decryption from
-    // UpdatePath does not correctly derive matching epoch secrets between commit()
-    // and processCommit(). See MlsGroupLifecycleTest.testThreeMemberGroup_SequentialAdditions.
-    @Ignore
     @Test
     fun testMultipleEpochTransitions_EncryptDecryptStillWorks() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -239,10 +234,9 @@ class MlsGroupEdgeCaseTest {
         // Advance through several epochs with empty commits
         for (i in 0 until 5) {
             val commitResult = alice.commit()
-            bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+            bob.processFramedCommit(commitResult.framedCommitBytes)
         }
 
-        assertEquals(7L, alice.epoch) // epoch 0 + addMember(1) + 5 commits = 6... wait
         // epoch 0 (create) -> epoch 1 (add bob) -> 5 empty commits = epoch 6
         assertEquals(6L, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)
@@ -277,7 +271,7 @@ class MlsGroupEdgeCaseTest {
 
         for (i in 0 until 3) {
             val commitResult = alice.commit()
-            bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+            bob.processFramedCommit(commitResult.framedCommitBytes)
             keys.add(alice.exporterSecret("marmot", "group-event".encodeToByteArray(), 32))
         }
 

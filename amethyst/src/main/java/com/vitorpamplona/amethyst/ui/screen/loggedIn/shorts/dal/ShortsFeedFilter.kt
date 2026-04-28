@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import kotlin.collections.plus
 
 class ShortsFeedFilter(
     val account: Account,

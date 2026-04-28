@@ -1,0 +1,29 @@
+[package]
+name = "mdk-vector-gen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+openmls = { version = "0.8.1", features = ["test-utils"] }
+openmls_rust_crypto = "0.5.1"
+openmls_basic_credential = { version = "0.5", features = ["test-utils"] }
+openmls_memory_storage = { version = "0.5", features = ["persistence"] }
+openmls_traits = "0.5"
+tls_codec = "0.4"
+hex = "0.4"
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+base64 = "0.22"
+env_logger = "0.11"
+
+[[bin]]
+name = "mdk-vector-gen"
+path = "src/main.rs"
+
+[[bin]]
+name = "emit-joiner-kp"
+path = "src/emit_joiner_kp.rs"
+
+[[bin]]
+name = "verify-amethyst"
+path = "src/verify_amethyst.rs"

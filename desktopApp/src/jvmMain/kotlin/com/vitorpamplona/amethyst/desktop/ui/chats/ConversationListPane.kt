@@ -38,11 +38,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -59,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -66,6 +63,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -91,6 +90,7 @@ fun ConversationListPane(
     selectedRoom: ChatroomKey?,
     onConversationSelected: (ChatroomKey) -> Unit,
     onNewConversation: () -> Unit = {},
+    onShowRelayPicker: () -> Unit = {},
     focusRequester: FocusRequester = remember { FocusRequester() },
     modifier: Modifier = Modifier,
 ) {
@@ -120,6 +120,9 @@ fun ConversationListPane(
         modifier =
             modifier
                 .fillMaxHeight()
+                // Chat-list pane reads as a secondary surface (like Messages.app,
+                // Slack, Telegram); the chat content pane to the right stays white.
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .focusRequester(focusRequester)
                 .focusable()
                 .onPreviewKeyEvent { event ->
@@ -180,11 +183,22 @@ fun ConversationListPane(
             )
 
             IconButton(
+                onClick = onShowRelayPicker,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    MaterialSymbols.Dns,
+                    contentDescription = "DM Relays",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            IconButton(
                 onClick = onNewConversation,
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    Icons.Default.Add,
+                    MaterialSymbols.Add,
                     contentDescription = "New conversation",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
@@ -273,9 +287,13 @@ private fun ConversationCard(
 ) {
     val backgroundColor =
         when {
-            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            isFocused -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            else -> MaterialTheme.colorScheme.surface
+            isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+
+            isFocused -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+
+            // Transparent lets the pane's surfaceContainer show through — the
+            // list pane is the "secondary surface" in this screen.
+            else -> Color.Transparent
         }
 
     Row(
@@ -287,40 +305,47 @@ private fun ConversationCard(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Unread indicator
-        if (item.hasUnread) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-            )
-            Spacer(Modifier.width(6.dp))
-        } else {
-            Spacer(Modifier.width(14.dp))
-        }
-
-        // Avatar
+        // Avatar — starts flush with the header's 12dp padding. Unread state is
+        // signalled by a small primary-coloured dot overlaid on the avatar's
+        // bottom-right corner (Slack / iMessage-style), not an inline indent
+        // that would push the whole card to the right of the header label.
         val firstUser = item.users.firstOrNull()
-        if (firstUser != null) {
-            UserAvatar(
-                userHex = firstUser.pubkeyHex,
-                pictureUrl = firstUser.profilePicture(),
-                size = 40.dp,
-            )
-        } else if (item.isGroup) {
-            Icon(
-                Icons.Default.Group,
-                contentDescription = "Group",
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Box {
+            if (firstUser != null) {
+                UserAvatar(
+                    userHex = firstUser.pubkeyHex,
+                    pictureUrl = firstUser.profilePicture(),
+                    size = 40.dp,
+                )
+            } else if (item.isGroup) {
+                Icon(
+                    MaterialSymbols.Group,
+                    contentDescription = "Group",
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (item.hasUnread) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .padding(1.5.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                )
+            }
         }
 
         Spacer(Modifier.width(10.dp))
 
-        // Name, preview, timestamp
+        // Name, preview, timestamp — vertical hierarchy: name = medium-weight
+        // primary text (titleSmall), preview = muted secondary. Prior styling had
+        // both lines at the same weight / near-same color and stacked flush,
+        // making them blur into each other.
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -329,7 +354,7 @@ private fun ConversationCard(
             ) {
                 Text(
                     text = item.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -337,30 +362,34 @@ private fun ConversationCard(
                 )
 
                 if (item.lastMessageTimestamp > 0) {
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = item.lastMessageTimestamp.toTimeAgo(withDot = false),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
                 }
             }
 
             if (item.lastMessagePreview.isNotEmpty()) {
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = item.lastMessagePreview,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
 
-            // Group indicator
+            // Group indicator — labelSmall with muted tertiary so the name line
+            // still wins the eye even when a group badge is present.
             if (item.isGroup) {
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "Group (${item.users.size + 1})",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 )
             }
         }

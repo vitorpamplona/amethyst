@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActiviti
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsAllCommunities
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -78,7 +77,7 @@ fun filterLiveActivitiesByAllCommunities(
 
     return communitySet.set
         .mapNotNull {
-            filterContentDVMsAllCommunities(
+            filterLiveActivitiesAllCommunities(
                 relay = it.key,
                 communities = it.value.communities,
                 since = since?.get(it.key)?.time ?: defaultSince,

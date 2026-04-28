@@ -31,15 +31,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -51,6 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -58,6 +54,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
@@ -71,11 +69,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
 import kotlinx.coroutines.launch
 
@@ -87,46 +82,8 @@ fun ProfileHeader(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    var popupExpanded by remember { mutableStateOf(false) }
-
     Box {
         DrawBanner(baseUser, accountViewModel)
-
-        Box(
-            modifier =
-                Modifier
-                    .statusBarsPadding()
-                    .padding(start = 10.dp, end = 10.dp, top = 10.dp)
-                    .size(40.dp)
-                    .align(Alignment.TopEnd),
-        ) {
-            Button(
-                modifier =
-                    Modifier
-                        .size(30.dp)
-                        .align(Alignment.Center),
-                onClick = { popupExpanded = true },
-                shape = ButtonBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                    ),
-                contentPadding = ZeroPadding,
-            ) {
-                Icon(
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringRes(R.string.more_options),
-                )
-
-                UserProfileDropDownMenu(
-                    baseUser,
-                    popupExpanded,
-                    { popupExpanded = false },
-                    accountViewModel,
-                )
-            }
-        }
 
         Column(
             modifier =
@@ -173,12 +130,15 @@ fun ZoomableUserPicture(
     val scope = rememberCoroutineScope()
 
     var zoomImageUrl by remember { mutableStateOf<String?>(null) }
+    var sourceBounds by remember { mutableStateOf<Rect?>(null) }
 
     ClickableUserPicture(
         baseUser = baseUser,
         accountViewModel = accountViewModel,
         size = size,
-        modifier = MaterialTheme.colorScheme.userProfileBorderModifier,
+        modifier =
+            MaterialTheme.colorScheme.userProfileBorderModifier
+                .onGloballyPositioned { sourceBounds = it.boundsInWindow() },
         onClick = {
             val pic = baseUser.profilePicture()
             if (pic != null) {
@@ -197,7 +157,8 @@ fun ZoomableUserPicture(
 
     zoomImageUrl?.let {
         ZoomableImageDialog(
-            RichTextParser.parseImageOrVideo(it),
+            imageUrl = RichTextParser.parseImageOrVideo(it),
+            sourceBounds = sourceBounds,
             onDismiss = { zoomImageUrl = null },
             accountViewModel = accountViewModel,
         )
@@ -268,7 +229,7 @@ private fun ProfilePictureUploadButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Default.AddPhotoAlternate,
+                symbol = MaterialSymbols.AddPhotoAlternate,
                 contentDescription = stringRes(R.string.upload_image),
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurface,

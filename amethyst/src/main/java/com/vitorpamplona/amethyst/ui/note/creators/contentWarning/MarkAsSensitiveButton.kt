@@ -24,11 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -37,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -54,7 +51,7 @@ fun MarkAsSensitiveButton(
         ) {
             if (!isActive) {
                 Icon(
-                    imageVector = Icons.Default.Visibility,
+                    symbol = MaterialSymbols.Visibility,
                     contentDescription = stringRes(R.string.add_content_warning),
                     modifier =
                         Modifier
@@ -63,7 +60,7 @@ fun MarkAsSensitiveButton(
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
-                    imageVector = Icons.Rounded.Warning,
+                    symbol = MaterialSymbols.Warning,
                     contentDescription = stringRes(R.string.add_content_warning),
                     modifier =
                         Modifier
@@ -73,7 +70,7 @@ fun MarkAsSensitiveButton(
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.VisibilityOff,
+                    symbol = MaterialSymbols.VisibilityOff,
                     contentDescription = stringRes(id = R.string.remove_content_warning),
                     modifier =
                         Modifier
@@ -82,7 +79,7 @@ fun MarkAsSensitiveButton(
                     tint = Color.Red,
                 )
                 Icon(
-                    imageVector = Icons.Rounded.Warning,
+                    symbol = MaterialSymbols.Warning,
                     contentDescription = stringRes(id = R.string.remove_content_warning),
                     modifier =
                         Modifier

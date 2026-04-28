@@ -30,20 +30,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.CallTurnServer
 import com.vitorpamplona.amethyst.model.CallVideoResolution
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -69,7 +69,7 @@ fun CallSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav)
         },
     ) { padding ->
         Column(
@@ -85,6 +85,22 @@ fun CallSettingsScreen(
 @Composable
 private fun CallSettingsContent(accountViewModel: AccountViewModel) {
     val settings = accountViewModel.account.settings
+    val callsEnabled by settings.callsEnabled.collectAsState()
+
+    EnableCallsSection(
+        enabled = callsEnabled,
+        onEnabledChanged = { settings.changeCallsEnabled(it) },
+    )
+
+    if (!callsEnabled) {
+        // When calls are disabled the remaining settings (video quality,
+        // TURN servers, etc.) have no effect, so hide them to keep the
+        // screen focused on the single meaningful toggle.
+        Spacer(modifier = Modifier.height(16.dp))
+        return
+    }
+
+    HorizontalDivider(thickness = 4.dp, modifier = Modifier.padding(vertical = 8.dp))
 
     SectionHeader(stringRes(R.string.call_settings_video_quality))
     VideoResolutionSection(
@@ -118,6 +134,39 @@ private fun CallSettingsContent(accountViewModel: AccountViewModel) {
     )
 
     Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
+private fun EnableCallsSection(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringRes(R.string.call_settings_enable_calls),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = stringRes(R.string.call_settings_enable_calls_description),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Switch(
+            checked = enabled,
+            onCheckedChange = onEnabledChanged,
+        )
+    }
 }
 
 @Composable
@@ -283,7 +332,7 @@ private fun CustomTurnServersSection(
                 onClick = { showAddForm = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(Icons.Outlined.Add, contentDescription = null)
+                Icon(MaterialSymbols.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringRes(R.string.call_settings_add_turn))
             }
@@ -311,7 +360,7 @@ private fun TurnServerRow(
         }
         IconButton(onClick = onDelete) {
             Icon(
-                Icons.Outlined.Delete,
+                MaterialSymbols.Delete,
                 contentDescription = stringRes(R.string.call_settings_remove_turn),
                 tint = MaterialTheme.colorScheme.error,
             )

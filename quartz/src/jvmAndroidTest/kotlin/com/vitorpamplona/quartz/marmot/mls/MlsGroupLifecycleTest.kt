@@ -22,12 +22,12 @@ package com.vitorpamplona.quartz.marmot.mls
 
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * End-to-end lifecycle tests for MlsGroup covering the full protocol flow:
@@ -78,7 +78,7 @@ class MlsGroupLifecycleTest {
         assertEquals(2, alice.memberCount)
 
         // Bob processes the Welcome to join the group
-        val bob = MlsGroup.processWelcome(result.welcomeBytes!!, bobBundle)
+        val bob = MlsGroup.processWelcome(result.welcomeBytes, bobBundle)
         assertEquals(1L, bob.epoch, "Bob should be at same epoch as Alice after Welcome")
         assertEquals(2, bob.memberCount, "Bob should see 2 members")
     }
@@ -171,12 +171,6 @@ class MlsGroupLifecycleTest {
     // 4. Three-member group: sequential additions
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit does not derive the same epoch secrets as commit().
-    // After Bob.processCommit(Alice's commit), Bob's key schedule diverges
-    // because the commit_secret decryption from the UpdatePath does not
-    // correctly walk the ratchet tree to find the common ancestor's path secret.
-    // This causes AEAD decryption failures on cross-member messages.
-    @Ignore
     @Test
     fun testThreeMemberGroup_SequentialAdditions() {
         // Alice creates the group
@@ -192,7 +186,7 @@ class MlsGroupLifecycleTest {
         // Alice adds Carol (Bob processes Alice's commit)
         val carolBundle = createStandaloneKeyPackage("carol")
         val addCarolResult = alice.addMember(carolBundle.keyPackage.toTlsBytes())
-        bob.processCommit(addCarolResult.commitBytes, alice.leafIndex)
+        bob.processFramedCommit(addCarolResult.framedCommitBytes)
         val carol = MlsGroup.processWelcome(addCarolResult.welcomeBytes!!, carolBundle)
 
         assertEquals(2L, alice.epoch)
@@ -230,7 +224,7 @@ class MlsGroupLifecycleTest {
         val addCarolResult = bob.addMember(carolBundle.keyPackage.toTlsBytes())
 
         // Alice processes Bob's commit
-        alice.processCommit(addCarolResult.commitBytes, bob.leafIndex)
+        alice.processFramedCommit(addCarolResult.framedCommitBytes)
 
         assertEquals(2L, alice.epoch)
         assertEquals(2L, bob.epoch)
@@ -242,19 +236,18 @@ class MlsGroupLifecycleTest {
     // 6. External join via GroupInfo
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testExternalJoin_ZaraJoinsViaGroupInfo() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
         val groupInfoBytes = alice.groupInfo().toTlsBytes()
 
         // Zara joins externally
-        val (zara, commitBytes) = MlsGroup.externalJoin(groupInfoBytes, "zara".encodeToByteArray())
+        val externalJoin = MlsGroup.externalJoin(groupInfoBytes, "zara".encodeToByteArray())
+        val zara = externalJoin.group
         assertEquals(1L, zara.epoch)
 
         // Alice processes the external commit
-        alice.processCommit(commitBytes, zara.leafIndex)
+        alice.processFramedCommit(externalJoin.framedCommitBytes)
         assertEquals(1L, alice.epoch)
         assertEquals(2, alice.memberCount)
 
@@ -265,15 +258,14 @@ class MlsGroupLifecycleTest {
         assertContentEquals(msg, dec.content)
     }
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testExternalJoin_ExporterSecretsAgree() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
         val groupInfoBytes = alice.groupInfo().toTlsBytes()
 
-        val (zara, commitBytes) = MlsGroup.externalJoin(groupInfoBytes, "zara".encodeToByteArray())
-        alice.processCommit(commitBytes, zara.leafIndex)
+        val externalJoin = MlsGroup.externalJoin(groupInfoBytes, "zara".encodeToByteArray())
+        val zara = externalJoin.group
+        alice.processFramedCommit(externalJoin.framedCommitBytes)
 
         val aliceKey = alice.exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
         val zaraKey = zara.exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
@@ -307,12 +299,125 @@ class MlsGroupLifecycleTest {
         )
     }
 
+    /**
+     * Regression: removing a member and re-adding them must produce a fully-
+     * functional group instance on the rejoiner's side. In the originally
+     * reported bug, the re-added user came back with no usable own_leaf —
+     * the UI showed the group but the user could neither decrypt new
+     * messages nor send any. This exercises the full loop with a fresh
+     * KeyPackage on re-add and asserts both directions still work.
+     */
+    @Test
+    fun testReaddAfterRemove_RejoinerCanEncryptAndDecrypt() {
+        val alice = MlsGroup.create("alice".encodeToByteArray())
+
+        // First add: Bob joins.
+        val firstBundle = createStandaloneKeyPackage("bob")
+        val firstAdd = alice.addMember(firstBundle.keyPackage.toTlsBytes())
+        val bob1 = MlsGroup.processWelcome(firstAdd.welcomeBytes!!, firstBundle)
+
+        // Baseline round-trip works before the remove.
+        val hello = "hello before remove".encodeToByteArray()
+        assertContentEquals(hello, bob1.decrypt(alice.encrypt(hello)).content)
+        val pong = "pong before remove".encodeToByteArray()
+        assertContentEquals(pong, alice.decrypt(bob1.encrypt(pong)).content)
+
+        // Alice removes Bob. bob1 is now stale (left-behind, no commit to apply).
+        alice.removeMember(bob1.leafIndex)
+        assertEquals(1, alice.memberCount)
+
+        // Re-add: Bob publishes a fresh KeyPackage, Alice adds it, Bob processes
+        // the new Welcome from scratch. This is the exact flow driven by the
+        // info screen's inline "Add member" after an earlier removal.
+        val secondBundle = createStandaloneKeyPackage("bob")
+        val secondAdd = alice.addMember(secondBundle.keyPackage.toTlsBytes())
+        val bob2 = MlsGroup.processWelcome(secondAdd.welcomeBytes!!, secondBundle)
+
+        assertEquals(alice.epoch, bob2.epoch, "Rejoiner must be at Alice's epoch")
+        assertEquals(2, alice.memberCount)
+        assertEquals(2, bob2.memberCount)
+
+        // Own-leaf sanity: the rejoiner must actually hold a leaf in the tree.
+        assertTrue(bob2.leafIndex >= 0, "Rejoiner must have a valid leafIndex after re-add")
+
+        // The bug surfaces here — if bob2 has no usable leaf / keying material,
+        // one of these two round-trips fails.
+        val afterHello = "hello after re-add".encodeToByteArray()
+        val decrypted = bob2.decrypt(alice.encrypt(afterHello))
+        assertContentEquals(afterHello, decrypted.content, "Rejoiner could not decrypt")
+        assertEquals(0, decrypted.senderLeafIndex, "Sender should still be Alice at leaf 0")
+
+        val afterPong = "pong after re-add".encodeToByteArray()
+        val bobEncrypted = bob2.encrypt(afterPong)
+        val aliceSees = alice.decrypt(bobEncrypted)
+        assertContentEquals(afterPong, aliceSees.content, "Rejoiner could not send (no usable leaf)")
+        assertEquals(bob2.leafIndex, aliceSees.senderLeafIndex)
+    }
+
+    /**
+     * Regression: 3-member group, committer removes the MIDDLE leaf while the
+     * trailing leaf remains occupied. Interop harness Test 06 hit this with
+     * whitenoise-rs: the interop log showed quartz rejecting wn's commit
+     * with "Failed to apply commit: UpdatePath node count (1) doesn't match
+     * direct path length (2)". That error comes from
+     * `RatchetTree.applyUpdatePath` comparing the received node count against
+     * the CURRENT tree's direct-path length — the two sides disagree on the
+     * post-proposal leaf_count, so the path-length invariant breaks.
+     *
+     * Scenario Amethyst observed:
+     *   Tree before: [B=leaf 0 (admin/committer), C=leaf 1, A=leaf 2]
+     *   Commit:       Remove(leaf 1)
+     *   Tree after:   [B=leaf 0, _blank_, A=leaf 2]   (leaf 2 still occupied,
+     *                                                  so RFC §7.8 does NOT trim)
+     *
+     * Both sender and every receiver should end up at leaf_count=3 post-
+     * proposal with the sender's direct path at size 2 ([node 1, root 3]).
+     * If quartz's receiver processes the commit cleanly, the test passes. If
+     * this reproduction also reports "UpdatePath node count … doesn't match
+     * direct path length …", we've isolated the bug to the quartz side, not
+     * a wn-specific oddity.
+     */
+    @Test
+    fun testRemoveMiddleLeaf_ReceiverAcceptsCommit() {
+        // Alice creates, adds Bob (→ leaf 1), adds Carol (→ leaf 2).
+        val alice = MlsGroup.create("alice".encodeToByteArray())
+
+        val bobBundle = createStandaloneKeyPackage("bob")
+        val addBobResult = alice.addMember(bobBundle.keyPackage.toTlsBytes())
+        val bob = MlsGroup.processWelcome(addBobResult.welcomeBytes!!, bobBundle)
+
+        val carolBundle = createStandaloneKeyPackage("carol")
+        val addCarolResult = alice.addMember(carolBundle.keyPackage.toTlsBytes())
+        bob.processFramedCommit(addCarolResult.framedCommitBytes)
+        val carol = MlsGroup.processWelcome(addCarolResult.welcomeBytes!!, carolBundle)
+
+        check(alice.memberCount == 3 && bob.memberCount == 3 && carol.memberCount == 3) {
+            "pre-condition: all three members must be present"
+        }
+
+        // Alice removes Bob (leaf 1) — the MIDDLE leaf. Carol (leaf 2) stays,
+        // so trailing-blank trim does NOT fire and leaf_count stays at 3.
+        val removeResult = alice.removeMember(bob.leafIndex)
+
+        // Carol, the remaining non-committer, must be able to apply the
+        // commit. This is where the interop regression surfaces.
+        carol.processFramedCommit(removeResult.framedCommitBytes)
+
+        // After the Remove, Alice and Carol are the only members but the
+        // tree still has leaf_count=3 (leaf 1 blank, leaf 2 = Carol).
+        assertEquals(alice.epoch, carol.epoch, "Carol must be at Alice's epoch after remove")
+        assertEquals(2, alice.memberCount, "Alice: 2 active members after removing Bob")
+        assertEquals(2, carol.memberCount, "Carol: 2 active members after removing Bob")
+
+        // Post-remove forward-secrecy round-trip: Alice sends, Carol decrypts.
+        val msg = "after removing bob".encodeToByteArray()
+        assertContentEquals(msg, carol.decrypt(alice.encrypt(msg)).content)
+    }
+
     // -----------------------------------------------------------------------
     // 8. Signing key rotation (Update proposal)
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testSigningKeyRotation_EpochAdvances() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -327,7 +432,7 @@ class MlsGroupLifecycleTest {
         val commitResult = alice.commit()
 
         // Bob processes Alice's rotation commit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processFramedCommit(commitResult.framedCommitBytes)
 
         assertEquals(2L, alice.epoch)
         assertEquals(2L, bob.epoch)
@@ -341,8 +446,6 @@ class MlsGroupLifecycleTest {
         assertFalse(keyBefore.contentEquals(aliceKey), "Exporter secret should change after rotation")
     }
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testEncryptDecryptAfterSigningKeyRotation() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -353,7 +456,7 @@ class MlsGroupLifecycleTest {
         // Alice rotates her signing key
         alice.proposeSigningKeyRotation()
         val commitResult = alice.commit()
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processFramedCommit(commitResult.framedCommitBytes)
 
         // Both directions should still work after rotation
         val msg1 = "After rotation from Alice".encodeToByteArray()
@@ -411,8 +514,6 @@ class MlsGroupLifecycleTest {
     // 10. PSK proposal: register and use in commit
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testPskProposal_EpochAdvancesWithPsk() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -433,7 +534,7 @@ class MlsGroupLifecycleTest {
         val commitResult = alice.commit()
 
         // Bob processes the commit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processFramedCommit(commitResult.framedCommitBytes)
 
         assertEquals(epochBefore + 1, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)
@@ -464,7 +565,7 @@ class MlsGroupLifecycleTest {
         assertNotNull(alice.reInitPending, "ReInit should be pending after commit")
 
         // Bob processes and should also see reInit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processFramedCommit(commitResult.framedCommitBytes)
         assertNotNull(bob.reInitPending, "Bob should also see ReInit pending")
     }
 
@@ -472,8 +573,6 @@ class MlsGroupLifecycleTest {
     // 12. Empty commit (no proposals, just UpdatePath for forward secrecy)
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testEmptyCommit_AdvancesEpoch() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -485,7 +584,7 @@ class MlsGroupLifecycleTest {
 
         // Alice commits with no proposals (purely for forward secrecy / UpdatePath)
         val commitResult = alice.commit()
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processFramedCommit(commitResult.framedCommitBytes)
 
         assertEquals(epochBefore + 1, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)

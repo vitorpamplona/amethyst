@@ -138,14 +138,18 @@ fun buildAnnotatedStringWithUrlHighlighting(
 
     val numberOffsetTranslator =
         object : OffsetMapping {
+            // Treat each substitution as an atomic wedge: any cursor position that falls
+            // strictly inside a substituted range snaps to the wedge's trailing edge.
+            // Without this, an IME (e.g. SwiftKey in extracted-text mode) can place the
+            // cursor in the middle of an "@npub1..." mention, and a subsequent backspace
+            // deletes a char from inside the bech32, breaking the npub and "expanding"
+            // the collapsed mention.
             override fun originalToTransformed(offset: Int): Int {
                 val inInsideRange =
                     substitutions.firstOrNull { offset > it.original.start && offset < it.original.end }
 
                 if (inInsideRange != null) {
-                    val percentInRange =
-                        (offset - inInsideRange.original.start) / (inInsideRange.original.length.toFloat())
-                    return (inInsideRange.modified.start + inInsideRange.modified.length * percentInRange).toInt()
+                    return inInsideRange.modified.end
                 }
 
                 val lastRangeThrough = substitutions.lastOrNull { offset >= it.original.end }
@@ -162,9 +166,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
                     substitutions.firstOrNull { offset > it.modified.start && offset < it.modified.end }
 
                 if (inInsideRange != null) {
-                    val percentInRange =
-                        (offset - inInsideRange.modified.start) / (inInsideRange.modified.length.toFloat())
-                    return (inInsideRange.original.start + inInsideRange.original.length * percentInRange).toInt()
+                    return inInsideRange.original.end
                 }
 
                 val lastRangeThrough = substitutions.lastOrNull { offset >= it.modified.end }

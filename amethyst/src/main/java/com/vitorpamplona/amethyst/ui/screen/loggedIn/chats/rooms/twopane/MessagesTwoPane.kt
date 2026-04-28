@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -80,12 +79,12 @@ fun MessagesTwoPane(
             UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
         },
         bottomBar = {
-            AppBottomBar(Route.Message, accountViewModel) { route ->
+            AppBottomBar(Route.Message, nav, accountViewModel) { route ->
                 if (route == Route.Message) {
                     knownFeedContentState.sendToTop()
                     newFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
@@ -134,7 +133,7 @@ fun MessagesTwoPane(
             strategy = strategy,
             displayFeatures = displayFeatures,
             foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
-            modifier = Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

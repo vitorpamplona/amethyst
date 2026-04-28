@@ -20,37 +20,48 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.imageLoader
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -60,8 +71,10 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import com.vitorpamplona.quartz.nip92IMeta.imetas
 
 @Composable
 fun SensitivityWarning(
@@ -98,6 +111,52 @@ fun SensitivityWarning(
         ObserveSensitivityWarning(reason, accountViewModel, content)
     } else {
         content()
+    }
+}
+
+@Composable
+fun ContentWarningGate(
+    isSensitive: Boolean,
+    reasons: Set<String>,
+    preloadUrls: List<String>,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    backdrop: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    if (!isSensitive) {
+        content()
+        return
+    }
+
+    val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
+
+    var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
+
+    if (showContentWarningNote && preloadUrls.isNotEmpty()) {
+        val context = LocalContext.current
+        LaunchedEffect(preloadUrls) {
+            preloadUrls.forEach { url ->
+                runCatching {
+                    context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).build())
+                }
+            }
+        }
+    }
+
+    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
+        if (it) {
+            if (backdrop != null) {
+                Box(modifier = modifier.clipToBounds()) {
+                    backdrop()
+                    ContentWarningOverlayBody(reasons) { showContentWarningNote = false }
+                }
+            } else {
+                ContentWarningNote(reasons.firstOrNull()) { showContentWarningNote = false }
+            }
+        } else {
+            content()
+        }
     }
 }
 
@@ -145,6 +204,138 @@ fun ContentWarningNoteWithBigReasonPreview() {
 }
 
 @Composable
+fun BlurhashBackdrop(
+    blurhash: String?,
+    description: String?,
+    thumbhash: String? = null,
+) {
+    DisplayBlurHash(
+        blurhash = blurhash,
+        description = description,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize(),
+        thumbhash = thumbhash,
+    )
+}
+
+@Composable
+fun BlurhashGridBackdrop(media: List<MediaUrlImage>) {
+    AutoNonlazyGrid(media.size) { idx ->
+        val item = media[idx]
+        if (item.blurhash != null || item.thumbhash != null) {
+            DisplayBlurHash(
+                blurhash = item.blurhash,
+                description = item.description,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                thumbhash = item.thumbhash,
+            )
+        }
+    }
+}
+
+fun mediaSizingModifier(
+    ratio: Float?,
+    contentScale: ContentScale,
+): Modifier =
+    when {
+        contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
+        ratio != null -> Modifier.fillMaxWidth().aspectRatio(ratio)
+        else -> Modifier.fillMaxWidth()
+    }
+
+@Composable
+private fun ContentWarningOverlayBody(
+    reasons: Set<String>,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.35f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier
+                    .height(80.dp)
+                    .width(90.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Visibility,
+                    contentDescription = stringRes(R.string.content_warning),
+                    modifier =
+                        Modifier
+                            .size(70.dp)
+                            .align(Alignment.BottomStart),
+                    tint = Color.White,
+                )
+                Icon(
+                    symbol = MaterialSymbols.Warning,
+                    contentDescription = stringRes(R.string.content_warning),
+                    modifier =
+                        Modifier
+                            .size(30.dp)
+                            .align(Alignment.TopEnd),
+                    tint = Color.White,
+                )
+            }
+
+            Text(
+                text = stringRes(R.string.content_warning),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = Color.White,
+                softWrap = true,
+                textAlign = TextAlign.Center,
+            )
+
+            if (reasons.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    reasons.forEach { reason ->
+                        AssistChip(
+                            onClick = {},
+                            enabled = false,
+                            label = {
+                                Text(
+                                    text = reason,
+                                    color = Color.White,
+                                )
+                            },
+                            colors =
+                                AssistChipDefaults.assistChipColors(
+                                    disabledContainerColor = Color.White.copy(alpha = 0.15f),
+                                    disabledLabelColor = Color.White,
+                                ),
+                            border = null,
+                        )
+                    }
+                }
+            }
+
+            FilledTonalButton(
+                modifier = Modifier.padding(top = 10.dp),
+                onClick = onDismiss,
+                shape = ButtonBorder,
+                contentPadding = ButtonPadding,
+            ) {
+                Text(
+                    text = stringRes(R.string.show_anyway),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ContentWarningNote(
     reason: String?,
     onDismiss: () -> Unit,
@@ -159,7 +350,7 @@ fun ContentWarningNote(
                             .width(90.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Visibility,
+                            symbol = MaterialSymbols.Visibility,
                             contentDescription = stringRes(R.string.content_warning),
                             modifier =
                                 Modifier
@@ -168,7 +359,7 @@ fun ContentWarningNote(
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                         Icon(
-                            imageVector = Icons.Rounded.Warning,
+                            symbol = MaterialSymbols.Warning,
                             contentDescription = stringRes(R.string.content_warning),
                             modifier =
                                 Modifier
@@ -220,4 +411,16 @@ fun ContentWarningNote(
             }
         }
     }
+}
+
+fun collectContentWarningReasons(event: Event): Set<String> {
+    val reasons = linkedSetOf<String>()
+    event.contentWarningReason()?.takeIf { it.isNotBlank() }?.let { reasons.add(it) }
+    event.imetas().forEach { iMeta ->
+        iMeta.properties[ContentWarningTag.TAG_NAME]
+            ?.firstOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { reasons.add(it) }
+    }
+    return reasons
 }

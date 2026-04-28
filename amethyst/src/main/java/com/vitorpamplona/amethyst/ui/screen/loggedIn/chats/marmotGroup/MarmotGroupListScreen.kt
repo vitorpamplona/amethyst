@@ -33,16 +33,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -60,10 +58,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +76,7 @@ fun MarmotGroupListScreen(
     nav: INav,
 ) {
     var groupList by remember { mutableStateOf(listOf<Pair<HexKey, MarmotGroupChatroom>>()) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     // Load group list
     LaunchedEffect(Unit) {
@@ -86,16 +90,17 @@ fun MarmotGroupListScreen(
         }
     }
 
-    // Auto-publish KeyPackage if none exists yet
-    LaunchedEffect(Unit) {
-        if (!accountViewModel.hasPublishedKeyPackage()) {
-            try {
-                accountViewModel.publishMarmotKeyPackage()
-            } catch (_: Exception) {
-                // Silently retry on next screen visit
-            }
-        }
-    }
+    // KeyPackage publishing is handled at Account startup
+    // (Account.ensureMarmotKeyPackagePublished), so this screen no longer
+    // needs to do anything to make sure invitees can find a KeyPackage.
+
+    val followState by accountViewModel.account.kind3FollowList.flow
+        .collectAsStateWithLifecycle()
+    val followingKeySet = followState.authors
+
+    val knownGroups = remember(groupList, followingKeySet) { groupList.filter { it.second.isKnown(followingKeySet) } }
+    val newRequestGroups = remember(groupList, followingKeySet) { groupList.filter { !it.second.isKnown(followingKeySet) } }
+    val visibleGroups = if (selectedTab == 0) knownGroups else newRequestGroups
 
     Scaffold(
         topBar = {
@@ -103,7 +108,7 @@ fun MarmotGroupListScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = "Back",
                         )
                     }
@@ -112,42 +117,78 @@ fun MarmotGroupListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }, shape = CircleShape) {
-                Icon(Icons.Default.Add, contentDescription = "Create Group")
+            FabBottomBarPadded(nav) {
+                FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }, shape = CircleShape) {
+                    Icon(MaterialSymbols.Add, contentDescription = "Create Group")
+                }
             }
         },
     ) { padding ->
-        if (groupList.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        "No groups yet",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = "Create a group or wait for an invitation.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text(
+                            text = if (knownGroups.isEmpty()) "Known" else "Known (${knownGroups.size})",
+                        )
+                    },
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            text = if (newRequestGroups.isEmpty()) "New Requests" else "New Requests (${newRequestGroups.size})",
+                        )
+                    },
+                )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-            ) {
-                items(groupList, key = { it.first }) { (groupId, chatroom) ->
-                    MarmotGroupListItem(
-                        groupId = groupId,
-                        chatroom = chatroom,
-                        onClick = {
-                            nav.nav(Route.MarmotGroupChat(groupId))
-                        },
-                    )
-                    HorizontalDivider()
+
+            if (visibleGroups.isEmpty()) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (selectedTab == 0) "No groups yet" else "No invitations",
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            text =
+                                if (selectedTab == 0) {
+                                    "Create a group or accept an invitation."
+                                } else {
+                                    "When someone adds you to a group it will show up here until you reply."
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(visibleGroups, key = { it.first }) { (groupId, chatroom) ->
+                        MarmotGroupListItem(
+                            groupId = groupId,
+                            chatroom = chatroom,
+                            accountViewModel = accountViewModel,
+                            onClick = {
+                                nav.nav(Route.MarmotGroupChat(groupId))
+                            },
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }
@@ -176,10 +217,13 @@ private fun loadGroupList(
 fun MarmotGroupListItem(
     groupId: HexKey,
     chatroom: MarmotGroupChatroom,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
+    val members by chatroom.members.collectAsStateWithLifecycle()
+    val memberPubkeys = remember(members) { members.map { it.pubkey } }
     val newestMessage = chatroom.newestMessage
 
     Row(
@@ -188,17 +232,40 @@ fun MarmotGroupListItem(
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = displayName ?: "Group ${groupId.take(8)}...",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        if (memberPubkeys.isNotEmpty()) {
+            NonClickableUserPictures(
+                userHexList = memberPubkeys,
+                size = 55.dp,
+                accountViewModel = accountViewModel,
             )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            if (!displayName.isNullOrBlank()) {
+                Text(
+                    text = displayName!!,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else if (memberPubkeys.isNotEmpty()) {
+                DisplayUserSetAsSubject(
+                    userList = memberPubkeys,
+                    accountViewModel = accountViewModel,
+                    fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
+                )
+            } else {
+                Text(
+                    text = "Group ${groupId.take(8)}...",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (newestMessage != null) {
                 Text(
                     text = newestMessage.event?.content ?: "",

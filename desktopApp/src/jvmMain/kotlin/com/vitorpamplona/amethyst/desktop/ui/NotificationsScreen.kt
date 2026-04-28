@@ -22,17 +22,15 @@ package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -48,14 +46,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.Reply
 import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -115,7 +115,7 @@ fun NotificationsScreen(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
+    val connectedRelays = relayStatuses.keys
     val scope = rememberCoroutineScope()
     val notificationState =
         remember {
@@ -237,14 +237,12 @@ fun NotificationsScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    ReadingColumn {
         FeedHeader(
             title = "Notifications",
             connectedRelayCount = connectedRelays.size,
             onRefresh = { relayManager.connect() },
         )
-
-        Spacer(Modifier.height(16.dp))
 
         if (connectedRelays.isEmpty()) {
             LoadingState("Connecting to relays...")
@@ -258,6 +256,7 @@ fun NotificationsScreen(
             )
         } else {
             LazyColumn(
+                contentPadding = PaddingValues(horizontal = readingHorizontalPadding()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(notifications.distinctBy { it.event.id }, key = { it.event.id }) { notification ->
@@ -273,28 +272,32 @@ fun NotificationCard(notification: NotificationItem) {
     val (icon, label, color) =
         when (notification) {
             is NotificationItem.Mention -> {
-                Triple(Icons.Default.Favorite, "mentioned you", MaterialTheme.colorScheme.primary)
+                Triple(
+                    rememberMaterialSymbolPainter(MaterialSymbols.Favorite),
+                    "mentioned you",
+                    MaterialTheme.colorScheme.primary,
+                )
             }
 
             is NotificationItem.Reply -> {
-                Triple(Reply, "replied", MaterialTheme.colorScheme.secondary)
+                Triple(rememberVectorPainter(Reply), "replied", MaterialTheme.colorScheme.secondary)
             }
 
             is NotificationItem.Reaction -> {
                 Triple(
-                    Icons.Default.Favorite,
+                    rememberMaterialSymbolPainter(MaterialSymbols.Favorite),
                     "reacted ${notification.content}",
                     MaterialTheme.colorScheme.tertiary,
                 )
             }
 
             is NotificationItem.Repost -> {
-                Triple(Repost, "reposted", MaterialTheme.colorScheme.primary)
+                Triple(rememberVectorPainter(Repost), "reposted", MaterialTheme.colorScheme.primary)
             }
 
             is NotificationItem.Zap -> {
                 val amountText = notification.amount?.let { " ${it / 1000} sats" } ?: ""
-                Triple(Zap, "zapped$amountText", MaterialTheme.colorScheme.primary)
+                Triple(rememberVectorPainter(Zap), "zapped$amountText", MaterialTheme.colorScheme.primary)
             }
         }
 

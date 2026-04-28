@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.graphics.Rect
 import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,10 +28,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PauseCircleOutline
-import androidx.compose.material.icons.filled.PlayCircleOutline
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -52,6 +47,8 @@ import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
@@ -206,8 +203,12 @@ fun RenderVoicePlayer(
                     .height(100.dp)
                     .onGloballyPositioned { coordinates ->
                         val bounds = coordinates.boundsInWindow()
-                        val boundRect = Rect(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
-                        controllerState.visibility.bounds = boundRect
+                        controllerState.visibility.setBounds(
+                            bounds.left.toInt(),
+                            bounds.top.toInt(),
+                            bounds.right.toInt(),
+                            bounds.bottom.toInt(),
+                        )
                     }.clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null, // to prevent the ripple from the tap
@@ -249,7 +250,7 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
         modifier = Size75Modifier,
     ) {
         Icon(
-            imageVector = if (state.showPlay) Icons.Default.PlayCircleOutline else Icons.Default.PauseCircleOutline,
+            symbol = if (state.showPlay) MaterialSymbols.PlayCircleOutline else MaterialSymbols.PauseCircleOutline,
             contentDescription = if (state.showPlay) stringResource(R.string.play) else stringResource(R.string.pause),
             modifier = Size50Modifier,
             tint = Color.White,

@@ -31,14 +31,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -56,6 +52,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.ContentPreset
 import com.vitorpamplona.amethyst.commons.search.DateUtils
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
@@ -215,7 +213,7 @@ private fun AuthorInputField(
                             )
                         },
                         trailingIcon = {
-                            Icon(Icons.Default.Close, contentDescription = "Remove", modifier = Modifier.size(14.dp))
+                            Icon(MaterialSymbols.Close, contentDescription = "Remove", modifier = Modifier.size(14.dp))
                         },
                     )
                 }
@@ -244,7 +242,7 @@ private fun AuthorInputField(
                         onAuthorAdded(authorInput.trim())
                         authorInput = ""
                     }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add author")
+                        Icon(MaterialSymbols.Add, contentDescription = "Add author")
                     }
                 }
             },
@@ -349,7 +347,7 @@ private fun ChipGroupWithInput(
                     onClick = { onRemove(item) },
                     label = { Text("$prefix$item", style = MaterialTheme.typography.bodySmall) },
                     trailingIcon = {
-                        Icon(Icons.Default.Close, contentDescription = "Remove", modifier = Modifier.size(14.dp))
+                        Icon(MaterialSymbols.Close, contentDescription = "Remove", modifier = Modifier.size(14.dp))
                     },
                 )
             }

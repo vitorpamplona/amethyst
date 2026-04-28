@@ -34,15 +34,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.FullscreenExit
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -59,6 +51,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 @Composable
 fun VideoControls(
@@ -112,7 +106,7 @@ fun VideoControls(
                 modifier = Modifier.align(Alignment.Center).size(64.dp),
             ) {
                 Icon(
-                    Icons.Default.PlayArrow,
+                    MaterialSymbols.PlayArrow,
                     contentDescription = "Play",
                     tint = Color.White,
                     modifier = Modifier.size(48.dp),
@@ -158,7 +152,7 @@ fun VideoControls(
                 ) {
                     IconButton(onClick = onPlayPause, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            if (isPlaying) MaterialSymbols.Pause else MaterialSymbols.PlayArrow,
                             contentDescription = if (isPlaying) "Pause" else "Play",
                             tint = Color.White,
                             modifier = Modifier.size(20.dp),
@@ -179,9 +173,9 @@ fun VideoControls(
                         IconButton(onClick = onMuteToggle, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 if (isMuted) {
-                                    Icons.AutoMirrored.Filled.VolumeOff
+                                    MaterialSymbols.AutoMirrored.VolumeOff
                                 } else {
-                                    Icons.AutoMirrored.Filled.VolumeUp
+                                    MaterialSymbols.AutoMirrored.VolumeUp
                                 },
                                 contentDescription = if (isMuted) "Unmute" else "Mute",
                                 tint = Color.White,
@@ -216,9 +210,9 @@ fun VideoControls(
                         ) {
                             Icon(
                                 if (viewMode == ViewMode.FULLSCREEN) {
-                                    Icons.Default.FullscreenExit
+                                    MaterialSymbols.FullscreenExit
                                 } else {
-                                    Icons.Default.Fullscreen
+                                    MaterialSymbols.Fullscreen
                                 },
                                 contentDescription =
                                     if (viewMode == ViewMode.FULLSCREEN) "Exit fullscreen" else "Fullscreen",
@@ -229,7 +223,7 @@ fun VideoControls(
                     } else if (onFullscreen != null) {
                         IconButton(onClick = onFullscreen, modifier = Modifier.size(32.dp)) {
                             Icon(
-                                Icons.Default.Fullscreen,
+                                MaterialSymbols.Fullscreen,
                                 contentDescription = "Fullscreen",
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp),

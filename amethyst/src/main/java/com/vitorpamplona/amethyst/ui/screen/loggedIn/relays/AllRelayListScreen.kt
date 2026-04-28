@@ -27,12 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,9 +44,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.DefaultDMRelayList
-import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
-import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -75,6 +72,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.RelayFeedsList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.renderRelayFeedsItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.IndexerRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.renderIndexerItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.keyPackage.KeyPackageRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.keyPackage.renderKeyPackageItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.renderLocalItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.PrivateOutboxRelayListViewModel
@@ -101,6 +100,7 @@ fun AllRelayListScreen(
     nav: INav,
 ) {
     val dmViewModel: DMRelayListViewModel = viewModel()
+    val keyPackageViewModel: KeyPackageRelayListViewModel = viewModel()
     val nip65ViewModel: Nip65RelayListViewModel = viewModel()
     val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
     val searchViewModel: SearchRelayListViewModel = viewModel()
@@ -114,6 +114,7 @@ fun AllRelayListScreen(
     val relayFeedsViewModel: RelayFeedsListViewModel = viewModel()
 
     dmViewModel.init(accountViewModel)
+    keyPackageViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
     searchViewModel.init(accountViewModel)
     localViewModel.init(accountViewModel)
@@ -128,6 +129,7 @@ fun AllRelayListScreen(
 
     LaunchedEffect(accountViewModel) {
         dmViewModel.load()
+        keyPackageViewModel.load()
         nip65ViewModel.load()
         searchViewModel.load()
         localViewModel.load()
@@ -143,6 +145,7 @@ fun AllRelayListScreen(
 
     MappedAllRelayListView(
         dmViewModel,
+        keyPackageViewModel,
         nip65ViewModel,
         searchViewModel,
         localViewModel,
@@ -163,6 +166,7 @@ fun AllRelayListScreen(
 @Composable
 fun MappedAllRelayListView(
     dmViewModel: DMRelayListViewModel,
+    keyPackageViewModel: KeyPackageRelayListViewModel,
     nip65ViewModel: Nip65RelayListViewModel,
     searchViewModel: SearchRelayListViewModel,
     localViewModel: LocalRelayListViewModel,
@@ -178,6 +182,7 @@ fun MappedAllRelayListView(
     nav: INav,
 ) {
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
+    val keyPackageFeedState by keyPackageViewModel.relays.collectAsStateWithLifecycle()
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
     val privateOutboxFeedState by privateOutboxViewModel.relays.collectAsStateWithLifecycle()
@@ -194,6 +199,7 @@ fun MappedAllRelayListView(
     val outboxCounts by nip65ViewModel.homeCountResults.collectAsStateWithLifecycle()
     val inboxCounts by nip65ViewModel.notifCountResults.collectAsStateWithLifecycle()
     val dmCounts by dmViewModel.countResults.collectAsStateWithLifecycle()
+    val keyPackageCounts by keyPackageViewModel.countResults.collectAsStateWithLifecycle()
     val privateHomeCounts by privateOutboxViewModel.countResults.collectAsStateWithLifecycle()
     val proxyCounts by proxyViewModel.countResults.collectAsStateWithLifecycle()
     val indexerCounts by indexerViewModel.countResults.collectAsStateWithLifecycle()
@@ -213,6 +219,11 @@ fun MappedAllRelayListView(
         rememberRelayDragState(
             onMove = { from, to -> dmViewModel.moveRelay(from, to) },
             itemCount = { dmFeedState.size },
+        )
+    val keyPackageDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> keyPackageViewModel.moveRelay(from, to) },
+            itemCount = { keyPackageFeedState.size },
         )
     val privateOutboxDragState =
         rememberRelayDragState(
@@ -284,6 +295,7 @@ fun MappedAllRelayListView(
                 },
                 onCancel = {
                     dmViewModel.clear()
+                    keyPackageViewModel.clear()
                     nip65ViewModel.clear()
                     searchViewModel.clear()
                     localViewModel.clear()
@@ -298,6 +310,7 @@ fun MappedAllRelayListView(
                 },
                 onPost = {
                     dmViewModel.create()
+                    keyPackageViewModel.create()
                     nip65ViewModel.create()
                     searchViewModel.create()
                     localViewModel.create()
@@ -315,7 +328,8 @@ fun MappedAllRelayListView(
     ) { pad ->
         val anyDragging =
             homeDragState.isDragging || notifDragState.isDragging ||
-                dmDragState.isDragging || privateOutboxDragState.isDragging ||
+                dmDragState.isDragging || keyPackageDragState.isDragging ||
+                privateOutboxDragState.isDragging ||
                 proxyDragState.isDragging || broadcastDragState.isDragging ||
                 indexerDragState.isDragging || searchDragState.isDragging ||
                 localDragState.isDragging || trustedDragState.isDragging ||
@@ -362,6 +376,15 @@ fun MappedAllRelayListView(
                 )
             }
             renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts, dmDragState)
+
+            item {
+                SettingsCategory(
+                    R.string.keypackage_section,
+                    R.string.keypackage_section_explainer,
+                    SettingsCategorySpacingWithHorzBorderModifier,
+                )
+            }
+            renderKeyPackageItems(keyPackageFeedState, keyPackageViewModel, accountViewModel, nav, keyPackageCounts, keyPackageDragState)
 
             item {
                 SettingsCategory(
@@ -565,7 +588,7 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
 
     IconButton(onClick = { expanded = true }) {
         Icon(
-            imageVector = Icons.Default.Share,
+            symbol = MaterialSymbols.Share,
             contentDescription = stringRes(R.string.export_relay_settings),
         )
     }
@@ -577,14 +600,14 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
         ) {
             M3ActionSection {
                 M3ActionRow(
-                    icon = Icons.Outlined.Description,
+                    icon = MaterialSymbols.Description,
                     text = stringRes(R.string.export_as_text),
                 ) {
                     expanded = false
                     RelayExporter(context).export(collection())
                 }
                 M3ActionRow(
-                    icon = Icons.Outlined.FolderZip,
+                    icon = MaterialSymbols.FolderZip,
                     text = stringRes(R.string.export_as_zip),
                 ) {
                     expanded = false

@@ -26,13 +26,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,7 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.desktop.network.RelayStatus
+import com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
 
 /**
  * Card displaying the status of a Nostr relay connection.
@@ -79,14 +80,14 @@ fun RelayStatusCard(
 
                 if (status.connected) {
                     Icon(
-                        Icons.Default.Check,
+                        MaterialSymbols.Check,
                         contentDescription = "Connected",
                         tint = statusColor,
                         modifier = Modifier.size(20.dp),
                     )
                 } else if (status.error != null) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = "Error",
                         tint = statusColor,
                         modifier = Modifier.size(20.dp),
@@ -99,11 +100,33 @@ fun RelayStatusCard(
                 }
 
                 Column {
-                    Text(
-                        status.url.url,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            status.url.url,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        // .onion badge: show "Requires Tor" when Tor is off
+                        if (status.url.isOnion()) {
+                            val torState = LocalTorState.current
+                            val badgeColor =
+                                if (torState.status is TorServiceStatus.Off) {
+                                    Color(0xFFF44336) // Red — Tor required but off
+                                } else {
+                                    Color(0xFF4CAF50) // Green — routed via Tor
+                                }
+                            val badgeText =
+                                if (torState.status is TorServiceStatus.Off) "Requires Tor" else "via Tor"
+                            Text(
+                                badgeText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = badgeColor,
+                            )
+                        }
+                    }
                     if (status.connected && status.pingMs != null) {
                         Text(
                             "${status.pingMs}ms${if (status.compressed) " • compressed" else ""}",
@@ -123,7 +146,7 @@ fun RelayStatusCard(
 
             IconButton(onClick = onRemove) {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = "Remove relay",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

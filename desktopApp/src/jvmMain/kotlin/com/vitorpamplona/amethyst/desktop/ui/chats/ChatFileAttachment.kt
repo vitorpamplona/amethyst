@@ -32,17 +32,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Forward
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,6 +55,8 @@ import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.media.EncryptedMediaService
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import kotlinx.coroutines.Dispatchers
@@ -144,7 +140,7 @@ fun ChatFileAttachment(
                 // Encryption indicator
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.Lock,
+                        MaterialSymbols.Lock,
                         contentDescription = "Encrypted",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.primary,
@@ -191,7 +187,7 @@ fun ChatFileAttachment(
                         // Non-image file
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.AutoMirrored.Filled.InsertDriveFile,
+                                MaterialSymbols.AutoMirrored.InsertDriveFile,
                                 contentDescription = "File",
                                 modifier = Modifier.size(32.dp),
                             )
@@ -223,7 +219,7 @@ fun ChatFileAttachment(
             DropdownMenuItem(
                 text = { Text("Save to disk") },
                 leadingIcon = {
-                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(MaterialSymbols.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                 },
                 enabled = decryptedBytes != null,
                 onClick = {
@@ -237,7 +233,7 @@ fun ChatFileAttachment(
                 DropdownMenuItem(
                     text = { Text("Forward") },
                     leadingIcon = {
-                        Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(MaterialSymbols.AutoMirrored.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
                     },
                     onClick = {
                         showContextMenu = false

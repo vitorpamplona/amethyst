@@ -31,9 +31,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,6 +47,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
@@ -218,7 +217,7 @@ private fun BubblePreview() {
                 UserDisplayNameLayout(
                     picture = {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            symbol = MaterialSymbols.Person,
                             contentDescription = null,
                             modifier =
                                 Modifier
@@ -253,7 +252,7 @@ private fun BubblePreview() {
                 UserDisplayNameLayout(
                     picture = {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            symbol = MaterialSymbols.Person,
                             contentDescription = null,
                             modifier =
                                 Modifier
@@ -287,7 +286,7 @@ private fun BubblePreview() {
                 UserDisplayNameLayout(
                     picture = {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            symbol = MaterialSymbols.Person,
                             contentDescription = null,
                             modifier =
                                 Modifier
@@ -321,7 +320,7 @@ private fun BubblePreview() {
                 UserDisplayNameLayout(
                     picture = {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            symbol = MaterialSymbols.Person,
                             contentDescription = null,
                             modifier =
                                 Modifier

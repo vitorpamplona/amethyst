@@ -34,25 +34,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ViewList
-import androidx.compose.material.icons.automirrored.outlined.VolumeOff
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +56,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -76,17 +66,19 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.service.call.CallSessionBridge.accountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
+import com.vitorpamplona.amethyst.ui.screen.FavoriteAlgoFeedName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
+import com.vitorpamplona.amethyst.ui.screen.InterestSetName
 import com.vitorpamplona.amethyst.ui.screen.Name
 import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.RelayName
@@ -98,8 +90,6 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -108,31 +98,26 @@ fun FeedFilterSpinner(
     placeholderCode: TopFilter,
     explainer: String,
     options: ImmutableList<FeedDefinition>,
-    onSelect: (Int) -> Unit,
+    onSelect: (FeedDefinition) -> Unit,
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
 ) {
     var optionsShowing by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val selectAnOption =
-        stringRes(
-            id = R.string.select_an_option,
-        )
+    val selectAnOption = stringRes(id = R.string.select_an_option)
 
-    var selected by
+    val selected =
         remember(placeholderCode, options) {
-            mutableStateOf(
-                options.firstOrNull { it.code.code == placeholderCode.code },
-            )
-        }
-
-    val currentText by
-        remember(placeholderCode, options) {
-            derivedStateOf {
-                selected?.name?.name(context) ?: selectAnOption
+            // Match by both subclass and code string to avoid collisions between
+            // TopFilter variants that derive `code` from the same Address (e.g.
+            // PeopleList vs MuteList).
+            options.firstOrNull {
+                it.code::class == placeholderCode::class && it.code.code == placeholderCode.code
             }
         }
+
+    val currentText = selected?.name?.name(context) ?: selectAnOption
 
     val accessibilityDescription =
         if (selected != null) {
@@ -150,23 +135,40 @@ fun FeedFilterSpinner(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Size20Modifier)
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Bound the Column so long filter names (e.g. DVM titles) get truncated
+            // instead of wrapping to multiple lines and shoving the expand icon out.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
                 val filter = selected?.code
                 if (filter is TopFilter.Geohash) {
                     LoadCityName(
                         geohashStr = filter.tag,
                         onLoading = {
                             Row {
-                                Text(filter.tag)
+                                Text(
+                                    text = filter.tag,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                                 Spacer(modifier = StdHorzSpacer)
                                 LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
                             }
                         },
                     ) { cityName ->
-                        Text(cityName)
+                        Text(
+                            text = cityName,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 } else {
-                    Text(currentText)
+                    Text(
+                        text = currentText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
 
                 if (filter is TopFilter.AroundMe) {
@@ -178,6 +180,8 @@ fun FeedFilterSpinner(
                             text = stringRes(R.string.lack_location_permissions),
                             fontSize = Font12SP,
                             lineHeight = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     } else {
                         val location by Amethyst.instance.locationManager.geohashStateFlow
@@ -193,6 +197,8 @@ fun FeedFilterSpinner(
                                                 text = "(${myLocation.geoHash})",
                                                 fontSize = Font12SP,
                                                 lineHeight = 12.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
                                             )
                                             Spacer(modifier = StdHorzSpacer)
                                             LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
@@ -203,6 +209,8 @@ fun FeedFilterSpinner(
                                         text = "($cityName)",
                                         fontSize = Font12SP,
                                         lineHeight = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                             }
@@ -212,6 +220,8 @@ fun FeedFilterSpinner(
                                     text = stringRes(R.string.lack_location_permissions),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
 
@@ -220,6 +230,8 @@ fun FeedFilterSpinner(
                                     text = stringRes(R.string.loading_location),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -228,7 +240,7 @@ fun FeedFilterSpinner(
             }
 
             Icon(
-                imageVector = Icons.Default.ExpandMore,
+                symbol = MaterialSymbols.ExpandMore,
                 contentDescription = explainer,
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
@@ -259,10 +271,9 @@ fun FeedFilterSpinner(
             title = explainer,
             options = options,
             onDismiss = { optionsShowing = false },
-            onSelect = {
-                selected = options[it]
+            onSelect = { definition ->
                 optionsShowing = false
-                onSelect(it)
+                onSelect(definition)
             },
         ) {
             RenderOption(it.name, accountViewModel)
@@ -275,6 +286,7 @@ fun RenderOption(
     option: Name,
     accountViewModel: AccountViewModel,
 ) {
+    val context = LocalContext.current
     when (option) {
         is GeoHashName -> {
             LoadCityName(option.geoHashTag) {
@@ -282,49 +294,35 @@ fun RenderOption(
             }
         }
 
-        is HashtagName -> {
-            Text(text = option.name(), fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
-        }
-
-        is ResourceName -> {
-            Text(
-                text = stringRes(id = option.resourceId),
-                fontSize = Font14SP,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
+        // Note-backed names: subscribe to the note so the displayed title updates as
+        // the corresponding event arrives from relays. The displayed string itself is
+        // produced by Name.name(), which already has the right precedence rules.
         is PeopleListName -> {
             val noteState by observeNote(option.note, accountViewModel)
-
-            val noteEvent = noteState.note.event
-            val name =
-                when (noteEvent) {
-                    is PeopleListEvent -> {
-                        noteEvent.titleOrName() ?: option.note.dTag()
-                    }
-
-                    is FollowListEvent -> {
-                        noteEvent.title() ?: option.note.dTag()
-                    }
-
-                    else -> {
-                        option.note.dTag()
-                    }
-                }
-
+            val name = remember(noteState) { option.name(context) }
             Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is CommunityName -> {
-            val it by observeNote(option.note, accountViewModel)
-
-            Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
+            val noteState by observeNote(option.note, accountViewModel)
+            val name = remember(noteState) { option.name(context) }
+            Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
         }
 
-        is RelayName -> {
+        is FavoriteAlgoFeedName -> {
+            val noteState by observeNote(option.note, accountViewModel)
+            val name = remember(noteState) { option.name(context) }
+            Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
+        }
+
+        // Pure names: no relay subscription needed.
+        is HashtagName,
+        is ResourceName,
+        is RelayName,
+        is InterestSetName,
+        -> {
             Text(
-                text = option.name(),
+                text = option.name(context),
                 fontSize = Font14SP,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -332,55 +330,63 @@ fun RenderOption(
     }
 }
 
-@Immutable
-private data class IndexedFeedDefinition(
-    val originalIndex: Int,
-    val item: FeedDefinition,
-)
-
 private enum class FeedGroup(
     @param:androidx.annotation.StringRes val labelRes: Int,
 ) {
     FEEDS(R.string.feed_group_feeds),
     HASHTAGS(R.string.feed_group_hashtags),
+    INTEREST_SETS(R.string.feed_group_interest_sets),
     COMMUNITIES(R.string.feed_group_communities),
     LOCATIONS(R.string.feed_group_locations),
     LISTS(R.string.feed_group_lists),
+    DVMS(R.string.feed_group_dvms),
     RELAYS(R.string.feed_group_relays),
 }
 
-private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<FeedGroup, List<IndexedFeedDefinition>> {
-    val indexed = options.mapIndexed { index, item -> IndexedFeedDefinition(index, item) }
-    return indexed.groupBy { entry ->
-        when (entry.item.name) {
-            is HashtagName -> {
-                FeedGroup.HASHTAGS
-            }
+private fun FeedDefinition.group(): FeedGroup =
+    when (name) {
+        is HashtagName -> {
+            FeedGroup.HASHTAGS
+        }
 
-            is CommunityName -> {
-                FeedGroup.COMMUNITIES
-            }
+        is CommunityName -> {
+            FeedGroup.COMMUNITIES
+        }
 
-            is PeopleListName -> {
-                FeedGroup.LISTS
-            }
+        is PeopleListName -> {
+            FeedGroup.LISTS
+        }
 
-            is RelayName -> {
-                FeedGroup.RELAYS
-            }
+        is RelayName -> {
+            FeedGroup.RELAYS
+        }
 
-            is GeoHashName -> {
-                FeedGroup.LOCATIONS
-            }
+        is GeoHashName -> {
+            FeedGroup.LOCATIONS
+        }
 
-            is ResourceName -> {
-                when (entry.item.code) {
-                    is TopFilter.AroundMe -> FeedGroup.LOCATIONS
-                    is TopFilter.Global -> FeedGroup.RELAYS
-                    else -> FeedGroup.FEEDS
-                }
+        is FavoriteAlgoFeedName -> {
+            FeedGroup.DVMS
+        }
+
+        is InterestSetName -> {
+            FeedGroup.INTEREST_SETS
+        }
+
+        is ResourceName -> {
+            when (code) {
+                is TopFilter.AroundMe -> FeedGroup.LOCATIONS
+                is TopFilter.Global -> FeedGroup.RELAYS
+                is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
+                else -> FeedGroup.FEEDS
             }
         }
+    }
+
+private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): List<Pair<FeedGroup, List<FeedDefinition>>> {
+    val grouped = options.groupBy { it.group() }
+    return FeedGroup.entries.mapNotNull { group ->
+        grouped[group]?.takeIf { it.isNotEmpty() }?.let { group to it }
     }
 }
 
@@ -389,7 +395,7 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
 private fun GroupedFeedFilterDialog(
     title: String,
     options: ImmutableList<FeedDefinition>,
-    onSelect: (Int) -> Unit,
+    onSelect: (FeedDefinition) -> Unit,
     onDismiss: () -> Unit,
     onRenderItem: @Composable (FeedDefinition) -> Unit,
 ) {
@@ -413,18 +419,15 @@ private fun GroupedFeedFilterDialog(
                     )
                 }
 
-                FeedGroup.entries.forEach { group ->
-                    val items = grouped[group]
-                    if (!items.isNullOrEmpty()) {
-                        item {
-                            GroupSection(
-                                label = stringRes(group.labelRes),
-                                items = items,
-                                isChipLayout = group == FeedGroup.HASHTAGS,
-                                onSelect = onSelect,
-                                onRenderItem = onRenderItem,
-                            )
-                        }
+                grouped.forEach { (group, items) ->
+                    item(key = group) {
+                        GroupSection(
+                            label = stringRes(group.labelRes),
+                            items = items,
+                            isChipLayout = group == FeedGroup.HASHTAGS,
+                            onSelect = onSelect,
+                            onRenderItem = onRenderItem,
+                        )
                     }
                 }
             }
@@ -436,11 +439,12 @@ private fun GroupedFeedFilterDialog(
 @Composable
 private fun GroupSection(
     label: String,
-    items: List<IndexedFeedDefinition>,
+    items: List<FeedDefinition>,
     isChipLayout: Boolean,
-    onSelect: (Int) -> Unit,
+    onSelect: (FeedDefinition) -> Unit,
     onRenderItem: @Composable (FeedDefinition) -> Unit,
 ) {
+    val context = LocalContext.current
     Surface(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
@@ -464,13 +468,13 @@ private fun GroupSection(
                 ) {
                     items.forEach { entry ->
                         Surface(
-                            modifier = Modifier.clickable { onSelect(entry.originalIndex) },
+                            modifier = Modifier.clickable { onSelect(entry) },
                             shape = RoundedCornerShape(18.dp),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             color = Color.Transparent,
                         ) {
                             Text(
-                                text = entry.item.name.name(),
+                                text = entry.name.name(context),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
@@ -486,15 +490,15 @@ private fun GroupSection(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .clickable { onSelect(entry.originalIndex) }
+                                .clickable { onSelect(entry) }
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                     ) {
                         FeedIcon(
-                            item = entry.item,
+                            item = entry,
                             modifier = Size20Modifier,
                         )
-                        Spacer(modifier = Modifier.padding(start = 12.dp))
-                        Column(modifier = Modifier.weight(1f)) { onRenderItem(entry.item) }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) { onRenderItem(entry) }
                     }
                 }
             }
@@ -510,49 +514,54 @@ private fun FeedIcon(
     val icon =
         when (item.code) {
             is TopFilter.Global -> {
-                Icons.Outlined.Public
+                MaterialSymbols.Public
             }
 
             is TopFilter.AroundMe -> {
-                Icons.Outlined.LocationOn
+                MaterialSymbols.LocationOn
             }
 
             is TopFilter.AllFollows -> {
-                Icons.Outlined.Groups
+                MaterialSymbols.Groups
             }
 
             is TopFilter.AllUserFollows -> {
-                Icons.Outlined.Person
+                MaterialSymbols.Person
             }
 
             is TopFilter.DefaultFollows -> {
-                Icons.Outlined.Groups
+                MaterialSymbols.Groups
             }
 
             is TopFilter.MuteList -> {
-                Icons.AutoMirrored.Outlined.VolumeOff
-            }
-
-            is TopFilter.Chess -> {
-                Icons.Outlined.Groups
+                MaterialSymbols.AutoMirrored.VolumeOff
             }
 
             is TopFilter.PeopleList -> {
-                Icons.AutoMirrored.Outlined.ViewList
+                MaterialSymbols.AutoMirrored.ViewList
+            }
+
+            is TopFilter.FavoriteAlgoFeed -> {
+                MaterialSymbols.AutoAwesome
+            }
+
+            is TopFilter.AllFavoriteAlgoFeeds -> {
+                MaterialSymbols.AutoAwesome
             }
 
             else -> {
                 when (item.name) {
-                    is GeoHashName -> Icons.Outlined.LocationOn
-                    is RelayName -> Icons.Outlined.Storage
-                    is CommunityName -> Icons.Outlined.Groups
-                    is PeopleListName -> Icons.AutoMirrored.Outlined.ViewList
-                    else -> Icons.Outlined.Person
+                    is GeoHashName -> MaterialSymbols.LocationOn
+                    is RelayName -> MaterialSymbols.Storage
+                    is CommunityName -> MaterialSymbols.Groups
+                    is PeopleListName -> MaterialSymbols.AutoMirrored.ViewList
+                    is FavoriteAlgoFeedName -> MaterialSymbols.AutoAwesome
+                    else -> MaterialSymbols.Person
                 }
             }
         }
     Icon(
-        imageVector = icon,
+        symbol = icon,
         contentDescription = null,
         modifier = modifier,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,

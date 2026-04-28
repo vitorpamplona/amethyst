@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -30,12 +31,14 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
@@ -47,9 +50,11 @@ val BasicAccountInfoKinds =
         ContactListEvent.KIND,
         AdvertisedRelayListEvent.KIND,
         ChatMessageRelayListEvent.KIND,
+        KeyPackageRelayListEvent.KIND,
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
         BlossomServersEvent.KIND,
+        NestsServersEvent.KIND,
     )
 
 val BasicAccountInfoKinds2 =
@@ -63,6 +68,7 @@ val BasicAccountInfoKinds2 =
         GeohashListEvent.KIND,
         TrustProviderListEvent.KIND,
         RelayFeedsListEvent.KIND,
+        InterestSetEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(

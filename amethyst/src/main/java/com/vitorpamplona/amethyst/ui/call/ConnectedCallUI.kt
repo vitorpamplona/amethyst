@@ -36,21 +36,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.BluetoothAudio
-import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.CameraFront
-import androidx.compose.material.icons.filled.CameraRear
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -70,8 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.call.AudioRoute
-import com.vitorpamplona.amethyst.service.call.CallController
+import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,7 +72,7 @@ import org.webrtc.VideoTrack
 @Composable
 fun ConnectedCallUI(
     state: CallState.Connected,
-    callController: CallController?,
+    callSession: CallSession?,
     accountViewModel: AccountViewModel,
     onHangup: () -> Unit,
     onToggleMute: () -> Unit,
@@ -103,15 +92,15 @@ fun ConnectedCallUI(
     val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
     val emptyTracksFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, VideoTrack>>(emptyMap()) }
     val emptySetFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Set<String>>(emptySet()) }
-    val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
-    val activePeerVideos by (callController?.activePeerVideos ?: emptySetFlow).collectAsState()
-    val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
+    val remoteVideoTracks by (callSession?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
+    val activePeerVideos by (callSession?.activePeerVideos ?: emptySetFlow).collectAsState()
+    val localVideoTrack by (callSession?.localVideoTrack ?: emptyVideoFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
-    val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
-    val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
-    val isFrontCamera by (callController?.isFrontCamera ?: defaultTrue).collectAsState()
-    val currentAudioRoute by (callController?.audioRoute ?: remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }).collectAsState()
+    val isAudioMuted by (callSession?.isAudioMuted ?: defaultFalse).collectAsState()
+    val isVideoEnabled by (callSession?.isVideoEnabled ?: defaultTrue).collectAsState()
+    val isFrontCamera by (callSession?.isFrontCamera ?: defaultTrue).collectAsState()
+    val currentAudioRoute by (callSession?.audioRoute ?: remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }).collectAsState()
     val hasActiveVideo =
         state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
             isVideoEnabled ||
@@ -145,9 +134,10 @@ fun ConnectedCallUI(
         if (hasActiveVideo) {
             PeerVideoGrid(
                 peerPubKeys = otherMembers,
+                pendingPeerPubKeys = state.pendingPeerPubKeys,
                 remoteVideoTracks = remoteVideoTracks,
                 activePeerVideos = activePeerVideos,
-                eglBase = callController?.getEglBase(),
+                eglBase = callSession?.getEglBase(),
                 accountViewModel = accountViewModel,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -156,7 +146,7 @@ fun ConnectedCallUI(
                 localVideoTrack?.let { track ->
                     VideoRenderer(
                         videoTrack = track,
-                        eglBase = callController?.getEglBase(),
+                        eglBase = callSession?.getEglBase(),
                         modifier =
                             Modifier
                                 .size(120.dp, 160.dp)
@@ -164,6 +154,7 @@ fun ConnectedCallUI(
                                 .windowInsetsPadding(WindowInsets.statusBars)
                                 .padding(16.dp),
                         mirror = isFrontCamera,
+                        zOrderMediaOverlay = true,
                     )
                 }
             }
@@ -178,35 +169,27 @@ fun ConnectedCallUI(
                         .windowInsetsPadding(WindowInsets.statusBars)
                         .padding(top = 16.dp),
             )
-
-            if (state.pendingPeerPubKeys.isNotEmpty()) {
-                Text(
-                    text = stringRes(R.string.call_waiting_for_others),
-                    color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 13.sp,
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .windowInsetsPadding(WindowInsets.statusBars)
-                            .padding(top = 38.dp),
-                )
-            }
         } else {
+            // Voice-only path: render the same peer grid so each pending
+            // callee shows their individual "Calling…" status rather than a
+            // single shared banner. Tracks and active-video sets are empty
+            // here, so every cell falls through to PeerAvatarCell.
+            val emptyTracks = remember { emptyMap<String, VideoTrack>() }
+            val emptyActive = remember { emptySet<String>() }
+
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                GroupCallPictures(
+                PeerVideoGrid(
                     peerPubKeys = otherMembers,
-                    size = 120.dp,
+                    pendingPeerPubKeys = state.pendingPeerPubKeys,
+                    remoteVideoTracks = emptyTracks,
+                    activePeerVideos = emptyActive,
+                    eglBase = null,
                     accountViewModel = accountViewModel,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                GroupCallNames(
-                    peerPubKeys = otherMembers,
-                    accountViewModel = accountViewModel,
-                    textColor = Color.White,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -214,14 +197,7 @@ fun ConnectedCallUI(
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 16.sp,
                 )
-                if (state.pendingPeerPubKeys.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringRes(R.string.call_waiting_for_others),
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 13.sp,
-                    )
-                }
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
 
@@ -233,7 +209,7 @@ fun ConnectedCallUI(
             currentAudioRoute = currentAudioRoute,
             onToggleMute = onToggleMute,
             onToggleVideo = onToggleVideo,
-            onSwitchCamera = { callController?.switchCamera() },
+            onSwitchCamera = { callSession?.switchCamera() },
             onCycleAudioRoute = onCycleAudioRoute,
             onAddParticipant = { showAddParticipant = true },
             onHangup = onHangup,
@@ -270,7 +246,7 @@ private fun CallControls(
         ) {
             IconButton(onClick = onToggleMute, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = if (isAudioMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                    symbol = if (isAudioMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
                     contentDescription = stringRes(if (isAudioMuted) R.string.call_unmute else R.string.call_mute),
                     tint = if (isAudioMuted) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
@@ -278,7 +254,7 @@ private fun CallControls(
             }
             IconButton(onClick = onToggleVideo, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                    symbol = if (isVideoEnabled) MaterialSymbols.Videocam else MaterialSymbols.VideocamOff,
                     contentDescription = stringRes(if (isVideoEnabled) R.string.call_camera_off else R.string.call_camera_on),
                     tint = if (!isVideoEnabled) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
@@ -287,11 +263,11 @@ private fun CallControls(
             if (isVideoEnabled) {
                 IconButton(onClick = onSwitchCamera, modifier = Modifier.size(56.dp)) {
                     Icon(
-                        imageVector =
+                        symbol =
                             if (isFrontCamera) {
-                                Icons.Default.CameraRear
+                                MaterialSymbols.CameraRear
                             } else {
-                                Icons.Default.CameraFront
+                                MaterialSymbols.CameraFront
                             },
                         contentDescription = stringRes(R.string.call_switch_camera),
                         tint = Color.White,
@@ -301,11 +277,11 @@ private fun CallControls(
             }
             IconButton(onClick = onCycleAudioRoute, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector =
+                    symbol =
                         when (currentAudioRoute) {
-                            AudioRoute.EARPIECE -> Icons.AutoMirrored.Filled.VolumeOff
-                            AudioRoute.SPEAKER -> Icons.AutoMirrored.Filled.VolumeUp
-                            AudioRoute.BLUETOOTH -> Icons.Default.BluetoothAudio
+                            AudioRoute.EARPIECE -> MaterialSymbols.Hearing
+                            AudioRoute.SPEAKER -> MaterialSymbols.AutoMirrored.VolumeUp
+                            AudioRoute.BLUETOOTH -> MaterialSymbols.BluetoothAudio
                         },
                     contentDescription =
                         stringRes(
@@ -326,14 +302,14 @@ private fun CallControls(
             }
             IconButton(onClick = onAddParticipant, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = Icons.Default.PersonAdd,
+                    symbol = MaterialSymbols.PersonAdd,
                     contentDescription = stringRes(R.string.call_add_participant),
                     tint = Color.White,
                     modifier = Modifier.size(28.dp),
                 )
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         FloatingActionButton(
             onClick = onHangup,
             containerColor = Color.Red,
@@ -341,7 +317,7 @@ private fun CallControls(
             modifier = Modifier.size(64.dp),
         ) {
             Icon(
-                Icons.Default.CallEnd,
+                MaterialSymbols.CallEnd,
                 contentDescription = stringRes(R.string.call_hangup),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp),

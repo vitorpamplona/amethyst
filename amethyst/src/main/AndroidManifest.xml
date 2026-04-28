@@ -42,13 +42,22 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Phone calls -->
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Always-on notification service: restart after reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Always-on notification service: battery optimization exemption -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Keeps screen on while playing videos -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -210,9 +219,19 @@
             tools:ignore="DiscouragedApi" />
 
         <activity
+            android:name=".ui.screen.loggedIn.nests.room.activity.NestActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:supportsPictureInPicture="true"
+            android:launchMode="singleTask"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.Amethyst" />
+
+        <activity
             android:name=".ui.call.CallActivity"
             android:autoRemoveFromRecents="true"
-            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
             android:supportsPictureInPicture="true"
             android:launchMode="singleTop"
             android:exported="false"
@@ -247,7 +266,13 @@
 
         <service
             android:name=".service.call.CallForegroundService"
-            android:foregroundServiceType="microphone|camera"
+            android:foregroundServiceType="microphone|camera|phoneCall"
+            android:stopWithTask="false"
+            android:exported="false" />
+
+        <service
+            android:name=".service.nests.NestForegroundService"
+            android:foregroundServiceType="mediaPlayback|microphone"
             android:stopWithTask="true"
             android:exported="false" />
 
@@ -260,6 +285,33 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <service
+            android:name=".service.notifications.NotificationRelayService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent real-time messaging relay connection for Nostr protocol. Maintains WebSocket connections to user-configured inbox relays for immediate notification delivery of direct messages, zaps, and mentions." />
+        </service>
+
+        <receiver
+            android:name=".service.notifications.BootCompletedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".service.notifications.ServiceWatchdogManager$WatchdogReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.notifications.AutoRestartReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".service.notifications.PokeyReceiver"

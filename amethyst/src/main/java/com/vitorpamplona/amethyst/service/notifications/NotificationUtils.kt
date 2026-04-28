@@ -38,11 +38,8 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -51,26 +48,40 @@ object NotificationUtils {
     private var zapChannel: NotificationChannel? = null
     private var reactionChannel: NotificationChannel? = null
     private var chessChannel: NotificationChannel? = null
-    private var callChannel: NotificationChannel? = null
+    private var replyChannel: NotificationChannel? = null
+    private var mentionChannel: NotificationChannel? = null
 
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
     private const val REACTION_GROUP_KEY = "com.vitorpamplona.amethyst.REACTION_NOTIFICATION"
     private const val CHESS_GROUP_KEY = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION"
-    private const val CALL_CHANNEL_ID = "com.vitorpamplona.amethyst.CALL_CHANNEL"
-    private const val CALL_NOTIFICATION_ID = 0x50000
+    const val REPLY_GROUP_KEY_PREFIX = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
+    private const val MENTION_GROUP_KEY = "com.vitorpamplona.amethyst.MENTION_NOTIFICATION"
 
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
+    const val PUBLIC_REPLY_ACTION = "com.vitorpamplona.amethyst.PUBLIC_REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
     const val KEY_REPLY_TEXT = "key_reply_text"
     const val KEY_NOTIFICATION_ID = "key_notification_id"
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
+    const val KEY_TARGET_EVENT_ID = "key_target_event_id"
 
     private const val DM_SUMMARY_ID = 0x10000
     private const val ZAP_SUMMARY_ID = 0x20000
     private const val REACTION_SUMMARY_ID = 0x40000
     private const val CHESS_SUMMARY_ID = 0x30000
+    private const val REPLY_SUMMARY_ID_BASE = 0x50000
+    private const val MENTION_SUMMARY_ID = 0x60000
+
+    /**
+     * Derives a stable summary notification id for a per-thread reply group.
+     * Uses the thread root id hash mixed with the base id so different threads
+     * don't collide with each other or with the other channel summaries.
+     */
+    fun replySummaryIdFor(threadRootId: String): Int = REPLY_SUMMARY_ID_BASE xor threadRootId.hashCode()
+
+    fun replyGroupKeyFor(threadRootId: String): String = "$REPLY_GROUP_KEY_PREFIX:$threadRootId"
 
     fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
@@ -156,6 +167,48 @@ object NotificationUtils {
         return chessChannel!!
     }
 
+    fun getOrCreateReplyChannel(applicationContext: Context): NotificationChannel {
+        if (replyChannel != null) return replyChannel!!
+
+        replyChannel =
+            NotificationChannel(
+                stringRes(applicationContext, R.string.app_notification_replies_channel_id),
+                stringRes(applicationContext, R.string.app_notification_replies_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description =
+                    stringRes(applicationContext, R.string.app_notification_replies_channel_description)
+            }
+
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(replyChannel!!)
+
+        return replyChannel!!
+    }
+
+    fun getOrCreateMentionChannel(applicationContext: Context): NotificationChannel {
+        if (mentionChannel != null) return mentionChannel!!
+
+        mentionChannel =
+            NotificationChannel(
+                stringRes(applicationContext, R.string.app_notification_mentions_channel_id),
+                stringRes(applicationContext, R.string.app_notification_mentions_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description =
+                    stringRes(applicationContext, R.string.app_notification_mentions_channel_description)
+            }
+
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(mentionChannel!!)
+
+        return mentionChannel!!
+    }
+
     suspend fun NotificationManager.sendReactionNotification(
         id: String,
         messageBody: String,
@@ -211,6 +264,76 @@ object NotificationUtils {
             applicationContext = applicationContext,
         )
     }
+
+    suspend fun NotificationManager.sendReplyNotification(
+        id: String,
+        messageBody: String,
+        messageTitle: String,
+        time: Long,
+        pictureUrl: String?,
+        uri: String,
+        applicationContext: Context,
+        threadRootId: String,
+        inlineReply: InlineReplyTarget? = null,
+    ) {
+        getOrCreateReplyChannel(applicationContext)
+        val channelId = stringRes(applicationContext, R.string.app_notification_replies_channel_id)
+
+        sendNotification(
+            id = id,
+            messageBody = messageBody,
+            messageTitle = messageTitle,
+            time = time,
+            pictureUrl = pictureUrl,
+            uri = uri,
+            channelId = channelId,
+            notificationGroupKey = replyGroupKeyFor(threadRootId),
+            category = NotificationCompat.CATEGORY_SOCIAL,
+            summaryId = replySummaryIdFor(threadRootId),
+            summaryText = stringRes(applicationContext, R.string.app_notification_replies_summary),
+            applicationContext = applicationContext,
+            inlineReply = inlineReply,
+        )
+    }
+
+    suspend fun NotificationManager.sendMentionNotification(
+        id: String,
+        messageBody: String,
+        messageTitle: String,
+        time: Long,
+        pictureUrl: String?,
+        uri: String,
+        applicationContext: Context,
+    ) {
+        getOrCreateMentionChannel(applicationContext)
+        val channelId = stringRes(applicationContext, R.string.app_notification_mentions_channel_id)
+
+        sendNotification(
+            id = id,
+            messageBody = messageBody,
+            messageTitle = messageTitle,
+            time = time,
+            pictureUrl = pictureUrl,
+            uri = uri,
+            channelId = channelId,
+            notificationGroupKey = MENTION_GROUP_KEY,
+            category = NotificationCompat.CATEGORY_SOCIAL,
+            summaryId = MENTION_SUMMARY_ID,
+            summaryText = stringRes(applicationContext, R.string.app_notification_mentions_summary),
+            applicationContext = applicationContext,
+        )
+    }
+
+    /**
+     * Payload for wiring a RemoteInput-powered inline reply action onto a public
+     * note notification. The receiver resolves the target event from LocalCache
+     * via [targetEventId] and signs the appropriate kind (1 for NIP-10, 1111
+     * for NIP-22) under the account identified by [accountNpub].
+     */
+    data class InlineReplyTarget(
+        val accountNpub: String,
+        val targetEventId: String,
+    )
 
     suspend fun NotificationManager.sendZapNotification(
         id: String,
@@ -444,6 +567,7 @@ object NotificationUtils {
         summaryId: Int,
         summaryText: String,
         applicationContext: Context,
+        inlineReply: InlineReplyTarget? = null,
     ) {
         val notId = id.hashCode()
 
@@ -490,6 +614,40 @@ object NotificationUtils {
                 .setAutoCancel(true)
                 .setWhen(time * 1000)
 
+        if (inlineReply != null) {
+            val remoteInput =
+                RemoteInput
+                    .Builder(KEY_REPLY_TEXT)
+                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+                    .build()
+
+            val replyIntent =
+                Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                    action = PUBLIC_REPLY_ACTION
+                    putExtra(KEY_NOTIFICATION_ID, notId)
+                    putExtra(KEY_ACCOUNT_NPUB, inlineReply.accountNpub)
+                    putExtra(KEY_TARGET_EVENT_ID, inlineReply.targetEventId)
+                }
+
+            val replyPendingIntent =
+                PendingIntent.getBroadcast(
+                    applicationContext,
+                    notId,
+                    replyIntent,
+                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            val replyAction =
+                NotificationCompat.Action
+                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+                    .addRemoteInput(remoteInput)
+                    .setAllowGeneratedReplies(true)
+                    .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+                    .build()
+
+            builder.addAction(replyAction)
+        }
+
         notify(notId, builder.build())
 
         sendGroupSummary(channelId, notificationGroupKey, summaryId, summaryText, applicationContext)
@@ -520,144 +678,6 @@ object NotificationUtils {
                 )
 
         notify(summaryId, summaryBuilder.build())
-    }
-
-    fun getOrCreateCallChannel(applicationContext: Context): NotificationChannel {
-        if (callChannel != null) return callChannel!!
-
-        callChannel =
-            NotificationChannel(
-                CALL_CHANNEL_ID,
-                stringRes(applicationContext, R.string.app_notification_calls_channel_name),
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description = stringRes(applicationContext, R.string.app_notification_calls_channel_description)
-                // Silence the notification sound — CallAudioManager plays the ringtone
-                setSound(null, null)
-                enableVibration(false)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(callChannel!!)
-
-        return callChannel!!
-    }
-
-    fun sendCallNotification(
-        callerName: String,
-        callerBitmap: Bitmap?,
-        uri: String,
-        applicationContext: Context,
-    ) {
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        val channel = getOrCreateCallChannel(applicationContext)
-
-        // Tapping the notification opens the CallActivity
-        val contentIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            }
-
-        val contentPendingIntent =
-            PendingIntent.getActivity(
-                applicationContext,
-                CALL_NOTIFICATION_ID,
-                contentIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        // Accept launches CallActivity directly (not via BroadcastReceiver)
-        // to comply with Android 12+ notification trampoline restrictions.
-        val acceptIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(com.vitorpamplona.amethyst.ui.call.CallActivity.EXTRA_ACCEPT_CALL, true)
-            }
-
-        val acceptPendingIntent =
-            PendingIntent.getActivity(
-                applicationContext,
-                CALL_NOTIFICATION_ID + 1,
-                acceptIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val rejectIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.service.call.CallNotificationReceiver::class.java).apply {
-                action = com.vitorpamplona.amethyst.service.call.CallNotificationReceiver.ACTION_REJECT_CALL
-            }
-
-        val rejectPendingIntent =
-            PendingIntent.getBroadcast(
-                applicationContext,
-                CALL_NOTIFICATION_ID + 2,
-                rejectIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val builder =
-            NotificationCompat
-                .Builder(applicationContext, channel.id)
-                .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(stringRes(applicationContext, R.string.call_incoming))
-                .setContentText(callerName)
-                .setLargeIcon(callerBitmap)
-                .setContentIntent(contentPendingIntent)
-                .setFullScreenIntent(contentPendingIntent, true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_CALL)
-                .setAutoCancel(true)
-                .setOngoing(true)
-                .setTimeoutAfter(60_000)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), rejectPendingIntent)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), acceptPendingIntent)
-
-        notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
-    }
-
-    fun cancelCallNotification(applicationContext: Context) {
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel("call", CALL_NOTIFICATION_ID)
-    }
-
-    suspend fun showIncomingCallNotification(
-        callerPubKey: String,
-        context: Context,
-    ) {
-        val callerUser = LocalCache.getUserIfExists(callerPubKey)
-        val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
-        val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
-
-        val callerBitmap =
-            callerUser?.profilePicture()?.let { pictureUrl ->
-                withContext(Dispatchers.IO) {
-                    try {
-                        val request =
-                            ImageRequest
-                                .Builder(context)
-                                .data(pictureUrl)
-                                .allowHardware(false)
-                                .build()
-                        val result = coil3.ImageLoader(context).execute(request)
-                        (result.image?.asDrawable(context.resources) as? BitmapDrawable)?.bitmap
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
-            }
-
-        sendCallNotification(
-            callerName = callerName,
-            callerBitmap = callerBitmap,
-            uri = uri,
-            applicationContext = context,
-        )
     }
 
     private fun NotificationManager.isDuplicate(notId: Int): Boolean {

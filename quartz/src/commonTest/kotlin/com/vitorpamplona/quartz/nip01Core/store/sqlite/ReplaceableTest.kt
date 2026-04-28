@@ -90,6 +90,43 @@ class ReplaceableTest : BaseDBTest() {
         }
 
     @Test
+    fun testReplacingSameCreatedAtLowerIdWins() =
+        forEachDB { db ->
+            val time = TimeUtils.now()
+            // Two events with the same (kind, pubkey, created_at) but different
+            // content -> different ids. NIP-01 says the lower-id wins.
+            val a = signer.sign(MetadataEvent.createNew("Vitor A", createdAt = time))
+            val b = signer.sign(MetadataEvent.createNew("Vitor B", createdAt = time))
+            val (winner, loser) = if (a.id < b.id) a to b else b to a
+
+            // Insert the higher-id (loser) first, then the lower-id (winner).
+            // The trigger should delete the loser and let the winner in.
+            db.insert(loser)
+            db.assertQuery(loser, Filter(ids = listOf(loser.id)))
+
+            db.insert(winner)
+            db.assertQuery(null, Filter(ids = listOf(loser.id)))
+            db.assertQuery(winner, Filter(ids = listOf(winner.id)))
+        }
+
+    @Test
+    fun testReplacingSameCreatedAtHigherIdRejected() =
+        forEachDB { db ->
+            val time = TimeUtils.now()
+            val a = signer.sign(MetadataEvent.createNew("Vitor A", createdAt = time))
+            val b = signer.sign(MetadataEvent.createNew("Vitor B", createdAt = time))
+            val (winner, loser) = if (a.id < b.id) a to b else b to a
+
+            // Winner already in DB; the higher-id duplicate must be rejected.
+            db.insert(winner)
+            assertFailsWith<SQLiteException> {
+                db.insert(loser)
+            }
+            db.assertQuery(winner, Filter(ids = listOf(winner.id)))
+            db.assertQuery(null, Filter(ids = listOf(loser.id)))
+        }
+
+    @Test
     fun testTriggersIndexUsageKind0() =
         forEachDB { db ->
             val sql =

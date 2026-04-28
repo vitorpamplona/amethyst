@@ -40,6 +40,7 @@ class AddressSerializer {
         }
 
         fun parse(addressId: String): Address? {
+            if (addressId.length < 66) return null
             if (addressId.isBlank()) return null
             return try {
                 val parts = addressId.split(":", limit = 3)

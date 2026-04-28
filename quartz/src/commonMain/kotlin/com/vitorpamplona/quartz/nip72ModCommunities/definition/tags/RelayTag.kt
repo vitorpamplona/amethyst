@@ -35,6 +35,10 @@ class RelayTag(
     companion object {
         const val TAG_NAME = "relay"
 
+        const val MARKER_AUTHOR = "author"
+        const val MARKER_REQUESTS = "requests"
+        const val MARKER_APPROVALS = "approvals"
+
         fun parse(tag: Array<String>): RelayTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }

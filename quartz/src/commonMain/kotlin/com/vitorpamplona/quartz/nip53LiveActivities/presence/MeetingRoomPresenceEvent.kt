@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip53LiveActivities.presence
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -31,8 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.HandRaisedTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.MutedTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.OnstageTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.PublishingTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -43,7 +47,7 @@ class MeetingRoomPresenceEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider {
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(MeetingSpaceTag::parseAsHint)
 
@@ -53,24 +57,23 @@ class MeetingRoomPresenceEvent(
 
     fun handRaised() = tags.firstNotNullOfOrNull(HandRaisedTag::parse)
 
+    fun muted() = tags.firstNotNullOfOrNull(MutedTag::parse)
+
+    /** True when the peer is actively pushing audio packets to the relay. */
+    fun publishing() = tags.firstNotNullOfOrNull(PublishingTag::parse)
+
+    /** True when the peer holds a speaker slot (vs. pure audience). */
+    fun onstage() = tags.firstNotNullOfOrNull(OnstageTag::parse)
+
     companion object Companion {
         const val KIND = 10312
         const val ALT = "Room Presence tag"
 
-        fun createAddress(
-            pubKey: HexKey,
-            dtag: String,
-        ): Address = Address(KIND, pubKey, dtag)
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
-        fun createAddressATag(
-            pubKey: HexKey,
-            dtag: String,
-        ): ATag = ATag(KIND, pubKey, dtag, null)
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(
-            pubKey: HexKey,
-            dtag: String,
-        ): String = Address.assemble(KIND, pubKey, dtag)
+        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
         fun build(
             root: MeetingRoomEvent,
@@ -85,6 +88,32 @@ class MeetingRoomPresenceEvent(
             handRaised?.let {
                 handRaised(it)
             }
+            initializer()
+        }
+
+        /**
+         * Convenience builder when the parent is a kind 30312 [MeetingSpaceEvent]
+         * (Clubhouse-style audio room). Mirrors the [MeetingRoomEvent] overload so
+         * a participant can publish presence + hand-raise + mute against an audio
+         * room without adapting to the meeting-room (kind 30313) variant.
+         */
+        fun build(
+            root: MeetingSpaceEvent,
+            handRaised: Boolean? = null,
+            muted: Boolean? = null,
+            publishing: Boolean? = null,
+            onstage: Boolean? = null,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<MeetingRoomPresenceEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(root.room() ?: ALT)
+
+            roomMeeting(MeetingSpaceTag(root.address(), root.relays().firstOrNull()))
+
+            handRaised?.let { handRaised(it) }
+            muted?.let { muted(it) }
+            publishing?.let { publishing(it) }
+            onstage?.let { onstage(it) }
             initializer()
         }
     }

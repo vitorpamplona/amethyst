@@ -318,6 +318,13 @@ class QueryBuilder(
     // --------------
     // Deletes
     // -------------
+
+    /**
+     * Safe-by-default: an empty filter (or a list of only empty filters)
+     * deletes nothing and returns 0, so a stray `delete(Filter())` cannot
+     * wipe the entire store. This is asymmetric with `query(Filter())`,
+     * which intentionally returns every event.
+     */
     fun delete(
         filter: Filter,
         db: SQLiteConnection,
@@ -331,6 +338,7 @@ class QueryBuilder(
         }
     }
 
+    /** See [delete] for the empty-filter contract. */
     fun delete(
         filters: List<Filter>,
         db: SQLiteConnection,

@@ -23,7 +23,9 @@ package com.vitorpamplona.quartz.marmot.mls.group
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
+import com.vitorpamplona.quartz.marmot.mls.messages.ExternalJoinResult
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.marmot.mls.schedule.KeySchedule
 import com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree
@@ -79,8 +81,11 @@ import kotlinx.coroutines.sync.withLock
  * ## Cross-Implementation Notes
  *
  * This manager uses ciphersuite 0x0001 (MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519).
- * The epoch secret retention window is [EPOCH_RETENTION_WINDOW] = 2, meaning secrets
- * for the current and previous epoch are kept for late-message decryption.
+ * The epoch secret retention window is [EPOCH_RETENTION_WINDOW] = 5, matching the
+ * `DEFAULT_EPOCH_LOOKBACK` used by the MDK reference implementation so that late-
+ * arriving MIP-03 GroupEvents (and MLS application messages) whose outer ChaCha20-
+ * Poly1305 key was derived from a prior epoch's exporter secret can still be
+ * decrypted after a Commit advances the group.
  *
  * Thread safety: All suspending mutation methods are guarded by a [Mutex]
  * to prevent concurrent state corruption. Non-suspending read methods
@@ -105,11 +110,17 @@ class MlsGroupManager(
     suspend fun restoreAll() =
         mutex.withLock {
             val groupIds = store.listGroups()
+            Log.d(TAG) { "restoreAll(): store reports ${groupIds.size} groups: $groupIds" }
             for (nostrGroupId in groupIds) {
                 try {
-                    val stateBytes = store.load(nostrGroupId) ?: continue
+                    val stateBytes = store.load(nostrGroupId)
+                    if (stateBytes == null) {
+                        Log.w(TAG) { "restoreAll(): load returned null for $nostrGroupId, skipping" }
+                        continue
+                    }
                     val state = MlsGroupState.decodeTls(stateBytes)
                     groups[nostrGroupId] = MlsGroup.restore(state)
+                    Log.d(TAG) { "restoreAll(): restored group $nostrGroupId (${stateBytes.size} bytes)" }
 
                     // Restore retained epochs
                     val retained = store.loadRetainedEpochs(nostrGroupId)
@@ -118,17 +129,22 @@ class MlsGroupManager(
                             retained
                                 .map { RetainedEpochSecrets.decodeTls(TlsReader(it)) }
                                 .toMutableList()
+                        Log.d(TAG) { "restoreAll(): restored ${retained.size} retained epochs for $nostrGroupId" }
                     }
                 } catch (e: Exception) {
-                    // Corrupted state — log and remove it so it doesn't block future joins
+                    // Could be genuinely corrupted state, or a transient bug
+                    // (e.g. wrong cipher param spec). Skip but DO NOT delete —
+                    // a future restart after a fix should still be able to
+                    // recover the group. If it really is corrupted the user
+                    // can explicitly leave/delete the group from the UI.
                     Log.e(
-                        "MlsGroupManager",
-                        "Corrupted state for group $nostrGroupId, deleting: ${e.message}",
+                        TAG,
+                        "restoreAll(): failed to restore group $nostrGroupId, skipping (file preserved): ${e.message}",
                         e,
                     )
-                    store.delete(nostrGroupId)
                 }
             }
+            Log.d(TAG) { "restoreAll(): finished with ${groups.size} active groups in memory" }
         }
 
     /**
@@ -142,9 +158,18 @@ class MlsGroupManager(
     fun activeGroupIds(): Set<HexKey> = groups.keys.toSet()
 
     /**
-     * Check if we are a member of the given group.
+     * Check if we are a (live) member of the given group.
+     *
+     * After processing a commit that removes us, the group entry stays in
+     * [groups] so callers can still inspect the post-Remove tree, but our
+     * own leaf has been set to null and the leaf count may have shrunk
+     * past `myLeafIndex`. Either condition means we cannot encrypt any
+     * more messages, propose anything, or decrypt future epochs — i.e.
+     * we are functionally not a member, and surface as such here so
+     * callers (`amy marmot group show`, the inbound processor) get a
+     * clean `not_member` answer instead of a misleading `true`.
      */
-    fun isMember(nostrGroupId: HexKey): Boolean = groups.containsKey(nostrGroupId)
+    fun isMember(nostrGroupId: HexKey): Boolean = groups[nostrGroupId]?.isLocalMember() ?: false
 
     // --- Group Creation ---
 
@@ -160,11 +185,14 @@ class MlsGroupManager(
         nostrGroupId: HexKey,
         identity: ByteArray,
         signingKey: ByteArray? = null,
+        initialExtensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> = emptyList(),
     ): MlsGroup =
         mutex.withLock {
-            val group = MlsGroup.create(identity, signingKey)
+            Log.d(TAG) { "createGroup($nostrGroupId): creating new MLS group" }
+            val group = MlsGroup.create(identity, signingKey, initialExtensions)
             groups[nostrGroupId] = group
             persistGroup(nostrGroupId)
+            Log.d(TAG) { "createGroup($nostrGroupId): done, in-memory group count=${groups.size}" }
             group
         }
 
@@ -179,25 +207,40 @@ class MlsGroupManager(
      * 2. Group state is persisted
      * 3. A KeyPackage rotation should be triggered (see [needsKeyPackageRotation])
      *
-     * @param nostrGroupId hex-encoded Nostr group ID (from Welcome event tags)
      * @param welcomeBytes TLS-serialized Welcome message
      * @param bundle the KeyPackageBundle that was used for the invitation
-     * @return the joined [MlsGroup]
+     * @param hintNostrGroupId optional nostrGroupId from the Welcome event's "h" tag;
+     *   if provided and non-null, validated against the GroupContext's NostrGroupData extension.
+     *   If absent (sender did not include an "h" tag), the ID is derived from the MLS content.
+     * @return pair of (joined group, derived nostrGroupId)
      */
     suspend fun processWelcome(
-        nostrGroupId: HexKey,
         welcomeBytes: ByteArray,
         bundle: KeyPackageBundle,
-    ): MlsGroup =
+        hintNostrGroupId: HexKey? = null,
+    ): Pair<MlsGroup, HexKey> =
         mutex.withLock {
             val group = MlsGroup.processWelcome(welcomeBytes, bundle)
-            groups[nostrGroupId] = group
+
+            val derivedId =
+                group.currentMarmotData()?.nostrGroupId
+                    ?: throw IllegalArgumentException(
+                        "Welcome GroupContext is missing the NostrGroupData extension — cannot derive nostrGroupId",
+                    )
+
+            if (hintNostrGroupId != null && hintNostrGroupId != derivedId) {
+                throw IllegalArgumentException(
+                    "nostrGroupId mismatch: h-tag=$hintNostrGroupId, GroupContext=$derivedId",
+                )
+            }
+
+            groups[derivedId] = group
 
             // init_key is consumed — the bundle's initPrivateKey should not be
             // reused. Caller must discard the bundle and rotate KeyPackages.
 
-            persistGroup(nostrGroupId)
-            group
+            persistGroup(derivedId)
+            Pair(group, derivedId)
         }
 
     /**
@@ -214,12 +257,12 @@ class MlsGroupManager(
         groupInfoBytes: ByteArray,
         identity: ByteArray,
         signingKey: ByteArray? = null,
-    ): Pair<MlsGroup, ByteArray> =
+    ): ExternalJoinResult =
         mutex.withLock {
-            val (group, commitBytes) = MlsGroup.externalJoin(groupInfoBytes, identity, signingKey)
-            groups[nostrGroupId] = group
+            val result = MlsGroup.externalJoin(groupInfoBytes, identity, signingKey)
+            groups[nostrGroupId] = result.group
             persistGroup(nostrGroupId)
-            Pair(group, commitBytes)
+            result
         }
 
     // --- Epoch Transitions ---
@@ -236,11 +279,9 @@ class MlsGroupManager(
     suspend fun commit(nostrGroupId: HexKey): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-
-            // Retain current epoch secrets before transition
-            retainEpochSecrets(nostrGroupId, group)
-
+            val retainedBefore = group.retainedSecrets()
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
@@ -258,13 +299,47 @@ class MlsGroupManager(
         commitBytes: ByteArray,
         senderLeafIndex: Int,
         confirmationTag: ByteArray,
+        signature: ByteArray = ByteArray(0),
+        wireFormat: com.vitorpamplona.quartz.marmot.mls.framing.WireFormat = com.vitorpamplona.quartz.marmot.mls.framing.WireFormat.PUBLIC_MESSAGE,
     ) = mutex.withLock {
         val group = requireGroup(nostrGroupId)
 
-        // Retain current epoch secrets before transition
-        retainEpochSecrets(nostrGroupId, group)
+        // Capture the outgoing epoch's secrets BEFORE advancing, but only
+        // commit them to the retention window once processCommit succeeds —
+        // otherwise a failed commit (e.g. "Duplicate encryption key" on an
+        // add-me relay echo) would pollute the window with a duplicate of
+        // the current epoch key, wasting the finite retention slots.
+        val retainedBefore = group.retainedSecrets()
 
-        group.processCommit(commitBytes, senderLeafIndex, confirmationTag)
+        group.processCommit(commitBytes, senderLeafIndex, confirmationTag, signature, wireFormat)
+
+        pushRetainedEpoch(nostrGroupId, retainedBefore)
+        persistGroup(nostrGroupId)
+    }
+
+    /**
+     * Process a fully-framed `MlsMessage(PublicMessage(Commit))` — the wire shape
+     * returned in [CommitResult.framedCommitBytes]. Delegates to
+     * [MlsGroup.processFramedCommit] which extracts the sender leaf index,
+     * confirmation_tag, and FramedContentTBS signature from the envelope, then
+     * calls [MlsGroup.processCommit] with all fields properly populated.
+     *
+     * Intended for callers that hold the framed bytes directly (tests driving
+     * peer managers, CLI interop harnesses). Production inbound goes through
+     * `MarmotInboundProcessor`, which unwraps the outer ChaCha20 layer first
+     * and then calls [processCommit] with the already-decoded PublicMessage
+     * fields.
+     */
+    suspend fun processFramedCommit(
+        nostrGroupId: HexKey,
+        framedCommitBytes: ByteArray,
+    ) = mutex.withLock {
+        val group = requireGroup(nostrGroupId)
+        val retainedBefore = group.retainedSecrets()
+
+        group.processFramedCommit(framedCommitBytes)
+
+        pushRetainedEpoch(nostrGroupId, retainedBefore)
         persistGroup(nostrGroupId)
     }
 
@@ -296,19 +371,40 @@ class MlsGroupManager(
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
 
-            // Try current epoch
-            val current = group.decryptOrNull(messageBytes)
-            if (current != null) return@withLock current
+            // Try current epoch. If we hit an exception here we MUST surface
+            // it — commits that throw mid-processCommit leave the in-memory
+            // group half-mutated, and a retry via `group.decrypt(...)` will
+            // just report a stale "epoch mismatch" from the partial advance,
+            // hiding the real bug. Capture the original throwable, try
+            // retained epochs as a fallback, and re-raise the captured one
+            // if nothing decrypts.
+            val retainedBefore = group.retainedSecrets()
+            val preEpoch = group.epoch
+            val currentFailure: Throwable? =
+                try {
+                    val result = group.decrypt(messageBytes)
+                    // PrivateMessage commits apply inline through
+                    // `MlsGroup.decrypt` → `processCommit`; the epoch advances
+                    // in memory but the CLI reopens a fresh Context on every
+                    // command, so we MUST persist here or reloaded state
+                    // silently reverts to the pre-commit extensions (including
+                    // admin list).
+                    if (result.contentType == com.vitorpamplona.quartz.marmot.mls.framing.ContentType.COMMIT && group.epoch != preEpoch) {
+                        pushRetainedEpoch(nostrGroupId, retainedBefore)
+                        persistGroup(nostrGroupId)
+                    }
+                    return@withLock result
+                } catch (t: Throwable) {
+                    t
+                }
 
-            // Try retained epochs
             val retained = retainedEpochs[nostrGroupId] ?: emptyList()
             for (epochSecrets in retained) {
                 val result = tryDecryptWithRetainedEpoch(messageBytes, epochSecrets)
                 if (result != null) return@withLock result
             }
 
-            // No epoch could decrypt — rethrow from current epoch for diagnostics
-            group.decrypt(messageBytes)
+            throw currentFailure ?: IllegalStateException("Decrypt failed without captured cause")
         }
 
     /**
@@ -328,6 +424,12 @@ class MlsGroupManager(
 
     /**
      * Add a member and create a Commit.
+     *
+     * The returned [CommitResult.preCommitExporterSecret] is the key the
+     * outbound kind:445 MUST be outer-encrypted with (RFC 9420 §12.4 + MDK
+     * parity). The local group state advances to the new epoch before this
+     * function returns; publishers get one shot at the correct pre-commit
+     * key via the [CommitResult] payload.
      */
     suspend fun addMember(
         nostrGroupId: HexKey,
@@ -335,14 +437,16 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             val result = group.addMember(keyPackageBytes)
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
 
     /**
-     * Remove a member and create a Commit.
+     * Remove a member and create a Commit. See [addMember] for the
+     * pre-commit exporter key contract on the returned [CommitResult].
      */
     suspend fun removeMember(
         nostrGroupId: HexKey,
@@ -350,8 +454,9 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             val result = group.removeMember(targetLeafIndex)
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
@@ -360,24 +465,22 @@ class MlsGroupManager(
      * Rotate the signing key within a group and commit.
      *
      * Per MIP-00, members SHOULD self-update within 24 hours of joining.
-     * This creates an Update proposal with a fresh signing key and commits it.
-     *
-     * @param nostrGroupId hex-encoded Nostr group ID
-     * @return the [CommitResult] to publish
+     * See [addMember] for the pre-commit exporter key contract.
      */
     suspend fun rotateSigningKey(nostrGroupId: HexKey): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             group.proposeSigningKeyRotation()
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
 
     /**
      * Update group extensions (e.g., MIP-01 metadata) via a GroupContextExtensions proposal.
-     * Creates the proposal, commits it, and persists the new state.
+     * See [addMember] for the pre-commit exporter key contract.
      */
     suspend fun updateGroupExtensions(
         nostrGroupId: HexKey,
@@ -385,24 +488,31 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val currentMarmot = group.currentMarmotData()
+            val adminsConfigured = currentMarmot != null && currentMarmot.adminPubkeys.isNotEmpty()
+            check(!adminsConfigured || group.isLocalAdmin()) {
+                "MIP-01: only admins may update group extensions"
+            }
+            val retainedBefore = group.retainedSecrets()
             group.proposeGroupContextExtensions(extensions)
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
 
     /**
-     * Leave a group (self-remove).
-     * Returns the SelfRemove proposal bytes to publish, then removes
-     * local state.
+     * Leave a group by publishing a standalone PublicMessage SelfRemove
+     * proposal (draft-ietf-mls-extensions). Admin receivers auto-commit
+     * the pending proposal; the caller publishes the framed bytes as the
+     * kind:445 content, outer-encrypted with the returned exporter key.
      */
-    suspend fun leaveGroup(nostrGroupId: HexKey): ByteArray =
+    suspend fun leaveGroup(nostrGroupId: HexKey): Pair<ByteArray, ByteArray> =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            val proposalBytes = group.selfRemove()
+            val result = group.buildSelfRemoveProposalMessage()
             removeGroupStateUnlocked(nostrGroupId)
-            proposalBytes
+            result
         }
 
     /**
@@ -420,7 +530,47 @@ class MlsGroupManager(
         store.delete(nostrGroupId)
     }
 
+    /**
+     * Wipe all MLS group state, both in-memory and on-disk. Intended as a
+     * user-initiated "nuclear" reset for the Marmot subsystem — does NOT
+     * publish any SelfRemove/leave events, because the reset path is meant
+     * to recover from unusable local state where graceful leave may not
+     * even be possible.
+     *
+     * The union of in-memory group IDs and [MlsGroupStateStore.listGroups]
+     * is used so any orphaned on-disk state (e.g. a prior restore that
+     * failed to decode into memory) is also removed.
+     */
+    suspend fun clearAllState() =
+        mutex.withLock {
+            val ids = (groups.keys + store.listGroups().toSet()).toList()
+            Log.d(TAG) { "clearAllState(): wiping ${ids.size} group(s): $ids" }
+            for (id in ids) {
+                try {
+                    removeGroupStateUnlocked(id)
+                } catch (e: Exception) {
+                    Log.w(TAG) { "clearAllState(): failed to wipe $id: ${e.message}" }
+                }
+            }
+            groups.clear()
+            retainedEpochs.clear()
+        }
+
     // --- Key Export ---
+
+    /**
+     * Hex-encoded BasicCredential identity of the member at [leafIndex] in
+     * the given group, or null if the group is unknown or the leaf is blank /
+     * not a Basic credential.
+     *
+     * Used by MIP-03 inner-event sender verification to confirm that the
+     * `pubkey` in a decrypted application message matches the MLS sender's
+     * credential identity.
+     */
+    fun memberIdentityHex(
+        nostrGroupId: HexKey,
+        leafIndex: Int,
+    ): String? = groups[nostrGroupId]?.memberIdentityHex(leafIndex)
 
     /**
      * Export the Marmot outer encryption key for GroupEvent wrapping.
@@ -430,6 +580,17 @@ class MlsGroupManager(
         requireGroup(nostrGroupId).exporterSecret(
             "marmot",
             "group-event".encodeToByteArray(),
+            32,
+        )
+
+    /**
+     * Export the MIP-04 encrypted media key for a group.
+     * MLS-Exporter("marmot", "encrypted-media", 32)
+     */
+    fun mediaExporterSecret(nostrGroupId: HexKey): ByteArray =
+        requireGroup(nostrGroupId).exporterSecret(
+            "marmot",
+            "encrypted-media".encodeToByteArray(),
             32,
         )
 
@@ -467,29 +628,47 @@ class MlsGroupManager(
             ?: throw IllegalStateException("Not a member of group $nostrGroupId")
 
     private suspend fun persistGroup(nostrGroupId: HexKey) {
-        val group = groups[nostrGroupId] ?: return
-        val state = group.saveState()
-        store.save(nostrGroupId, state.encodeTls())
+        val group = groups[nostrGroupId]
+        if (group == null) {
+            Log.w(TAG) { "persistGroup($nostrGroupId): group not in memory, skipping" }
+            return
+        }
+        try {
+            val state = group.saveState()
+            val encoded = state.encodeTls()
+            Log.d(TAG) { "persistGroup($nostrGroupId): serialized ${encoded.size} bytes, calling store.save" }
+            store.save(nostrGroupId, encoded)
 
-        // Also persist retained epochs
-        val retained = retainedEpochs[nostrGroupId]
-        if (retained != null) {
-            val retainedBytes =
-                retained.map { epoch ->
-                    val writer = TlsWriter()
-                    epoch.encodeTls(writer)
-                    writer.toByteArray()
-                }
-            store.saveRetainedEpochs(nostrGroupId, retainedBytes)
+            // Also persist retained epochs
+            val retained = retainedEpochs[nostrGroupId]
+            if (retained != null) {
+                val retainedBytes =
+                    retained.map { epoch ->
+                        val writer = TlsWriter()
+                        epoch.encodeTls(writer)
+                        writer.toByteArray()
+                    }
+                store.saveRetainedEpochs(nostrGroupId, retainedBytes)
+                Log.d(TAG) { "persistGroup($nostrGroupId): persisted ${retainedBytes.size} retained epochs" }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "persistGroup($nostrGroupId) FAILED: ${e.message}", e)
+            throw e
         }
     }
 
-    private fun retainEpochSecrets(
+    /**
+     * Push a previously-captured [RetainedEpochSecrets] into the bounded
+     * retention window. Call after the epoch advance has been applied
+     * successfully so that failed commits don't pollute the window with
+     * duplicate current-epoch keys.
+     */
+    private fun pushRetainedEpoch(
         nostrGroupId: HexKey,
-        group: MlsGroup,
+        retainedBefore: RetainedEpochSecrets,
     ) {
         val retained = retainedEpochs.getOrPut(nostrGroupId) { mutableListOf() }
-        retained.add(group.retainedSecrets())
+        retained.add(retainedBefore)
 
         // Trim to retention window (keep only the most recent N-1 epochs)
         while (retained.size > EPOCH_RETENTION_WINDOW) {
@@ -517,8 +696,18 @@ class MlsGroupManager(
             if (privMsg.epoch != retained.epoch) return null
 
             // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
+            // RFC 9420 §6.3.2: ciphertext_sample is the first KDF.Nh bytes
+            // (32 for HKDF-SHA256), not AEAD.Nk (16). Using AEAD.Nk here made
+            // sender-data decryption silently fail for every retained-epoch
+            // message and turned the fallback path into a no-op — the
+            // symptom was interop Test 12 (offline catch-up): kind:9
+            // messages encrypted under epoch N arriving after a 1→N+1
+            // commit got rejected with "Message epoch X doesn't match
+            // current epoch Y" instead of being pulled through this path.
+            // Same fix already applied to MlsGroup.decrypt (line ~878);
+            // this branch was missed when that one was patched.
             val ciphertextSample =
-                privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
+                privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
             val senderDataKey =
                 MlsCryptoProvider.expandWithLabel(
                     retained.senderDataSecret,
@@ -567,13 +756,23 @@ class MlsGroupManager(
             contentAad.putUint8(privMsg.contentType.value)
             contentAad.putOpaqueVarInt(privMsg.authenticatedData)
 
-            val plaintext =
+            val pmcBytes =
                 MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad.toByteArray(), privMsg.ciphertext)
+
+            // AEAD plaintext is a PrivateMessageContent struct (RFC 9420
+            // §6.3.1): `applicationData<V> || signature<V> || padding`. The
+            // main decrypt path parses this and returns the inner
+            // applicationData; the retained-epoch branch was returning the
+            // raw struct, which made callers see a length-prefixed blob
+            // with signature + zero-padding glued onto the end. Extract the
+            // applicationData the same way.
+            val pmcReader = TlsReader(pmcBytes)
+            val applicationData = pmcReader.readOpaqueVarInt()
 
             DecryptedMessage(
                 senderLeafIndex = senderLeafIndex,
                 contentType = privMsg.contentType,
-                content = plaintext,
+                content = applicationData,
                 epoch = privMsg.epoch,
             )
         } catch (_: Exception) {
@@ -581,11 +780,15 @@ class MlsGroupManager(
         }
 
     companion object {
+        private const val TAG = "MlsGroupManager"
+
         /**
          * Number of past epochs to retain for late-arriving message decryption.
-         * MLS forward secrecy guarantees mean we want to limit this window.
+         * Matches MDK's `DEFAULT_EPOCH_LOOKBACK` so a message encrypted under
+         * the prior N epochs' exporter secrets can still be decrypted after a
+         * Commit advances the group. Capped for forward-secrecy reasons.
          */
-        const val EPOCH_RETENTION_WINDOW = 2
+        const val EPOCH_RETENTION_WINDOW = 5
 
         /** Size of reuse_guard in PrivateMessage (RFC 9420 §6.3.1) */
         private const val REUSE_GUARD_LENGTH = 4

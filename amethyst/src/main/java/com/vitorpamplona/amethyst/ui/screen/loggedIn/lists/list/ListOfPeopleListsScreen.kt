@@ -24,22 +24,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
+import kotlinx.coroutines.launch
 
 @Composable
 fun ListOfPeopleListsScreen(
@@ -52,18 +56,31 @@ fun ListOfPeopleListsScreen(
     val pack: FollowPackViewModel = viewModel()
     pack.init(accountViewModel)
 
-    ListOfPeopleListsScreen(list, pack, nav)
+    ListOfPeopleListsScreen(list, pack, accountViewModel, nav)
 }
 
 @Composable
 fun ListOfPeopleListsScreen(
     list: PeopleListViewModel,
     pack: FollowPackViewModel,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
+            TopBarWithBackButton(stringRes(R.string.my_lists), nav)
+        },
+        bottomBar = {
+            AppBottomBar(Route.Lists, nav, accountViewModel) { route ->
+                if (route == Route.Lists) {
+                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
         },
     ) { paddingValues ->
         Column(
@@ -73,7 +90,7 @@ fun ListOfPeopleListsScreen(
                     bottom = paddingValues.calculateBottomPadding(),
                 ).fillMaxHeight(),
         ) {
-            AllPeopleListFeedView(list, pack, nav)
+            AllPeopleListFeedView(list, pack, listState, nav)
         }
     }
 }
@@ -83,7 +100,7 @@ fun NewListButton(onClick: () -> Unit) {
     OutlinedButton(onClick = onClick) {
         Row(horizontalArrangement = SpacedBy5dp, verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                symbol = MaterialSymbols.AutoMirrored.PlaylistAdd,
                 contentDescription = null,
             )
             Text(stringRes(R.string.follow_set_create_btn_label))

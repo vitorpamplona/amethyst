@@ -26,15 +26,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserComposeNoAction
@@ -98,7 +97,7 @@ fun PeopleListItem(
                 modifier = HalfPadding,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.PersonRemove,
+                    symbol = MaterialSymbols.PersonRemove,
                     contentDescription = stringRes(R.string.remove_user_from_the_list),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )

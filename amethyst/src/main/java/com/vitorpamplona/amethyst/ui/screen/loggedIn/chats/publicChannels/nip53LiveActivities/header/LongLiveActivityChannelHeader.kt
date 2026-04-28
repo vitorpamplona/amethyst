@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -69,7 +70,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @Composable
 fun LongLiveActivityChannelHeader(
@@ -116,7 +116,7 @@ fun LongLiveActivityChannelHeader(
                     modifier = Modifier.width(75.dp),
                 )
                 Spacer(DoubleHorzSpacer)
-                NormalTimeAgo(note, remember { Modifier.weight(1f) })
+                NormalTimeAgo(note, Modifier.weight(1f))
                 MoreOptionsButton(note, null, accountViewModel, nav)
             }
         }
@@ -145,6 +145,8 @@ fun LongLiveActivityChannelHeader(
         }
     }
 
+    val locale = LocalConfiguration.current.locales.get(0)
+
     participantUsers.forEach {
         Row(
             lineModifier.clickable { nav.nav(routeFor(it.second)) },
@@ -154,7 +156,7 @@ fun LongLiveActivityChannelHeader(
                 Text(
                     text =
                         it1.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                            if (it.isLowerCase()) it.titlecase(locale) else it.toString()
                         },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

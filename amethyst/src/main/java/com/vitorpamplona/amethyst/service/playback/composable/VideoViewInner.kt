@@ -26,6 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import com.vitorpamplona.amethyst.service.playback.composable.controls.ApplyInitialVideoQuality
+import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQualityPolicy
 import com.vitorpamplona.amethyst.service.playback.composable.mainVideo.VideoPlayerActiveMutex
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -47,12 +49,20 @@ fun VideoViewInner(
     authorName: String? = null,
     nostrUriCallback: String? = null,
     automaticallyStartPlayback: Boolean,
+    isLiveStream: Boolean = false,
     controllerVisible: MutableState<Boolean> = mutableStateOf(false),
     onZoom: (() -> Unit)? = null,
+    hasBlurhash: Boolean = false,
+    isFullscreen: Boolean = false,
     accountViewModel: AccountViewModel,
 ) {
     // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
     val muted = remember(videoUri) { DEFAULT_MUTED_SETTING.value }
+
+    // The proxy port is decided once per video URI; recomputing on every recomposition does
+    // pointless work (the result is anyway dropped because GetMediaItem.remember is keyed on the
+    // URI alone, so the cached MediaItemData is locked in on the first frame).
+    val proxyPort = remember(videoUri) { accountViewModel.httpClientBuilder.proxyPortForVideo(videoUri) }
 
     GetMediaItem(
         videoUri = videoUri,
@@ -62,14 +72,19 @@ fun VideoViewInner(
         callbackUri = nostrUriCallback,
         mimeType = mimeType,
         aspectRatio = aspectRatio,
-        proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(videoUri),
+        proxyPort = proxyPort,
         keepPlaying = true,
         waveformData = waveform,
+        isLiveStream = isLiveStream,
     ) { mediaItem ->
         GetVideoController(
             mediaItem = mediaItem,
             muted = muted,
         ) { controller ->
+            ApplyInitialVideoQuality(
+                player = controller.controller,
+                policy = if (isFullscreen) VideoQualityPolicy.AUTO else VideoQualityPolicy.LOWEST,
+            )
             VideoPlayerActiveMutex(controller) { videoModifier, isClosestToTheCenterOfTheScreen ->
                 ControlWhenPlayerIsActive(controller, automaticallyStartPlayback, isClosestToTheCenterOfTheScreen)
                 RenderVideoPlayer(
@@ -82,6 +97,7 @@ fun VideoViewInner(
                     videoModifier = videoModifier,
                     controllerVisible = controllerVisible,
                     onDialog = onZoom,
+                    hasBlurhash = hasBlurhash,
                     accountViewModel = accountViewModel,
                 )
             }

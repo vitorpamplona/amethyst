@@ -34,7 +34,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.unit.IntSize
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
@@ -87,21 +86,25 @@ fun RenderVideoPlayer(
     videoModifier: Modifier,
     onDialog: (() -> Unit)? = null,
     controllerVisible: MutableState<Boolean> = remember { mutableStateOf(false) },
+    hasBlurhash: Boolean = false,
     accountViewModel: AccountViewModel,
 ) {
-    val containerSize = remember { mutableStateOf(IntSize.Zero) }
-    val isLive = isLiveStreaming(mediaItem.src.videoUri)
+    // Hold the container size in a non-state holder so layout passes don't trigger an
+    // unnecessary recomposition of the whole player tree just to update a value that is only
+    // ever read inside the onDoubleTap callback below.
+    val containerWidth = remember { intArrayOf(0) }
+    val isLive = remember(mediaItem.src.videoUri) { isLiveStreaming(mediaItem.src.videoUri) }
 
     Box(
         modifier =
             borderModifier
-                .onSizeChanged { containerSize.value = it }
+                .onSizeChanged { containerWidth[0] = it.width }
                 .pointerInput(isLive, controllerState) {
                     detectTapGestures(
                         onTap = { controllerVisible.value = !controllerVisible.value },
                         onDoubleTap = { offset ->
                             if (!isLive) {
-                                val isLeftSide = offset.x < containerSize.value.width / 2
+                                val isLeftSide = offset.x < containerWidth[0] / 2
                                 if (isLeftSide) {
                                     controllerState.controller.seekBackward()
                                 } else {
@@ -123,6 +126,7 @@ fun RenderVideoPlayer(
             controllerState,
             mediaItem.src.waveformData,
             Modifier.fillMaxSize().align(Alignment.Center),
+            hasBlurhash = hasBlurhash,
         )
 
         if (showControls) {

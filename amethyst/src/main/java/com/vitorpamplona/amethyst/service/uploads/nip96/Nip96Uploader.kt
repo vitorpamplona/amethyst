@@ -30,8 +30,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.uploads.BlurhashMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
@@ -107,7 +107,7 @@ class Nip96Uploader {
         val myContentType = contentType ?: contentResolver.getType(uri)
         val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
 
-        val localMetadata = BlurhashMetadataCalculator.computeFromUri(context, uri, myContentType)
+        val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
         val imageInputStream = contentResolver.openInputStream(uri)
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
@@ -144,7 +144,10 @@ class Nip96Uploader {
         checkNotInMainThread()
 
         val fileName = RandomInstance.randomChars(16)
-        val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+        val extension =
+            contentType?.let {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: fallbackExtensionForMimeType(it)
+            } ?: ""
 
         val client = okHttpClient(server.apiUrl)
         val requestBuilder = Request.Builder()
@@ -230,6 +233,18 @@ class Nip96Uploader {
     }
 
     fun String.displayUrl() = this.removeSuffix("/").removePrefix("https://")
+
+    // Android's MimeTypeMap does not know every MIME we upload (notably HLS playlist types).
+    // When it returns null we fall back to a small static table so the multipart filename still
+    // carries a real extension — otherwise the server gets "name." and echoes it back, which
+    // breaks HLS URL rewriting.
+    private fun fallbackExtensionForMimeType(mimeType: String): String? =
+        when (mimeType.lowercase()) {
+            "application/vnd.apple.mpegurl", "application/x-mpegurl", "audio/x-mpegurl", "audio/mpegurl" -> "m3u8"
+            "video/mp2t" -> "ts"
+            "video/iso.segment", "video/mp4" -> "mp4"
+            else -> null
+        }
 
     fun convertToMediaResult(nip96: PartialEvent): MediaUploadResult {
         // Images don't seem to be ready immediately after upload

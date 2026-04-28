@@ -23,16 +23,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28
 import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -62,7 +61,7 @@ fun OpenChatButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+            symbol = MaterialSymbols.AutoMirrored.OpenInNew,
             contentDescription = stringRes(R.string.quick_actions_open_in_another_app),
             modifier = Size20Modifier,
         )

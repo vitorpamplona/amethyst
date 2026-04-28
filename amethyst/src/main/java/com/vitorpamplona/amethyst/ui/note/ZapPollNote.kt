@@ -38,13 +38,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,6 +71,8 @@ import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -659,7 +657,7 @@ fun ZapVote(
         if (poolOption.zappedByLoggedIn.value) {
             zappingProgress = 1f
             Icon(
-                imageVector = Icons.Default.Bolt,
+                symbol = MaterialSymbols.Bolt,
                 contentDescription = stringRes(R.string.zaps),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
@@ -667,7 +665,7 @@ fun ZapVote(
         } else {
             if (zappingProgress < 0.1 || zappingProgress > 0.99) {
                 Icon(
-                    imageVector = Icons.Outlined.Bolt,
+                    symbol = MaterialSymbols.Bolt,
                     contentDescription = stringRes(id = R.string.zaps),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,

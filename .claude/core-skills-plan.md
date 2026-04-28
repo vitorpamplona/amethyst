@@ -320,3 +320,59 @@ Should show:
 - kotlin-expert/
 - kotlin-multiplatform/
 - nostr-expert/
+
+---
+
+## Phase 2 (2026-04): Audit & Expansion
+
+After a full audit of the skill library, the following changes were made:
+
+### Stale references fixed
+- `CLAUDE.md` tech-stack versions updated to Compose 1.10.3 / Kotlin 2.3.20.
+- `kotlin-multiplatform` reframed iOS as a mature target (not future) and added secp256k1-kmp 0.23.0 version notes.
+- `desktop-expert` Main.kt line references rewritten to match current layout (Main.kt grew from ~270 to ~1341 lines; NavigationRail moved to `ui/deck/SinglePaneLayout.kt:97`); the obsolete "hardcoded ctrl = true anti-pattern" section replaced with a note that `isMacOS` branching is now applied throughout.
+
+### Redundant files removed
+- `.claude/skills/compose-desktop.md` deleted (superseded by `desktop-expert/`). `quartz-kmp.md` kept as a small breadcrumb pointer.
+
+### New references added to existing skills
+- `nostr-expert/references/nip19-bech32.md` — `Nip19Parser`, `Bech32Util`, `TlvBuilder`, entities.
+- `nostr-expert/references/event-factory.md` — `EventFactory` dispatch + registering a new kind.
+- `nostr-expert/references/crypto-and-encryption.md` — `EventHasher`, `Secp256k1Instance`, NIP-44, `SharedKeyCache`.
+- `nostr-expert/references/large-cache.md` — `LargeCache<K,V>` + `ICacheOperations`.
+- `kotlin-expert/references/common-utilities.md` — `NumberFormatters`, `TimeUtils`, `Hex`, `PubKeyFormatter`, `CoroutinesExt.launchIO`, etc.
+- `compose-expert/references/rich-text-parsing.md` — `RichTextParser`, `UrlParser`, `GalleryParser`, NIP-92 imeta.
+- `android-expert/references/image-loading.md` — Coil 3.x setup, custom fetchers, `MyAsyncImage`, `RobohashAsyncImage`.
+
+### New skills created
+- **`account-state/`** — `Account.kt` (50+ StateFlow properties) and `LocalCache.kt` event store.
+  - `references/account-state-flow.md`, `references/local-cache.md`
+- **`relay-client/`** — `ComposeSubscriptionManager`, filter assemblers, preloaders (`MetadataPreloader`, `MetadataRateLimiter`).
+  - `references/filter-assemblers.md`, `references/preloaders.md`
+- **`feed-patterns/`** — `FeedFilter`, `AdditiveComplexFeedFilter`, `FeedViewModel` hierarchy in `commons/`.
+  - `references/feed-filter-composition.md`, `references/viewmodel-base-classes.md`
+- **`auth-signers/`** — `NostrSigner` abstraction across `NostrSignerInternal`, `NostrSignerRemote` (NIP-46), `NostrSignerExternal` (NIP-55).
+  - `references/nip46-remote-signer.md`, `references/nip55-android-signer.md`
+
+### Updated skills directory (Phase 2)
+```
+- android-expert/
+- auth-signers/                (new)
+- account-state/               (new)
+- compose-expert/
+- desktop-expert/
+- feed-patterns/               (new)
+- find-missing-translations/
+- find-non-lambda-logs/
+- gradle-expert/
+- kotlin-coroutines/
+- kotlin-expert/
+- kotlin-multiplatform/
+- nostr-expert/
+- quartz-integration/
+- relay-client/                (new)
+- quartz-kmp.md                (breadcrumb pointer)
+```
+
+### Still deferred
+- ⏸️ `ios-expert` — iOS targets are mature but iOS-specific UI work hasn't surfaced yet in this repo.

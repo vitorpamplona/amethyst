@@ -81,7 +81,7 @@ fun FollowListAndPackAndUserScreen(
             val userName by observeUserName(userToAddOrRemove, accountViewModel)
             TopBarWithBackButton(
                 caption = stringRes(id = R.string.follow_set_man_dialog_title2, userName),
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { contentPadding ->

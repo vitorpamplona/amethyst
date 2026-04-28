@@ -49,7 +49,7 @@ class InliningTagArrayPrettyPrinterTest {
             }
             """.trimIndent()
         val json = writer.writeValueAsString(data)
-        assertEquals(expected, json)
+        assertEquals(expected.replace("\r\n", "\n"), json.replace("\r\n", "\n"))
 
         val data2 =
             mapOf(
@@ -65,7 +65,7 @@ class InliningTagArrayPrettyPrinterTest {
             }
             """.trimIndent()
         val json2 = writer.writeValueAsString(data2)
-        assertEquals(expected2, json2)
+        assertEquals(expected2.replace("\r\n", "\n"), json2.replace("\r\n", "\n"))
     }
 
     @Test
@@ -90,6 +90,6 @@ class InliningTagArrayPrettyPrinterTest {
 
         val prettified = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(tree)
 
-        assertEquals(nostrObject, prettified)
+        assertEquals(nostrObject.replace("\r\n", "\n"), prettified.replace("\r\n", "\n"))
     }
 }

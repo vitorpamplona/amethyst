@@ -23,29 +23,18 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.DefaultChannels
-import com.vitorpamplona.amethyst.model.DefaultDMRelayList
-import com.vitorpamplona.amethyst.model.DefaultGlobalRelays
-import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
-import com.vitorpamplona.amethyst.model.DefaultNIP65List
-import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
-import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -57,12 +46,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
-import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -222,21 +206,20 @@ class AccountSessionManager(
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
-                val nip05 = Nip05Id.parse(key)
-                if (nip05 == null) {
-                    onError("Could not parse nip05 address: $nip05")
-                } else {
-                    try {
-                        val pubkeyInfo = nip05ClientBuilder().get(nip05)
-                        if (pubkeyInfo == null) {
-                            onError("User not found in the nip05 server: $nip05")
-                        } else {
-                            loginSync(Hex.decode(pubkeyInfo.pubkey).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
-                        }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        onError("Could not load nip05 address from the server: $nip05. ${e.message}")
+                // Delegate to the shared quartz resolver so NIP-05 handling stays in
+                // lockstep with the CLI and anywhere else we accept user identifiers.
+                try {
+                    val hex =
+                        com.vitorpamplona.quartz.nip05DnsIdentifiers
+                            .resolveUserHexOrNull(key, nip05ClientBuilder())
+                    if (hex == null) {
+                        onError("User not found in the nip05 server: $key")
+                    } else {
+                        loginSync(Hex.decode(hex).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
                     }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    onError("Could not load nip05 address from the server: $key. ${e.message}")
                 }
             } else {
                 loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)
@@ -293,33 +276,34 @@ class AccountSessionManager(
                 accountSettings.backupContactList?.let { client.publish(it, toPost) }
                 accountSettings.backupNIP65RelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupDMRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupKeyPackageRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupSearchRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupIndexRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupRelayFeedsList?.let { client.publish(it, toPost) }
+                accountSettings.backupChannelList?.let { client.publish(it, toPost) }
             }
         }
     }
 
     fun createNewAccount(name: String? = null): AccountSettings {
         val keyPair = KeyPair()
-        val tempSigner = NostrSignerSync(keyPair)
-
+        val bootstrap =
+            com.vitorpamplona.amethyst.commons.account.bootstrapAccountEvents(
+                signer = NostrSignerSync(keyPair),
+                name = name,
+            )
         return AccountSettings(
             keyPair = keyPair,
             transientAccount = false,
-            backupUserMetadata = tempSigner.sign(MetadataEvent.newUser(name)),
-            backupContactList =
-                ContactListEvent.createFromScratch(
-                    followUsers = listOf(ContactTag(keyPair.pubKey.toHexKey(), null, null)),
-                    relayUse = emptyMap(),
-                    signer = tempSigner,
-                ),
-            backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
-            backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
-            backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
-            backupIndexRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), tempSigner),
-            backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
-            backupRelayFeedsList = RelayFeedsListEvent.create(DefaultGlobalRelays, tempSigner),
+            backupUserMetadata = bootstrap.userMetadata,
+            backupContactList = bootstrap.contactList,
+            backupNIP65RelayList = bootstrap.nip65RelayList,
+            backupDMRelayList = bootstrap.dmRelayList,
+            backupKeyPackageRelayList = bootstrap.keyPackageRelayList,
+            backupSearchRelayList = bootstrap.searchRelayList,
+            backupIndexRelayList = bootstrap.indexerRelayList,
+            backupChannelList = bootstrap.channelList,
+            backupRelayFeedsList = bootstrap.relayFeedsList,
         )
     }
 

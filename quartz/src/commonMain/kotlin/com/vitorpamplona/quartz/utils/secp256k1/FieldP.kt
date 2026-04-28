@@ -59,6 +59,14 @@ internal object FieldP {
 
     // ==================== Core arithmetic ====================
 
+    /**
+     * out = a + b. LAZY: does NOT reduce the result.
+     * Values may be in [0, 2^256) after this call. This is safe because:
+     * - mul/sqr reduce any 256-bit input via reduceWide
+     * - neg normalizes its input before P - a
+     * - half normalizes its input before the conditional add
+     * Only explicit reduceSelf is needed before isZero/cmp/toBytes.
+     */
     fun add(
         out: Fe4,
         a: Fe4,
@@ -78,13 +86,21 @@ internal object FieldP {
                 }
             }
         }
-        reduceSelf(out)
+        // No reduceSelf — lazy addition for performance.
+        // Result may be in [P, 2^256) but this is handled by
+        // downstream mul/sqr/neg/half/reduceSelf.
     }
 
     /**
      * out = a - b mod p. Specialized add-back for P = [P0, -1, -1, -1]:
      * adding -1 to limbs 1-3 with carry=1 is identity, so only the carry=0
      * case needs work (subtract 1 with borrow propagation). ~500 calls/verify.
+     *
+     * NOTE: unlike fe_add, fe_sub CANNOT be lazy because the unsigned-wrapped
+     * underflow value (a - b + 2^256) differs from (a - b + P) by C = 2^32+977.
+     * When multiplied, this C factor produces wrong results:
+     *   (a-b+2^256) * x mod p ≠ (a-b) * x mod p  (off by x*C mod p)
+     * The P-add-back is required to keep values in [0, P).
      */
     fun sub(
         out: Fe4,
@@ -97,15 +113,11 @@ internal object FieldP {
             val s0 = out.l0 + P0
             val c0 = if (uLtInline(s0, out.l0)) 1L else 0L
             out.l0 = s0
-            // For limbs 1-3: adding P[i]=-1 with carry c:
-            //   c=1 → result unchanged, carry out=1 (identity propagation)
-            //   c=0 → result = out[i]-1, carry out = (out[i] != 0) ? 1 : 0
-            // So if c0=1, limbs 1-3 are untouched. If c0=0, subtract 1 with borrow:
             if (c0 == 0L) {
                 if (out.l1 != 0L) {
                     out.l1--
                 } else {
-                    out.l1 = -1L // 0-1 wraps
+                    out.l1 = -1L
                     if (out.l2 != 0L) {
                         out.l2--
                     } else {
@@ -159,18 +171,17 @@ internal object FieldP {
      * out = -a mod p = P - a. Specialized for P = [P0, -1, -1, -1]:
      * P[i]-a[i] = ~a[i] for i>=1 (bitwise NOT), with borrow from limb 0.
      * Avoids generic U256.subTo + P field reads (~260 calls/verify).
+     *
+     * Branch-free for a == 0: P - 0 = P, which is then reduced to 0 by the
+     * trailing reduceSelf. Removing the early return matches the C fe_negate
+     * path and eliminates a data-dependent branch that the JIT can't optimize.
      */
     fun neg(
         out: Fe4,
         a: Fe4,
     ) {
-        if (a.isZero()) {
-            out.l0 = 0L
-            out.l1 = 0L
-            out.l2 = 0L
-            out.l3 = 0L
-            return
-        }
+        // Normalize input: P - a underflows if a > P (from lazy add)
+        reduceSelf(a)
         // P - a: limb 0 is P0 - a.l0, limbs 1-3 are (-1) - a[i] = ~a[i]
         out.l0 = P0 - a.l0
         val borrow = if (uLtInline(P0, a.l0)) 1L else 0L
@@ -180,6 +191,8 @@ internal object FieldP {
         out.l2 = a.l2.inv() - b1
         val b2 = if (a.l2 == -1L && b1 != 0L) 1L else 0L
         out.l3 = a.l3.inv() - b2
+        // a == 0 ⇒ out == P here; reduceSelf folds P back to 0.
+        reduceSelf(out)
     }
 
     /**
@@ -190,6 +203,9 @@ internal object FieldP {
         out: Fe4,
         a: Fe4,
     ) {
+        // Normalize: half conditionally adds P; if a is in [P, 2^256) from lazy add,
+        // a+P could exceed 2^256. Normalize ensures a < P first.
+        reduceSelf(a)
         val mask = -(a.l0 and 1L) // all 1s if odd, all 0s if even
         val p0 = P0 and mask // P[0] masked; P[1..3] are -1, so P[i]&mask = mask
         var s1: Long
@@ -478,7 +494,9 @@ internal object FieldP {
             }
         }
 
-        reduceSelf(out)
+        // No reduceSelf — lazy mul. Output is in [0, 2^256), possibly [P, P+C).
+        // Safe: mul/add/sub all handle unreduced inputs.
+        // Only neg/half/isZero/cmp/toBytes need explicit reduceSelf.
     }
 
     // ==================== Convenience wrappers ====================

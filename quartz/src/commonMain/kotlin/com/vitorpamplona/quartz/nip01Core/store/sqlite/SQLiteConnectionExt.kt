@@ -70,14 +70,24 @@ fun SQLiteConnection.changes(): Int =
 
 inline fun <T> SQLiteConnection.transaction(body: SQLiteConnection.() -> T): T {
     execSQL("BEGIN IMMEDIATE TRANSACTION")
+    val result: T
     try {
-        val result = body()
-        execSQL("END TRANSACTION")
-        return result
+        result = body()
     } catch (e: Throwable) {
-        execSQL("ROLLBACK TRANSACTION")
+        // Attempt rollback, but never let a rollback failure mask the
+        // original cause — attach it as a suppressed exception instead.
+        try {
+            execSQL("ROLLBACK TRANSACTION")
+        } catch (rollbackError: Throwable) {
+            e.addSuppressed(rollbackError)
+        }
         throw e
     }
+    // Commit is intentionally outside the catch: if COMMIT fails SQLite
+    // has already finalized the transaction state, so we must not also
+    // try to ROLLBACK on top of it.
+    execSQL("END TRANSACTION")
+    return result
 }
 
 fun SQLiteStatement.bindAny(

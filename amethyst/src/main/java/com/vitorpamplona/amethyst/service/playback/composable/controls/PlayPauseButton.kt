@@ -28,10 +28,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -44,6 +40,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PlayIconSize
@@ -114,13 +112,13 @@ fun PlayPauseButton(
         ) {
             if (!isPlaying) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
+                    symbol = MaterialSymbols.PlayArrow,
                     modifier = Size50Modifier,
                     contentDescription = stringRes(R.string.play),
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.Pause,
+                    symbol = MaterialSymbols.Pause,
                     modifier = Size50Modifier,
                     contentDescription = stringRes(R.string.pause),
                 )

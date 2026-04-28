@@ -31,14 +31,13 @@ import kotlin.uuid.Uuid
 class MediaControllerState(
     // each composable has an ID.
     val id: String = Uuid.random().toString(),
-    // This is filled after the controller returns from this class
-    var controller: Player,
+    val controller: Player,
     // visibility onscreen
     val visibility: VisibilityData = VisibilityData(),
 ) {
     fun isPlaying() = controller.isPlaying
 
-    fun currrentMedia() = controller.currentMediaItem?.mediaId
+    fun currentMedia() = controller.currentMediaItem?.mediaId
 
     fun toggleMute() {
         controller.volume = if (controller.volume == 0f) 1f else 0f
@@ -56,5 +55,20 @@ class MediaControllerState(
 @Stable
 class VisibilityData {
     var bounds: Rect? = null
+        private set
     var distanceToCenter: Float? = null
+
+    fun setBounds(
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+    ) {
+        val current = bounds
+        if (current == null) {
+            bounds = Rect(left, top, right, bottom)
+        } else {
+            current.set(left, top, right, bottom)
+        }
+    }
 }

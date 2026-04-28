@@ -26,11 +26,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
@@ -44,6 +40,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,7 +90,7 @@ fun BunkerHeartbeatIndicator(
                     label = "heartbeatScale",
                 )
                 Icon(
-                    Icons.Default.Favorite,
+                    MaterialSymbols.Favorite,
                     contentDescription = "Bunker connected",
                     tint = Color(0xFF4CAF50),
                     modifier = Modifier.size(20.dp).scale(scale),
@@ -101,7 +99,7 @@ fun BunkerHeartbeatIndicator(
 
             is SignerConnectionState.Disconnected -> {
                 Icon(
-                    Icons.Default.FavoriteBorder,
+                    MaterialSymbols.FavoriteBorder,
                     contentDescription = "Bunker disconnected",
                     tint = Color(0xFFF44336),
                     modifier = Modifier.size(20.dp),

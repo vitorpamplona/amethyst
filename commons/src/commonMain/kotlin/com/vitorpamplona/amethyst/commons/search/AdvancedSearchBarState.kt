@@ -84,10 +84,10 @@ class AdvancedSearchBarState(
     val noteResults: StateFlow<ImmutableList<Event>> = _noteResults.asStateFlow()
 
     // Sort orders
-    private val _eventSortOrder = MutableStateFlow(SearchSortOrder.DEFAULT_EVENT)
+    private val _eventSortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
     val eventSortOrder: StateFlow<SearchSortOrder> = _eventSortOrder.asStateFlow()
 
-    private val _peopleSortOrder = MutableStateFlow(SearchSortOrder.DEFAULT_PEOPLE)
+    private val _peopleSortOrder = MutableStateFlow(SearchSortOrder.PEOPLE_DEFAULT)
     val peopleSortOrder: StateFlow<SearchSortOrder> = _peopleSortOrder.asStateFlow()
 
     // Derived sorted results
@@ -266,8 +266,8 @@ class AdvancedSearchBarState(
         _peopleResults.value = persistentListOf()
         _noteResults.value = persistentListOf()
         _relayStates.value = persistentListOf()
-        _eventSortOrder.value = SearchSortOrder.DEFAULT_EVENT
-        _peopleSortOrder.value = SearchSortOrder.DEFAULT_PEOPLE
+        _eventSortOrder.value = SearchSortOrder.EVENT_DEFAULT
+        _peopleSortOrder.value = SearchSortOrder.PEOPLE_DEFAULT
         activeSubIds.value = emptySet()
         eventDeduplicator.clear()
     }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metada
 
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -34,12 +35,14 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
@@ -53,9 +56,11 @@ val AccountInfoAndListsFromKeyKinds =
         StatusEvent.KIND,
         AdvertisedRelayListEvent.KIND,
         ChatMessageRelayListEvent.KIND,
+        KeyPackageRelayListEvent.KIND,
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
         BlossomServersEvent.KIND,
+        NestsServersEvent.KIND,
         PrivateOutboxRelayListEvent.KIND,
     )
 
@@ -71,6 +76,7 @@ val AccountInfoAndListsFromKeyKinds2 =
         TrustProviderListEvent.KIND,
         PaymentTargetsEvent.KIND,
         RelayFeedsListEvent.KIND,
+        InterestSetEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
@@ -100,7 +106,7 @@ fun filterAccountInfoAndListsFromKey(
                 Filter(
                     kinds = AccountInfoAndListsFromKeyKinds2,
                     authors = listOf(pubkey),
-                    limit = 20,
+                    limit = 80,
                     since = since,
                 ),
         ),

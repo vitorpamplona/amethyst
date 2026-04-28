@@ -44,10 +44,28 @@ import kotlin.test.assertTrue
  * implementations, and that re-encoding produces identical bytes (round-trip).
  */
 class MessageSerializationInteropTest {
-    private val vectors: List<MessagesVector> =
+    private val allVectors: List<MessagesVector> =
         JsonMapper.jsonInstance.decodeFromString<List<MessagesVector>>(
             TestResourceLoader().loadString("mls/messages.json"),
         )
+
+    /**
+     * messages.json ships vectors for MLS cipher suites 1, 2, and 3. Quartz
+     * only implements cipher suite 1
+     * (MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519), so we filter the
+     * corpus by peeking at the KeyPackage's ciphersuite field
+     * (`uint16 version || uint16 cipher_suite || ...`) and keeping only
+     * vectors authored with cipher suite 1.
+     */
+    private val vectors: List<MessagesVector> =
+        allVectors.filter { v ->
+            val hex = v.mlsKeyPackage
+            // MLSMessage wraps a KeyPackage with:
+            //   uint16 version || uint16 wire_format || KeyPackage{ uint16 version || uint16 cs || ...}
+            // Offset of the KeyPackage ciphersuite = 4 bytes (version+wire_format) +
+            //   2 bytes (KP version) = 6 bytes → 12 hex chars in.
+            hex.length >= 16 && hex.substring(12, 16).toInt(16) == 1
+        }
 
     @Test
     fun testWelcomeDeserialization() {

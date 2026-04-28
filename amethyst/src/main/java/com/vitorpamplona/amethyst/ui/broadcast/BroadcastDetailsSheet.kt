@@ -42,18 +42,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -77,7 +69,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Constants
+import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.service.broadcast.RelayResult
@@ -252,7 +246,7 @@ private fun BroadcastSection(
                 )
 
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    symbol = if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
                     contentDescription = if (isExpanded) stringRes(R.string.collapse) else stringRes(R.string.expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
@@ -289,7 +283,7 @@ private fun BroadcastSection(
                             ),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            symbol = MaterialSymbols.Refresh,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
                         )
@@ -318,14 +312,14 @@ private fun StatusIcon(
 ) {
     val (icon, tint, shouldRotate) =
         when (status) {
-            BroadcastStatus.SUCCESS -> Triple(Icons.Default.CheckCircle, Color(0xFF22C55E), false)
-            BroadcastStatus.PARTIAL -> Triple(Icons.Default.Error, Color(0xFFF59E0B), false)
-            BroadcastStatus.FAILED -> Triple(Icons.Default.Error, MaterialTheme.colorScheme.error, false)
-            BroadcastStatus.IN_PROGRESS -> Triple(Icons.Default.HourglassEmpty, MaterialTheme.colorScheme.primary, true)
+            BroadcastStatus.SUCCESS -> Triple(MaterialSymbols.CheckCircle, Color(0xFF22C55E), false)
+            BroadcastStatus.PARTIAL -> Triple(MaterialSymbols.Error, Color(0xFFF59E0B), false)
+            BroadcastStatus.FAILED -> Triple(MaterialSymbols.Error, MaterialTheme.colorScheme.error, false)
+            BroadcastStatus.IN_PROGRESS -> Triple(MaterialSymbols.HourglassEmpty, MaterialTheme.colorScheme.primary, true)
         }
 
     Icon(
-        imageVector = icon,
+        symbol = icon,
         contentDescription = status.name,
         tint = tint,
         modifier =
@@ -362,15 +356,15 @@ private fun RelayResultRow(
         // Status icon
         val (icon, tint, shouldRotate) =
             when (result) {
-                is RelayResult.Success -> Triple(Icons.Default.CheckCircle, successColor, false)
-                is RelayResult.Error -> Triple(Icons.Default.Error, errorColor, false)
-                is RelayResult.Timeout -> Triple(Icons.Default.Error, warningColor, false)
-                is RelayResult.Pending -> Triple(Icons.Default.HourglassEmpty, MaterialTheme.colorScheme.onSurfaceVariant, true)
-                is RelayResult.Retrying -> Triple(Icons.Default.HourglassEmpty, MaterialTheme.colorScheme.primary, true)
+                is RelayResult.Success -> Triple(MaterialSymbols.CheckCircle, successColor, false)
+                is RelayResult.Error -> Triple(MaterialSymbols.Error, errorColor, false)
+                is RelayResult.Timeout -> Triple(MaterialSymbols.Error, warningColor, false)
+                is RelayResult.Pending -> Triple(MaterialSymbols.HourglassEmpty, MaterialTheme.colorScheme.onSurfaceVariant, true)
+                is RelayResult.Retrying -> Triple(MaterialSymbols.HourglassEmpty, MaterialTheme.colorScheme.primary, true)
             }
 
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = null,
             tint = tint,
             modifier =
@@ -437,7 +431,7 @@ private fun RelayResultRow(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Refresh,
+                    symbol = MaterialSymbols.Refresh,
                     contentDescription = stringResource(R.string.retry),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),

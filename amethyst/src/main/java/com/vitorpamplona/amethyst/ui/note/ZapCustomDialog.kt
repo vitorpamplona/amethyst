@@ -359,7 +359,7 @@ fun PayViaIntentScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.manual_zaps), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.manual_zaps), nav)
         },
     ) { pad ->
         val list = accountViewModel.tempManualPaymentCache.get(paymentId)

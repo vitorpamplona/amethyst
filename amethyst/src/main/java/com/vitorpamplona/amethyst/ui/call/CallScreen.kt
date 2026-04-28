@@ -36,11 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
@@ -59,7 +55,9 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
-import com.vitorpamplona.amethyst.service.call.CallController
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
@@ -68,7 +66,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CallScreen(
     callManager: CallManager,
-    callController: CallController?,
+    callSession: CallSession?,
     accountViewModel: AccountViewModel,
     onCallEnded: () -> Unit,
     isInPipMode: Boolean = false,
@@ -77,7 +75,7 @@ fun CallScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val emptyStringFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }
-    val errorMessage by (callController?.errorMessage ?: emptyStringFlow).collectAsState()
+    val errorMessage by (callSession?.errorMessage ?: emptyStringFlow).collectAsState()
 
     BackHandler(enabled = callState !is CallState.Idle && callState !is CallState.Ended) {
         scope.launch { callManager.hangup() }
@@ -124,7 +122,7 @@ fun CallScreen(
                     val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                     val acceptWithPermission =
                         rememberCallWithPermission(context, isVideo = isVideoCall) {
-                            callController?.acceptIncomingCall(state.sdpOffer)
+                            callSession?.accept(state.sdpOffer)
                         }
                     IncomingCallUI(
                         groupMembers = otherMembers,
@@ -155,17 +153,17 @@ fun CallScreen(
 
             is CallState.Connected -> {
                 if (isInPipMode) {
-                    PipConnectedCallUI(state = state, callController = callController, accountViewModel = accountViewModel)
+                    PipConnectedCallUI(state = state, callSession = callSession, accountViewModel = accountViewModel)
                 } else {
                     ConnectedCallUI(
                         state = state,
-                        callController = callController,
+                        callSession = callSession,
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
-                        onToggleMute = { callController?.toggleAudioMute() },
-                        onToggleVideo = { callController?.toggleVideo() },
-                        onCycleAudioRoute = { callController?.cycleAudioRoute() },
-                        onInvitePeer = { peerPubKey -> callController?.invitePeer(peerPubKey) },
+                        onToggleMute = { callSession?.toggleMute() },
+                        onToggleVideo = { callSession?.toggleVideo() },
+                        onCycleAudioRoute = { callSession?.cycleAudioRoute() },
+                        onInvitePeer = { peerPubKey -> callSession?.invitePeer(peerPubKey) },
                     )
                 }
             }
@@ -196,7 +194,7 @@ fun CallScreen(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                     action = {
                         androidx.compose.material3.TextButton(
-                            onClick = { callController?.clearError() },
+                            onClick = { callSession?.clearError() },
                         ) {
                             Text(
                                 stringRes(R.string.call_dismiss),
@@ -256,7 +254,7 @@ private fun CallInProgressUI(
                 modifier = Modifier.size(64.dp),
             ) {
                 Icon(
-                    Icons.Default.CallEnd,
+                    MaterialSymbols.CallEnd,
                     contentDescription = stringRes(R.string.call_hangup),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
@@ -321,7 +319,7 @@ private fun IncomingCallUI(
                     modifier = Modifier.size(64.dp),
                 ) {
                     Icon(
-                        Icons.Default.CallEnd,
+                        MaterialSymbols.CallEnd,
                         contentDescription = stringRes(R.string.call_reject),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
@@ -334,7 +332,7 @@ private fun IncomingCallUI(
                     modifier = Modifier.size(64.dp),
                 ) {
                     Icon(
-                        Icons.Default.Call,
+                        MaterialSymbols.Call,
                         contentDescription = stringRes(R.string.call_accept),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),

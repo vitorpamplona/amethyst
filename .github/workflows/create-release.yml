@@ -3,264 +3,45 @@ name: Create Release Assets
 on:
   push:
     tags:
-    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: build assets but do not publish to GH Release or trigger bump workflows'
+        type: boolean
+        default: false
+      test_tag:
+        description: 'Synthetic tag name for dry-run (e.g. v1.08.0-dryrun); ignored on tag push'
+        type: string
+        default: 'v0.0.0-dryrun'
 
 permissions:
   contents: write
 
+env:
+  # Asset naming contract: amethyst-desktop-<version>-<family>-<arch>.<ext>
+  # Single source of truth in scripts/asset-name.sh.
+  # linuxdeploy pinned release — bump via Dependabot, verify SHA256 via env var below.
+  LINUXDEPLOY_URL: https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20240109-1/linuxdeploy-x86_64.AppImage
+  LINUXDEPLOY_SHA256: c86d6540f1df31061f02f539a2d3445f8d7f85cc3994eee1e74cd1ac97b76df0
+
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: true
-
-  deploy-android:
-    needs: create-release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'zulu'
-          java-version: 21
-
-      - name: Cache gradle
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Build AAB
-        run: ./gradlew clean bundleRelease --stacktrace
-
-      - name: Sign AAB (Google Play)
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: amethyst/build/outputs/bundle/playRelease
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "36.0.0"
-
-      - name: Sign AAB (F-Droid)
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: amethyst/build/outputs/bundle/fdroidRelease
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "36.0.0"
-
-      - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: Sign APK (Google Play)
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: amethyst/build/outputs/apk/play/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "36.0.0"
-
-      - name: Sign APK (F-Droid)
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: amethyst/build/outputs/apk/fdroid/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "36.0.0"
-
-      # Google Play APK
-      - name: Upload Play APK Universal Asset
-        id: upload-release-asset-play-universal-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-universal-release-unsigned-signed.apk
-          asset_name: amethyst-googleplay-universal-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload Play APK x86 Asset
-        id: upload-release-asset-play-x86-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-x86-release-unsigned-signed.apk
-          asset_name: amethyst-googleplay-x86-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload Play APK x86_64 Asset
-        id: upload-release-asset-play-x86-64-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-x86_64-release-unsigned-signed.apk
-          asset_name: amethyst-googleplay-x86_64-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload Play APK arm64-v8a Asset
-        id: upload-release-asset-play-arm64-v8a-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-arm64-v8a-release-unsigned-signed.apk
-          asset_name: amethyst-googleplay-arm64-v8a-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload Play APK armeabi-v7a Asset
-        id: upload-release-asset-play-armeabi-v7a-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-armeabi-v7a-release-unsigned-signed.apk
-          asset_name: amethyst-googleplay-armeabi-v7a-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      # F-Droid APK
-      - name: Upload F-Droid APK Universal Asset
-        id: upload-release-asset-fdroid-universal-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-universal-release-unsigned-signed.apk
-          asset_name: amethyst-fdroid-universal-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload F-Droid APK x86 Asset
-        id: upload-release-asset-fdroid-x86-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-x86-release-unsigned-signed.apk
-          asset_name: amethyst-fdroid-x86-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload F-Droid APK x86_64 Asset
-        id: upload-release-asset-fdroid-x86-64-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-x86_64-release-unsigned-signed.apk
-          asset_name: amethyst-fdroid-x86_64-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload F-Droid APK arm64-v8a Asset
-        id: upload-release-asset-fdroid-arm64-v8a-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-arm64-v8a-release-unsigned-signed.apk
-          asset_name: amethyst-fdroid-arm64-v8a-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      - name: Upload F-Droid APK armeabi-v7a Asset
-        id: upload-release-asset-fdroid-armeabi-v7a-apk
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-armeabi-v7a-release-unsigned-signed.apk
-          asset_name: amethyst-fdroid-armeabi-v7a-${{ github.ref_name }}.apk
-          asset_content_type: application/zip
-
-      # Google Play AAB
-      - name: Upload Google Play AAB Asset
-        id: upload-release-asset-play-aab
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/bundle/playRelease/amethyst-play-release.aab
-          asset_name: amethyst-googleplay-${{ github.ref_name }}.aab
-          asset_content_type: application/zip
-
-      # FDroid AAB
-      - name: Upload F-Droid AAB Asset
-        id: upload-release-asset-fdroid-aab
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: amethyst/build/outputs/bundle/fdroidRelease/amethyst-fdroid-release.aab
-          asset_name: amethyst-fdroid-${{ github.ref_name }}.aab
-          asset_content_type: application/zip
-
-      - name: Publish Quartz Lib
-        run: ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-
-  deploy-desktop:
-    needs: create-release
+  # ---------------------------------------------------------------------------
+  # Desktop build matrix. Each leg uploads directly to the GH Release via
+  # softprops/action-gh-release@v2 (upsert by tag_name). No artifact round-trip.
+  # ---------------------------------------------------------------------------
+  build-desktop:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            task: packageDeb
-            format: deb
-            platform: linux
-          - os: macos-latest
-            task: packageDmg
-            format: dmg
-            platform: macos
-          - os: windows-latest
-            task: packageMsi
-            format: msi
-            platform: windows
+          - { os: macos-13,       arch: x64,   family: macos,          tasks: "packageReleaseDmg" }
+          - { os: macos-14,       arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
+          - { os: windows-latest, arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
+          - { os: ubuntu-latest,  arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
+          - { os: ubuntu-latest,  arch: x64,   family: linux-portable, tasks: "createReleaseAppImage createReleaseDistributable" }
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     defaults:
       run:
         shell: bash
@@ -274,32 +55,406 @@ jobs:
           distribution: 'zulu'
           java-version: 21
 
+      - name: Resolve tag + version
+        id: ver
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          TEST_TAG: ${{ github.event.inputs.test_tag || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${TEST_TAG:-v0.0.0-dryrun}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          VER="${TAG#v}"
+          TOML_VER=$(grep -E '^app\s*=' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          # On dry-run we only require that TOML has a version; on real tag push we require exact match.
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]]; then
+            if [[ "$TOML_VER" != "$VER" ]]; then
+              echo "::error::gradle/libs.versions.toml app=$TOML_VER but tag is $TAG"
+              exit 1
+            fi
+          fi
+          echo "tag=$TAG"       >> "$GITHUB_OUTPUT"
+          echo "version=$VER"   >> "$GITHUB_OUTPUT"
+          echo "toml=$TOML_VER" >> "$GITHUB_OUTPUT"
+
+      - name: Install RPM tooling (deb+rpm leg only)
+        if: matrix.family == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+
+      - name: Fetch linuxdeploy (linux-portable only, SHA-verified)
+        if: matrix.family == 'linux-portable'
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 "$LINUXDEPLOY_URL" -o packaging/appimage/linuxdeploy-x86_64.AppImage
+          actual=$(sha256sum packaging/appimage/linuxdeploy-x86_64.AppImage | awk '{print $1}')
+          if [[ "$actual" != "$LINUXDEPLOY_SHA256" ]]; then
+            echo "::error::linuxdeploy SHA256 mismatch. Expected $LINUXDEPLOY_SHA256, got $actual"
+            exit 1
+          fi
+          chmod +x packaging/appimage/linuxdeploy-x86_64.AppImage
+
+      - name: Build desktop artifacts
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        with:
+          max_attempts: 2
+          timeout_minutes: 15
+          command: ./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}
+
+      # jpackage pins libicu to the build host's version (libicu74 on
+      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax libicu dependency in .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
+      - name: Build portable archives (windows + linux-portable)
+        if: matrix.family == 'windows' || matrix.family == 'linux-portable'
+        run: |
+          set -euo pipefail
+          VER="${{ steps.ver.outputs.version }}"
+          APP="desktopApp/build/compose/binaries/main-release/app"
+          mkdir -p desktopApp/build/portable
+          if [[ "${{ matrix.family }}" == "windows" ]]; then
+            ( cd "$APP" && 7z a -tzip "../../../../portable/amethyst-desktop-${VER}-windows-x64.zip" Amethyst/ )
+          else
+            ( cd "$APP" && tar czf "../../../../portable/amethyst-desktop-${VER}-linux-x64.tar.gz" Amethyst/ )
+          fi
+
+      - name: Collect + rename assets
+        run: |
+          set -euo pipefail
+          # shellcheck source=scripts/asset-name.sh
+          source scripts/asset-name.sh
+          # collect_assets normalizes linux-portable → linux internally.
+          collect_assets "${{ matrix.family }}" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
+
+      - name: Enforce asset size budget (1 GB per asset)
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in dist/*; do
+            if [[ -f "$f" ]]; then
+              size=$(wc -c < "$f")
+              mb=$(( size / 1048576 ))
+              if (( size > 1073741824 )); then
+                echo "::error file=$f::asset is ${mb} MB — exceeds 1 GB budget"
+                fail=1
+              else
+                echo "OK: $f — ${mb} MB"
+              fi
+            fi
+          done
+          [[ "$fail" == 0 ]]
+
+      - name: Classify release
+        id: classify
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          # Stable = exactly vMAJOR.MINOR.PATCH; everything else is prerelease.
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to GH Release (skip on dry-run)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        with:
+          files: dist/*
+          tag_name: ${{ steps.ver.outputs.tag }}
+          prerelease: ${{ steps.classify.outputs.prerelease }}
+          draft: false
+          fail_on_unmatched_files: true
+          generate_release_notes: false  # Android job writes release notes (last-writer-wins race)
+
+      - name: Dry-run summary
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          echo "### Dry-run: ${{ matrix.family }}/${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -la dist >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Amy CLI build matrix. Each leg produces a self-contained amy bundle with a
+  # minimal jlink'd JRE — no system Java required on the user's machine.
+  #
+  # amyImage task (all legs):  cli/build/amy-image/amy/ → amy-*.tar.gz
+  # jpackageDeb / jpackageRpm: cli/build/jpackage/amy_*.deb + amy-*.rpm
+  #
+  # macOS legs ship only the tarball. We deliberately avoid jpackage --type
+  # app-image on macOS because it produces an .app bundle (burying the binary
+  # at Contents/MacOS/amy) — wrong UX for a CLI.
+  #
+  # Windows is intentionally deferred — cli/ has not been validated on Windows
+  # yet (data-dir path handling, file locking on groups/<gid>.mls, line endings
+  # in identity.json).
+  #
+  # Asset naming: amy-<version>-<family>-<arch>.<ext>. See scripts/asset-name.sh.
+  # ---------------------------------------------------------------------------
+  build-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-13,      arch: x64,   family: macos, tasks: "amyImage" }
+          - { os: macos-14,      arch: arm64, family: macos, tasks: "amyImage" }
+          - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Resolve tag + version
+        id: ver
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          TEST_TAG: ${{ github.event.inputs.test_tag || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${TEST_TAG:-v0.0.0-dryrun}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          VER="${TAG#v}"
+          TOML_VER=$(grep -E '^app\s*=' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          # On dry-run we only require that TOML has a version; on real tag push we require exact match.
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]]; then
+            if [[ "$TOML_VER" != "$VER" ]]; then
+              echo "::error::gradle/libs.versions.toml app=$TOML_VER but tag is $TAG"
+              exit 1
+            fi
+          fi
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Install RPM tooling (linux only)
+        if: matrix.family == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+
+      - name: Build amy artifacts
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        with:
+          max_attempts: 2
+          timeout_minutes: 15
+          command: ./gradlew --no-daemon :cli:${{ matrix.tasks }}
+
+      # jpackage pins libicu to the build host's version (libicu74 on
+      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax libicu dependency in .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh cli/build/jpackage/*.deb
+
+      - name: Collect + rename assets
+        run: |
+          set -euo pipefail
+          # shellcheck source=scripts/asset-name.sh
+          source scripts/asset-name.sh
+          collect_cli_assets "${{ matrix.family }}" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
+
+      - name: Enforce CLI size budget (200 MB per asset)
+        run: |
+          set -euo pipefail
+          # The plan at cli/plans/2026-04-21-cli-distribution.md §size-budget
+          # targets < 80 MB, but :commons currently leaks Compose + Skiko as
+          # transitive deps (~40 MB of unused UI jars). Budget is set to
+          # 200 MB until commons is split into core + ui modules — track that
+          # as a follow-up. Until then, this gate just catches pathological
+          # regressions (e.g. accidental :amethyst dep pulling Android libs).
+          fail=0
+          for f in dist/*; do
+            if [[ -f "$f" ]]; then
+              size=$(wc -c < "$f")
+              mb=$(( size / 1048576 ))
+              if (( size > 209715200 )); then
+                echo "::error file=$f::asset is ${mb} MB — exceeds 200 MB amy budget"
+                fail=1
+              else
+                echo "OK: $f — ${mb} MB"
+              fi
+            fi
+          done
+          [[ "$fail" == 0 ]]
+
+      - name: Classify release
+        id: classify
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to GH Release (skip on dry-run)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        with:
+          files: dist/*
+          tag_name: ${{ steps.ver.outputs.tag }}
+          prerelease: ${{ steps.classify.outputs.prerelease }}
+          draft: false
+          fail_on_unmatched_files: true
+          generate_release_notes: false  # Android job writes release notes (last-writer-wins race)
+
+      - name: Dry-run summary
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          echo "### Dry-run: amy ${{ matrix.family }}/${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -la dist >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Android build + sign + direct-upload. Logic preserved from previous workflow;
+  # uses softprops/action-gh-release@v2 instead of deprecated upload-release-asset.
+  # ---------------------------------------------------------------------------
+  deploy-android:
+    if: github.event_name != 'workflow_dispatch'  # dry-run skips Android (tag-push only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
       - name: Cache gradle
         uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-android-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
           restore-keys: |
-            ${{ runner.os }}-gradle-
+            ${{ runner.os }}-android-gradle-
 
-      - name: Build Desktop Distribution
-        run: ./gradlew :desktopApp:${{ matrix.task }}
+      - name: Build AAB
+        run: ./gradlew clean bundleRelease --stacktrace
 
-      - name: Find distribution file
-        id: find-dist
-        run: |
-          DIST_FILE=$(find desktopApp/build/compose/binaries/main/${{ matrix.format }} -type f \( -name "*.deb" -o -name "*.dmg" -o -name "*.msi" \) | head -1)
-          echo "path=$DIST_FILE" >> $GITHUB_OUTPUT
-          echo "name=$(basename $DIST_FILE)" >> $GITHUB_OUTPUT
-
-      - name: Upload Desktop Distribution to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign AAB (Google Play)
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ steps.find-dist.outputs.path }}
-          asset_name: amethyst-desktop-${{ matrix.platform }}-${{ github.ref_name }}.${{ matrix.format }}
-          asset_content_type: application/octet-stream
+          releaseDirectory: amethyst/build/outputs/bundle/playRelease
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
+
+      - name: Sign AAB (F-Droid)
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
+        with:
+          releaseDirectory: amethyst/build/outputs/bundle/fdroidRelease
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
+
+      - name: Build APK
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Sign APK (Google Play)
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
+        with:
+          releaseDirectory: amethyst/build/outputs/apk/play/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
+
+      - name: Sign APK (F-Droid)
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
+        with:
+          releaseDirectory: amethyst/build/outputs/apk/fdroid/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
+
+      - name: Collect Android assets (rename to canonical scheme)
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          TAG="${GITHUB_REF_NAME}"
+
+          # Play APKs (5 variants)
+          for variant in universal x86 x86_64 arm64-v8a armeabi-v7a; do
+            cp "amethyst/build/outputs/apk/play/release/amethyst-play-${variant}-release-unsigned-signed.apk" \
+               "dist/amethyst-googleplay-${variant}-${TAG}.apk"
+          done
+
+          # F-Droid APKs (5 variants)
+          for variant in universal x86 x86_64 arm64-v8a armeabi-v7a; do
+            cp "amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-${variant}-release-unsigned-signed.apk" \
+               "dist/amethyst-fdroid-${variant}-${TAG}.apk"
+          done
+
+          # AABs
+          cp "amethyst/build/outputs/bundle/playRelease/amethyst-play-release.aab" \
+             "dist/amethyst-googleplay-${TAG}.aab"
+          cp "amethyst/build/outputs/bundle/fdroidRelease/amethyst-fdroid-release.aab" \
+             "dist/amethyst-fdroid-${TAG}.aab"
+          ls -la dist
+
+      - name: Classify release
+        id: classify
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # Stable = exactly vMAJOR.MINOR.PATCH; everything else is prerelease.
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Android assets to GH Release
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        with:
+          files: dist/*
+          tag_name: ${{ github.ref_name }}
+          prerelease: ${{ steps.classify.outputs.prerelease }}
+          draft: false
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+      - name: Publish Quartz Lib
+        run: ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}

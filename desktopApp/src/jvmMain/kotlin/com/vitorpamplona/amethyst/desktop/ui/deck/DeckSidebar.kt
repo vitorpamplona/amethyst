@@ -28,10 +28,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,7 +38,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
+import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 
 @Composable
 fun DeckSidebar(
@@ -50,15 +51,16 @@ fun DeckSidebar(
     onOpenSettings: () -> Unit,
     signerConnectionState: SignerConnectionState,
     lastPingTimeSec: Long?,
+    torStatus: TorServiceStatus,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
             modifier
-                .width(48.dp)
+                .width(56.dp)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(vertical = 8.dp),
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(top = 8.dp + titleBarInsetTop, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
@@ -74,7 +76,7 @@ fun DeckSidebar(
 
         IconButton(onClick = onAddColumn) {
             Icon(
-                Icons.Default.Add,
+                MaterialSymbols.Add,
                 contentDescription = "Add Column",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -87,11 +89,14 @@ fun DeckSidebar(
             lastPingTimeSec = lastPingTimeSec,
         )
 
-        Spacer(Modifier.size(8.dp))
+        Spacer(Modifier.size(4.dp))
+        TorStatusIndicator(status = torStatus, onClick = onOpenSettings)
+
+        Spacer(Modifier.size(4.dp))
 
         IconButton(onClick = onOpenSettings) {
             Icon(
-                Icons.Default.Settings,
+                MaterialSymbols.Settings,
                 contentDescription = "Settings",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

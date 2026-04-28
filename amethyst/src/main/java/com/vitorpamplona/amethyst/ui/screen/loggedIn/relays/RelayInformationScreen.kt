@@ -42,39 +42,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.filled.ContactSupport
-import androidx.compose.material.icons.automirrored.filled.Feed
-import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.EditOff
-import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Payment
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material.icons.filled.Topic
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
@@ -91,7 +62,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -105,6 +75,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -227,6 +200,7 @@ import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -570,6 +544,7 @@ fun kindDisplayName(kind: Int): Int =
         BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
         BlockedRelayListEvent.KIND -> R.string.kind_blocked_relays
         BlossomServersEvent.KIND -> R.string.kind_blossom_servers
+        NestsServersEvent.KIND -> R.string.kind_nests_servers
         BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
         BroadcastRelayListEvent.KIND -> R.string.kind_broadcast_relays
         BookmarkListEvent.KIND -> R.string.kind_bookmark_list
@@ -922,7 +897,7 @@ private fun SubscriptionCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.FilterAlt,
+                    symbol = MaterialSymbols.FilterAlt,
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.primary,
@@ -972,9 +947,9 @@ private fun OutboxEventsCard(eventIds: Set<HexKey>) {
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            symbol = MaterialSymbols.AutoMirrored.Send,
                             contentDescription = null,
-                            modifier = Modifier.size(12.dp),
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onTertiaryContainer,
                         )
                         Text(
@@ -1144,7 +1119,7 @@ private fun RelayHeader(
                 onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Feed,
+                    symbol = MaterialSymbols.AutoMirrored.Feed,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
@@ -1158,7 +1133,7 @@ private fun RelayHeader(
                     shape = ButtonBorder,
                 ) {
                     Icon(
-                        Icons.Default.People,
+                        MaterialSymbols.People,
                         contentDescription = stringRes(R.string.relay_members),
                         modifier = Modifier.size(18.dp),
                     )
@@ -1173,7 +1148,7 @@ private fun RelayHeader(
                     shape = ButtonBorder,
                 ) {
                     Icon(
-                        Icons.Default.Settings,
+                        MaterialSymbols.Settings,
                         contentDescription = stringRes(R.string.manage),
                         modifier = Height25Modifier,
                     )
@@ -1203,7 +1178,7 @@ fun FeesCard(
             }
             payUrl?.let {
                 val uri = LocalUriHandler.current
-                ClickableInfoRow(Icons.Default.Payment, stringRes(R.string.payments_url), it.removePrefix(HTTPS_PREFIX)) {
+                ClickableInfoRow(MaterialSymbols.Payment, stringRes(R.string.payments_url), it.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(it)
                     }
@@ -1233,23 +1208,23 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
                     val no = stringRes(R.string.no)
 
                     lim.auth_required?.let {
-                        InfoRow(Icons.Default.History, stringRes(R.string.auth_required), if (it) yes else no)
+                        InfoRow(MaterialSymbols.History, stringRes(R.string.auth_required), if (it) yes else no)
                     }
                     lim.payment_required?.let {
-                        InfoRow(Icons.Default.Lock, stringRes(R.string.payment_required), if (it) yes else no)
+                        InfoRow(MaterialSymbols.Lock, stringRes(R.string.payment_required), if (it) yes else no)
                     }
                     lim.restricted_writes?.let {
-                        InfoRow(Icons.Default.EditOff, stringRes(R.string.restricted_writes), if (it) yes else no)
+                        InfoRow(MaterialSymbols.EditOff, stringRes(R.string.restricted_writes), if (it) yes else no)
                     }
 
                     val minPoW = lim.min_pow_difficulty
 
                     if (minPoW != null && minPoW > 0) {
-                        InfoRow(Icons.Default.Bolt, stringRes(R.string.minimum_pow), stringRes(R.string.amount_in_bits, minPoW))
+                        InfoRow(MaterialSymbols.Bolt, stringRes(R.string.minimum_pow), stringRes(R.string.amount_in_bits, minPoW))
                     } else {
                         lim.min_prefix?.let {
                             if (it > 0) {
-                                InfoRow(Icons.Default.Key, stringRes(R.string.minimum_prefix), stringRes(R.string.amount_in_bits, it * 8))
+                                InfoRow(MaterialSymbols.Key, stringRes(R.string.minimum_prefix), stringRes(R.string.amount_in_bits, it * 8))
                             }
                         }
                     }
@@ -1271,22 +1246,22 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     lim.max_message_length?.let {
-                        InfoRow(Icons.AutoMirrored.Default.Message, stringRes(R.string.max_message_length), "${it / 1024} kb")
+                        InfoRow(MaterialSymbols.AutoMirrored.Message, stringRes(R.string.max_message_length), "${it / 1024} kb")
                     }
                     lim.max_subscriptions?.let {
-                        InfoRow(Icons.Default.Dns, stringRes(R.string.max_subs), it.toString())
+                        InfoRow(MaterialSymbols.Dns, stringRes(R.string.max_subs), it.toString())
                     }
                     lim.max_filters?.let {
-                        InfoRow(Icons.Default.FilterAlt, stringRes(R.string.max_filters_per_sub), it.toString())
+                        InfoRow(MaterialSymbols.FilterAlt, stringRes(R.string.max_filters_per_sub), it.toString())
                     }
                     lim.max_limit?.let {
-                        InfoRow(Icons.AutoMirrored.Default.List, stringRes(R.string.max_limit_events_returning), it.toString())
+                        InfoRow(MaterialSymbols.AutoMirrored.List, stringRes(R.string.max_limit_events_returning), it.toString())
                     }
                     lim.default_limit?.let {
-                        InfoRow(Icons.AutoMirrored.Default.List, stringRes(R.string.max_limit_events_returning), it.toString())
+                        InfoRow(MaterialSymbols.AutoMirrored.List, stringRes(R.string.max_limit_events_returning), it.toString())
                     }
                     lim.max_subid_length?.let {
-                        InfoRow(Icons.AutoMirrored.Default.Label, stringRes(R.string.max_subid_length), it.toString())
+                        InfoRow(MaterialSymbols.AutoMirrored.Label, stringRes(R.string.max_subid_length), it.toString())
                     }
                 }
             }
@@ -1302,11 +1277,11 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     lim.max_event_tags?.let {
-                        InfoRow(Icons.Default.Tag, stringRes(R.string.maximum_event_tags), it.toString())
+                        InfoRow(MaterialSymbols.Tag, stringRes(R.string.maximum_event_tags), it.toString())
                     }
 
                     lim.max_content_length?.let {
-                        InfoRow(Icons.AutoMirrored.Default.Article, stringRes(R.string.max_content_length), "${it / 1024} kb")
+                        InfoRow(MaterialSymbols.AutoMirrored.Article, stringRes(R.string.max_content_length), "${it / 1024} kb")
                     }
                 }
             }
@@ -1323,12 +1298,12 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
 
                     lim.created_at_lower_limit?.let {
                         if (it > 0) {
-                            InfoRow(Icons.Default.History, stringRes(R.string.discards_older_than), stringRes(R.string.time_in_the_past, timeDiffAgoShortish(it)))
+                            InfoRow(MaterialSymbols.History, stringRes(R.string.discards_older_than), stringRes(R.string.time_in_the_past, timeDiffAgoShortish(it)))
                         }
                     }
                     lim.created_at_upper_limit?.let {
                         if (it > 0) {
-                            InfoRow(Icons.Default.History, stringRes(R.string.accepts_up_to), stringRes(R.string.time_in_the_future, timeDiffAgoShortish(it)))
+                            InfoRow(MaterialSymbols.History, stringRes(R.string.accepts_up_to), stringRes(R.string.time_in_the_future, timeDiffAgoShortish(it)))
                         }
                     }
                 }
@@ -1353,18 +1328,18 @@ fun SoftwareCard(relayInfo: Nip11RelayInformation) {
             val uri = LocalUriHandler.current
             relayInfo.software?.let {
                 if (it.contains(HTTPS_PREFIX)) {
-                    ClickableInfoRow(Icons.Default.Code, stringRes(R.string.software), it.removePrefix("git+https://").removePrefix(HTTPS_PREFIX)) {
+                    ClickableInfoRow(MaterialSymbols.Code, stringRes(R.string.software), it.removePrefix("git+https://").removePrefix(HTTPS_PREFIX)) {
                         runCatching {
                             uri.openUri(it.removePrefix("git+"))
                         }
                     }
                 } else {
-                    InfoRow(Icons.Default.Code, stringRes(R.string.software), it)
+                    InfoRow(MaterialSymbols.Code, stringRes(R.string.software), it)
                 }
             }
 
             relayInfo.version?.let {
-                InfoRow(Icons.Default.Storage, stringRes(R.string.version), it)
+                InfoRow(MaterialSymbols.Storage, stringRes(R.string.version), it)
             }
 
             relayInfo.supported_nips?.let { nips ->
@@ -1459,7 +1434,7 @@ fun TargetAudienceCard(
                         }
                     }
                 } else if (tags.isNotEmpty()) {
-                    InfoRow(Icons.Default.Topic, stringRes(R.string.topics), tags.joinToString())
+                    InfoRow(MaterialSymbols.Topic, stringRes(R.string.topics), tags.joinToString())
                 }
             }
             relay.relay_countries?.let { countries ->
@@ -1497,7 +1472,7 @@ fun TargetAudienceCard(
                     }
                 } else if (countries.isNotEmpty()) {
                     InfoRow(
-                        Icons.Default.Language,
+                        MaterialSymbols.Language,
                         stringRes(R.string.countries),
                         countries.joinToString {
                             if (it == "*") allCountries else it
@@ -1538,7 +1513,7 @@ fun TargetAudienceCard(
                     }
                 } else if (languages.isNotEmpty()) {
                     InfoRow(
-                        Icons.Default.Translate,
+                        MaterialSymbols.Translate,
                         stringRes(R.string.languages),
                         languages.joinToString {
                             if (it == "*") allLang else it
@@ -1557,18 +1532,18 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
             val uri = LocalUriHandler.current
             relay.contact?.let {
                 if (it.contains("@")) {
-                    ClickableInfoRow(Icons.AutoMirrored.Default.ContactSupport, stringRes(R.string.contact), it) {
+                    ClickableInfoRow(MaterialSymbols.AutoMirrored.ContactSupport, stringRes(R.string.contact), it) {
                         runCatching {
                             uri.openUri("mailto:$it")
                         }
                     }
                 } else {
-                    InfoRow(Icons.AutoMirrored.Default.ContactSupport, stringRes(R.string.contact), it)
+                    InfoRow(MaterialSymbols.AutoMirrored.ContactSupport, stringRes(R.string.contact), it)
                 }
             }
 
             relay.posting_policy?.let {
-                ClickableInfoRow(Icons.Default.EditNote, stringRes(R.string.posting_policy), it) {
+                ClickableInfoRow(MaterialSymbols.EditNote, stringRes(R.string.posting_policy), it) {
                     runCatching {
                         uri.openUri(it)
                     }
@@ -1578,24 +1553,24 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
             val pp = relay.privacy_policy
 
             if (pp != null) {
-                ClickableInfoRow(Icons.Default.PrivacyTip, stringRes(R.string.privacy_policy), pp.removePrefix(HTTPS_PREFIX)) {
+                ClickableInfoRow(MaterialSymbols.PrivacyTip, stringRes(R.string.privacy_policy), pp.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(pp)
                     }
                 }
             } else {
-                InfoRow(Icons.Default.PrivacyTip, stringRes(R.string.privacy_policy), stringRes(R.string.not_available_acronym))
+                InfoRow(MaterialSymbols.PrivacyTip, stringRes(R.string.privacy_policy), stringRes(R.string.not_available_acronym))
             }
 
             val ts = relay.terms_of_service
             if (ts != null) {
-                ClickableInfoRow(Icons.Default.Gavel, stringRes(R.string.terms_and_conditions), ts.removePrefix(HTTPS_PREFIX)) {
+                ClickableInfoRow(MaterialSymbols.Gavel, stringRes(R.string.terms_and_conditions), ts.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(ts)
                     }
                 }
             } else {
-                InfoRow(Icons.Default.Gavel, stringRes(R.string.terms_and_conditions), stringRes(R.string.not_available_acronym))
+                InfoRow(MaterialSymbols.Gavel, stringRes(R.string.terms_and_conditions), stringRes(R.string.not_available_acronym))
             }
         }
     }
@@ -1688,7 +1663,7 @@ private fun RelayMonitorReportCard(
             val networkTypes = event.networkTypes()
             if (networkTypes.isNotEmpty()) {
                 InfoRow(
-                    Icons.Default.Language,
+                    MaterialSymbols.Language,
                     stringRes(R.string.relay_monitor_network),
                     networkTypes.joinToString { it.code },
                 )
@@ -1698,7 +1673,7 @@ private fun RelayMonitorReportCard(
             val relayTypes = event.relayTypes()
             if (relayTypes.isNotEmpty()) {
                 InfoRow(
-                    Icons.Default.Dns,
+                    MaterialSymbols.Dns,
                     stringRes(R.string.relay_monitor_relay_type),
                     relayTypes.joinToString(),
                 )
@@ -1708,7 +1683,7 @@ private fun RelayMonitorReportCard(
             val requirements = event.requirements()
             if (requirements.isNotEmpty()) {
                 InfoRow(
-                    Icons.Default.Lock,
+                    MaterialSymbols.Lock,
                     stringRes(R.string.relay_monitor_requirements),
                     requirements.joinToString { req ->
                         if (req.negated) "!${req.value}" else req.value
@@ -1768,7 +1743,7 @@ fun SectionHeader(title: String) {
 
 @Composable
 private fun InfoRow(
-    icon: ImageVector,
+    icon: MaterialSymbol,
     label: String,
     value: String,
 ) {
@@ -1785,7 +1760,7 @@ private fun InfoRow(
 
 @Composable
 private fun ClickableInfoRow(
-    icon: ImageVector,
+    icon: MaterialSymbol,
     label: String,
     value: String,
     onClickValue: () -> Unit,
@@ -1816,9 +1791,9 @@ fun FeeRow(
             }
 
         if (fee.unit == "msats") {
-            InfoRow(Icons.Default.AttachMoney, combinedLabel, "${it / 1000} sats")
+            InfoRow(MaterialSymbols.AttachMoney, combinedLabel, "${it / 1000} sats")
         } else {
-            InfoRow(Icons.Default.AttachMoney, combinedLabel, "$it ${fee.unit}")
+            InfoRow(MaterialSymbols.AttachMoney, combinedLabel, "$it ${fee.unit}")
         }
     }
 }

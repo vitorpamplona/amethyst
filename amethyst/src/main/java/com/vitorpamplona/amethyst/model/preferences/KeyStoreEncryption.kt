@@ -24,24 +24,29 @@ import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
+import com.vitorpamplona.quartz.utils.Log
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.GCMParameterSpec
 
 class KeyStoreEncryption {
     companion object {
+        private const val TAG = "KeyStoreEncryption"
+        private const val ANDROID_KEY_STORE = "AndroidKeyStore"
         private const val ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
         private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
-        private const val PADDING = KeyProperties.ENCRYPTION_PADDING_PKCS7
+        private const val PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
         private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
         private const val PURPOSE = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         private const val KEY_ALIAS = "AMETHYST_AES_KEY"
+        private const val GCM_IV_LENGTH = 12
+        private const val GCM_TAG_LENGTH_BITS = 128
     }
 
     private val cipher = Cipher.getInstance(TRANSFORMATION)
-    private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    private val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
 
     private fun getKey(): SecretKey {
         val existingKey = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
@@ -59,7 +64,7 @@ class KeyStoreEncryption {
                         .setIsStrongBoxBacked(true)
                         .build()
 
-                val generator = KeyGenerator.getInstance(ALGORITHM)
+                val generator = KeyGenerator.getInstance(ALGORITHM, ANDROID_KEY_STORE)
                 generator.init(keyParams)
                 generator.generateKey()
             } catch (_: StrongBoxUnavailableException) {
@@ -77,26 +82,41 @@ class KeyStoreEncryption {
                 .setEncryptionPaddings(PADDING)
                 .build()
 
-        val generator = KeyGenerator.getInstance(ALGORITHM)
+        val generator = KeyGenerator.getInstance(ALGORITHM, ANDROID_KEY_STORE)
         generator.init(keyParams)
         return generator.generateKey()
     }
 
-    private fun createKey(): SecretKey = createKeyStrongBoxIfAvailable() ?: createKeyRegular()
+    private fun createKey(): SecretKey {
+        Log.d(TAG) { "Creating new AES key in AndroidKeyStore (alias=$KEY_ALIAS)" }
+        return createKeyStrongBoxIfAvailable() ?: createKeyRegular()
+    }
 
     fun encrypt(bytes: ByteArray): ByteArray {
-        // Initializes the cipher in encrypt mode and encrypts data
-        cipher.init(Cipher.ENCRYPT_MODE, getKey())
-        val iv = cipher.iv
-        val encrypted = cipher.doFinal(bytes)
-        return iv + encrypted
+        try {
+            // Initializes the cipher in encrypt mode and encrypts data
+            cipher.init(Cipher.ENCRYPT_MODE, getKey())
+            val iv = cipher.iv
+            val encrypted = cipher.doFinal(bytes)
+            return iv + encrypted
+        } catch (e: Exception) {
+            Log.e(TAG, "encrypt() failed: ${e.message}", e)
+            throw e
+        }
     }
 
     fun decrypt(bytes: ByteArray): ByteArray? {
-        // Extracts IV and decrypts the data
-        val iv = bytes.copyOfRange(0, cipher.blockSize)
-        val data = bytes.copyOfRange(cipher.blockSize, bytes.size)
-        cipher.init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
-        return cipher.doFinal(data)
+        try {
+            // Extract the 12-byte GCM IV prefix and decrypt the remainder. The
+            // AndroidKeyStore cipher only accepts GCMParameterSpec (not a plain
+            // IvParameterSpec), so we must pass the 128-bit auth tag length.
+            val iv = bytes.copyOfRange(0, GCM_IV_LENGTH)
+            val data = bytes.copyOfRange(GCM_IV_LENGTH, bytes.size)
+            cipher.init(Cipher.DECRYPT_MODE, getKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+            return cipher.doFinal(data)
+        } catch (e: Exception) {
+            Log.e(TAG, "decrypt() failed (input ${bytes.size} bytes): ${e.message}", e)
+            throw e
+        }
     }
 }

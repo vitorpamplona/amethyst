@@ -765,6 +765,8 @@
     <string name="add_a_nip96_server">添加 NIP-96 服務器</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
+    <!-- HLS multi-resolution video sharing -->
     <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
+    <!-- Emoji packs -->
 </resources>

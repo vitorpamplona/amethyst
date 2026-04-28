@@ -25,9 +25,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +37,8 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -77,7 +76,7 @@ fun RelayNameAndRemoveButton(
 
             if (item.paidRelay) {
                 Icon(
-                    imageVector = Icons.Default.Paid,
+                    symbol = MaterialSymbols.Paid,
                     contentDescription = stringRes(id = R.string.paid_relay),
                     modifier =
                         Modifier
@@ -106,7 +105,7 @@ fun RelayNameAndRemoveButton(
                 onClick = { onDelete(item) },
             ) {
                 Icon(
-                    imageVector = Icons.Default.Cancel,
+                    symbol = MaterialSymbols.Cancel,
                     contentDescription = stringRes(id = R.string.remove),
                     modifier =
                         Modifier

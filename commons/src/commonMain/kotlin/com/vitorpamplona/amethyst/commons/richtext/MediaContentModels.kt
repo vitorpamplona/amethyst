@@ -29,6 +29,7 @@ abstract class BaseMediaContent(
     val description: String? = null,
     val dim: DimensionTag? = null,
     val blurhash: String? = null,
+    val thumbhash: String? = null,
 )
 
 @Immutable
@@ -40,7 +41,8 @@ abstract class MediaUrlContent(
     blurhash: String? = null,
     val uri: String? = null,
     val mimeType: String? = null,
-) : BaseMediaContent(description, dim, blurhash)
+    thumbhash: String? = null,
+) : BaseMediaContent(description, dim, blurhash, thumbhash)
 
 @Immutable
 open class MediaUrlImage(
@@ -52,7 +54,8 @@ open class MediaUrlImage(
     uri: String? = null,
     val contentWarning: String? = null,
     mimeType: String? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
+    thumbhash: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash)
 
 class EncryptedMediaUrlImage(
     url: String,
@@ -66,7 +69,20 @@ class EncryptedMediaUrlImage(
     val encryptionAlgo: String,
     val encryptionKey: ByteArray,
     val encryptionNonce: ByteArray,
-) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType)
+    thumbhash: String? = null,
+) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType, thumbhash)
+
+@Immutable
+open class MediaUrlPdf(
+    url: String,
+    description: String? = null,
+    hash: String? = null,
+    blurhash: String? = null,
+    dim: DimensionTag? = null,
+    uri: String? = null,
+    mimeType: String? = null,
+    thumbhash: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash)
 
 @Immutable
 open class MediaUrlVideo(
@@ -80,7 +96,9 @@ open class MediaUrlVideo(
     blurhash: String? = null,
     val contentWarning: String? = null,
     mimeType: String? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
+    thumbhash: String? = null,
+    val isLiveStream: Boolean = false,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash)
 
 @Immutable
 class EncryptedMediaUrlVideo(
@@ -97,7 +115,8 @@ class EncryptedMediaUrlVideo(
     val encryptionAlgo: String,
     val encryptionKey: ByteArray,
     val encryptionNonce: ByteArray,
-) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType)
+    thumbhash: String? = null,
+) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType, thumbhash)
 
 @Immutable
 abstract class MediaPreloadedContent(
@@ -109,7 +128,8 @@ abstract class MediaPreloadedContent(
     blurhash: String? = null,
     val uri: String,
     val id: String? = null,
-) : BaseMediaContent(description, dim, blurhash) {
+    thumbhash: String? = null,
+) : BaseMediaContent(description, dim, blurhash, thumbhash) {
     fun localFileExists() = localFile != null && localFile.exists()
 }
 
@@ -122,7 +142,8 @@ class MediaLocalImage(
     blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,
-) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri)
+    thumbhash: String? = null,
+) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri, thumbhash = thumbhash)
 
 @Immutable
 class MediaLocalVideo(
@@ -135,4 +156,5 @@ class MediaLocalVideo(
     uri: String,
     val artworkUri: String? = null,
     val authorName: String? = null,
-) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri)
+    thumbhash: String? = null,
+) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri, thumbhash = thumbhash)

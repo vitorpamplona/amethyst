@@ -29,9 +29,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MilitaryTech
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,15 +39,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
+import com.vitorpamplona.amethyst.ui.note.types.AcceptBadgeControls
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.BadgeCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -100,7 +101,7 @@ fun BadgeCompose(
                     modifier = Modifier.width(55.dp).padding(0.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MilitaryTech,
+                        symbol = MaterialSymbols.MilitaryTech,
                         null,
                         modifier = Modifier.size(25.dp).align(Alignment.TopEnd),
                         tint = MaterialTheme.colorScheme.primary,
@@ -127,6 +128,10 @@ fun BadgeCompose(
 
                 note.replyTo?.firstOrNull()?.let {
                     BadgeDisplay(baseNote = it, accountViewModel)
+                }
+
+                (note.event as? BadgeAwardEvent)?.let { award ->
+                    AcceptBadgeControls(award, accountViewModel)
                 }
             }
         }

@@ -55,6 +55,7 @@
     <string name="boost">Продвинуть</string>
     <string name="edited">изменено</string>
     <string name="edited_number">изменить #%1$s</string>
+    <string name="original">оригинал</string>
     <string name="quote">Цитата</string>
     <string name="propose_an_edit">Предложить изменение</string>
     <string name="new_amount_in_sats">Новая сумма в sat</string>
@@ -67,6 +68,8 @@
     <string name="error_parsing_error_message">Ошибка при анализе сообщения об ошибке</string>
     <string name="following">" Подписок"</string>
     <string name="followers">" Подписчиков"</string>
+    <string name="number_following">"%1$s Подписок"</string>
+    <string name="number_followers">"%1$s Подписчиков"</string>
     <string name="profile">Профиль</string>
     <string name="security_filters">Фильтры безопасности</string>
     <string name="log_out">Выйти</string>
@@ -143,7 +146,11 @@
     <string name="upload_file">Загрузить файл</string>
     <string name="take_a_picture">Сделать фото</string>
     <string name="record_a_video">Снять видео</string>
+    <string name="record_a_message_description">Нажмите и удерживайте, чтобы записать сообщение</string>
+    <string name="re_record">Перезаписать</string>
+    <string name="recording_indicator_description">Запись</string>
     <string name="uploading">Загрузка…</string>
+    <string name="voice_preset_none">Отсутствует</string>
     <string name="voice_preset_deep">Глубокий</string>
     <string name="voice_preset_high">Высокий</string>
     <string name="voice_preset_neutral">Нейтральный</string>
@@ -161,6 +168,7 @@
     <string name="conversations">Обсуждения</string>
     <string name="notes">Записи</string>
     <string name="replies">Ответы</string>
+    <string name="mutual">Ваш</string>
     <string name="gallery">Галерея</string>
     <string name="follows">"Подписок"</string>
     <string name="reports">"Жалоб"</string>
@@ -507,8 +515,37 @@
     <string name="classifieds_category_food">Еда</string>
     <string name="classifieds_category_misc">Разное</string>
     <string name="classifieds_category_other">Другое</string>
+    <string name="share_image">Поделиться изображением…</string>
+    <string name="unable_to_share_image">Не удается поделиться изображением, повторите попытку позже…</string>
+    <string name="share_video">Поделиться видео…</string>
+    <string name="unable_to_share_video">Не удается поделиться видео, повторите попытку позже…</string>
+    <string name="downloading_video_for_sharing">Скачивание видео…</string>
+    <string name="search_by_hashtag">Поиск по хештегу: #%1$s</string>
+    <string name="dont_translate_from">Не переводить с</string>
+    <string name="dont_translate_from_description">Языки показанные здесь не будут переведены. Выберите язык, чтобы удалить его и снова перевести.</string>
+    <string name="translate_to">Перевести на</string>
+    <string name="translate_to_description">Выберите язык для перевода содержимого.</string>
+    <string name="language_preferences">Настройки отображения языка</string>
+    <string name="language_preferences_description">Для каждой языковой пары, выберите язык, который показывать в первую очередь.</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="search_languages">Поиск языков</string>
+    <string name="add_language">Добавить язык</string>
+    <string name="add_language_pair">Добавить языковую пару</string>
+    <string name="source_language">Исходный язык</string>
+    <string name="target_language">Целевой язык</string>
+    <string name="show_first">Показать сперва %1$s</string>
+    <string name="no_language_preferences">Настройки языка пока отсутствуют. Они создаются автоматически во время переводов, вы можете добавить их в ручную.</string>
+    <string name="delete_preference">Удалить предпочтение</string>
+    <string name="pause">Пауза</string>
+    <string name="play">Воспроизведение</string>
+    <string name="open_dropdown_menu">Открыть выпадающее меню</string>
+    <string name="option_of">Вариант %1$s из %2$s</string>
+    <string name="crashreport_found_send">Отправить</string>
+    <string name="in_the_list">Уже в списке</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
+    <!-- HLS multi-resolution video sharing -->
     <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
+    <!-- Emoji packs -->
 </resources>

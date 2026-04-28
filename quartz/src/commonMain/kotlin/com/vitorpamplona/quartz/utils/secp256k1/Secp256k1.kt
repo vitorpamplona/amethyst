@@ -20,6 +20,15 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.ecdhXOnly
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.privKeyTweakAdd
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.pubKeyCompress
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.pubKeyTweakMul
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.pubkeyCreate
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.secKeyVerify
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorr
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorrWithPubKey
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.verifySchnorr
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import com.vitorpamplona.quartz.utils.sha256.sha256Into
 
@@ -358,7 +367,11 @@ object Secp256k1 {
         U256.fromBytesInto(sc.scalarTmp1, sc.bytesTmp2, 0)
         ScalarN.reduceTo(sc.scalarTmp1, sc.scalarTmp1)
         val k0 = sc.scalarTmp1
-        require(!k0.isZero())
+        // BIP-340 step "Fail if k' = 0". Probability ~2^-256, unreachable in
+        // practice but the spec requires refusal. `check` here (vs the prior
+        // `require`) communicates it as an internal invariant rather than an
+        // argument error, matching the semantics of the C side returning 0.
+        check(!k0.isZero()) { "BIP-340 nonce derived to 0 — refuse to sign" }
 
         // R = k0·G
         ECPoint.mulG(sc.entryResult, k0, sc)
@@ -514,12 +527,21 @@ object Secp256k1 {
         val w = sc.w
         FieldP.sqr(sc.zInv2, sc.entryResult.z, w) // Z²
         FieldP.mul(sc.zInv3, r, sc.zInv2, w) // r·Z²
+        // Normalize X before comparison (may be unreduced from lazy fe_add)
+        FieldP.reduceSelf(sc.entryResult.x)
         return U256.cmp(sc.entryResult.x, sc.zInv3) == 0
     }
 
     // ==================== Tweak operations ====================
 
-    /** Add a tweak to a private key: result = (seckey + tweak) mod n. Used by BIP-32. */
+    /**
+     * Add a tweak to a private key: result = (seckey + tweak) mod n. Used by BIP-32.
+     *
+     * Throws `IllegalArgumentException` for wrong-size inputs and
+     * `IllegalStateException` when the result is 0 or >= n (matching the
+     * C side which returns 0). The latter is a ~2^-128 cryptographic edge
+     * case that indicates an adversarial tweak choice.
+     */
     fun privKeyTweakAdd(
         seckey: ByteArray,
         tweak: ByteArray,
@@ -535,7 +557,10 @@ object Secp256k1 {
         U256.fromBytesInto(a, seckey, 0)
         U256.fromBytesInto(b, tweak, 0)
         ScalarN.addTo(r, a, b)
-        require(!r.isZero() && U256.cmp(r, ScalarN.N) < 0)
+        // ScalarN.addTo already reduces mod n, so r < n is guaranteed.
+        // The only remaining invalid state is r == 0, which matches the
+        // C side's `scalar_is_zero(&r)` failure.
+        check(!r.isZero()) { "Tweaked private key is zero — invalid tweak" }
         return U256.toBytes(r)
     }
 

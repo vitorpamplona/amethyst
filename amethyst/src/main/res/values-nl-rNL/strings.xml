@@ -1753,6 +1753,7 @@
     <string name="profile_actions_dialog_title">Profielacties</string>
     <string name="media_actions_dialog_title">Media-acties</string>
     <string name="playback_actions_dialog_title">Afspelen</string>
+    <!-- HLS multi-resolution video sharing -->
     <string name="pack_actions_dialog_title">Pakket-acties</string>
     <string name="list_actions_dialog_title">Lijst-acties</string>
     <string name="bookmark_item_actions_dialog_title">Bladwijzer-acties</string>
@@ -1911,4 +1912,5 @@
     <string name="relay_members_removed">%1$d leden verwijderd van relay</string>
     <string name="relay_join_request">Relay-lidmaatschapsverzoek</string>
     <string name="relay_leave_request">Relay-opzegverzoek</string>
+    <!-- Emoji packs -->
 </resources>

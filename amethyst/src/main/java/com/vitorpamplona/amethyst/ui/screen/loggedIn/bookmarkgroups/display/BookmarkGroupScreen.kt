@@ -30,9 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CellTower
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -44,19 +41,23 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlinx.coroutines.launch
 
 @Composable
@@ -158,6 +160,11 @@ fun BookmarkGroupScreenView(
                     ).consumeWindowInsets(padding)
                     .imePadding(),
         ) {
+            DeletedBookmarksBanner(
+                bookmarkGroupViewModel = bookmarkGroupViewModel,
+                bookmarkType = bookmarkType,
+                accountViewModel = accountViewModel,
+            )
             when (bookmarkType) {
                 BookmarkType.PostBookmark -> {
                     RenderPostList(
@@ -214,6 +221,67 @@ fun BookmarkGroupScreenView(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DeletedBookmarksBanner(
+    bookmarkGroupViewModel: BookmarkGroupViewModel,
+    bookmarkType: BookmarkType,
+    accountViewModel: AccountViewModel,
+) {
+    val postsFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.publicPosts() }
+    val privatePostsFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.privatePosts() }
+    val articlesFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.publicArticles() }
+    val privateArticlesFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.privateArticles() }
+
+    val publicPosts by postsFlow.collectAsStateWithLifecycle()
+    val privatePosts by privatePostsFlow.collectAsStateWithLifecycle()
+    val publicArticles by articlesFlow.collectAsStateWithLifecycle()
+    val privateArticles by privateArticlesFlow.collectAsStateWithLifecycle()
+
+    val cache = accountViewModel.account.cache
+
+    val deletedEventIds = remember(publicPosts, privatePosts, publicArticles, privateArticles, bookmarkType) { mutableSetOf<String>() }
+    val deletedAddresses = remember(publicPosts, privatePosts, publicArticles, privateArticles, bookmarkType) { mutableSetOf<Address>() }
+    val deletedCount =
+        remember(publicPosts, privatePosts, publicArticles, privateArticles, bookmarkType) {
+            deletedEventIds.clear()
+            deletedAddresses.clear()
+            val scope =
+                when (bookmarkType) {
+                    BookmarkType.PostBookmark -> publicPosts + privatePosts
+                    BookmarkType.ArticleBookmark -> publicArticles + privateArticles
+                }
+            scope.forEach { note ->
+                val event = note.event
+                if (event != null && cache.hasBeenDeleted(event)) {
+                    deletedEventIds.add(note.idHex)
+                    if (note is AddressableNote) deletedAddresses.add(note.address)
+                }
+            }
+            deletedEventIds.size + deletedAddresses.size
+        }
+
+    var bannerDismissed by remember(bookmarkType) { mutableStateOf(false) }
+    LaunchedEffect(deletedCount) {
+        if (deletedCount == 0) bannerDismissed = false
+    }
+
+    if (!bannerDismissed) {
+        DeletedItemsBanner(
+            count = deletedCount,
+            onRemove = {
+                accountViewModel.launchSigner {
+                    bookmarkGroupViewModel.removeDeletedBookmarksFromGroup(
+                        deletedEventIds = deletedEventIds.toSet(),
+                        deletedAddresses = deletedAddresses.toSet(),
+                    )
+                }
+                bannerDismissed = true
+            },
+            onDismiss = { bannerDismissed = true },
+        )
     }
 }
 
@@ -280,7 +348,7 @@ fun BookmarkGroupHeaderTabs(
         }
 
     SecondaryTabRow(
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
         selectedTabIndex = pagerState.currentPage,
         modifier = TabRowHeight,
@@ -313,14 +381,14 @@ fun BookmarkGroupActionsMenuButton(
         ) {
             M3ActionSection {
                 M3ActionRow(
-                    icon = Icons.Outlined.CellTower,
+                    icon = MaterialSymbols.CellTower,
                     text = stringRes(R.string.bookmark_list_broadcast_btn_label),
                 ) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
                 M3ActionRow(
-                    icon = Icons.Outlined.Delete,
+                    icon = MaterialSymbols.Delete,
                     text = stringRes(R.string.bookmark_list_delete_btn_label),
                     isDestructive = true,
                 ) {

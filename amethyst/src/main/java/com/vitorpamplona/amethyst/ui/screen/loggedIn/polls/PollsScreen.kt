@@ -34,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -47,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -131,7 +131,7 @@ private fun PollsPages(
             Column {
                 PollsTopBar(accountViewModel, nav)
                 SecondaryTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     modifier = TabRowHeight,
                     selectedTabIndex = pagerState.currentPage,
@@ -148,21 +148,22 @@ private fun PollsPages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Polls, accountViewModel) { route ->
+            AppBottomBar(Route.Polls, nav, accountViewModel) { route ->
                 if (route == Route.Polls) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
         floatingButton = {
-            NewPollButton(nav)
+            FabBottomBarPadded(nav) {
+                NewPollButton(nav)
+            }
         },
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(
-            contentPadding = it,
             state = pagerState,
             userScrollEnabled = true,
         ) { page ->

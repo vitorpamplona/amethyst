@@ -20,25 +20,25 @@
  */
 package com.vitorpamplona.amethyst.desktop
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -48,13 +48,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,6 +62,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.unit.dp
@@ -70,13 +72,20 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
-import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
+import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
+import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
@@ -87,20 +96,33 @@ import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
-import com.vitorpamplona.amethyst.desktop.ui.deck.AddColumnDialog
+import com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawer
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
+import com.vitorpamplona.amethyst.desktop.ui.deck.PinnedNavBarState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
+import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
+import com.vitorpamplona.amethyst.desktop.ui.deck.Workspace
+import com.vitorpamplona.amethyst.desktop.ui.deck.WorkspaceManager
+import com.vitorpamplona.amethyst.desktop.ui.deck.param
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
+import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.CoroutineScope
@@ -110,8 +132,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 
-private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+private val isMacOS = com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
 
 enum class LayoutMode {
     SINGLE_PANE,
@@ -159,7 +183,47 @@ sealed class DesktopScreen {
     data object Settings : DesktopScreen()
 }
 
+/** Reference to active Tor manager for shutdown hook. Set by App composable. */
+@Volatile
+private var activeTorManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager? = null
+
 fun main() {
+    // macOS: route the app's MenuBar to the system menu bar at the top of the
+    // screen and set the application name shown in the apple-menu. Both must be
+    // set before AWT initializes (i.e. before any Swing/AWT class loads).
+    if (com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS) {
+        System.setProperty("apple.laf.useScreenMenuBar", "true")
+        System.setProperty("apple.awt.application.name", "Amethyst")
+        System.setProperty("apple.awt.application.appearance", "system")
+    }
+
+    // Set the dock / taskbar icon image before any window is shown.
+    //
+    // On macOS the Cmd+Tab app switcher and the dock use the Taskbar API's
+    // iconImage, NOT the Window(icon=) composable parameter (which only sets
+    // the in-title-bar proxy icon). Without this, a JVM launched via gradle
+    // shows the generic Java coffee-cup square in Cmd+Tab. ImageIO preserves
+    // the PNG alpha channel so the dock renders the logo with transparency;
+    // on macOS the logo is then wrapped in a squircle so it matches
+    // first-party dock icons.
+    try {
+        val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+        val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+        val adapted =
+            raw?.let {
+                com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
+                    .adaptForHost(it)
+            }
+        if (adapted != null && java.awt.Taskbar.isTaskbarSupported()) {
+            val taskbar = java.awt.Taskbar.getTaskbar()
+            if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                taskbar.iconImage = adapted
+            }
+        }
+    } catch (e: Exception) {
+        Log.w("Main") { "Failed to set dock icon: ${e.message}" }
+    }
+
     Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
@@ -167,6 +231,8 @@ fun main() {
             com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
                 .shutdown()
             VlcjPlayerPool.shutdown()
+            // Stop Tor daemon if running — reference set by App composable
+            activeTorManager?.stopSync()
         },
     )
     // Pre-init VLC on background thread so first play is fast
@@ -178,13 +244,32 @@ fun main() {
                 height = 800.dp,
                 position = WindowPosition.Aligned(Alignment.Center),
             )
+        var appRestartKey by remember { mutableStateOf(0) }
         var showComposeDialog by remember { mutableStateOf(false) }
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
         val deckScope = rememberCoroutineScope()
         val deckState = remember { DeckState(deckScope).also { it.load() } }
+        val workspaceManager = remember { WorkspaceManager(deckScope).also { it.load() } }
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
-        var showAddColumnDialog by remember { mutableStateOf(false) }
+        var showAppDrawer by remember { mutableStateOf(false) }
+
+        // Tor state at Window level — survives key() app rebuild
+        var torSettings by remember {
+            mutableStateOf(
+                com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                    .load(),
+            )
+        }
+        val torTypeFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.torType) }
+        val externalPortFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.externalSocksPort) }
+        val windowScope = rememberCoroutineScope()
+        val torManager =
+            remember {
+                com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager(torTypeFlow, externalPortFlow, windowScope).also {
+                    activeTorManager = it
+                }
+            }
         var layoutMode by remember {
             mutableStateOf(
                 try {
@@ -194,12 +279,38 @@ fun main() {
                 },
             )
         }
+        // Callback set by App() for single pane navigation from MenuBar
+        var navigateToScreen by remember { mutableStateOf<((DeckColumnType) -> Unit)?>(null) }
+
+        // Window title-bar / taskbar thumbnail icon. On macOS the source logo
+        // is wrapped in a squircle so it matches every other dock icon; on
+        // other platforms the raw transparent logo is used as-is.
+        val appIcon =
+            remember {
+                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+                val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+                val adapted =
+                    com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
+                        .adaptForHost(raw)
+                val buf = java.io.ByteArrayOutputStream()
+                javax.imageio.ImageIO.write(adapted, "png", buf)
+                val bitmap =
+                    org.jetbrains.skia.Image
+                        .makeFromEncoded(buf.toByteArray())
+                        .toComposeImageBitmap()
+                BitmapPainter(bitmap)
+            }
 
         Window(
             onCloseRequest = ::exitApplication,
             state = windowState,
             title = "Amethyst",
+            icon = appIcon,
         ) {
+            // macOS: transparent + full-window-content title bar so the deck/sidebar
+            // shows through, with traffic lights still drawn on top. No-op elsewhere.
+            applyNativeWindowChrome()
+
             MenuBar {
                 Menu("File") {
                     Item(
@@ -211,6 +322,42 @@ fun main() {
                                 KeyShortcut(Key.N, ctrl = true)
                             },
                         onClick = { showComposeDialog = true },
+                    )
+                    Item(
+                        "Save as Workspace",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.S, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.S, ctrl = true, shift = true)
+                            },
+                        onClick = {
+                            if (workspaceManager.workspaces.value.size < WorkspaceManager.MAX_WORKSPACES) {
+                                val columns =
+                                    deckState.columns.value.map { col ->
+                                        Workspace.WorkspaceColumn(
+                                            typeKey = col.type.typeKey(),
+                                            param = col.type.param(),
+                                            width = col.width,
+                                        )
+                                    }
+                                val ws =
+                                    Workspace(
+                                        name = "Workspace ${workspaceManager.workspaces.value.size + 1}",
+                                        iconName = "Star",
+                                        layoutMode = layoutMode,
+                                        columns = columns,
+                                        singlePaneScreens =
+                                            if (layoutMode == LayoutMode.SINGLE_PANE) {
+                                                columns.map { it.typeKey }
+                                            } else {
+                                                emptyList()
+                                            },
+                                    )
+                                workspaceManager.addWorkspace(ws)
+                            }
+                        },
+                        enabled = workspaceManager.workspaces.value.size < WorkspaceManager.MAX_WORKSPACES,
                     )
                     Separator()
                     Item(
@@ -275,6 +422,37 @@ fun main() {
                 }
                 Menu("View") {
                     Item(
+                        "App Drawer",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.K, meta = true)
+                            } else {
+                                KeyShortcut(Key.K, ctrl = true)
+                            },
+                        onClick = { showAppDrawer = !showAppDrawer },
+                    )
+                    Item(
+                        "Relay Dashboard",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.R, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.R, ctrl = true, shift = true)
+                            },
+                        onClick = {
+                            if (layoutMode == LayoutMode.DECK) {
+                                if (deckState.hasColumnOfType(DeckColumnType.Relays)) {
+                                    deckState.focusExistingColumn(DeckColumnType.Relays)
+                                } else {
+                                    deckState.addColumn(DeckColumnType.Relays)
+                                }
+                            } else {
+                                navigateToScreen?.invoke(DeckColumnType.Relays)
+                            }
+                        },
+                    )
+                    Separator()
+                    Item(
                         if (layoutMode == LayoutMode.DECK) "\u2713 Deck Layout" else "Deck Layout",
                         shortcut =
                             if (isMacOS) {
@@ -298,7 +476,7 @@ fun main() {
                                 } else {
                                     KeyShortcut(Key.T, ctrl = true)
                                 },
-                            onClick = { showAddColumnDialog = true },
+                            onClick = { showAppDrawer = true },
                         )
                         Item(
                             "Close Column",
@@ -389,6 +567,7 @@ fun main() {
                             Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
                             Item("Chess", onClick = { deckState.addColumn(DeckColumnType.Chess) })
+                            Item("Relays", onClick = { deckState.addColumn(DeckColumnType.Relays) })
                         }
                     }
                 }
@@ -404,25 +583,38 @@ fun main() {
                 LocalAwtWindow provides window,
                 LocalIsImmersiveFullscreen provides immersiveFullscreenState,
             ) {
-                App(
-                    layoutMode = layoutMode,
-                    deckState = deckState,
-                    accountManager = accountManager,
-                    showComposeDialog = showComposeDialog,
-                    showAddColumnDialog = showAddColumnDialog,
-                    onShowComposeDialog = { showComposeDialog = true },
-                    onShowReplyDialog = { event ->
-                        replyToNote = event
-                        showComposeDialog = true
-                    },
-                    onDismissComposeDialog = {
-                        showComposeDialog = false
-                        replyToNote = null
-                    },
-                    onDismissAddColumnDialog = { showAddColumnDialog = false },
-                    onShowAddColumnDialog = { showAddColumnDialog = true },
-                    replyToNote = replyToNote,
-                )
+                key(appRestartKey) {
+                    App(
+                        layoutMode = layoutMode,
+                        onLayoutModeChange = { newMode ->
+                            layoutMode = newMode
+                            DesktopPreferences.layoutMode = newMode.name
+                        },
+                        deckState = deckState,
+                        workspaceManager = workspaceManager,
+                        accountManager = accountManager,
+                        showComposeDialog = showComposeDialog,
+                        showAppDrawer = showAppDrawer,
+                        onShowComposeDialog = { showComposeDialog = true },
+                        onShowReplyDialog = { event ->
+                            replyToNote = event
+                            showComposeDialog = true
+                        },
+                        onDismissComposeDialog = {
+                            showComposeDialog = false
+                            replyToNote = null
+                        },
+                        onDismissAppDrawer = { showAppDrawer = false },
+                        onShowAppDrawer = { showAppDrawer = true },
+                        replyToNote = replyToNote,
+                        onRestartApp = { appRestartKey++ },
+                        torManager = torManager,
+                        torTypeFlow = torTypeFlow,
+                        externalPortFlow = externalPortFlow,
+                        initialTorSettings = torSettings,
+                        onNavigateToScreen = { navigateToScreen = it },
+                    )
+                }
             }
         }
     }
@@ -431,21 +623,128 @@ fun main() {
 @Composable
 fun App(
     layoutMode: LayoutMode,
+    onLayoutModeChange: (LayoutMode) -> Unit,
     deckState: DeckState,
+    workspaceManager: WorkspaceManager,
     accountManager: AccountManager,
     showComposeDialog: Boolean,
-    showAddColumnDialog: Boolean,
+    showAppDrawer: Boolean,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onDismissComposeDialog: () -> Unit,
-    onDismissAddColumnDialog: () -> Unit,
-    onShowAddColumnDialog: () -> Unit,
+    onDismissAppDrawer: () -> Unit,
+    onShowAppDrawer: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    onRestartApp: () -> Unit = {},
+    torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
+    torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
+    externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
+    initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
+    onNavigateToScreen: ((DeckColumnType) -> Unit) -> Unit = {},
 ) {
-    val relayManager = remember { DesktopRelayConnectionManager() }
+    val singlePaneState = remember { SinglePaneState() }
+    val pinnedNavBarState = remember { PinnedNavBarState(workspaceManager).also { it.loadFromWorkspace() } }
+
+    // Register single pane navigation callback for MenuBar shortcuts
+    LaunchedEffect(singlePaneState) {
+        onNavigateToScreen { screen -> singlePaneState.navigate(screen) }
+    }
+
+    // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
+    var torSettings by remember {
+        mutableStateOf(
+            com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                .load(),
+        )
+    }
+
+    // Gate: block EVERYTHING until Tor proxy is ready (when Tor expected)
+    // This must be before any OkHttpClient/Coil/relay creation
+    val torStatus by torManager.status.collectAsState()
+    val isTorExpected = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
+    if (isTorExpected && torStatus !is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active) {
+        androidx.compose.foundation.layout.Box(
+            modifier =
+                androidx.compose.ui.Modifier
+                    .fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            androidx.compose.foundation.layout.Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            ) {
+                androidx.compose.material3.CircularProgressIndicator()
+                androidx.compose.foundation.layout.Spacer(
+                    modifier =
+                        androidx.compose.ui.Modifier
+                            .height(16.dp),
+                )
+                if (torStatus is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Error) {
+                    androidx.compose.material3.Text(
+                        "Tor error: ${(torStatus as com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Error).message}",
+                    )
+                } else {
+                    androidx.compose.material3.Text("Connecting to Tor...")
+                }
+            }
+        }
+        return // Nothing below runs until Tor is Active
+    }
+
     val localCache = remember { DesktopLocalCache() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
+
+    // Build TorRelayEvaluation for per-relay routing
+    val torRelayEvaluation =
+        remember(torSettings) {
+            com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation(
+                torSettings =
+                    com.vitorpamplona.amethyst.commons.tor.TorRelaySettings(
+                        torType = torSettings.torType,
+                        onionRelaysViaTor = torSettings.onionRelaysViaTor,
+                        dmRelaysViaTor = torSettings.dmRelaysViaTor,
+                        newRelaysViaTor = torSettings.newRelaysViaTor,
+                        trustedRelaysViaTor = torSettings.trustedRelaysViaTor,
+                    ),
+                trustedRelayList = emptySet(), // TODO: populate from account relay lists
+                dmRelayList = emptySet(), // TODO: populate from account relay lists
+            )
+        }
+
+    val httpClient =
+        remember(torRelayEvaluation) {
+            com.vitorpamplona.amethyst.desktop.network
+                .DesktopHttpClient(
+                    torManager = torManager,
+                    shouldUseTorForRelay = { url -> torRelayEvaluation.useTor(url) },
+                    torTypeProvider = { torTypeFlow.value },
+                    scope = scope,
+                ).also {
+                    com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
+                        .setInstance(it)
+                }
+        }
+    // Clean up old httpClient's connection pool on rebuild
+    DisposableEffect(httpClient) {
+        onDispose {
+            httpClient.sharedConnectionPool.evictAll()
+        }
+    }
+
+    // Reinitialize Coil after setInstance so image loads use the Tor-aware client
+    remember(httpClient) {
+        httpClient.evictConnections()
+        com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+            .setup()
+    }
+
+    val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
+    val nip11Fetcher = remember { Nip11Fetcher() }
+
+    // Start 1Hz metrics snapshot for relay dashboard
+    LaunchedEffect(relayManager) {
+        relayManager.startMetricsSnapshot(this)
+    }
 
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
     // Feed subscriptions (inside MainContent) drive actual relay pool connections.
@@ -503,89 +802,156 @@ fun App(
         }
     }
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(),
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
+    val isDark by com.vitorpamplona.amethyst.desktop.platform
+        .rememberSystemDark(LocalAwtWindow.current)
+
+    com.vitorpamplona.amethyst.desktop.platform.PlatformMaterialTheme(isDark = isDark) {
+        ProvideMaterialSymbols(
+            weight = com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight.current,
         ) {
-            when (accountState) {
-                is AccountState.LoggedOut -> {
-                    LoginScreen(
-                        accountManager = accountManager,
-                        onLoginSuccess = {
-                            // Start heartbeat if bunker account
-                            val current = accountManager.currentAccount()
-                            if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
-                                accountManager.startHeartbeat(scope)
-                            }
-                        },
-                    )
-                }
-
-                is AccountState.ConnectingRelays -> {
-                    val relays by relayManager.relayStatuses.collectAsState()
-                    ConnectingRelaysScreen(
-                        subtitle = "Restoring remote signer session",
-                        relayStatuses = relays,
-                    )
-                }
-
-                is AccountState.LoggedIn -> {
-                    val account = accountState as AccountState.LoggedIn
-                    val nwcConnection by accountManager.nwcConnection.collectAsState()
-
-                    // Load NWC connection on first composition
-                    LaunchedEffect(Unit) {
-                        accountManager.loadNwcConnection()
-                    }
-
-                    MainContent(
-                        layoutMode = layoutMode,
-                        deckState = deckState,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = scope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onShowAddColumnDialog = onShowAddColumnDialog,
-                    )
-
-                    // Compose dialog
-                    if (showComposeDialog) {
-                        ComposeNoteDialog(
-                            onDismiss = onDismissComposeDialog,
-                            relayManager = relayManager,
-                            account = account,
-                            replyTo = replyToNote,
-                        )
-                    }
-
-                    // Add column dialog
-                    if (showAddColumnDialog) {
-                        AddColumnDialog(
-                            onDismiss = onDismissAddColumnDialog,
-                            onAdd = { type ->
-                                deckState.addColumn(type)
-                                onDismissAddColumnDialog()
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                when (accountState) {
+                    is AccountState.LoggedOut -> {
+                        LoginScreen(
+                            accountManager = accountManager,
+                            onLoginSuccess = {
+                                // Start heartbeat if bunker account
+                                val current = accountManager.currentAccount()
+                                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                                    accountManager.startHeartbeat(scope)
+                                }
                             },
                         )
                     }
-                }
-            }
 
-            // Force logout dialog overlay
-            val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
-            forceLogoutReason?.let { reason ->
-                ForceLogoutDialog(
-                    reason = reason,
-                    onDismiss = { accountManager.clearForceLogoutReason() },
-                )
+                    is AccountState.ConnectingRelays -> {
+                        val relays by relayManager.relayStatuses.collectAsState()
+                        ConnectingRelaysScreen(
+                            subtitle = "Restoring remote signer session",
+                            relayStatuses = relays,
+                        )
+                    }
+
+                    is AccountState.LoggedIn -> {
+                        val account = accountState as AccountState.LoggedIn
+                        val nwcConnection by accountManager.nwcConnection.collectAsState()
+
+                        // Load NWC connection on first composition
+                        LaunchedEffect(Unit) {
+                            accountManager.loadNwcConnection()
+                        }
+
+                        val currentTorStatus = torManager.status.collectAsState().value
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState provides
+                                com.vitorpamplona.amethyst.desktop.ui.tor.TorState(
+                                    status = currentTorStatus,
+                                    settings = torSettings,
+                                    onSettingsChanged = { newSettings ->
+                                        torSettings = newSettings
+                                        com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                                            .save(newSettings)
+                                        torTypeFlow.value = newSettings.torType
+                                        externalPortFlow.value = newSettings.externalSocksPort
+                                        // Rebuild app to apply Tor changes
+                                        onRestartApp()
+                                    },
+                                ),
+                        ) {
+                            MainContent(
+                                layoutMode = layoutMode,
+                                deckState = deckState,
+                                workspaceManager = workspaceManager,
+                                singlePaneState = singlePaneState,
+                                pinnedNavBarState = pinnedNavBarState,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                accountManager = accountManager,
+                                account = account,
+                                nwcConnection = nwcConnection,
+                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                nip11Fetcher = nip11Fetcher,
+                                appScope = scope,
+                                torStatus = currentTorStatus,
+                                onShowComposeDialog = onShowComposeDialog,
+                                onShowReplyDialog = onShowReplyDialog,
+                                onShowAppDrawer = onShowAppDrawer,
+                            )
+                        }
+
+                        // Compose dialog
+                        if (showComposeDialog) {
+                            ComposeNoteDialog(
+                                onDismiss = onDismissComposeDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                replyTo = replyToNote,
+                            )
+                        }
+
+                        // App Drawer overlay
+                        if (showAppDrawer) {
+                            val openColumns by deckState.columns.collectAsState()
+                            AppDrawer(
+                                openColumnTypes =
+                                    if (layoutMode == LayoutMode.DECK) {
+                                        openColumns.map { it.type.typeKey() }.toSet()
+                                    } else {
+                                        emptySet()
+                                    },
+                                pinnedNavBarState = pinnedNavBarState,
+                                workspaceManager = workspaceManager,
+                                onSwitchWorkspace = { ws ->
+                                    // Switch layout mode to match workspace
+                                    onLayoutModeChange(ws.layoutMode)
+                                    // Load columns or single pane screen
+                                    when (ws.layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            deckState.loadFromWorkspace(ws.columns)
+                                        }
+
+                                        LayoutMode.SINGLE_PANE -> {
+                                            // Load nav bar from workspace + navigate to first screen
+                                            pinnedNavBarState.loadFromWorkspace()
+                                            val firstKey =
+                                                ws.singlePaneScreens.firstOrNull() ?: "home"
+                                            val type = DeckState.parseColumnTypeFromKey(firstKey)
+                                            if (type != null) singlePaneState.navigate(type)
+                                        }
+                                    }
+                                },
+                                onSelectScreen = { type ->
+                                    when (layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            if (deckState.hasColumnOfType(type)) {
+                                                deckState.focusExistingColumn(type)
+                                            } else {
+                                                deckState.addColumn(type)
+                                            }
+                                        }
+
+                                        LayoutMode.SINGLE_PANE -> {
+                                            singlePaneState.navigate(type)
+                                        }
+                                    }
+                                },
+                                onDismiss = onDismissAppDrawer,
+                            )
+                        }
+                    }
+                }
+
+                // Force logout dialog overlay
+                val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
+                forceLogoutReason?.let { reason ->
+                    ForceLogoutDialog(
+                        reason = reason,
+                        onDismiss = { accountManager.clearForceLogoutReason() },
+                    )
+                }
             }
         }
     }
@@ -595,16 +961,21 @@ fun App(
 fun MainContent(
     layoutMode: LayoutMode,
     deckState: DeckState,
+    workspaceManager: WorkspaceManager,
+    singlePaneState: SinglePaneState,
+    pinnedNavBarState: PinnedNavBarState,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
+    torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
-    onShowAddColumnDialog: () -> Unit,
+    onShowAppDrawer: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -616,9 +987,27 @@ fun MainContent(
         remember(relayManager) {
             DmSendTracker(relayManager.client)
         }
+    // Centralized relay state for all categories (DM, search, blocked, NIP-65 persistence)
+    // Created before iAccount so NIP-65 backup can be loaded
+    val accountRelays =
+        remember(account, relayManager, scope) {
+            DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
+        }
+
     val iAccount =
-        remember(account, localCache, relayManager, dmSendTracker) {
-            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
+        remember(account, localCache, relayManager, dmSendTracker, accountRelays) {
+            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays)
+        }
+
+    // Aggregated relay categories (feed, notifications, search, DM)
+    val relayCategories =
+        remember(iAccount.nip65RelayList, accountRelays, relayManager) {
+            DesktopRelayCategories(
+                nip65State = iAccount.nip65RelayList,
+                accountRelays = accountRelays,
+                connectedRelays = relayManager.connectedRelays,
+                scope = scope,
+            )
         }
 
     val highlightStore = remember { DesktopHighlightStore(appScope) }
@@ -628,19 +1017,63 @@ fun MainContent(
                 .DesktopDraftStore(appScope)
         }
 
+    // Bootstrap subscription: fetch relay config events (kinds 10002, 10050, 10007, 10006)
+    // Uses DisposableEffect to clean up subscription on account change
+    DisposableEffect(accountRelays) {
+        val bootstrapSubId = "bootstrap-relay-config"
+        scope.launch {
+            val connected =
+                withTimeoutOrNull(30.seconds) {
+                    relayManager.connectedRelays.first { it.isNotEmpty() }
+                }
+            if (connected != null) {
+                val filter =
+                    Filter(
+                        kinds =
+                            listOf(
+                                AdvertisedRelayListEvent.KIND,
+                                ChatMessageRelayListEvent.KIND,
+                                SearchRelayListEvent.KIND,
+                                BlockedRelayListEvent.KIND,
+                            ),
+                        authors = listOf(account.pubKeyHex),
+                        limit = 4,
+                    )
+                relayManager.subscribe(
+                    subId = bootstrapSubId,
+                    filters = listOf(filter),
+                    listener =
+                        object : SubscriptionListener {
+                            override fun onEvent(
+                                event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                                isLive: Boolean,
+                                relay: NormalizedRelayUrl,
+                                forFilters: List<Filter>?,
+                            ) {
+                                // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
+                                // because localCache.consume() doesn't handle addressable events
+                                if (event is AdvertisedRelayListEvent) {
+                                    scope.launch(Dispatchers.IO) {
+                                        localCache.justConsumeMyOwnEvent(event)
+                                    }
+                                }
+                                // Route to accountRelays for persistence + state updates
+                                accountRelays.consumeIfRelevant(event)
+                            }
+                        },
+                )
+            }
+        }
+        onDispose { relayManager.unsubscribe(bootstrapSubId) }
+    }
+
     // Subscribe to incoming DMs and process into chatroomList
     LaunchedEffect(account) {
         relayManager.connectedRelays.first { it.isNotEmpty() }
 
-        val dmRelayState =
-            DesktopDmRelayState(
-                dmRelayList = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
-                connectedRelays = relayManager.connectedRelays,
-                scope = scope,
-            )
         subscriptionsCoordinator.subscribeToDms(
             userPubKeyHex = account.pubKeyHex,
-            dmRelayState = dmRelayState,
+            dmRelayState = accountRelays.dmRelays,
             onDmEvent = { event, relay ->
                 // Store raw event in cache
                 val note = localCache.getOrCreateNote(event.id)
@@ -660,13 +1093,9 @@ fun MainContent(
                     }
 
                     is com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent -> {
-                        // NIP-17: unwrap gift wrap → seal → inner event
+                        // NIP-17: peel both the gift-wrap and sealed-rumor layers.
                         scope.launch {
-                            val seal =
-                                event.unwrapOrNull(iAccount.signer)
-                                    as? com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
-                                    ?: return@launch
-                            val innerEvent = seal.unsealOrNull(iAccount.signer) ?: return@launch
+                            val innerEvent = event.unwrapAndUnsealOrNull(iAccount.signer) ?: return@launch
                             when (innerEvent) {
                                 is com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent -> {
                                     val innerNote = localCache.getOrCreateNote(innerEvent.id)
@@ -734,87 +1163,105 @@ fun MainContent(
 
     val isImmersive by com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen.current
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxSize().weight(1f)) {
-                when (layoutMode) {
-                    LayoutMode.SINGLE_PANE -> {
-                        val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
-                        SinglePaneLayout(
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            accountManager = accountManager,
-                            account = account,
-                            iAccount = iAccount,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            highlightStore = highlightStore,
-                            draftStore = draftStore,
-                            appScope = appScope,
-                            onShowComposeDialog = onShowComposeDialog,
-                            onShowReplyDialog = onShowReplyDialog,
-                            onZapFeedback = onZapFeedback,
-                            signerConnectionState = signerConnectionState,
-                            lastPingTimeSec = lastPingTimeSec,
-                            lastRelayEventAt = lastRelayEvent,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
-                    LayoutMode.DECK -> {
-                        if (!isImmersive) {
-                            DeckSidebar(
-                                onAddColumn = onShowAddColumnDialog,
-                                onOpenSettings = {
-                                    if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                        deckState.focusExistingColumn(DeckColumnType.Settings)
-                                    } else {
-                                        deckState.addColumn(DeckColumnType.Settings)
-                                    }
-                                },
+    CompositionLocalProvider(
+        LocalRelayCategories provides relayCategories,
+        com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxSize().weight(1f)) {
+                    when (layoutMode) {
+                        LayoutMode.SINGLE_PANE -> {
+                            val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
+                            SinglePaneLayout(
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                accountManager = accountManager,
+                                account = account,
+                                iAccount = iAccount,
+                                nwcConnection = nwcConnection,
+                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                highlightStore = highlightStore,
+                                draftStore = draftStore,
+                                nip11Fetcher = nip11Fetcher,
+                                appScope = appScope,
+                                singlePaneState = singlePaneState,
+                                pinnedNavBarState = pinnedNavBarState,
+                                onOpenAppDrawer = onShowAppDrawer,
+                                onShowComposeDialog = onShowComposeDialog,
+                                onShowReplyDialog = onShowReplyDialog,
+                                onZapFeedback = onZapFeedback,
                                 signerConnectionState = signerConnectionState,
                                 lastPingTimeSec = lastPingTimeSec,
+                                lastRelayEventAt = lastRelayEvent,
+                                modifier = Modifier.weight(1f),
                             )
-
-                            VerticalDivider()
                         }
 
-                        DeckLayout(
-                            deckState = deckState,
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            accountManager = accountManager,
-                            account = account,
-                            iAccount = iAccount,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            highlightStore = highlightStore,
-                            draftStore = draftStore,
-                            appScope = appScope,
-                            onShowComposeDialog = onShowComposeDialog,
-                            onShowReplyDialog = onShowReplyDialog,
-                            onZapFeedback = onZapFeedback,
-                            modifier = Modifier.weight(1f),
-                        )
+                        LayoutMode.DECK -> {
+                            if (!isImmersive) {
+                                DeckSidebar(
+                                    onAddColumn = onShowAppDrawer,
+                                    onOpenSettings = {
+                                        if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                            deckState.focusExistingColumn(DeckColumnType.Settings)
+                                        } else {
+                                            deckState.addColumn(DeckColumnType.Settings)
+                                        }
+                                    },
+                                    signerConnectionState = signerConnectionState,
+                                    lastPingTimeSec = lastPingTimeSec,
+                                    torStatus = torStatus,
+                                )
+
+                                VerticalDivider()
+                            }
+
+                            DeckLayout(
+                                deckState = deckState,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                accountManager = accountManager,
+                                account = account,
+                                iAccount = iAccount,
+                                nwcConnection = nwcConnection,
+                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                highlightStore = highlightStore,
+                                draftStore = draftStore,
+                                nip11Fetcher = nip11Fetcher,
+                                appScope = appScope,
+                                onShowComposeDialog = onShowComposeDialog,
+                                onShowReplyDialog = onShowReplyDialog,
+                                onZapFeedback = onZapFeedback,
+                                onNavigateToRelays = {
+                                    if (deckState.hasColumnOfType(DeckColumnType.Relays)) {
+                                        deckState.focusExistingColumn(DeckColumnType.Relays)
+                                    } else {
+                                        deckState.addColumn(DeckColumnType.Relays)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
-                }
-            } // end Row
+                } // end Row
 
-            // Persistent media control bar
+                // Persistent media control bar
+                com.vitorpamplona.amethyst.desktop.ui.media
+                    .NowPlayingBar()
+            } // end Column
+
+            // Global fullscreen video overlay
             com.vitorpamplona.amethyst.desktop.ui.media
-                .NowPlayingBar()
-        } // end Column
+                .GlobalFullscreenOverlay()
 
-        // Global fullscreen video overlay
-        com.vitorpamplona.amethyst.desktop.ui.media
-            .GlobalFullscreenOverlay()
-
-        // Snackbar for zap feedback
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-        )
-    }
+            // Snackbar for zap feedback
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+            )
+        }
+    } // end CompositionLocalProvider
 }
 
 @Composable
@@ -857,6 +1304,11 @@ fun RelaySettingsScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     accountManager: AccountManager,
+    torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus = com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Off,
+    torSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings =
+        com.vitorpamplona.amethyst.commons.tor
+            .TorSettings(torType = com.vitorpamplona.amethyst.commons.tor.TorType.OFF),
+    onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -870,203 +1322,232 @@ fun RelaySettingsScreen(
         accountManager.loadNwcConnection()
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-    ) {
-        Text(
-            "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        // Wallet Connect Section
-        Text(
-            "Wallet Connect (NWC)",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        if (nwcConnection != null) {
+    com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
+        val sidePadding =
+            com.vitorpamplona.amethyst.desktop.ui
+                .readingHorizontalPadding()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = sidePadding),
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(
-                        "Wallet Connected",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        "Relay: ${nwcConnection!!.relayUri.url}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                OutlinedButton(
-                    onClick = { accountManager.clearNwcConnection() },
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
+                Text(
+                    "Settings",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Wallet Connect Section
+            Text(
+                "Wallet Connect (NWC)",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            if (nwcConnection != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Disconnect")
+                    Column {
+                        Text(
+                            "Wallet Connected",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Relay: ${nwcConnection!!.relayUri.url}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { accountManager.clearNwcConnection() },
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                    ) {
+                        Text("Disconnect")
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = nwcInput,
+                        onValueChange = {
+                            nwcInput = it
+                            nwcError = null
+                        },
+                        label = { Text("NWC Connection String") },
+                        placeholder = { Text("nostr+walletconnect://...") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        isError = nwcError != null,
+                        supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    )
+                    Button(
+                        onClick = {
+                            val result = accountManager.setNwcConnection(nwcInput)
+                            result.fold(
+                                onSuccess = { nwcInput = "" },
+                                onFailure = { nwcError = it.message ?: "Invalid connection string" },
+                            )
+                        },
+                        enabled = nwcInput.isNotBlank(),
+                    ) {
+                        Text("Connect")
+                    }
                 }
             }
-        } else {
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Media Server Settings
+            MediaServerSettings(
+                initialServers = DesktopPreferences.blossomServers,
+                onServersChanged = { DesktopPreferences.blossomServers = it },
+            )
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Tor Settings
+            com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
+                torStatus = torStatus,
+                currentSettings = torSettings,
+                onSettingsChanged = onTorSettingsChanged,
+            )
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Developer Settings Section (only in debug mode)
+            if (DebugConfig.isDebugMode) {
+                com.vitorpamplona.amethyst.desktop.ui
+                    .DevSettingsSection(account = account)
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+            }
+
+            Text(
+                "Relay Settings",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "${connectedRelays.size} of ${relayStatuses.size} relays connected",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                IconButton(onClick = { relayManager.connect() }) {
+                    Icon(
+                        MaterialSymbols.Refresh,
+                        contentDescription = "Reconnect",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
-                    value = nwcInput,
-                    onValueChange = {
-                        nwcInput = it
-                        nwcError = null
-                    },
-                    label = { Text("NWC Connection String") },
-                    placeholder = { Text("nostr+walletconnect://...") },
+                    value = newRelayUrl,
+                    onValueChange = { newRelayUrl = it },
+                    label = { Text("Add relay") },
+                    placeholder = { Text("wss://relay.example.com") },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    isError = nwcError != null,
-                    supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                 )
                 Button(
                     onClick = {
-                        val result = accountManager.setNwcConnection(nwcInput)
-                        result.fold(
-                            onSuccess = { nwcInput = "" },
-                            onFailure = { nwcError = it.message ?: "Invalid connection string" },
-                        )
+                        if (newRelayUrl.isNotBlank()) {
+                            relayManager.addRelay(newRelayUrl)
+                            newRelayUrl = ""
+                        }
                     },
-                    enabled = nwcInput.isNotBlank(),
+                    enabled = newRelayUrl.isNotBlank(),
                 ) {
-                    Text("Connect")
+                    Text("Add")
                 }
             }
-        }
 
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
-        // Media Server Settings
-        MediaServerSettings(
-            initialServers = DesktopPreferences.blossomServers,
-            onServersChanged = { DesktopPreferences.blossomServers = it },
-        )
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
-
-        // Developer Settings Section (only in debug mode)
-        if (DebugConfig.isDebugMode) {
-            com.vitorpamplona.amethyst.desktop.ui
-                .DevSettingsSection(account = account)
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-        }
-
-        Text(
-            "Relay Settings",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                "${connectedRelays.size} of ${relayStatuses.size} relays connected",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            IconButton(onClick = { relayManager.connect() }) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "Reconnect",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = newRelayUrl,
-                onValueChange = { newRelayUrl = it },
-                label = { Text("Add relay") },
-                placeholder = { Text("wss://relay.example.com") },
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-            Button(
-                onClick = {
-                    if (newRelayUrl.isNotBlank()) {
-                        relayManager.addRelay(newRelayUrl)
-                        newRelayUrl = ""
-                    }
-                },
-                enabled = newRelayUrl.isNotBlank(),
             ) {
-                Text("Add")
+                items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
+                    RelayStatusCard(
+                        status = status,
+                        onRemove = { relayManager.removeRelay(status.url) },
+                    )
+                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
-                RelayStatusCard(
-                    status = status,
-                    onRemove = { relayManager.removeRelay(status.url) },
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
+                    Text("Reset to Defaults")
+                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
-                Text("Reset to Defaults")
+            val logoutScope = rememberCoroutineScope()
+            OutlinedButton(
+                onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+            ) {
+                Text("Logout")
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        val logoutScope = rememberCoroutineScope()
-        OutlinedButton(
-            onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
-            colors =
-                ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-        ) {
-            Text("Logout")
         }
     }
 }

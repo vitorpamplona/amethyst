@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
@@ -34,9 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import coil3.asDrawable
-import coil3.imageLoader
-import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -49,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
@@ -66,7 +63,6 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
-import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -88,7 +84,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -107,6 +102,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -131,12 +127,14 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -145,6 +143,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -199,41 +198,20 @@ class AccountViewModel(
                     account.publishCallSignaling(wrap)
                 }
             },
+            isCallsEnabled = { account.settings.callsEnabled.value },
         )
 
-    var callController: CallController? = null
-        private set
-
-    @Synchronized
-    fun initCallController(context: Context) {
-        if (callController != null) return
-
-        // Wire EventProcessor before creating CallController so events aren't dropped
+    init {
+        // Wire the signaling event processor eagerly so incoming call
+        // events are routed to CallManager even before any CallActivity
+        // is launched. Previously this was deferred to initCallController,
+        // which could miss events if the UI hadn't mounted yet.
         account.newNotesPreProcessor.callManager = callManager
 
-        val controller =
-            CallController(
-                context = context,
-                callManager = callManager,
-                scope = viewModelScope,
-                publishWrap = { wrap -> account.publishCallSignaling(wrap) },
-                signerProvider = { account.signer },
-                localPubKey = account.signer.pubKey,
-                settingsProvider = { account.settings },
-            )
-
-        // Set callbacks before exposing controller to avoid timing races
-        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.pubKey, event.sdpAnswer()) }
-        callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
-        callManager.onNewPeerInGroupCall = { peerPubKey -> controller.onNewPeerInGroupCall(peerPubKey) }
-        callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> controller.onMidCallOfferReceived(peerPubKey, sdpOffer) }
-        callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
-        callController = controller
-
-        // Populate CallSessionBridge so CallActivity can launch even when the app
-        // is in the background (e.g. full-screen incoming call intent).
+        // Populate CallSessionBridge so CallActivity and background
+        // receivers can reach callManager + accountViewModel.
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
-            .set(callManager, controller, this)
+            .set(callManager, this)
     }
 
     val eventSync =
@@ -431,7 +409,7 @@ class AccountViewModel(
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
-                if (settings.isCompleteUIMode() && note.event !is NIP17Group) {
+                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
@@ -859,24 +837,12 @@ class AccountViewModel(
         }
     }
 
-    fun boost(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            // Tracked broadcasting with progress feedback
-            launchSigner {
-                account.createBoostEvent(note)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBoostEvent(event)
-                }
-            }
-        } else {
-            // Fire-and-forget (original behavior)
-            launchSigner { account.boost(note) }
-        }
-    }
+    fun boost(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createBoostEvent(note) },
+            consumeTracked = account::consumeBoostEvent,
+            direct = { account.boost(note) },
+        )
 
     fun removeEmojiPack(emojiPack: Note) = launchSigner { account.removeEmojiPack(emojiPack) }
 
@@ -904,107 +870,64 @@ class AccountViewModel(
 
     fun pinnedNotes(user: User): Note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
 
-    fun addPin(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createAddPinEvent(note)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumePinEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.addPin(note) }
-        }
+    fun addPin(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createAddPinEvent(note) },
+            consumeTracked = account::consumePinEvent,
+            direct = { account.addPin(note) },
+        )
+
+    fun removePin(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createRemovePinEvent(note) },
+            consumeTracked = account::consumePinEvent,
+            direct = { account.removePin(note) },
+        )
+
+    fun removeDeletedPins(deletedNotes: Set<Note>) {
+        launchSigner { account.removeDeletedPins(deletedNotes) }
     }
 
-    fun removePin(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createRemovePinEvent(note)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumePinEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.removePin(note) }
-        }
+    fun addPrivateBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createAddBookmarkEvent(note, true) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.addBookmark(note, true) },
+        )
+
+    fun addPublicBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createAddBookmarkEvent(note, false) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.addBookmark(note, false) },
+        )
+
+    fun removePrivateBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createRemoveBookmarkEvent(note, true) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.removeBookmark(note, true) },
+        )
+
+    fun removePublicBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createRemoveBookmarkEvent(note, false) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.removeBookmark(note, false) },
+        )
+
+    fun removeDeletedBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        launchSigner { account.removeDeletedBookmarks(deletedEventIds, deletedAddresses) }
     }
 
-    fun addPrivateBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createAddBookmarkEvent(note, true)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.addBookmark(note, true) }
-        }
-    }
-
-    fun addPublicBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createAddBookmarkEvent(note, false)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.addBookmark(note, false) }
-        }
-    }
-
-    fun removePrivateBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createRemoveBookmarkEvent(note, true)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.removeBookmark(note, true) }
-        }
-    }
-
-    fun removePublicBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createRemoveBookmarkEvent(note, false)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.removeBookmark(note, false) }
-        }
+    fun removeDeletedOldBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        launchSigner { account.removeDeletedOldBookmarks(deletedEventIds, deletedAddresses) }
     }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
@@ -1033,6 +956,29 @@ class AccountViewModel(
         onReady: (String) -> Unit,
     ) = launchSigner {
         account.decryptContent(note)?.let { onReady(it) }
+    }
+
+    /**
+     * Runs an action that has both a tracked and a direct broadcast variant,
+     * picking the path the user selected via the "Tracked broadcasts" setting.
+     */
+    inline fun launchTrackedOrDirect(
+        crossinline createTracked: suspend () -> Pair<Event, Set<NormalizedRelayUrl>>?,
+        crossinline consumeTracked: (Event) -> Unit,
+        crossinline direct: suspend () -> Unit,
+    ) = launchSigner {
+        if (settings.useTrackedBroadcasts()) {
+            createTracked()?.let { (event, relays) ->
+                broadcastTracker.trackBroadcast(
+                    event = event,
+                    relays = relays,
+                    client = account.client,
+                )
+                consumeTracked(event)
+            }
+        } else {
+            direct()
+        }
     }
 
     inline fun launchSigner(crossinline action: suspend () -> Unit) {
@@ -1106,6 +1052,12 @@ class AccountViewModel(
     fun followHashtag(tag: String) = launchSigner { account.followHashtag(tag) }
 
     fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
+
+    fun followFavoriteAlgoFeed(dvm: AddressBookmark) = launchSigner { account.followFavoriteAlgoFeed(dvm) }
+
+    fun unfollowFavoriteAlgoFeed(dvm: Address) = launchSigner { account.unfollowFavoriteAlgoFeed(dvm) }
+
+    fun refreshFavoriteAlgoFeed(dvm: Address) = account.favoriteAlgoFeedsOrchestrator.refresh(dvm)
 
     fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
 
@@ -1183,6 +1135,13 @@ class AccountViewModel(
     fun changeReactionRowItems(items: List<com.vitorpamplona.amethyst.model.ReactionRowItem>) =
         launchSigner {
             account.changeReactionRowItems(items)
+        }
+
+    fun videoPlayerButtonItemsFlow() = account.settings.syncedSettings.videoPlayer.buttonItems
+
+    fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.model.VideoPlayerButtonItem>) =
+        launchSigner {
+            account.changeVideoPlayerButtonItems(items)
         }
 
     fun updateZapAmounts(
@@ -1447,15 +1406,45 @@ class AccountViewModel(
         nostrGroupId: String,
         text: String,
     ) {
+        // Inner event construction lives on MarmotManager so CLI and UI don't drift.
+        // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
+        // event through LocalCache which already handles own-message display.
+        val bundle = account.marmotManager?.buildTextMessage(nostrGroupId, text, persistOwn = false) ?: return
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+    }
+
+    suspend fun sendMarmotGroupMediaMessage(
+        nostrGroupId: String,
+        url: String,
+        imeta: com.vitorpamplona.quartz.nip92IMeta.IMetaTag,
+        caption: String? = null,
+    ) {
         val template =
-            com.vitorpamplona.quartz.nip01Core.signers.eventTemplate<com.vitorpamplona.quartz.nip01Core.core.Event>(
+            eventTemplate(
                 kind = 9,
-                description = text,
-            )
-        val innerEvent = account.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
+                description = url,
+            ) {
+                imeta(imeta)
+                if (!caption.isNullOrEmpty()) {
+                    alt(caption)
+                }
+            }
+        // MIP-03: inner events MUST remain unsigned (no `sig`) so a leaked
+        // plaintext can't be replayed as a valid public kind:9. Authorship
+        // is authenticated by the MLS sender's LeafNode + the pubkey↔
+        // credential-identity equality check on the receive side.
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<com.vitorpamplona.quartz.nip01Core.core.Event>(
+                    account.signer.pubKey,
+                    template,
+                )
         val relays = marmotGroupRelays(nostrGroupId)
         account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
+
+    fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
 
     suspend fun createMarmotGroup(nostrGroupId: String) {
         account.createMarmotGroup(nostrGroupId)
@@ -1467,9 +1456,34 @@ class AccountViewModel(
 
     suspend fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
 
+    /**
+     * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)
+     * advertising where it publishes KeyPackages.
+     */
+    fun hasKeyPackageRelayList(): Boolean =
+        account.keyPackageRelayList.flow.value
+            .isNotEmpty()
+
+    /**
+     * Publishes a kind:10051 KeyPackage Relay List seeded from the account's
+     * current outbox relays. Used when the user opts in from the
+     * "Create Group" warning dialog.
+     */
+    suspend fun saveKeyPackageRelayListFromOutbox() {
+        val outbox =
+            account.outboxRelays.flow.value
+                .toList()
+        if (outbox.isEmpty()) return
+        account.saveKeyPackageRelayList(outbox)
+    }
+
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
         val relays = marmotGroupRelays(nostrGroupId)
         account.leaveMarmotGroup(nostrGroupId, relays)
+    }
+
+    suspend fun resetMarmotState() {
+        account.resetMarmotState()
     }
 
     /**
@@ -1503,53 +1517,63 @@ class AccountViewModel(
         account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
     }
 
+    suspend fun grantMarmotGroupAdmin(
+        nostrGroupId: String,
+        targetPubKey: String,
+    ) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.grantMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+    }
+
+    suspend fun revokeMarmotGroupAdmin(
+        nostrGroupId: String,
+        targetPubKey: String,
+    ) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+    }
+
     suspend fun updateMarmotGroupMetadata(
         nostrGroupId: String,
         name: String,
         description: String,
     ) {
-        val currentMetadata =
-            account.marmotManager?.groupMetadata(nostrGroupId)
-                ?: throw IllegalStateException("Group metadata not found")
+        // Stamp the inviter's outbox relays into the group metadata so that
+        // every member ends up with a single canonical relay set for kind:445
+        // GroupEvents. Without this, both the inviter and the invitee fall
+        // back to their *own* home/outbox relays — which usually do not
+        // overlap, so kind:445 messages never reach the other side. The
+        // welcome carries the metadata, so the invitee learns the relays at
+        // join time.
+        val outboxRelayStrings =
+            account.outboxRelays.flow.value
+                .map { it.url }
+        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
         val updatedMetadata =
-            currentMetadata.copy(
-                name = name,
-                description = description,
-            )
+            currentMetadata
+                ?.copy(name = name, description = description)
+                ?.withMergedRelays(outboxRelayStrings)
+                ?: com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+                    .bootstrap(
+                        nostrGroupId = nostrGroupId,
+                        creatorPubKey = account.signer.pubKey,
+                        outboxRelays = outboxRelayStrings,
+                        name = name,
+                        description = description,
+                    )
         val relays = marmotGroupRelays(nostrGroupId)
         account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }
 
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
-        callController?.cleanup()
+        callManager.dispose()
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
+            .clear()
+        com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
             .clear()
         feedStates.destroy()
         super.onCleared()
-    }
-
-    fun loadThumb(
-        context: Context,
-        thumbUri: String,
-        onReady: (Drawable?) -> Unit,
-        onError: (String?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val request = ImageRequest.Builder(context).data(thumbUri).build()
-                val myCover =
-                    context.imageLoader
-                        .execute(request)
-                        .image
-                        ?.asDrawable(context.resources)
-                onReady(myCover)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e("VideoView", "Fail to load cover $thumbUri", e)
-                onError(e.message)
-            }
-        }
     }
 
     fun loadMentions(
@@ -1751,8 +1775,8 @@ class AccountViewModel(
         onReady: (event: Note) -> Unit,
     ) {
         launchSigner {
-            account.requestDVMContentDiscovery(dvmPublicKey) {
-                onReady(LocalCache.getOrCreateNote(it.id))
+            account.requestDVMContentDiscovery(dvmPublicKey) { request, _ ->
+                onReady(LocalCache.getOrCreateNote(request.id))
             }
         }
     }

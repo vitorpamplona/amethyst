@@ -119,6 +119,7 @@ val Size22dp = 22.dp
 val Size23dp = 23.dp
 val Size24dp = 24.dp
 val Size25dp = 25.dp
+val Size27dp = 27.dp
 val Size30dp = 30.dp
 val Size34dp = 34.dp
 val Size35dp = 35.dp
@@ -263,6 +264,7 @@ val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Siz
 
 val IconRowTextModifier = Modifier.padding(start = 16.dp)
 val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp)
+val DrawerSectionHeaderModifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp, start = 25.dp, end = 15.dp)
 
 val Width16Space = Modifier.width(Size16dp)
 

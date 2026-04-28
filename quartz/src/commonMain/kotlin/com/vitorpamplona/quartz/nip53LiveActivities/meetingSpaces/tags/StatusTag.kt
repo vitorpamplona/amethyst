@@ -27,6 +27,8 @@ class StatusTag {
     enum class STATUS(
         val code: String,
     ) {
+        /** Scheduled in the future — host hasn't started the room yet. Pairs with a `["starts", <unix>]` tag. */
+        PLANNED("planned"),
         OPEN("open"),
         PRIVATE("private"),
         CLOSED("closed"),
@@ -37,9 +39,23 @@ class StatusTag {
         companion object {
             fun parse(code: String): STATUS? =
                 when (code) {
-                    STATUS.OPEN.code -> STATUS.OPEN
-                    STATUS.PRIVATE.code -> STATUS.PRIVATE
-                    STATUS.CLOSED.code -> STATUS.CLOSED
+                    PLANNED.code -> PLANNED
+
+                    OPEN.code -> OPEN
+
+                    PRIVATE.code -> PRIVATE
+
+                    CLOSED.code -> CLOSED
+
+                    // Legacy aliases used by first-generation nostrnests
+                    // web clients that reused NIP-53 streaming-event
+                    // status values for kind-30312 meeting spaces.
+                    // Accept on read to preserve interop; we always emit
+                    // the canonical EGG-01 codes.
+                    "live" -> OPEN
+
+                    "ended" -> CLOSED
+
                     else -> null
                 }
         }

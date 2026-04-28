@@ -21,19 +21,24 @@
 package com.vitorpamplona.amethyst.commons.call
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 
+@Stable
 @Immutable
 sealed interface CallState {
+    @Stable
     data object Idle : CallState
 
+    @Stable
     data class Offering(
         val callId: String,
         val peerPubKeys: Set<HexKey>,
         val callType: CallType,
     ) : CallState
 
+    @Stable
     data class IncomingCall(
         val callId: String,
         val callerPubKey: HexKey,
@@ -42,6 +47,7 @@ sealed interface CallState {
         val sdpOffer: String,
     ) : CallState
 
+    @Stable
     data class Connecting(
         val callId: String,
         val peerPubKeys: Set<HexKey>,
@@ -49,6 +55,7 @@ sealed interface CallState {
         val pendingPeerPubKeys: Set<HexKey> = emptySet(),
     ) : CallState
 
+    @Stable
     data class Connected(
         val callId: String,
         val peerPubKeys: Set<HexKey>,
@@ -60,6 +67,7 @@ sealed interface CallState {
         val allPeerPubKeys: Set<HexKey> get() = peerPubKeys + pendingPeerPubKeys
     }
 
+    @Stable
     data class Ended(
         val callId: String,
         val peerPubKeys: Set<HexKey>,

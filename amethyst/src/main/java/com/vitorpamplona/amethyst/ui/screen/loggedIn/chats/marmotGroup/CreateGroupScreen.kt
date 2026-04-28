@@ -26,10 +26,12 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,9 +46,9 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.security.SecureRandom
 
 @Composable
 fun CreateGroupScreen(
@@ -55,36 +57,53 @@ fun CreateGroupScreen(
 ) {
     var groupName by remember { mutableStateOf("") }
     var isCreating by remember { mutableStateOf(false) }
+    var showKeyPackageRelayDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    fun proceedWithCreate() {
+        isCreating = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                val nostrGroupId = RandomInstance.bytes(32).toHexKey()
+                accountViewModel.createMarmotGroup(nostrGroupId)
+                // Always commit an initial metadata extension so that
+                // (a) the name (if any) is persisted in MLS extensions
+                //     and survives app restarts,
+                // (b) the inviter's outbox relays land in the group
+                //     metadata so every member ends up with the same
+                //     canonical relay set for kind:445 — without this,
+                //     invitees would never receive the group's messages.
+                // Both are handled inside `updateMarmotGroupMetadata`.
+                accountViewModel.updateMarmotGroupMetadata(
+                    nostrGroupId = nostrGroupId,
+                    name = groupName.trim(),
+                    description = "",
+                )
+                nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)
+            } catch (e: Exception) {
+                isCreating = false
+                launch(Dispatchers.Main) {
+                    Toast
+                        .makeText(
+                            context,
+                            "Failed to create group: ${e.message}",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             CreatingTopBar(
                 onCancel = { nav.popBack() },
                 onPost = {
-                    isCreating = true
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            val nostrGroupId = ByteArray(32).also { SecureRandom().nextBytes(it) }.toHexKey()
-                            accountViewModel.createMarmotGroup(nostrGroupId)
-                            if (groupName.isNotBlank()) {
-                                accountViewModel.account.marmotGroupList
-                                    .getOrCreateGroup(nostrGroupId)
-                                    .displayName.value = groupName
-                            }
-                            nav.nav(Route.MarmotGroupChat(nostrGroupId))
-                        } catch (e: Exception) {
-                            isCreating = false
-                            launch(Dispatchers.Main) {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        "Failed to create group: ${e.message}",
-                                        Toast.LENGTH_LONG,
-                                    ).show()
-                            }
-                        }
+                    if (!accountViewModel.hasKeyPackageRelayList()) {
+                        showKeyPackageRelayDialog = true
+                    } else {
+                        proceedWithCreate()
                     }
                 },
                 isActive = { !isCreating },
@@ -121,4 +140,53 @@ fun CreateGroupScreen(
             )
         }
     }
+
+    if (showKeyPackageRelayDialog) {
+        MissingKeyPackageRelayListDialog(
+            onConfirm = {
+                showKeyPackageRelayDialog = false
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.saveKeyPackageRelayListFromOutbox()
+                }
+                proceedWithCreate()
+            },
+            onDismiss = {
+                showKeyPackageRelayDialog = false
+                proceedWithCreate()
+            },
+            onCancel = {
+                showKeyPackageRelayDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun MissingKeyPackageRelayListDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("KeyPackage Relays not set") },
+        text = {
+            Text(
+                "You don't have a KeyPackage Relay List yet (MIP-00). " +
+                    "This list tells other people where your KeyPackage is " +
+                    "published so they can invite you to group chats.\n\n" +
+                    "Use your current outbox relays for this?",
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Use outbox relays")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Skip for now")
+            }
+        },
+    )
 }

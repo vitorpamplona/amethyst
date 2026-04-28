@@ -34,10 +34,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -59,8 +55,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
@@ -172,6 +171,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -250,6 +250,7 @@ import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -396,10 +397,6 @@ fun AcceptableNote(
                 }
             }
 
-            is BadgeDefinitionEvent -> {
-                BadgeDisplay(baseNote = baseNote, accountViewModel)
-            }
-
             else -> {
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
@@ -452,10 +449,6 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            }
-
-            is BadgeDefinitionEvent -> {
-                BadgeDisplay(baseNote, accountViewModel)
             }
 
             else -> {
@@ -938,8 +931,16 @@ private fun RenderNoteRow(
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
         }
 
+        is BadgeDefinitionEvent -> {
+            BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
+        }
+
         is LnZapEvent -> {
             RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is LiveActivitiesClipEvent -> {
+            RenderChatClip(baseNote, accountViewModel, nav)
         }
 
         is FhirResourceEvent -> {
@@ -1036,6 +1037,11 @@ private fun RenderNoteRow(
 
         is MeetingRoomEvent -> {
             RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
+        }
+
+        is com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent -> {
+            com.vitorpamplona.amethyst.ui.note.types
+                .RenderMeetingRoomPresence(baseNote, accountViewModel, nav)
         }
 
         is GitRepositoryEvent -> {
@@ -1512,7 +1518,7 @@ fun SecondUserInfoRow(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        Column(modifier = remember { Modifier.weight(1f) }) {
+        Column(modifier = Modifier.weight(1f)) {
             if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
                 ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
             } else {
@@ -1548,7 +1554,7 @@ fun DisplayExpiration(expirationDate: Long) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Timer,
+            symbol = MaterialSymbols.Timer,
             contentDescription = stringRes(R.string.expiration_date_label),
             modifier = Modifier.padding(start = 5.dp).size(15.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
@@ -1679,7 +1685,7 @@ fun FirstUserInfoRow(
 @Composable
 fun PinnedMark() {
     Icon(
-        imageVector = Icons.Default.PushPin,
+        symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(R.string.pinned_notes),
         modifier = Modifier.padding(start = 5.dp).size(16.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
@@ -1817,6 +1823,10 @@ private fun ChannelNotePicture(
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
     )
 }
 

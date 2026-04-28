@@ -25,25 +25,35 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import java.io.Serializable
 
 @Composable
 fun ChatroomListFeedView(
@@ -102,14 +112,16 @@ private fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
+    val myPubKey = accountViewModel.userProfile().pubkeyHex
+
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
-        itemsIndexed(
+        items(
             items.list,
-            key = { index, item -> if (index == 0) index else item.idHex },
-        ) { _, item ->
+            key = { item -> chatroomLazyKey(item, myPubKey) },
+        ) { item ->
             Row(Modifier.fillMaxWidth()) {
                 ChatroomHeaderCompose(
                     item,
@@ -121,6 +133,73 @@ private fun FeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+        }
+    }
+}
+
+// Stable per-chatroom key — derived from chatroom identity, not the latest
+// message id, so reorders move the row instead of recreating it. Compose
+// stores LazyColumn item keys in a SaveableStateHolder, which on Android
+// requires Bundle-storable types, so each variant is Serializable and only
+// holds primitives.
+private sealed interface ChatroomLazyKey : Serializable
+
+private data class MarmotChatroomLazyKey(
+    val groupId: HexKey,
+) : ChatroomLazyKey
+
+private data class PublicChannelLazyKey(
+    val channelId: HexKey,
+) : ChatroomLazyKey
+
+private data class EphemeralChannelLazyKey(
+    val id: String,
+    val relayUrl: String,
+) : ChatroomLazyKey
+
+private data class PrivateChatLazyKey(
+    val users: HashSet<HexKey>,
+) : ChatroomLazyKey
+
+private data class FallbackChatroomLazyKey(
+    val noteIdHex: HexKey,
+) : ChatroomLazyKey
+
+private fun chatroomLazyKey(
+    item: Note,
+    myPubKey: HexKey,
+): ChatroomLazyKey {
+    item.inGatherers
+        ?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
+        ?.let { return MarmotChatroomLazyKey(it.nostrGroupId) }
+
+    return when (val event = item.event) {
+        is ChannelMessageEvent -> {
+            PublicChannelLazyKey(event.channelId() ?: item.idHex)
+        }
+
+        is ChannelMetadataEvent -> {
+            PublicChannelLazyKey(event.channelId() ?: item.idHex)
+        }
+
+        is ChannelCreateEvent -> {
+            PublicChannelLazyKey(event.id)
+        }
+
+        is EphemeralChatEvent -> {
+            event.roomId()?.let { EphemeralChannelLazyKey(it.id, it.relayUrl.url) }
+                ?: FallbackChatroomLazyKey(item.idHex)
+        }
+
+        is ChatroomKeyable -> {
+            // ChatroomKey.users may be a kotlinx PersistentOrderedSet, which
+            // is not Serializable. Copy into a HashSet so the key survives
+            // Bundle round-trips; Set equality stays order-independent.
+            PrivateChatLazyKey(HashSet(event.chatroomKey(myPubKey).users))
+        }
+
+        else -> {
+            FallbackChatroomLazyKey(item.idHex)
         }
     }
 }

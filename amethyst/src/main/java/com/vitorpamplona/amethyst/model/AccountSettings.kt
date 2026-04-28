@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -36,12 +37,12 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -53,8 +54,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
@@ -65,31 +64,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
-
-val DefaultChannels =
-    listOf(
-        // Anigma's Nostr
-        ChannelTag("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", Constants.nos),
-        // Amethyst's Group
-        ChannelTag("42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5", Constants.nos),
-    )
-
-val DefaultNIP65RelaySet = setOf(Constants.mom, Constants.nos, Constants.bitcoiner)
-
-val DefaultNIP65List =
-    listOf(
-        AdvertisedRelayInfo(Constants.mom, AdvertisedRelayType.BOTH),
-        AdvertisedRelayInfo(Constants.nos, AdvertisedRelayType.BOTH),
-        AdvertisedRelayInfo(Constants.bitcoiner, AdvertisedRelayType.BOTH),
-    )
-
-val DefaultGlobalRelays = listOf(Constants.wine, Constants.news)
-
-val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
-
-val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto)
-
-val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1)
 
 val DefaultSignerPermissions =
     listOf(
@@ -122,7 +96,7 @@ sealed class TopFilter(
     object AroundMe : TopFilter(" Around Me ")
 
     @Serializable
-    object Chess : TopFilter(" Chess ")
+    object Mine : TopFilter(" Mine ")
 
     @Serializable
     class PeopleList(
@@ -153,6 +127,18 @@ sealed class TopFilter(
     class Relay(
         val url: String,
     ) : TopFilter("Relay/$url")
+
+    @Serializable
+    class FavoriteAlgoFeed(
+        val address: Address,
+    ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
+
+    @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
+
+    @Serializable
+    class InterestSet(
+        val address: Address,
+    ) : TopFilter("InterestSet/${address.toValue()}")
 }
 
 @Stable
@@ -169,16 +155,26 @@ class AccountSettings(
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultPublicChatsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultLiveStreamsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
+    val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
+    val alwaysOnNotificationService: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
+    var backupKeyPackageRelayList: KeyPackageRelayListEvent? = null,
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
@@ -191,6 +187,7 @@ class AccountSettings(
     var backupChannelList: ChannelListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
     var backupHashtagList: HashtagListEvent? = null,
+    var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
@@ -203,6 +200,7 @@ class AccountSettings(
     var callTurnServers: List<CallTurnServer> = emptyList(),
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
+    val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -217,6 +215,17 @@ class AccountSettings(
     }
 
     fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
+
+    // ---
+    // Always-on Notification Service
+    // ---
+
+    fun toggleAlwaysOnNotificationService(): Boolean {
+        val newValue = !alwaysOnNotificationService.value
+        alwaysOnNotificationService.tryEmit(newValue)
+        saveAccountSettings()
+        return newValue
+    }
 
     // ---
     // Zaps and Reactions
@@ -252,6 +261,15 @@ class AccountSettings(
     fun changeReactionRowItems(newItems: List<ReactionRowItem>): Boolean {
         if (syncedSettings.reactions.reactionRowItems.value != newItems) {
             syncedSettings.reactions.reactionRowItems.tryEmit(newItems.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeVideoPlayerButtonItems(newItems: List<VideoPlayerButtonItem>): Boolean {
+        if (syncedSettings.videoPlayer.buttonItems.value != newItems) {
+            syncedSettings.videoPlayer.buttonItems.tryEmit(newItems.toImmutableList())
             saveAccountSettings()
             return true
         }
@@ -443,6 +461,17 @@ class AccountSettings(
         }
     }
 
+    fun changeDefaultCommunitiesFollowList(name: FeedDefinition) {
+        changeDefaultCommunitiesFollowList(name.code)
+    }
+
+    fun changeDefaultCommunitiesFollowList(name: TopFilter) {
+        if (defaultCommunitiesFollowList.value != name) {
+            defaultCommunitiesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
     fun changeDefaultPicturesFollowList(name: FeedDefinition) {
         changeDefaultPicturesFollowList(name.code)
     }
@@ -450,6 +479,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultProductsFollowList(name: FeedDefinition) {
+        changeDefaultProductsFollowList(name.code)
+    }
+
+    fun changeDefaultProductsFollowList(name: TopFilter) {
+        if (defaultProductsFollowList.value != name) {
+            defaultProductsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
@@ -465,6 +505,28 @@ class AccountSettings(
         }
     }
 
+    fun changeDefaultPublicChatsFollowList(name: FeedDefinition) {
+        changeDefaultPublicChatsFollowList(name.code)
+    }
+
+    fun changeDefaultPublicChatsFollowList(name: TopFilter) {
+        if (defaultPublicChatsFollowList.value != name) {
+            defaultPublicChatsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultLiveStreamsFollowList(name: FeedDefinition) {
+        changeDefaultLiveStreamsFollowList(name.code)
+    }
+
+    fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
+        if (defaultLiveStreamsFollowList.value != name) {
+            defaultLiveStreamsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
     fun changeDefaultLongsFollowList(name: FeedDefinition) {
         changeDefaultLongsFollowList(name.code)
     }
@@ -472,6 +534,50 @@ class AccountSettings(
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultArticlesFollowList(name: FeedDefinition) {
+        changeDefaultArticlesFollowList(name.code)
+    }
+
+    fun changeDefaultArticlesFollowList(name: TopFilter) {
+        if (defaultArticlesFollowList.value != name) {
+            defaultArticlesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultBadgesFollowList(name: FeedDefinition) {
+        changeDefaultBadgesFollowList(name.code)
+    }
+
+    fun changeDefaultBadgesFollowList(name: TopFilter) {
+        if (defaultBadgesFollowList.value != name) {
+            defaultBadgesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultBrowseEmojiSetsFollowList(name: FeedDefinition) {
+        changeDefaultBrowseEmojiSetsFollowList(name.code)
+    }
+
+    fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
+        if (defaultBrowseEmojiSetsFollowList.value != name) {
+            defaultBrowseEmojiSetsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultFollowPacksFollowList(name: FeedDefinition) {
+        changeDefaultFollowPacksFollowList(name.code)
+    }
+
+    fun changeDefaultFollowPacksFollowList(name: TopFilter) {
+        if (defaultFollowPacksFollowList.value != name) {
+            defaultFollowPacksFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
@@ -565,6 +671,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupDMRelayList?.id != newDMRelayList.id) {
             backupDMRelayList = newDMRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateKeyPackageRelayList(newKeyPackageRelayList: KeyPackageRelayListEvent?) {
+        if (newKeyPackageRelayList == null || newKeyPackageRelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupKeyPackageRelayList?.id != newKeyPackageRelayList.id) {
+            backupKeyPackageRelayList = newKeyPackageRelayList
             saveAccountSettings()
         }
     }
@@ -677,6 +793,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupHashtagList?.id != newHashtagList.id) {
             backupHashtagList = newHashtagList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateFavoriteAlgoFeedsListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
+        if (newFavoriteDvmList == null || newFavoriteDvmList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupFavoriteAlgoFeedsList?.id != newFavoriteDvmList.id) {
+            backupFavoriteAlgoFeedsList = newFavoriteDvmList
             saveAccountSettings()
         }
     }
@@ -941,6 +1067,13 @@ class AccountSettings(
     fun changeCallMaxBitrateBps(bitrate: Int) {
         callMaxBitrateBps = bitrate
         saveAccountSettings()
+    }
+
+    fun changeCallsEnabled(enabled: Boolean) {
+        if (callsEnabled.value != enabled) {
+            callsEnabled.tryEmit(enabled)
+            saveAccountSettings()
+        }
     }
 }
 

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,12 +30,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,10 +50,14 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -63,6 +65,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.CoroutineScope
+import java.awt.Cursor
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -85,6 +88,8 @@ fun DesktopMessagesScreen(
     onNavigateToProfile: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
+    val accountRelays = com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays.current
+    var showDmRelayPicker by remember { mutableStateOf(false) }
     val listState =
         remember(account) {
             ChatroomListState(account, cacheProvider, relayManager, localCache, scope)
@@ -110,6 +115,11 @@ fun DesktopMessagesScreen(
                     true
                 }
 
+                event.key == Key.R && isModifier && event.isShiftPressed -> {
+                    showDmRelayPicker = true
+                    true
+                }
+
                 else -> {
                     false
                 }
@@ -126,6 +136,7 @@ fun DesktopMessagesScreen(
             onNavigateToProfile = onNavigateToProfile,
             listFocusRequester = listFocusRequester,
             onShowNewDm = { showNewDmDialog = true },
+            onShowRelayPicker = { showDmRelayPicker = true },
             keyHandler = keyHandler,
         )
     } else {
@@ -138,6 +149,7 @@ fun DesktopMessagesScreen(
             onNavigateToProfile = onNavigateToProfile,
             listFocusRequester = listFocusRequester,
             onShowNewDm = { showNewDmDialog = true },
+            onShowRelayPicker = { showDmRelayPicker = true },
             keyHandler = keyHandler,
         )
     }
@@ -152,6 +164,36 @@ fun DesktopMessagesScreen(
                 showNewDmDialog = false
             },
             onDismiss = { showNewDmDialog = false },
+        )
+    }
+
+    if (showDmRelayPicker && accountRelays != null) {
+        val pickerRelays =
+            remember {
+                androidx.compose.runtime.mutableStateListOf<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl>().also {
+                    it.addAll(accountRelays.dmRelayList.value.sortedBy { r -> r.url })
+                }
+            }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDmRelayPicker = false },
+            title = { androidx.compose.material3.Text("DM Relays") },
+            text = {
+                com.vitorpamplona.amethyst.desktop.ui.relay.DmRelayEditor(
+                    dmRelays = accountRelays.dmRelayList,
+                    signer = account.signer,
+                    onPublish = { event ->
+                        relayManager.broadcastToAll(event)
+                        accountRelays.consumePublishedEvent(event)
+                        accountRelays.setDmRelays(pickerRelays.toSet())
+                    },
+                    onDmRelaysUpdated = { accountRelays.setDmRelays(it) },
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showDmRelayPicker = false }) {
+                    androidx.compose.material3.Text("Close")
+                }
+            },
         )
     }
 }
@@ -170,6 +212,7 @@ private fun CompactMessagesContent(
     onNavigateToProfile: (String) -> Unit,
     listFocusRequester: FocusRequester,
     onShowNewDm: () -> Unit,
+    onShowRelayPicker: () -> Unit = {},
     keyHandler: Modifier,
 ) {
     Box(modifier = Modifier.fillMaxSize().then(keyHandler)) {
@@ -208,6 +251,7 @@ private fun CompactMessagesContent(
                 selectedRoom = selectedRoom,
                 onConversationSelected = { listState.selectRoom(it) },
                 onNewConversation = onShowNewDm,
+                onShowRelayPicker = onShowRelayPicker,
                 focusRequester = listFocusRequester,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -229,21 +273,45 @@ private fun SplitMessagesContent(
     onNavigateToProfile: (String) -> Unit,
     listFocusRequester: FocusRequester,
     onShowNewDm: () -> Unit,
+    onShowRelayPicker: () -> Unit = {},
     keyHandler: Modifier,
 ) {
+    // Draggable split: the conversation list width is user-adjustable and
+    // persisted so it survives app restarts.
+    var listWidth by remember {
+        androidx.compose.runtime.mutableStateOf(
+            com.vitorpamplona.amethyst.desktop.DesktopPreferences.messagesListWidthDp.dp,
+        )
+    }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+
     Row(modifier = Modifier.fillMaxSize().then(keyHandler)) {
         ConversationListPane(
             state = listState,
             selectedRoom = selectedRoom,
             onConversationSelected = { listState.selectRoom(it) },
             onNewConversation = onShowNewDm,
+            onShowRelayPicker = onShowRelayPicker,
             focusRequester = listFocusRequester,
-            modifier = Modifier.width(280.dp),
+            modifier = Modifier.width(listWidth),
         )
 
-        VerticalDivider(modifier = Modifier.fillMaxHeight())
+        MessagesDraggableDivider(
+            onDrag = { deltaPx ->
+                val deltaDp = with(density) { deltaPx.toDp() }
+                val next = (listWidth + deltaDp).coerceIn(220.dp, 480.dp)
+                listWidth = next
+                com.vitorpamplona.amethyst.desktop.DesktopPreferences.messagesListWidthDp = next.value
+            },
+        )
 
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surface),
+        ) {
             val currentRoom = selectedRoom
             if (currentRoom != null) {
                 val feedViewModel =
@@ -292,7 +360,7 @@ private fun EmptyConversationState() {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                Icons.Default.Email,
+                MaterialSymbols.Email,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 modifier = Modifier.size(48.dp),
@@ -306,5 +374,45 @@ private fun EmptyConversationState() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * Draggable vertical divider between the conversation list pane and the chat
+ * pane. The hit area is split in half horizontally: the left half takes the
+ * conversation list's surfaceContainer fill, the right half takes the chat
+ * pane's surface fill, so the divider reads as a continuation of the two panes
+ * instead of a single contrasting stripe. Cursor flips to the horizontal
+ * resize arrow on hover.
+ */
+@Composable
+private fun MessagesDraggableDivider(onDrag: (Float) -> Unit) {
+    Row(
+        modifier =
+            Modifier
+                .width(12.dp)
+                .fillMaxHeight()
+                .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount.x)
+                    }
+                },
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceContainer),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surface),
+        )
     }
 }

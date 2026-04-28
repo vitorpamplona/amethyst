@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -58,17 +59,21 @@ class RichTextParser {
 
         val isImage: Boolean
         val isVideo: Boolean
+        val isPdf: Boolean
 
         if (contentType != null) {
             isImage = contentType.startsWith("image/")
             isVideo = contentType.startsWith("video/") || contentType.startsWith("audio/")
+            isPdf = contentType.startsWith("application/pdf")
         } else if (fullUrl.startsWith("data:")) {
             isImage = fullUrl.startsWith("data:image/")
             isVideo = fullUrl.startsWith("data:video/") || fullUrl.startsWith("data:audio/")
+            isPdf = fullUrl.startsWith("data:application/pdf")
         } else {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
             isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
             isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            isPdf = pdfExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
 
         return if (isImage) {
@@ -81,6 +86,7 @@ class RichTextParser {
                 contentWarning = frags[ContentWarningTag.TAG_NAME] ?: tags[ContentWarningTag.TAG_NAME]?.firstOrNull(),
                 uri = callbackUri,
                 mimeType = contentType,
+                thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
             )
         } else if (isVideo) {
             MediaUrlVideo(
@@ -92,6 +98,18 @@ class RichTextParser {
                 contentWarning = frags[ContentWarningTag.TAG_NAME] ?: tags[ContentWarningTag.TAG_NAME]?.firstOrNull(),
                 uri = callbackUri,
                 mimeType = contentType,
+                thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
+            )
+        } else if (isPdf) {
+            MediaUrlPdf(
+                url = fullUrl,
+                description = description ?: frags[AltTag.TAG_NAME] ?: tags[AltTag.TAG_NAME]?.firstOrNull(),
+                hash = frags[HashSha256Tag.TAG_NAME] ?: tags[HashSha256Tag.TAG_NAME]?.firstOrNull(),
+                blurhash = frags[BlurhashTag.TAG_NAME] ?: tags[BlurhashTag.TAG_NAME]?.firstOrNull(),
+                dim = frags[DimensionTag.TAG_NAME]?.let { DimensionTag.parse(it) } ?: tags[DimensionTag.TAG_NAME]?.firstOrNull()?.let { DimensionTag.parse(it) },
+                uri = callbackUri,
+                mimeType = contentType,
+                thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
             )
         } else {
             null
@@ -158,6 +176,7 @@ class RichTextParser {
 
         val imageUrls = mediaForPager.filterValues { it is MediaUrlImage }.keys
         val videoUrls = mediaForPager.filterValues { it is MediaUrlVideo }.keys
+        val pdfUrls = mediaForPager.filterValues { it is MediaUrlPdf }.keys
 
         val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
@@ -165,7 +184,7 @@ class RichTextParser {
 
         val newContent = fixMissingSpaces(content, allUrls)
 
-        val segments = findTextSegments(newContent, imageUrls, videoUrls, urlSet, emojiMap, tags)
+        val segments = findTextSegments(newContent, imageUrls, videoUrls, pdfUrls, urlSet, emojiMap, tags)
 
         val mediaForPagerWithBase64 =
             mediaForPager +
@@ -197,6 +216,7 @@ class RichTextParser {
         content: String,
         images: Set<String>,
         videos: Set<String>,
+        pdfs: Set<String>,
         urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -211,7 +231,7 @@ class RichTextParser {
 
             val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
+                segments.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
             }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
@@ -262,6 +282,7 @@ class RichTextParser {
         word: String,
         images: Set<String>,
         videos: Set<String>,
+        pdfs: Set<String>,
         urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -285,6 +306,14 @@ class RichTextParser {
                 VideoSegment("https://$word")
             } else {
                 VideoSegment(word)
+            }
+        }
+
+        if (pdfs.contains(word)) {
+            return if (urls.withoutScheme.contains(word)) {
+                PdfSegment("https://$word")
+            } else {
+                PdfSegment(word)
             }
         }
 
@@ -377,9 +406,11 @@ class RichTextParser {
 
         val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
         val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a")
+        val pdfExt = listOf("pdf")
 
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }
+        val pdfExtensions = pdfExt + pdfExt.map { it.uppercase() }
 
         val tagIndex = Regex("\\#\\[([0-9]+)\\](.*)")
         val hashTagsPattern: Regex =
@@ -419,6 +450,11 @@ class RichTextParser {
         fun isVideoUrl(url: String): Boolean {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
             return videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+        }
+
+        fun isPdfUrl(url: String): Boolean {
+            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
+            return pdfExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
 
         fun isValidURL(url: String?): Boolean =
@@ -496,4 +532,6 @@ val mimeTypeMap: Map<String, String> =
         "m4a" to "audio/mp4",
         "aac" to "audio/aac",
         "flac" to "audio/flac",
+        // Documents
+        "pdf" to "application/pdf",
     )

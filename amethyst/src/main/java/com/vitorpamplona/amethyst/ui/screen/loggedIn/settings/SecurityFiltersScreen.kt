@@ -157,7 +157,7 @@ fun SecurityFiltersScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.security_filters), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.security_filters), nav)
         },
     ) {
         Column(

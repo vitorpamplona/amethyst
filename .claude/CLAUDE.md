@@ -3,12 +3,22 @@
 ## Project Overview
 
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
-over to a Kotlin Multiplatform project. This project has 4 main modules: `quartz`, `commons`,
-`amethyst` and `desktopApp`. Quartz should contain implementations of Nostr specifications and
-utilities to help implement them. Commons stores shared code between Amethyst Android (`amethyst`)
-and Amethyst Desktop (`desktopApp`). The Desktop App is designed to be mouse first and so uses a
-completely different screen and navigation architecture while sharing the back end components with
-the android counterpart.
+over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `amethyst`,
+`desktopApp`, `cli`, plus the audio-rooms transport stack `quic` + `nestsClient`. Quartz should
+contain implementations of Nostr specifications and utilities to help implement them. Commons stores
+shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop
+App is designed to be mouse first and so uses a completely different screen and navigation
+architecture while sharing the back end components with the android counterpart. `cli` ships `amy`,
+a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
+humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
+WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
+exists. `nestsClient` runs the audio-room protocol on top of `:quic` for the NIP-53
+audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
+`moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
+production listener AND speaker paths both run on moq-lite to interop with the
+nostrnests reference relay. The IETF code is kept as a reference + unit-test
+implementation for any future IETF target; see
+`nestsClient/plans/2026-04-26-moq-lite-gap.md`.
 
 ## Architecture
 
@@ -25,27 +35,46 @@ amethyst/
 │       ├── commonMain/    # Shared composables, icons, state
 │       ├── androidMain/   # Android-specific UI utilities
 │       └── jvmMain/       # Desktop-specific UI utilities
+├── quic/           # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport (audio-rooms transport)
+│   └── src/
+│       ├── commonMain/    # Protocol, frame/packet codecs, TLS state machine
+│       ├── jvmAndroid/    # JCA-backed AEAD + UDP socket actuals
+│       └── commonTest/    # RFC vector + adversarial tests
+├── nestsClient/    # Audio-room client (IETF MoQ-transport today; moq-lite phase pending)
+│   └── src/
+│       ├── commonMain/    # MoQ session, NestsListener, audio glue
+│       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
+├── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
 └── ammolite/       # Support module (unused)
 ```
 
 **Sharing Philosophy:**
 - `quartz/` = Nostr business logic, protocol, data (no UI)
 - `commons/` = Shared UI components, icons, composables, flows and ViewModels
+- `quic/` = Transport library (QUIC + HTTP/3 + WebTransport); reusable for any
+  KMP project that needs MoQ. Has no Android-framework dependencies.
+- `nestsClient/` = MoQ + audio-rooms client; takes `:quic` as transport,
+  Quartz for crypto, `MediaCodec` / `AudioRecord` / `AudioTrack` for audio.
 - `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
+- `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic allowed)
+
+**Plans per module:** design docs for new subsystems live in the owning
+module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
+The global `docs/plans/` folder is frozen — don't add new plans there.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
 | **Core** | Quartz (Nostr KMP) |
-| **UI** | Compose Multiplatform 1.7.x |
+| **UI** | Compose Multiplatform 1.10.3 |
 | **Async** | kotlinx.coroutines + Flow |
 | **Network** | OkHttp (JVM) |
 | **Serialization** | Jackson |
 | **DI** | Manual / Koin |
-| **Build** | Gradle 8.x, Kotlin 2.1.0 |
+| **Build** | Gradle 8.x, Kotlin 2.3.20 |
 
 ## Skills
 
@@ -53,14 +82,22 @@ Specialized skills provide domain expertise with bundled resources and patterns:
 
 | Skill | Expertise | When to Use |
 |-------|-----------|-------------|
-| `nostr-expert` | Nostr protocol (Quartz library) | Event types, NIPs, tags, signing, Bech32 |
-| `kotlin-expert` | Advanced Kotlin patterns | StateFlow, sealed classes, @Immutable, DSLs |
+| `nostr-expert` | Nostr protocol (Quartz library) | Event types, NIPs, tags, signing, Bech32, NIP-44, LargeCache |
+| `kotlin-expert` | Advanced Kotlin patterns | StateFlow, sealed classes, @Immutable, DSLs, common utilities |
 | `kotlin-coroutines` | Advanced async patterns | supervisorScope, callbackFlow, relay pools, testing |
 | `kotlin-multiplatform` | Platform abstraction | expect/actual, source sets, sharing decisions |
-| `compose-expert` | Shared UI components | Material3, state hoisting, recomposition |
-| `android-expert` | Android platform | Navigation, permissions, lifecycle, Material3 |
-| `desktop-expert` | Desktop platform | Window, MenuBar, Tray, keyboard shortcuts |
+| `compose-expert` | Shared UI components | Material3, state hoisting, recomposition, rich-text parsing |
+| `android-expert` | Android platform | Navigation, permissions, lifecycle, Material3, Coil image loading |
+| `desktop-expert` | Desktop platform | Window, MenuBar, keyboard shortcuts, DeckLayout |
 | `gradle-expert` | Build system | Dependencies, versioning, packaging, optimization |
+| `account-state` | `Account` + `LocalCache` | Per-user StateFlows, event store, adding account-scoped settings |
+| `relay-client` | Subscriptions & filter assembly | `ComposeSubscriptionManager`, assemblers, preloaders, EOSE |
+| `feed-patterns` | Feeds & DAL | `FeedFilter`, `AdditiveComplexFeedFilter`, `FeedViewModel` family |
+| `auth-signers` | `NostrSigner` implementations | Local, NIP-46 bunker, NIP-55 Android external signer |
+| `quartz-integration` | Quartz as an external library | Gradle setup, `NostrClient`, `KeyPair`, for external projects |
+| `amy-expert` | Amy CLI (`cli/` module) | Adding `amy <verb>` commands, JSON output contract, extracting logic from `amethyst/` into `commons/` so CLI can call it |
+| `find-missing-translations` | Utility | Extract untranslated Android strings |
+| `find-non-lambda-logs` | Utility | Audit Log calls for lambda overloads |
 
 ## Workflow
 

@@ -30,10 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +44,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 /**
  * Form fields for article metadata: title, summary, banner, tags, slug.
@@ -137,7 +136,7 @@ fun MetadataPanel(
                             label = { Text(tag) },
                             trailingIcon = {
                                 Icon(
-                                    Icons.Default.Close,
+                                    MaterialSymbols.Close,
                                     contentDescription = "Remove $tag",
                                     modifier = Modifier.size(16.dp),
                                 )

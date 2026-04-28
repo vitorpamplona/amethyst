@@ -30,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 @Stable
@@ -130,6 +131,8 @@ class UiSettingsState(
 
     fun isCompleteUIMode() = uiSettingsFlow.featureSet.value == FeatureSetType.COMPLETE
 
+    fun useTrackedBroadcasts() = uiSettingsFlow.useTrackedBroadcasts.value == BooleanType.ALWAYS
+
     fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
 
     fun showProfilePictures() = showProfilePictures.value
@@ -137,6 +140,17 @@ class UiSettingsState(
     fun showUrlPreview() = showUrlPreview.value
 
     fun startVideoPlayback() = startVideoPlayback.value
+
+    fun autoPlayVideos() = uiSettingsFlow.automaticallyPlayVideos.value == BooleanType.ALWAYS
+
+    val autoPlayVideosFlow: StateFlow<Boolean> =
+        uiSettingsFlow.automaticallyPlayVideos
+            .map { it == BooleanType.ALWAYS }
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                uiSettingsFlow.automaticallyPlayVideos.value == BooleanType.ALWAYS,
+            )
 
     fun showImages() = showImages.value
 }

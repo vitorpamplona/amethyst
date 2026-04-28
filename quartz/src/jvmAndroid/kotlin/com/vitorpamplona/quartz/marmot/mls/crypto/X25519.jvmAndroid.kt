@@ -20,32 +20,22 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.crypto
 
-import java.security.KeyFactory
-import java.security.KeyPairGenerator
-import java.security.spec.NamedParameterSpec
-import java.security.spec.XECPrivateKeySpec
-import java.security.spec.XECPublicKeySpec
-import javax.crypto.KeyAgreement
+import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
- * JVM/Android X25519 implementation using java.security XDH.
+ * JVM/Android X25519 implementation using pure Kotlin field arithmetic.
  *
- * Requires Java 11+ or Android API 31+.
+ * This implementation is used to avoid issues with Android's KeyStore provider,
+ * which requires platform-specific initialization that breaks standard JCA usage.
  *
  * Key format: raw 32-byte Curve25519 keys (little-endian per RFC 7748).
  */
 actual object X25519 {
-    private const val ALGORITHM = "X25519"
     private const val KEY_LENGTH = 32
 
     actual fun generateKeyPair(): X25519KeyPair {
-        val kpg = KeyPairGenerator.getInstance("XDH")
-        kpg.initialize(NamedParameterSpec(ALGORITHM))
-        val kp = kpg.generateKeyPair()
-
-        val publicKey = extractPublicKeyBytes(kp.public as java.security.interfaces.XECPublicKey)
-        val privateKey = extractPrivateKeyBytes(kp.private as java.security.interfaces.XECPrivateKey)
-
+        val privateKey = RandomInstance.bytes(KEY_LENGTH)
+        val publicKey = publicFromPrivate(privateKey)
         return X25519KeyPair(privateKey, publicKey)
     }
 
@@ -56,116 +46,82 @@ actual object X25519 {
         require(privateKey.size == KEY_LENGTH) { "Private key must be 32 bytes" }
         require(publicKey.size == KEY_LENGTH) { "Public key must be 32 bytes" }
 
-        val kf = KeyFactory.getInstance("XDH")
+        val result = scalarmult(privateKey, publicKey)
 
-        // Build JCA private key from raw bytes
-        val privKeySpec = XECPrivateKeySpec(NamedParameterSpec(ALGORITHM), privateKey)
-        val jcaPrivateKey = kf.generatePrivate(privKeySpec)
-
-        // Build JCA public key from raw bytes (u-coordinate as BigInteger)
-        val u = bytesToBigInteger(publicKey)
-        val pubKeySpec = XECPublicKeySpec(NamedParameterSpec(ALGORITHM), u)
-        val jcaPublicKey = kf.generatePublic(pubKeySpec)
-
-        val ka = KeyAgreement.getInstance("XDH")
-        ka.init(jcaPrivateKey)
-        ka.doPhase(jcaPublicKey, true)
-
-        val secret = ka.generateSecret()
-
-        // Check for small-subgroup attack (RFC 9180 Section 4.1)
-        require(!secret.all { it == 0.toByte() }) {
+        require(!result.all { it == 0.toByte() }) {
             "DH produced all-zero shared secret (possible small-subgroup attack)"
         }
 
-        // XDH returns big-endian, X25519 shared secret is 32 bytes
-        // Pad or trim to KEY_LENGTH
-        return if (secret.size == KEY_LENGTH) {
-            secret
-        } else if (secret.size < KEY_LENGTH) {
-            ByteArray(KEY_LENGTH - secret.size) + secret
-        } else {
-            secret.copyOfRange(secret.size - KEY_LENGTH, secret.size)
-        }
+        return result
     }
 
     actual fun publicFromPrivate(privateKey: ByteArray): ByteArray {
         require(privateKey.size == KEY_LENGTH) { "Private key must be 32 bytes" }
-
-        val kf = KeyFactory.getInstance("XDH")
-        val privKeySpec = XECPrivateKeySpec(NamedParameterSpec(ALGORITHM), privateKey)
-        val jcaPrivateKey = kf.generatePrivate(privKeySpec)
-
-        // Generate key pair from the same seed to get the public key
-        val kpg = KeyPairGenerator.getInstance("XDH")
-        kpg.initialize(NamedParameterSpec(ALGORITHM))
-
-        // Re-derive: use the private key to create a keypair, then extract public
-        // Unfortunately JCA doesn't have a direct way to do this, so we use key factory
-        // The JCA will compute the public key when creating the key pair
-        // Workaround: generate a dummy keypair and use DH with basepoint
-        // Actually, XECPrivateKeySpec can be used with KeyFactory to get the paired public key
-        val kp = kf.generatePrivate(privKeySpec)
-        // Get the public key by computing DH with the basepoint (9)
         val basepoint = ByteArray(KEY_LENGTH)
         basepoint[0] = 9
-
-        return dh(privateKey, basepoint)
+        return scalarmult(privateKey, basepoint)
     }
 
     /**
-     * Extract 32-byte raw X25519 public key from JCA XECPublicKey.
-     * The u-coordinate is stored as a BigInteger, we convert to little-endian bytes.
+     * X25519 scalar multiplication via Montgomery ladder (RFC 7748).
+     *
+     * Computes [n]P on Curve25519 in Montgomery form.
+     * Based on the TweetNaCl algorithm by Bernstein et al.
      */
-    private fun extractPublicKeyBytes(pubKey: java.security.interfaces.XECPublicKey): ByteArray {
-        val u = pubKey.u
-        return bigIntegerToBytes(u)
-    }
+    private fun scalarmult(
+        n: ByteArray,
+        p: ByteArray,
+    ): ByteArray {
+        val z = n.copyOf()
+        // Clamp scalar per RFC 7748 Section 5
+        z[0] = (z[0].toInt() and 248).toByte()
+        z[31] = ((z[31].toInt() and 127) or 64).toByte()
 
-    /**
-     * Extract raw scalar bytes from JCA XECPrivateKey.
-     * Scalar is in little-endian byte order per JCA spec.
-     */
-    private fun extractPrivateKeyBytes(privKey: java.security.interfaces.XECPrivateKey): ByteArray {
-        val scalar = privKey.scalar.orElseThrow { IllegalStateException("No scalar in private key") }
-        return if (scalar.size == KEY_LENGTH) {
-            scalar
-        } else if (scalar.size < KEY_LENGTH) {
-            // Pad with trailing zeros (little-endian: high-order bytes at end)
-            val result = ByteArray(KEY_LENGTH)
-            scalar.copyInto(result, 0)
-            result
-        } else {
-            // Take only the first KEY_LENGTH bytes (little-endian low-order bytes)
-            scalar.copyOfRange(0, KEY_LENGTH)
+        val x = Curve25519Field.unpack25519(p)
+        val a = Curve25519Field.GF1.copyOf()
+        val b = x.copyOf()
+        val c = Curve25519Field.GF0.copyOf()
+        val d = Curve25519Field.GF1.copyOf()
+
+        for (i in 254 downTo 0) {
+            val r = ((z[i shr 3].toLong() shr (i and 7)) and 1)
+            Curve25519Field.sel25519(a, b, r)
+            Curve25519Field.sel25519(c, d, r)
+
+            val e = Curve25519Field.add(a, c)
+            val aMc = Curve25519Field.sub(a, c)
+            val f = Curve25519Field.add(b, d)
+            val bMd = Curve25519Field.sub(b, d)
+
+            val dd = Curve25519Field.sqr(e)
+            val ff = Curve25519Field.sqr(aMc)
+            val da = Curve25519Field.mul(bMd, e)
+            val cb = Curve25519Field.mul(f, aMc)
+
+            val ePrime = Curve25519Field.add(da, cb)
+            val aPrime = Curve25519Field.sub(da, cb)
+
+            val bNew = Curve25519Field.sqr(ePrime)
+            val aSqr = Curve25519Field.sqr(aPrime)
+            val dNew = Curve25519Field.mul(aSqr, x)
+
+            val aNew = Curve25519Field.mul(dd, ff)
+            val cc = Curve25519Field.sub(dd, ff)
+            val tmp = Curve25519Field.mul(cc, Curve25519Field.A24)
+            val ddPlusTmp = Curve25519Field.add(dd, tmp)
+            val cNew = Curve25519Field.mul(cc, ddPlusTmp)
+
+            aNew.copyInto(a)
+            bNew.copyInto(b)
+            cNew.copyInto(c)
+            dNew.copyInto(d)
+
+            Curve25519Field.sel25519(a, b, r)
+            Curve25519Field.sel25519(c, d, r)
         }
-    }
 
-    /**
-     * Convert little-endian 32-byte X25519 key to BigInteger for JCA.
-     * RFC 7748 uses little-endian, JCA uses BigInteger (unsigned).
-     */
-    private fun bytesToBigInteger(bytes: ByteArray): java.math.BigInteger {
-        // Reverse to big-endian and create unsigned BigInteger
-        val be = ByteArray(bytes.size + 1) // prepend 0 for positive
-        for (i in bytes.indices) {
-            be[bytes.size - i] = bytes[i]
-        }
-        return java.math.BigInteger(be)
-    }
-
-    /**
-     * Convert BigInteger (u-coordinate) to 32-byte little-endian.
-     */
-    private fun bigIntegerToBytes(bi: java.math.BigInteger): ByteArray {
-        val beBytes = bi.toByteArray()
-        val result = ByteArray(KEY_LENGTH)
-        // BigInteger is big-endian, possibly with a leading zero sign byte.
-        // Reverse into little-endian, taking at most KEY_LENGTH bytes from the low end.
-        val bytesToCopy = minOf(beBytes.size, KEY_LENGTH)
-        for (i in 0 until bytesToCopy) {
-            result[i] = beBytes[beBytes.size - 1 - i]
-        }
-        return result
+        val invC = Curve25519Field.inv25519(c)
+        val result = Curve25519Field.mul(a, invC)
+        return Curve25519Field.pack25519(result)
     }
 }

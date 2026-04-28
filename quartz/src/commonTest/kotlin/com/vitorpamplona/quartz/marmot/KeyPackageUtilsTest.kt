@@ -37,8 +37,20 @@ class KeyPackageUtilsTest {
     private val testPubKey = "a".repeat(64)
     private val testRef = "b".repeat(64)
 
+    /**
+     * Per MIP-00 the `d` tag MUST be 64 lowercase hex characters
+     * (a random 32-byte slot ID). The strict [KeyPackageUtils.isValid] enforces
+     * this on the parse side, so test fixtures need realistic 64-char hex
+     * slot IDs even when we only care about the selection logic.
+     */
+    private fun slot(label: Int): String = "0".repeat(63) + label.toString(16)
+
+    private val slot0 = slot(0)
+    private val slot1 = slot(1)
+    private val slotLastResort = "f".repeat(64)
+
     private fun makeKeyPackageEvent(
-        dTag: String = "0",
+        dTag: String = slot0,
         createdAt: Long = 1000,
         encoding: String = "base64",
         ciphersuite: String = "0x0001",
@@ -105,8 +117,8 @@ class KeyPackageUtilsTest {
 
     @Test
     fun testSelectBest_PrefersNewest() {
-        val old = makeKeyPackageEvent(dTag = "0", createdAt = 1000)
-        val newer = makeKeyPackageEvent(dTag = "1", createdAt = 2000)
+        val old = makeKeyPackageEvent(dTag = slot0, createdAt = 1000)
+        val newer = makeKeyPackageEvent(dTag = slot1, createdAt = 2000)
 
         val best = KeyPackageUtils.selectBest(listOf(old, newer))
         assertNotNull(best)
@@ -115,33 +127,33 @@ class KeyPackageUtilsTest {
 
     @Test
     fun testSelectBest_PrefersNonLastResort() {
-        val lastResort = makeKeyPackageEvent(dTag = "lr", createdAt = 3000)
-        val regular = makeKeyPackageEvent(dTag = "0", createdAt = 1000)
+        val lastResort = makeKeyPackageEvent(dTag = slotLastResort, createdAt = 3000)
+        val regular = makeKeyPackageEvent(dTag = slot0, createdAt = 1000)
 
         // Even though lastResort is newer, regular is preferred
-        val best = KeyPackageUtils.selectBest(listOf(lastResort, regular), lastResortDTag = "lr")
+        val best = KeyPackageUtils.selectBest(listOf(lastResort, regular), lastResortDTag = slotLastResort)
         assertNotNull(best)
-        assertEquals("0", best.dTag())
+        assertEquals(slot0, best.dTag())
     }
 
     @Test
     fun testSelectBest_FallsBackToLastResort() {
-        val lastResort = makeKeyPackageEvent(dTag = "lr", createdAt = 3000)
+        val lastResort = makeKeyPackageEvent(dTag = slotLastResort, createdAt = 3000)
 
         // Only last-resort available
-        val best = KeyPackageUtils.selectBest(listOf(lastResort), lastResortDTag = "lr")
+        val best = KeyPackageUtils.selectBest(listOf(lastResort), lastResortDTag = slotLastResort)
         assertNotNull(best)
-        assertEquals("lr", best.dTag())
+        assertEquals(slotLastResort, best.dTag())
     }
 
     @Test
     fun testSelectBest_FiltersOutInvalid() {
-        val invalid = makeKeyPackageEvent(dTag = "0", encoding = "raw")
-        val valid = makeKeyPackageEvent(dTag = "1", createdAt = 500)
+        val invalid = makeKeyPackageEvent(dTag = slot0, encoding = "raw")
+        val valid = makeKeyPackageEvent(dTag = slot1, createdAt = 500)
 
         val best = KeyPackageUtils.selectBest(listOf(invalid, valid))
         assertNotNull(best)
-        assertEquals("1", best.dTag())
+        assertEquals(slot1, best.dTag())
     }
 
     @Test
@@ -159,7 +171,7 @@ class KeyPackageUtilsTest {
         val template =
             KeyPackageUtils.buildRotation(
                 newKeyPackageBase64 = "bmV3IGtleXBhY2thZ2U=",
-                dTagSlot = "0",
+                dTagSlot = slot0,
                 newKeyPackageRef = testRef,
                 relays = emptyList(),
             )

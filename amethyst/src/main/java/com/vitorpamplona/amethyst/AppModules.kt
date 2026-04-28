@@ -26,6 +26,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettings
@@ -50,6 +51,8 @@ import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.namecoin.BitRelayUrlRewriter
 import com.vitorpamplona.amethyst.service.namecoin.TlsaConnectionPolicy
+import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
+import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
@@ -72,9 +75,9 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerRes
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
+import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -102,6 +105,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
@@ -311,7 +315,7 @@ class AppModules(
                     // setting takes effect on the next reconnect.
                     preferOnion = { _ ->
                         val settings = torEvaluatorFlow.torSettings.value
-                        settings.torType != com.vitorpamplona.amethyst.ui.tor.TorType.OFF &&
+                        settings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF &&
                             settings.onionRelaysViaTor
                     },
                 ),
@@ -434,6 +438,23 @@ class AppModules(
         )
     }
 
+    // Manages always-on notification service lifecycle. Preloads every saved
+    // writable account while enabled so GiftWraps for non-active accounts still
+    // get unwrapped by their owning account's newNotesPreProcessor.
+    val alwaysOnNotificationServiceManager =
+        AlwaysOnNotificationServiceManager(
+            context = appContext,
+            scope = applicationIOScope,
+            accountsCache = accountsCache,
+            localPreferences = LocalPreferences,
+            activePubKeyProvider = { sessionManager.loggedInAccount()?.pubKey },
+        )
+
+    // Observes LocalCache for notification-relevant events and routes them to
+    // EventNotificationConsumer. Sources: FCM, UnifiedPush, Pokey, active relay
+    // subscriptions, and NotificationRelayService.
+    val notificationDispatcher = NotificationDispatcher(appContext, applicationIOScope)
+
     // Organizes cache clearing
     val trimmingService by
         lazy {
@@ -471,7 +492,9 @@ class AppModules(
     // thumbnail disk cache for profile pictures
     val thumbnailDiskCache: ThumbnailDiskCache by lazy {
         Log.d("AppModules", "ThumbnailDiskCache Init")
-        ThumbnailDiskCache(appContext.safeCacheDir().resolve("profile_thumbnails"))
+        // One-shot reclaim of the v1 cache dir, which held squashed thumbnails.
+        appContext.safeCacheDir().resolve("profile_thumbnails").deleteRecursively()
+        ThumbnailDiskCache(appContext.safeCacheDir().resolve("profile_thumbnails_v2"))
     }
 
     // crash report storage
@@ -531,18 +554,40 @@ class AppModules(
         // registers to receive events
         pokeyReceiver.register(appContext)
 
-        // initializes diskcache on an IO thread.
+        // starts observing LocalCache for notification-worthy events
+        notificationDispatcher.start()
+
+        // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {
-            // Prepares video cache later
-            delay(10_000)
+            sessionManager.accountContent.collectLatest { state ->
+                if (state is AccountState.LoggedIn) {
+                    alwaysOnNotificationServiceManager.watchAccount(state.account)
+                } else {
+                    alwaysOnNotificationServiceManager.stop()
+                }
+            }
+        }
+
+        // Warms the video cache off the main thread. SimpleCache's constructor opens a SQLite
+        // index over StandaloneDatabaseProvider and walks every cached span on disk — up to a
+        // few hundred ms on a populated 4 GB cache — so leaving it for the first session's
+        // onGetSession would do that work on the main thread. The short delay keeps the IO
+        // dispatcher free for the urgent first-paint work above (account load, image loader,
+        // ui state, robohash) while still landing the warmup well before a typical user can
+        // scroll to and tap a video. The previous 10 s delay was long enough that a fast user
+        // (or a deep link) could lose the lazy { } race and trigger main-thread init.
+        applicationIOScope.launch {
+            delay(1_500)
             videoCache
         }
     }
 
     fun terminate(appContext: Context) {
         pokeyReceiver.unregister(appContext)
+        notificationDispatcher.stop()
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
         PlaybackServiceClient.shutdown()
+        alwaysOnNotificationServiceManager.stop()
         applicationIOScope.cancel("Application onTerminate $appContext")
         accountsCache.clear()
     }

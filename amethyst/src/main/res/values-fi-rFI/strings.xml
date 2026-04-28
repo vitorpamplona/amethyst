@@ -572,6 +572,8 @@
     <string name="could_not_prepare_local_file_to_upload">Paikallista tiedostoa ei voitu valmistella ladattavaksi: %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
+    <!-- HLS multi-resolution video sharing -->
     <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
+    <!-- Emoji packs -->
 </resources>

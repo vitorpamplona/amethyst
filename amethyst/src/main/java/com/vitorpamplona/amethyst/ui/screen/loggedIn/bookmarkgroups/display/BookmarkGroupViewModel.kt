@@ -155,6 +155,19 @@ class BookmarkGroupViewModel(
         )
     }
 
+    suspend fun removeDeletedBookmarksFromGroup(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        account.labeledBookmarkLists.removeDeletedBookmarksFromList(
+            groupIdentifier,
+            deletedEventIds,
+            deletedAddresses,
+            account,
+        )
+    }
+
     @Suppress("UNCHECKED_CAST")
     class Initializer(
         val account: Account,

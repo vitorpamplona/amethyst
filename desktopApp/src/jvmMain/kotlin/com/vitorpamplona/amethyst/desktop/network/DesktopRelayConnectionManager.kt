@@ -24,9 +24,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
 
 /**
  * Desktop-specific relay connection manager that configures OkHttp for websockets.
- * Delegates to the shared RelayConnectionManager from commons.
+ * Now Tor-aware: passes the DesktopHttpClient's getHttpClient which selects
+ * proxy or direct client per relay URL based on Tor settings.
  */
-class DesktopRelayConnectionManager :
-    RelayConnectionManager(
-        websocketBuilder = BasicOkHttpWebSocket.Builder(DesktopHttpClient::getHttpClient),
+class DesktopRelayConnectionManager(
+    httpClient: DesktopHttpClient,
+) : RelayConnectionManager(
+        websocketBuilder = BasicOkHttpWebSocket.Builder(httpClient::getHttpClient),
     )

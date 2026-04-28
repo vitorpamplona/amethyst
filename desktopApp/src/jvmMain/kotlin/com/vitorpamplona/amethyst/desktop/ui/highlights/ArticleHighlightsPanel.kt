@@ -28,14 +28,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightData
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
@@ -160,7 +156,7 @@ private fun HighlightPanelCard(
             ) {
                 // Published status
                 Icon(
-                    imageVector = if (highlight.published) Icons.Default.Public else Icons.Default.Lock,
+                    symbol = if (highlight.published) MaterialSymbols.Public else MaterialSymbols.Lock,
                     contentDescription = if (highlight.published) "Published" else "Private",
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -178,7 +174,7 @@ private fun HighlightPanelCard(
                 if (onPublish != null) {
                     IconButton(onClick = onPublish, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            Icons.Default.Public,
+                            MaterialSymbols.Public,
                             contentDescription = "Publish to relays",
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.primary,
@@ -188,7 +184,7 @@ private fun HighlightPanelCard(
 
                 IconButton(onClick = onEditNote, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        Icons.Default.Edit,
+                        MaterialSymbols.Edit,
                         contentDescription = "Edit note",
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -196,7 +192,7 @@ private fun HighlightPanelCard(
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        Icons.Default.Delete,
+                        MaterialSymbols.Delete,
                         contentDescription = "Delete",
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.error,

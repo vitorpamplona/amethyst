@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.navigation.navs
 
 import androidx.compose.material3.DrawerState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,11 @@ interface INav {
     fun nav(computeRoute: suspend () -> Route?)
 
     fun newStack(route: Route)
+
+    fun navBottomBar(route: Route)
+
+    @Composable
+    fun canPop(): Boolean
 
     fun popBack()
 

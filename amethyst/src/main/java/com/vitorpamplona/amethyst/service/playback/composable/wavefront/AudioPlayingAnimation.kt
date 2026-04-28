@@ -33,14 +33,17 @@ import androidx.media3.common.Tracks
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 
-fun Tracks.isAudio() = groups.none { it.type == C.TRACK_TYPE_VIDEO }
+fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_TYPE_VIDEO }
 
 @Composable
 fun AudioPlayingAnimation(
     controllerState: MediaControllerState,
     waveform: WaveformData?,
     modifier: Modifier = Modifier,
+    hasBlurhash: Boolean = false,
 ) {
+    if (hasBlurhash) return
+
     var isAudio by remember { mutableStateOf(controllerState.controller.currentTracks.isAudio()) }
 
     DisposableEffect(controllerState.controller) {

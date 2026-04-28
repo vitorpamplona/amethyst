@@ -129,17 +129,17 @@ install_sdk_package() {
   echo "Installed to $dest_dir"
 }
 
-# Install Android platform 36
+# Install Android platform 37
 install_sdk_package \
-  "$SDK_REPO_BASE/platform-36_r02.zip" \
-  "$ANDROID_SDK_DIR/platforms/android-36" \
-  "android-36"
+  "$SDK_REPO_BASE/platform-37.0_r01.zip" \
+  "$ANDROID_SDK_DIR/platforms/android-37" \
+  "android-37.0"
 
-# Install build-tools 36.0.0 (zip uses "android-16" as inner dir name)
+# Install build-tools 37.0.0 (zip uses "android-37.0" as inner dir name)
 install_sdk_package \
-  "$SDK_REPO_BASE/build-tools_r36_linux.zip" \
-  "$ANDROID_SDK_DIR/build-tools/36.0.0" \
-  "android-16"
+  "$SDK_REPO_BASE/build-tools_r37_linux.zip" \
+  "$ANDROID_SDK_DIR/build-tools/37.0.0" \
+  "android-37.0"
 
 # Install platform-tools
 install_sdk_package \

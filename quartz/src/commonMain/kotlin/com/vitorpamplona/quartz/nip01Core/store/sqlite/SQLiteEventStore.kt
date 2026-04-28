@@ -34,22 +34,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.EventFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.withContext
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
     val dbName: String? = "events.db",
     val relay: NormalizedRelayUrl? = null,
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    val numReaders: Int = 4,
 ) {
     companion object {
         const val DATABASE_VERSION = 2
-    }
-
-    val connection: SQLiteConnection by lazy {
-        openAndConfigure()
     }
 
     val seedModule = SeedModule()
@@ -89,33 +83,44 @@ class SQLiteEventStore(
             fullTextSearchModule,
         )
 
-    private fun openAndConfigure(): SQLiteConnection {
-        val db = driver.open(dbName ?: ":memory:")
+    val pool: SQLiteConnectionPool by lazy {
+        SQLiteConnectionPool(
+            driver = driver,
+            dbName = dbName,
+            numReaders = numReaders,
+            onConfigure = { db ->
+                // 32MB memory cache (per-connection).
+                db.execSQL("PRAGMA cache_size=-32000;")
 
-        // 32MB memory cache
-        db.execSQL("PRAGMA cache_size=-32000;")
+                // Make sure the FKs are sane (per-connection).
+                db.execSQL("PRAGMA foreign_keys = ON;")
 
-        // makes sure the FKs are sane
-        db.execSQL("PRAGMA foreign_keys = ON;")
+                // SQLite implements mutations by appending them to a log,
+                // which it occasionally compacts into the database. This
+                // is called Write-Ahead Logging (WAL). Setting it on the
+                // first connection is enough — `journal_mode` is
+                // database-wide; subsequent connections inherit it.
+                db.execSQL("PRAGMA journal_mode = WAL;")
 
-        // SQLite implements mutations by appending them to a log, which it occasionally
-        // compacts into the database. This is called Write-Ahead Logging (WAL)
-        db.execSQL("PRAGMA journal_mode = WAL;")
-
-        // The DB can be corrupted if the OS is shutdown before sync, which generally
-        // doesn't happen on Android
-        db.execSQL("PRAGMA synchronous = OFF;")
-
-        val currentVersion = getUserVersion(db)
-        if (currentVersion == 0) {
-            onCreate(db)
-            setUserVersion(db, DATABASE_VERSION)
-        } else if (currentVersion < DATABASE_VERSION) {
-            onUpgrade(db, currentVersion, DATABASE_VERSION)
-            setUserVersion(db, DATABASE_VERSION)
-        }
-
-        return db
+                // The DB can be corrupted if the OS shuts down before
+                // sync, which generally doesn't happen on Android.
+                db.execSQL("PRAGMA synchronous = OFF;")
+            },
+            onMigrate = { db ->
+                val currentVersion = getUserVersion(db)
+                if (currentVersion == 0) {
+                    db.transaction {
+                        onCreate(this)
+                        setUserVersion(this, DATABASE_VERSION)
+                    }
+                } else if (currentVersion < DATABASE_VERSION) {
+                    db.transaction {
+                        onUpgrade(this, currentVersion, DATABASE_VERSION)
+                        setUserVersion(this, DATABASE_VERSION)
+                    }
+                }
+            },
+        )
     }
 
     private fun getUserVersion(db: SQLiteConnection): Int =
@@ -155,25 +160,24 @@ class SQLiteEventStore(
         }
     }
 
-    fun clearDB() {
-        modules.reversed().forEach { it.deleteAll(connection) }
-    }
-
-    suspend fun vacuum() {
-        // 1. ANALYZE: Collects statistics about tables and indices
-        // to help the query planner optimize queries.
-        withContext(Dispatchers.IO) {
-            connection.execSQL("VACUUM")
+    suspend fun clearDB() =
+        pool.useWriter { db ->
+            modules.reversed().forEach { it.deleteAll(db) }
         }
-    }
 
-    suspend fun analyse() {
-        // 2. VACUUM: Rebuilds the database file, reclaiming unused space
-        // and reducing fragmentation.
-        withContext(Dispatchers.IO) {
-            connection.execSQL("ANALYZE")
+    suspend fun vacuum() =
+        pool.useWriter { db ->
+            // VACUUM: Rebuilds the database file, reclaiming unused space
+            // and reducing fragmentation.
+            db.execSQL("VACUUM")
         }
-    }
+
+    suspend fun analyse() =
+        pool.useWriter { db ->
+            // ANALYZE: Collects statistics about tables and indices
+            // to help the query planner optimize queries.
+            db.execSQL("ANALYZE")
+        }
 
     private fun innerInsertEvent(
         event: Event,
@@ -186,12 +190,14 @@ class SQLiteEventStore(
         rightToVanishModule.insert(event, relay, headerId, db)
     }
 
-    fun insertEvent(event: Event) {
+    suspend fun insertEvent(event: Event) {
         if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
         if (event.kind.isEphemeral()) return
 
-        connection.transaction {
-            innerInsertEvent(event, this)
+        pool.useWriter { db ->
+            db.transaction {
+                innerInsertEvent(event, this)
+            }
         }
     }
 
@@ -206,64 +212,65 @@ class SQLiteEventStore(
         }
     }
 
-    fun transaction(body: Transaction.() -> Unit) {
-        connection.transaction {
-            with(Transaction(this)) {
-                body()
+    suspend fun transaction(body: Transaction.() -> Unit) {
+        pool.useWriter { db ->
+            db.transaction {
+                with(Transaction(this)) {
+                    body()
+                }
             }
         }
     }
 
-    fun <T : Event> query(filter: Filter): List<T> = queryBuilder.query(filter, connection)
+    suspend fun <T : Event> query(filter: Filter): List<T> = pool.useReader { queryBuilder.query(filter, it) }
 
-    fun <T : Event> query(filters: List<Filter>): List<T> = queryBuilder.query(filters, connection)
+    suspend fun <T : Event> query(filters: List<Filter>): List<T> = pool.useReader { queryBuilder.query(filters, it) }
 
-    fun <T : Event> query(
+    suspend fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
-    ) = queryBuilder.query(filter, connection, onEach)
+    ) = pool.useReader { queryBuilder.query(filter, it, onEach) }
 
-    fun <T : Event> query(
+    suspend fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
-    ) = queryBuilder.query(filters, connection, onEach)
+    ) = pool.useReader { queryBuilder.query(filters, it, onEach) }
 
-    fun rawQuery(filter: Filter): List<RawEvent> = queryBuilder.rawQuery(filter, connection)
+    suspend fun rawQuery(filter: Filter): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filter, it) }
 
-    fun rawQuery(filters: List<Filter>): List<RawEvent> = queryBuilder.rawQuery(filters, connection)
+    suspend fun rawQuery(filters: List<Filter>): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filters, it) }
 
-    fun rawQuery(
+    suspend fun rawQuery(
         filter: Filter,
         onEach: (RawEvent) -> Unit,
-    ) = queryBuilder.rawQuery(filter, connection, onEach)
+    ) = pool.useReader { queryBuilder.rawQuery(filter, it, onEach) }
 
-    fun rawQuery(
+    suspend fun rawQuery(
         filters: List<Filter>,
         onEach: (RawEvent) -> Unit,
-    ) = queryBuilder.rawQuery(filters, connection, onEach)
+    ) = pool.useReader { queryBuilder.rawQuery(filters, it, onEach) }
 
-    fun planQuery(filter: Filter) = queryBuilder.planQuery(filter, seedModule.hasher(connection), connection)
+    suspend fun planQuery(filter: Filter) = pool.useReader { queryBuilder.planQuery(filter, seedModule.hasher(it), it) }
 
-    fun planQuery(filters: List<Filter>) = queryBuilder.planQuery(filters, seedModule.hasher(connection), connection)
+    suspend fun planQuery(filters: List<Filter>) = pool.useReader { queryBuilder.planQuery(filters, seedModule.hasher(it), it) }
 
-    fun count(filter: Filter): Int = queryBuilder.count(filter, connection)
+    suspend fun count(filter: Filter): Int = pool.useReader { queryBuilder.count(filter, it) }
 
-    fun count(filters: List<Filter>): Int = queryBuilder.count(filters, connection)
+    suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters, it) }
 
-    fun delete(filter: Filter) {
-        queryBuilder.delete(filter, connection)
-    }
+    suspend fun delete(filter: Filter) = pool.useWriter { queryBuilder.delete(filter, it) }
 
-    fun delete(filters: List<Filter>) {
-        queryBuilder.delete(filters, connection)
-    }
+    suspend fun delete(filters: List<Filter>) = pool.useWriter { queryBuilder.delete(filters, it) }
 
-    fun delete(id: HexKey): Int {
-        connection.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
-        return connection.changes()
-    }
+    suspend fun delete(id: HexKey): Int =
+        pool.useWriter { db ->
+            db.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
+            db.changes()
+        }
 
-    fun deleteExpiredEvents() = expirationModule.deleteExpiredEvents(connection)
+    suspend fun deleteExpiredEvents() = pool.useWriter { expirationModule.deleteExpiredEvents(it) }
+
+    fun close() = pool.close()
 }
 
 class RawEvent(

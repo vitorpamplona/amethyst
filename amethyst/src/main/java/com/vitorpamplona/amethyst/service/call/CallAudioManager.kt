@@ -33,7 +33,7 @@ import android.hardware.SensorManager
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-import android.media.Ringtone
+import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -42,9 +42,12 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+private const val TAG = "CallAudioManager"
 
 enum class AudioRoute {
     EARPIECE,
@@ -55,13 +58,30 @@ enum class AudioRoute {
 class CallAudioManager(
     private val context: Context,
 ) {
-    private var ringtone: Ringtone? = null
+    /**
+     * Instance id — every log line from this audio manager is prefixed
+     * with this so we can trace whether multiple CallAudioManager
+     * instances are fighting over the ringtone.
+     */
+    private val instanceId = nextInstanceId.getAndIncrement()
+
+    private var ringtonePlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var proximityWakeLock: PowerManager.WakeLock? = null
     private var ringbackTone: ToneGenerator? = null
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var previousAudioMode: Int = AudioManager.MODE_NORMAL
     private var scoReceiver: BroadcastReceiver? = null
+
+    init {
+        Log.d(TAG) { "[#$instanceId] created on ${Thread.currentThread().name}" }
+    }
+
+    companion object {
+        private val nextInstanceId =
+            java.util.concurrent.atomic
+                .AtomicInteger(0)
+    }
 
     private val _audioRoute = MutableStateFlow(AudioRoute.EARPIECE)
     val audioRoute: StateFlow<AudioRoute> = _audioRoute.asStateFlow()
@@ -97,6 +117,13 @@ class CallAudioManager(
         }
 
     fun startRinging() {
+        Log.d(TAG) { "[#$instanceId] startRinging on ${Thread.currentThread().name} — existing player=${ringtonePlayer?.hashCode()}" }
+        // IDEMPOTENT: always stop any existing player/vibrator before
+        // starting a new one. Without this, rapid re-entry (e.g. state
+        // flow re-emission when a group member rejects while we are
+        // ringing) would leak MediaPlayer/Ringtone instances that keep
+        // playing because the old reference is overwritten before stop.
+        stopRinging()
         val ringerMode = audioManager.ringerMode
         if (ringerMode != AudioManager.RINGER_MODE_SILENT) {
             if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
@@ -107,6 +134,7 @@ class CallAudioManager(
     }
 
     fun stopRinging() {
+        Log.d(TAG) { "[#$instanceId] stopRinging on ${Thread.currentThread().name} — player=${ringtonePlayer?.hashCode()}" }
         stopRingtone()
         stopVibration()
     }
@@ -143,7 +171,9 @@ class CallAudioManager(
             } else {
                 routeToEarpiece()
             }
-            registerBluetoothScoReceiver()
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                registerBluetoothScoReceiver()
+            }
         } else {
             _isBluetoothAvailable.value = false
             routeToEarpiece()
@@ -214,6 +244,7 @@ class CallAudioManager(
     }
 
     fun release() {
+        Log.d(TAG) { "[#$instanceId] release on ${Thread.currentThread().name}" }
         stopRinging()
         stopRingbackTone()
         restoreAudioMode()
@@ -301,6 +332,7 @@ class CallAudioManager(
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun registerBluetoothScoReceiver() {
         if (scoReceiver != null) return
         scoReceiver =
@@ -346,32 +378,57 @@ class CallAudioManager(
         scoReceiver = null
     }
 
+    /**
+     * Starts the ringtone via [MediaPlayer] (not [android.media.Ringtone]).
+     *
+     * Why MediaPlayer: `Ringtone.stop()` has documented reliability
+     * problems on older Android versions where stop() returns but
+     * playback continues, and `isLooping` is only settable on API 28+.
+     * `MediaPlayer` has reliable stop/release on all API levels and
+     * supports looping universally.
+     */
     private fun startRingtone() {
         try {
             val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            ringtone =
-                RingtoneManager.getRingtone(context, ringtoneUri)?.apply {
-                    audioAttributes =
+            val player =
+                MediaPlayer().apply {
+                    setAudioAttributes(
                         AudioAttributes
                             .Builder()
                             .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        isLooping = true
+                            .build(),
+                    )
+                    setDataSource(context, ringtoneUri)
+                    isLooping = true
+                    setOnErrorListener { _, what, extra ->
+                        Log.e(TAG) { "[#$instanceId] ringtone MediaPlayer error what=$what extra=$extra" }
+                        true
                     }
-                    play()
+                    prepare()
+                    start()
                 }
-        } catch (_: Exception) {
+            ringtonePlayer = player
+            Log.d(TAG) { "[#$instanceId] startRingtone: player=${player.hashCode()} started" }
+        } catch (e: Exception) {
+            Log.e(TAG, "[#$instanceId] startRingtone failed", e)
         }
     }
 
     private fun stopRingtone() {
+        val player = ringtonePlayer ?: return
+        Log.d(TAG) { "[#$instanceId] stopRingtone: player=${player.hashCode()} isPlaying=${runCatching { player.isPlaying }.getOrDefault(false)}" }
         try {
-            ringtone?.stop()
-        } catch (_: Exception) {
+            if (player.isPlaying) player.stop()
+        } catch (e: Exception) {
+            Log.e(TAG, "[#$instanceId] stopRingtone: stop() failed", e)
         }
-        ringtone = null
+        try {
+            player.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "[#$instanceId] stopRingtone: release() failed", e)
+        }
+        ringtonePlayer = null
     }
 
     private fun startVibration() {

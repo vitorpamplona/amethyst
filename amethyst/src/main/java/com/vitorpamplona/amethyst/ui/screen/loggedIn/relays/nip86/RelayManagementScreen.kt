@@ -38,19 +38,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +75,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -212,7 +207,7 @@ fun RelayManagementScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Icon(
-                    Icons.Default.Block,
+                    MaterialSymbols.Block,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.error,
@@ -476,7 +471,7 @@ private fun PubkeyUserCard(
             if (showRemove) {
                 IconButton(onClick = onRemove) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = stringResource(R.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -766,7 +761,7 @@ private fun SectionHeaderWithAdd(
         if (showAdd) {
             IconButton(onClick = onAdd) {
                 Icon(
-                    Icons.Default.Add,
+                    MaterialSymbols.Add,
                     contentDescription = stringResource(R.string.relay_management_add),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -821,7 +816,7 @@ private fun HexEntryCard(
             if (showRemove) {
                 IconButton(onClick = onRemove) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = stringResource(R.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -866,7 +861,7 @@ private fun ModerationEventCard(
                 if (canAllow) {
                     IconButton(onClick = onAllow) {
                         Icon(
-                            Icons.Default.CheckCircle,
+                            MaterialSymbols.CheckCircle,
                             contentDescription = stringResource(R.string.relay_management_allow),
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -875,7 +870,7 @@ private fun ModerationEventCard(
                 if (canBan) {
                     IconButton(onClick = onBan) {
                         Icon(
-                            Icons.Default.Block,
+                            MaterialSymbols.Block,
                             contentDescription = stringResource(R.string.relay_management_ban),
                             tint = MaterialTheme.colorScheme.error,
                         )
@@ -912,7 +907,7 @@ private fun KindEntryCard(
             if (showRemove) {
                 IconButton(onClick = onRemove) {
                     Icon(
-                        Icons.Default.Delete,
+                        MaterialSymbols.Delete,
                         contentDescription = stringResource(R.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -955,7 +950,7 @@ private fun IpEntryCard(
             if (showRemove) {
                 IconButton(onClick = onRemove) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = stringResource(R.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -1119,7 +1114,7 @@ private fun SelectedUserRow(
         }
         IconButton(onClick = onClear) {
             Icon(
-                Icons.Default.Close,
+                MaterialSymbols.Close,
                 contentDescription = stringResource(R.string.relay_management_remove),
                 modifier = Modifier.size(20.dp),
             )

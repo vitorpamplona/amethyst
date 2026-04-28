@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -86,6 +87,7 @@ fun RenderCardFeed(
     nav: INav,
     routeForLastRead: String,
     scrollToEventId: String? = null,
+    headerContent: (@Composable () -> Unit)? = null,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
@@ -113,6 +115,7 @@ fun RenderCardFeed(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     scrollToEventId = scrollToEventId,
+                    headerContent = headerContent,
                 )
             }
 
@@ -146,6 +149,7 @@ private fun FeedLoaded(
     accountViewModel: AccountViewModel,
     nav: INav,
     scrollToEventId: String? = null,
+    headerContent: (@Composable () -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
@@ -170,9 +174,12 @@ private fun FeedLoaded(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
+        if (headerContent != null) {
+            item(key = "scaffold-header") { headerContent() }
+        }
         item {
             ShowDonationCard(accountViewModel, nav)
         }

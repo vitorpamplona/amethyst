@@ -164,6 +164,14 @@ desktopApp/src/jvmMain/appResources/linux/
 desktopApp/src/jvmMain/appResources/macos/
 desktopApp/src/jvmMain/appResources/windows/
 
+# CI-fetched AppImage tooling (downloaded by create-release workflow; not committed)
+packaging/appimage/linuxdeploy-x86_64.AppImage
+packaging/appimage/linuxdeploy-extracted/
+packaging/appimage/squashfs-root/
+
 # Git worktrees
 .worktrees/
 .claude/worktrees/
+benchmark/src/main/jniLibs/
+
+/tools/marmot-interop/state

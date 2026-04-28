@@ -42,6 +42,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -84,7 +85,11 @@ fun ChatroomHeaderCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (baseNote.event != null) {
+    val isEmptyMarmotPlaceholder =
+        baseNote.event == null &&
+            baseNote.inGatherers?.any { it is MarmotGroupChatroom } == true
+
+    if (baseNote.event != null || isEmptyMarmotPlaceholder) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
     } else {
         val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
@@ -118,6 +123,12 @@ private fun ChatroomEntry(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val marmotGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
+    if (marmotGroup != null) {
+        MarmotGroupRoomCompose(lastMessage, marmotGroup, accountViewModel, nav)
+        return
+    }
+
     val baseNoteEvent = lastMessage.event
     when (baseNoteEvent) {
         is ChannelMessageEvent -> {
@@ -198,6 +209,10 @@ private fun ChannelRoomCompose(
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(routeFor(channel)) },
     )
 }
@@ -230,7 +245,50 @@ private fun ChannelRoomCompose(
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(routeFor(channel)) },
+    )
+}
+
+@Composable
+private fun MarmotGroupRoomCompose(
+    lastMessage: Note,
+    chatroom: MarmotGroupChatroom,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val displayName by chatroom.displayName.collectAsStateWithLifecycle()
+    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
+
+    val author = lastMessage.author
+    val noteEvent = lastMessage.event
+    val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
+
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            stringRes(R.string.marmot_group_no_messages_yet)
+        }
+
+    ChannelName(
+        channelIdHex = chatroom.nostrGroupId,
+        channelPicture = null,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = unread > 0,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
     )
 }
 
@@ -353,6 +411,7 @@ fun ChannelName(
     hasNewMessages: Boolean,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
+    autoPlayGif: Boolean,
     onClick: () -> Unit,
 ) {
     ChannelName(
@@ -364,6 +423,7 @@ fun ChannelName(
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
+                autoPlayGif = autoPlayGif,
             )
         },
         channelTitle,

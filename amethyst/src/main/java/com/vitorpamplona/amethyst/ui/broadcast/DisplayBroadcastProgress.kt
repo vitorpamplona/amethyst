@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -48,13 +50,14 @@ import kotlinx.coroutines.delay
  * - CompletedBroadcastIndicator: Shows completed broadcast for tap-to-view (auto-dismisses after 10s)
  * - BroadcastDetailsSheet: Shows detailed relay status on tap
  *
- * Only shown when FeatureSetType.COMPLETE is enabled.
+ * Hidden when the "Tracked broadcasts" UI setting is off.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
-    // Only show in COMPLETE UI mode
-    if (!accountViewModel.settings.isCompleteUIMode()) return
+    val useTrackedBroadcasts by accountViewModel.settings.uiSettingsFlow.useTrackedBroadcasts
+        .collectAsStateWithLifecycle()
+    if (useTrackedBroadcasts != BooleanType.ALWAYS) return
 
     val activeBroadcasts by accountViewModel.broadcastTracker.activeBroadcasts.collectAsStateWithLifecycle()
 
@@ -130,10 +133,11 @@ fun DisplaySnack(
             },
             modifier =
                 Modifier
-                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = 50.dp),
+                    .padding(start = 12.dp, end = 12.dp, bottom = 58.dp)
+                    .fillMaxWidth(0.94f)
+                    .widthIn(max = 560.dp),
         )
     }
 }

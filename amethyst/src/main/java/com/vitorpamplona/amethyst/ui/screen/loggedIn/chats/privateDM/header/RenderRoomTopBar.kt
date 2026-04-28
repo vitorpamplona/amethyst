@@ -30,13 +30,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,6 +47,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -98,7 +95,7 @@ fun RenderRoomTopBar(
                                 modifier = Modifier.size(40.dp),
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Videocam,
+                                    symbol = MaterialSymbols.Videocam,
                                     contentDescription = stringRes(R.string.call_video),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
@@ -112,7 +109,7 @@ fun RenderRoomTopBar(
                                 modifier = Modifier.size(40.dp),
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Call,
+                                    symbol = MaterialSymbols.Call,
                                     contentDescription = stringRes(R.string.call_voice),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
@@ -153,7 +150,7 @@ fun RenderRoomTopBar(
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Videocam,
+                                symbol = MaterialSymbols.Videocam,
                                 contentDescription = stringRes(R.string.call_video),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
@@ -167,7 +164,7 @@ fun RenderRoomTopBar(
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Call,
+                                symbol = MaterialSymbols.Call,
                                 contentDescription = stringRes(R.string.call_voice),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
@@ -252,7 +249,7 @@ private fun EditRoomSubjectButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            imageVector = Icons.Default.EditNote,
+            symbol = MaterialSymbols.EditNote,
             contentDescription = stringRes(R.string.edits_the_channel_metadata),
         )
     }

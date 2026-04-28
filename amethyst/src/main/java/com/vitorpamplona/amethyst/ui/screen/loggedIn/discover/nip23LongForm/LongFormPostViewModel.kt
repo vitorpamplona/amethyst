@@ -105,6 +105,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -325,7 +326,7 @@ class LongFormPostViewModel :
         val version = draftTag.current
         cancel()
 
-        if (accountViewModel.settings.isCompleteUIMode()) {
+        if (accountViewModel.settings.useTrackedBroadcasts()) {
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, emptyList())
             accountViewModel.viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.broadcastTracker.trackBroadcast(
@@ -544,6 +545,8 @@ class LongFormPostViewModel :
                                             ?.let { dims(it) }
                                         state.result.fileHeader.blurHash
                                             ?.let { blurhash(it.blurhash) }
+                                        state.result.fileHeader.thumbHash
+                                            ?.let { thumbhash(it.thumbhash) }
                                         state.result.magnet?.let { magnet(it) }
                                         state.result.uploadedHash?.let { originalHash(it) }
                                         alt?.let { alt(it) }

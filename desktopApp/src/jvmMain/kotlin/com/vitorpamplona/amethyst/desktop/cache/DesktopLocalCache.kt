@@ -545,7 +545,17 @@ class DesktopLocalCache : ICacheProvider {
     // ----- Own event consumption -----
 
     override fun justConsumeMyOwnEvent(event: Event): Boolean {
-        // Desktop doesn't track own events separately
+        // For addressable/replaceable events, store in the addressable note cache
+        // so state holders (Nip65RelayListState, etc.) pick it up via their flows
+        if (event is com.vitorpamplona.quartz.nip01Core.core.AddressableEvent) {
+            val address = event.address()
+            val note = getOrCreateAddressableNote(address)
+            val author = getOrCreateUser(event.pubKey) ?: return false
+            if (note.event == null || (note.event?.createdAt ?: 0) <= event.createdAt) {
+                note.loadEvent(event, author, emptyList())
+                return true
+            }
+        }
         return false
     }
 

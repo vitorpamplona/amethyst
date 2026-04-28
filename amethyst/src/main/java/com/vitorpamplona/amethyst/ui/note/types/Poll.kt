@@ -358,7 +358,7 @@ private fun ColumnScope.RenderSingleChoiceOptions(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val hasSpaceToClick =
-                    remember {
+                    remember(it.label) {
                         it.label.contains(' ') || it.label.contains('\n')
                     }
 
@@ -436,7 +436,7 @@ private fun RenderResults(
     labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
 ) {
     val showGallery =
-        remember {
+        remember(card) {
             card.options.all {
                 it.label.length < 50
             }

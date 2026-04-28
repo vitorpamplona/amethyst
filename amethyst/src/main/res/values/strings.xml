@@ -53,6 +53,10 @@
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>
     <string name="login_with_a_private_key_to_like_posts">You are using a public key and public keys are read-only. Login with a Private key to like posts</string>
     <string name="no_zap_amount_setup_long_press_to_change">No Zap Amount Setup. Long Press to change</string>
+    <string name="chat_zap_amount_suffix">zapped %1$s sats</string>
+    <string name="chat_zap_anonymous">Anonymous</string>
+    <string name="chat_raid_is_raiding">is raiding</string>
+    <string name="chat_clip_created_a_clip">created a clip</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">You are using a public key and public keys are read-only. Login with a Private key to be able to send zaps</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">You are using a public key and public keys are read-only. Login with a Private key to be able to follow</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">You are using a public key and public keys are read-only. Login with a Private key to be able to unfollow</string>
@@ -283,6 +287,8 @@
     and thus chat messages disappear over time</string>
 
     <string name="public_chat">Public Chat</string>
+    <string name="marmot_group">MLS Group</string>
+    <string name="marmot_group_no_messages_yet">No messages yet</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
         can participate on them. They are great for open communities around specific topics.
@@ -363,6 +369,11 @@
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
     <string name="account_switch_add_account_dialog_title">Add New Account</string>
     <string name="drawer_accounts">Accounts</string>
+    <string name="drawer_section_navigate">Navigate</string>
+    <string name="drawer_section_you">You</string>
+    <string name="drawer_section_feeds">Feeds</string>
+    <string name="drawer_section_create">Create</string>
+    <string name="drawer_section_system">System</string>
     <string name="account_switch_select_account">Select Account</string>
     <string name="account_switch_add_account_btn">Add New Account</string>
     <string name="account_switch_active_account">Active account</string>
@@ -418,9 +429,195 @@
     <string name="polls">Polls</string>
     <string name="open_polls">Open</string>
     <string name="closed_polls">Closed</string>
+    <string name="badges">Badges</string>
+    <string name="communities">Communities</string>
+    <string name="new_community">New Community</string>
+    <string name="edit_community">Edit Community</string>
+    <string name="new_community_name">Community name</string>
+    <string name="new_community_description">Description</string>
+    <string name="new_community_rules">Rules (optional)</string>
+    <string name="new_community_pick_cover">Add a cover image</string>
+    <string name="new_community_pick_cover_hint">Tap to pick a photo — it will be uploaded to your media server.</string>
+    <string name="new_community_moderators_section">Moderators</string>
+    <string name="new_community_moderators_hint">Moderators can approve posts. You are always a moderator.</string>
+    <string name="new_community_add_moderator">Add a moderator</string>
+    <string name="new_community_add_moderator_placeholder">Name, npub, or NIP-05</string>
+    <string name="new_community_owner">Owner</string>
+    <string name="new_community_relays_section">Relays</string>
+    <string name="new_community_relays_hint">Pick relays that will host requests, approvals, or the community author\'s metadata.</string>
+    <string name="new_community_relay_marker_none">Any</string>
+    <string name="new_community_relay_marker_author">Author</string>
+    <string name="new_community_relay_marker_requests">Requests</string>
+    <string name="new_community_relay_marker_approvals">Approvals</string>
+    <string name="new_community_empty">No communities match this filter.</string>
+    <string name="received_badges">Received</string>
+    <string name="my_badges">Mine</string>
+    <string name="awarded_badges">Awarded</string>
+    <string name="discover_badges">Discover</string>
+    <string name="new_badge">New Badge</string>
+    <string name="edit_badge">Edit Badge</string>
+    <string name="award_badge">Award Badge</string>
+    <string name="accept_badge">Accept</string>
+    <string name="reject_badge">Reject</string>
+    <string name="unaccept_badge">Remove from profile</string>
+    <string name="badge_id_label">Badge ID (d-tag)</string>
+    <string name="badge_id_placeholder">bravery, contributor-2025…</string>
+    <string name="badge_name_label">Name</string>
+    <string name="badge_name_placeholder">Human-readable badge name</string>
+    <string name="badge_description_label">Description</string>
+    <string name="badge_description_placeholder">Why is this badge awarded?</string>
+    <string name="badge_image_label">Image URL (1024×1024)</string>
+    <string name="badge_image_placeholder">https://example.com/badge.png</string>
+    <string name="badge_thumb_label">Thumbnail URL (optional)</string>
+    <string name="badge_thumb_placeholder">https://example.com/badge-thumb.png</string>
+    <string name="badge_upload_image_cta">Upload an image</string>
+    <string name="badge_upload_image_hint">Pick a square image to be the face of your badge.</string>
+    <string name="award_badge_loading">Loading badge…</string>
+    <string name="award_badge_search_label">Search users</string>
+    <string name="award_badge_search_placeholder">Name, npub, or NIP-05</string>
+    <string name="award_badge_remove_recipient">Remove</string>
+    <string name="badge_untitled">Untitled badge</string>
+    <string name="badge_awardees_label">Awarded to %1$d</string>
+    <string name="badge_award_received_title">You received a badge</string>
+    <string name="profile_badges_title">Profile badges</string>
+    <string name="profile_badges_header">Badges · %1$d</string>
+    <string name="profile_badges_description">Choose which of the badges you\'ve received appear on your profile.</string>
+    <string name="profile_badges_empty">You haven\'t received any badges yet.</string>
     <string name="pictures">Pictures</string>
     <string name="shorts">Shorts</string>
+    <string name="public_chats">Public Chats</string>
+    <string name="follow_packs">Follow Packs</string>
+    <string name="live_streams">Live Streams</string>
+    <string name="nests">Nests</string>
+    <string name="meeting_room_in_space">In %1$s</string>
+    <string name="meeting_room_in_space_unknown">a Nest</string>
+    <string name="nest_stage">Stage</string>
+    <string name="nest_stage_empty">Waiting for speakers…</string>
+    <string name="nest_audience">Audience</string>
+    <string name="nest_raise_hand">Raise hand</string>
+    <string name="nest_lower_hand">Lower hand</string>
+    <string name="nest_connect">Connect audio</string>
+    <string name="nest_disconnect">Disconnect</string>
+    <string name="nest_mute">Mute</string>
+    <string name="nest_unmute">Unmute</string>
+    <string name="nest_connecting">Connecting…</string>
+    <string name="nest_connecting_resolving">Resolving room</string>
+    <string name="nest_connecting_transport">Opening transport</string>
+    <string name="nest_connecting_handshake">Negotiating audio</string>
+    <string name="nest_connected">Audio connected</string>
+    <string name="nest_reconnecting">Reconnecting…</string>
+    <string name="nest_listen_to_recording">Listen to recording</string>
+    <string name="nest_chat_send_failed_title">Couldn\'t send message</string>
+    <string name="nest_no_app_to_open_link">No app installed to open this link.</string>
+    <string name="nest_close_room_confirm_title">Close this room?</string>
+    <string name="nest_close_room_confirm_body">All attendees will be disconnected. The room will show as CLOSED in the feed.</string>
+    <string name="nest_close_room_confirm_action">Close room</string>
+    <string name="nest_create_when_in_past">Pick a future start time.</string>
+    <string name="nest_audio_failed">Audio failed: %1$s</string>
+    <string name="nest_audio_unavailable">Audio is not available for this room</string>
+    <string name="nest_talk">Talk</string>
+    <string name="nest_stop_talking">Stop talking</string>
+    <string name="nest_leave_stage">Leave stage</string>
+    <string name="nest_mic_mute">Mute mic</string>
+    <string name="nest_mic_unmute">Unmute mic</string>
+    <string name="nest_broadcast_connecting">Going live…</string>
+    <string name="nest_broadcasting">Live</string>
+    <string name="nest_broadcast_failed">Broadcast failed: %1$s</string>
+    <string name="nest_record_permission_required">Microphone access is required to talk in this room.</string>
+    <string name="nest_open_settings">Open settings</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Keeps audio playing while a room is open.</string>
+    <string name="nest_notification_listening">Nest connected</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
+    <string name="nest_notification_text">Tap to return.</string>
+    <string name="nest_notification_stop">Stop</string>
+    <string name="nest_join">Join nest</string>
+    <string name="nest_lobby_host_label">Host</string>
+    <string name="nest_role_host">Host</string>
+    <string name="nest_role_moderator">Moderator</string>
+    <string name="nest_state_muted">Microphone muted</string>
+    <string name="nest_state_speaking">Speaking now</string>
+    <string name="nest_state_mic_open">Microphone open</string>
+    <string name="nest_presence_raised_hand">raised their hand</string>
+    <string name="nest_presence_on_stage">stepped on stage</string>
+    <string name="nest_presence_speaking">is speaking</string>
+    <string name="nest_presence_listening">joined as audience</string>
+    <string name="nest_presence_left">left the nest</string>
+    <string name="nest_leave">Leave</string>
+    <string name="nest_leave_host_title">End this nest?</string>
+    <string name="nest_leave_host_body">You\'re the host. Closing the room will disconnect everyone. Choose \"Just leave\" if you want to come back later — the room will auto-close after 8 hours of inactivity.</string>
+    <string name="nest_leave_host_close">Close room</string>
+    <string name="nest_leave_host_just_leave">Just leave</string>
+    <string name="nest_leave_host_close_failed">Couldn\'t mark room as closed. Leaving anyway — room will auto-close.</string>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d listener</item>
+        <item quantity="other">%1$d listeners</item>
+    </plurals>
+    <string name="nest_live_chip">LIVE</string>
+    <string name="nest_tab_chat">Chat</string>
+    <string name="nest_tab_audience">Audience</string>
+    <string name="nest_tab_hands">Hands</string>
+    <string name="nest_audience_empty">No one in the audience yet.</string>
+    <string name="nest_chat_send">Send</string>
+    <string name="nest_chat_placeholder">Say something…</string>
+    <string name="nest_chat_empty">No messages yet. Be the first to chat.</string>
+    <string name="nest_reactions_title">React</string>
+    <string name="nest_reactions_button">React</string>
+    <string name="nest_edit_title">Edit room</string>
+    <string name="nest_edit_save">Save</string>
+    <string name="nest_close_action">Close room</string>
+    <string name="nest_overflow_menu">Room actions</string>
+    <string name="nest_hand_raise_queue_title">Raised hands</string>
+    <string name="nest_hand_raise_approve">Approve</string>
+    <string name="nest_promote_speaker">Promote to speaker</string>
+    <string name="nest_promote_moderator">Promote to moderator</string>
+    <string name="nest_demote_listener">Demote to listener</string>
+    <string name="nest_force_mute">Force-mute speaker</string>
+    <string name="nest_kick_action">Kick</string>
+    <string name="nest_hush_local">Hush this speaker</string>
+    <string name="nest_hush_local_restore">Restore this speaker</string>
+    <string name="nest_participant_view_profile">View profile</string>
+    <string name="nest_participant_zap">Send zap</string>
+    <string name="nest_participant_zap_split_unsupported">Split zaps are not supported from inside a nest. Open the profile screen to send.</string>
+    <string name="nest_participant_follow">Follow</string>
+    <string name="nest_participant_unfollow">Unfollow</string>
+    <string name="nest_participant_mute">Mute</string>
+    <string name="nest_participant_unmute">Unmute</string>
+    <string name="nest_share_action">Share room</string>
+    <string name="nest_minimize">Minimize</string>
+    <string name="nest_minimize_description">Minimize to keep listening</string>
+    <string name="nest_audio_dropped">Audio dropped</string>
+    <string name="nest_create_fab">Start space</string>
+    <string name="nest_no_server_title">Set up a nest server</string>
+    <string name="nest_no_server_body">You haven\'t picked a nest server yet. Add %1$s to your server list and continue?\n\nYou can change this later in Settings.</string>
+    <string name="nest_no_server_use_default">Use default</string>
+    <string name="nest_no_server_cancel">Cancel</string>
+    <string name="nest_no_server_save_failed">Couldn\'t save your nest server list. Try again.</string>
+    <string name="nest_create_title">Start a new nest</string>
+    <string name="nest_create_field_room">Room name</string>
+    <string name="nest_create_field_summary">What\'s it about?</string>
+    <string name="nest_create_field_service">MoQ service URL</string>
+    <string name="nest_create_field_service_hint">Auth sidecar — defaults to nostrnests.com</string>
+    <string name="nest_create_field_endpoint">MoQ relay endpoint</string>
+    <string name="nest_create_field_endpoint_hint">WebTransport URL — usually the same host</string>
+    <string name="nest_create_field_image">Cover image URL (optional)</string>
+    <string name="nest_create_cancel">Cancel</string>
+    <string name="nest_create_submit">Start space</string>
+    <string name="nest_create_schedule_toggle">Schedule for later</string>
+    <string name="nest_create_when">Pick a start time</string>
+    <string name="nests_servers_title">Nest servers</string>
+    <string name="nests_servers_explainer">Choose which MoQ host servers Amethyst publishes your nests to. The first entry is used by default when you start a new space.</string>
+    <string name="nests_servers_my_section">Your servers</string>
+    <string name="nests_servers_my_explainer">Saved as a kind-10112 replaceable event so other clients can read your preference.</string>
+    <string name="nests_servers_add_field">Add a nest server</string>
+    <string name="nests_servers_recommended_section">Recommended servers</string>
+    <string name="nests_servers_recommended_explainer">Built-in suggestions you can add to your list with one tap.</string>
+    <string name="nests_servers_use_defaults">Use Amethyst defaults</string>
+    <string name="nests_servers_add_recommended">Add server</string>
+    <string name="nests_servers_remove">Remove server</string>
+    <string name="nests_servers_empty">No nest servers yet. Add one below or pick a recommended server.</string>
     <string name="longs">Videos</string>
+    <string name="articles">Articles</string>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>
     <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
@@ -429,8 +626,13 @@
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
 
     <string name="pinned_notes">Pinned Notes</string>
+    <string name="pinned_notes_explainer">Your pinned notes</string>
     <string name="pin_to_profile">Pin to Profile</string>
     <string name="unpin_from_profile">Unpin from Profile</string>
+
+    <string name="deleted_items_banner_title">%1$d item(s) in this list have been deleted by their author.</string>
+    <string name="deleted_items_banner_remove">Remove from list</string>
+    <string name="deleted_items_banner_dismiss">Dismiss</string>
 
     <string name="bookmark_lists">Bookmark Lists</string>
     <string name="bookmark_list_icon_label">Icon for bookmark list</string>
@@ -444,6 +646,21 @@
     <string name="bookmark_list_links_btn_label">View Links</string>
     <string name="bookmark_list_hashtags_btn_label">View Hashtags</string>
     <string name="bookmark_list_feed_empty_msg">You do not have any bookmark lists yet. Tap the new button below to make one.</string>
+
+    <string name="interest_sets_title">Hashtag Sets</string>
+    <string name="interest_sets_empty">You do not have any interest sets yet. Tap the new button below to make one.</string>
+    <string name="interest_set_create_btn_label">New Interest Set</string>
+    <string name="interest_set_creation_screen_title">New Interest Set</string>
+    <string name="interest_set_name_label">Set Name</string>
+    <string name="interest_set_name_placeholder">My interests</string>
+    <string name="interest_set_hashtag_add_placeholder">Add hashtag</string>
+    <string name="interest_set_hashtag_private_toggle">Private</string>
+    <string name="interest_set_hashtag_count">%1$d hashtag(s)</string>
+    <string name="interest_set_actions_dialog_title">Interest Set Actions</string>
+    <string name="interest_set_rename">Rename</string>
+    <string name="interest_set_clone">Clone</string>
+    <string name="interest_set_add_hashtag">Add hashtag</string>
+    <string name="interest_set_toggle_visibility">Toggle public/private</string>
     <string name="private_posts_label">Private Posts</string>
     <string name="private_posts_count">Private Posts(%1$s)</string>
     <string name="public_posts_label">Public Posts</string>
@@ -539,6 +756,8 @@
 
     <string name="content_description">Description of the contents</string>
     <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
+    <string name="ai_suggested_alt_text_hint">AI-suggested, edit me</string>
+    <string name="ai_suggested_alt_text_dismiss">Dismiss AI suggestion</string>
 
     <string name="zap_type">Zap Type</string>
     <string name="zap_type_explainer">Zap Type for all options</string>
@@ -621,6 +840,7 @@
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_chess">Chess</string>
+    <string name="follow_list_mine">Mine</string>
     <string name="follow_list_mute_list">Mute List</string>
 
     <string name="follow_sets">Follow Lists</string>
@@ -781,6 +1001,17 @@
     <string name="app_notification_chess_challenge_accepted">%1$s accepted your chess challenge</string>
     <string name="app_notification_chess_your_turn">%1$s moved — your turn</string>
     <string name="app_notification_chess_summary">Chess updates</string>
+    <string name="app_notification_replies_channel_id" translatable="false">RepliesID</string>
+    <string name="app_notification_replies_channel_name">Replies</string>
+    <string name="app_notification_replies_channel_description">Notifies you when somebody replies to your post</string>
+    <string name="app_notification_replies_channel_message">%1$s replied</string>
+    <string name="app_notification_replies_channel_message_for">on: %1$s</string>
+    <string name="app_notification_replies_summary">New replies</string>
+    <string name="app_notification_mentions_channel_id" translatable="false">MentionsID</string>
+    <string name="app_notification_mentions_channel_name">Mentions</string>
+    <string name="app_notification_mentions_channel_description">Notifies you when somebody mentions or cites you in a post</string>
+    <string name="app_notification_mentions_channel_message">%1$s mentioned you</string>
+    <string name="app_notification_mentions_summary">New mentions</string>
 
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Incoming calls</string>
@@ -815,6 +1046,8 @@
     <string name="call_failed_accept">Failed to accept call</string>
     <string name="call_failed_session">Failed to create call session</string>
     <string name="call_settings">Call Settings</string>
+    <string name="call_settings_enable_calls">Enable voice and video calls</string>
+    <string name="call_settings_enable_calls_description">When disabled, call buttons are hidden from chat screens and all incoming calls are silently ignored.</string>
     <string name="call_settings_video_quality">Video Quality</string>
     <string name="call_settings_max_bitrate">Max Video Bitrate</string>
     <string name="call_settings_turn_servers">TURN / STUN Servers</string>
@@ -827,6 +1060,18 @@
     <string name="call_settings_turn_url">Server URL</string>
     <string name="call_settings_turn_username">Username</string>
     <string name="call_settings_turn_credential">Credential</string>
+
+    <string name="always_on_notif_channel_name" translatable="false">Relay Connection Service</string>
+    <string name="always_on_notif_channel_description">Keeps connections to your inbox relays active for real-time notifications</string>
+    <string name="always_on_notif_title">Amethyst Notifications Active</string>
+    <string name="always_on_notif_connected">Connected to %1$d inbox relays</string>
+    <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
+    <string name="always_on_notif_setting_title">Always-on notification service</string>
+    <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
+
+    <string name="battery_optimization_title">Battery optimization active</string>
+    <string name="battery_optimization_description">Android may restrict relay connections in the background. Disable battery optimization for Amethyst to ensure reliable notifications.</string>
+    <string name="battery_optimization_fix_now">Fix now</string>
 
     <string name="reply_notify">Notify: </string>
 
@@ -975,12 +1220,15 @@
     <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">ENDED</string>
     <string name="live_stream_planned_tag">SCHEDULED</string>
+    <string name="live_stream_private_tag">PRIVATE</string>
 
     <string name="live_stream_is_offline">Livestream is Offline</string>
     <string name="live_stream_has_ended">Livestream Ended</string>
     <string name="meeting_space_open_tag">OPEN</string>
     <string name="meeting_space_private_tag">PRIVATE</string>
     <string name="meeting_space_closed_tag">CLOSED</string>
+    <string name="meeting_space_planned_tag">SCHEDULED</string>
+    <string name="meeting_space_planned_starts_at">Starts %1$s</string>
     <string name="are_you_sure_you_want_to_log_out">Logging out deletes all your local information. Make sure to have your private keys backed up to avoid losing your account. Do you want to continue?</string>
     <string name="followed_tags">Followed Tags</string>
 
@@ -1012,6 +1260,12 @@
     <string name="account_settings">Account Settings</string>
     <string name="app_settings">App Settings</string>
     <string name="danger_zone">Danger Zone</string>
+    <string name="reset_marmot_state">Reset Marmot State</string>
+    <string name="reset_marmot_confirm_title">Reset Marmot State?</string>
+    <string name="reset_marmot_confirm_body">This will permanently delete every Marmot group chat, message history, and MLS key on this device for the current account. Peers will not be notified and may still see you in groups until their next commit. This cannot be undone. A new KeyPackage will be published the next time the app syncs.</string>
+    <string name="reset_marmot_confirm_action">Reset</string>
+    <string name="reset_marmot_success">Marmot state reset.</string>
+    <string name="reset_marmot_failure">Failed to reset Marmot state: %1$s</string>
     <string name="connectivity_type_always">Always</string>
     <string name="connectivity_type_wifi_only">Wifi-only</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
@@ -1033,6 +1287,7 @@
     <string name="theme">Theme</string>
     <string name="automatically_load_images_gifs">Image Preview</string>
     <string name="automatically_play_videos">Video Playback</string>
+    <string name="autoplay_videos">Autoplay Videos</string>
     <string name="automatically_show_url_preview">URL Preview</string>
     <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
     <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
@@ -1074,6 +1329,8 @@
     <string name="hashtag_exclusive">Hashtag-exclusive Post</string>
     <string name="hashtag_exclusive_explainer">Only followers of the hashtag will see it. Your general followers won\'t see it.</string>
 
+    <string name="long_form_reading_minutes">%1$d min read</string>
+
 
     <string name="loading_location">Loading location</string>
     <string name="lack_location_permissions">No Location Permissions</string>
@@ -1086,6 +1343,7 @@
     <string name="new_feature_nip17_activate">Activate</string>
 
     <string name="messages_create_public_chat">Public</string>
+    <string name="messages_create_group">Group</string>
     <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
     <string name="messages_relay_based">Relay</string>
     <string name="messages_new_message">Private</string>
@@ -1121,7 +1379,8 @@
     <string name="language_description">For the App\'s Interface</string>
     <string name="theme_description">Dark, Light or System theme</string>
     <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
-    <string name="automatically_play_videos_description">Automatically plays videos and GIFs</string>
+    <string name="automatically_play_videos_description">Automatically load videos and GIFs</string>
+    <string name="autoplay_videos_description">Automatically play videos when visible on screen</string>
     <string name="automatically_show_url_preview_description">Show URL previews</string>
     <string name="load_image_description">When to load images</string>
 
@@ -1458,6 +1717,10 @@
 
     <string name="change_reaction">Change Quick Reactions</string>
 
+    <string name="bottom_bar_settings">Bottom Navigation Bar</string>
+    <string name="bottom_bar_settings_description">Drag to reorder. Toggle to add or remove an item from the bottom bar. With zero items the bottom bar is hidden.</string>
+    <string name="bottom_bar_settings_available">Available</string>
+    <string name="bottom_bar_settings_reorder">Reorder</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
@@ -1475,6 +1738,24 @@
     <string name="reactions_settings_share_description">Share this note externally</string>
     <string name="reactions_settings_pay">Pay</string>
     <string name="reactions_settings_pay_description">Send a payment to the author via their payment targets</string>
+
+    <string name="video_player_settings">Video Player Buttons</string>
+    <string name="video_player_settings_description">Choose which buttons appear on the video player and which live in the overflow menu. Drag to reorder.</string>
+    <string name="video_player_settings_reorder">Reorder</string>
+    <string name="video_player_settings_location_top_bar">Top Bar</string>
+    <string name="video_player_settings_location_overflow">Overflow Menu</string>
+    <string name="video_player_settings_action_fullscreen">Fullscreen</string>
+    <string name="video_player_settings_action_fullscreen_description">Open the video in a fullscreen zoom view</string>
+    <string name="video_player_settings_action_mute">Mute</string>
+    <string name="video_player_settings_action_mute_description">Toggle audio on or off</string>
+    <string name="video_player_settings_action_quality">Video Quality</string>
+    <string name="video_player_settings_action_quality_description">Pick a resolution for HLS videos (hidden on non-HLS videos)</string>
+    <string name="video_player_settings_action_share">Share or Save</string>
+    <string name="video_player_settings_action_share_description">Share the video link externally</string>
+    <string name="video_player_settings_action_download">Save to Phone</string>
+    <string name="video_player_settings_action_download_description">Download the video to your device (hidden on live streams)</string>
+    <string name="video_player_settings_action_pip">Picture-in-Picture</string>
+    <string name="video_player_settings_action_pip_description">Play the video in a floating window (hidden if unsupported)</string>
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>
@@ -1554,6 +1835,9 @@
     <string name="private_inbox_section">DM Inbox Relays</string>
     <string name="private_inbox_section_explainer_profile">User receives DMs on these relays</string>
     <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="keypackages">KeyPackages</string>
+    <string name="keypackage_section">KeyPackage Relays</string>
+    <string name="keypackage_section_explainer">Relays where your MLS KeyPackages are published (MIP-00). Other users fetch these KeyPackages to invite you into Marmot group chats. Insert between 1–3 relays that accept KeyPackage events from you and allow public reads.</string>
     <string name="private_outbox_section">Private Home Relays</string>
     <string name="private_outbox_section_explainer">Insert between 1–3 relays to store events no one else can see, like your Drafts and/or app settings. Ideally, these relays are either local or require authentication before downloading each user\'s content.</string>
     <string name="kind_3_section">General Relays</string>
@@ -1714,10 +1998,25 @@
     <string name="select_list_to_filter">Select an option to filter the feed</string>
     <string name="feed_group_feeds">Feeds</string>
     <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_interest_sets">Interest Sets</string>
     <string name="feed_group_locations">Locations</string>
     <string name="feed_group_communities">Communities</string>
     <string name="feed_group_lists">Lists</string>
+    <string name="feed_group_dvms">Feed Algorithms</string>
+    <string name="follow_list_all_favorite_dvms">All favorite feed algorithms</string>
     <string name="feed_group_relays">Relays</string>
+
+    <string name="add_dvm_to_favorites">Add feed algorithm to favorites</string>
+    <string name="remove_dvm_from_favorites">Remove from favorites</string>
+    <string name="favorite_dvms_title">Favorite Feed Algorithms</string>
+    <string name="favorite_dvms_explainer">Feed algorithms you starred here appear as filter chips on the Home feed. Open Discover to add more.</string>
+    <string name="favorite_dvms_empty">No favorite feed algorithms yet. Open Discover, tap one, and star it to add it here.</string>
+    <string name="dvm_home_status_requesting">Asking %1$s for a feed…</string>
+    <string name="dvm_home_status_requesting_all">Asking your favorite feed algorithms for feeds…</string>
+    <string name="dvm_home_status_processing">Processing your feed…</string>
+    <string name="dvm_home_status_payment_required">This feed algorithm requires payment</string>
+    <string name="dvm_home_status_error">The feed algorithm returned an error</string>
+    <string name="dvm_home_retry">Retry</string>
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>
@@ -1732,6 +2031,22 @@
     <string name="downloading_video_for_sharing">Downloading video…</string>
 
     <string name="search_by_hashtag">Search hashtag: #%1$s</string>
+
+    <string name="search_scope_all">All</string>
+    <string name="search_scope_people">People</string>
+    <string name="search_scope_notes">Notes</string>
+    <string name="search_source_local">Local</string>
+    <string name="search_source_relays">Relays</string>
+    <string name="search_follows_only">Follows only</string>
+    <string name="search_sort_newest">Newest</string>
+    <string name="search_sort_oldest">Oldest</string>
+    <string name="search_sort_relevance">Relevance</string>
+    <string name="search_sort_popular">Popular</string>
+    <string name="search_filters_title">Filters</string>
+    <string name="search_filters_reset">Reset</string>
+    <string name="search_filters_section_source">Source</string>
+    <string name="search_filters_section_sort">Sort by</string>
+    <string name="search_filters_open">Filters</string>
 
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
@@ -1855,6 +2170,7 @@
     <string name="kind_profile_badges">Profile Badges</string>
     <string name="kind_blocked_relays">Blocked Relays</string>
     <string name="kind_blossom_servers">Blossom Servers</string>
+    <string name="kind_nests_servers">Nests Servers</string>
     <string name="kind_blossom_auth">Blossom Auth</string>
     <string name="kind_broadcast_relays">Broadcast Relays</string>
     <string name="kind_bookmark_list">Bookmark List</string>
@@ -2076,6 +2392,47 @@
     <string name="profile_actions_dialog_title">Profile Actions</string>
     <string name="media_actions_dialog_title">Media Actions</string>
     <string name="playback_actions_dialog_title">Playback</string>
+    <string name="video_quality_auto">Auto</string>
+
+    <!-- HLS multi-resolution video sharing -->
+    <string name="share_hls_video">HLS Upload</string>
+    <string name="share_hls_video_drawer_description">Publish multi-resolution HLS to your media server</string>
+    <string name="hls_pick_video_primary">Pick a video</string>
+    <string name="hls_pick_video_helper">Your video will be transcoded into multiple resolutions so viewers get smooth playback on any connection.</string>
+    <string name="hls_change_video">Change</string>
+    <string name="hls_title_label">Title</string>
+    <string name="hls_title_placeholder">Give your video a title</string>
+    <string name="hls_description_label">Description</string>
+    <string name="hls_description_placeholder">What is this video about?</string>
+    <string name="hls_content_warning_reason_placeholder">Reason (optional)</string>
+    <string name="hls_codec_label">Codec</string>
+    <string name="hls_codec_h265">H.265 (better compression)</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="hls_codec_fallback_notice">H.265 not available on this device — falling back to H.264.</string>
+    <string name="hls_renditions_label">Renditions</string>
+    <string name="hls_renditions_source_format">Source resolution: %1$d×%2$d</string>
+    <string name="hls_renditions_produce_format">Will produce: %1$s</string>
+    <string name="hls_renditions_skipped_format">(%1$s skipped — above source)</string>
+    <string name="hls_rendition_bitrate_kbps_format">%1$d kbps</string>
+    <string name="hls_rendition_above_source">above source — will be skipped</string>
+    <string name="hls_publish_button">Publish HD video</string>
+    <string name="hls_publishing_header_format">Publishing “%1$s”…</string>
+    <string name="hls_state_transcoding_format">Transcoding %1$s</string>
+    <string name="hls_state_uploading_idle">Upload</string>
+    <string name="hls_state_uploading_format">Uploading %1$d of %2$d</string>
+    <string name="hls_state_uploading_with_label_format">Uploading %1$s (%2$d of %3$d)</string>
+    <string name="hls_state_uploaded_format">Uploaded %1$d of %2$d</string>
+    <string name="hls_state_publishing">Publishing event…</string>
+    <string name="hls_state_success_title">Video published</string>
+    <string name="hls_state_success_body">Your HD video is live on Nostr.</string>
+    <string name="hls_state_failure_title">Something went wrong</string>
+    <string name="hls_view_note">View note</string>
+    <string name="hls_done">Done</string>
+    <string name="hls_try_again">Try again</string>
+    <string name="hls_draft_note_after_upload">Draft note after upload</string>
+    <string name="hls_draft_note_after_upload_explainer">Open the note composer pre-filled with the title, description and video link so you can tweak it before posting.</string>
+    <string name="hls_draft_note_button">Draft note</string>
+
     <string name="pack_actions_dialog_title">Pack Actions</string>
     <string name="list_actions_dialog_title">List Actions</string>
     <string name="bookmark_item_actions_dialog_title">Bookmark Actions</string>
@@ -2240,6 +2597,8 @@
     <string name="ai_writing_help">AI Writing Help</string>
     <string name="ai_writing_setting_title">Propose text improvements</string>
     <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
+    <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
+    <string name="tracked_broadcasts_setting_description">Use the tracked broadcaster when sending events. Shows live progress and per-relay status while broadcasting.</string>
     <string name="ai_writing_use_this">Use This</string>
     <string name="ai_writing_dismiss">Dismiss</string>
     <string name="ai_tone_correct">Correct</string>
@@ -2251,4 +2610,42 @@
     <string name="ai_tone_more_direct">More Direct</string>
     <string name="ai_tone_punchy">Punchy</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+
+    <!-- Emoji packs -->
+    <string name="emoji_packs_title">Emoji Packs</string>
+    <string name="emoji_pack_management_title">Add to Emoji List</string>
+    <string name="add_to_emoji_list">Add to my emoji list</string>
+    <string name="remove_from_emoji_list">Remove from my emoji list</string>
+    <string name="new_emoji_pack">New emoji pack</string>
+    <string name="edit_emoji_pack">Edit emoji pack</string>
+    <string name="emoji_shortcode_label">Shortcode (e.g. :smile:)</string>
+    <string name="emoji_shortcode_invalid">Only letters, numbers, hyphens, and underscores</string>
+    <string name="emoji_url_label">Image URL</string>
+    <string name="emoji_pack_address_label">Pack address (optional)</string>
+    <string name="emoji_pack_name_label">Pack name</string>
+    <string name="emoji_pack_description_label">Description (optional)</string>
+    <string name="emoji_pack_image_label">Cover image URL (optional)</string>
+    <string name="emoji_pack_upload_image_cta">Upload a cover image</string>
+    <string name="emoji_pack_upload_image_hint">Pick a square image to represent this emoji pack.</string>
+    <string name="no_emoji_packs">You don\'t have any emoji packs yet</string>
+    <string name="emoji_pack_count">%1$d emojis</string>
+    <string name="my_emoji_list_title">My Emoji List</string>
+    <string name="my_emoji_list_explainer">Emoji packs you\'ve added to your selection (NIP-51 kind 10030)</string>
+    <string name="my_emoji_list_empty">You haven\'t added any emoji packs to your list yet</string>
+    <string name="my_emoji_list_by_author">by %1$s</string>
+    <string name="add_emoji_fab">Add emoji</string>
+    <string name="emoji_add_dialog_title">Add custom emoji</string>
+    <string name="emoji_remove_dialog_title">Remove :%1$s:?</string>
+    <string name="emoji_long_press_hint">Long-press an emoji to remove it</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" is in your emoji list</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" is not in your emoji list</string>
+    <string name="emoji_pack_actions_dialog_title">Emoji pack actions</string>
+    <string name="manage_emoji_packs">My Emoji Packs</string>
+    <string name="emoji_sets">Emojis</string>
+    <string name="browse_emoji_sets">Browse Emoji Sets</string>
+    <string name="emoji_private_toggle">Private</string>
+    <string name="emoji_private_badge">Private emoji</string>
+    <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
+    <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
+    <string name="gif">Gif</string>
 </resources>

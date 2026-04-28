@@ -32,13 +32,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -327,6 +327,10 @@ fun ShortCommunityHeader(
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif =
+                    accountViewModel.settings.autoPlayVideosFlow
+                        .collectAsStateWithLifecycle()
+                        .value,
             )
         }
 
@@ -377,6 +381,10 @@ fun ShortCommunityHeaderNoActions(
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif =
+                    accountViewModel.settings.autoPlayVideosFlow
+                        .collectAsStateWithLifecycle()
+                        .value,
             )
         }
 
@@ -439,12 +447,31 @@ private fun LongCommunityActionOptions(
     nav: INav,
 ) {
     Row {
+        if (note.author?.pubkeyHex == accountViewModel.account.signer.pubKey) {
+            EditCommunityButton(note, nav)
+        }
         ShareCommunityButton(accountViewModel, note, nav)
         WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
             if (isFollowing) {
                 LeaveCommunityButton(accountViewModel, note, nav)
             }
         }
+    }
+}
+
+@Composable
+fun EditCommunityButton(
+    note: AddressableNote,
+    nav: INav,
+) {
+    FilledTonalIconButton(
+        onClick = { nav.nav(Route.EditCommunity(note.address)) },
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Edit,
+            modifier = Size18Modifier,
+            contentDescription = stringRes(R.string.edit_community),
+        )
     }
 }
 
@@ -522,7 +549,7 @@ fun ShareCommunityButton(
         },
     ) {
         Icon(
-            imageVector = Icons.Default.Share,
+            symbol = MaterialSymbols.Share,
             modifier = Size18Modifier,
             contentDescription = stringRes(R.string.quick_action_share),
         )

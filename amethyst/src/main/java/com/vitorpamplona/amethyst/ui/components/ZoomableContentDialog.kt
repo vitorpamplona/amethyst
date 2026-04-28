@@ -28,6 +28,9 @@ import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
@@ -45,26 +48,30 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -72,6 +79,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -94,6 +103,8 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
@@ -102,11 +113,62 @@ import net.engawapg.lib.zoomable.zoomable
 fun ZoomableImageDialog(
     imageUrl: BaseMediaContent,
     allImages: ImmutableList<BaseMediaContent> = listOf(imageUrl).toImmutableList(),
+    sourceBounds: Rect? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
+    // Animation progress: 0f = at source position/size, 1f = fullscreen.
+    val progress = remember { Animatable(0f) }
+    var isExiting by remember { mutableStateOf(false) }
+
+    // Natural layout bounds of the currently-visible image/video inside the dialog.
+    // Used as the "target" of the grow animation so the image itself — not the dialog
+    // viewport — aligns with the tapped thumbnail at progress = 0.
+    var imageBounds by remember { mutableStateOf<Rect?>(null) }
+
+    // Start the enter animation as soon as valid image bounds are available. Without
+    // this gate, the animation can begin before onGloballyPositioned has reported real
+    // bounds and the graphicsLayer falls back to its alpha-only branch.
+    LaunchedEffect(Unit) {
+        snapshotFlow { imageBounds }
+            .filter { it != null && it.width > 0f && it.height > 0f }
+            .first()
+        progress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        )
+    }
+
+    LaunchedEffect(isExiting) {
+        if (isExiting) {
+            progress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            )
+            onDismiss()
+        }
+    }
+
+    val dismissWithAnimation: () -> Unit = { if (!isExiting) isExiting = true }
+    val progressProvider: () -> Float = { progress.value }
+
+    // Accept the first set of valid bounds unconditionally. Subsequent updates are
+    // only accepted while the progress Animatable is idle, so a layout change
+    // mid-transition (e.g. an async image finishing loading, or a pager settling)
+    // can't re-target the transform and cause a hiccup.
+    val updateImageBounds: (Rect) -> Unit = { newBounds ->
+        if (newBounds.width > 0f && newBounds.height > 0f) {
+            val current = imageBounds
+            if (current == null) {
+                imageBounds = newBounds
+            } else if (!progress.isRunning && current != newBounds) {
+                imageBounds = newBounds
+            }
+        }
+    }
+
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismissWithAnimation,
         properties =
             DialogProperties(
                 usePlatformDefaultWidth = true,
@@ -123,11 +185,31 @@ fun ZoomableImageDialog(
             val attributes = WindowManager.LayoutParams()
             attributes.copyFrom(activityWindow.attributes)
             attributes.type = dialogWindow.attributes.type
+            // Disable the system dim so the thumbnail stays visible behind the growing dialog.
+            attributes.dimAmount = 0f
+            attributes.flags = attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND.inv()
             dialogWindow.attributes = attributes
         }
 
-        Surface(Modifier.fillMaxSize()) {
-            DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background surface that fades in as the content grows to fullscreen.
+            Surface(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = progressProvider() },
+            ) {}
+
+            DialogContent(
+                allImages = allImages,
+                imageUrl = imageUrl,
+                sourceBounds = sourceBounds,
+                imageBounds = imageBounds,
+                onImageBoundsChanged = updateImageBounds,
+                progress = progressProvider,
+                onDismiss = dismissWithAnimation,
+                accountViewModel = accountViewModel,
+            )
         }
     }
 }
@@ -137,6 +219,10 @@ fun ZoomableImageDialog(
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
+    sourceBounds: Rect?,
+    imageBounds: Rect?,
+    onImageBoundsChanged: (Rect) -> Unit,
+    progress: () -> Float,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
@@ -179,38 +265,79 @@ private fun DialogContent(
             ),
         Alignment.TopCenter,
     ) {
-        if (allImages.size > 1) {
-            SlidingCarousel(
-                pagerState = pagerState,
-            ) { index ->
-                allImages.getOrNull(index)?.let {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        RenderImageOrVideo(
-                            content = it,
-                            roundedCorner = false,
-                            isFiniteHeight = true,
-                            controllerVisible = controllerVisible,
-                            accountViewModel = accountViewModel,
-                        )
+        // Transformed image/video container. Only this layer scales & translates so the
+        // image aligns with the tapped thumbnail on enter/exit. Controls stay put.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val src = sourceBounds
+                        val img = imageBounds
+                        if (src != null && img != null &&
+                            src.width > 0f && src.height > 0f &&
+                            img.width > 0f && img.height > 0f
+                        ) {
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            // Uniform scale so non-square images keep their aspect ratio during
+                            // the grow animation. max() so the image covers the source rect in
+                            // at least one dimension; the other overflows centered on the tap.
+                            val startScale = maxOf(src.width / img.width, src.height / img.height)
+                            val srcCenter = src.center
+                            val imgCenter = img.center
+                            val p = progress()
+                            scaleX = lerp(startScale, 1f, p)
+                            scaleY = lerp(startScale, 1f, p)
+                            translationX = lerp(srcCenter.x - startScale * imgCenter.x, 0f, p)
+                            translationY = lerp(srcCenter.y - startScale * imgCenter.y, 0f, p)
+                        } else {
+                            // No source bounds: fall back to a plain fade.
+                            alpha = progress()
+                        }
+                    },
+        ) {
+            if (allImages.size > 1) {
+                SlidingCarousel(
+                    pagerState = pagerState,
+                ) { index ->
+                    allImages.getOrNull(index)?.let { pageContent ->
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            RenderImageOrVideo(
+                                content = pageContent,
+                                roundedCorner = false,
+                                isFiniteHeight = true,
+                                controllerVisible = controllerVisible,
+                                accountViewModel = accountViewModel,
+                                onContentBoundsChanged =
+                                    if (index == pagerState.currentPage) {
+                                        onImageBoundsChanged
+                                    } else {
+                                        null
+                                    },
+                            )
+                        }
                     }
                 }
-            }
-        } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RenderImageOrVideo(
-                    content = imageUrl,
-                    roundedCorner = false,
-                    isFiniteHeight = true,
-                    controllerVisible = controllerVisible,
-                    accountViewModel = accountViewModel,
-                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    RenderImageOrVideo(
+                        content = imageUrl,
+                        roundedCorner = false,
+                        isFiniteHeight = true,
+                        controllerVisible = controllerVisible,
+                        accountViewModel = accountViewModel,
+                        onContentBoundsChanged = onImageBoundsChanged,
+                    )
+                }
             }
         }
 
         AnimatedVisibility(
             visible = controllerVisible.value,
-            enter = remember { fadeIn() },
-            exit = remember { fadeOut() },
+            enter = fadeIn(),
+            exit = fadeOut(),
+            // Also fade with the grow animation so controls appear/disappear alongside it.
+            modifier = Modifier.graphicsLayer { alpha = progress().coerceIn(0f, 1f) },
         ) {
             Row(
                 modifier =
@@ -228,7 +355,7 @@ private fun DialogContent(
                     colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = stringRes(R.string.back),
                     )
                 }
@@ -243,7 +370,7 @@ private fun DialogContent(
                             colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Share,
+                                symbol = MaterialSymbols.Share,
                                 modifier = Size20Modifier,
                                 contentDescription = stringRes(R.string.quick_action_share),
                             )
@@ -298,7 +425,7 @@ private fun DialogContent(
                                 colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Download,
+                                    symbol = MaterialSymbols.Download,
                                     modifier = Size20Modifier,
                                     contentDescription = stringRes(R.string.download_to_phone),
                                 )
@@ -373,6 +500,7 @@ private fun RenderImageOrVideo(
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
+    onContentBoundsChanged: ((Rect) -> Unit)? = null,
 ) {
     val contentScale =
         if (isFiniteHeight) {
@@ -381,7 +509,16 @@ private fun RenderImageOrVideo(
             ContentScale.FillWidth
         }
 
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+    val rowModifier =
+        if (onContentBoundsChanged != null) {
+            Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { onContentBoundsChanged(it.boundsInWindow()) }
+        } else {
+            Modifier.fillMaxWidth()
+        }
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = rowModifier) {
         when (content) {
             is MediaUrlImage -> {
                 val mainModifier =
@@ -402,6 +539,7 @@ private fun RenderImageOrVideo(
                     controllerVisible = controllerVisible,
                     accountViewModel = accountViewModel,
                     alwayShowImage = true,
+                    fullResolution = true,
                 )
             }
 
@@ -435,6 +573,8 @@ private fun RenderImageOrVideo(
                         nostrUriCallback = content.uri,
                         automaticallyStartPlayback = true,
                         controllerVisible = controllerVisible,
+                        hasBlurhash = content.blurhash != null,
+                        isFullscreen = true,
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -459,6 +599,7 @@ private fun RenderImageOrVideo(
                     controllerVisible = controllerVisible,
                     accountViewModel = accountViewModel,
                     alwayShowImage = true,
+                    fullResolution = true,
                 )
             }
 
@@ -493,6 +634,8 @@ private fun RenderImageOrVideo(
                             nostrUriCallback = content.uri,
                             automaticallyStartPlayback = true,
                             controllerVisible = controllerVisible,
+                            hasBlurhash = content.blurhash != null,
+                            isFullscreen = true,
                             accountViewModel = accountViewModel,
                         )
                     }

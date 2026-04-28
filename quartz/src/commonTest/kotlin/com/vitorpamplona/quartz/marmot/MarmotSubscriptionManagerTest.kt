@@ -105,15 +105,16 @@ class MarmotSubscriptionManagerTest {
         }
 
     @Test
-    fun testGiftWrapFilter() {
-        val manager = MarmotSubscriptionManager(userPubKey)
-        val filter = manager.giftWrapFilter()
+    fun testGiftWrapFilter() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
+            val filter = manager.giftWrapFilter()
 
-        assertEquals(listOf(GiftWrapEvent.KIND), filter.kinds)
-        assertNotNull(filter.tags)
-        assertEquals(listOf(userPubKey), filter.tags["p"])
-        assertNull(filter.since)
-    }
+            assertEquals(listOf(GiftWrapEvent.KIND), filter.kinds)
+            assertNotNull(filter.tags)
+            assertEquals(listOf(userPubKey), filter.tags["p"])
+            assertNull(filter.since)
+        }
 
     @Test
     fun testGiftWrapFilterWithSince() =
@@ -154,14 +155,15 @@ class MarmotSubscriptionManagerTest {
         }
 
     @Test
-    fun testBuildFiltersWithNoGroupsHasGiftWrapAndKeyPackage() {
-        val manager = MarmotSubscriptionManager(userPubKey)
-        val allFilters = manager.buildFilters()
+    fun testBuildFiltersWithNoGroupsHasGiftWrapAndKeyPackage() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
+            val allFilters = manager.buildFilters()
 
-        // Gift wrap filter + own key package filter
-        assertEquals(2, allFilters.size)
-        assertEquals(listOf(GiftWrapEvent.KIND), allFilters[0].kinds)
-    }
+            // Gift wrap filter + own key package filter
+            assertEquals(2, allFilters.size)
+            assertEquals(listOf(GiftWrapEvent.KIND), allFilters[0].kinds)
+        }
 
     @Test
     fun testKeyPackageFilter() {

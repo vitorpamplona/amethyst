@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -38,17 +40,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -84,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.chess.PublicGame
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -184,42 +179,49 @@ fun ChessScreen(
     var showNewGameDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
+        // Header — Messages-style: compact row, titleMedium title, icon-only actions
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selectedGameId != null) {
-                    IconButton(onClick = { viewModel.selectGame(null) }) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, "Back to list")
+                    IconButton(onClick = { viewModel.selectGame(null) }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            MaterialSymbols.AutoMirrored.ArrowBack,
+                            contentDescription = "Back to list",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(
                     if (selectedGameId != null) "Live Game" else "Chess",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             }
 
             if (selectedGameId == null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Refresh button
-                    IconButton(onClick = { viewModel.forceRefresh() }) {
-                        Icon(Icons.Default.Refresh, "Refresh")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { viewModel.forceRefresh() }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            MaterialSymbols.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
-
-                    // New Game button
                     if (!account.isReadOnly) {
-                        Button(onClick = { showNewGameDialog = true }) {
-                            Icon(Icons.Default.Add, "New Game")
-                            Spacer(Modifier.width(8.dp))
-                            Text("New Game")
+                        IconButton(onClick = { showNewGameDialog = true }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                MaterialSymbols.Add,
+                                contentDescription = "New Game",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     }
                 }
@@ -414,6 +416,7 @@ private fun ChessLobby(
 
     LazyColumn(
         state = listState,
+        contentPadding = PaddingValues(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Active games section (user is participant)
@@ -728,9 +731,9 @@ private fun DesktopChessGameLayout(
                 ) {
                     Icon(
                         if (showInfoPanel) {
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight
+                            MaterialSymbols.AutoMirrored.KeyboardArrowRight
                         } else {
-                            Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                            MaterialSymbols.AutoMirrored.KeyboardArrowLeft
                         },
                         contentDescription = if (showInfoPanel) "Hide info panel" else "Show info panel",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -907,7 +910,7 @@ private fun DesktopChessGameLayout(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    Icon(Icons.Default.Visibility, contentDescription = null)
+                                    Icon(MaterialSymbols.Visibility, contentDescription = null)
                                     Text(
                                         "Watching game - spectator mode",
                                         style = MaterialTheme.typography.bodyMedium,

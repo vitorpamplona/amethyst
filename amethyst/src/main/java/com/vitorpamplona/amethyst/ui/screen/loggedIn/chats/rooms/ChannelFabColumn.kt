@@ -31,10 +31,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +45,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route.NewGroupDM
@@ -106,7 +105,7 @@ fun ChannelFabColumn(nav: INav) {
 
                 FloatingActionButton(
                     onClick = {
-                        nav.nav(Route.MarmotGroupList)
+                        nav.nav(Route.CreateMarmotGroup)
                         isOpen = false
                     },
                     modifier = Size55Modifier,
@@ -114,7 +113,7 @@ fun ChannelFabColumn(nav: INav) {
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Text(
-                        text = "MLS\nGroups",
+                        text = stringRes(R.string.messages_create_group),
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         fontSize = Font12SP,
@@ -136,7 +135,7 @@ fun ChannelFabColumn(nav: INav) {
             containerColor = MaterialTheme.colorScheme.primary,
         ) {
             Icon(
-                imageVector = Icons.Outlined.Add,
+                symbol = MaterialSymbols.Add,
                 contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
                 modifier =
                     Modifier.size(26.dp).graphicsLayer {

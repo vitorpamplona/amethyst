@@ -45,8 +45,11 @@ enum class ProposalType(
     EXTERNAL_INIT(6),
     GROUP_CONTEXT_EXTENSIONS(7),
 
-    // Marmot custom proposal types (private-use range 0xF000-0xFFFF)
-    SELF_REMOVE(0xF001),
+    // SelfRemove is standardized in MLS Extensions draft-ietf-mls-extensions
+    // as IANA proposal type 0x000A, NOT a Marmot private-use value.
+    // openmls / mdk encode it as 0x000A on the wire; quartz was writing
+    // 0xF001, which strict receivers reject as "Unknown ProposalType".
+    SELF_REMOVE(0x000A),
     ;
 
     companion object {

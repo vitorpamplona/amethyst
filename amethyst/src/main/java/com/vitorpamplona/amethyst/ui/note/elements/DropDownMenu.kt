@@ -21,23 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.elements
 
 import android.content.Intent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.BookmarkAdd
-import androidx.compose.material.icons.outlined.BookmarkRemove
-import androidx.compose.material.icons.outlined.CellTower
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.LockOpen
-import androidx.compose.material.icons.outlined.PersonAdd
-import androidx.compose.material.icons.outlined.PersonRemove
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Report
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
@@ -50,6 +33,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
@@ -69,8 +53,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -114,6 +100,7 @@ data class DropDownParams(
     val isLoggedUser: Boolean,
     val isSensitive: Boolean,
     val showSensitiveContent: Boolean?,
+    val isEmojiPackInMyList: Boolean = false,
 )
 
 @Composable
@@ -173,19 +160,19 @@ fun NoteDropDownMenu(
         // Follow section
         M3ActionSection {
             if (!state.isFollowingAuthor) {
-                M3ActionRow(icon = Icons.Outlined.PersonAdd, text = stringRes(R.string.follow)) {
+                M3ActionRow(icon = MaterialSymbols.PersonAdd, text = stringRes(R.string.follow)) {
                     val author = note.author ?: return@M3ActionRow
                     accountViewModel.follow(author)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.PersonRemove, text = stringRes(R.string.unfollow)) {
+                M3ActionRow(icon = MaterialSymbols.PersonRemove, text = stringRes(R.string.unfollow)) {
                     val author = note.author ?: return@M3ActionRow
                     accountViewModel.unfollow(author)
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = Icons.AutoMirrored.Outlined.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
+            M3ActionRow(icon = MaterialSymbols.AutoMirrored.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
                 val authorHexKey = note.author?.pubkeyHex ?: return@M3ActionRow
                 nav.nav(Route.PeopleListManagement(authorHexKey))
                 onDismiss()
@@ -194,7 +181,7 @@ fun NoteDropDownMenu(
 
         // Copy & Share section
         M3ActionSection {
-            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_text)) {
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
                 accountViewModel.decrypt(lastNoteVersion) {
                     scope.launch {
@@ -203,7 +190,7 @@ fun NoteDropDownMenu(
                 }
                 onDismiss()
             }
-            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
                 note.author?.let {
                     scope.launch(Dispatchers.IO) {
                         clipboardManager.setText("nostr:${it.pubkeyNpub()}")
@@ -211,13 +198,13 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_note_id)) {
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_note_id)) {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(note.toNostrUri())
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.quick_action_share)) {
+            M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
                 val sendIntent =
                     Intent().apply {
                         action = Intent.ACTION_SEND
@@ -234,28 +221,28 @@ fun NoteDropDownMenu(
         // Edit & Broadcast section
         M3ActionSection {
             if (state.isLoggedUser && note.isDraft()) {
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_draft)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_draft)) {
                     nav.nav { routeEditDraftTo(note, accountViewModel.account) }
                 }
             }
             if (!note.isDraft()) {
                 if (note.event is TextNoteEvent) {
                     if (state.isLoggedUser) {
-                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_post)) {
+                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_post)) {
                             wantsToEditPost.value = true
                         }
                     } else {
-                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.propose_an_edit)) {
+                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.propose_an_edit)) {
                             wantsToEditPost.value = true
                         }
                     }
                 } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
-                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_article)) {
+                    M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_article)) {
                         nav.nav { Route.NewLongFormPost(version = note.idHex) }
                     }
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.CellTower, text = stringRes(R.string.broadcast)) {
+            M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
                 accountViewModel.broadcast(note)
                 onDismiss()
             }
@@ -264,53 +251,68 @@ fun NoteDropDownMenu(
         // Timestamp & Bookmarks section
         M3ActionSection {
             if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
+                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringRes(R.string.timestamp_it)) {
+                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_it)) {
                     accountViewModel.timestamp(note)
                     onDismiss()
                 }
             }
             if (state.isLoggedUser) {
                 if (state.isPinnedNote) {
-                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.unpin_from_profile)) {
+                    M3ActionRow(icon = MaterialSymbols.PushPin, text = stringRes(R.string.unpin_from_profile)) {
                         accountViewModel.removePin(note)
                         onDismiss()
                     }
                 } else {
-                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.pin_to_profile)) {
+                    M3ActionRow(icon = MaterialSymbols.PushPin, text = stringRes(R.string.pin_to_profile)) {
                         accountViewModel.addPin(note)
                         onDismiss()
                     }
                 }
             }
-            val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-            M3ActionRow(icon = Icons.Outlined.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
-                if (note.event is LongTextNoteEvent) {
-                    nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
-                } else {
-                    nav.nav(Route.PostBookmarkManagement(note.idHex))
+            // Emoji packs belong in the user's emoji list (kind 10030), not the bookmark list.
+            if (note.event is EmojiPackEvent) {
+                val emojiText =
+                    if (state.isEmojiPackInMyList) {
+                        stringRes(R.string.remove_from_emoji_list)
+                    } else {
+                        stringRes(R.string.add_to_emoji_list)
+                    }
+                M3ActionRow(icon = MaterialSymbols.EmojiEmotions, text = emojiText) {
+                    val address = (note as AddressableNote).address
+                    nav.nav(Route.EmojiPackSelection(kind = EmojiPackEvent.KIND, pubKeyHex = address.pubKeyHex, dTag = address.dTag))
+                    onDismiss()
                 }
-                onDismiss()
+            } else {
+                val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
+                M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
+                    if (note.event is LongTextNoteEvent) {
+                        nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
+                    } else {
+                        nav.nav(Route.PostBookmarkManagement(note.idHex))
+                    }
+                    onDismiss()
+                }
             }
             if (state.isPrivateBookmarkNote) {
-                M3ActionRow(icon = Icons.Outlined.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
+                M3ActionRow(icon = MaterialSymbols.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
                     accountViewModel.removePrivateBookmark(note)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Lock, text = stringRes(R.string.add_to_private_bookmarks)) {
+                M3ActionRow(icon = MaterialSymbols.Lock, text = stringRes(R.string.add_to_private_bookmarks)) {
                     accountViewModel.addPrivateBookmark(note)
                     onDismiss()
                 }
             }
             if (state.isPublicBookmarkNote) {
-                M3ActionRow(icon = Icons.Outlined.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
+                M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
                     accountViewModel.removePublicBookmark(note)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
+                M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
                     accountViewModel.addPublicBookmark(note)
                     onDismiss()
                 }
@@ -320,12 +322,12 @@ fun NoteDropDownMenu(
         // Moderation section
         M3ActionSection {
             if (state.isLoggedUser) {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.block_report), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.block_report), isDestructive = true) {
                     reportDialogShowing = true
                 }
             }
@@ -345,12 +347,20 @@ fun observeBookmarksFollowsAndAccount(
     note: Note,
     accountViewModel: AccountViewModel,
 ) = remember(note) {
+    val noteIdForEmoji = if (note.event is EmojiPackEvent) note.idHex else null
     combine(
         accountViewModel.account.kind3FollowList.flow,
         accountViewModel.account.bookmarkState.bookmarks,
         accountViewModel.account.pinState.pinnedEventIdSet,
         accountViewModel.showSensitiveContent(),
-    ) { follows, bookmarks, pinnedIds, showSensitiveContent ->
+        accountViewModel.account.emoji.getEmojiPackSelectionFlow(),
+    ) { follows, bookmarks, pinnedIds, showSensitiveContent, emojiSelectionState ->
+        val isEmojiPackInMyList =
+            if (noteIdForEmoji != null) {
+                emojiSelectionState.note.event?.isTaggedAddressableNote(noteIdForEmoji) == true
+            } else {
+                false
+            }
         DropDownParams(
             isFollowingAuthor = note.author?.pubkeyHex in follows.authors,
             isPrivateBookmarkNote = note in bookmarks.private,
@@ -359,6 +369,7 @@ fun observeBookmarksFollowsAndAccount(
             isLoggedUser = accountViewModel.isLoggedUser(note.author),
             isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
             showSensitiveContent = showSensitiveContent,
+            isEmojiPackInMyList = isEmojiPackInMyList,
         )
     }.onStart {
         emit(
@@ -370,6 +381,12 @@ fun observeBookmarksFollowsAndAccount(
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
                 showSensitiveContent = accountViewModel.showSensitiveContent().value,
+                isEmojiPackInMyList =
+                    noteIdForEmoji?.let {
+                        accountViewModel.account.emoji
+                            .getEmojiPackSelection()
+                            ?.isTaggedAddressableNote(it) == true
+                    } ?: false,
             ),
         )
     }.flowOn(Dispatchers.IO)

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -56,24 +57,26 @@ class LargeDBTests {
     }
 
     @Test
-    fun insertHeavyEvent() {
-        events.first { it.id == "3f34b8cb682307ec11753de4669ce8948e95fd6fb360d79136446c5547fd235e" }.let { event ->
-            try {
-                db.insert(event)
-            } catch (e: SQLiteException) {
-                Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+    fun insertHeavyEvent() =
+        runBlocking {
+            events.first { it.id == "3f34b8cb682307ec11753de4669ce8948e95fd6fb360d79136446c5547fd235e" }.let { event ->
+                try {
+                    db.insert(event)
+                } catch (e: SQLiteException) {
+                    Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+                }
             }
         }
-    }
 
     @Test
-    fun insertDatabase() {
-        events.forEach { event ->
-            try {
-                db.insert(event)
-            } catch (e: SQLiteException) {
-                Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+    fun insertDatabase() =
+        runBlocking {
+            events.forEach { event ->
+                try {
+                    db.insert(event)
+                } catch (e: SQLiteException) {
+                    Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+                }
             }
         }
-    }
 }

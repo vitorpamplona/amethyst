@@ -23,20 +23,24 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -44,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 @Composable
 fun ListOfBookmarkGroupsScreen(
@@ -53,9 +58,11 @@ fun ListOfBookmarkGroupsScreen(
     ListOfBookmarkGroupsFeed(
         defaultBookmarks = accountViewModel.account.bookmarkState,
         oldBookmarks = accountViewModel.account.oldBookmarkState,
+        pinnedNotes = accountViewModel.account.pinState,
         listSource = accountViewModel.account.labeledBookmarkLists.listFeedFlow,
         openDefaultBookmarks = { nav.nav(Route.Bookmarks) },
         openOldBookmarks = { nav.nav(Route.OldBookmarks) },
+        openPinnedNotes = { nav.nav(Route.PinnedNotes) },
         addBookmarkGroup = { nav.nav(Route.BookmarkGroupMetadataEdit()) },
         openBookmarkGroup = { identifier, bookmarkType ->
             nav.nav(Route.BookmarkGroupView(identifier, bookmarkType))
@@ -84,7 +91,8 @@ fun ListOfBookmarkGroupsScreen(
                 )
             }
         },
-        nav,
+        accountViewModel = accountViewModel,
+        nav = nav,
     )
 }
 
@@ -92,23 +100,41 @@ fun ListOfBookmarkGroupsScreen(
 fun ListOfBookmarkGroupsFeed(
     defaultBookmarks: BookmarkListState,
     oldBookmarks: OldBookmarkListState,
+    pinnedNotes: PinListState,
     listSource: StateFlow<List<LabeledBookmarkList>>,
     openDefaultBookmarks: () -> Unit,
     openOldBookmarks: () -> Unit,
+    openPinnedNotes: () -> Unit,
     addBookmarkGroup: () -> Unit,
     openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
     renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
     changeBookmarkGroupDescription: (bookmarkGroup: LabeledBookmarkList) -> Unit,
     cloneBookmarkGroup: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,
     deleteBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav)
+        },
+        bottomBar = {
+            AppBottomBar(Route.BookmarkGroups, nav, accountViewModel) { route ->
+                if (route == Route.BookmarkGroups) {
+                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
         },
         floatingActionButton = {
-            BookmarkGroupFab(onAddGroup = addBookmarkGroup)
+            BookmarkGroupFab(
+                onAddGroup = addBookmarkGroup,
+                modifier = Modifier.fabBottomBarPadding(nav),
+            )
         },
     ) { paddingValues ->
         Column(
@@ -121,33 +147,40 @@ fun ListOfBookmarkGroupsFeed(
             ListOfBookmarkGroupsFeedView(
                 defaultBookmarks = defaultBookmarks,
                 oldBookmarks = oldBookmarks,
+                pinnedNotes = pinnedNotes,
                 groupListFeedSource = listSource,
                 openDefaultBookmarks = openDefaultBookmarks,
                 openOldBookmarks = openOldBookmarks,
+                openPinnedNotes = openPinnedNotes,
                 onOpenItem = openBookmarkGroup,
                 onRenameItem = renameBookmarkGroup,
                 onItemDescriptionChange = changeBookmarkGroupDescription,
                 onItemClone = cloneBookmarkGroup,
                 onDeleteItem = deleteBookmarkGroup,
+                listState = listState,
             )
         }
     }
 }
 
 @Composable
-fun BookmarkGroupFab(onAddGroup: () -> Unit) {
+fun BookmarkGroupFab(
+    onAddGroup: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     ExtendedFloatingActionButton(
         text = {
             Text(text = stringRes(R.string.follow_set_create_btn_label))
         },
         icon = {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                symbol = MaterialSymbols.AutoMirrored.PlaylistAdd,
                 contentDescription = null,
             )
         },
         onClick = onAddGroup,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
+        modifier = modifier,
     )
 }

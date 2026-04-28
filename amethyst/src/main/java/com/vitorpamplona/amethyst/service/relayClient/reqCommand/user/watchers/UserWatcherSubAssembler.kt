@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
-import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState

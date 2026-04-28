@@ -33,16 +33,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -69,6 +63,8 @@ import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.LiveChessGameScreen
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -190,7 +186,7 @@ fun ChessGameScreen(
                     navigationIcon = {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                                 contentDescription = stringRes(R.string.back),
                             )
                         }
@@ -198,7 +194,7 @@ fun ChessGameScreen(
                     actions = {
                         IconButton(onClick = { showRelaySettings = true }) {
                             Icon(
-                                imageVector = Icons.Default.Settings,
+                                symbol = MaterialSymbols.Settings,
                                 contentDescription = stringRes(R.string.relay_settings),
                             )
                         }
@@ -290,7 +286,7 @@ fun ChessGameScreen(
                         nav.popBack()
                     }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = stringRes(R.string.back),
                             modifier = Modifier.padding(end = 8.dp),
                         )
@@ -471,7 +467,7 @@ private fun RelayItem(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
-            imageVector = if (isConnected) Icons.Default.CheckCircle else Icons.Default.Circle,
+            symbol = if (isConnected) MaterialSymbols.CheckCircle else MaterialSymbols.Circle,
             contentDescription = if (isConnected) "Connected" else "Disconnected",
             tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             modifier = Modifier.size(16.dp),

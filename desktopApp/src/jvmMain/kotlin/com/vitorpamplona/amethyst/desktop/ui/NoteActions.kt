@@ -29,10 +29,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.icons.BookmarkFilled
 import com.vitorpamplona.amethyst.commons.icons.Reply
 import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip51Bookmarks.BookmarkAction
@@ -67,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.nip57Zaps.ZapAction
 import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -84,10 +83,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 private val ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
@@ -553,7 +550,7 @@ fun NoteActionsRow(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    if (isLiked) MaterialSymbols.Favorite else MaterialSymbols.FavoriteBorder,
                     contentDescription = if (isLiked) "Unlike" else "Like",
                     tint =
                         if (isLiked) {
@@ -732,7 +729,7 @@ fun NoteActionsRow(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    Icons.Default.MoreVert,
+                    MaterialSymbols.MoreVert,
                     contentDescription = "More options",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
@@ -936,12 +933,7 @@ private suspend fun zapNote(
         }
 
         // Create HTTP client and resolver
-        val httpClient =
-            OkHttpClient
-                .Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .build()
+        val httpClient = DesktopHttpClient.currentClient()
         val resolver = LightningAddressResolver(httpClient)
 
         // Get relay URLs for zap request

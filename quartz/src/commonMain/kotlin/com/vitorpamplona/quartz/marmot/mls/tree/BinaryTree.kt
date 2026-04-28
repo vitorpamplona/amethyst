@@ -88,34 +88,40 @@ object BinaryTree {
     /**
      * Parent of a node in a tree with [nodeCount] total nodes.
      * Uses the left-balanced tree parent formula per RFC 9420 Appendix C.
+     *
+     * The root and any index ≥ [nodeCount] have no defined parent — the
+     * left-balanced formula keeps walking up through virtual parents that
+     * never come back into range, integer-overflows after ~31 doublings,
+     * and either returns garbage or OOMs the call site that's storing the
+     * result. Both modes are signs of a tree-accounting bug upstream
+     * (e.g., calling directPath with a leafIndex past the post-Remove
+     * leafCount); fail loudly here so callers can't silently corrupt
+     * the rest of the commit-processing pipeline.
      */
     fun parent(
         nodeIndex: Int,
         nodeCount: Int,
     ): Int {
-        // For left-balanced trees with non-power-of-2 leaves,
-        // the parent might be beyond nodeCount. In that case,
-        // the node's parent is the next valid ancestor.
-        val k = level(nodeIndex)
-        val b = (nodeIndex shr (k + 1)) and 1
-        val p =
-            if (b == 0) {
-                nodeIndex + (1 shl k)
-            } else {
-                nodeIndex - (1 shl k)
-            }
-
-        return if (p < nodeCount) {
-            p
-        } else {
-            // Parent is out of range. This node is at the rightmost
-            // edge of a non-full tree. Walk up through virtual parents
-            // until we find one within range.
-            parentInRange(p, nodeCount)
+        require(nodeCount > 0) { "nodeCount must be positive, got $nodeCount" }
+        require(nodeIndex in 0 until nodeCount) {
+            "nodeIndex $nodeIndex out of range [0, $nodeCount)"
         }
+        // The structural root of a left-balanced tree with `leafCount`
+        // leaves sits at (1 << ceil(log2(leafCount))) - 1, derivable from
+        // nodeCount via leafCount = (nodeCount + 1) / 2.
+        val leafCount = (nodeCount + 1) / 2
+        require(nodeIndex != root(leafCount)) {
+            "nodeIndex $nodeIndex is the root of a $leafCount-leaf tree and has no parent"
+        }
+        return parentRec(nodeIndex, nodeCount)
     }
 
-    private fun parentInRange(
+    /**
+     * Inner walker that assumes [nodeIndex] has at least one valid parent
+     * within [nodeCount]. Public callers go through [parent] which performs
+     * the bounds check above.
+     */
+    private fun parentRec(
         nodeIndex: Int,
         nodeCount: Int,
     ): Int {
@@ -127,7 +133,7 @@ object BinaryTree {
             } else {
                 nodeIndex - (1 shl k)
             }
-        return if (p < nodeCount) p else parentInRange(p, nodeCount)
+        return if (p < nodeCount) p else parentRec(p, nodeCount)
     }
 
     /** Root node index for a tree with [leafCount] leaves */
@@ -141,11 +147,20 @@ object BinaryTree {
     /**
      * Direct path from a leaf to the root (excluding the leaf itself).
      * These are the parent nodes along the path from leaf to root.
+     *
+     * [leafIndex] must be in `[0, leafCount)`. Calling with `leafIndex >=
+     * leafCount` is an upstream bug — most often a stale local index that
+     * was valid before the tree shrank under a Remove proposal — and used
+     * to OOM here because `parent()` would loop on the out-of-range start.
      */
     fun directPath(
         leafIndex: Int,
         leafCount: Int,
     ): List<Int> {
+        require(leafCount > 0) { "leafCount must be positive, got $leafCount" }
+        require(leafIndex in 0 until leafCount) {
+            "leafIndex $leafIndex out of range [0, $leafCount)"
+        }
         val nodeIdx = leafToNode(leafIndex)
         val n = nodeCount(leafCount)
         val rootIdx = root(leafCount)
@@ -162,11 +177,18 @@ object BinaryTree {
     /**
      * Copath of a leaf: the siblings of each node on the direct path.
      * The copath determines which nodes need to receive encrypted path secrets.
+     *
+     * Same range contract as [directPath]: `leafIndex` must be in
+     * `[0, leafCount)`.
      */
     fun copath(
         leafIndex: Int,
         leafCount: Int,
     ): List<Int> {
+        require(leafCount > 0) { "leafCount must be positive, got $leafCount" }
+        require(leafIndex in 0 until leafCount) {
+            "leafIndex $leafIndex out of range [0, $leafCount)"
+        }
         val nodeIdx = leafToNode(leafIndex)
         val n = nodeCount(leafCount)
         val rootIdx = root(leafCount)

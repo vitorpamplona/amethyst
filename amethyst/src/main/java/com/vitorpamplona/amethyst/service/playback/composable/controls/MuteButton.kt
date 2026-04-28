@@ -27,10 +27,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -43,15 +39,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -81,11 +77,12 @@ fun MuteButton(
             )
         }
 
+    // LaunchedEffect already runs on Main, and delay() suspends without holding a thread, so
+    // the previous launch(Dispatchers.IO) was just unnecessary dispatcher hopping for a state
+    // mutation that's also fine on Main.
     LaunchedEffect(key1 = controllerVisible) {
-        launch(Dispatchers.IO) {
-            delay(2000)
-            holdOn.value = false
-        }
+        delay(2000)
+        holdOn.value = false
     }
 
     val mutedInstance = remember(startingMuteState) { mutableStateOf(startingMuteState) }
@@ -125,7 +122,7 @@ fun MuteButton(
 @Composable
 fun MutedIcon() {
     Icon(
-        imageVector = Icons.AutoMirrored.Filled.VolumeOff,
+        symbol = MaterialSymbols.AutoMirrored.VolumeOff,
         contentDescription = stringRes(id = R.string.muted_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
@@ -135,7 +132,7 @@ fun MutedIcon() {
 @Composable
 fun MuteIcon() {
     Icon(
-        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+        symbol = MaterialSymbols.AutoMirrored.VolumeUp,
         contentDescription = stringRes(id = R.string.mute_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,

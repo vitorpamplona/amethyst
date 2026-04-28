@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.marmot.mls.framing
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.messages.Commit
+import com.vitorpamplona.quartz.marmot.mls.messages.Proposal
 
 /**
  * MLS MLSMessage (RFC 9420 Section 6).
@@ -161,7 +163,17 @@ data class PublicMessage(
         encodeSender(writer, sender)
         writer.putOpaqueVarInt(authenticatedData)
         writer.putUint8(contentType.value)
-        writer.putBytes(content)
+
+        // RFC 9420 §6 FramedContent.content is a type-dependent body:
+        //   case application: opaque application_data<V>
+        //   case proposal:    Proposal proposal (struct, no outer length prefix)
+        //   case commit:      Commit commit       (struct, no outer length prefix)
+        // `content` holds the already-serialized body for proposal/commit, and
+        // the raw application bytes for application.
+        when (contentType) {
+            ContentType.APPLICATION -> writer.putOpaqueVarInt(content)
+            ContentType.PROPOSAL, ContentType.COMMIT -> writer.putBytes(content)
+        }
 
         // FramedContentAuthData
         writer.putOpaqueVarInt(signature)
@@ -184,16 +196,43 @@ data class PublicMessage(
     override fun hashCode(): Int = groupId.contentHashCode()
 
     companion object {
+        /** Same DoS cap that PrivateMessage applies to its AAD field. */
+        const val MAX_AUTHENTICATED_DATA_BYTES = 1 shl 16 // 64 KiB
+
         fun decodeTls(reader: TlsReader): PublicMessage {
             val groupId = reader.readOpaqueVarInt()
             val epoch = reader.readUint64()
             val sender = decodeSender(reader)
             val authenticatedData = reader.readOpaqueVarInt()
+            require(authenticatedData.size <= MAX_AUTHENTICATED_DATA_BYTES) {
+                "PublicMessage authenticated_data too large: ${authenticatedData.size} > $MAX_AUTHENTICATED_DATA_BYTES"
+            }
             val contentType = ContentType.fromValue(reader.readUint8())
 
-            // Content is variable based on content_type, read remaining content
-            // For now, read as opaque
-            val content = reader.readOpaqueVarInt()
+            // RFC 9420 §6 FramedContent.content body varies by content_type.
+            // For PROPOSAL/COMMIT we decode the inner struct to advance the reader
+            // and then re-serialize back to bytes so the invariant
+            // "content holds the serialized body" holds for all variants.
+            val content: ByteArray =
+                when (contentType) {
+                    ContentType.APPLICATION -> {
+                        reader.readOpaqueVarInt()
+                    }
+
+                    ContentType.PROPOSAL -> {
+                        val proposal = Proposal.decodeTls(reader)
+                        val w = TlsWriter()
+                        proposal.encodeTls(w)
+                        w.toByteArray()
+                    }
+
+                    ContentType.COMMIT -> {
+                        val commit = Commit.decodeTls(reader)
+                        val w = TlsWriter()
+                        commit.encodeTls(w)
+                        w.toByteArray()
+                    }
+                }
             val signature = reader.readOpaqueVarInt()
 
             val confirmationTag =
@@ -256,15 +295,47 @@ data class PrivateMessage(
     override fun hashCode(): Int = groupId.contentHashCode()
 
     companion object {
-        fun decodeTls(reader: TlsReader): PrivateMessage =
-            PrivateMessage(
-                groupId = reader.readOpaqueVarInt(),
-                epoch = reader.readUint64(),
-                contentType = ContentType.fromValue(reader.readUint8()),
-                authenticatedData = reader.readOpaqueVarInt(),
-                encryptedSenderData = reader.readOpaqueVarInt(),
-                ciphertext = reader.readOpaqueVarInt(),
+        /**
+         * Per-field DoS cap for `authenticated_data` and
+         * `encrypted_sender_data`. The underlying [TlsReader] already
+         * refuses any opaque<V> field larger than 1 MiB (its global
+         * `MAX_OPAQUE_SIZE`), but those fields shouldn't carry anything
+         * close to that — `encrypted_sender_data` is always exactly the
+         * sender-data AEAD ciphertext (a couple hundred bytes), and
+         * Marmot doesn't put anything in `authenticated_data` today.
+         * Tightening to 64 KiB makes the per-frame memory floor
+         * predictable and turns "we'd allocate up to 3 MiB on every
+         * inbound packet that escapes verification" into "we'll
+         * allocate at most ~1 MiB even before AEAD."
+         */
+        const val MAX_AAD_BYTES = 1 shl 16 // 64 KiB
+
+        fun decodeTls(reader: TlsReader): PrivateMessage {
+            val groupId = reader.readOpaqueVarInt()
+            val epoch = reader.readUint64()
+            val contentType = ContentType.fromValue(reader.readUint8())
+            val authenticatedData = reader.readOpaqueVarInt()
+            require(authenticatedData.size <= MAX_AAD_BYTES) {
+                "PrivateMessage authenticated_data too large: ${authenticatedData.size} > $MAX_AAD_BYTES"
+            }
+            val encryptedSenderData = reader.readOpaqueVarInt()
+            require(encryptedSenderData.size <= MAX_AAD_BYTES) {
+                "PrivateMessage encrypted_sender_data too large: ${encryptedSenderData.size} > $MAX_AAD_BYTES"
+            }
+            // `ciphertext` size is bounded by [TlsReader.MAX_OPAQUE_SIZE]
+            // (1 MiB) — which dominates any peer-side practical limit
+            // (Marmot kind:445 events ride a Nostr relay's per-event
+            // ceiling, typically 64 KiB). No tighter cap needed here.
+            val ciphertext = reader.readOpaqueVarInt()
+            return PrivateMessage(
+                groupId = groupId,
+                epoch = epoch,
+                contentType = contentType,
+                authenticatedData = authenticatedData,
+                encryptedSenderData = encryptedSenderData,
+                ciphertext = ciphertext,
             )
+        }
     }
 }
 

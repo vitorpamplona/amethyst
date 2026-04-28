@@ -221,13 +221,7 @@ class DeckState(
                         "id" to col.id,
                         "type" to col.type.typeKey(),
                         "width" to col.width,
-                        "param" to
-                            when (col.type) {
-                                is DeckColumnType.Profile -> col.type.pubKeyHex
-                                is DeckColumnType.Thread -> col.type.noteId
-                                is DeckColumnType.Hashtag -> col.type.tag
-                                else -> null
-                            },
+                        "param" to col.type.param(),
                     )
                 }
             DesktopPreferences.deckColumns = mapper.writeValueAsString(data)
@@ -256,6 +250,20 @@ class DeckState(
         }
     }
 
+    fun loadFromWorkspace(workspaceColumns: List<Workspace.WorkspaceColumn>) {
+        val loaded =
+            workspaceColumns.mapNotNull { col ->
+                val entry = mapOf("type" to col.typeKey, "param" to col.param)
+                val type = parseColumnType(entry) ?: return@mapNotNull null
+                DeckColumn(
+                    type = type,
+                    width = col.width.coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH),
+                )
+            }
+        _columns.value = loaded.ifEmpty { DEFAULT_COLUMNS }
+        _focusedColumnIndex.value = 0
+    }
+
     companion object {
         const val MIN_COLUMN_WIDTH = 300f
         const val MAX_COLUMN_WIDTH = 800f
@@ -271,6 +279,11 @@ class DeckState(
 
         private val mapper = jacksonObjectMapper()
 
+        fun parseColumnTypeFromKey(
+            typeKey: String,
+            param: String? = null,
+        ): DeckColumnType? = parseColumnType(mapOf("type" to typeKey, "param" to param))
+
         private fun parseColumnType(entry: Map<String, Any?>): DeckColumnType? {
             val typeKey = entry["type"] as? String ?: return null
             val param = entry["param"] as? String
@@ -285,6 +298,11 @@ class DeckState(
                 "my_profile" -> DeckColumnType.MyProfile
                 "chess" -> DeckColumnType.Chess
                 "settings" -> DeckColumnType.Settings
+                "relays" -> DeckColumnType.Relays
+                "drafts" -> DeckColumnType.Drafts
+                "highlights" -> DeckColumnType.MyHighlights
+                "editor" -> DeckColumnType.Editor(param)
+                "article" -> param?.let { DeckColumnType.Article(it) }
                 "profile" -> param?.let { DeckColumnType.Profile(it) }
                 "thread" -> param?.let { DeckColumnType.Thread(it) }
                 "hashtag" -> param?.let { DeckColumnType.Hashtag(it) }

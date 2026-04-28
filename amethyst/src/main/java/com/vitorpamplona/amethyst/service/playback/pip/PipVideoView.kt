@@ -58,7 +58,7 @@ fun RenderPipVideo(
     val modifier =
         remember {
             val ratio =
-                controller.currrentMedia()?.let {
+                controller.currentMedia()?.let {
                     MediaAspectRatioCache.get(it)
                 }
 

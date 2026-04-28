@@ -93,7 +93,9 @@ class DeletionTest : BaseDBTest() {
             db.assertQuery(null, Filter(ids = listOf(note2.id)))
             db.assertQuery(note3, Filter(ids = listOf(note3.id)))
 
-            val deletion = signer.sign(DeletionEvent.build(listOf(note1)))
+            // Deletion must be timestamped >= note3.createdAt for it to
+            // remove the latest addressable per NIP-09.
+            val deletion = signer.sign(DeletionEvent.build(listOf(note1), createdAt = time + 100))
 
             db.insert(deletion)
 
@@ -128,7 +130,7 @@ class DeletionTest : BaseDBTest() {
             db.assertQuery(null, Filter(ids = listOf(note2.id)))
             db.assertQuery(note3, Filter(ids = listOf(note3.id)))
 
-            val deletion = signer.sign(DeletionEvent.buildAddressOnly(listOf(note1)))
+            val deletion = signer.sign(DeletionEvent.buildAddressOnly(listOf(note1), createdAt = time + 100))
 
             db.insert(deletion)
 
@@ -226,6 +228,7 @@ class DeletionTest : BaseDBTest() {
                 db.store.deletionModule
                     .deleteSQL(
                         pubkey = "key1",
+                        createdAt = 1766686500,
                         idValues = listOf("ca29c211f", "ca29c211d"),
                         addresses = emptyList(),
                         hasher =
@@ -256,6 +259,7 @@ class DeletionTest : BaseDBTest() {
                 db.store.deletionModule
                     .deleteSQL(
                         pubkey = "key1",
+                        createdAt = 1766686500,
                         idValues = emptyList(),
                         addresses =
                             listOf(
@@ -273,8 +277,9 @@ class DeletionTest : BaseDBTest() {
                 WHERE (
                     (kind = "30000" AND pubkey = "key1" AND d_tag = "a")
                 ) AND
-                    kind >= 30000 AND kind < 40000
-                ├── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+                    kind >= 30000 AND kind < 40000 AND
+                    +created_at <= "1766686500"
+                ├── SEARCH event_headers USING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
                 ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
                 ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
                 └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
@@ -290,6 +295,7 @@ class DeletionTest : BaseDBTest() {
                 db.store.deletionModule
                     .deleteSQL(
                         pubkey = "key1",
+                        createdAt = 1766686500,
                         idValues = emptyList(),
                         addresses =
                             listOf(
@@ -310,8 +316,9 @@ class DeletionTest : BaseDBTest() {
                 WHERE (
                     (kind = "30000" AND pubkey = "key1" AND d_tag IN ("a","b","c","d"))
                 ) AND
-                    kind >= 30000 AND kind < 40000
-                ├── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+                    kind >= 30000 AND kind < 40000 AND
+                    +created_at <= "1766686500"
+                ├── SEARCH event_headers USING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
                 ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
                 ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
                 └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
@@ -327,6 +334,7 @@ class DeletionTest : BaseDBTest() {
                 db.store.deletionModule
                     .deleteSQL(
                         pubkey = "key1",
+                        createdAt = 1766686500,
                         idValues = emptyList(),
                         addresses =
                             listOf(
@@ -351,12 +359,13 @@ class DeletionTest : BaseDBTest() {
                 OR
                     (kind = "30101" AND pubkey = "key1" AND d_tag IN ("c","d"))
                 ) AND
-                    kind >= 30000 AND kind < 40000
+                    kind >= 30000 AND kind < 40000 AND
+                    +created_at <= "1766686500"
                 ├── MULTI-INDEX OR
                 │   ├── INDEX 1
-                │   │   └── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+                │   │   └── SEARCH event_headers USING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
                 │   └── INDEX 2
-                │       └── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+                │       └── SEARCH event_headers USING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
                 ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
                 ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
                 └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
@@ -372,6 +381,7 @@ class DeletionTest : BaseDBTest() {
                 db.store.deletionModule
                     .deleteSQL(
                         pubkey = "key1",
+                        createdAt = 1766686500,
                         idValues = emptyList(),
                         addresses =
                             listOf(
@@ -394,13 +404,153 @@ class DeletionTest : BaseDBTest() {
                 WHERE
                     kind IN ("10000","10001") AND
                     pubkey = "key1" AND
-                    ((kind in (0,3)) OR (kind >= 10000 AND kind < 20000))
-                ├── SEARCH event_headers USING COVERING INDEX replaceable_idx (kind=? AND pubkey=?)
+                    ((kind in (0,3)) OR (kind >= 10000 AND kind < 20000)) AND
+                    created_at <= "1766686500"
+                ├── SEARCH event_headers USING COVERING INDEX query_by_kind_pubkey_created (kind=? AND pubkey=? AND created_at<?)
                 ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
                 ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
                 └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
                 """.trimIndent(),
                 db.store.explainQuery(sql.sql, sql.args),
             )
+        }
+
+    @Test
+    fun testDeletionByThirdPartyDoesNothing() =
+        forEachDB { db ->
+            val owner = NostrSignerSync()
+            val stranger = NostrSignerSync()
+
+            val target = owner.sign(TextNoteEvent.build("private"))
+            db.insert(target)
+            db.assertQuery(target, Filter(ids = listOf(target.id)))
+
+            // A deletion event from a *different* author must not remove the
+            // target — only the original author can delete via NIP-09.
+            val strangerDeletion = stranger.sign(DeletionEvent.build(listOf(target)))
+            db.insert(strangerDeletion)
+
+            db.assertQuery(target, Filter(ids = listOf(target.id)))
+            db.assertQuery(strangerDeletion, Filter(ids = listOf(strangerDeletion.id)))
+
+            // The owner's deletion still works after a failed third-party attempt.
+            val ownerDeletion = owner.sign(DeletionEvent.build(listOf(target)))
+            db.insert(ownerDeletion)
+            db.assertQuery(null, Filter(ids = listOf(target.id)))
+        }
+
+    @Test
+    fun testKind5CanBeDeletedByAnotherKind5OfSameAuthor() =
+        forEachDB { db ->
+            // Pinning current behavior: a kind-5 event is treated like any
+            // other event for ownership purposes — the same author can issue
+            // a second deletion that removes the first. Cross-author
+            // deletion of a kind-5 must NOT work.
+            val target = signer.sign(TextNoteEvent.build("target"))
+            val firstDeletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = 100))
+
+            db.insert(target)
+            db.insert(firstDeletion)
+            db.assertQuery(null, Filter(ids = listOf(target.id)))
+            db.assertQuery(firstDeletion, Filter(ids = listOf(firstDeletion.id)))
+
+            // Stranger cannot delete the kind-5.
+            val stranger = NostrSignerSync()
+            val strangerDeletion =
+                stranger.sign(DeletionEvent.build(listOf(firstDeletion), createdAt = 200))
+            db.insert(strangerDeletion)
+            db.assertQuery(firstDeletion, Filter(ids = listOf(firstDeletion.id)))
+
+            // Same author can delete their previous kind-5.
+            val secondDeletion =
+                signer.sign(DeletionEvent.build(listOf(firstDeletion), createdAt = 300))
+            db.insert(secondDeletion)
+            db.assertQuery(null, Filter(ids = listOf(firstDeletion.id)))
+            db.assertQuery(secondDeletion, Filter(ids = listOf(secondDeletion.id)))
+
+            // First deletion now blocked from re-insertion (own e-tag in event_tags).
+            assertFailsWith<SQLiteException> {
+                db.insert(firstDeletion)
+            }
+        }
+
+    @Test
+    fun testGiftWrapDeletionRequiresRecipient() =
+        forEachDB { db ->
+            // GiftWraps key their owner off the p-tag (recipient), since the
+            // outer wrap is signed by an ephemeral random key per NIP-59. The
+            // inner author isn't visible to the relay, so only the recipient
+            // can delete the wrap.
+            val recipient = NostrSignerSync()
+            val sender = NostrSignerSync()
+            val unrelated = NostrSignerSync()
+
+            val inner = sender.sign(TextNoteEvent.build("secret"))
+            val wrap = GiftWrapEvent.create(inner, recipient.pubKey)
+
+            db.insert(wrap)
+            db.assertQuery(wrap, Filter(ids = listOf(wrap.id)))
+
+            // Inner author (the "sender") cannot delete a wrap addressed to
+            // someone else — sender pubkey != wrap's pubkey_owner_hash.
+            val senderDeletion = sender.sign(DeletionEvent.build(listOf(wrap)))
+            db.insert(senderDeletion)
+            db.assertQuery(wrap, Filter(ids = listOf(wrap.id)))
+
+            // An unrelated third party can't delete it either.
+            val unrelatedDeletion = unrelated.sign(DeletionEvent.build(listOf(wrap)))
+            db.insert(unrelatedDeletion)
+            db.assertQuery(wrap, Filter(ids = listOf(wrap.id)))
+
+            // The recipient (whose pubkey matches pubkey_owner_hash) can.
+            val recipientDeletion = recipient.sign(DeletionEvent.build(listOf(wrap)))
+            db.insert(recipientDeletion)
+            db.assertQuery(null, Filter(ids = listOf(wrap.id)))
+        }
+
+    @Test
+    fun testDeletionDoesNotRemoveNewerAddressable() =
+        forEachDB { db ->
+            // Old addressable (will be deleted by deletion request)
+            val old =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "version 1",
+                        "title",
+                        dTag = "blog-1",
+                        createdAt = 1000,
+                    ),
+                )
+
+            db.insert(old)
+            db.assertQuery(old, Filter(ids = listOf(old.id)))
+
+            // Deletion targeting the address with created_at = 1500
+            val deletion =
+                signer.sign(
+                    DeletionEvent.buildAddressOnly(
+                        listOf(old),
+                        createdAt = 1500,
+                    ),
+                )
+            db.insert(deletion)
+
+            // The old version is gone
+            db.assertQuery(null, Filter(ids = listOf(old.id)))
+
+            // Now a NEWER version of the same address arrives, with
+            // created_at AFTER the deletion. NIP-09 says it must be kept.
+            val newer =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "version 2",
+                        "title",
+                        dTag = "blog-1",
+                        createdAt = 2000,
+                    ),
+                )
+
+            db.insert(newer)
+            db.assertQuery(newer, Filter(ids = listOf(newer.id)))
         }
 }

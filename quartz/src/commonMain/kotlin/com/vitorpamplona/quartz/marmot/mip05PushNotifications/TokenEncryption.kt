@@ -20,35 +20,36 @@
  */
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenEncryption.PLATFORM_APNS
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenEncryption.PLATFORM_FCM
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTag
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import com.vitorpamplona.quartz.utils.mac.MacInstance
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Handles EncryptedToken creation and decryption for Marmot push notifications (MIP-05).
  *
- * EncryptedToken format (280 bytes total):
- *   ephemeral_pubkey(32) || nonce(12) || ciphertext(236 = 220 plaintext + 16 tag)
+ * EncryptedToken format (MUST be exactly 1084 bytes per MIP-05):
+ *   ephemeral_pubkey(32) || nonce(12) || ciphertext(1040 = 1024 plaintext + 16 tag)
  *
- * Token payload (220 bytes, padded):
- *   platform(1) || token_length(2 BE) || device_token(N) || random_padding(220-3-N)
+ * Token plaintext (MUST be exactly 1024 bytes per MIP-05):
+ *   platform(1) || token_length(2 BE) || device_token(N) || random_padding(1024-3-N)
  *
- * Key derivation:
- *   1. ECDH: shared_point = ephemeral_privkey * server_pubkey
- *   2. shared_x = sha256(shared_point) (x-coordinate as shared secret)
- *   3. PRK = HKDF-Extract(salt="mip05-v1", IKM=shared_x)
- *   4. encryption_key = HKDF-Expand(PRK, info="mip05-token-encryption", 32)
- *   5. Encrypt padded payload with ChaCha20-Poly1305(key, nonce, payload, aad="")
+ * Key derivation (MIP-05 §"Key Derivation"):
+ *   1. ECDH: shared_x = secp256k1_ecdh(ephemeral_privkey, server_pubkey)  — raw 32-byte x
+ *   2. PRK = HKDF-Extract(salt="mip05-v1", IKM=shared_x)
+ *   3. encryption_key = HKDF-Expand(PRK, info="mip05-token-encryption", 32)
+ *   4. Encrypt padded plaintext with ChaCha20-Poly1305(key, nonce, plaintext, aad="")
  *
  * Platform values: 0x01 = APNs, 0x02 = FCM
  */
 object TokenEncryption {
-    private const val PADDED_PAYLOAD_SIZE = 220
+    /** Token plaintext MUST be exactly 1024 bytes per MIP-05. */
+    private const val PADDED_PAYLOAD_SIZE = 1024
     private const val NONCE_SIZE = 12
     private const val PUBKEY_SIZE = 32
     private const val HEADER_SIZE = 3 // platform(1) + token_length(2)
@@ -97,9 +98,9 @@ object TokenEncryption {
         // Extract the 32-byte x-only public key by dropping the SEC1 prefix byte
         val ephemeralPubKey = compressedPubKey.copyOfRange(1, 33)
 
-        // ECDH: shared_x = sha256(ephemeral_privkey * server_pubkey)
-        val sharedPoint = Secp256k1Instance.pubKeyTweakMulCompact(serverPubKey, ephemeralPrivKey)
-        val sharedX = sha256(sharedPoint)
+        // ECDH: shared_x = secp256k1_ecdh(ephemeral_privkey, server_pubkey) — raw 32-byte x
+        // per MIP-05. Do NOT hash; HKDF-Extract will mix the salt.
+        val sharedX = Secp256k1Instance.pubKeyTweakMulCompact(serverPubKey, ephemeralPrivKey)
 
         // HKDF-Extract then Expand to get encryption key
         val encryptionKey = hkdfDeriveKey(sharedX)
@@ -108,7 +109,7 @@ object TokenEncryption {
         val nonce = RandomInstance.bytes(NONCE_SIZE)
         val ciphertextWithTag = ChaCha20Poly1305.encrypt(payload, EMPTY_AAD, nonce, encryptionKey)
 
-        // Assemble: ephemeral_pubkey(32) || nonce(12) || ciphertext+tag(236)
+        // Assemble: ephemeral_pubkey(32) || nonce(12) || ciphertext+tag(1040)
         val result = ByteArray(TokenTag.ENCRYPTED_TOKEN_SIZE)
         ephemeralPubKey.copyInto(result, 0)
         nonce.copyInto(result, PUBKEY_SIZE)
@@ -140,9 +141,9 @@ object TokenEncryption {
         val nonce = data.copyOfRange(PUBKEY_SIZE, PUBKEY_SIZE + NONCE_SIZE)
         val ciphertextWithTag = data.copyOfRange(PUBKEY_SIZE + NONCE_SIZE, data.size)
 
-        // ECDH: shared_x = sha256(server_privkey * ephemeral_pubkey)
-        val sharedPoint = Secp256k1Instance.pubKeyTweakMulCompact(ephemeralPubKey, serverPrivKey)
-        val sharedX = sha256(sharedPoint)
+        // ECDH: shared_x = secp256k1_ecdh(server_privkey, ephemeral_pubkey) — raw 32-byte x
+        // per MIP-05.
+        val sharedX = Secp256k1Instance.pubKeyTweakMulCompact(ephemeralPubKey, serverPrivKey)
 
         // Derive encryption key
         val encryptionKey = hkdfDeriveKey(sharedX)

@@ -23,8 +23,14 @@ package com.vitorpamplona.amethyst.ui.navigation.navs
 import android.annotation.SuppressLint
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
+import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
@@ -72,6 +78,40 @@ class Nav(
                 launchSingleTop = true
             }
         }
+    }
+
+    override fun navBottomBar(route: Route) {
+        navigationScope.launch {
+            controller.navigate(route) {
+                // Clear sibling bottom-nav entries but keep Home (the start
+                // destination) below, so back-swipe from any tab returns to
+                // Home and back-swipe from Home leaves the app.
+                popUpTo(Route.Home) {
+                    inclusive = false
+                }
+                launchSingleTop = true
+            }
+            // Mark this entry as a tab root: hides the back arrow in canPop
+            // and skips the horizontal slide in composableFromEnd.
+            controller.getBackStackEntry(route).savedStateHandle[BOTTOM_NAV_ROOT_KEY] = true
+        }
+    }
+
+    @Composable
+    override fun canPop(): Boolean {
+        // Observe the current entry as State so consumers recompose when the
+        // back stack settles after a navigation or back-swipe transition.
+        // A non-reactive read would leave a stale value behind: e.g. on
+        // back-swipe to Home, previousBackStackEntry is still the popping
+        // entry until the gesture finishes, and nothing would re-evaluate
+        // canPop afterwards.
+        val current by controller.currentBackStackEntryAsState()
+        val entry = current ?: return false
+        if (entry.isBottomNavRoot()) return false
+        // Home is the graph's start destination and nothing can sit below
+        // it, so a back arrow there is never meaningful.
+        if (entry.destination.id == controller.graph.findStartDestination().id) return false
+        return controller.previousBackStackEntry != null
     }
 
     override fun popBack() {

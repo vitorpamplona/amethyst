@@ -23,12 +23,16 @@ package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.EndpointUrlTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RelayListTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RoomNameTag
@@ -36,6 +40,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.ServiceUr
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class MeetingSpaceEvent(
@@ -65,6 +71,45 @@ class MeetingSpaceEvent(
 
     fun endpoint() = tags.firstNotNullOfOrNull(EndpointUrlTag::parse)
 
+    /**
+     * Theme tints — every `["c", hex, "background"|"text"|"primary"]`
+     * tag, in event order. Clients use the first hex per target;
+     * extras are spec-defined as fallbacks for clients with palette
+     * support (out of scope for v1).
+     */
+    fun colors() = tags.mapNotNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.ColorTag::parse)
+
+    /**
+     * Background image / pattern for the room screen. Returns the
+     * first valid `["bg", url, mode]` tag.
+     */
+    fun background() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.BackgroundTag::parse)
+
+    /**
+     * Suggested typography for the room screen. Returns the first
+     * `["f", family, optionalUrl]` tag. Clients with theming
+     * support match the family against system fonts (or fetch the
+     * URL); clients without theming support ignore.
+     */
+    fun font() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.FontTag::parse)
+
+    /**
+     * Optional URL to a post-room recording. Hosts that record a
+     * room re-publish the kind-30312 with `status=closed` and
+     * `["recording", url]` so audience members who missed the live
+     * session can listen back. Returns null when no recording is
+     * available.
+     */
+    fun recording() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RecordingTag::parse)
+
+    /**
+     * Scheduled start time as unix seconds, only meaningful when
+     * [status] is [StatusTag.STATUS.PLANNED]. Returns null on
+     * malformed or absent tag — the room-list renderer falls back
+     * to "live now" for status=OPEN/PRIVATE rooms.
+     */
+    fun starts() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StartsTag::parse)
+
     fun relays() = tags.mapNotNull(RelayListTag::parse).flatten()
 
     fun allRelayUrls() = tags.mapNotNull(RelayListTag::parse).flatten()
@@ -92,6 +137,25 @@ class MeetingSpaceEvent(
         ): MeetingSpaceEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
             return signer.sign(createdAt, KIND, tags, "")
+        }
+
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            room: String,
+            status: StatusTag.STATUS,
+            service: String,
+            host: ParticipantTag,
+            dTag: String = Uuid.random().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<MeetingSpaceEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            dTag(dTag)
+            room(room)
+            status(status)
+            service(service)
+            participant(host.pubKey, host.relayHint, host.role, host.proof)
+            alt(ALT)
+            initializer()
         }
     }
 }

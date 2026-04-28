@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Auto-update SHA-pinned GitHub Actions across all workflows.
+  # Required for supply-chain safety — SHA pins only age well with active bumps.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - release-ops
+      - dependencies
+    commit-message:
+      prefix: chore(actions)
+    groups:
+      actions:
+        patterns:
+          - "*"

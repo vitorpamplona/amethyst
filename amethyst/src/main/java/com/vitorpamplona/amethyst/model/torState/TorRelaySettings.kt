@@ -20,12 +20,5 @@
  */
 package com.vitorpamplona.amethyst.model.torState
 
-import com.vitorpamplona.amethyst.ui.tor.TorType
-
-data class TorRelaySettings(
-    val torType: TorType = TorType.OFF,
-    val onionRelaysViaTor: Boolean = true,
-    val dmRelaysViaTor: Boolean = false,
-    val newRelaysViaTor: Boolean = false,
-    val trustedRelaysViaTor: Boolean = false,
-)
+// Canonical type now lives in commons
+typealias TorRelaySettings = com.vitorpamplona.amethyst.commons.tor.TorRelaySettings

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -151,7 +152,14 @@ class NotificationFeedFilter(
                     acceptableEvent(note, filterParams)
                 }
 
-        return sort(notifications)
+        // Include marmot group messages as notifications (like DMs)
+        val loggedInUserHex = account.userProfile().pubkeyHex
+        val marmotMessages =
+            account.marmotGroupList.rooms.mapFlatten { _, chatroom ->
+                chatroom.messages.filter { it.author?.pubkeyHex != loggedInUserHex }
+            }
+
+        return sort(notifications + marmotMessages)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -167,6 +175,23 @@ class NotificationFeedFilter(
         filterParams: FilterByListParams,
     ): Boolean {
         val loggedInUserHex = account.userProfile().pubkeyHex
+
+        // Marmot group messages are only acceptable if the gathering chatroom is
+        // actually in the current account's group list. Notes are stored in the
+        // global LocalCache and accumulate a gatherer reference from every
+        // account's chatroom that has ever touched them, so seeing any
+        // MarmotGroupChatroom is not enough — it could belong to a prior account
+        // or a group the user has since left. Verify the chatroom is the same
+        // instance held by this account's list.
+        val marmotGatherers = it.inGatherers?.filterIsInstance<MarmotGroupChatroom>()
+        if (!marmotGatherers.isNullOrEmpty()) {
+            val inCurrentAccount =
+                marmotGatherers.any { room ->
+                    account.marmotGroupList.rooms.get(room.nostrGroupId) === room
+                }
+            if (!inCurrentAccount) return false
+            return it.author?.pubkeyHex != loggedInUserHex
+        }
 
         val noteEvent = it.event
         val notifAuthor =

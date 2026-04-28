@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -89,6 +90,10 @@ fun LongPublicChatChannelHeader(
                 modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif =
+                    accountViewModel.settings.autoPlayVideosFlow
+                        .collectAsStateWithLifecycle()
+                        .value,
             )
         }
     }
@@ -162,7 +167,7 @@ fun LongPublicChatChannelHeader(
                     modifier = Modifier.width(75.dp),
                 )
                 Spacer(DoubleHorzSpacer)
-                NormalTimeAgo(note, remember { Modifier.weight(1f) })
+                NormalTimeAgo(note, Modifier.weight(1f))
                 MoreOptionsButton(note, null, accountViewModel, nav)
             }
         }

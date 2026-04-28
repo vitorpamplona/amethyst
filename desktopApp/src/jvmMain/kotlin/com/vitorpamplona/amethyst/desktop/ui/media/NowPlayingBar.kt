@@ -33,16 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -58,6 +48,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import kotlinx.coroutines.launch
 
@@ -107,7 +99,7 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
                 )
             } else {
                 Icon(
-                    Icons.Default.MusicNote,
+                    MaterialSymbols.MusicNote,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
@@ -126,7 +118,7 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    if (activeState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    if (activeState.isPlaying) MaterialSymbols.Pause else MaterialSymbols.PlayArrow,
                     contentDescription = if (activeState.isPlaying) "Pause" else "Play",
                     modifier = Modifier.size(20.dp),
                 )
@@ -185,9 +177,9 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
             ) {
                 Icon(
                     if (activeState.isMuted) {
-                        Icons.AutoMirrored.Filled.VolumeOff
+                        MaterialSymbols.AutoMirrored.VolumeOff
                     } else {
-                        Icons.AutoMirrored.Filled.VolumeUp
+                        MaterialSymbols.AutoMirrored.VolumeUp
                     },
                     contentDescription = if (activeState.isMuted) "Unmute" else "Mute",
                     modifier = Modifier.size(16.dp),
@@ -225,7 +217,7 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
                 modifier = Modifier.size(24.dp),
             ) {
                 Icon(
-                    Icons.Default.Save,
+                    MaterialSymbols.Save,
                     contentDescription = "Save",
                     modifier = Modifier.size(16.dp),
                 )
@@ -238,7 +230,7 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
                     modifier = Modifier.size(24.dp),
                 ) {
                     Icon(
-                        Icons.Default.Fullscreen,
+                        MaterialSymbols.Fullscreen,
                         contentDescription = "Fullscreen",
                         modifier = Modifier.size(16.dp),
                     )
@@ -259,7 +251,7 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
                 modifier = Modifier.size(24.dp),
             ) {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = "Stop",
                     modifier = Modifier.size(16.dp),
                 )

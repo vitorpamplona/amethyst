@@ -47,11 +47,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -162,6 +163,10 @@ fun RenderChannelData(
                     modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                     loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                     loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    autoPlayGif =
+                        accountViewModel.settings.autoPlayVideosFlow
+                            .collectAsStateWithLifecycle()
+                            .value,
                 )
             }
         }

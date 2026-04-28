@@ -21,6 +21,8 @@ Join the social network you control.
 
 ## Download and Install
 
+### Android
+
 [<img src="./docs/design/zapstore.svg"
 alt="Get it on Zap Store"
 height="70">](https://github.com/zapstore/zapstore/releases)
@@ -32,6 +34,24 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 [<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
      alt="Get it on Google Play"
      height="70">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
+
+### Desktop
+
+| OS | CLI install | Direct download |
+|---|---|---|
+| macOS (Apple Silicon) | `brew install --cask amethyst-nostr` | [.dmg arm64](https://github.com/vitorpamplona/amethyst/releases/latest) |
+| macOS (Intel) | `brew install --cask amethyst-nostr` | [.dmg x64](https://github.com/vitorpamplona/amethyst/releases/latest) |
+| Windows 10/11 | `winget install VitorPamplona.Amethyst` | [.msi](https://github.com/vitorpamplona/amethyst/releases/latest) · [.zip portable](https://github.com/vitorpamplona/amethyst/releases/latest) |
+| Debian/Ubuntu | — | [.deb](https://github.com/vitorpamplona/amethyst/releases/latest) |
+| Fedora/RHEL/openSUSE | — | [.rpm](https://github.com/vitorpamplona/amethyst/releases/latest) |
+| Any Linux | — | [AppImage](https://github.com/vitorpamplona/amethyst/releases/latest) · [.tar.gz](https://github.com/vitorpamplona/amethyst/releases/latest) |
+
+_Coming soon (separate PR): Scoop (Windows), AUR (Arch Linux)._
+
+**Build from source:** see [BUILDING.md](BUILDING.md).
+
+**Install troubleshooting** (Gatekeeper / SmartScreen / AppImage): see
+[BUILDING.md § Troubleshooting installs](BUILDING.md#troubleshooting-installs).
 
 </div>
 
@@ -249,22 +269,18 @@ For the Play build:
 
 ## Deploying
 
-1. Generate a new signing key
-```
-keytool -genkey -v -keystore <my-release-key.keystore> -alias <alias_name> -keyalg RSA -keysize 2048 -validity 10000
-openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.jks.base64.txt
-```
-2. Create four Secret Key variables on your GitHub repository and fill in the signing key information
-    - `KEY_ALIAS` <- `<alias_name>`
-    - `KEY_PASSWORD` <- `<your password>`
-    - `KEY_STORE_PASSWORD` <- `<your key store password>`
-    - `SIGNING_KEY` <- the data from `<my-release-key.keystore>`
-3. Change the `versionCode` and `versionName` on `amethyst/build.gradle`
-4. Commit and push.
-5. Tag the commit with `v{x.x.x}`
-6. Let the [Create Release GitHub Action](https://github.com/vitorpamplona/amethyst/actions/workflows/create-release.yml) build a new `aab` file.
-7. Add your CHANGE LOG to the description of the new release
-8. Download the `aab` file and upload it to the PlayStore.
+Full release + bootstrap runbooks (Android AAB upload, desktop packaging,
+Homebrew cask, Winget manifest, Apple Developer signing budget time-box) live
+in [BUILDING.md § Release runbook](BUILDING.md#release-runbook) and
+[BUILDING.md § Bootstrap runbook (one-time)](BUILDING.md#bootstrap-runbook-one-time).
+
+TL;DR for cutting a release:
+
+1. Bump `app` in `gradle/libs.versions.toml` (e.g. `"1.08.1"`)
+2. Bump `versionCode` in `amethyst/build.gradle`
+3. `git commit -am "chore(release): 1.08.1" && git tag -s v1.08.1 && git push --tags`
+4. Wait for `Create Release Assets` workflow — 20 Android assets + 8 desktop assets go live on GH Release; Homebrew + Winget auto-bump on stable tags
+5. Upload AAB to Play Store manually (existing step)
 
 ## Using the Quartz library
 

@@ -48,35 +48,43 @@ fun RenderReport(
 ) {
     val noteEvent = note.event as? ReportEvent ?: return
 
-    val base = remember { (noteEvent.reportedPost() + noteEvent.reportedAuthor()) }
+    val reportTypes =
+        remember(noteEvent) {
+            (noteEvent.reportedPost() + noteEvent.reportedAuthor())
+                .mapTo(LinkedHashSet()) { it.type }
+        }
 
-    val reportType =
-        base
-            .map {
-                when (it.type) {
-                    ReportType.EXPLICIT -> stringRes(R.string.explicit_content)
-                    ReportType.NUDITY -> stringRes(R.string.nudity)
-                    ReportType.PROFANITY -> stringRes(R.string.profanity_hateful_speech)
-                    ReportType.SPAM -> stringRes(R.string.spam)
-                    ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
-                    ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
-                    ReportType.MALWARE -> stringRes(R.string.malware)
-                    ReportType.OTHER -> stringRes(R.string.other)
-                    ReportType.HARASSMENT -> stringRes(R.string.harassment)
-                    ReportType.VIOLENCE -> stringRes(R.string.violence)
-                    null -> stringRes(R.string.other)
-                }
-            }.toSet()
-            .joinToString(", ")
+    val explicitContent = stringRes(R.string.explicit_content)
+    val nudity = stringRes(R.string.nudity)
+    val profanity = stringRes(R.string.profanity_hateful_speech)
+    val spam = stringRes(R.string.spam)
+    val impersonation = stringRes(R.string.impersonation)
+    val illegal = stringRes(R.string.illegal_behavior)
+    val malware = stringRes(R.string.malware)
+    val other = stringRes(R.string.other)
+    val harassment = stringRes(R.string.harassment)
+    val violence = stringRes(R.string.violence)
 
     val content =
-        remember {
-            reportType + (
-                note.event
-                    ?.content
-                    ?.ifBlank { null }
-                    ?.let { ": $it" } ?: ""
-            )
+        remember(reportTypes, noteEvent) {
+            val reportTypeText =
+                reportTypes.joinToString(", ") {
+                    when (it) {
+                        ReportType.EXPLICIT -> explicitContent
+                        ReportType.NUDITY -> nudity
+                        ReportType.PROFANITY -> profanity
+                        ReportType.SPAM -> spam
+                        ReportType.IMPERSONATION -> impersonation
+                        ReportType.ILLEGAL -> illegal
+                        ReportType.MALWARE -> malware
+                        ReportType.OTHER -> other
+                        ReportType.HARASSMENT -> harassment
+                        ReportType.VIOLENCE -> violence
+                        null -> other
+                    }
+                }
+            val extra = noteEvent.content.ifBlank { null }?.let { ": $it" } ?: ""
+            reportTypeText + extra
         }
 
     TranslatableRichTextViewer(

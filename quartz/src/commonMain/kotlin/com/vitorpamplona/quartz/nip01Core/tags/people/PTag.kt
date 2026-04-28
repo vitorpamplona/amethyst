@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -53,6 +54,24 @@ data class PTag(
             tag: Array<String>,
             key: HexKey,
         ): Boolean = tag.has(1) && tag[0] == TAG_NAME && tag[1] == key
+
+        /**
+         * Returns true if any `p` tag inside [tags] addresses [userHex].
+         * This is the canonical check for "does this event notify this user
+         * under the lowercase-`p` convention" and is the default used by
+         * [Event.notifies]. Kinds that address recipients through other tag
+         * names (e.g. NIP-22 uppercase `P` for root authors) override
+         * [Event.notifies] and may combine this with their own checks.
+         */
+        fun isNotifying(
+            tags: TagArray,
+            userHex: HexKey,
+        ): Boolean {
+            for (tag in tags) {
+                if (isTagged(tag, userHex)) return true
+            }
+            return false
+        }
 
         fun parse(tag: Tag): PTag? {
             ensure(tag.has(1)) { return null }

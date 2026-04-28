@@ -24,31 +24,43 @@ import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
- * Process-level singleton that bridges the active call state between
- * the main activity (which owns [AccountViewModel]) and [com.vitorpamplona.amethyst.ui.call.CallActivity]
- * (which runs in its own window but in the same process).
+ * Process-level singleton that bridges the active [CallManager] and
+ * [AccountViewModel] between the main activity and
+ * [com.vitorpamplona.amethyst.ui.call.CallActivity] (which runs in its
+ * own window but in the same process).
+ *
+ * No call controller / session is held here — each [CallActivity]
+ * creates and owns its own [com.vitorpamplona.amethyst.ui.call.session.CallSession]
+ * whose lifetime is tied to the Activity's lifecycle.
  */
 object CallSessionBridge {
     var callManager: CallManager? = null
-        private set
-    var callController: CallController? = null
         private set
     var accountViewModel: AccountViewModel? = null
         private set
 
     fun set(
         callManager: CallManager,
-        callController: CallController?,
         accountViewModel: AccountViewModel,
     ) {
         this.callManager = callManager
-        this.callController = callController
         this.accountViewModel = accountViewModel
     }
 
+    /**
+     * Resets call state and clears all references. Called from
+     * [AccountViewModel.onCleared] during logout or account switch.
+     *
+     * Uses [CallManager.reset] (non-blocking, no mutex) instead of
+     * [CallManager.hangup] to avoid deadlocking on `stateMutex` if
+     * a cancelled coroutine on the dying `viewModelScope` still holds
+     * it. Hangup signaling to the remote peer is the responsibility
+     * of [CallActivity.onDestroy] and [CallForegroundService], not
+     * the bridge teardown.
+     */
     fun clear() {
+        callManager?.reset()
         callManager = null
-        callController = null
         accountViewModel = null
     }
 }

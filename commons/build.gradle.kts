@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.serialization)
 }
 
 kotlin {
@@ -47,13 +48,17 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(project(":quartz"))
+                // Audio-rooms ViewModel needs the listener orchestration + audio
+                // pipeline types (NestsListener, AudioRoomPlayer, AudioPlayer
+                // interface). Concrete OkHttp/Quic/MediaCodec/AudioTrack actuals
+                // stay in :nestsClient's platform source sets.
+                implementation(project(":nestsClient"))
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)
                 implementation(libs.jetbrains.compose.foundation)
                 implementation(libs.jetbrains.compose.runtime)
                 implementation(libs.jetbrains.compose.material3)
-                implementation(libs.jetbrains.compose.material.icons.extended)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
                 // Lifecycle ViewModel (KMP since 2.8.0)
@@ -104,6 +109,9 @@ kotlin {
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)
+
+                // EXIF stripping for image uploads (used by service/upload/MediaCompressor).
+                implementation(libs.commons.imaging)
             }
         }
 

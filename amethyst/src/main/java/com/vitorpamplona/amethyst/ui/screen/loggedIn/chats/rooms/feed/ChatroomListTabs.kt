@@ -21,17 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.DoneAll
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.MoveToInbox
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
@@ -46,8 +39,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -81,7 +75,7 @@ fun MessagesTabHeader(
 
     Box(Modifier.fillMaxWidth()) {
         SecondaryTabRow(
-            containerColor = Color.Transparent,
+            containerColor = MaterialTheme.colorScheme.background,
             contentColor = MaterialTheme.colorScheme.onBackground,
             selectedTabIndex = pagerState.currentPage,
             modifier = TabRowHeight,
@@ -103,7 +97,7 @@ fun MessagesTabHeader(
             onClick = { moreActionsExpanded = true },
         ) {
             Icon(
-                imageVector = Icons.Default.MoreVert,
+                symbol = MaterialSymbols.MoreVert,
                 contentDescription = stringRes(id = R.string.more_options),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -123,12 +117,10 @@ fun MessagesTabHeader(
 fun MessagesPager(
     pagerState: PagerState,
     tabs: List<MessagesTabItem>,
-    paddingValues: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     HorizontalPager(
-        contentPadding = paddingValues,
         state = pagerState,
         userScrollEnabled = true,
         modifier =
@@ -158,21 +150,21 @@ fun MessagesMarkAsReadDialog(
     ) {
         M3ActionSection {
             M3ActionRow(
-                icon = Icons.Outlined.Groups,
+                icon = MaterialSymbols.Groups,
                 text = stringRes(R.string.mark_all_known_as_read),
             ) {
                 onMarkKnownAsRead()
                 onDismiss()
             }
             M3ActionRow(
-                icon = Icons.Outlined.MoveToInbox,
+                icon = MaterialSymbols.MoveToInbox,
                 text = stringRes(R.string.mark_all_new_as_read),
             ) {
                 onMarkNewAsRead()
                 onDismiss()
             }
             M3ActionRow(
-                icon = Icons.Outlined.DoneAll,
+                icon = MaterialSymbols.DoneAll,
                 text = stringRes(R.string.mark_all_as_read),
             ) {
                 onMarkKnownAsRead()

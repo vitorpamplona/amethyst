@@ -26,23 +26,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -62,7 +58,7 @@ fun RenderRelayMembershipList(
     val memberCount = remember(noteEvent) { noteEvent.members().size }
 
     RelayMemberEventCard(
-        icon = Icons.Default.People,
+        icon = MaterialSymbols.People,
         title = stringRes(R.string.relay_membership_list),
         subtitle = stringRes(R.string.relay_members_count, memberCount),
         nav = nav,
@@ -87,7 +83,7 @@ fun RenderRelayAddMember(
     val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 
     RelayMemberEventCard(
-        icon = Icons.Default.PersonAdd,
+        icon = MaterialSymbols.PersonAdd,
         title = title,
         subtitle = subtitle,
         relayPubKey = noteEvent.pubKey,
@@ -111,7 +107,7 @@ fun RenderRelayRemoveMember(
     val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 
     RelayMemberEventCard(
-        icon = Icons.Default.PersonRemove,
+        icon = MaterialSymbols.PersonRemove,
         title = title,
         subtitle = subtitle,
         relayPubKey = noteEvent.pubKey,
@@ -125,7 +121,7 @@ fun RenderRelayJoinRequest(
     nav: INav,
 ) {
     RelayMemberEventCard(
-        icon = Icons.Default.PersonAdd,
+        icon = MaterialSymbols.PersonAdd,
         title = stringRes(R.string.relay_join_request),
         subtitle = null,
         nav = nav,
@@ -140,7 +136,7 @@ fun RenderRelayLeaveRequest(
     nav: INav,
 ) {
     RelayMemberEventCard(
-        icon = Icons.AutoMirrored.Filled.ExitToApp,
+        icon = MaterialSymbols.AutoMirrored.ExitToApp,
         title = stringRes(R.string.relay_leave_request),
         subtitle = null,
         nav = nav,
@@ -150,7 +146,7 @@ fun RenderRelayLeaveRequest(
 
 @Composable
 private fun RelayMemberEventCard(
-    icon: ImageVector,
+    icon: MaterialSymbol,
     title: String,
     subtitle: String?,
     nav: INav? = null,
@@ -167,7 +163,7 @@ private fun RelayMemberEventCard(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = icon,
+                symbol = icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -195,7 +191,7 @@ private fun RelayMemberEventCard(
 private fun RelayMembershipListCardPreview() {
     ThemeComparisonColumn {
         RelayMemberEventCard(
-            icon = Icons.Default.People,
+            icon = MaterialSymbols.People,
             title = "Relay membership list",
             subtitle = "42 members",
         )
@@ -207,7 +203,7 @@ private fun RelayMembershipListCardPreview() {
 private fun RelayAddMemberCardPreview() {
     ThemeComparisonColumn {
         RelayMemberEventCard(
-            icon = Icons.Default.PersonAdd,
+            icon = MaterialSymbols.PersonAdd,
             title = "Member added to relay",
             subtitle = "a1b2c3d4e5f6a7b8...",
         )
@@ -219,7 +215,7 @@ private fun RelayAddMemberCardPreview() {
 private fun RelayRemoveMemberCardPreview() {
     ThemeComparisonColumn {
         RelayMemberEventCard(
-            icon = Icons.Default.PersonRemove,
+            icon = MaterialSymbols.PersonRemove,
             title = "Member removed from relay",
             subtitle = "a1b2c3d4e5f6a7b8...",
         )
@@ -231,7 +227,7 @@ private fun RelayRemoveMemberCardPreview() {
 private fun RelayJoinRequestCardPreview() {
     ThemeComparisonColumn {
         RelayMemberEventCard(
-            icon = Icons.Default.PersonAdd,
+            icon = MaterialSymbols.PersonAdd,
             title = "Relay join request",
             subtitle = null,
         )
@@ -243,7 +239,7 @@ private fun RelayJoinRequestCardPreview() {
 private fun RelayLeaveRequestCardPreview() {
     ThemeComparisonColumn {
         RelayMemberEventCard(
-            icon = Icons.AutoMirrored.Filled.ExitToApp,
+            icon = MaterialSymbols.AutoMirrored.ExitToApp,
             title = "Relay leave request",
             subtitle = null,
         )

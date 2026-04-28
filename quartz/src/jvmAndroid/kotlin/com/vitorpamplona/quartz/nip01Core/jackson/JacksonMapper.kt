@@ -141,6 +141,29 @@ class JacksonMapper {
 
         fun toJson(event: Event): String = EventManualSerializer.toJson(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content, event.sig)
 
+        /**
+         * Pretty-printed event JSON for human inspection. Uses the
+         * [InliningTagArrayPrettyPrinter] already configured on the
+         * mapper so each tag array stays on its own line (no nested
+         * line-per-element noise) and the seven event fields get their
+         * own indented lines. Re-canonicalisation is the caller's
+         * problem — this output is not canonical NIP-01.
+         */
+        fun toJsonPretty(event: Event): String =
+            mapper
+                .writerWithDefaultPrettyPrinter()
+                .writeValueAsString(
+                    EventManualSerializer.assemble(
+                        event.id,
+                        event.pubKey,
+                        event.createdAt,
+                        event.kind,
+                        event.tags,
+                        event.content,
+                        event.sig,
+                    ),
+                )
+
         fun toJson(event: ArrayNode): String = mapper.writeValueAsString(event)
 
         fun toJson(event: ObjectNode?): String = mapper.writeValueAsString(event)

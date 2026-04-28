@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows
 
+import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Constants
-import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
-import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast

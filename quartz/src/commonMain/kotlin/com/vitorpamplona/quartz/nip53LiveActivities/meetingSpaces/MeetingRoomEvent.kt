@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -30,10 +31,13 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
@@ -46,6 +50,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StreamingTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.TotalParticipantsTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class MeetingRoomEvent(
@@ -156,6 +162,25 @@ class MeetingRoomEvent(
         ): MeetingRoomEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
             return signer.sign(createdAt, KIND, tags, "")
+        }
+
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            meetingSpace: MeetingSpaceTag,
+            title: String,
+            starts: Long,
+            status: StatusTag.STATUS,
+            dTag: String = Uuid.random().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<MeetingRoomEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            dTag(dTag)
+            meetingSpace(meetingSpace)
+            title(title)
+            starts(starts)
+            status(status)
+            alt(ALT)
+            initializer()
         }
     }
 }

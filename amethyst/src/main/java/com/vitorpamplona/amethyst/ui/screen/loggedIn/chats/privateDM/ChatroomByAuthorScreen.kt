@@ -51,6 +51,7 @@ fun ChatroomByAuthorScreen(
             RoomByAuthorTopBar(authorPubKeyHex, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) {
         Column(Modifier.padding(it)) {
             ChatroomByAuthor(authorPubKeyHex, draftMessage, accountViewModel, nav)

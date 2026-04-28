@@ -32,13 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,6 +49,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -125,7 +120,7 @@ fun VoiceMessagePreview(
                     modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        symbol = if (isPlaying) MaterialSymbols.Pause else MaterialSymbols.PlayArrow,
                         contentDescription = if (isPlaying) stringRes(context, R.string.pause) else stringRes(context, R.string.play),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -168,7 +163,7 @@ fun VoiceMessagePreview(
                     modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        symbol = MaterialSymbols.Close,
                         contentDescription = stringRes(context, R.string.remove),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -199,7 +194,7 @@ private fun ReRecordButton(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Mic,
+                symbol = MaterialSymbols.Mic,
                 contentDescription = stringRes(id = R.string.record_a_message),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -224,9 +219,9 @@ private fun ReRecordButton(
             }
         val icon =
             if (isRecording) {
-                Icons.Default.Stop
+                MaterialSymbols.Stop
             } else {
-                Icons.Default.Mic
+                MaterialSymbols.Mic
             }
         val label =
             if (isRecording) {
@@ -246,7 +241,7 @@ private fun ReRecordButton(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = icon,
+                symbol = icon,
                 contentDescription = iconDescription,
                 tint = contentColor,
             )

@@ -1,0 +1,201 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip01Core.store.fs
+
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.util.UUID
+import kotlin.io.path.exists
+import kotlin.io.path.readText
+
+/**
+ * NIP-09 deletion tombstones. Each tombstone is itself a hardlink to
+ * the kind-5 event that authored the deletion — so the tombstone *is*
+ * the deletion event, just indexed by what it targets.
+ *
+ * Two tombstone kinds:
+ *   tombstones/id/<target_id>.json                  (NIP-09 by `e`-tag)
+ *   tombstones/addr/<kind>/<pubkey>/<sha256(d)>.json (NIP-09 by `a`-tag;
+ *                                                    empty d for replaceables)
+ *
+ * Semantics:
+ *   - An `id` tombstone blocks re-insertion of the exact event id only
+ *     when the deletion's author matches the candidate event's owner —
+ *     matching SQLite's `event_tags.pubkey_hash = NEW.pubkey_owner_hash`
+ *     condition in `reject_deleted_events`. The id tombstone is therefore
+ *     stored unconditionally (so the check survives "deletion arrives
+ *     before its target") and authority is checked at lookup time via
+ *     [idTombstoneOwnerPubKey].
+ *   - An `addr` tombstone holds the kind-5 `createdAt` as a cutoff. An
+ *     insert is blocked iff `event.createdAt <= tombstone.createdAt`.
+ *     Newer events at the same address may pass (matching SQLite's
+ *     `created_at >= NEW.created_at` trigger condition). Addr tombstones
+ *     are only installed when `addr.pubkey == deletion.author`, since
+ *     the address itself carries the owner identity (NIP-09: only the
+ *     original author may delete their addressable).
+ *   - When multiple kind-5s target the same tombstone path, the one
+ *     with the larger `createdAt` wins (strongest cutoff). Atomic
+ *     rename swaps it in.
+ *
+ * The caller (FsEventStore) handles cascade-deleting the target events
+ * and slots; this class only manages the tombstone filesystem state.
+ */
+internal class FsTombstones(
+    private val layout: FsLayout,
+) {
+    /**
+     * Returns the kind-5 deletion's author pubkey for an id tombstone, or
+     * null if there is no tombstone (or it can't be parsed). The caller
+     * must compare this against the candidate event's owner pubkey to
+     * decide whether to honour the tombstone — a stranger's kind-5 with
+     * an `e`-tag pointing at someone else's event MUST NOT block that
+     * event from being (re-)inserted.
+     */
+    fun idTombstoneOwnerPubKey(id: HexKey): HexKey? {
+        val path = layout.idTombstonePath(id)
+        if (!path.exists()) return null
+        return try {
+            Event.fromJson(path.readText()).pubKey
+        } catch (_: java.io.IOException) {
+            null
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+            null
+        }
+    }
+
+    /** Returns the `createdAt` cutoff from the tombstone, or null if none exists. */
+    fun addrTombstoneCutoff(
+        kind: Kind,
+        pubkey: HexKey,
+        dTag: String,
+    ): Long? {
+        val path = layout.addrTombstonePath(kind, pubkey, dTag)
+        if (!path.exists()) return null
+        return try {
+            Event.fromJson(path.readText()).createdAt
+        } catch (_: java.io.IOException) {
+            null
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+            null
+        }
+    }
+
+    fun installId(
+        targetId: HexKey,
+        deletionCanonical: Path,
+    ) {
+        val path = layout.idTombstonePath(targetId)
+        if (path.exists()) return
+        Files.createDirectories(path.parent)
+        try {
+            Files.createLink(path, deletionCanonical)
+        } catch (_: FileAlreadyExistsException) {
+            // Concurrent writer installed first — fine, either copy is equivalent.
+        }
+    }
+
+    fun installAddr(
+        kind: Kind,
+        pubkey: HexKey,
+        dTag: String,
+        deletionEvent: Event,
+        deletionCanonical: Path,
+    ) {
+        val path = layout.addrTombstonePath(kind, pubkey, dTag)
+        val existing = addrTombstoneCutoff(kind, pubkey, dTag)
+        if (existing != null && existing >= deletionEvent.createdAt) return
+
+        Files.createDirectories(path.parent)
+        val tmp = path.resolveSibling("${path.fileName}.tmp.${UUID.randomUUID()}")
+        try {
+            Files.createLink(tmp, deletionCanonical)
+            Files.move(tmp, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (t: Throwable) {
+            Files.deleteIfExists(tmp)
+            throw t
+        }
+    }
+
+    fun clearId(id: HexKey) {
+        Files.deleteIfExists(layout.idTombstonePath(id))
+    }
+
+    fun clearAddr(
+        kind: Kind,
+        pubkey: HexKey,
+        dTag: String,
+    ) {
+        Files.deleteIfExists(layout.addrTombstonePath(kind, pubkey, dTag))
+    }
+
+    // ------------------------------------------------------------------
+    // NIP-62 vanish tombstones (one per owner; latest wins)
+    // ------------------------------------------------------------------
+
+    /** Vanish cutoff for the given owner, or null if no tombstone. */
+    fun vanishCutoff(ownerHash: Long): Long? {
+        val path = layout.vanishTombstonePath(ownerHash)
+        if (!path.exists()) return null
+        return try {
+            Event.fromJson(path.readText()).createdAt
+        } catch (_: java.io.IOException) {
+            null
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+            null
+        }
+    }
+
+    /**
+     * Install a vanish tombstone, atomically replacing any existing one
+     * with a strictly older `createdAt`. Returns true when this call
+     * actually installed a new (or stronger) tombstone — the caller
+     * should run the cascade only when this is true.
+     */
+    fun installVanish(
+        ownerHash: Long,
+        vanishEvent: Event,
+        canonical: Path,
+    ): Boolean {
+        val path = layout.vanishTombstonePath(ownerHash)
+        val existing = vanishCutoff(ownerHash)
+        if (existing != null && existing >= vanishEvent.createdAt) return false
+
+        Files.createDirectories(path.parent)
+        val tmp = path.resolveSibling("${path.fileName}.tmp.${UUID.randomUUID()}")
+        try {
+            Files.createLink(tmp, canonical)
+            Files.move(tmp, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (t: Throwable) {
+            Files.deleteIfExists(tmp)
+            throw t
+        }
+        return true
+    }
+
+    fun clearVanish(ownerHash: Long) {
+        Files.deleteIfExists(layout.vanishTombstonePath(ownerHash))
+    }
+}

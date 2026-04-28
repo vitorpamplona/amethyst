@@ -20,11 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.graphics.drawable.Animatable
 import androidx.compose.foundation.Image
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -33,7 +37,14 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil3.asDrawable
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import com.vitorpamplona.amethyst.ui.theme.isLight
@@ -54,7 +65,7 @@ fun RobohashAsyncImage(
         )
     } else {
         Image(
-            imageVector = Icons.Default.Face,
+            painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
             contentDescription = contentDescription,
             colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
             modifier = modifier,
@@ -75,8 +86,18 @@ fun RobohashFallbackAsyncImage(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
+    autoPlayGif: Boolean = true,
 ) {
-    if (model != null && loadProfilePicture) {
+    if (model != null && loadProfilePicture && isGifUrl(model)) {
+        GifProfilePicture(
+            userHex = robot,
+            userPicture = model,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            loadRobohash = loadRobohash,
+            autoPlay = autoPlayGif,
+        )
+    } else if (model != null && loadProfilePicture) {
         val painter =
             if (loadRobohash) {
                 rememberVectorPainter(
@@ -84,10 +105,7 @@ fun RobohashFallbackAsyncImage(
                 )
             } else {
                 forwardingPainter(
-                    painter =
-                        rememberVectorPainter(
-                            image = Icons.Default.Face,
-                        ),
+                    painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
                     colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
                 )
             }
@@ -117,13 +135,68 @@ fun RobohashFallbackAsyncImage(
             )
         } else {
             Image(
-                imageVector = Icons.Default.Face,
+                painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
                 contentDescription = contentDescription,
                 colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
                 modifier = modifier,
                 alignment = alignment,
                 contentScale = contentScale,
             )
+        }
+    }
+}
+
+@Composable
+fun GifProfilePicture(
+    userHex: String,
+    userPicture: String,
+    contentDescription: String?,
+    modifier: Modifier,
+    loadRobohash: Boolean,
+    autoPlay: Boolean,
+) {
+    val resources = LocalContext.current.resources
+    val fallbackPainter =
+        if (loadRobohash) {
+            rememberVectorPainter(image = CachedRobohash.get(userHex, MaterialTheme.colorScheme.isLight))
+        } else {
+            forwardingPainter(
+                painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
+                colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
+            )
+        }
+
+    Box(modifier = modifier) {
+        SubcomposeAsyncImage(
+            model = userPicture,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            val state by painter.state.collectAsState()
+            val successState = state as? AsyncImagePainter.State.Success
+            val drawable = successState?.result?.image?.asDrawable(resources)
+
+            LaunchedEffect(drawable, autoPlay) {
+                if (drawable is Animatable) {
+                    if (autoPlay) drawable.start() else drawable.stop()
+                }
+            }
+
+            when (state) {
+                is AsyncImagePainter.State.Success -> {
+                    SubcomposeAsyncImageContent()
+                }
+
+                else -> {
+                    Image(
+                        painter = fallbackPainter,
+                        contentDescription = contentDescription,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
         }
     }
 }

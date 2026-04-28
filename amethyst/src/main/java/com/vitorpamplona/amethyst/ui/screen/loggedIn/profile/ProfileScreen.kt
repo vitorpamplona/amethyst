@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -36,6 +38,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -62,7 +65,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.BookmarkTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.TabBookmarks
@@ -81,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal.UserPro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.FollowedTagsTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.TabFollowedTags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualConversations
@@ -291,31 +297,59 @@ fun ProfileScreen(
 
     UserProfileFilterAssemblerSubscription(baseUser, accountViewModel.dataSources().profile)
 
-    RenderSurface { tabRowModifier: Modifier, pagerModifier: Modifier ->
-        RenderScreen(
-            baseUser,
-            tabRowModifier,
-            pagerModifier,
-            threadsViewModel,
-            repliesViewModel,
-            mutualViewModel,
-            appRecommendations,
-            externalIdentities,
-            followsFeedViewModel,
-            followersFeedViewModel,
-            zapFeedViewModel,
-            bookmarksFeedViewModel,
-            pinnedNotesFeedViewModel,
-            galleryFeedViewModel,
-            reportsFeedViewModel,
-            accountViewModel,
-            nav,
-        )
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
+    Scaffold(
+        topBar = {
+            ProfileTopBar(baseUser, accountViewModel, nav)
+        },
+        contentWindowInsets = WindowInsets(0),
+        bottomBar = {
+            AppBottomBar(
+                Route.Profile(accountViewModel.userProfile().pubkeyHex),
+                nav,
+                accountViewModel,
+            ) { route ->
+                if (route is Route.Profile) {
+                    coroutineScope.launch { scrollState.animateScrollTo(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
+        },
+    ) { padding ->
+        Box(modifier = Modifier.padding(bottom = padding.calculateBottomPadding())) {
+            RenderSurface(scrollState) { tabRowModifier: Modifier, pagerModifier: Modifier ->
+                RenderScreen(
+                    baseUser,
+                    tabRowModifier,
+                    pagerModifier,
+                    threadsViewModel,
+                    repliesViewModel,
+                    mutualViewModel,
+                    appRecommendations,
+                    externalIdentities,
+                    followsFeedViewModel,
+                    followersFeedViewModel,
+                    zapFeedViewModel,
+                    bookmarksFeedViewModel,
+                    pinnedNotesFeedViewModel,
+                    galleryFeedViewModel,
+                    reportsFeedViewModel,
+                    accountViewModel,
+                    nav,
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun RenderSurface(content: @Composable (tabRowModifier: Modifier, pagerModifier: Modifier) -> Unit) {
+private fun RenderSurface(
+    scrollState: ScrollState,
+    content: @Composable (tabRowModifier: Modifier, pagerModifier: Modifier) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.background,
@@ -330,7 +364,6 @@ private fun RenderSurface(content: @Composable (tabRowModifier: Modifier, pagerM
                     .onSizeChanged { columnSize = it },
         ) {
             val coroutineScope = rememberCoroutineScope()
-            val scrollState = rememberScrollState()
 
             val tabRowModifier = remember { Modifier.onSizeChanged { tabsSize = it } }
 

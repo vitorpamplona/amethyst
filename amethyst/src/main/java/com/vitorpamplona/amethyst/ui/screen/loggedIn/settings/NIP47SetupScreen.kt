@@ -25,11 +25,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -45,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetAddField
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -217,7 +216,7 @@ private fun PaymentTargetInlineEntry(
         }
         IconButton(onClick = onDelete) {
             Icon(
-                imageVector = Icons.Rounded.Delete,
+                symbol = MaterialSymbols.Delete,
                 contentDescription = stringRes(id = R.string.delete_payment_target),
             )
         }

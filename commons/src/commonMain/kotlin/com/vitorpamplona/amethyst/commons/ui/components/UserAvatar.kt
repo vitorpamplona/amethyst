@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -38,6 +36,8 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
@@ -96,9 +96,7 @@ fun UserAvatar(
                     image = CachedRobohash.get(userHex, MaterialTheme.colorScheme.isLight),
                 )
             } else {
-                rememberVectorPainter(
-                    image = Icons.Default.Face,
-                )
+                rememberMaterialSymbolPainter(MaterialSymbols.Face)
             }
 
         AsyncImage(
@@ -125,7 +123,7 @@ fun UserAvatar(
     } else {
         // Show generic icon
         Image(
-            imageVector = Icons.Default.Face,
+            painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
             contentDescription = contentDescription,
             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
             modifier = avatarModifier,

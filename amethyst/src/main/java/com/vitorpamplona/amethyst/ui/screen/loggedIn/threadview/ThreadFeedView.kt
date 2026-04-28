@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -163,6 +164,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
+import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
@@ -261,6 +264,8 @@ import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
@@ -356,7 +361,7 @@ fun RenderThreadFeed(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(
@@ -534,7 +539,7 @@ private fun FullBleedNoteCompose(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(
-                        remember { Modifier.weight(1f) },
+                        Modifier.weight(1f),
                     ) {
                         if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
                             ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
@@ -829,6 +834,10 @@ private fun FullBleedNoteCompose(
                         accountViewModel,
                         nav,
                     )
+                } else if (noteEvent is MeetingSpaceEvent) {
+                    RenderMeetingSpaceEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is MeetingRoomEvent) {
+                    RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is TorrentEvent) {
                     RenderTorrent(
                         baseNote,
@@ -922,6 +931,7 @@ private fun RenderClassifiedsReaderForThread(
                 dim = it.dimension,
                 uri = note.toNostrUri(),
                 mimeType = it.mimeType,
+                thumbhash = it.thumbhash,
             )
         }
 
