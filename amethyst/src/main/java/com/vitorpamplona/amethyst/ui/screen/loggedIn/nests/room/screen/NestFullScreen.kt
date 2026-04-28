@@ -114,6 +114,8 @@ internal fun NestFullScreen(
     handRaised: Boolean,
     onHandRaisedChange: (Boolean) -> Unit,
     onLeave: () -> Unit,
+    onMinimize: () -> Unit,
+    canMinimize: Boolean,
 ) {
     var showEditSheet by rememberSaveable { mutableStateOf(false) }
     var showHostMenu by rememberSaveable { mutableStateOf(false) }
@@ -181,6 +183,8 @@ internal fun NestFullScreen(
                 title = event.room().orEmpty(),
                 isHost = isHost,
                 showHostMenu = showHostMenu,
+                showMinimize = canMinimize,
+                onMinimize = onMinimize,
                 onMenuOpen = { showHostMenu = true },
                 onMenuDismiss = { showHostMenu = false },
                 onShare = {
@@ -483,6 +487,8 @@ private fun NestTopAppBar(
     title: String,
     isHost: Boolean,
     showHostMenu: Boolean,
+    showMinimize: Boolean,
+    onMinimize: () -> Unit,
     onMenuOpen: () -> Unit,
     onMenuDismiss: () -> Unit,
     onShare: () -> Unit,
@@ -497,6 +503,18 @@ private fun NestTopAppBar(
             )
         },
         actions = {
+            // Minimize-to-PIP affordance. The user-facing way to learn
+            // that audio keeps playing in a floating window — pairs
+            // with the back-gesture handler in NestActivityContent.
+            // Hidden when the device doesn't advertise the PIP feature.
+            if (showMinimize) {
+                IconButton(onClick = onMinimize) {
+                    Icon(
+                        symbol = MaterialSymbols.PictureInPicture,
+                        contentDescription = stringRes(R.string.nest_minimize_description),
+                    )
+                }
+            }
             Box {
                 IconButton(onClick = onMenuOpen) {
                     Icon(

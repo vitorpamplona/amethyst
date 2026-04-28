@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -58,10 +60,12 @@ internal fun NestActivityContent(
     addressValue: String,
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
+    isPipSupported: Boolean,
     onMuteState: (Boolean) -> Unit,
     onConnectedChange: (Boolean) -> Unit,
     pipMuteSignal: SharedFlow<Unit>,
     onLeave: () -> Unit,
+    onMinimize: () -> Unit,
 ) {
     val parsedAddress = remember(addressValue) { Address.parse(addressValue) }
     if (parsedAddress == null) {
@@ -97,10 +101,12 @@ internal fun NestActivityContent(
                     viewModel = viewModel,
                     accountViewModel = accountViewModel,
                     isInPipMode = isInPipMode,
+                    isPipSupported = isPipSupported,
                     onMuteState = onMuteState,
                     onConnectedChange = onConnectedChange,
                     pipMuteSignal = pipMuteSignal,
                     onLeave = onLeave,
+                    onMinimize = onMinimize,
                 )
             }
         }
@@ -125,10 +131,12 @@ private fun NestActivityBody(
     viewModel: NestViewModel,
     accountViewModel: AccountViewModel,
     isInPipMode: Boolean,
+    isPipSupported: Boolean,
     onMuteState: (Boolean) -> Unit,
     onConnectedChange: (Boolean) -> Unit,
     pipMuteSignal: SharedFlow<Unit>,
     onLeave: () -> Unit,
+    onMinimize: () -> Unit,
 ) {
     val account = accountViewModel.account
     val localPubkey = account.signer.pubKey
@@ -177,6 +185,13 @@ private fun NestActivityBody(
         handRaised = handRaised,
     )
 
+    // Back gesture while connected = minimize to PIP rather than tearing
+    // down the audio session. When disconnected (lobby / Connecting /
+    // Failed) or PIP isn't supported, we let back fall through to the
+    // default Activity.finish() so the user can cancel out cleanly.
+    val canMinimize = isPipSupported && !isInPipMode && ui.connection is ConnectionUiState.Connected
+    BackHandler(enabled = canMinimize) { onMinimize() }
+
     if (isInPipMode) {
         NestPipScreen(
             title = event.room(),
@@ -195,6 +210,8 @@ private fun NestActivityBody(
             handRaised = handRaised,
             onHandRaisedChange = { handRaised = it },
             onLeave = onLeave,
+            onMinimize = onMinimize,
+            canMinimize = isPipSupported,
         )
     }
 }
