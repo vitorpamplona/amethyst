@@ -119,6 +119,8 @@ internal fun StageGrid(
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
     connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
+    myPubkey: String? = null,
+    onTapSelf: (() -> Unit)? = null,
 ) {
     // Float currently-speaking members to the top so the listener can
     // see who they're hearing without scrolling. sortedBy is stable in
@@ -160,6 +162,7 @@ internal fun StageGrid(
             verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
         ) {
             items(items = sortedMembers, key = { it.pubkey }) { member ->
+                val isSelf = myPubkey != null && member.pubkey == myPubkey
                 MemberCell(
                     member = member,
                     avatarSize = STAGE_AVATAR,
@@ -170,6 +173,8 @@ internal fun StageGrid(
                     reactions = reactionsByPubkey[member.pubkey].orEmpty(),
                     accountViewModel = accountViewModel,
                     onLongPressParticipant = onLongPressParticipant,
+                    isSelf = isSelf,
+                    onTapSelf = if (isSelf) onTapSelf else null,
                     modifier = Modifier.animateItem(),
                 )
             }
@@ -194,6 +199,7 @@ internal fun AudienceGrid(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     onLongPressParticipant: ((String) -> Unit)? = null,
+    myPubkey: String? = null,
 ) {
     if (members.isEmpty()) {
         Box(
@@ -235,6 +241,7 @@ internal fun AudienceGrid(
                 reactions = emptyList(),
                 accountViewModel = accountViewModel,
                 onLongPressParticipant = onLongPressParticipant,
+                isSelf = myPubkey != null && member.pubkey == myPubkey,
                 modifier = Modifier.animateItem(),
             )
         }
@@ -252,6 +259,8 @@ private fun MemberCell(
     reactions: List<RoomReaction>,
     accountViewModel: AccountViewModel,
     onLongPressParticipant: ((String) -> Unit)?,
+    isSelf: Boolean = false,
+    onTapSelf: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val mutedRingColor = MaterialTheme.colorScheme.error
@@ -292,6 +301,17 @@ private fun MemberCell(
         remember(member.pubkey, onLongPressParticipant) {
             onLongPressParticipant?.let { cb -> { hex: String -> cb(hex) } }
         }
+    // Self-cell tap shortcut: tap your own avatar to toggle mic-mute
+    // when broadcasting. For other cells we leave tap unhandled so
+    // the existing nav-to-profile path stays consistent (and there's
+    // nothing visually different from a non-clickable avatar).
+    val onClick =
+        if (isSelf && onTapSelf != null) {
+            remember(onTapSelf) { { _: String -> onTapSelf() } }
+        } else {
+            null
+        }
+    val selfTint = if (isSelf) MaterialTheme.colorScheme.primary else Color.Unspecified
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -302,6 +322,7 @@ private fun MemberCell(
                 size = avatarSize,
                 accountViewModel = accountViewModel,
                 modifier = avatarModifier,
+                onClick = onClick,
                 onLongClick = onLongClick,
             )
             if (isConnecting) {
@@ -330,19 +351,27 @@ private fun MemberCell(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
+            // Reactions float over the avatar's bottom-right corner so
+            // a 👏 burst no longer pushes the username down and reflows
+            // neighbouring cells. The mic badge sits at BottomCenter,
+            // so BottomEnd + a small outward offset keeps them clear.
+            if (reactions.isNotEmpty()) {
+                SpeakerReactionOverlay(
+                    reactions = reactions,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 6.dp, y = 6.dp),
+                )
+            }
         }
         UsernameDisplay(
             baseUser = user,
             weight = Modifier.fillMaxWidth().padding(top = 4.dp),
+            textColor = selfTint,
             textAlign = TextAlign.Center,
             accountViewModel = accountViewModel,
         )
-        if (reactions.isNotEmpty()) {
-            SpeakerReactionOverlay(
-                reactions = reactions,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
     }
 }
 

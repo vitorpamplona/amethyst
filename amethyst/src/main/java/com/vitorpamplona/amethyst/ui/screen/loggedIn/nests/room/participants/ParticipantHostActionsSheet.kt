@@ -302,7 +302,14 @@ internal fun ParticipantHostActionsSheet(
                     text = stringRes(R.string.nest_kick_action),
                     color = MaterialTheme.colorScheme.error,
                 ) {
+                    // Two-step kick mirroring nostrnests' ProfileCard.tsx:
+                    //   1. ephemeral kind-4312 ["action","kick"] kicks the
+                    //      user off the audio plane
+                    //   2. re-published kind-30312 with the target's p-tag
+                    //      dropped removes them from the participant grid
+                    //      so future presence events don't re-render them
                     broadcast(AdminCommandEvent.kick(roomATag, target))
+                    broadcast(RoomParticipantActions.removeParticipant(event, target))
                     onDismiss()
                 }
             }

@@ -90,6 +90,28 @@ internal object RoomParticipantActions {
         targetPubkey: String,
     ): EventTemplate<MeetingSpaceEvent>? = setRole(original, targetPubkey, ROLE.PARTICIPANT)
 
+    /**
+     * Drop [targetPubkey]'s p-tag from the room event entirely.
+     * Mirrors nostrnests' kick follow-up (`updateRoomParticipant(_,
+     * null)` after `kickUser` in `ProfileCard.tsx`): the kind-4312
+     * boots them off the audio plane, this re-published kind-30312
+     * keeps them out of the participant grid.
+     *
+     * Refuses to drop the host — same reasoning as [setRole]. Returns
+     * null if the target isn't currently in the participant list (a
+     * pure-audience kick has no list-mutation to do).
+     */
+    fun removeParticipant(
+        original: MeetingSpaceEvent,
+        targetPubkey: String,
+    ): EventTemplate<MeetingSpaceEvent>? {
+        val all = original.participants()
+        val target = all.firstOrNull { it.pubKey == targetPubkey } ?: return null
+        if (target.role.equals(ROLE.HOST.code, ignoreCase = true)) return null
+        val remaining = all.filterNot { it.pubKey == targetPubkey }
+        return rebuild(original, remaining, original.status() ?: StatusTag.STATUS.OPEN)
+    }
+
     private fun rebuild(
         original: MeetingSpaceEvent,
         participants: List<ParticipantTag>,

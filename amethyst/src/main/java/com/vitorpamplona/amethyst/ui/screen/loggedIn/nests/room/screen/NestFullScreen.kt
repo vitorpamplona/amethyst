@@ -223,6 +223,14 @@ internal fun NestFullScreen(
                 summary = event.summary(),
                 listenerCount = presences.size,
             )
+            // Self-cell tap toggles mic-mute when broadcasting; null
+            // when not broadcasting so the avatar falls back to the
+            // default no-op tap (rather than offering a button that
+            // does nothing).
+            val onTapSelf: (() -> Unit)? =
+                (ui.broadcast as? com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState.Broadcasting)?.let { state ->
+                    { viewModel.setMicMuted(!state.isMuted) }
+                }
             StageGrid(
                 members = participantGrid.onStage,
                 speakingNow = ui.speakingNow,
@@ -231,6 +239,8 @@ internal fun NestFullScreen(
                 reactionsByPubkey = reactionsByPubkey,
                 connectingSpeakers = ui.connectingSpeakers,
                 onLongPressParticipant = onLongPressParticipant,
+                myPubkey = myPubkey,
+                onTapSelf = onTapSelf,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             NestTabRow(
@@ -258,6 +268,7 @@ internal fun NestFullScreen(
                         members = participantGrid.audience,
                         accountViewModel = accountViewModel,
                         onLongPressParticipant = onLongPressParticipant,
+                        myPubkey = myPubkey,
                         modifier =
                             Modifier
                                 .weight(1f)
