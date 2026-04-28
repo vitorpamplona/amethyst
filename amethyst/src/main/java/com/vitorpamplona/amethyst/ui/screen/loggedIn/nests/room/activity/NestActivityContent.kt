@@ -197,6 +197,8 @@ private fun NestActivityBody(
             title = event.room(),
             onStage = onStage,
             ui = ui,
+            viewModel = viewModel,
+            handRaised = handRaised,
             accountViewModel = accountViewModel,
         )
     } else {
