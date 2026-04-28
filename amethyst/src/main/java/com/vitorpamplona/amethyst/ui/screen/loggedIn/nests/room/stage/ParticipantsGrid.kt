@@ -95,7 +95,7 @@ private val MAX_GLOW_RADIUS = 12.dp
 // at 100.dp. The 0.42 ratio was tuned for ~48.dp avatars (giving
 // ~20.dp badges); without a cap, scaling to 100.dp produces 42.dp
 // badges that compete with the face for attention.
-private val MAX_BADGE_SIZE = 28.dp
+private val MAX_BADGE_SIZE = 22.dp
 
 private val STAGE_CARD_SHAPE = RoundedCornerShape(20.dp)
 private val STAGE_CARD_PADDING_HORIZONTAL = 12.dp
