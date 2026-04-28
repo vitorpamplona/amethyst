@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.IElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NameShowResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinImportResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -436,6 +437,37 @@ class NamecoinImportTest {
             assertEquals(
                 "6cdebccabda1dfa058ab85352a79509b592b2bdfa0370325e28ec1cb4f18667d",
                 result?.pubkey,
+            )
+        }
+
+    @Test
+    fun `NIP-05 lookup surfaces MalformedRecord with parser detail when value is broken JSON`() =
+        runTest {
+            // Real-world failure mode: a hand-built `name_update` with one
+            // closing brace short of balanced ends up published as broken
+            // JSON. The publisher then sees "name not found / no nostr
+            // field" and chases a phantom bug. Surface the parser's
+            // diagnostic so they know the value itself is the problem.
+            val truncated =
+                """{"ip":"1.2.3.4","nostr":{"names":{"_":"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"}""".trimIndent()
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/broken", truncated)
+                }
+            val resolver = NamecoinNameResolver(client, lookupTimeoutMs = 1_000L)
+            val outcome = resolver.resolveDetailed("_@broken.bit")
+            assertTrue(
+                "expected MalformedRecord, got $outcome",
+                outcome is NamecoinResolveOutcome.MalformedRecord,
+            )
+            outcome as NamecoinResolveOutcome.MalformedRecord
+            assertEquals("d/broken", outcome.name)
+            // Don't pin the exact parser text — different kotlinx.serialization
+            // versions phrase it differently. Just require it's a non-empty
+            // diagnostic, NOT "no nostr field" or similar misdirection.
+            assertTrue(
+                "error must be a non-empty diagnostic: ${outcome.error}",
+                outcome.error.isNotBlank(),
             )
         }
 

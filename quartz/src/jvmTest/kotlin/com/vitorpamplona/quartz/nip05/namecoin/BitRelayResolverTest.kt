@@ -145,6 +145,45 @@ class BitRelayResolverTest {
             assertTrue(outcome is BitRelayResolver.Resolution.Error)
         }
 
+    // ── Diagnostic: malformed JSON in the value gets a useful error ──
+
+    @Test
+    fun `malformed value JSON returns Error with parser detail in message`() =
+        runTest {
+            // Real-world example: a hand-built `name_update` value with one
+            // closing brace short of balanced ends up published as broken
+            // JSON. The parser fails and *previously* the resolver swallowed
+            // the exception inside the per-field parsers, surfacing a
+            // misleading "no relay field" message. We now want the parser's
+            // own diagnostic in the error so the publisher can fix the value
+            // (the column number alone identifies the broken brace).
+            val truncatedValue =
+                """{"ip":"1.2.3.4","map":{"relay":{"relay":"wss://relay.testls.bit/"}""".trimIndent()
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/testls", truncatedValue)
+                }
+            val resolver = newResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+            assertTrue(
+                "expected Error, got $outcome",
+                outcome is BitRelayResolver.Resolution.Error,
+            )
+            outcome as BitRelayResolver.Resolution.Error
+            assertTrue(
+                "expected the error message to mention the malformed JSON, got: ${outcome.message}",
+                outcome.message.contains("Malformed Namecoin record JSON", ignoreCase = true),
+            )
+            // We don't pin the exact parser text (kotlinx.serialization
+            // wording can change between versions), only that the message
+            // is non-empty and explicitly attributed to JSON parsing
+            // rather than to a missing relay field.
+            assertFalse(
+                "error message must NOT pretend the relay field is missing when JSON itself is broken: ${outcome.message}",
+                outcome.message.contains("No `relay` or `tor`", ignoreCase = true),
+            )
+        }
+
     @Test
     fun `cache prevents second lookup within ttl`() =
         runTest {
