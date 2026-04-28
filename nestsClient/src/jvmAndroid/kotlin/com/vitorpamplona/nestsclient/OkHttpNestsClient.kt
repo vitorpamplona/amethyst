@@ -22,6 +22,7 @@ package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -31,6 +32,10 @@ import okhttp3.Response
 import java.io.EOFException
 import java.io.IOException
 import java.net.SocketException
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.min
 
 /**
  * OkHttp-backed [NestsClient] used on JVM + Android. A shared [OkHttpClient]
@@ -54,17 +59,20 @@ class OkHttpNestsClient(
                 append('}')
             }
         val bodyBytes = bodyJson.encodeToByteArray()
-        // NIP-98 binds the signed event to (url, method, body-hash) so the
-        // server can reject a token replayed against a different request.
-        val authHeader =
-            NestsAuth.header(
-                signer = signer,
-                url = url,
-                method = "POST",
-                payload = bodyBytes,
-            )
 
-        val request =
+        // NIP-98 events embed `created_at`; the moq-auth reference
+        // accepts a 60 s validity window. A retry that waits longer
+        // than that (e.g. exponential backoff after 429) MUST re-sign
+        // or the server returns 401 "Event too old". So we build the
+        // request lazily on every attempt instead of once up front.
+        val buildRequest: suspend () -> Request = {
+            val authHeader =
+                NestsAuth.header(
+                    signer = signer,
+                    url = url,
+                    method = "POST",
+                    payload = bodyBytes,
+                )
             Request
                 .Builder()
                 .url(url)
@@ -72,9 +80,10 @@ class OkHttpNestsClient(
                 .header("Authorization", authHeader)
                 .header("Accept", "application/json")
                 .build()
+        }
 
         return withContext(Dispatchers.IO) {
-            executeWithTransportRetry(request, url)
+            executeWithRetry(buildRequest, url)
                 .use { response ->
                     val body = response.body.string()
                     if (!response.isSuccessful) {
@@ -97,44 +106,124 @@ class OkHttpNestsClient(
     }
 
     /**
-     * Send [request] and tolerate one transport-layer hiccup. OkHttp's
-     * built-in `retryOnConnectionFailure` does NOT retry POSTs once any
-     * byte of the request body has been written — but a stale pooled
-     * connection can RST or EOF *exactly* in that window, especially on
-     * mobile networks (and during interop test runs after an idle gap
-     * between test classes). One retry on `SocketException` /
-     * `EOFException` / `IOException` recovers cleanly because
-     * `Request` builders are immutable; OkHttp opens a fresh
-     * connection on the second try.
+     * Send [request] and tolerate two recoverable failure modes:
      *
-     * Anything that's not a transient transport failure (HTTP 4xx /
-     * 5xx, malformed response) is left to the caller as before.
+     *   1. Transport hiccup. OkHttp's built-in `retryOnConnectionFailure`
+     *      does NOT retry POSTs once any byte of the request body has
+     *      been written — but a stale pooled connection can RST or EOF
+     *      *exactly* in that window, especially on mobile networks (and
+     *      during interop test runs after an idle gap between test
+     *      classes). One retry on `SocketException` / `EOFException` /
+     *      `IOException` recovers cleanly because `Request` builders
+     *      are immutable; OkHttp opens a fresh connection on the
+     *      second try.
+     *
+     *   2. HTTP 429 (Too Many Requests). The nostrnests reference
+     *      `moq-auth` sidecar rate-limits 20/min/IP; production
+     *      back-ends may be stricter. We respect a `Retry-After`
+     *      header (delta-seconds OR HTTP-date) when present and fall
+     *      back to capped exponential backoff when absent, retrying
+     *      up to [MAX_RATE_LIMIT_RETRIES] times. Cancellable: the
+     *      backoff suspends with `delay`, so a coroutine cancellation
+     *      tears the retry loop down at the next sleep boundary.
+     *
+     * Anything that's not a transient transport failure or a 429 (HTTP
+     * 4xx other than 429, 5xx, malformed response) is left to the
+     * caller as before.
      */
-    private fun executeWithTransportRetry(
-        request: Request,
+    private suspend fun executeWithRetry(
+        buildRequest: suspend () -> Request,
         url: String,
     ): Response {
-        var lastError: Throwable? = null
-        repeat(2) { attempt ->
-            try {
-                return http.newCall(request).execute()
-            } catch (e: SocketException) {
-                lastError = e
-            } catch (e: EOFException) {
-                lastError = e
-            } catch (e: IOException) {
-                // OkHttp wraps a wide variety of transport faults
-                // (StreamResetException, ConnectionShutdownException,
-                // …) under IOException. Retry once; second pass either
-                // succeeds against a fresh connection or surfaces the
-                // real error.
-                lastError = e
+        var transportError: Throwable? = null
+        var transportAttempts = 0
+        var rateLimitAttempts = 0
+        while (true) {
+            val request = buildRequest()
+            val response: Response =
+                try {
+                    http.newCall(request).execute()
+                } catch (e: SocketException) {
+                    transportError = e
+                    if (++transportAttempts >= MAX_TRANSPORT_RETRIES) throw NestsException("Failed to reach $url", e)
+                    continue
+                } catch (e: EOFException) {
+                    transportError = e
+                    if (++transportAttempts >= MAX_TRANSPORT_RETRIES) throw NestsException("Failed to reach $url", e)
+                    continue
+                } catch (e: IOException) {
+                    // OkHttp wraps a wide variety of transport faults
+                    // (StreamResetException, ConnectionShutdownException,
+                    // …) under IOException. Retry once; second pass
+                    // either succeeds against a fresh connection or
+                    // surfaces the real error.
+                    transportError = e
+                    if (++transportAttempts >= MAX_TRANSPORT_RETRIES) throw NestsException("Failed to reach $url", e)
+                    continue
+                }
+
+            if (response.code != 429 || rateLimitAttempts >= MAX_RATE_LIMIT_RETRIES) {
+                return response
             }
+
+            val retryAfter = response.header("Retry-After")
+            // Drain + close so the connection returns to the pool;
+            // the Response we hand back to the caller is the one from
+            // the next iteration.
+            response.close()
+            val delayMs = computeRateLimitBackoffMs(retryAfter, rateLimitAttempts)
+            rateLimitAttempts++
+            delay(delayMs)
         }
-        throw NestsException("Failed to reach $url", lastError)
+        // Unreachable — every path either returns or throws.
+        @Suppress("UNREACHABLE_CODE")
+        throw NestsException("Failed to reach $url", transportError)
     }
 
     private companion object {
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
+
+        private const val MAX_TRANSPORT_RETRIES = 2
     }
+}
+
+// Worst-case total wait at INITIAL_BACKOFF_MS=1s, MAX_BACKOFF_MS=16s,
+// 7 retries: 1+2+4+8+16+16+16 = 63 s — just over the moq-auth
+// reference 60 s/IP rate-limit window, so a clustered burst of mints
+// (typical in interop test runs) will outlast the bucket reset
+// instead of cascading.
+internal const val MAX_RATE_LIMIT_RETRIES = 7
+
+internal const val INITIAL_BACKOFF_MS = 1_000L
+
+internal const val MAX_BACKOFF_MS = 16_000L
+
+/**
+ * Translate a `Retry-After` header (RFC 7231 §7.1.3 — either
+ * delta-seconds or HTTP-date) into millis to sleep. Falls back to
+ * capped exponential backoff (1s, 2s, 4s, 8s, …) when the header is
+ * absent or unparseable.
+ *
+ * `nowMs` is parameterised so date-driven cases are testable without
+ * `Thread.sleep`-style time travel.
+ */
+internal fun computeRateLimitBackoffMs(
+    retryAfterHeader: String?,
+    attempt: Int,
+    nowMs: Long = System.currentTimeMillis(),
+): Long {
+    if (retryAfterHeader != null) {
+        retryAfterHeader.trim().toLongOrNull()?.let { seconds ->
+            return seconds.coerceAtLeast(0L) * 1_000L
+        }
+        try {
+            val target = ZonedDateTime.parse(retryAfterHeader, DateTimeFormatter.RFC_1123_DATE_TIME)
+            val targetMs = target.withZoneSameInstant(ZoneId.of("UTC")).toInstant().toEpochMilli()
+            if (targetMs > nowMs) return targetMs - nowMs
+        } catch (_: Throwable) {
+            // Fall through to exponential backoff.
+        }
+    }
+    val base = INITIAL_BACKOFF_MS shl attempt
+    return min(base, MAX_BACKOFF_MS)
 }
