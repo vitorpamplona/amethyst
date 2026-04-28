@@ -219,10 +219,22 @@ class BitRelayResolver(
         // `_tor` fields read cleanly from the merged view. We use a
         // pre-parsed [JsonObject] here and pass it to the JsonObject
         // overloads of the parsers, so the value JSON is parsed once.
+        //
+        // If the published value isn't valid JSON (a real failure mode
+        // when an operator hand-builds the value and miscounts braces),
+        // surface the parser's error message verbatim. Hiding it behind
+        // a generic "no relay field" message — which is what happens if
+        // the JSON parse exception is swallowed downstream — sends the
+        // publisher chasing a missing field that isn't actually the
+        // problem.
         val parsedRoot =
             runCatching { sharedJson.parseToJsonElement(nameResult.value).jsonObject }
-                .getOrElse {
-                    return Resolution.Error(host, "Malformed Namecoin record JSON for `$namecoinName`")
+                .getOrElse { err ->
+                    val detail = err.message ?: "unparseable JSON value"
+                    return Resolution.Error(
+                        host,
+                        "Malformed Namecoin record JSON for `$namecoinName`: $detail",
+                    )
                 }
         val effectiveRoot: JsonObject =
             NamecoinImportResolver.expandImports(parsedRoot) { name ->

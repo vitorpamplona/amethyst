@@ -46,6 +46,20 @@ sealed class NamecoinResolveOutcome {
         val name: String,
     ) : NamecoinResolveOutcome()
 
+    /**
+     * The name exists but its value is not parseable as a Namecoin Domain
+     * Name Object (i.e. valid JSON of the right shape). Distinct from
+     * [NoNostrField], which means valid JSON but no `nostr` data.
+     *
+     * `error` is the underlying parser message (kotlinx.serialization);
+     * useful for surfacing back to the publisher of the broken record
+     * (e.g. "Unfinished JSON term at EOF at line 1, column 474").
+     */
+    data class MalformedRecord(
+        val name: String,
+        val error: String,
+    ) : NamecoinResolveOutcome()
+
     /** All ElectrumX servers were unreachable. */
     data class ServersUnreachable(
         val message: String,
@@ -819,9 +833,23 @@ class NamecoinNameResolver(
                 }
             }
 
+        // Distinguish "valid JSON, no `nostr` field" from "value is
+        // unparseable JSON". Both used to collapse into NoNostrField, which
+        // sent operators chasing a missing field that wasn't actually the
+        // problem (the Namecoin record itself was malformed). Surfacing
+        // the parser's column number lets a publisher see WHERE the value
+        // is bad without spelunking through the whole serialised form.
         val parsedRoot =
-            tryParseJson(nameResult.value)
-                ?: return NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+            parseValueOrError(nameResult.value)
+                .fold(
+                    onSuccess = { it },
+                    onFailure = { err ->
+                        return NamecoinResolveOutcome.MalformedRecord(
+                            name = parsed.namecoinName,
+                            error = err.message ?: "unparseable JSON value",
+                        )
+                    },
+                )
 
         // Per ifa-0001 §"import": expand any `import` items on the parent
         // record before consulting the value. Imports happen at the value
@@ -1021,6 +1049,26 @@ class NamecoinNameResolver(
             json.parseToJsonElement(raw).jsonObject
         } catch (_: Exception) {
             null
+        }
+
+    /**
+     * Parse [raw] into a [JsonObject], surfacing the underlying parser
+     * error message instead of swallowing it. The result is used by
+     * [performLookupDetailed] to distinguish [NamecoinResolveOutcome.MalformedRecord]
+     * (the value itself is broken) from [NamecoinResolveOutcome.NoNostrField]
+     * (valid JSON, just missing the `nostr` block).
+     *
+     * Returns [Result.failure] with the parser's diagnostic message; the
+     * caller is expected to forward that text into a UI / log surface so
+     * the publisher of the broken record can fix it.
+     */
+    private fun parseValueOrError(raw: String): Result<JsonObject> =
+        runCatching {
+            val element = json.parseToJsonElement(raw)
+            element as? JsonObject
+                ?: throw IllegalArgumentException(
+                    "top-level value is ${element::class.simpleName}, expected JSON object",
+                )
         }
 
     private fun isValidPubkey(s: String): Boolean = HEX_PUBKEY_REGEX.matches(s)
