@@ -119,6 +119,35 @@ object TlsaVerifier {
         chain: List<CertView>,
         records: List<TlsaRecord>,
         sha512: (ByteArray) -> ByteArray,
+    ): Result = verifyWithStapled(chain, records, emptyList(), sha512)
+
+    /**
+     * Like [verify], but also accepts a list of extra SPKI DER blobs to try
+     * for `*-TA` (trust-anchor) usages. Used to honour the ncgencert AIA
+     * stapling convention: the AIA Parent CA is not actually sent over the
+     * wire, but its SPKI is stapled into the served chain's metadata so
+     * verifiers can synthetically add a one-step-higher trust anchor.
+     *
+     * Stapled SPKIs only participate in `PKIX-TA` / `DANE-TA` matches —
+     * end-entity matches must still come from a real cert in the served
+     * chain. Stapled SPKIs participate ONLY in the `SUBJECT_PUBLIC_KEY_INFO`
+     * selector path; full-cert matches are skipped because we don't have the
+     * full DER for a stapled-only key.
+     *
+     * The chain is checked first; only when no record matches the served
+     * chain do stapled candidates get a try. This preserves the existing
+     * matching semantics for pre-stapling deployments.
+     *
+     * @param chain          peer certificate chain, leaf-first
+     * @param records        TLSA records from the Namecoin `tls` field
+     * @param stapledSpkis   extra SPKI DER blobs (e.g. ncgencert AIA staples)
+     * @param sha512         platform SHA-512 implementation
+     */
+    fun verifyWithStapled(
+        chain: List<CertView>,
+        records: List<TlsaRecord>,
+        stapledSpkis: List<ByteArray>,
+        sha512: (ByteArray) -> ByteArray,
     ): Result {
         if (records.isEmpty()) return Result.NoUsableRecords
         var usable = 0
@@ -154,6 +183,38 @@ object TlsaVerifier {
                 }
             }
         }
+
+        // No match against the served chain. Try stapled SPKIs as a fallback.
+        // Only TA usages are eligible (stapled keys represent the AIA Parent
+        // CA, which is structurally a trust anchor); only the SPKI selector
+        // is eligible (we don't have full-cert DER for stapled keys); and
+        // only SHA-256 / SHA-512 / EXACT matching applies the usual way.
+        if (stapledSpkis.isNotEmpty()) {
+            for (record in records) {
+                if (record.usage != TlsaUsage.PKIX_TA && record.usage != TlsaUsage.DANE_TA) continue
+                if (record.selector != TlsaSelector.SUBJECT_PUBLIC_KEY_INFO) continue
+                if (record.matchingType == TlsaMatchingType.UNKNOWN) continue
+                val expected = decodeAssociationData(record) ?: continue
+                for (spki in stapledSpkis) {
+                    val actual =
+                        when (record.matchingType) {
+                            TlsaMatchingType.EXACT -> spki
+                            TlsaMatchingType.SHA_256 -> sha256(spki)
+                            TlsaMatchingType.SHA_512 -> sha512(spki)
+                            TlsaMatchingType.UNKNOWN -> continue
+                        }
+                    if (actual.contentEquals(expected)) {
+                        return Result.Match(
+                            matchedRecord = record,
+                            // -1 signals "matched a stapled key, not a position in the served chain".
+                            matchedCertIndex = -1,
+                            requiresPkixValidation = isPkixUsage(record.usage),
+                        )
+                    }
+                }
+            }
+        }
+
         return if (usable == 0) Result.NoUsableRecords else Result.NoMatch(usable)
     }
 

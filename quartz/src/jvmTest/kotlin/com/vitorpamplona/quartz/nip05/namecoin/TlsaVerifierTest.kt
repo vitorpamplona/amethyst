@@ -322,4 +322,141 @@ class TlsaVerifierTest {
         // Must NOT throw, must NOT match, must report as no-usable since it's the only record.
         assertTrue(r is TlsaVerifier.Result.NoUsableRecords)
     }
+
+    // ── verifyWithStapled ── ncgencert AIA-stapled SPKI fallback path ──────
+
+    @Test
+    fun `verifyWithStapled DANE-TA SHA-256 matches a stapled SPKI when chain has none`() {
+        val stapledSpki = bytesOf(0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11)
+        val rec =
+            TlsaRecord(
+                usage = TlsaUsage.DANE_TA,
+                selector = TlsaSelector.SUBJECT_PUBLIC_KEY_INFO,
+                matchingType = TlsaMatchingType.SHA_256,
+                associationDataBase64 = b64(sha256(stapledSpki)),
+            )
+        val r =
+            TlsaVerifier.verifyWithStapled(
+                chain = listOf(cert(0), cert(1)), // unrelated SPKIs in the served chain
+                records = listOf(rec),
+                stapledSpkis = listOf(stapledSpki),
+                sha512 = sha512,
+            )
+        assertTrue("expected match against stapled SPKI: $r", r is TlsaVerifier.Result.Match)
+        val match = r as TlsaVerifier.Result.Match
+        assertEquals(-1, match.matchedCertIndex) // -1 signals stapled-fallback match
+        assertSame(rec, match.matchedRecord)
+        assertEquals(false, match.requiresPkixValidation) // DANE-TA does not require PKIX
+    }
+
+    @Test
+    fun `verifyWithStapled PKIX-TA SHA-256 stapled match still requires PKIX`() {
+        val stapledSpki = bytesOf(0xDE, 0xAD, 0xBE, 0xEF)
+        val rec =
+            TlsaRecord(
+                usage = TlsaUsage.PKIX_TA,
+                selector = TlsaSelector.SUBJECT_PUBLIC_KEY_INFO,
+                matchingType = TlsaMatchingType.SHA_256,
+                associationDataBase64 = b64(sha256(stapledSpki)),
+            )
+        val r =
+            TlsaVerifier.verifyWithStapled(
+                chain = listOf(cert(0)),
+                records = listOf(rec),
+                stapledSpkis = listOf(stapledSpki),
+                sha512 = sha512,
+            )
+        val match = r as TlsaVerifier.Result.Match
+        assertEquals(true, match.requiresPkixValidation)
+    }
+
+    @Test
+    fun `verifyWithStapled does not promote stapled SPKI for EE usages`() {
+        val stapledSpki = bytesOf(0xCA, 0xFE)
+        val daneEe =
+            TlsaRecord(
+                usage = TlsaUsage.DANE_EE,
+                selector = TlsaSelector.SUBJECT_PUBLIC_KEY_INFO,
+                matchingType = TlsaMatchingType.SHA_256,
+                associationDataBase64 = b64(sha256(stapledSpki)),
+            )
+        val r =
+            TlsaVerifier.verifyWithStapled(
+                chain = listOf(cert(0)),
+                records = listOf(daneEe),
+                stapledSpkis = listOf(stapledSpki),
+                sha512 = sha512,
+            )
+        // DANE-EE matches the leaf only, never a stapled key (the leaf can't be "stapled into" a CA).
+        assertTrue("DANE-EE must not match stapled keys: $r", r is TlsaVerifier.Result.NoMatch)
+    }
+
+    @Test
+    fun `verifyWithStapled prefers chain match over stapled fallback`() {
+        val leafSpki = bytesOf(0xAA, 0xBB, 0xCC, 0)
+        val stapledSpki = bytesOf(0xDE, 0xAD)
+        val danceTaForLeaf =
+            TlsaRecord(
+                usage = TlsaUsage.DANE_TA,
+                selector = TlsaSelector.SUBJECT_PUBLIC_KEY_INFO,
+                matchingType = TlsaMatchingType.SHA_256,
+                associationDataBase64 = b64(sha256(leafSpki)),
+            )
+        val danceTaForStapled =
+            TlsaRecord(
+                usage = TlsaUsage.DANE_TA,
+                selector = TlsaSelector.SUBJECT_PUBLIC_KEY_INFO,
+                matchingType = TlsaMatchingType.SHA_256,
+                associationDataBase64 = b64(sha256(stapledSpki)),
+            )
+        val r =
+            TlsaVerifier.verifyWithStapled(
+                chain = listOf(cert(0)), // SPKI = 0xAA 0xBB 0xCC 0x00
+                records = listOf(danceTaForLeaf, danceTaForStapled),
+                stapledSpkis = listOf(stapledSpki),
+                sha512 = sha512,
+            )
+        val match = r as TlsaVerifier.Result.Match
+        assertEquals(0, match.matchedCertIndex) // chain match wins; stapled never tried
+    }
+
+    @Test
+    fun `verifyWithStapled empty stapledSpkis behaves like verify`() {
+        val rec =
+            TlsaRecord(
+                usage = TlsaUsage.DANE_TA,
+                selector = TlsaSelector.SUBJECT_PUBLIC_KEY_INFO,
+                matchingType = TlsaMatchingType.SHA_256,
+                associationDataBase64 = b64(sha256(bytesOf(0x01))),
+            )
+        val r =
+            TlsaVerifier.verifyWithStapled(
+                chain = listOf(cert(0)), // SPKI doesn't match
+                records = listOf(rec),
+                stapledSpkis = emptyList(),
+                sha512 = sha512,
+            )
+        assertTrue(r is TlsaVerifier.Result.NoMatch)
+    }
+
+    @Test
+    fun `verifyWithStapled FULL_CERT selector skips stapled fallback`() {
+        // Stapled keys are SPKIs only — we can't synthesise a full-cert match from a stapled SPKI.
+        val stapledSpki = bytesOf(0x42)
+        val rec =
+            TlsaRecord(
+                usage = TlsaUsage.DANE_TA,
+                selector = TlsaSelector.FULL_CERT,
+                matchingType = TlsaMatchingType.SHA_256,
+                associationDataBase64 = b64(sha256(stapledSpki)),
+            )
+        val r =
+            TlsaVerifier.verifyWithStapled(
+                chain = listOf(cert(0)),
+                records = listOf(rec),
+                stapledSpkis = listOf(stapledSpki),
+                sha512 = sha512,
+            )
+        assertTrue("FULL_CERT selector must not be served by stapled SPKIs: $r", r is TlsaVerifier.Result.NoMatch)
+    }
 }
