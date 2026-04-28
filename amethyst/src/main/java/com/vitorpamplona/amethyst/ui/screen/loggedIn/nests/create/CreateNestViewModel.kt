@@ -20,9 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.image
@@ -36,6 +48,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Backing ViewModel for [CreateNestSheet]. Holds form state, runs
@@ -79,6 +92,102 @@ class CreateNestViewModel : ViewModel() {
     fun onEndpointUrlChange(value: String) = _state.update { it.copy(endpointUrl = value.trim(), error = null) }
 
     fun onImageUrlChange(value: String) = _state.update { it.copy(imageUrl = value.trim(), error = null) }
+
+    fun uploadForImage(
+        uri: SelectedMedia,
+        context: Context,
+        onError: (String, String) -> Unit,
+    ) {
+        val avm = account ?: return
+        avm.launchSigner {
+            upload(
+                galleryUri = uri,
+                account = avm.account,
+                context = context,
+                onError = onError,
+            )?.let { url ->
+                _state.update { it.copy(imageUrl = url, error = null) }
+            }
+        }
+    }
+
+    private suspend fun upload(
+        galleryUri: SelectedMedia,
+        account: Account,
+        context: Context,
+        onError: (String, String) -> Unit,
+    ): String? {
+        _state.update { it.copy(isUploadingImage = true) }
+        try {
+            val strippingResult =
+                if (account.settings.stripLocationOnUpload) {
+                    MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                } else {
+                    null
+                }
+
+            val sourceUri =
+                if (account.settings.stripLocationOnUpload &&
+                    strippingResult != null &&
+                    !strippingResult.stripped
+                ) {
+                    onError(
+                        stringRes(context, R.string.metadata_strip_failed_title),
+                        stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                    )
+                    return null
+                } else {
+                    strippingResult?.uri ?: galleryUri.uri
+                }
+
+            val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+
+            return try {
+                val result =
+                    if (account.settings.defaultFileServer.type == ServerType.NIP96) {
+                        Nip96Uploader().upload(
+                            uri = compResult.uri,
+                            contentType = compResult.contentType,
+                            size = compResult.size,
+                            alt = null,
+                            sensitiveContent = null,
+                            serverBaseUrl = account.settings.defaultFileServer.baseUrl,
+                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                            onProgress = {},
+                            httpAuth = account::createHTTPAuthorization,
+                            context = context,
+                        )
+                    } else {
+                        BlossomUploader().upload(
+                            uri = compResult.uri,
+                            contentType = compResult.contentType,
+                            size = compResult.size,
+                            alt = null,
+                            sensitiveContent = null,
+                            serverBaseUrl = account.settings.defaultFileServer.baseUrl,
+                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                            httpAuth = account::createBlossomUploadAuth,
+                            context = context,
+                        )
+                    }
+
+                if (result.url == null) {
+                    onError(
+                        stringRes(context, R.string.failed_to_upload_media_no_details),
+                        stringRes(context, R.string.server_did_not_provide_a_url_after_uploading),
+                    )
+                }
+
+                result.url
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+                null
+            }
+        } finally {
+            _state.update { it.copy(isUploadingImage = false) }
+        }
+    }
 
     /**
      * Toggle scheduled-vs-now mode. When [scheduled] is true the
@@ -200,6 +309,7 @@ class CreateNestViewModel : ViewModel() {
         val imageUrl: String,
         val isPublishing: Boolean,
         val error: String?,
+        val isUploadingImage: Boolean = false,
         /** When true, publish as `status=PLANNED` + `["starts", <unix>]`. */
         val scheduled: Boolean = false,
         /** Unix seconds of the scheduled start; 0 = not yet picked. */
