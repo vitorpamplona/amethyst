@@ -532,6 +532,11 @@
     <string name="nest_notification_stop">Stop</string>
     <string name="nest_join">Join nest</string>
     <string name="nest_lobby_host_label">Host</string>
+    <string name="nest_role_host">Host</string>
+    <string name="nest_role_moderator">Moderator</string>
+    <string name="nest_state_muted">Microphone muted</string>
+    <string name="nest_state_speaking">Speaking now</string>
+    <string name="nest_state_mic_open">Microphone open</string>
     <string name="nest_presence_raised_hand">raised their hand</string>
     <string name="nest_presence_on_stage">stepped on stage</string>
     <string name="nest_presence_speaking">is speaking</string>

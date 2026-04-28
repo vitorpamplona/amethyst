@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 
@@ -72,6 +73,12 @@ private val AUDIENCE_CELL_MIN = 96.dp
 private val AUDIENCE_AVATAR = 100.dp
 private val GRID_SPACING = 6.dp
 private val AVATAR_RING_WIDTH = 3.dp
+
+// Cap badge sizes so they stay legible without dominating the avatar
+// at 100.dp. The 0.42 ratio was tuned for ~48.dp avatars (giving
+// ~20.dp badges); without a cap, scaling to 100.dp produces 42.dp
+// badges that compete with the face for attention.
+private val MAX_BADGE_SIZE = 28.dp
 
 // Cell min sits 4.dp under the avatar diameter so 4 columns fit on a
 // 411.dp phone (Pixel 6/7/8). The 100.dp avatar overflows ~2.dp into
@@ -107,6 +114,15 @@ internal fun StageGrid(
     onLongPressParticipant: ((String) -> Unit)? = null,
 ) {
     if (members.isEmpty()) return
+    // Float currently-speaking members to the top so the listener can
+    // see who they're hearing without scrolling. sortedBy is stable in
+    // Kotlin — speakers retain relative order among themselves, as do
+    // non-speakers. Memoized on (members, speakingNow) so a 250ms
+    // speaking flip doesn't reallocate when neither input changed.
+    val sortedMembers =
+        remember(members, speakingNow) {
+            members.sortedBy { if (it.pubkey in speakingNow) 0 else 1 }
+        }
     Column(modifier = modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(
             text = stringRes(R.string.nest_stage),
@@ -120,7 +136,7 @@ internal fun StageGrid(
             horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
             verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
         ) {
-            items(items = members, key = { it.pubkey }) { member ->
+            items(items = sortedMembers, key = { it.pubkey }) { member ->
                 MemberCell(
                     member = member,
                     avatarSize = STAGE_AVATAR,
@@ -130,6 +146,7 @@ internal fun StageGrid(
                     reactions = reactionsByPubkey[member.pubkey].orEmpty(),
                     accountViewModel = accountViewModel,
                     onLongPressParticipant = onLongPressParticipant,
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -167,6 +184,13 @@ internal fun AudienceGrid(
         }
         return
     }
+    // Pull raised hands to the top of the audience so a moderator
+    // approving the queue isn't scrolling. Stable sort keeps everyone
+    // else in their incoming order.
+    val sortedMembers =
+        remember(members) {
+            members.sortedBy { if (it.handRaised) 0 else 1 }
+        }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(AUDIENCE_CELL_MIN),
         modifier = modifier.fillMaxSize().padding(horizontal = 4.dp),
@@ -176,7 +200,7 @@ internal fun AudienceGrid(
             androidx.compose.foundation.layout
                 .PaddingValues(vertical = 8.dp),
     ) {
-        items(items = members, key = { it.pubkey }) { member ->
+        items(items = sortedMembers, key = { it.pubkey }) { member ->
             MemberCell(
                 member = member,
                 avatarSize = AUDIENCE_AVATAR,
@@ -186,6 +210,7 @@ internal fun AudienceGrid(
                 reactions = emptyList(),
                 accountViewModel = accountViewModel,
                 onLongPressParticipant = onLongPressParticipant,
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -201,6 +226,7 @@ private fun MemberCell(
     reactions: List<RoomReaction>,
     accountViewModel: AccountViewModel,
     onLongPressParticipant: ((String) -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     val mutedRingColor = MaterialTheme.colorScheme.error
     // Tri-state ring around the avatar so a glance distinguishes:
@@ -231,7 +257,7 @@ private fun MemberCell(
         }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Box(contentAlignment = Alignment.Center) {
             ClickableUserPicture(
@@ -248,9 +274,15 @@ private fun MemberCell(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
+            val role = member.role
+            if (role == ROLE.HOST || role == ROLE.MODERATOR) {
+                RoleBadge(
+                    role = role,
+                    modifier = Modifier.align(Alignment.TopStart),
+                )
+            }
             if (member.handRaised) {
                 HandRaiseBadge(
-                    avatarSize = avatarSize,
                     modifier = Modifier.align(Alignment.TopEnd),
                 )
             }
@@ -258,7 +290,6 @@ private fun MemberCell(
                 MicStateBadge(
                     isSpeaking = isSpeaking,
                     isMuted = member.muted == true,
-                    avatarSize = avatarSize,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -286,10 +317,7 @@ private fun MemberCell(
  * `ParticipantAvatar`.
  */
 @Composable
-private fun HandRaiseBadge(
-    avatarSize: Dp,
-    modifier: Modifier = Modifier,
-) {
+private fun HandRaiseBadge(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "hand-raise-bounce")
     val offsetY by
         transition.animateFloat(
@@ -302,12 +330,11 @@ private fun HandRaiseBadge(
                 ),
             label = "hand-raise-bounce-y",
         )
-    val badgeSize = (avatarSize.value * 0.42f).dp
     Box(
         modifier =
             modifier
                 .offset(x = 2.dp, y = (-2).dp + offsetY.dp)
-                .size(badgeSize)
+                .size(MAX_BADGE_SIZE)
                 .background(NEST_HAND_RAISE_COLOR, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
@@ -315,7 +342,40 @@ private fun HandRaiseBadge(
             symbol = MaterialSymbols.PanTool,
             contentDescription = stringRes(R.string.nest_raise_hand),
             tint = Color.White,
-            modifier = Modifier.size(badgeSize - 4.dp),
+            modifier = Modifier.size(MAX_BADGE_SIZE - 4.dp),
+        )
+    }
+}
+
+/**
+ * Role indicator overlaid on the top-left of the avatar — only
+ * rendered for HOST and MODERATOR. Mirrors how nostrnests
+ * surfaces room ownership/staff at a glance.
+ */
+@Composable
+private fun RoleBadge(
+    role: ROLE,
+    modifier: Modifier = Modifier,
+) {
+    val (color, symbol, label) =
+        when (role) {
+            ROLE.HOST -> Triple(NEST_HOST_COLOR, MaterialSymbols.MilitaryTech, stringRes(R.string.nest_role_host))
+            ROLE.MODERATOR -> Triple(NEST_MODERATOR_COLOR, MaterialSymbols.Shield, stringRes(R.string.nest_role_moderator))
+            else -> return
+        }
+    Box(
+        modifier =
+            modifier
+                .offset(x = (-2).dp, y = (-2).dp)
+                .size(MAX_BADGE_SIZE)
+                .background(color, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = symbol,
+            contentDescription = label,
+            tint = Color.White,
+            modifier = Modifier.size(MAX_BADGE_SIZE - 4.dp),
         )
     }
 }
@@ -336,7 +396,6 @@ private fun HandRaiseBadge(
 private fun MicStateBadge(
     isSpeaking: Boolean,
     isMuted: Boolean,
-    avatarSize: Dp,
     modifier: Modifier = Modifier,
 ) {
     val color =
@@ -345,23 +404,30 @@ private fun MicStateBadge(
             isMuted -> MaterialTheme.colorScheme.error
             else -> MaterialTheme.colorScheme.primary
         }
-    val badgeSize = (avatarSize.value * 0.42f).dp
+    val description =
+        when {
+            isMuted -> stringRes(R.string.nest_state_muted)
+            isSpeaking -> stringRes(R.string.nest_state_speaking)
+            else -> stringRes(R.string.nest_state_mic_open)
+        }
     Box(
         modifier =
             modifier
                 .offset(y = 2.dp)
-                .size(badgeSize)
+                .size(MAX_BADGE_SIZE)
                 .background(color, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             symbol = if (isMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
-            contentDescription = null,
+            contentDescription = description,
             tint = Color.White,
-            modifier = Modifier.size(badgeSize - 4.dp),
+            modifier = Modifier.size(MAX_BADGE_SIZE - 4.dp),
         )
     }
 }
 
 private val NEST_HAND_RAISE_COLOR = Color(0xFFEAB308) // tailwind yellow-500
 private val NEST_SPEAKING_COLOR = Color(0xFF22C55E) // tailwind green-500
+private val NEST_HOST_COLOR = Color(0xFFA855F7) // tailwind purple-500
+private val NEST_MODERATOR_COLOR = Color(0xFF0EA5E9) // tailwind sky-500
