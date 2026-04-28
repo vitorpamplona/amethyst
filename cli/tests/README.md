@@ -16,10 +16,13 @@ cli/tests/
 │   ├── tests-manage.sh             # tests 06–08, 11
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
 │   └── patches/                    # whitenoise-rs harness patches
-└── dm/                    # NIP-17 DM interop (amy ↔ amy)
-    ├── dm-interop-headless.sh
-    ├── setup.sh                    # preflight + identities
-    └── tests-dm.sh
+├── dm/                    # NIP-17 DM interop (amy ↔ amy)
+│   ├── dm-interop-headless.sh
+│   ├── setup.sh                    # preflight + identities
+│   └── tests-dm.sh
+└── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
+    ├── nests-interop.sh            # 47-test manual harness
+    └── README.md                   # operator brief + per-test matrix
 ```
 
 The Marmot harnesses come in two flavours, same scenarios:
@@ -40,6 +43,17 @@ A third, slimmer harness covers the NIP-17 DM surface:
   No whitenoise-rs required — only `amy` and the relay binary (which
   is shared with the Marmot harness's checkout at
   `marmot/state-headless/nostr-rs-relay/`).
+
+A fourth harness covers audio rooms (NIP-53 + moq-lite):
+
+- **`nests/nests-interop.sh`** — fully manual interop between Amethyst
+  Android and the [nostrnests.com](https://nostrnests.com) reference
+  web client. 47 tests spanning host/listener flows, audio round-trip,
+  hand-raise + role promotion, reactions, in-room chat (kind 1311),
+  kick (kind 4312), close-room, schedule, network-drop reconnect,
+  10-min JWT refresh, custom moq servers (kind 10112), and PIP /
+  background audio. See `nests/README.md` for the full matrix and
+  prereqs.
 
 Both Marmot harnesses validate Amethyst against **whitenoise-rs**
 (https://github.com/marmot-protocol/whitenoise-rs), the reference Rust
