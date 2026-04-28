@@ -656,7 +656,6 @@ class NestViewModel(
                     listener = l
                     observeListenerState(l)
                     observeAnnounces(l)
-                    startLevelEmitter()
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
@@ -949,9 +948,9 @@ class NestViewModel(
     /**
      * Record the latest decoded peak amplitude for [pubkey]. Called
      * from the [NestPlayer] decode loop on the same dispatcher as the
-     * VM, so plain map mutation is safe. The actual StateFlow emission
-     * is coalesced by [startLevelEmitter] so a 50 Hz packet rate
-     * doesn't translate into 50 Hz recompositions.
+     * VM, so plain map mutation is safe. Boots the coalescing emitter
+     * on first activity; the emitter shuts itself down once all audio
+     * has gone quiet, so a long-idle room costs no scheduled work.
      */
     private fun onAudioLevel(
         pubkey: String,
@@ -959,6 +958,7 @@ class NestViewModel(
     ) {
         if (closed) return
         rawAudioLevels[pubkey] = level
+        startLevelEmitter()
     }
 
     /**
@@ -966,6 +966,11 @@ class NestViewModel(
      * per-speaker levels. Coalesces the high-frequency raw updates
      * into ~10 Hz UI state so the speaking-ring animation has a
      * smooth, lightweight signal to follow.
+     *
+     * Self-terminating: once a tick observes an empty raw map (and
+     * has flushed the empty snapshot to consumers) the loop exits.
+     * The next [onAudioLevel] restarts it. Idempotent — calling
+     * this while already active is a no-op.
      */
     private fun startLevelEmitter() {
         if (levelEmitterJob?.isActive == true) return
@@ -978,6 +983,7 @@ class NestViewModel(
                     if (snapshot != _audioLevels.value) {
                         _audioLevels.value = snapshot
                     }
+                    if (snapshot.isEmpty()) return@launch
                 }
             }
     }
