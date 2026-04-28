@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,21 +27,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -53,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -60,14 +56,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
-import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
@@ -83,10 +77,21 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTa
 import kotlinx.coroutines.launch
 
 /**
- * Full-screen layout for [NestActivity]. Renders title + summary,
- * host/speaker/audience rows (with active-speaker rings), connection chip
- * + mute, talk row (when allowed), hand-raise, and a Leave button that
- * finishes the activity.
+ * Full-screen layout for [NestActivity]. Vertically split into:
+ *
+ *   1. TopAppBar — room title + overflow menu (Share, host's Edit).
+ *   2. Header strip — LIVE chip, listener count, optional 1-line summary.
+ *   3. Stage — vertical adaptive grid of host/speakers (height-bounded
+ *      so a 30-speaker room scrolls inside the strip and never pushes
+ *      the chat below the fold).
+ *   4. Tabs — `Chat | Audience · N | Hands · N` (Hands host-only,
+ *      shown only while there's at least one raised hand).
+ *   5. Tab content — fills the remaining vertical space:
+ *        - Chat: the kind-1311 transcript + composer
+ *        - Audience: lazy vertical grid (handles 1,000+ listeners)
+ *        - Hands: host's promote-to-speaker queue
+ *   6. Sticky action bar — connection / talk / hand / react / leave
+ *      controls; never scrolls.
  *
  * The PIP variant lives in [NestPipScreen]; the activity flips
  * between them based on `isInPipMode`.
@@ -103,21 +108,66 @@ internal fun NestFullScreen(
     onHandRaisedChange: (Boolean) -> Unit,
     onLeave: () -> Unit,
 ) {
-    val roomTheme = androidx.compose.runtime.remember(event) { RoomTheme.from(event) }
+    val roomTheme = remember(event) { RoomTheme.from(event) }
     NestThemedScope(theme = roomTheme, accountViewModel = accountViewModel) {
         var showEditSheet by rememberSaveable { mutableStateOf(false) }
         var showHostMenu by rememberSaveable { mutableStateOf(false) }
         var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
+        var showReactionPicker by rememberSaveable { mutableStateOf(false) }
+        var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
+        // Tab selection survives configuration changes and PIP transitions.
+        // Stored as ordinal so rememberSaveable can persist it without a
+        // custom Saver.
+        var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+
         val isHost = accountViewModel.account.signer.pubKey == event.pubKey
+        val myPubkey = accountViewModel.account.signer.pubKey
+        val isOnStageMe = remember(onStage, myPubkey) { onStage.any { it.pubKey == myPubkey } }
         val leaveScope = rememberCoroutineScope()
         val topBarContext = LocalContext.current
 
-        // Scaffold owns safeDrawing insets via its `contentWindowInsets`
-        // default, so we don't manage them manually anymore. The
-        // container is transparent because NestThemedScope's outer
-        // Surface already paints the themed background (and overlays
-        // the optional `bg` image on top of it); painting again here
-        // would double up.
+        val presences by viewModel.presences.collectAsState()
+        val reactionsByPubkey by viewModel.recentReactions.collectAsState()
+        val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
+
+        val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
+        val participantGrid =
+            remember(event, presences) {
+                buildParticipantGrid(
+                    participants = event.participants(),
+                    presences = presences,
+                )
+            }
+        // Same logic HandRaiseQueueSection uses internally — duplicated
+        // here so the tab label can show a count without coupling the
+        // section to the screen.
+        val handsCount =
+            remember(presences, onStageKeys) {
+                presences.values.count { it.handRaised && it.pubkey !in onStageKeys }
+            }
+        val showHandsTab = isHost && handsCount > 0
+
+        // Tab roster changes when the Hands tab appears/disappears.
+        // If the user was on Hands and the queue empties, fall back to
+        // Chat — kept as a stable default rather than Audience because
+        // chat is the room's primary engagement surface.
+        val tabs =
+            remember(showHandsTab) {
+                buildList {
+                    add(NestTab.Chat)
+                    add(NestTab.Audience)
+                    if (showHandsTab) add(NestTab.Hands)
+                }
+            }
+        val effectiveTab = tabs.getOrNull(selectedTabIndex) ?: NestTab.Chat
+
+        // Long-press on any participant opens the host-actions sheet
+        // (T2 #2). The sheet itself gates which rows render based on
+        // host status. Skip self.
+        val onLongPressParticipant: ((String) -> Unit) = { target ->
+            if (target != myPubkey) hostMenuTarget = target
+        }
+
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent,
@@ -138,185 +188,153 @@ internal fun NestFullScreen(
                     },
                 )
             },
+            bottomBar = {
+                NestActionBar(
+                    viewModel = viewModel,
+                    ui = ui,
+                    isOnStage = isOnStageMe,
+                    canBroadcast = viewModel.canBroadcast,
+                    speakerPubkeyHex = myPubkey,
+                    handRaised = handRaised,
+                    onHandRaisedChange = onHandRaisedChange,
+                    onShowReactionPicker = { showReactionPicker = true },
+                    onLeave = {
+                        if (isHost) {
+                            showHostLeaveConfirm = true
+                        } else {
+                            onLeave()
+                        }
+                    },
+                )
+            },
         ) { padding ->
-            // Inner column is just the two weighted siblings — top
-            // metadata (scrolls internally if overflow) and the chat
-            // panel (takes the rest). Title and overflow menu live in
-            // the TopAppBar above.
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .padding(padding),
             ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp),
-                ) {
-                    event.summary()?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    // Listener counter — counts every active kind-10312 presence
-                    // in the room. Hidden until the aggregator has at least one
-                    // entry so the placeholder doesn't flash on entry.
-                    val presences by viewModel.presences.collectAsState()
-
-                    val reactionsByPubkey by viewModel.recentReactions.collectAsState()
-                    var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
-                    // Long-press opens the participant context sheet for ANYONE
-                    // (T2 #2). The sheet's own gating decides which rows to show
-                    // (follow/mute always; promote/demote/kick host-only).
-                    val onLongPressParticipant: ((String) -> Unit) = { target ->
-                        if (target != accountViewModel.account.signer.pubKey) hostMenuTarget = target
-                    }
-                    // Tier-2 #1: replace the two LazyRow sections with a single
-                    // pure-projection ParticipantGrid. The `absent` flag (member
-                    // promoted in the kind-30312 but never emitted a kind-10312)
-                    // greys out at 50 % alpha, matching nostrnests' web client.
-                    val participantGrid =
-                        androidx.compose.runtime.remember(event, presences) {
-                            buildParticipantGrid(
-                                participants = event.participants(),
-                                presences = presences,
-                            )
-                        }
-                    ParticipantsGrid(
-                        grid = participantGrid,
-                        speakingNow = ui.speakingNow,
-                        accountViewModel = accountViewModel,
-                        onStageLabel = stringRes(R.string.nest_stage),
-                        audienceLabel = stringRes(R.string.nest_audience),
-                        reactionsByPubkey = reactionsByPubkey,
-                        connectingSpeakers = ui.connectingSpeakers,
-                        onLongPressParticipant = onLongPressParticipant,
-                    )
-                    val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
-                    hostMenuTarget?.let { target ->
-                        ParticipantHostActionsSheet(
-                            target = target,
+                RoomHeaderStrip(
+                    summary = event.summary(),
+                    listenerCount = presences.size,
+                )
+                StageGrid(
+                    members = participantGrid.onStage,
+                    speakingNow = ui.speakingNow,
+                    accountViewModel = accountViewModel,
+                    reactionsByPubkey = reactionsByPubkey,
+                    connectingSpeakers = ui.connectingSpeakers,
+                    onLongPressParticipant = onLongPressParticipant,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                NestTabRow(
+                    tabs = tabs,
+                    selectedTab = effectiveTab,
+                    audienceCount = participantGrid.audience.size,
+                    handsCount = handsCount,
+                    onSelect = { tab -> selectedTabIndex = tabs.indexOf(tab).coerceAtLeast(0) },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                when (effectiveTab) {
+                    NestTab.Chat -> {
+                        NestChatPanel(
                             event = event,
+                            viewModel = viewModel,
                             accountViewModel = accountViewModel,
-                            onDismiss = { hostMenuTarget = null },
-                            catalog = speakerCatalogs[target],
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 16.dp),
                         )
                     }
 
-                    if (isHost) {
+                    NestTab.Audience -> {
+                        AudienceGrid(
+                            members = participantGrid.audience,
+                            accountViewModel = accountViewModel,
+                            onLongPressParticipant = onLongPressParticipant,
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 12.dp),
+                        )
+                    }
+
+                    NestTab.Hands -> {
                         HandRaiseQueueSection(
                             event = event,
                             viewModel = viewModel,
                             accountViewModel = accountViewModel,
-                        )
-                    }
-
-                    ConnectionRow(viewModel = viewModel, ui = ui)
-
-                    val myPubkey = accountViewModel.account.signer.pubKey
-                    if (viewModel.canBroadcast && onStage.any { it.pubKey == myPubkey }) {
-                        TalkRow(viewModel = viewModel, ui = ui, speakerPubkeyHex = myPubkey)
-                    }
-
-                    var showReactionPicker by rememberSaveable { mutableStateOf(false) }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FilledTonalIconToggleButton(
-                            checked = handRaised,
-                            onCheckedChange = onHandRaisedChange,
-                        ) {
-                            Icon(
-                                symbol = MaterialSymbols.PanTool,
-                                contentDescription =
-                                    stringRes(
-                                        if (handRaised) R.string.nest_lower_hand else R.string.nest_raise_hand,
-                                    ),
-                            )
-                        }
-                        OutlinedButton(onClick = { showReactionPicker = true }) {
-                            Text(stringRes(R.string.nest_reactions_button))
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                if (isHost) {
-                                    showHostLeaveConfirm = true
-                                } else {
-                                    onLeave()
-                                }
-                            },
-                        ) {
-                            Text(stringRes(R.string.nest_leave))
-                        }
-                    }
-                    if (showReactionPicker) {
-                        RoomReactionPickerSheet(
-                            onPick = { emoji ->
-                                accountViewModel.reactToOrDelete(roomNote, emoji)
-                            },
-                            onDismiss = { showReactionPicker = false },
-                        )
-                    }
-
-                    if (showHostLeaveConfirm) {
-                        AlertDialog(
-                            onDismissRequest = { showHostLeaveConfirm = false },
-                            title = { Text(stringRes(R.string.nest_leave_host_title)) },
-                            text = { Text(stringRes(R.string.nest_leave_host_body)) },
-                            confirmButton = {
-                                TextButton(
-                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                    onClick = {
-                                        showHostLeaveConfirm = false
-                                        leaveScope.launch {
-                                            val ok = closeMeetingSpace(accountViewModel, event)
-                                            if (!ok) {
-                                                accountViewModel.toastManager.toast(
-                                                    R.string.nests,
-                                                    R.string.nest_leave_host_close_failed,
-                                                )
-                                            }
-                                            onLeave()
-                                        }
-                                    },
-                                ) {
-                                    Text(stringRes(R.string.nest_leave_host_close))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(
-                                    onClick = {
-                                        showHostLeaveConfirm = false
-                                        onLeave()
-                                    },
-                                ) {
-                                    Text(stringRes(R.string.nest_leave_host_just_leave))
-                                }
-                            },
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 16.dp),
                         )
                     }
                 }
-
-                NestChatPanel(
-                    event = event,
-                    viewModel = viewModel,
-                    accountViewModel = accountViewModel,
-                    modifier = Modifier.weight(1f),
-                )
             }
         }
 
-        // EditNestSheet renders as a ModalBottomSheet — placement in
-        // the tree doesn't affect layout, but keeping it adjacent to
-        // the Scaffold makes the dialog/sheet boundary obvious.
+        // Sheets and dialogs render alongside the Scaffold so they
+        // cover the room content (including the action bar) when
+        // open. ParticipantHostActionsSheet stays outside the Column
+        // for the same reason — modal bottom sheets are not affected
+        // by parent layout.
+        hostMenuTarget?.let { target ->
+            ParticipantHostActionsSheet(
+                target = target,
+                event = event,
+                accountViewModel = accountViewModel,
+                onDismiss = { hostMenuTarget = null },
+                catalog = speakerCatalogs[target],
+            )
+        }
+
+        if (showReactionPicker) {
+            RoomReactionPickerSheet(
+                onPick = { emoji -> accountViewModel.reactToOrDelete(roomNote, emoji) },
+                onDismiss = { showReactionPicker = false },
+            )
+        }
+
+        if (showHostLeaveConfirm) {
+            AlertDialog(
+                onDismissRequest = { showHostLeaveConfirm = false },
+                title = { Text(stringRes(R.string.nest_leave_host_title)) },
+                text = { Text(stringRes(R.string.nest_leave_host_body)) },
+                confirmButton = {
+                    TextButton(
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        onClick = {
+                            showHostLeaveConfirm = false
+                            leaveScope.launch {
+                                val ok = closeMeetingSpace(accountViewModel, event)
+                                if (!ok) {
+                                    accountViewModel.toastManager.toast(
+                                        R.string.nests,
+                                        R.string.nest_leave_host_close_failed,
+                                    )
+                                }
+                                onLeave()
+                            }
+                        },
+                    ) {
+                        Text(stringRes(R.string.nest_leave_host_close))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showHostLeaveConfirm = false
+                            onLeave()
+                        },
+                    ) {
+                        Text(stringRes(R.string.nest_leave_host_just_leave))
+                    }
+                },
+            )
+        }
+
         if (showEditSheet) {
             EditNestSheet(
                 accountViewModel = accountViewModel,
@@ -325,6 +343,113 @@ internal fun NestFullScreen(
             )
         }
     }
+}
+
+/**
+ * Header strip rendered between the TopAppBar and the stage grid.
+ * Carries the LIVE chip + listener count and (when present) a single-
+ * line ellipsised summary. Lives at the screen level rather than in
+ * the TopAppBar so the chip + count have room to breathe and the
+ * summary's typography matches the body, not the title.
+ */
+@Composable
+private fun RoomHeaderStrip(
+    summary: String?,
+    listenerCount: Int,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            LiveChip()
+            Text(
+                text = pluralStringResource(R.plurals.nest_listener_count, listenerCount, listenerCount),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (!summary.isNullOrBlank()) {
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LiveChip() {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    ) {
+        Text(
+            text = stringRes(R.string.nest_live_chip),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
+    }
+}
+
+/**
+ * Tab-bar between the stage and the tab content. Audience / Hands
+ * tabs carry a count badge so the user knows whether switching tabs
+ * is worthwhile (e.g. "Hands · 3" tells the host they have a queue
+ * to attend to without ever leaving the chat).
+ */
+@Composable
+private fun NestTabRow(
+    tabs: List<NestTab>,
+    selectedTab: NestTab,
+    audienceCount: Int,
+    handsCount: Int,
+    onSelect: (NestTab) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0)
+    PrimaryTabRow(
+        selectedTabIndex = selectedIndex,
+        modifier = modifier.fillMaxWidth(),
+        containerColor = Color.Transparent,
+    ) {
+        tabs.forEach { tab ->
+            val (label, count) =
+                when (tab) {
+                    NestTab.Chat -> stringRes(R.string.nest_tab_chat) to 0
+                    NestTab.Audience -> stringRes(R.string.nest_tab_audience) to audienceCount
+                    NestTab.Hands -> stringRes(R.string.nest_tab_hands) to handsCount
+                }
+            Tab(
+                selected = tab == selectedTab,
+                onClick = { onSelect(tab) },
+                text = {
+                    if (count > 0) {
+                        BadgedBox(
+                            badge = {
+                                Badge { Text(text = count.toString()) }
+                            },
+                        ) {
+                            Text(text = label)
+                        }
+                    } else {
+                        Text(text = label)
+                    }
+                },
+            )
+        }
+    }
+}
+
+private enum class NestTab {
+    Chat,
+    Audience,
+    Hands,
 }
 
 /**
@@ -386,228 +511,6 @@ private fun NestTopAppBar(
                 containerColor = Color.Transparent,
             ),
     )
-}
-
-@Composable
-private fun ConnectionRow(
-    viewModel: NestViewModel,
-    ui: NestUiState,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        when (val connection = ui.connection) {
-            is ConnectionUiState.Idle, is ConnectionUiState.Closed -> {
-                Button(onClick = { viewModel.connect() }) {
-                    Text(stringRes(R.string.nest_connect))
-                }
-            }
-
-            is ConnectionUiState.Connecting -> {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(connectingLabel(connection)) },
-                )
-            }
-
-            is ConnectionUiState.Reconnecting -> {
-                // The wrapper retries on its own; the user typically
-                // doesn't need to do anything. Keep the mute toggle
-                // hidden during this window — there's no live session
-                // to apply mute against, and showing it implies a
-                // healthier connection than we have.
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(stringRes(R.string.nest_reconnecting)) },
-                )
-            }
-
-            is ConnectionUiState.Connected -> {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(stringRes(R.string.nest_connected)) },
-                    colors =
-                        AssistChipDefaults.assistChipColors(
-                            disabledLabelColor = MaterialTheme.colorScheme.primary,
-                        ),
-                )
-                FilledTonalIconToggleButton(
-                    checked = ui.isMuted,
-                    onCheckedChange = { viewModel.setMuted(it) },
-                ) {
-                    Icon(
-                        symbol = if (ui.isMuted) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
-                        contentDescription =
-                            stringRes(
-                                if (ui.isMuted) R.string.nest_unmute else R.string.nest_mute,
-                            ),
-                    )
-                }
-            }
-
-            is ConnectionUiState.Failed -> {
-                Text(
-                    text = stringRes(R.string.nest_audio_failed, connection.reason),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Button(onClick = { viewModel.connect() }) {
-                    Text(stringRes(R.string.nest_connect))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TalkRow(
-    viewModel: NestViewModel,
-    ui: NestUiState,
-    speakerPubkeyHex: String,
-) {
-    // Render whenever the user can act on broadcast state. The
-    // speaker session is independent of the listener: a transient
-    // listener Reconnecting must NOT hide the mic-mute / Stop
-    // controls if the broadcast is in flight, otherwise the user
-    // can't pause their own mic during a network blip.
-    val canAct =
-        ui.connection is ConnectionUiState.Connected ||
-            ui.broadcast is BroadcastUiState.Broadcasting ||
-            ui.broadcast is BroadcastUiState.Connecting
-    if (!canAct) return
-    val context = LocalContext.current
-    var permissionDenied by rememberSaveable { mutableStateOf(false) }
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                permissionDenied = false
-                viewModel.startBroadcast(speakerPubkeyHex)
-            } else {
-                permissionDenied = true
-            }
-        }
-    // If the user grants RECORD_AUDIO via the system Settings deep-link
-    // and returns to the activity, the permissionLauncher callback never
-    // fires and `permissionDenied` would otherwise stay true. Recompute
-    // every time the permission state could have changed (audit round-2
-    // Android #12).
-    val showDenialWarning =
-        permissionDenied &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
-            PackageManager.PERMISSION_GRANTED
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        when (val broadcast = ui.broadcast) {
-            BroadcastUiState.Idle -> {
-                Button(onClick = {
-                    val granted =
-                        ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO,
-                        ) == PackageManager.PERMISSION_GRANTED
-                    if (granted) {
-                        viewModel.startBroadcast(speakerPubkeyHex)
-                    } else {
-                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                    }
-                }) {
-                    Text(stringRes(R.string.nest_talk))
-                }
-                OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
-                    Text(stringRes(R.string.nest_leave_stage))
-                }
-                if (showDenialWarning) {
-                    Text(
-                        text = stringRes(R.string.nest_record_permission_required),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    // After "Don't ask again" the permission launcher
-                    // silently returns false. Give the user a path to
-                    // toggle the permission in system settings (audit
-                    // Android #14).
-                    OutlinedButton(onClick = {
-                        runCatching {
-                            context.startActivity(
-                                android.content
-                                    .Intent(
-                                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        android.net.Uri.fromParts("package", context.packageName, null),
-                                    ).apply {
-                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    },
-                            )
-                        }
-                    }) {
-                        Text(stringRes(R.string.nest_open_settings))
-                    }
-                }
-            }
-
-            BroadcastUiState.Connecting -> {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(stringRes(R.string.nest_broadcast_connecting)) },
-                )
-            }
-
-            is BroadcastUiState.Broadcasting -> {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(stringRes(R.string.nest_broadcasting)) },
-                    colors =
-                        AssistChipDefaults.assistChipColors(
-                            disabledLabelColor = MaterialTheme.colorScheme.error,
-                        ),
-                )
-                FilledTonalIconToggleButton(
-                    checked = broadcast.isMuted,
-                    onCheckedChange = { viewModel.setMicMuted(it) },
-                ) {
-                    Icon(
-                        symbol = if (broadcast.isMuted) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
-                        contentDescription =
-                            stringRes(
-                                if (broadcast.isMuted) R.string.nest_mic_unmute else R.string.nest_mic_mute,
-                            ),
-                    )
-                }
-                OutlinedButton(onClick = { viewModel.stopBroadcast() }) {
-                    Text(stringRes(R.string.nest_stop_talking))
-                }
-                OutlinedButton(onClick = {
-                    viewModel.stopBroadcast()
-                    viewModel.setOnStage(false)
-                }) {
-                    Text(stringRes(R.string.nest_leave_stage))
-                }
-            }
-
-            is BroadcastUiState.Failed -> {
-                Text(
-                    text = stringRes(R.string.nest_broadcast_failed, broadcast.reason),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Button(onClick = { viewModel.startBroadcast(speakerPubkeyHex) }) {
-                    Text(stringRes(R.string.nest_talk))
-                }
-            }
-        }
-    }
 }
 
 /**
