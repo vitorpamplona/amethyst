@@ -24,8 +24,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -83,6 +85,8 @@ fun AccountSwitcherDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             offset = DpOffset(x = 48.dp, y = 0.dp),
+            modifier = Modifier.heightIn(max = 400.dp),
+            scrollState = rememberScrollState(),
         ) {
             allAccounts.forEach { account ->
                 val isActive = account.npub == activeNpub

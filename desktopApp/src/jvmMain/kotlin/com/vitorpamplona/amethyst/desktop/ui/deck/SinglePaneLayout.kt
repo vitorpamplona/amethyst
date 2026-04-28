@@ -41,7 +41,10 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,12 +58,16 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.account.AccountSwitcherDropdown
+import com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog
 import com.vitorpamplona.amethyst.desktop.ui.components.RelayHealthIndicator
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState
 import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun SinglePaneLayout(
@@ -157,7 +164,7 @@ fun SinglePaneLayout(
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
 
-                // Tor status — always last so it's never pushed off screen
+                // Tor status
                 val torState = LocalTorState.current
                 TorStatusIndicator(
                     status = torState.status,
@@ -165,8 +172,43 @@ fun SinglePaneLayout(
                         singlePaneState.navigate(DeckColumnType.Settings)
                         navState.clear()
                     },
-                    modifier = Modifier.padding(bottom = 12.dp),
+                    modifier = Modifier.padding(bottom = 4.dp),
                 )
+
+                // Account switcher — at very bottom of rail
+                val allAccountsState by accountManager.allAccounts.collectAsState()
+                val singlePaneScope = rememberCoroutineScope()
+                var showAddAccountDialog by remember { mutableStateOf(false) }
+
+                AccountSwitcherDropdown(
+                    activeNpub = accountManager.currentAccount()?.npub,
+                    allAccounts = allAccountsState,
+                    onSwitchAccount = { npub ->
+                        singlePaneScope.launch(Dispatchers.IO) {
+                            accountManager.switchAccount(npub)
+                        }
+                    },
+                    onAddAccount = { showAddAccountDialog = true },
+                    onRemoveAccount = { npub ->
+                        singlePaneScope.launch(Dispatchers.IO) {
+                            accountManager.removeAccountFromStorage(npub)
+                        }
+                    },
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
+                if (showAddAccountDialog) {
+                    AddAccountDialog(
+                        accountManager = accountManager,
+                        onDismiss = { showAddAccountDialog = false },
+                        onAccountAdded = {
+                            showAddAccountDialog = false
+                            singlePaneScope.launch(Dispatchers.IO) {
+                                accountManager.refreshAccountList()
+                            }
+                        },
+                    )
+                }
             }
         }
 
