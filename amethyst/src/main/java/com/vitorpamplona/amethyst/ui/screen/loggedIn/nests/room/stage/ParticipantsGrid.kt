@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -42,8 +44,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,12 +55,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
@@ -72,7 +78,7 @@ private val STAGE_CELL_MIN = 96.dp
 private val STAGE_AVATAR = 100.dp
 private val AUDIENCE_CELL_MIN = 96.dp
 private val AUDIENCE_AVATAR = 100.dp
-private val GRID_SPACING = 6.dp
+private val GRID_SPACING = 8.dp
 private val AVATAR_RING_WIDTH = 3.dp
 
 // Upper bound for the live "voice" halo. Speaking with a peak audio
@@ -80,17 +86,26 @@ private val AVATAR_RING_WIDTH = 3.dp
 // quieter voices land somewhere in between.
 private val MAX_RING_WIDTH = 7.dp
 
+// Soft outer glow that scales with audio level. Drawn behind the
+// avatar via drawBehind so it doesn't change layout bounds; alpha
+// fades to 0 when not speaking.
+private val MAX_GLOW_RADIUS = 12.dp
+
 // Cap badge sizes so they stay legible without dominating the avatar
 // at 100.dp. The 0.42 ratio was tuned for ~48.dp avatars (giving
 // ~20.dp badges); without a cap, scaling to 100.dp produces 42.dp
 // badges that compete with the face for attention.
 private val MAX_BADGE_SIZE = 28.dp
 
+private val STAGE_CARD_SHAPE = RoundedCornerShape(20.dp)
+private val STAGE_CARD_PADDING_HORIZONTAL = 12.dp
+private val STAGE_CARD_PADDING_VERTICAL = 12.dp
+
 // Cell min sits 4.dp under the avatar diameter so 4 columns fit on a
 // 411.dp phone (Pixel 6/7/8). The 100.dp avatar overflows ~2.dp into
-// the 6.dp horizontal arrangement on each side, leaving a visible
-// ~2.dp gap between neighbors. Names below ellipsize to the cell
-// width, which is fine since they're short display handles.
+// the 8.dp horizontal arrangement on each side, leaving a visible
+// gap between neighbors. Names below ellipsize to the cell width,
+// which is fine since they're short display handles.
 
 // Two rows visible by default. Each cell is roughly avatar + name +
 // reaction headroom; with a 100dp avatar one row lifts to ~140dp, so
@@ -107,7 +122,8 @@ private val STAGE_MAX_HEIGHT = 320.dp
  * scroll inside the strip without pushing the tabs / chat below the
  * fold.
  *
- * Falls open: when [members] is empty, renders nothing.
+ * When [members] is empty, renders an "Waiting for speakers…" hint
+ * instead so the strip stays visually anchored.
  */
 @Composable
 internal fun StageGrid(
@@ -131,54 +147,85 @@ internal fun StageGrid(
         remember(members, speakingNow) {
             members.sortedBy { if (it.pubkey in speakingNow) 0 else 1 }
         }
-    Column(modifier = modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(
-            text = stringRes(R.string.nest_stage),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 6.dp),
-        )
-        if (members.isEmpty()) {
-            // Keep the strip visible so the room doesn't look broken
-            // when nobody is on stage yet — the title plus a quiet
-            // hint signals "waiting state" without taking the chat /
-            // audience tab's space below.
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringRes(R.string.nest_stage_empty),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            return@Column
-        }
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(STAGE_CELL_MIN),
-            modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),
-            horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
-            verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
+    // Wrap the strip in a tonal card so the active speakers visually
+    // live in their own zone, separated from the chat / audience tab
+    // below. surfaceContainerLow is a quiet step up from the screen
+    // background — readable in both light and dark.
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(top = 8.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = STAGE_CARD_SHAPE,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = STAGE_CARD_PADDING_HORIZONTAL,
+                        vertical = STAGE_CARD_PADDING_VERTICAL,
+                    ),
         ) {
-            items(items = sortedMembers, key = { it.pubkey }) { member ->
-                val isSelf = myPubkey != null && member.pubkey == myPubkey
-                MemberCell(
-                    member = member,
-                    avatarSize = STAGE_AVATAR,
-                    isSpeaking = member.pubkey in speakingNow,
-                    audioLevel = audioLevels[member.pubkey] ?: 0f,
-                    isConnecting = member.pubkey in connectingSpeakers,
-                    showMicBadge = true,
-                    reactions = reactionsByPubkey[member.pubkey].orEmpty(),
-                    accountViewModel = accountViewModel,
-                    onLongPressParticipant = onLongPressParticipant,
-                    isSelf = isSelf,
-                    onTapSelf = if (isSelf) onTapSelf else null,
-                    modifier = Modifier.animateItem(),
-                )
+            Text(
+                text = stringRes(R.string.nest_stage),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+            if (members.isEmpty()) {
+                EmptyStageHint()
+                return@Column
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(STAGE_CELL_MIN),
+                modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),
+                horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
+                verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
+            ) {
+                items(items = sortedMembers, key = { it.pubkey }) { member ->
+                    val isSelf = myPubkey != null && member.pubkey == myPubkey
+                    MemberCell(
+                        member = member,
+                        avatarSize = STAGE_AVATAR,
+                        isSpeaking = member.pubkey in speakingNow,
+                        audioLevel = audioLevels[member.pubkey] ?: 0f,
+                        isConnecting = member.pubkey in connectingSpeakers,
+                        showMicBadge = true,
+                        reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                        accountViewModel = accountViewModel,
+                        onLongPressParticipant = onLongPressParticipant,
+                        isSelf = isSelf,
+                        onTapSelf = if (isSelf) onTapSelf else null,
+                        modifier = Modifier.animateItem(),
+                    )
+                }
             }
         }
+    }
+}
+
+/**
+ * Idle "Waiting for speakers…" placeholder for [StageGrid]. Pairs an
+ * hourglass glyph with the existing copy so the empty state reads as
+ * intentional rather than as a layout glitch.
+ */
+@Composable
+private fun EmptyStageHint() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.HourglassEmpty,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.size(32.dp),
+        )
+        Text(
+            text = stringRes(R.string.nest_stage_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -264,30 +311,49 @@ private fun MemberCell(
     modifier: Modifier = Modifier,
 ) {
     val mutedRingColor = MaterialTheme.colorScheme.error
+    val clampedLevel = audioLevel.coerceIn(0f, 1f)
     // Tri-state ring around the avatar so a glance distinguishes:
     //   - green ring: actively speaking right now
     //   - red ring:   on stage and broadcasting but mic flagged muted
     //   - no ring:    idle, audience, or unknown mute state
-    val ringColor =
+    //
+    // Both color and width crossfade so going idle → speaking → idle
+    // doesn't snap; the color animates from Transparent through the
+    // speaking green and the width tracks the live peak amplitude.
+    val targetRingColor =
         when {
             isSpeaking -> NEST_SPEAKING_COLOR
             showMicBadge && member.publishing && member.muted == true -> mutedRingColor
-            else -> null
+            else -> Color.Transparent
         }
-    // Throb the ring width with the live peak amplitude — quiet voices
-    // sit at the base width, loud ones widen the halo. animateDpAsState
-    // smooths the 10 Hz raw signal into a continuous animation. The
-    // muted ring stays at base width because no audio is being decoded.
     val targetRingWidth =
         when {
-            isSpeaking -> AVATAR_RING_WIDTH + (audioLevel.coerceIn(0f, 1f) * (MAX_RING_WIDTH - AVATAR_RING_WIDTH).value).dp
-            ringColor != null -> AVATAR_RING_WIDTH
+            isSpeaking -> AVATAR_RING_WIDTH + (clampedLevel * (MAX_RING_WIDTH - AVATAR_RING_WIDTH).value).dp
+            targetRingColor != Color.Transparent -> AVATAR_RING_WIDTH
             else -> 0.dp
         }
     val animatedRingWidth by animateDpAsState(targetValue = targetRingWidth, label = "speaker-ring-width")
+    val animatedRingColor by animateColorAsState(targetValue = targetRingColor, label = "speaker-ring-color")
+    // Soft outer halo behind the avatar, scaled by audio level. Drawn
+    // via drawBehind on a transparent overlay so it doesn't push the
+    // cell layout out — the glow extends past the circle but never
+    // affects neighbour measurement. Capped so a loud peak doesn't
+    // bleed into the next column.
+    val animatedGlowAlpha by animateFloatAsState(
+        targetValue = if (isSpeaking) (clampedLevel * 0.45f) else 0f,
+        label = "speaker-ring-glow-alpha",
+    )
     val avatarModifier =
         Modifier
-            .let { if (ringColor != null) it.border(animatedRingWidth, ringColor, CircleShape) else it }
+            .drawBehind {
+                if (animatedGlowAlpha <= 0.001f) return@drawBehind
+                val baseRadius = size.minDimension / 2f
+                val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
+                drawCircle(
+                    color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
+                    radius = baseRadius + extra,
+                )
+            }.border(animatedRingWidth, animatedRingColor, CircleShape)
             .let { if (member.absent) it.alpha(0.5f) else it }
     val user =
         remember(member.pubkey) {
@@ -401,13 +467,13 @@ private fun HandRaiseBadge(modifier: Modifier = Modifier) {
             modifier
                 .offset(x = 2.dp, y = (-2).dp + offsetY.dp)
                 .size(MAX_BADGE_SIZE)
-                .background(NEST_HAND_RAISE_COLOR, CircleShape),
+                .background(MaterialTheme.colorScheme.tertiary, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             symbol = MaterialSymbols.PanTool,
             contentDescription = stringRes(R.string.nest_raise_hand),
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.size(MAX_BADGE_SIZE - 4.dp),
         )
     }
@@ -423,28 +489,55 @@ private fun RoleBadge(
     role: ROLE,
     modifier: Modifier = Modifier,
 ) {
-    val (color, symbol, label) =
+    val scheme = MaterialTheme.colorScheme
+    val (bg, fg, symbol, label) =
         when (role) {
-            ROLE.HOST -> Triple(NEST_HOST_COLOR, MaterialSymbols.MilitaryTech, stringRes(R.string.nest_role_host))
-            ROLE.MODERATOR -> Triple(NEST_MODERATOR_COLOR, MaterialSymbols.Shield, stringRes(R.string.nest_role_moderator))
-            else -> return
+            ROLE.HOST -> {
+                BadgeStyle(
+                    background = scheme.primary,
+                    foreground = scheme.onPrimary,
+                    symbol = MaterialSymbols.MilitaryTech,
+                    label = stringRes(R.string.nest_role_host),
+                )
+            }
+
+            ROLE.MODERATOR -> {
+                BadgeStyle(
+                    background = scheme.secondary,
+                    foreground = scheme.onSecondary,
+                    symbol = MaterialSymbols.Shield,
+                    label = stringRes(R.string.nest_role_moderator),
+                )
+            }
+
+            else -> {
+                return
+            }
         }
     Box(
         modifier =
             modifier
                 .offset(x = (-2).dp, y = (-2).dp)
                 .size(MAX_BADGE_SIZE)
-                .background(color, CircleShape),
+                .background(bg, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             symbol = symbol,
             contentDescription = label,
-            tint = Color.White,
+            tint = fg,
             modifier = Modifier.size(MAX_BADGE_SIZE - 4.dp),
         )
     }
 }
+
+/** Tuple of resolved badge colors + content; trivially destructured by [RoleBadge]. */
+private data class BadgeStyle(
+    val background: Color,
+    val foreground: Color,
+    val symbol: MaterialSymbol,
+    val label: String,
+)
 
 /**
  * Mic-state pill anchored to the bottom-center of an on-stage
@@ -464,11 +557,12 @@ private fun MicStateBadge(
     isMuted: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val color =
+    val scheme = MaterialTheme.colorScheme
+    val (bg, fg) =
         when {
-            isSpeaking -> NEST_SPEAKING_COLOR
-            isMuted -> MaterialTheme.colorScheme.error
-            else -> MaterialTheme.colorScheme.primary
+            isSpeaking -> NEST_SPEAKING_COLOR to Color.White
+            isMuted -> scheme.error to scheme.onError
+            else -> scheme.primary to scheme.onPrimary
         }
     val description =
         when {
@@ -481,19 +575,20 @@ private fun MicStateBadge(
             modifier
                 .offset(y = 2.dp)
                 .size(MAX_BADGE_SIZE)
-                .background(color, CircleShape),
+                .background(bg, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             symbol = if (isMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
             contentDescription = description,
-            tint = Color.White,
+            tint = fg,
             modifier = Modifier.size(MAX_BADGE_SIZE - 4.dp),
         )
     }
 }
 
-private val NEST_HAND_RAISE_COLOR = Color(0xFFEAB308) // tailwind yellow-500
+// Speaking-green is kept as a hardcoded brand-ish color rather than
+// pulled from the theme — "green = mic active" is a near-universal
+// convention (Spaces, Clubhouse, Discord) and a primary-tinted ring
+// would lose that signal in user themes that recolour primary.
 private val NEST_SPEAKING_COLOR = Color(0xFF22C55E) // tailwind green-500
-private val NEST_HOST_COLOR = Color(0xFFA855F7) // tailwind purple-500
-private val NEST_MODERATOR_COLOR = Color(0xFF0EA5E9) // tailwind sky-500
