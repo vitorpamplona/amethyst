@@ -637,6 +637,17 @@ class AccountManager internal constructor(
         refreshAccountList()
     }
 
+    /**
+     * Ensures the currently logged-in account is persisted in multi-account storage.
+     * Call before switching to a new account to avoid losing the current one.
+     */
+    suspend fun ensureCurrentAccountInStorage() {
+        val current = currentAccount() ?: return
+        val info = AccountInfo(npub = current.npub, signerType = current.signerType)
+        accountStorage.saveAccount(info)
+        accountStorage.setCurrentAccount(current.npub)
+    }
+
     suspend fun removeAccountFromStorage(npub: String) {
         val current = currentAccount()
         accountStorage.deleteAccount(npub)

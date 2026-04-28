@@ -708,6 +708,10 @@ fun App(
                             if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                                 accountManager.startHeartbeat(scope)
                             }
+                            // Refresh account list for switcher
+                            scope.launch(Dispatchers.IO) {
+                                accountManager.refreshAccountList()
+                            }
                         },
                     )
                 }

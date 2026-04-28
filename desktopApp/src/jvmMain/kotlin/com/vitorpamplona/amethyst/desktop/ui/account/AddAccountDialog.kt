@@ -88,6 +88,12 @@ fun AddAccountDialog(
                 ) {
                     LoginCard(
                         onLogin = { keyInput ->
+                            // Save current account before switching
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    accountManager.ensureCurrentAccountInStorage()
+                                }
+                            }
                             accountManager.loginWithKey(keyInput).map {
                                 scope.launch {
                                     withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
@@ -96,18 +102,31 @@ fun AddAccountDialog(
                             }
                         },
                         onGenerateNew = {
-                            accountManager.generateNewAccount()
                             scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    accountManager.ensureCurrentAccountInStorage()
+                                }
+                                accountManager.generateNewAccount()
                                 withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
                                 onAccountAdded()
                             }
                         },
                         onLoginBunker = { bunkerUri ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    accountManager.ensureCurrentAccountInStorage()
+                                }
+                            }
                             accountManager.loginWithBunker(bunkerUri).map {
                                 onAccountAdded()
                             }
                         },
                         onLoginNostrConnect = { onUriGenerated ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    accountManager.ensureCurrentAccountInStorage()
+                                }
+                            }
                             accountManager.loginWithNostrConnect(onUriGenerated).map {
                                 onAccountAdded()
                             }
