@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -55,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -74,7 +76,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.PrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.observeNestRoomLatestPresence
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -91,10 +93,16 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapLatest
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -253,9 +261,50 @@ private fun RenderLiveOrEndedFromPresence(
         LiveFlag()
         return
     }
-    val latestPresence by observeNestRoomLatestPresence(address, accountViewModel)
+    val latestPresence by observeRoomLatestPresence(address, accountViewModel)
     val fresh = latestPresence == null || latestPresence!! > TimeUtils.now() - PRESENCE_FRESHNESS_WINDOW_SECONDS
     if (fresh) LiveFlag() else EndedFlag()
+}
+
+/**
+ * Most recent kind-10312 presence `createdAt` cached for [address],
+ * or null until one arrives. Reuses the room's existing assembler
+ * subscription (`NestRoomFilterAssemblerSubscription`) — same
+ * subscription that warms up when the user actually opens the room
+ * — and reads version notes off the room's [LocalCache] channel,
+ * which `LocalCache.consume(MeetingRoomPresenceEvent, …)` attaches
+ * by `#a=room`. Trade-off: that REQ also pulls chat + reactions, so
+ * a thumbnail probe pays a popular room's full message history. If
+ * that load matters, swap to a dedicated limit:1 assembler.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+@Composable
+private fun observeRoomLatestPresence(
+    address: Address,
+    accountViewModel: AccountViewModel,
+): State<Long?> {
+    NestRoomFilterAssemblerSubscription(address.toValue(), accountViewModel)
+
+    val channel = remember(address) { LocalCache.getOrCreateLiveChannel(address) }
+    val flow =
+        remember(channel) {
+            channel
+                .flow()
+                .notes.stateFlow
+                .mapLatest { state ->
+                    var max: Long? = null
+                    state.channel.notes.forEach { _, note ->
+                        val event = note.event
+                        if (event is MeetingRoomPresenceEvent) {
+                            val createdAt = event.createdAt
+                            if (max == null || createdAt > max!!) max = createdAt
+                        }
+                    }
+                    max
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.IO)
+        }
+    return flow.collectAsStateWithLifecycle(null)
 }
 
 @Composable

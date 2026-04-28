@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestThumbStatusFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
@@ -110,7 +109,6 @@ class RelaySubscriptionsCoordinator(
     val liveStreams = LiveStreamsFilterAssembler(client)
     val nests = NestsFilterAssembler(client)
     val nestRoom = NestRoomFilterAssembler(client)
-    val nestThumbStatus = NestThumbStatusFilterAssembler(client)
     val longs = LongsFilterAssembler(client)
     val articles = ArticlesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
@@ -137,7 +135,6 @@ class RelaySubscriptionsCoordinator(
             liveStreams,
             nests,
             nestRoom,
-            nestThumbStatus,
             longs,
             articles,
             badges,
