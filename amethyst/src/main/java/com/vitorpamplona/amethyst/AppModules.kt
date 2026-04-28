@@ -303,7 +303,27 @@ class AppModules(
     val websocketBuilder =
         OkHttpWebSocket.Builder(
             httpClient = { url ->
-                val useTor = torEvaluatorFlow.flow.value.useTor(url)
+                // When the user has Tor enabled with onion routing for relays
+                // AND this is a `.bit` relay, the URL rewriter may produce a
+                // `ws://...onion/` target. The OkHttp client we hand back
+                // here MUST be Tor-routed in that case, otherwise OkHttp
+                // asks the system resolver for the `.onion` (which fails
+                // with `Unable to resolve host`). The decision mirrors
+                // [BitRelayUrlRewriter.preferOnion] so the two stay in
+                // sync; conservatively forcing Tor for any `.bit` relay
+                // when Tor + onionRelaysViaTor are on is correct — if the
+                // record has no onion alias the rewriter falls back to
+                // clearnet, but routing that clearnet through Tor is also
+                // what the user implicitly asked for by enabling onion
+                // routing for relays.
+                val torSettings = torEvaluatorFlow.torSettings.value
+                val torEnabled = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
+                val forceTorForBitOnion =
+                    torEnabled &&
+                        torSettings.onionRelaysViaTor &&
+                        com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.BitRelayResolver
+                            .isBitRelay(url)
+                val useTor = forceTorForBitOnion || torEvaluatorFlow.flow.value.useTor(url)
                 okHttpClientForRelays.getHttpClient(useTor)
             },
             urlRewriter =
