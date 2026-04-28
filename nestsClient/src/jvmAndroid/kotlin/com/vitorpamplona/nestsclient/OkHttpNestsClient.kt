@@ -43,7 +43,7 @@ import kotlin.math.min
  * the process; the default constructor creates a dedicated client.
  */
 class OkHttpNestsClient(
-    private val http: OkHttpClient = OkHttpClient(),
+    private val httpClient: (String) -> OkHttpClient,
 ) : NestsClient {
     override suspend fun mintToken(
         room: NestsRoomConfig,
@@ -142,7 +142,7 @@ class OkHttpNestsClient(
             val request = buildRequest()
             val response: Response =
                 try {
-                    http.newCall(request).execute()
+                    httpClient(url).newCall(request).execute()
                 } catch (e: SocketException) {
                     transportError = e
                     if (++transportAttempts >= MAX_TRANSPORT_RETRIES) throw NestsException("Failed to reach $url", e)

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.OkHttpNestsClient
@@ -46,7 +47,7 @@ internal class NestViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         NestViewModel(
-            httpClient = OkHttpNestsClient(),
+            httpClient = OkHttpNestsClient(Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForVideo),
             transport = QuicWebTransportFactory(),
             decoderFactory = { MediaCodecOpusDecoder() },
             playerFactory = { AudioTrackPlayer() },

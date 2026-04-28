@@ -99,7 +99,7 @@ class OkHttpNestsClientRateLimitTest {
             server.enqueue(success(token = "T1"))
 
             try {
-                val client = OkHttpNestsClient(http = OkHttpClient())
+                val client = OkHttpNestsClient(httpClient = { OkHttpClient() })
                 val token =
                     client.mintToken(
                         room = roomConfig(server.baseUrl),
@@ -122,7 +122,7 @@ class OkHttpNestsClientRateLimitTest {
             repeat(MAX_RATE_LIMIT_RETRIES + 2) { server.enqueue(rateLimited(retryAfterSeconds = 0)) }
 
             try {
-                val client = OkHttpNestsClient(http = OkHttpClient())
+                val client = OkHttpNestsClient(httpClient = { OkHttpClient() })
                 val ex =
                     assertFailsWith<NestsException> {
                         client.mintToken(
@@ -149,7 +149,7 @@ class OkHttpNestsClientRateLimitTest {
             server.enqueue(StubResponse(401, "Unauthorized", body = "{\"error\":\"bad sig\"}"))
 
             try {
-                val client = OkHttpNestsClient(http = OkHttpClient())
+                val client = OkHttpNestsClient(httpClient = { OkHttpClient() })
                 val ex =
                     assertFailsWith<NestsException> {
                         client.mintToken(

@@ -140,7 +140,7 @@ class NostrNestsAuthFailureInteropTest {
             // Per moq-auth's regex /^nests\/\d+:[0-9a-f]{64}:[a-zA-Z0-9._-]+$/
             // — uppercase pubkey hex doesn't match the `[0-9a-f]` class.
             val signer = NostrSignerInternal(KeyPair())
-            val client = OkHttpNestsClient(http = http)
+            val client = OkHttpNestsClient(httpClient = { http })
             val room =
                 NestsRoomConfig(
                     authBaseUrl = harness.authBaseUrl,
@@ -171,7 +171,7 @@ class NostrNestsAuthFailureInteropTest {
             // with `put: [<their-pubkey>]`. Lock that in so a future
             // hostlist gate doesn't sneak in unnoticed.
             val signer = NostrSignerInternal(KeyPair())
-            val client = OkHttpNestsClient(http = http)
+            val client = OkHttpNestsClient(httpClient = { http })
             val room =
                 NestsRoomConfig(
                     authBaseUrl = harness.authBaseUrl,
