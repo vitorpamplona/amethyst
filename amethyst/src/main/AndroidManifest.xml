@@ -219,7 +219,7 @@
             tools:ignore="DiscouragedApi" />
 
         <activity
-            android:name=".ui.screen.loggedIn.nests.room.NestActivity"
+            android:name=".ui.screen.loggedIn.nests.room.activity.NestActivity"
             android:autoRemoveFromRecents="true"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
             android:supportsPictureInPicture="true"
