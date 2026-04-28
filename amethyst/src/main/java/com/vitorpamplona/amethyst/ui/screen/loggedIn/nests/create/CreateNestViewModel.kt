@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestAct
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.image
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.relays
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.starts
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.summary
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
@@ -159,6 +160,10 @@ class CreateNestViewModel : ViewModel() {
                     .trim()
                     .takeIf { it.isNotBlank() }
                     ?.let { image(it) }
+                relays(
+                    accountModel.outboxRelays.flow.value
+                        .toList(),
+                )
             }
 
         val signed =

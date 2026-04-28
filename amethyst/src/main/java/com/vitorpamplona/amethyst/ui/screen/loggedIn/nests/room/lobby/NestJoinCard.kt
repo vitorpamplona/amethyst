@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby
 
+import android.R.attr.textColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -107,13 +107,8 @@ private fun NestJoinCardContent(
     // are missing — those rooms aren't joinable on the audio plane.
     if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
-    val theme = remember(event) { RoomTheme.from(event) }
-    val containerColor =
-        theme.backgroundArgb?.let { Color(it) }
-            ?: MaterialTheme.colorScheme.surfaceVariant
-    val textColor =
-        theme.textArgb?.let { Color(it) }
-            ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val containerColor = MaterialTheme.colorScheme.surfaceVariant
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
     val mutedTextColor = textColor.copy(alpha = 0.7f)
 
     val image = remember(event) { event.image() }
@@ -266,7 +261,6 @@ private fun NestJoinCardContent(
                     JoinNestButton(
                         event = event,
                         accountViewModel = accountViewModel,
-                        primaryColorOverride = theme.primaryArgb?.let { Color(it) },
                     )
                 }
             }
