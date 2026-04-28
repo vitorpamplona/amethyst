@@ -30,8 +30,8 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
@@ -445,13 +445,11 @@ class MoqLiteSessionTest {
      * are simply abandoned — their pump-side `bidi.incoming()`
      * collect just sits idle until the test ends.
      */
-    private suspend fun nextSubscribeBidi(serverSide: FakeWebTransport): Pair<FakeBidiStream, MoqLiteSubscribe> {
-        val bidiFlow = serverSide.peerOpenedBidiStreams()
-        var found: Pair<FakeBidiStream, MoqLiteSubscribe>? = null
-        bidiFlow
-            .takeWhile { found == null }
-            .collect { bidi ->
-                val firstChunk = bidi.incoming().firstOrNull() ?: return@collect
+    private suspend fun nextSubscribeBidi(serverSide: FakeWebTransport): Pair<FakeBidiStream, MoqLiteSubscribe> =
+        serverSide
+            .peerOpenedBidiStreams()
+            .transformWhile { bidi ->
+                val firstChunk = bidi.incoming().firstOrNull() ?: return@transformWhile true
                 val code = MoqLiteFrameBuffer().apply { push(firstChunk) }.readVarint()
                 if (code != MoqLiteControlType.Subscribe.code) {
                     // Housekeeping bidi (announce watch, etc.) —
@@ -459,7 +457,7 @@ class MoqLiteSessionTest {
                     // collector will idle indefinitely, which is
                     // fine for unit tests under runBlocking +
                     // pumpScope cleanup.
-                    return@collect
+                    return@transformWhile true
                 }
                 val bodyChunk =
                     bidi.incoming().firstOrNull()
@@ -467,10 +465,15 @@ class MoqLiteSessionTest {
                 val payload =
                     MoqLiteFrameBuffer().apply { push(bodyChunk) }.readSizePrefixed()
                         ?: error("subscribe body chunk did not contain a complete size-prefixed payload")
-                found = bidi to MoqLiteCodec.decodeSubscribe(payload)
-            }
-        return found ?: error("flow ended without a Subscribe bidi")
-    }
+                emit(bidi to MoqLiteCodec.decodeSubscribe(payload))
+                // Terminate upstream collection — without this the
+                // helper would block waiting for a NEXT bidi that
+                // may never come, since `takeWhile` only re-checks
+                // its predicate when the next value emits. Tests
+                // that open exactly two subscribes (no third bidi
+                // to nudge the flow forward) used to hang here.
+                false
+            }.firstOrNull() ?: error("flow ended without a Subscribe bidi")
 
     private fun framePayload(bytes: ByteArray): ByteArray = Varint.encode(bytes.size.toLong()) + bytes
 
