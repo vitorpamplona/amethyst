@@ -66,12 +66,18 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 
-private val STAGE_CELL_MIN = 112.dp
+private val STAGE_CELL_MIN = 96.dp
 private val STAGE_AVATAR = 100.dp
-private val AUDIENCE_CELL_MIN = 112.dp
+private val AUDIENCE_CELL_MIN = 96.dp
 private val AUDIENCE_AVATAR = 100.dp
 private val GRID_SPACING = 6.dp
 private val AVATAR_RING_WIDTH = 3.dp
+
+// Cell min sits 4.dp under the avatar diameter so 4 columns fit on a
+// 411.dp phone (Pixel 6/7/8). The 100.dp avatar overflows ~2.dp into
+// the 6.dp horizontal arrangement on each side, leaving a visible
+// ~2.dp gap between neighbors. Names below ellipsize to the cell
+// width, which is fine since they're short display handles.
 
 // Two rows visible by default. Each cell is roughly avatar + name +
 // reaction headroom; with a 100dp avatar one row lifts to ~140dp, so
