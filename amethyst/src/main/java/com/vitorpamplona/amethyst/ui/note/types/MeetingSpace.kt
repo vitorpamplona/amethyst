@@ -175,7 +175,7 @@ fun RenderMeetingSpaceEventInner(
                 ListenToRecordingButton(url = it, accountViewModel = accountViewModel)
             }
         } else {
-            com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.JoinNestButton(
+            com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.JoinNestButton(
                 event = noteEvent,
                 accountViewModel = accountViewModel,
             )
