@@ -672,6 +672,10 @@ fun App(
             }
             val result = accountManager.loadSavedAccount()
             if (result.isSuccess) {
+                // Ensure loaded account is in multi-account storage
+                accountManager.ensureCurrentAccountInStorage()
+                accountManager.refreshAccountList()
+
                 val current = accountManager.currentAccount()
                 if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                     accountManager.startHeartbeat(scope)
