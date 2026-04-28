@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -126,7 +127,10 @@ fun ListOfEmojiPacksFeed(
             }
         },
         floatingActionButton = {
-            EmojiPackFab(onAddPack = addEmojiPack)
+            EmojiPackFab(
+                onAddPack = addEmojiPack,
+                modifier = Modifier.fabBottomBarPadding(nav),
+            )
         },
     ) { paddingValues ->
         Column(
@@ -308,7 +312,10 @@ private fun MyEmojiListRow(
 }
 
 @Composable
-fun EmojiPackFab(onAddPack: () -> Unit) {
+fun EmojiPackFab(
+    onAddPack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     ExtendedFloatingActionButton(
         text = {
             Text(text = stringRes(R.string.new_emoji_pack))
@@ -322,5 +329,6 @@ fun EmojiPackFab(onAddPack: () -> Unit) {
         onClick = onAddPack,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
+        modifier = modifier,
     )
 }

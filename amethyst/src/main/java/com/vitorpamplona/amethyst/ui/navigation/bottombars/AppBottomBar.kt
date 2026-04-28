@@ -54,6 +54,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size27dp
 
+/** Content height of the [AppBottomBar] (the 50.dp Column inside [RenderBottomMenu]),
+ * exclusive of the system navigation-bar inset. Used by FAB callers that want to
+ * reserve the same vertical space when the bar hides itself on canPop entries. */
+val AppBottomBarHeight = 50.dp
+
 @Composable
 fun AppBottomBar(
     selectedRoute: Route?,
@@ -99,7 +104,7 @@ private fun RenderBottomMenu(
                 .background(MaterialTheme.colorScheme.background)
                 .windowInsetsPadding(windowInsets)
                 .consumeWindowInsets(windowInsets)
-                .height(50.dp),
+                .height(AppBottomBarHeight),
     ) {
         HorizontalDivider(
             thickness = DividerThickness,

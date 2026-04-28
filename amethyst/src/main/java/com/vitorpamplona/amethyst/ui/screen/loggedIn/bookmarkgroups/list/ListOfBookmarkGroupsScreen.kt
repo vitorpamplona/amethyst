@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -130,7 +131,10 @@ fun ListOfBookmarkGroupsFeed(
             }
         },
         floatingActionButton = {
-            BookmarkGroupFab(onAddGroup = addBookmarkGroup)
+            BookmarkGroupFab(
+                onAddGroup = addBookmarkGroup,
+                modifier = Modifier.fabBottomBarPadding(nav),
+            )
         },
     ) { paddingValues ->
         Column(
@@ -160,7 +164,10 @@ fun ListOfBookmarkGroupsFeed(
 }
 
 @Composable
-fun BookmarkGroupFab(onAddGroup: () -> Unit) {
+fun BookmarkGroupFab(
+    onAddGroup: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     ExtendedFloatingActionButton(
         text = {
             Text(text = stringRes(R.string.follow_set_create_btn_label))
@@ -174,5 +181,6 @@ fun BookmarkGroupFab(onAddGroup: () -> Unit) {
         onClick = onAddGroup,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
+        modifier = modifier,
     )
 }
