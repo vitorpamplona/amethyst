@@ -25,7 +25,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
@@ -117,7 +119,14 @@ internal fun LeaveOnRoomClosed(
     // fires once per live→closed transition, regardless of how
     // many other tag changes the host pushes alongside.
     val isLive = event.isLive()
-    LaunchedEffect(isLive) { if (!isLive) onLeave() }
+    var wasLive by remember { mutableStateOf(isLive) }
+
+    LaunchedEffect(isLive) {
+        if (wasLive && !isLive) {
+            onLeave()
+        }
+        wasLive = isLive
+    }
 }
 
 /**
