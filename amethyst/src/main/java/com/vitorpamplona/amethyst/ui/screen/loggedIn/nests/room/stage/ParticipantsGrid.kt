@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -74,6 +75,11 @@ private val AUDIENCE_AVATAR = 100.dp
 private val GRID_SPACING = 6.dp
 private val AVATAR_RING_WIDTH = 3.dp
 
+// Upper bound for the live "voice" halo. Speaking with a peak audio
+// level of 1.0 grows the ring from AVATAR_RING_WIDTH to this value;
+// quieter voices land somewhere in between.
+private val MAX_RING_WIDTH = 7.dp
+
 // Cap badge sizes so they stay legible without dominating the avatar
 // at 100.dp. The 0.42 ratio was tuned for ~48.dp avatars (giving
 // ~20.dp badges); without a cap, scaling to 100.dp produces 42.dp
@@ -109,6 +115,7 @@ internal fun StageGrid(
     speakingNow: ImmutableSet<String>,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    audioLevels: Map<String, Float> = emptyMap(),
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
     connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
@@ -141,6 +148,7 @@ internal fun StageGrid(
                     member = member,
                     avatarSize = STAGE_AVATAR,
                     isSpeaking = member.pubkey in speakingNow,
+                    audioLevel = audioLevels[member.pubkey] ?: 0f,
                     isConnecting = member.pubkey in connectingSpeakers,
                     showMicBadge = true,
                     reactions = reactionsByPubkey[member.pubkey].orEmpty(),
@@ -205,6 +213,7 @@ internal fun AudienceGrid(
                 member = member,
                 avatarSize = AUDIENCE_AVATAR,
                 isSpeaking = false,
+                audioLevel = 0f,
                 isConnecting = false,
                 showMicBadge = false,
                 reactions = emptyList(),
@@ -221,6 +230,7 @@ private fun MemberCell(
     member: RoomMember,
     avatarSize: Dp,
     isSpeaking: Boolean,
+    audioLevel: Float,
     isConnecting: Boolean,
     showMicBadge: Boolean,
     reactions: List<RoomReaction>,
@@ -239,9 +249,20 @@ private fun MemberCell(
             showMicBadge && member.publishing && member.muted == true -> mutedRingColor
             else -> null
         }
+    // Throb the ring width with the live peak amplitude — quiet voices
+    // sit at the base width, loud ones widen the halo. animateDpAsState
+    // smooths the 10 Hz raw signal into a continuous animation. The
+    // muted ring stays at base width because no audio is being decoded.
+    val targetRingWidth =
+        when {
+            isSpeaking -> AVATAR_RING_WIDTH + (audioLevel.coerceIn(0f, 1f) * (MAX_RING_WIDTH - AVATAR_RING_WIDTH).value).dp
+            ringColor != null -> AVATAR_RING_WIDTH
+            else -> 0.dp
+        }
+    val animatedRingWidth by animateDpAsState(targetValue = targetRingWidth, label = "speaker-ring-width")
     val avatarModifier =
         Modifier
-            .let { if (ringColor != null) it.border(AVATAR_RING_WIDTH, ringColor, CircleShape) else it }
+            .let { if (ringColor != null) it.border(animatedRingWidth, ringColor, CircleShape) else it }
             .let { if (member.absent) it.alpha(0.5f) else it }
     val user =
         remember(member.pubkey) {

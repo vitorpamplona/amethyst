@@ -56,10 +56,19 @@ class NestPlayer(
      *
      * Decoder errors are reported via [onError] but do NOT stop the loop —
      * one bad packet shouldn't tear down the room. Player errors are fatal.
+     *
+     * [onLevel] receives the peak amplitude of each successfully decoded
+     * frame, normalized to `[0, 1]`. Default no-op so callers that don't
+     * care about levels (tests, audio-only consumers) pay zero cost.
+     * Invoked on the same dispatcher as the decode loop — typically
+     * `viewModelScope`'s Main, so the consumer must keep its handler
+     * lightweight (e.g. a HashMap put followed by a coalesced StateFlow
+     * emission).
      */
     fun play(
         objects: Flow<MoqObject>,
         onError: (AudioException) -> Unit = { /* swallow */ },
+        onLevel: (Float) -> Unit = { /* no-op */ },
     ) {
         check(!stopped) { "NestPlayer already stopped" }
         check(job == null) { "NestPlayer.play already called" }
@@ -85,6 +94,7 @@ class NestPlayer(
                                 return@collect
                             }
                         if (pcm.isNotEmpty()) {
+                            onLevel(peakAmplitude(pcm))
                             player.enqueue(pcm)
                         }
                     }
@@ -100,6 +110,20 @@ class NestPlayer(
                     )
                 }
             }
+    }
+
+    /**
+     * Peak amplitude of a 16-bit PCM frame, normalized to `[0, 1]`. Peak
+     * (vs RMS) is jittery on its own but responds instantly to onsets,
+     * which suits a visual ring that the UI smooths via animateDpAsState.
+     */
+    private fun peakAmplitude(pcm: ShortArray): Float {
+        var maxAbs = 0
+        for (s in pcm) {
+            val abs = if (s.toInt() < 0) -s.toInt() else s.toInt()
+            if (abs > maxAbs) maxAbs = abs
+        }
+        return (maxAbs / 32768f).coerceIn(0f, 1f)
     }
 
     /**

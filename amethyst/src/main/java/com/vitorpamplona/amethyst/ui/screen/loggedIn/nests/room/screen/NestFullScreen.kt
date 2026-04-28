@@ -134,6 +134,7 @@ internal fun NestFullScreen(
     val presences by viewModel.presences.collectAsState()
     val reactionsByPubkey by viewModel.recentReactions.collectAsState()
     val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
+    val audioLevels by viewModel.audioLevels.collectAsState()
 
     val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
     val participantGrid =
@@ -225,6 +226,7 @@ internal fun NestFullScreen(
             StageGrid(
                 members = participantGrid.onStage,
                 speakingNow = ui.speakingNow,
+                audioLevels = audioLevels,
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = reactionsByPubkey,
                 connectingSpeakers = ui.connectingSpeakers,
