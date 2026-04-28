@@ -28,19 +28,20 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,75 +56,127 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
+
+private val STAGE_CELL_MIN = 88.dp
+private val STAGE_AVATAR = 48.dp
+private val AUDIENCE_CELL_MIN = 76.dp
+private val AUDIENCE_AVATAR = Size40dp
+private val GRID_SPACING = 6.dp
+
+// Two rows visible by default. Each cell is roughly avatar + name +
+// reaction headroom, so this lifts to ~200dp on most phones — tall
+// enough to show 6-8 speakers without scrolling but small enough to
+// leave the chat / audience tab the majority of the viewport.
+private val STAGE_MAX_HEIGHT = 220.dp
 
 /**
- * Material3 grid for the room participants — replaces the
- * horizontal LazyRow layout for rooms with many speakers /
- * audience members. On-stage and audience render as separate
- * fixed-height horizontal grids (one row per group, scrolls
- * horizontally) so the chat panel below stays at a predictable
- * vertical position even when the room fills up.
+ * Vertical adaptive grid for the on-stage section. Used as the
+ * always-visible header strip in the room layout: speakers flow into
+ * as many columns as the screen width allows, wrapping to a new row
+ * once full. Capped at [STAGE_MAX_HEIGHT] so a 30-speaker room can
+ * scroll inside the strip without pushing the tabs / chat below the
+ * fold.
  *
- * Falls open: when [grid] is empty (room with no presence yet),
- * neither section renders.
- *
- * Absent members (kind-30312 `p`-tag with no kind-10312 presence)
- * render at 50% alpha — matches nostrnests' grey-out for
- * "promoted but never joined".
+ * Falls open: when [members] is empty, renders nothing.
  */
 @Composable
-internal fun ParticipantsGrid(
-    grid: ParticipantGrid,
+internal fun StageGrid(
+    members: List<RoomMember>,
     speakingNow: ImmutableSet<String>,
     accountViewModel: AccountViewModel,
-    onStageLabel: String,
-    audienceLabel: String,
     modifier: Modifier = Modifier,
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
-    connectingSpeakers: ImmutableSet<String> = kotlinx.collections.immutable.persistentSetOf(),
+    connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        if (grid.onStage.isNotEmpty()) {
-            ParticipantsSection(
-                title = onStageLabel,
-                members = grid.onStage,
-                avatarSize = Size40dp,
-                speakingNow = speakingNow,
-                connectingSpeakers = connectingSpeakers,
-                showMicBadge = true,
-                accountViewModel = accountViewModel,
-                reactionsByPubkey = reactionsByPubkey,
-                onLongPressParticipant = onLongPressParticipant,
+    if (members.isEmpty()) return
+    Column(modifier = modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(
+            text = stringRes(R.string.nest_stage),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(STAGE_CELL_MIN),
+            modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),
+            horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
+            verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
+        ) {
+            items(items = members, key = { it.pubkey }) { member ->
+                MemberCell(
+                    member = member,
+                    avatarSize = STAGE_AVATAR,
+                    isSpeaking = member.pubkey in speakingNow,
+                    isConnecting = member.pubkey in connectingSpeakers,
+                    showMicBadge = true,
+                    reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                    accountViewModel = accountViewModel,
+                    onLongPressParticipant = onLongPressParticipant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Vertical adaptive grid for the audience tab. Sized to fill the
+ * remaining vertical space its parent gives it (`Modifier.weight(1f)`)
+ * so a room with 1,000 listeners scrolls efficiently — the lazy grid
+ * only composes the rows currently visible.
+ *
+ * Audience cells deliberately omit the speaking ring, mic badge and
+ * connecting spinner: only members with a live broadcast subscription
+ * earn those, and audience by definition aren't broadcasting. Hand
+ * badge still renders because the audience is the hand-raise queue.
+ */
+@Composable
+internal fun AudienceGrid(
+    members: List<RoomMember>,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+    onLongPressParticipant: ((String) -> Unit)? = null,
+) {
+    if (members.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize().padding(16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringRes(R.string.nest_audience_empty),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (grid.audience.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            ParticipantsSection(
-                title = audienceLabel,
-                members = grid.audience,
-                avatarSize = Size35dp,
-                // Audience rows don't get the speaking-ring, mic-state
-                // pill, or buffering overlay — only members with a
-                // live broadcast subscription do. Hand-raise badge
-                // still renders (audience is the queue).
-                speakingNow = kotlinx.collections.immutable.persistentSetOf(),
-                connectingSpeakers = kotlinx.collections.immutable.persistentSetOf(),
+        return
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(AUDIENCE_CELL_MIN),
+        modifier = modifier.fillMaxSize().padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
+        verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
+        contentPadding =
+            androidx.compose.foundation.layout
+                .PaddingValues(vertical = 8.dp),
+    ) {
+        items(items = members, key = { it.pubkey }) { member ->
+            MemberCell(
+                member = member,
+                avatarSize = AUDIENCE_AVATAR,
+                isSpeaking = false,
+                isConnecting = false,
                 showMicBadge = false,
+                reactions = emptyList(),
                 accountViewModel = accountViewModel,
-                reactionsByPubkey = emptyMap(),
                 onLongPressParticipant = onLongPressParticipant,
             )
         }
@@ -131,126 +184,80 @@ internal fun ParticipantsGrid(
 }
 
 @Composable
-private fun ParticipantsSection(
-    title: String,
-    members: List<RoomMember>,
+private fun MemberCell(
+    member: RoomMember,
     avatarSize: Dp,
-    speakingNow: ImmutableSet<String>,
-    connectingSpeakers: ImmutableSet<String>,
+    isSpeaking: Boolean,
+    isConnecting: Boolean,
     showMicBadge: Boolean,
+    reactions: List<RoomReaction>,
     accountViewModel: AccountViewModel,
-    reactionsByPubkey: Map<String, List<RoomReaction>>,
     onLongPressParticipant: ((String) -> Unit)?,
 ) {
     val ringColor = MaterialTheme.colorScheme.primary
-    // Hoist the size/spacing modifiers — same Dp values for every
-    // cell, so allocating them once per section beats allocating
-    // per-cell-recompose with N speakers.
-    val gridModifier =
-        remember(avatarSize) {
-            Modifier
-                .fillMaxWidth()
-                .height(avatarSize + 48.dp)
-                .padding(top = 4.dp)
+    val avatarModifier =
+        when {
+            isSpeaking && member.absent -> Modifier.border(2.dp, ringColor, CircleShape).then(Modifier.alpha(0.5f))
+            isSpeaking -> Modifier.border(2.dp, ringColor, CircleShape)
+            member.absent -> Modifier.alpha(0.5f)
+            else -> Modifier
         }
-    val cellWidthModifier = remember(avatarSize) { Modifier.width(avatarSize + 16.dp) }
-    val absentAlphaModifier = remember { Modifier.alpha(0.5f) }
-    val speakingBorderModifier = remember(ringColor) { Modifier.border(2.dp, ringColor, CircleShape) }
-    val spinnerModifier = remember(avatarSize) { Modifier.size(avatarSize - 8.dp) }
-    Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = SpacedBy5dp) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        // Single-row horizontal grid. Cell height = avatar +
-        // reaction overlay headroom + a username line below; the
-        // grid auto-fits the avatar + name + (optional) reaction
-        // bubble vertically without clipping.
-        LazyHorizontalGrid(
-            rows = GridCells.Fixed(1),
-            modifier = gridModifier,
-            horizontalArrangement = SpacedBy5dp,
-        ) {
-            items(items = members, key = { it.pubkey }) { member ->
-                val isSpeaking = member.pubkey in speakingNow
-                val avatarModifier =
-                    when {
-                        isSpeaking && member.absent -> speakingBorderModifier.then(absentAlphaModifier)
-                        isSpeaking -> speakingBorderModifier
-                        member.absent -> absentAlphaModifier
-                        else -> Modifier
-                    }
-                val user =
-                    remember(member.pubkey) {
-                        com.vitorpamplona.amethyst.model.LocalCache
-                            .getOrCreateUser(member.pubkey)
-                    }
-                // Cache the long-click adapter per (pubkey, callback)
-                // tuple — `onLongPressParticipant?.let { cb -> { hex -> cb(hex) } }`
-                // would otherwise allocate a fresh lambda on every
-                // recompose, which adds up across N members during a
-                // connectingSpeakers / speakingNow flip.
-                val onLongClick =
-                    remember(member.pubkey, onLongPressParticipant) {
-                        onLongPressParticipant?.let { cb -> { hex: String -> cb(hex) } }
-                    }
-                val isConnecting = member.pubkey in connectingSpeakers
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = SpacedBy10dp,
-                    modifier = cellWidthModifier,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        ClickableUserPicture(
-                            baseUserHex = member.pubkey,
-                            size = avatarSize,
-                            accountViewModel = accountViewModel,
-                            modifier = avatarModifier,
-                            onLongClick = onLongClick,
-                        )
-                        if (isConnecting) {
-                            // Pre-roll buffering overlay — visible
-                            // between SUBSCRIBE_OK and the first
-                            // decoded frame (typically 0.5-2 s on a
-                            // fresh subscription). Sized smaller than
-                            // the avatar so the user picture stays
-                            // recognisable underneath.
-                            androidx.compose.material3.CircularProgressIndicator(
-                                modifier = spinnerModifier,
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        if (member.handRaised) {
-                            HandRaiseBadge(
-                                avatarSize = avatarSize,
-                                modifier = Modifier.align(Alignment.TopEnd),
-                            )
-                        }
-                        if (showMicBadge && member.publishing) {
-                            MicStateBadge(
-                                isSpeaking = isSpeaking,
-                                isMuted = member.muted == true,
-                                avatarSize = avatarSize,
-                                modifier = Modifier.align(Alignment.BottomCenter),
-                            )
-                        }
-                    }
-                    UsernameDisplay(
-                        baseUser = user,
-                        weight = Modifier.fillMaxWidth(),
-                        accountViewModel = accountViewModel,
-                    )
-                    val reactions = reactionsByPubkey[member.pubkey].orEmpty()
-                    if (reactions.isNotEmpty()) {
-                        SpeakerReactionOverlay(
-                            reactions = reactions,
-                            modifier = Modifier.padding(top = 2.dp),
-                        )
-                    }
-                }
+    val user =
+        remember(member.pubkey) {
+            com.vitorpamplona.amethyst.model.LocalCache
+                .getOrCreateUser(member.pubkey)
+        }
+    // Cache the long-click adapter per (pubkey, callback) tuple so a
+    // recompose during a connectingSpeakers / speakingNow flip doesn't
+    // allocate a fresh lambda for every cell.
+    val onLongClick =
+        remember(member.pubkey, onLongPressParticipant) {
+            onLongPressParticipant?.let { cb -> { hex: String -> cb(hex) } }
+        }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            ClickableUserPicture(
+                baseUserHex = member.pubkey,
+                size = avatarSize,
+                accountViewModel = accountViewModel,
+                modifier = avatarModifier,
+                onLongClick = onLongClick,
+            )
+            if (isConnecting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(avatarSize - 8.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
+            if (member.handRaised) {
+                HandRaiseBadge(
+                    avatarSize = avatarSize,
+                    modifier = Modifier.align(Alignment.TopEnd),
+                )
+            }
+            if (showMicBadge && member.publishing) {
+                MicStateBadge(
+                    isSpeaking = isSpeaking,
+                    isMuted = member.muted == true,
+                    avatarSize = avatarSize,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+        }
+        UsernameDisplay(
+            baseUser = user,
+            weight = Modifier.fillMaxWidth().padding(top = 4.dp),
+            accountViewModel = accountViewModel,
+        )
+        if (reactions.isNotEmpty()) {
+            SpeakerReactionOverlay(
+                reactions = reactions,
+                modifier = Modifier.padding(top = 2.dp),
+            )
         }
     }
 }
