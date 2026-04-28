@@ -79,8 +79,7 @@ class MoqLiteSessionTest {
 
             val peerHandlesSubscribe =
                 async {
-                    val bidi = serverSide.peerOpenedBidiStreams().first()
-                    val req = readSubscribeRequest(bidi)
+                    val (bidi, req) = nextSubscribeBidi(serverSide)
                     assertEquals("speakerPubkey", req.broadcast)
                     assertEquals("audio/data", req.track)
                     assertEquals(MoqLiteSession.DEFAULT_PRIORITY, req.priority)
@@ -130,8 +129,7 @@ class MoqLiteSessionTest {
 
             val peer =
                 async {
-                    val bidi = serverSide.peerOpenedBidiStreams().first()
-                    readSubscribeRequest(bidi)
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
                     bidi.write(
                         MoqLiteCodec.encodeSubscribeDrop(
                             MoqLiteSubscribeDrop(errorCode = 4L, reasonPhrase = "no such broadcast"),
@@ -396,8 +394,7 @@ class MoqLiteSessionTest {
             var peerBidi: FakeBidiStream? = null
             val peer =
                 async {
-                    val bidi = serverSide.peerOpenedBidiStreams().first()
-                    readSubscribeRequest(bidi)
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
                     bidi.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
                     peerBidi = bidi
                     // Drain whatever the listener writes after Ok — moq-lite

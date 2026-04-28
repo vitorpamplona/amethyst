@@ -171,9 +171,20 @@ suspend fun connectReconnectingNestsListener(
                     // never enters Reconnecting.
                     continue
                 }
-                val terminal = state.value
-                if (terminal is NestsListenerState.Closed) break
+                // Note: we do NOT break on terminal=Closed. The
+                // user-driven stop path goes through
+                // [ReconnectingHandle.close], which calls
+                // `orchestrator.cancel()` BEFORE closing the inner
+                // listener; cancellation propagates through the
+                // next suspending call (typically `delay` below or
+                // `openOnce` on the next loop iteration) and the
+                // orchestrator exits cleanly. Any *other* path that
+                // produces a Closed inner listener — peer-driven
+                // transport close, half-broken session that was
+                // closed by some internal cleanup — should be
+                // treated as an unexpected drop and reconnected.
                 if (policy.isExhausted(attempt + 1)) break
+                val terminal = state.value
                 val delayMs =
                     if (terminal is NestsListenerState.Reconnecting) {
                         terminal.delayMs

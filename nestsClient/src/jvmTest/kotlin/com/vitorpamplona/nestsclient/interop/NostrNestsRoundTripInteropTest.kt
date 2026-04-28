@@ -200,9 +200,13 @@ class NostrNestsRoundTripInteropTest {
                     assertEquals(
                         idx.toLong(),
                         obj.objectId,
-                        "object id at index $idx — MoQ requires monotonic ids per group",
+                        "object id at index $idx — MoqLiteNestsListener uses a session-level counter, monotonic across all groups",
                     )
-                    assertEquals(0L, obj.groupId, "single-group track per audio-rooms NIP draft")
+                    assertEquals(
+                        idx.toLong(),
+                        obj.groupId,
+                        "group id at index $idx — broadcaster emits one moq-lite group per Opus frame (audio-rooms NIP draft) so groupId increments 1:1 with the frame index",
+                    )
                     assertContentEquals(
                         "FRAME-".encodeToByteArray() + byteArrayOf(idx.toByte()),
                         obj.payload,
