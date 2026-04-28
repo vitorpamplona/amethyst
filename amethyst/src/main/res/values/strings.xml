@@ -584,6 +584,9 @@
     <string name="nest_participant_mute">Mute</string>
     <string name="nest_participant_unmute">Unmute</string>
     <string name="nest_share_action">Share room</string>
+    <string name="nest_minimize">Minimize</string>
+    <string name="nest_minimize_description">Minimize to keep listening</string>
+    <string name="nest_audio_dropped">Audio dropped</string>
     <string name="nest_create_fab">Start space</string>
     <string name="nest_no_server_title">Set up a nest server</string>
     <string name="nest_no_server_body">You haven\'t picked a nest server yet. Add %1$s to your server list and continue?\n\nYou can change this later in Settings.</string>

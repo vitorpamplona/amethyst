@@ -133,12 +133,16 @@ class NestActivity : AppCompatActivity() {
             registerReceiver(pipReceiver, filter)
         }
 
+        val pipSupported =
+            packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
         setContent {
             AmethystTheme {
                 NestActivityContent(
                     addressValue = addressValue,
                     accountViewModel = accountViewModel,
                     isInPipMode = isInPipMode.value,
+                    isPipSupported = pipSupported,
                     onMuteState = { muted ->
                         if (isMuted.value != muted) {
                             isMuted.value = muted
@@ -148,6 +152,7 @@ class NestActivity : AppCompatActivity() {
                     onConnectedChange = { isConnected.value = it },
                     pipMuteSignal = toggleMuteSignal,
                     onLeave = { finish() },
+                    onMinimize = { enterPip() },
                 )
             }
         }
@@ -155,9 +160,19 @@ class NestActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // PIP only makes sense once the audio session is live; entering
-        // PIP from the lobby/Connecting state would freeze a half-rendered
-        // card in Recents. Also gates on the system supporting PIP.
+        enterPip()
+    }
+
+    /**
+     * Enter Picture-in-Picture if the audio session is live and the
+     * system supports PIP. Called both by [onUserLeaveHint] (Home /
+     * Recents gesture) and by user-driven entry points (back gesture,
+     * Minimize button in [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestFullScreen]).
+     *
+     * Gated on `isConnected` so PIP from the lobby/Connecting state
+     * doesn't freeze a half-rendered card in Recents.
+     */
+    fun enterPip() {
         if (!isConnected.value) return
         if (!packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) return
         runCatching { enterPictureInPictureMode(buildPipParams()) }
