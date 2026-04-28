@@ -612,6 +612,7 @@ class DesktopLocalCache : ICacheProvider {
         _followedUsers.value = emptySet()
         followerCounts.clear()
         followingCounts.clear()
+        lastContactListCreatedAt = 0L
     }
 }
 
