@@ -29,17 +29,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -51,6 +50,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 
 /**
@@ -94,8 +95,15 @@ internal fun ColumnScope.NestChatPanel(
     nestScreenModel.init(accountViewModel)
     nestScreenModel.load(event)
 
+    val listState = rememberLazyListState()
+
     Column(modifier = modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.fillMaxWidth().weight(1f, fill = true)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = true),
+        ) {
             if (messages.isEmpty()) {
                 Text(
                     text = stringRes(R.string.nest_chat_empty),
@@ -106,6 +114,7 @@ internal fun ColumnScope.NestChatPanel(
             } else {
                 NestChatMessageList(
                     messages = messages,
+                    listState = listState,
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -120,7 +129,12 @@ internal fun ColumnScope.NestChatPanel(
         NestEditFieldRow(
             nestScreenModel = nestScreenModel,
             accountViewModel = accountViewModel,
-            onSendNewMessage = {},
+            onSendNewMessage = {
+                scope.launch {
+                    delay(100)
+                    listState.animateScrollToItem(0)
+                }
+            },
             nav = nav,
         )
     }
@@ -130,26 +144,12 @@ internal fun ColumnScope.NestChatPanel(
 private fun NestChatMessageList(
     messages: List<Note>,
     routeForLastRead: String,
+    listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: BouncingIntentNav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
-    val listState = rememberLazyListState()
-
-    // Auto-scroll to the newest message ONLY when the user is already
-    // pinned near the bottom — otherwise a new message yanks them away
-    // from the history they're scrolling. With reverseLayout=true the
-    // bottom of the screen is index 0, so "pinned" = the first visible
-    // item is index 0 or 1 (one row of tolerance for partial scroll).
-    LaunchedEffect(listState) {
-        snapshotFlow { messages.size }.collect { size ->
-            if (size > 0 && listState.firstVisibleItemIndex <= 1) {
-                listState.animateScrollToItem(0)
-            }
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = listState,
