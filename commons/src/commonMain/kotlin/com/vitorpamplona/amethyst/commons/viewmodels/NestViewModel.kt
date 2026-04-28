@@ -42,8 +42,11 @@ import com.vitorpamplona.nestsclient.connectReconnectingNestsListener
 import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
+import com.vitorpamplona.quartz.experimental.nests.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
@@ -54,8 +57,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -118,7 +123,25 @@ class NestViewModel(
     // their `backgroundScope` so assertions can observe the close.
     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     private val cleanupScope: CoroutineScope = GlobalScope,
+    // Read side of the room — LocalCache-backed in production, no-op
+    // for unit tests. The VM collects these flows on viewModelScope
+    // so the LocalCache → VM fan-out lives at the VM's lifetime
+    // instead of recomposing-with-the-screen `LaunchedEffect`s.
+    private val eventSource: NestRoomEventSource = EmptyNestRoomEventSource,
 ) : ViewModel() {
+    init {
+        // Skip all background pumps when wired to the no-op source.
+        // The unit-test path drives the VM's `on*Event` hooks
+        // directly and would otherwise leak the eviction tickers'
+        // `while (isActive) { delay() }` loops into `runTest`'s
+        // virtual-time scheduler — they'd never fire (no virtual
+        // time advancement) but `runTest` would still wait for them.
+        if (eventSource !== EmptyNestRoomEventSource) {
+            startEventCollectors()
+            startEvictionTickers()
+        }
+    }
+
     private val _uiState = MutableStateFlow(NestUiState())
     val uiState: StateFlow<NestUiState> = _uiState.asStateFlow()
 
@@ -238,9 +261,11 @@ class NestViewModel(
      * Honor an inbound kind-4312 force-mute targeted at the local
      * user. No-ops when we aren't broadcasting; otherwise routes
      * through the existing [setMicMuted] path so the wire mute and
-     * UI state both flip in sync. Caller (the AdminCommandsCollector)
-     * is responsible for verifying the signer is host/moderator on
-     * the active kind-30312 — the relay does not enforce that.
+     * UI state both flip in sync. The caller — the
+     * [NestRoomEventSource]'s admin-command stream — is responsible
+     * for verifying the signer is host/moderator on the active
+     * kind-30312 before this is invoked. The relay does not enforce
+     * that gate.
      */
     fun onForceMuted() {
         if (closed) return
@@ -421,6 +446,19 @@ class NestViewModel(
     fun evictReactions(olderThanSec: Long) {
         if (closed) return
         _recentReactions.value = reactionsAgg.evictAndSnapshot(olderThanSec)
+    }
+
+    /**
+     * Forward the latest [MeetingSpaceEvent] reference into the
+     * [NestRoomEventSource]. The kind-4312 admin-command auth gate
+     * lives inside the source — calling this whenever the host
+     * edits the room (adding/removing a moderator) lets a fresh
+     * promotion take effect before the new moderator's first
+     * command lands.
+     */
+    fun setRoomEvent(event: MeetingSpaceEvent) {
+        if (closed) return
+        eventSource.updateRoomEvent(event)
     }
 
     /**
@@ -1035,6 +1073,68 @@ class NestViewModel(
             }
     }
 
+    /**
+     * Drain each [NestRoomEventSource] flow into the matching `on*Event`
+     * hook. Runs once per VM (launched from `init`); cancelled when
+     * `viewModelScope` cancels in `onCleared`. Tests pass
+     * [EmptyNestRoomEventSource] so these collectors never see an
+     * emission — the `on*Event` hooks remain the test entry points.
+     */
+    private fun startEventCollectors() {
+        viewModelScope.launch {
+            eventSource.presenceEvents.collect { events ->
+                events.forEach { onPresenceEvent(it) }
+            }
+        }
+        viewModelScope.launch {
+            eventSource.chatNotes.collect { notes ->
+                notes.forEach { onChatEvent(it) }
+            }
+        }
+        viewModelScope.launch {
+            eventSource.reactionEvents.collect { events ->
+                val nowSec = TimeUtils.now()
+                events.forEach { onReactionEvent(it, nowSec) }
+            }
+        }
+        viewModelScope.launch {
+            eventSource.adminCommands.collect { cmd ->
+                when (cmd.action()) {
+                    AdminCommandEvent.Action.KICK -> onKick()
+                    AdminCommandEvent.Action.MUTE -> onForceMuted()
+                    null -> Unit
+                }
+            }
+        }
+    }
+
+    /**
+     * Periodic cleanup the previous Composable layer ran via two
+     * `LaunchedEffect` `while (isActive) { delay(); … }` loops:
+     *
+     *  - drop peers silent for >6 min (one missed 30-s heartbeat plus
+     *    a 5-min "still here" tolerance window so a transient relay
+     *    hiccup doesn't drop everyone),
+     *  - drop kind-7 reactions older than 30 s so the floating-up
+     *    overlay drains in lock-step with its animation duration.
+     *
+     * Both run on `viewModelScope` for the VM's lifetime.
+     */
+    private fun startEvictionTickers() {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(PRESENCE_EVICT_INTERVAL_MS)
+                evictStalePresences(TimeUtils.now() - PRESENCE_STALE_THRESHOLD_SEC)
+            }
+        }
+        viewModelScope.launch {
+            while (isActive) {
+                delay(REACTIONS_TICK_MS)
+                evictReactions(TimeUtils.now() - REACTION_WINDOW_SEC)
+            }
+        }
+    }
+
     private class ActiveSubscription private constructor(
         val pubkey: String,
     ) {
@@ -1226,6 +1326,17 @@ const val LEVEL_TICK_MS: Long = 100L
  * SpeakerReactionOverlay.
  */
 const val REACTION_WINDOW_SEC: Long = 30L
+
+/**
+ * Presence-eviction tick. A peer drops after one missed 30-s
+ * heartbeat plus a 5-min "still here" tolerance window so a
+ * transient relay hiccup doesn't kick everyone.
+ */
+const val PRESENCE_EVICT_INTERVAL_MS: Long = 60_000L
+const val PRESENCE_STALE_THRESHOLD_SEC: Long = 6L * 60L
+
+/** Reaction-window eviction cadence. Matches the floating-up animation period. */
+const val REACTIONS_TICK_MS: Long = 1_000L
 
 /**
  * Indirection over the top-level `connectNestsListener` so tests can drive

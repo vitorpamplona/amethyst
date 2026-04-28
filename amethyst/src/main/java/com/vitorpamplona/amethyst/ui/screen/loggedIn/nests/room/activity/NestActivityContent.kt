@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveO
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveOnRoomClosed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestForegroundServiceLifecycle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestPresencePublisher
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestRoomEventCollectors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.PipBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.rememberNestViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestFullScreen
@@ -86,14 +85,17 @@ internal fun NestActivityContent(
             if (service != null && endPoint != null) {
                 val viewModel =
                     rememberNestViewModel(
-                        NestsRoomConfig(
-                            authBaseUrl = service,
-                            endpoint = endPoint,
-                            hostPubkey = it.pubKey,
-                            roomId = it.dTag(),
-                            kind = it.kind,
-                        ),
-                        accountViewModel.account.signer,
+                        room =
+                            NestsRoomConfig(
+                                authBaseUrl = service,
+                                endpoint = endPoint,
+                                hostPubkey = it.pubKey,
+                                roomId = it.dTag(),
+                                kind = it.kind,
+                            ),
+                        signer = accountViewModel.account.signer,
+                        roomATag = addressableNote.idHex,
+                        event = it,
                     )
 
                 NestActivityBody(
@@ -140,7 +142,6 @@ private fun NestActivityBody(
     onMinimize: () -> Unit,
 ) {
     val account = accountViewModel.account
-    val localPubkey = account.signer.pubKey
     val roomATag = roomNote.idHex
 
     // Static room layout: hosts + speakers from the kind-30312 `p`-tags.
@@ -160,11 +161,10 @@ private fun NestActivityBody(
 
     // Single REQ per relay covering chat, presence, reactions, admin
     // commands. See NestRoomFilterAssembler for the filter shape.
+    // Read side (LocalCache → VM) lives inside the VM via
+    // [LocalCacheNestRoomEventSource] — collectors run on
+    // viewModelScope rather than in this composable.
     NestRoomFilterAssemblerSubscription(roomATag, accountViewModel)
-
-    // Read side: LocalCache → VM. Each kind has its own collector
-    // (different VM hook per kind) plus the two eviction tickers.
-    NestRoomEventCollectors(viewModel, event, roomATag, localPubkey)
 
     // Kick → leave the activity.
     LeaveOnKick(viewModel, onLeave)

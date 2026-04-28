@@ -45,19 +45,37 @@ import kotlinx.coroutines.flow.SharedFlow
  * `<authBaseUrl>|<roomId>` so navigating between two rooms in the
  * same Activity (unlikely today, possible tomorrow) doesn't share
  * audio state.
+ *
+ * Forwards the live [MeetingSpaceEvent] reference into the VM so
+ * [LocalCacheNestRoomEventSource]'s admin-command auth gate sees
+ * mid-session moderator promotions before any command they issue
+ * lands. The factory is keyed without `event` because we only need
+ * the initial reference at construction time — subsequent updates
+ * flow through `setRoomEvent`.
  */
 @Composable
 internal fun rememberNestViewModel(
     room: NestsRoomConfig,
     signer: NostrSigner,
-): NestViewModel =
-    viewModel(
-        key = "${room.authBaseUrl}|${room.roomId}",
-        factory =
-            remember(room, signer) {
-                NestViewModelFactory(signer = signer, room = room)
-            },
-    )
+    roomATag: String,
+    event: MeetingSpaceEvent,
+): NestViewModel {
+    val viewModel =
+        viewModel<NestViewModel>(
+            key = "${room.authBaseUrl}|${room.roomId}",
+            factory =
+                remember(room, signer, roomATag) {
+                    NestViewModelFactory(
+                        signer = signer,
+                        room = room,
+                        roomATag = roomATag,
+                        initialRoomEvent = event,
+                    )
+                },
+        )
+    LaunchedEffect(viewModel, event) { viewModel.setRoomEvent(event) }
+    return viewModel
+}
 
 /**
  * Connect to MoQ on entry and keep the listener's "who's on stage"
@@ -76,9 +94,11 @@ internal fun AutoConnectAndTrackSpeakers(
 
 /**
  * Bounce out of the room when the kick handler flips
- * [NestViewModel.wasKicked] to true. Authority check happens in
- * [NestRoomEventCollectors] before `onKick()` is invoked; this
- * composable just observes the boolean.
+ * [NestViewModel.wasKicked] to true. The host/moderator authority
+ * check lives inside [LocalCacheNestRoomEventSource]'s
+ * `adminCommands` filter — by the time this composable observes
+ * `wasKicked = true`, the inbound kind-4312 has already been
+ * vetted, freshness-gated, and deduped.
  */
 @Composable
 internal fun LeaveOnKick(

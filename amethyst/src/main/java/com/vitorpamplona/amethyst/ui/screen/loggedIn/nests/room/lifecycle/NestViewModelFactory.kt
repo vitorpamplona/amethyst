@@ -32,17 +32,21 @@ import com.vitorpamplona.nestsclient.audio.MediaCodecOpusDecoder
 import com.vitorpamplona.nestsclient.audio.MediaCodecOpusEncoder
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 
 /**
  * Android-side Factory for [NestViewModel]. The ViewModel itself lives
  * in `commons/` so a future desktop port can reuse the orchestration once
  * Compose Desktop has WebTransport; this factory binds it to the Android
  * actuals (OkHttp HTTP, pure-Kotlin QUIC, MediaCodec Opus, AudioTrack +
- * AudioRecord on the speaker side).
+ * AudioRecord on the speaker side) and to the [LocalCacheNestRoomEventSource]
+ * that pumps LocalCache → VM for presence/chat/reactions/admin commands.
  */
 internal class NestViewModelFactory(
     private val signer: NostrSigner,
     private val room: NestsRoomConfig,
+    private val roomATag: String,
+    private val initialRoomEvent: MeetingSpaceEvent,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -55,5 +59,11 @@ internal class NestViewModelFactory(
             room = room,
             captureFactory = { AudioRecordCapture() },
             encoderFactory = { MediaCodecOpusEncoder() },
+            eventSource =
+                LocalCacheNestRoomEventSource(
+                    roomATag = roomATag,
+                    localPubkey = signer.pubKey,
+                    initialEvent = initialRoomEvent,
+                ),
         ) as T
 }
