@@ -24,9 +24,42 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayF
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+
+/**
+ * Window the lobby looks back for kind-10312 presence events. Matches
+ * the [NestsFeedFilter] freshness gate so the wire fetch and the local
+ * filter agree on what "live" means. Tighter than the room-event REQ
+ * (1 week) since presence is a high-volume heartbeat stream we only
+ * need recent samples of.
+ */
+private const val PRESENCE_LOOKBACK_SECONDS = 10L * 60L
+
+/**
+ * Lobby-wide presence probe so [NestsFeedFilter] can hide OPEN rooms
+ * whose host crashed without flipping status to CLOSED. Without this
+ * the only path that fetched kind-10312 was per-room when a card
+ * mounted, which forced one full assembler subscription per visible
+ * card just to color the badge.
+ *
+ * Returned as a single REQ per relay so it composes with whatever
+ * room-event filter the active TopFilter built (global, follows,
+ * authors, hashtag, geohash, community).
+ */
+fun filterNestsPresence(relay: NormalizedRelayUrl): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = listOf(MeetingRoomPresenceEvent.KIND),
+                limit = 500,
+                since = TimeUtils.now() - PRESENCE_LOOKBACK_SECONDS,
+            ),
+    )
 
 fun filterNestsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -37,7 +70,7 @@ fun filterNestsGlobal(
 
     return relays.set
         .map {
-            val since = since?.get(it.key)?.time ?: defaultSince
+            val roomsSince = since?.get(it.key)?.time ?: defaultSince
             listOf(
                 RelayBasedFilter(
                     relay = it.key,
@@ -45,9 +78,10 @@ fun filterNestsGlobal(
                         Filter(
                             kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                             limit = 300,
-                            since = since ?: TimeUtils.oneWeekAgo(),
+                            since = roomsSince ?: TimeUtils.oneWeekAgo(),
                         ),
                 ),
+                filterNestsPresence(it.key),
             )
         }.flatten()
 }
