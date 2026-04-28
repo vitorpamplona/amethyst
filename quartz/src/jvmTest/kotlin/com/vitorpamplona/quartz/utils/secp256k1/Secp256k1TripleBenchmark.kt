@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
-import com.vitorpamplona.quartz.utils.Secp256k1InstanceC
+import com.vitorpamplona.schnorr256k1.Schnorr256k1
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import fr.acinq.secp256k1.Secp256k1 as NativeSecp256k1
@@ -29,7 +29,7 @@ import fr.acinq.secp256k1.Secp256k1 as NativeSecp256k1
  * Three-way benchmark comparing:
  * 1. ACINQ C (libsecp256k1 via JNI) — the established reference
  * 2. Pure Kotlin (our KMP implementation) — portable, no native deps
- * 3. Custom C (our new C implementation via JNI) — maximum performance target
+ * 3. Custom C (libschnorr256k1 via JNI) — maximum performance target
  *
  * Run with: ./gradlew :quartz:jvmTest --tests "*.Secp256k1TripleBenchmark"
  */
@@ -112,22 +112,21 @@ class Secp256k1TripleBenchmark {
         // Verify signature compatibility
         assertTrue(acinqSig.contentEquals(kotlinSig), "ACINQ and Kotlin signatures must match")
 
-        // Try to load C library (may not be available in all environments)
+        // Probe libschnorr256k1's native lib — skip the C row if the JNI .so
+        // isn't packaged for this platform (e.g. obscure JVM target).
         var cAvailable = false
         try {
-            Secp256k1InstanceC.init()
+            Schnorr256k1.seckeyVerify(ByteArray(32) { 1 })
             cAvailable = true
         } catch (e: UnsatisfiedLinkError) {
-            println("NOTE: Custom C library not available (${e.message})")
-            println("      Build it with: cd quartz/src/main/c/secp256k1 && mkdir build && cd build && cmake .. && make")
-            println("      Then add build/ to java.library.path")
+            println("NOTE: libschnorr256k1 native lib not available (${e.message})")
         }
 
-        val cPubKey = if (cAvailable) Secp256k1InstanceC.compressedPubKeyFor(privKey) else null
+        val cPubKey = if (cAvailable) Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!)!! else null
         val cXOnlyPub = cPubKey?.copyOfRange(1, 33)
         val cSig =
             if (cAvailable) {
-                Secp256k1InstanceC.signSchnorr(msg32, privKey, auxRand)
+                Schnorr256k1.schnorrSign(msg32, privKey, auxRand)!!
             } else {
                 null
             }
@@ -139,7 +138,7 @@ class Secp256k1TripleBenchmark {
                 "ACINQ should verify C signature",
             )
             assertTrue(
-                Secp256k1InstanceC.verifySchnorr(acinqSig, msg32, acinqXOnlyPub),
+                Schnorr256k1.schnorrVerify(acinqSig, msg32, acinqXOnlyPub),
                 "C should verify ACINQ signature",
             )
         }
@@ -156,7 +155,7 @@ class Secp256k1TripleBenchmark {
                 kotlinOp = { Secp256k1.verifySchnorrFast(kotlinSig, msg32, kotlinXOnlyPub) },
                 cOp =
                     if (cAvailable && cSig != null && cXOnlyPub != null) {
-                        { Secp256k1InstanceC.verifySchnorrFast(cSig, msg32, cXOnlyPub) }
+                        { Schnorr256k1.schnorrVerifyFast(cSig, msg32, cXOnlyPub) }
                     } else {
                         null
                     },
@@ -172,7 +171,7 @@ class Secp256k1TripleBenchmark {
                 kotlinOp = { Secp256k1.verifySchnorr(kotlinSig, msg32, kotlinXOnlyPub) },
                 cOp =
                     if (cAvailable && cSig != null && cXOnlyPub != null) {
-                        { Secp256k1InstanceC.verifySchnorr(cSig, msg32, cXOnlyPub) }
+                        { Schnorr256k1.schnorrVerify(cSig, msg32, cXOnlyPub) }
                     } else {
                         null
                     },
@@ -188,7 +187,7 @@ class Secp256k1TripleBenchmark {
                 kotlinOp = { Secp256k1.signSchnorrWithXOnlyPubKey(msg32, privKey, kotlinXOnlyPub, auxRand) },
                 cOp =
                     if (cAvailable && cXOnlyPub != null) {
-                        { Secp256k1InstanceC.signSchnorrWithXOnlyPubKey(msg32, privKey, cXOnlyPub, auxRand) }
+                        { Schnorr256k1.schnorrSignXOnly(msg32, privKey, cXOnlyPub, auxRand) }
                     } else {
                         null
                     },
@@ -204,7 +203,7 @@ class Secp256k1TripleBenchmark {
                 kotlinOp = { Secp256k1.signSchnorr(msg32, privKey, auxRand) },
                 cOp =
                     if (cAvailable) {
-                        { Secp256k1InstanceC.signSchnorr(msg32, privKey, auxRand) }
+                        { Schnorr256k1.schnorrSign(msg32, privKey, auxRand) }
                     } else {
                         null
                     },
@@ -220,7 +219,7 @@ class Secp256k1TripleBenchmark {
                 kotlinOp = { Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(privKey)) },
                 cOp =
                     if (cAvailable) {
-                        { Secp256k1InstanceC.compressedPubKeyFor(privKey) }
+                        { Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!) }
                     } else {
                         null
                     },
@@ -236,7 +235,7 @@ class Secp256k1TripleBenchmark {
                 kotlinOp = { Secp256k1.ecdhXOnly(pub2xOnly, privKey) },
                 cOp =
                     if (cAvailable) {
-                        { Secp256k1InstanceC.ecdhXOnly(pub2xOnly, privKey) }
+                        { Schnorr256k1.ecdhXOnly(pub2xOnly, privKey) }
                     } else {
                         null
                     },
@@ -298,9 +297,9 @@ class Secp256k1TripleBenchmark {
             // Time C batch (if available)
             var cBatchEvSec = 0L
             if (cAvailable) {
-                repeat(500) { Secp256k1InstanceC.verifySchnorrBatch(batchPub, sigs, msgs) }
+                repeat(500) { Schnorr256k1.schnorrVerifyBatch(batchPub, sigs, msgs) }
                 val cBatchStart = System.nanoTime()
-                repeat(iters) { Secp256k1InstanceC.verifySchnorrBatch(batchPub, sigs, msgs) }
+                repeat(iters) { Schnorr256k1.schnorrVerifyBatch(batchPub, sigs, msgs) }
                 val cBatchNs = System.nanoTime() - cBatchStart
                 cBatchEvSec = iters.toLong() * batchSize * 1_000_000_000L / cBatchNs
             }
