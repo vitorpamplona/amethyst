@@ -74,10 +74,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 
-private val STAGE_CELL_MIN = 96.dp
-private val STAGE_AVATAR = 100.dp
-private val AUDIENCE_CELL_MIN = 96.dp
-private val AUDIENCE_AVATAR = 100.dp
+private val STAGE_CELL_MIN = 80.dp
+private val STAGE_AVATAR = 75.dp
+private val AUDIENCE_CELL_MIN = 80.dp
+private val AUDIENCE_AVATAR = 75.dp
 private val GRID_SPACING = 8.dp
 private val AVATAR_RING_WIDTH = 3.dp
 
