@@ -167,7 +167,6 @@ internal fun NestFullScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Transparent,
         topBar = {
             NestTopAppBar(
                 title = event.room().orEmpty(),
