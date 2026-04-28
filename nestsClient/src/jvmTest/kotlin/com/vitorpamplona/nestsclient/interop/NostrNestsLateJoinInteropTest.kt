@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
@@ -178,7 +179,7 @@ class NostrNestsLateJoinInteropTest {
         private const val FRAME_SPACING_MS = 25L
         private const val RECEIVE_TIMEOUT_MS = 10_000L
 
-        private val httpClient = OkHttpNestsClient()
+        private val httpClient = OkHttpNestsClient { OkHttpClient() }
         private val transport =
             QuicWebTransportFactory(certificateValidator = PermissiveCertificateValidator())
         private var harnessOrNull: NostrNestsHarness? = null

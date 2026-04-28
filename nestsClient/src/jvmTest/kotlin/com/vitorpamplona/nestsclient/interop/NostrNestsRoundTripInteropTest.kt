@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
@@ -99,7 +100,7 @@ class NostrNestsRoundTripInteropTest {
                     roomId = "rt-${System.currentTimeMillis()}",
                 )
 
-            val httpClient = OkHttpNestsClient()
+            val httpClient = OkHttpNestsClient { OkHttpClient() }
             // Self-signed dev cert on the relay — production uses
             // JdkCertificateValidator; the type system forces us to pass a
             // permissive validator explicitly here.

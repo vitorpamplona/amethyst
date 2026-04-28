@@ -37,6 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
@@ -186,7 +187,7 @@ class NostrNestsSpeakerCloseInteropTest {
         private const val FRAME_SPACING_MS = 25L
         private const val CLOSE_TIMEOUT_MS = 5_000L
 
-        private val httpClient = OkHttpNestsClient()
+        private val httpClient = OkHttpNestsClient { OkHttpClient() }
         private val transport =
             QuicWebTransportFactory(certificateValidator = PermissiveCertificateValidator())
         private var harnessOrNull: NostrNestsHarness? = null

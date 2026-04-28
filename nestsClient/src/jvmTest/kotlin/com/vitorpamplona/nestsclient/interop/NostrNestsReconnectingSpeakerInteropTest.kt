@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
@@ -220,7 +221,7 @@ class NostrNestsReconnectingSpeakerInteropTest {
                     roomId = "spk-refr-${System.currentTimeMillis()}",
                 )
 
-            val httpClient = OkHttpNestsClient()
+            val httpClient = OkHttpNestsClient { OkHttpClient() }
             val transport =
                 QuicWebTransportFactory(
                     certificateValidator = PermissiveCertificateValidator(),
