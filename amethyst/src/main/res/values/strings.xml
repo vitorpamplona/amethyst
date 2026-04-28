@@ -1202,6 +1202,7 @@
     <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">ENDED</string>
     <string name="live_stream_planned_tag">SCHEDULED</string>
+    <string name="live_stream_private_tag">PRIVATE</string>
 
     <string name="live_stream_is_offline">Livestream is Offline</string>
     <string name="live_stream_has_ended">Livestream Ended</string>

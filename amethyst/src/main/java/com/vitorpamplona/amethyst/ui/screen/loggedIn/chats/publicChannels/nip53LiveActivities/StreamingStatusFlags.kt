@@ -74,6 +74,22 @@ fun EndedFlag() {
 }
 
 @Composable
+fun PrivateFlag() {
+    Text(
+        text = stringRes(id = R.string.live_stream_private_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier =
+            remember {
+                Modifier
+                    .clip(SmallBorder)
+                    .background(Color.Black)
+                    .padding(horizontal = 5.dp)
+            },
+    )
+}
+
+@Composable
 fun OfflineFlag() {
     Text(
         text = stringRes(id = R.string.live_stream_offline_tag),
