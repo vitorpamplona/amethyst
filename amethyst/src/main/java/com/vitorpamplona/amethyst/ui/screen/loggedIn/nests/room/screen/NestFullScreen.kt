@@ -20,14 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -39,7 +37,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,11 +49,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -86,11 +81,13 @@ import kotlinx.coroutines.launch
 /**
  * Full-screen layout for [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity]. Vertically split into:
  *
- *   1. TopAppBar — room title + overflow menu (Share, host's Edit).
- *   2. Header strip — LIVE chip, listener count, optional 1-line summary.
- *   3. Stage — vertical adaptive grid of host/speakers (height-bounded
- *      so a 30-speaker room scrolls inside the strip and never pushes
- *      the chat below the fold).
+ *   1. TopAppBar — room title (tap to expand/collapse summary) + overflow
+ *      menu (Share, host's Edit).
+ *   2. Optional summary strip — only visible when the user taps the title.
+ *   3. Stage — vertical adaptive grid of host/speakers, with the LIVE
+ *      chip and listener count rendered in the stage header row
+ *      (height-bounded so a 30-speaker room scrolls inside the strip
+ *      and never pushes the chat below the fold).
  *   4. Tabs — `Chat | Audience · N | Hands · N` (Hands host-only,
  *      shown only while there's at least one raised hand).
  *   5. Tab content — fills the remaining vertical space:
@@ -122,6 +119,11 @@ internal fun NestFullScreen(
     var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
     var showReactionPicker by rememberSaveable { mutableStateOf(false) }
     var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    // Summary is collapsed by default; tapping the top-bar title
+    // toggles it so the user can preview the room description without
+    // opening a separate sheet, then collapse again to reclaim vertical
+    // room for the stage and chat.
+    var summaryExpanded by rememberSaveable { mutableStateOf(false) }
     // Tab selection survives configuration changes and PIP transitions.
     // Stored as ordinal so rememberSaveable can persist it without a
     // custom Saver.
@@ -187,6 +189,7 @@ internal fun NestFullScreen(
                 onMinimize = onMinimize,
                 onMenuOpen = { showHostMenu = true },
                 onMenuDismiss = { showHostMenu = false },
+                onTitleClick = { summaryExpanded = !summaryExpanded },
                 onShare = {
                     showHostMenu = false
                     shareRoomNaddr(topBarContext, event)
@@ -223,10 +226,9 @@ internal fun NestFullScreen(
                     .fillMaxSize()
                     .padding(padding),
         ) {
-            RoomHeaderStrip(
-                summary = event.summary(),
-                listenerCount = presences.size,
-            )
+            if (summaryExpanded) {
+                RoomSummaryStrip(summary = event.summary())
+            }
             // Self-cell tap toggles mic-mute when broadcasting; null
             // when not broadcasting so the avatar falls back to the
             // default no-op tap (rather than offering a button that
@@ -245,6 +247,7 @@ internal fun NestFullScreen(
                 onLongPressParticipant = onLongPressParticipant,
                 myPubkey = myPubkey,
                 onTapSelf = onTapSelf,
+                listenerCount = presences.size,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             NestTabRow(
@@ -366,55 +369,23 @@ internal fun NestFullScreen(
 }
 
 /**
- * Header strip rendered between the TopAppBar and the stage grid.
- * Carries the LIVE chip + listener count and (when present) a single-
- * line ellipsised summary. Lives at the screen level rather than in
- * the TopAppBar so the chip + count have room to breathe and the
- * summary's typography matches the body, not the title.
+ * Expanded summary strip shown between the TopAppBar and the stage grid
+ * when the user taps the title. The LIVE chip and listener count have
+ * moved to the stage card's header row, so this strip now carries only
+ * the room description.
  */
 @Composable
-private fun RoomHeaderStrip(
-    summary: String?,
-    listenerCount: Int,
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            LiveChip()
-            Text(
-                text = pluralStringResource(R.plurals.nest_listener_count, listenerCount, listenerCount),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (!summary.isNullOrBlank()) {
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun LiveChip() {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-    ) {
-        Text(
-            text = stringRes(R.string.nest_live_chip),
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-        )
-    }
+private fun RoomSummaryStrip(summary: String?) {
+    if (summary.isNullOrBlank()) return
+    Text(
+        text = summary,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+    )
 }
 
 /**
@@ -491,6 +462,7 @@ private fun NestTopAppBar(
     onMinimize: () -> Unit,
     onMenuOpen: () -> Unit,
     onMenuDismiss: () -> Unit,
+    onTitleClick: () -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
 ) {
@@ -500,6 +472,10 @@ private fun NestTopAppBar(
                 text = title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onTitleClick),
             )
         },
         actions = {
