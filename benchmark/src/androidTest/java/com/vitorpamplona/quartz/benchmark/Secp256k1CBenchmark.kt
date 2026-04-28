@@ -23,8 +23,8 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.utils.Secp256k1InstanceC
 import com.vitorpamplona.quartz.utils.Secp256k1InstanceKotlin
+import com.vitorpamplona.schnorr256k1.Schnorr256k1
 import fr.acinq.secp256k1.Secp256k1
 import org.junit.Rule
 import org.junit.Test
@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
  * Android benchmark comparing three secp256k1 implementations:
  * 1. ACINQ C (libsecp256k1 via JNI) — "Foo"
  * 2. Pure Kotlin — "FooOurs"
- * 3. Custom C (our implementation via JNI) — "FooC"
+ * 3. Custom C (libschnorr256k1 via JNI) — "FooC"
  *
  * Run with: ./gradlew :benchmark:connectedAndroidTest
  */
@@ -110,48 +110,42 @@ class Secp256k1CBenchmark {
             )
         }
 
-    // ==================== Custom C (Our JNI) ====================
+    // ==================== Custom C (libschnorr256k1 JNI) ====================
 
     @Test
     fun verifySchnorrC() {
-        Secp256k1InstanceC.init()
-        val cSig = Secp256k1InstanceC.signSchnorr(msg32, privKey, auxRand)
-        val cXOnly = Secp256k1InstanceC.compressedPubKeyFor(privKey).copyOfRange(1, 33)
-        benchmarkRule.measureRepeated { Secp256k1InstanceC.verifySchnorr(cSig, msg32, cXOnly) }
+        val cSig = Schnorr256k1.schnorrSign(msg32, privKey, auxRand)!!
+        val cXOnly = Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!)!!.copyOfRange(1, 33)
+        benchmarkRule.measureRepeated { Schnorr256k1.schnorrVerify(cSig, msg32, cXOnly) }
     }
 
     @Test
     fun verifySchnorrFastC() {
-        Secp256k1InstanceC.init()
-        val cSig = Secp256k1InstanceC.signSchnorr(msg32, privKey, auxRand)
-        val cXOnly = Secp256k1InstanceC.compressedPubKeyFor(privKey).copyOfRange(1, 33)
-        benchmarkRule.measureRepeated { Secp256k1InstanceC.verifySchnorrFast(cSig, msg32, cXOnly) }
+        val cSig = Schnorr256k1.schnorrSign(msg32, privKey, auxRand)!!
+        val cXOnly = Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!)!!.copyOfRange(1, 33)
+        benchmarkRule.measureRepeated { Schnorr256k1.schnorrVerifyFast(cSig, msg32, cXOnly) }
     }
 
     @Test
     fun signSchnorrC() {
-        Secp256k1InstanceC.init()
-        benchmarkRule.measureRepeated { Secp256k1InstanceC.signSchnorr(msg32, privKey, auxRand) }
+        benchmarkRule.measureRepeated { Schnorr256k1.schnorrSign(msg32, privKey, auxRand) }
     }
 
     @Test
     fun signSchnorrXOnlyC() {
-        Secp256k1InstanceC.init()
-        val cXOnly = Secp256k1InstanceC.compressedPubKeyFor(privKey).copyOfRange(1, 33)
-        benchmarkRule.measureRepeated { Secp256k1InstanceC.signSchnorrWithXOnlyPubKey(msg32, privKey, cXOnly, auxRand) }
+        val cXOnly = Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!)!!.copyOfRange(1, 33)
+        benchmarkRule.measureRepeated { Schnorr256k1.schnorrSignXOnly(msg32, privKey, cXOnly, auxRand) }
     }
 
     @Test
     fun pubkeyCreateC() {
-        Secp256k1InstanceC.init()
-        benchmarkRule.measureRepeated { Secp256k1InstanceC.compressedPubKeyFor(privKey) }
+        benchmarkRule.measureRepeated { Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!) }
     }
 
     @Test
     fun ecdhXOnlyC() {
-        Secp256k1InstanceC.init()
         val pub2xOnly = hexToBytes("c2f9d9948dc8c7c38321e4b85c8558872eafa0641cd269db76848a6073e69133")
-        benchmarkRule.measureRepeated { Secp256k1InstanceC.ecdhXOnly(pub2xOnly, privKey) }
+        benchmarkRule.measureRepeated { Schnorr256k1.ecdhXOnly(pub2xOnly, privKey) }
     }
 
     // ==================== Batch Verification (all three) ====================
@@ -172,16 +166,15 @@ class Secp256k1CBenchmark {
 
     @Test
     fun verifySchnorrBatch16C() {
-        Secp256k1InstanceC.init()
-        val cXOnly = Secp256k1InstanceC.compressedPubKeyFor(privKey).copyOfRange(1, 33)
+        val cXOnly = Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!)!!.copyOfRange(1, 33)
         val sigs =
             (0 until 16).map { i ->
                 val m = ByteArray(32) { (i * 7 + it).toByte() }
-                Secp256k1InstanceC.signSchnorr(m, privKey, auxRand)
+                Schnorr256k1.schnorrSign(m, privKey, auxRand)!!
             }
         val msgs = (0 until 16).map { i -> ByteArray(32) { (i * 7 + it).toByte() } }
         benchmarkRule.measureRepeated {
-            Secp256k1InstanceC.verifySchnorrBatch(cXOnly, sigs, msgs)
+            Schnorr256k1.schnorrVerifyBatch(cXOnly, sigs, msgs)
         }
     }
 
@@ -201,16 +194,15 @@ class Secp256k1CBenchmark {
 
     @Test
     fun verifySchnorrBatch200C() {
-        Secp256k1InstanceC.init()
-        val cXOnly = Secp256k1InstanceC.compressedPubKeyFor(privKey).copyOfRange(1, 33)
+        val cXOnly = Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!)!!.copyOfRange(1, 33)
         val sigs =
             (0 until 200).map { i ->
                 val m = ByteArray(32) { (i * 7 + it).toByte() }
-                Secp256k1InstanceC.signSchnorr(m, privKey, auxRand)
+                Schnorr256k1.schnorrSign(m, privKey, auxRand)!!
             }
         val msgs = (0 until 200).map { i -> ByteArray(32) { (i * 7 + it).toByte() } }
         benchmarkRule.measureRepeated {
-            Secp256k1InstanceC.verifySchnorrBatch(cXOnly, sigs, msgs)
+            Schnorr256k1.schnorrVerifyBatch(cXOnly, sigs, msgs)
         }
     }
 
@@ -231,11 +223,9 @@ class Secp256k1CBenchmark {
 
     @Test
     fun sha256OurC() {
-        // Our C SHA-256 (ARM64 CE hardware acceleration)
-        Secp256k1InstanceC.init()
+        // libschnorr256k1 SHA-256 (ARM64 CE hardware acceleration where available)
         benchmarkRule.measureRepeated {
-            com.vitorpamplona.quartz.utils.Secp256k1C
-                .nativeSha256(sha256Input)
+            Schnorr256k1.sha256(sha256Input)
         }
     }
 

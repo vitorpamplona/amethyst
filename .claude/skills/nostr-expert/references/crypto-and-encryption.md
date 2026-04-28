@@ -16,9 +16,9 @@ Event signing, hashing, and NIP-44 payload encryption.
 ### secp256k1 abstraction (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/`)
 
 - `Secp256k1Instance.kt` — `expect object` with `signSchnorr`, `verifySchnorr`, `pubKey(seckey)`, `sharedSecret`.
-- `Secp256k1InstanceC.kt` — C-based actual using secp256k1 JNI (Android/JVM).
 - `Secp256k1InstanceKotlin.kt` — pure-Kotlin actual (iOS via native, etc.).
 - Android actual: `secp256k1-kmp-jni-android` (0.23.0). JVM actual: `secp256k1-kmp-jni-jvm`.
+- Tests/benchmarks pull in `com.vitorpamplona:schnorr256k1-kmp` (libschnorr256k1) for the in-house C JNI baseline used in `Secp256k1CrossValidationTest` and the 3-way benchmarks; production never ships it.
 
 ### NIP-44 encryption (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip44Encryption/`)
 

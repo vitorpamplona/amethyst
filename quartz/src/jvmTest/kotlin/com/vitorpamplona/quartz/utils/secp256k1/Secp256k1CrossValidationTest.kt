@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
-import com.vitorpamplona.quartz.utils.Secp256k1InstanceC
+import com.vitorpamplona.schnorr256k1.Schnorr256k1
 import java.util.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -32,7 +32,7 @@ import fr.acinq.secp256k1.Secp256k1 as NativeSecp256k1
  * available on JVM:
  *   1. ACINQ / libsecp256k1-kmp (reference implementation)
  *   2. Pure Kotlin ([Secp256k1])
- *   3. Custom C library via JNI ([Secp256k1InstanceC]) — when loadable
+ *   3. Custom C library via JNI ([Schnorr256k1] from libschnorr256k1-kmp) — when loadable
  *
  * BIP-340 signatures are deterministic given (privkey, message, aux_rand),
  * so two correct implementations MUST produce identical signature bytes.
@@ -124,15 +124,17 @@ class Secp256k1CrossValidationTest {
 
     @Test
     fun customCImplementationMatchesAcinqAndKotlin() {
+        // Probe libschnorr256k1's native lib before exercising it: on platforms
+        // where the JNI .so isn't packaged we skip rather than fail the test.
         val cAvailable =
             try {
-                Secp256k1InstanceC.init()
+                Schnorr256k1.seckeyVerify(ByteArray(32) { 1 })
                 true
             } catch (e: UnsatisfiedLinkError) {
-                println("SKIP: custom C library not loadable (${e.message})")
+                println("SKIP: libschnorr256k1 native lib not loadable (${e.message})")
                 false
             } catch (e: Throwable) {
-                println("SKIP: custom C library init failed (${e.message})")
+                println("SKIP: libschnorr256k1 init failed (${e.message})")
                 false
             }
         if (!cAvailable) return
@@ -146,13 +148,13 @@ class Secp256k1CrossValidationTest {
 
             val kotlinPubCompressed = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(seckey))
             val acinqPubCompressed = acinq.pubKeyCompress(acinq.pubkeyCreate(seckey))
-            val cPubCompressed = Secp256k1InstanceC.compressedPubKeyFor(seckey)
+            val cPubCompressed = Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(seckey)!!)!!
             assertContentEquals(acinqPubCompressed, kotlinPubCompressed, "pubkey: Kotlin vs ACINQ")
             assertContentEquals(acinqPubCompressed, cPubCompressed, "pubkey: C vs ACINQ")
 
             val kotlinSig = Secp256k1.signSchnorr(msg, seckey, aux)
             val acinqSig = acinq.signSchnorr(msg, seckey, aux)
-            val cSig = Secp256k1InstanceC.signSchnorr(msg, seckey, aux)
+            val cSig = Schnorr256k1.schnorrSign(msg, seckey, aux)!!
             assertContentEquals(acinqSig, kotlinSig, "sig: Kotlin vs ACINQ")
             assertContentEquals(acinqSig, cSig, "sig: C vs ACINQ")
         }
