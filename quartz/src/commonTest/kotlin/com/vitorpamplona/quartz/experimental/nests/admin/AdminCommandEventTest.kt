@@ -32,16 +32,30 @@ class AdminCommandEventTest {
     private val roomATag = ATag(kind = 30312, pubKeyHex = host, dTag = "rt-1", relay = null)
 
     @Test
-    fun kickTemplateCarriesActionContentAddressAndTarget() {
+    fun kickTemplateUsesActionTagWithEmptyContent() {
+        // Spec / nostrnests wire format: ["action", "kick"] tag,
+        // empty content. An older Amethyst layout put the verb in
+        // content; the reader still accepts that for compat but
+        // emission is tag-only.
         val template = AdminCommandEvent.kick(roomATag, target, createdAt = 100L)
         assertEquals(AdminCommandEvent.KIND, template.kind)
-        assertEquals(AdminCommandEvent.Action.KICK.code, template.content)
+        assertEquals("", template.content)
+        val actionTag = template.tags.firstOrNull { it.firstOrNull() == AdminCommandEvent.ACTION_TAG }
+        assertEquals(AdminCommandEvent.Action.KICK.code, actionTag?.getOrNull(1))
         // Single `a` tag pointing at the room.
         val aTag = template.tags.firstOrNull { it.firstOrNull() == "a" }
         assertEquals(roomATag.toTag(), aTag?.getOrNull(1))
         // Single `p` tag pointing at the kicked user.
         val pTag = template.tags.firstOrNull { it.firstOrNull() == "p" }
         assertEquals(target, pTag?.getOrNull(1))
+    }
+
+    @Test
+    fun forceMuteTemplateUsesActionTag() {
+        val template = AdminCommandEvent.forceMute(roomATag, target, createdAt = 100L)
+        assertEquals("", template.content)
+        val actionTag = template.tags.firstOrNull { it.firstOrNull() == AdminCommandEvent.ACTION_TAG }
+        assertEquals(AdminCommandEvent.Action.MUTE.code, actionTag?.getOrNull(1))
     }
 
     @Test
@@ -62,14 +76,48 @@ class AdminCommandEventTest {
     }
 
     @Test
-    fun unknownActionReturnsNull() {
+    fun legacyContentVerbStillParsedForBackwardsCompat() {
+        // An Amethyst build briefly emitted the verb in content. After
+        // we switched to the tag form (matching nostrnests / EGG-07)
+        // the reader still accepts the old layout so any in-flight
+        // event during the rollout window is honored.
         val event =
             AdminCommandEvent(
                 id = "0".repeat(64),
                 pubKey = host,
                 createdAt = 100L,
                 tags = arrayOf(arrayOf("a", "30312:host:rt"), arrayOf("p", target)),
-                content = "haunt",
+                content = "kick",
+                sig = "0".repeat(128),
+            )
+        assertEquals(AdminCommandEvent.Action.KICK, event.action())
+    }
+
+    @Test
+    fun actionTagWinsOverContentWhenBothPresent() {
+        // Defensive: if both forms are present (e.g. mixed-source
+        // event), the tag — the spec-correct location — is preferred.
+        val event =
+            AdminCommandEvent(
+                id = "0".repeat(64),
+                pubKey = host,
+                createdAt = 100L,
+                tags = arrayOf(arrayOf("a", "30312:host:rt"), arrayOf("p", target), arrayOf("action", "mute")),
+                content = "kick",
+                sig = "0".repeat(128),
+            )
+        assertEquals(AdminCommandEvent.Action.MUTE, event.action())
+    }
+
+    @Test
+    fun unknownActionReturnsNull() {
+        val event =
+            AdminCommandEvent(
+                id = "0".repeat(64),
+                pubKey = host,
+                createdAt = 100L,
+                tags = arrayOf(arrayOf("a", "30312:host:rt"), arrayOf("p", target), arrayOf("action", "haunt")),
+                content = "",
                 sig = "0".repeat(128),
             )
         assertNull(event.action())

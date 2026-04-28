@@ -33,11 +33,24 @@ import com.vitorpamplona.quartz.utils.ensure
 
 enum class ROLE(
     val code: String,
+    /**
+     * Aliases recognised on inbound parse but never emitted. Used to
+     * keep reading kind-30312 events written by older Amethyst builds
+     * (which used `"moderator"` before we matched the nostrnests /
+     * EGG-07 `"admin"` wire string).
+     */
+    val legacyCodes: List<String> = emptyList(),
 ) {
     HOST("host"),
-    MODERATOR("moderator"),
+    MODERATOR("admin", legacyCodes = listOf("moderator")),
     SPEAKER("speaker"),
     PARTICIPANT("participant"),
+    ;
+
+    /** Whether [code] (case-insensitive) matches this role's primary or legacy spellings. */
+    fun matches(code: String): Boolean =
+        this.code.equals(code, ignoreCase = true) ||
+            legacyCodes.any { it.equals(code, ignoreCase = true) }
 }
 
 @Immutable
@@ -47,8 +60,8 @@ data class ParticipantTag(
     val role: String?,
     val proof: String?,
 ) : PubKeyReferenceTag {
-    /** Match the role string against [ROLE], case-insensitive. */
-    fun effectiveRole(): ROLE? = role?.let { r -> ROLE.entries.firstOrNull { it.code.equals(r, ignoreCase = true) } }
+    /** Match the role string against [ROLE], case-insensitive — primary code or legacy alias. */
+    fun effectiveRole(): ROLE? = role?.let { r -> ROLE.entries.firstOrNull { it.matches(r) } }
 
     fun isHost(): Boolean = effectiveRole() == ROLE.HOST
 
