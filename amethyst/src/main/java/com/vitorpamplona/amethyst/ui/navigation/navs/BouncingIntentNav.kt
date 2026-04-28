@@ -25,6 +25,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -98,6 +99,7 @@ class BouncingIntentNav(
 
     override fun navBottomBar(route: Route) = nav(route)
 
+    @Composable
     override fun canPop(): Boolean = false
 
     override fun popBack() {
