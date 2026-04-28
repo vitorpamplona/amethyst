@@ -146,6 +146,14 @@ class BitRelayResolver(
         val candidates: List<String>,
         val tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
         val onionEndpoints: List<String>,
+        /**
+         * IPv4 addresses parsed from the Namecoin record's `ip` field at
+         * the walked node. Used by the platform `okhttp3.Dns` interceptor
+         * for `.bit` hosts so that a record whose `relay` is itself a
+         * `.bit` URL (the natural shape) can be resolved to a real socket
+         * without going through ICANN DNS.
+         */
+        val ipAddresses: List<String>,
         val message: String?,
         val timestamp: Long = TimeUtils.now(),
     )
@@ -199,7 +207,7 @@ class BitRelayResolver(
                 }
 
                 is NamecoinNameResolver.NameLookupOutcome.NotFound -> {
-                    cachePut(host, emptyList(), emptyList(), emptyList(), "Name not found")
+                    cachePut(host, emptyList(), emptyList(), emptyList(), emptyList(), "Name not found")
                     return Resolution.NotFound(host, "Namecoin name `${outcome.name}` not found")
                 }
 
@@ -247,11 +255,12 @@ class BitRelayResolver(
         // collecting; passing an empty list yields the original top-level
         // behaviour.
         val candidates = NamecoinNameResolver.parseRelayUrls(effectiveRoot, subdomainLabels)
-        // Same JSON, same parser — pull the TLSA list and Tor endpoints out
-        // of the value so the caller can pin / route without paying for a
-        // second ElectrumX round-trip.
+        // Same JSON, same parser — pull the TLSA list, Tor endpoints, and
+        // IPv4 addresses out of the value so the caller can pin / route /
+        // dns-resolve without paying for a second ElectrumX round-trip.
         val tlsaRecords = NamecoinNameResolver.parseTlsaRecords(effectiveRoot, subdomainLabels)
         val onionEndpoints = NamecoinNameResolver.parseTorEndpoints(effectiveRoot, subdomainLabels)
+        val ipAddresses = NamecoinNameResolver.parseIpAddresses(effectiveRoot, subdomainLabels)
         if (candidates.isEmpty() && onionEndpoints.isEmpty()) {
             val msg =
                 if (subdomainLabels.isEmpty()) {
@@ -259,11 +268,11 @@ class BitRelayResolver(
                 } else {
                     "No `relay` or `tor` field at subdomain `${subdomainLabels.joinToString(".")}` of `$namecoinName`"
                 }
-            cachePut(host, emptyList(), tlsaRecords, emptyList(), msg)
+            cachePut(host, emptyList(), tlsaRecords, emptyList(), ipAddresses, msg)
             return Resolution.NotFound(host, msg)
         }
 
-        cachePut(host, candidates, tlsaRecords, onionEndpoints, null)
+        cachePut(host, candidates, tlsaRecords, onionEndpoints, ipAddresses, null)
         return resolutionFromCandidates(rawUrl, host, candidates, tlsaRecords, onionEndpoints)
     }
 
@@ -329,10 +338,20 @@ class BitRelayResolver(
         candidates: List<String>,
         tlsaRecords: List<NamecoinNameResolver.TlsaRecord>,
         onionEndpoints: List<String>,
+        ipAddresses: List<String>,
         message: String?,
     ) {
         mutex.withLock {
-            cache.put(host, CachedRelayResolution(candidates, tlsaRecords, onionEndpoints, message))
+            cache.put(
+                host,
+                CachedRelayResolution(
+                    candidates = candidates,
+                    tlsaRecords = tlsaRecords,
+                    onionEndpoints = onionEndpoints,
+                    ipAddresses = ipAddresses,
+                    message = message,
+                ),
+            )
         }
     }
 
@@ -368,6 +387,26 @@ class BitRelayResolver(
         val key = host.lowercase()
         return mutex.withLock {
             cache[key]?.onionEndpoints
+        }
+    }
+
+    /**
+     * Look up the cached IPv4 addresses for a `.bit` host that has been
+     * resolved through [resolve]. Returns `null` if the host has not been
+     * resolved (so the caller knows to fall through to the platform DNS
+     * resolver), an empty list if the Namecoin record has no `ip` field.
+     *
+     * Used by the platform `okhttp3.Dns` adapter to make `.bit` hosts
+     * reachable when the publisher's `relay` URL is itself a `.bit` URL
+     * — in that case ICANN DNS has nothing for the host, and these
+     * addresses are the only way to open a socket. Reuses the same cache
+     * as the relay-URL / TLSA / onion paths so a single `name_show`
+     * round-trip serves every code path.
+     */
+    suspend fun cachedIpFor(host: String): List<String>? {
+        val key = host.lowercase()
+        return mutex.withLock {
+            cache[key]?.ipAddresses
         }
     }
 

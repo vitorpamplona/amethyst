@@ -520,6 +520,106 @@ class NamecoinNameResolver(
             return collectTorEndpoints(target)
         }
 
+        /**
+         * Parse a Namecoin Domain Name Object value JSON for `ip` (IPv4)
+         * addresses, per [namecoin/proposals ifa-0001](https://github.com/namecoin/proposals/blob/master/ifa-0001.md)
+         * §"ip". Two shapes are accepted (both observed in the wild):
+         *
+         *   1. `"ip": "203.0.113.5"`
+         *   2. `"ip": ["203.0.113.5", "203.0.113.6"]`
+         *
+         * Each entry is a dotted-decimal IPv4 string. Items that don't
+         * look like a syntactically plausible IPv4 are silently dropped
+         * (we keep this lenient because an IP literal that the system
+         * resolver later rejects is more useful than a record that fails
+         * resolution outright).
+         *
+         * Pass [subdomainLabels] (DNS order, most-specific first) to read
+         * `ip` from a walked node instead of the top-level object — same
+         * convention as [parseRelayUrls] / [parseTlsaRecords]. Empty list
+         * (default) reads from the top-level value.
+         *
+         * Used by the relay path to populate an `okhttp3.Dns` interceptor
+         * for `.bit` hosts: when a Namecoin record's `relay` field is
+         * itself a `.bit` URL (the natural shape, where the publisher
+         * hasn't allocated an ICANN DNS record), the IP from the same
+         * walked node is the only way the WebSocket / HTTP client can
+         * reach the host.
+         */
+        fun parseIpAddresses(
+            rawValueJson: String,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<String> =
+            try {
+                val root = SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject
+                parseIpAddresses(root, subdomainLabels)
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+        /**
+         * As [parseIpAddresses] but accepts a pre-parsed root [JsonObject].
+         * Use this when the caller has already expanded `import` items via
+         * [NamecoinImportResolver].
+         */
+        fun parseIpAddresses(
+            rootObject: JsonObject,
+            subdomainLabels: List<String> = emptyList(),
+        ): List<String> {
+            val target = walkSubdomain(rootObject, subdomainLabels) ?: return emptyList()
+            return collectIpAddresses(target)
+        }
+
+        private fun collectIpAddresses(obj: JsonObject): List<String> {
+            val out = mutableListOf<String>()
+            pushIpField(obj["ip"], out)
+            return out.distinct()
+        }
+
+        private fun pushIpField(
+            value: JsonElement?,
+            out: MutableList<String>,
+        ) {
+            if (value == null) return
+            if (value is JsonPrimitive && value.isString) {
+                normalizeIpv4(value.content)?.let { out += it }
+                return
+            }
+            // Otherwise treat as array of strings; non-arrays fall through.
+            runCatching {
+                value.jsonArray.forEach { entry ->
+                    if (entry is JsonPrimitive && entry.isString) {
+                        normalizeIpv4(entry.content)?.let { out += it }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Conservative dotted-decimal IPv4 sanity check. Returns the
+         * canonical form (lowercase, trimmed) on success, null otherwise.
+         * Permissive enough to accept what publishers actually write
+         * (whitespace, mixed case in non-IP contexts), strict enough to
+         * reject obviously-wrong values (e.g. hostnames, hex, IPv6 —
+         * which is fine, just not a use case the relay path supports yet).
+         */
+        private fun normalizeIpv4(raw: String): String? {
+            val s = raw.trim()
+            if (s.isEmpty()) return null
+            val parts = s.split('.')
+            if (parts.size != 4) return null
+            for (p in parts) {
+                if (p.isEmpty() || p.length > 3) return null
+                if (!p.all { it.isDigit() }) return null
+                val n = p.toIntOrNull() ?: return null
+                if (n !in 0..255) return null
+                // Reject leading-zero forms like "010" — ambiguous
+                // (octal in some libraries) and almost never intended.
+                if (p.length > 1 && p[0] == '0') return null
+            }
+            return s
+        }
+
         private fun collectTorEndpoints(obj: JsonObject): List<String> {
             val out = mutableListOf<String>()
             pushOnionField(obj["tor"], out)

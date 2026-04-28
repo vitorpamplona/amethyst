@@ -501,9 +501,21 @@ class AppModules(
     val crashReportCache = CrashReportCache(appContext)
 
     // cache for NIP-11 documents
+    //
+    // For `.bit` relays, the HTTP path that fetches NIP-11 (and any
+    // future per-relay HTTP request) also needs the BitRelayDns + TLSA
+    // decoration that the WebSocket path gets via OkHttpWebSocket's
+    // clientDecorator hook. Without it, `https://relay.testls.bit/`
+    // hits ICANN DNS, sees no record, and surfaces FAIL_TO_ASSEMBLE_URL
+    // even when the WebSocket connection is happily live. We wrap the
+    // base client provider so the same TlsaConnectionPolicy.decorate
+    // applies for both transports.
     val nip11Cache: Nip11CachedRetriever by lazy {
         Log.d("AppModules", "Nip11CachedRetriever Init")
-        Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay)
+        Nip11CachedRetriever { url ->
+            val base = torEvaluatorFlow.okHttpClientForRelay(url)
+            tlsaConnectionPolicy.decorate(url, base)
+        }
     }
 
     fun setImageLoader() {
