@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal.UserPro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.FollowedTagsTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.TabFollowedTags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualConversations
@@ -300,6 +301,10 @@ fun ProfileScreen(
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
+        topBar = {
+            ProfileTopBar(baseUser, accountViewModel, nav)
+        },
+        contentWindowInsets = WindowInsets(0),
         bottomBar = {
             AppBottomBar(
                 Route.Profile(accountViewModel.userProfile().pubkeyHex),
@@ -314,7 +319,7 @@ fun ProfileScreen(
             }
         },
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Box(modifier = Modifier.padding(bottom = padding.calculateBottomPadding())) {
             RenderSurface(scrollState) { tabRowModifier: Modifier, pagerModifier: Modifier ->
                 RenderScreen(
                     baseUser,
