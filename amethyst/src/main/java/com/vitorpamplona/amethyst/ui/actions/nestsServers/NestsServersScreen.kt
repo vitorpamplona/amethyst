@@ -250,5 +250,5 @@ private fun NestsServerEntry(
  */
 val DEFAULT_NESTS_SERVERS: List<NestsServer> =
     listOf(
-        NestsServer(name = "nostrnests.com", baseUrl = "https://moq.nostrnests.com"),
+        NestsServer(name = "nostrnests.com", baseUrl = "https://moq.nostrnests.com:4443"),
     )

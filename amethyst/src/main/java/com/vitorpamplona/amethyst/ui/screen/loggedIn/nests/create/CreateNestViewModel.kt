@@ -356,7 +356,7 @@ class CreateNestViewModel : ViewModel() {
          * room here. Users can edit either field to point at their own
          * moq-auth / moq-relay pair.
          */
-        const val DEFAULT_SERVICE_URL: String = "https://moq.nostrnests.com"
-        const val DEFAULT_ENDPOINT_URL: String = "https://moq.nostrnests.com"
+        const val DEFAULT_SERVICE_URL: String = "https://moq.nostrnests.com:4443"
+        const val DEFAULT_ENDPOINT_URL: String = "https://moq.nostrnests.com:4443"
     }
 }
