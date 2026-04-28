@@ -180,7 +180,6 @@ fun ObserveAndRenderSpace(
     val card by observeNoteAndMap(baseNote, accountViewModel) {
         when (val noteEvent = it.event) {
             is MeetingSpaceEvent -> {
-                println("AABBCC ${noteEvent.address()} ${noteEvent.status()}")
                 NestCard(
                     id = noteEvent.address(),
                     name = noteEvent.dTag(),
@@ -189,7 +188,7 @@ fun ObserveAndRenderSpace(
                     subject = noteEvent.room()?.ifBlank { null },
                     content = noteEvent.summary(),
                     participants = noteEvent.participants().toImmutableList(),
-                    status = noteEvent.status(),
+                    status = noteEvent.checkStatus(noteEvent.status()),
                     starts = null,
                 )
             }
