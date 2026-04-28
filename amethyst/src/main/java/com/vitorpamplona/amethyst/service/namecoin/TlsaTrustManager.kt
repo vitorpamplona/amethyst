@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.namecoin
 
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.AiaStapledPubkeyExtractor
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TlsaVerifier
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TlsaVerifier.Result
@@ -28,6 +29,7 @@ import java.security.MessageDigest
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
+import javax.security.auth.x500.X500Principal
 
 /**
  * `X509TrustManager` that enforces a Namecoin `tls` (TLSA) record set against
@@ -112,7 +114,8 @@ class TlsaTrustManager(
                 )
             }
 
-        val result = TlsaVerifier.verify(view, records, ::sha512)
+        val stapledSpkis = collectStapledSpkis(chain)
+        val result = TlsaVerifier.verifyWithStapled(view, records, stapledSpkis, ::sha512)
         when (result) {
             is Result.Match -> {
                 if (result.requiresPkixValidation) {
@@ -152,4 +155,98 @@ class TlsaTrustManager(
     override fun getAcceptedIssuers(): Array<X509Certificate> = systemTrustManager.acceptedIssuers
 
     private fun sha512(input: ByteArray): ByteArray = MessageDigest.getInstance("SHA-512").digest(input)
+
+    /**
+     * Walk the served chain extracting any AIA-stapled SPKIs (ncgencert
+     * convention). The Domain CA cert in an ncgencert chain carries the AIA
+     * Parent CA's SPKI in two redundant places — the issuer-DN serialNumber
+     * attribute as a JSON blob, and the AIA caIssuers URL as a `pubb64=`
+     * query parameter. Both should produce the same bytes; we collect both
+     * to be robust to operator variation.
+     *
+     * Duplicates are deduplicated so [TlsaVerifier.verifyWithStapled] doesn't
+     * waste cycles re-hashing the same blob.
+     */
+    private fun collectStapledSpkis(chain: Array<X509Certificate>): List<ByteArray> {
+        val out = mutableListOf<ByteArray>()
+        for (cert in chain) {
+            // 1) Issuer DN serialNumber attribute. RFC 2253 form preserves the
+            //    "\0A" escapes ncgencert needs us to unescape.
+            val issuerDn =
+                runCatching { cert.issuerX500Principal.getName(X500Principal.RFC2253) }.getOrNull()
+            AiaStapledPubkeyExtractor.extractFromIssuerDn(issuerDn)?.let { out.addUnique(it) }
+
+            // 2) AIA caIssuers URLs. We deliberately don't fetch them — the
+            //    `pubb64=` query parameter contains everything we need.
+            for (url in extractAiaCaIssuersUrls(cert)) {
+                AiaStapledPubkeyExtractor.extractFromAiaUrl(url)?.let { out.addUnique(it) }
+            }
+        }
+        return out
+    }
+
+    private fun MutableList<ByteArray>.addUnique(value: ByteArray) {
+        if (none { it.contentEquals(value) }) add(value)
+    }
+
+    /**
+     * Extract the CA-Issuers URLs from an X.509 cert's Authority Information
+     * Access extension (RFC 5280 §4.2.2.1, OID 1.3.6.1.5.5.7.1.1).
+     *
+     * On JVM there's no zero-cost way to do this through `X509Certificate`'s
+     * public API — the extension comes back as a raw DER OctetString. We
+     * parse just enough of the DER structure to recover the URLs, falling
+     * back to a simple ASCII scan for `http`/`https` scheme prefixes if the
+     * structured parse misses anything (defensive: ncgencert URLs are pure
+     * ASCII inside an IA5String).
+     */
+    private fun extractAiaCaIssuersUrls(cert: X509Certificate): List<String> {
+        val raw = runCatching { cert.getExtensionValue("1.3.6.1.5.5.7.1.1") }.getOrNull() ?: return emptyList()
+        // raw is an OctetString wrapping the actual SEQUENCE. Strip the outer
+        // OCTET STRING tag (04) + length, then scan the inner bytes for the
+        // CA-Issuers OID (1.3.6.1.5.5.7.48.2 = 06 08 2B 06 01 05 05 07 30 02)
+        // followed by a uniformResourceIdentifier IA5String (context tag
+        // [6] = 86). This is a deliberately permissive scan; we don't need
+        // a full DER parser since we only care about extracting URL strings.
+        val urls = mutableListOf<String>()
+        val caIssuersOid = byteArrayOf(0x06, 0x08, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x02)
+        var i = 0
+        while (i + caIssuersOid.size < raw.size) {
+            if (raw.regionMatches(i, caIssuersOid)) {
+                // Right after the OID: skip the SEQUENCE wrapper (if any) and
+                // look for the [6] context-specific tag (0x86) for URI.
+                var j = i + caIssuersOid.size
+                // Walk forward up to ~8 bytes scanning for 0x86 context tag.
+                val scanLimit = (j + 8).coerceAtMost(raw.size)
+                while (j < scanLimit) {
+                    if (raw[j] == 0x86.toByte()) {
+                        // Next byte is the length (we only care about short-form
+                        // lengths; URLs are well under 128 bytes).
+                        if (j + 1 < raw.size) {
+                            val len = raw[j + 1].toInt() and 0xFF
+                            if (len < 128 && j + 2 + len <= raw.size) {
+                                val urlBytes = raw.copyOfRange(j + 2, j + 2 + len)
+                                urls.add(urlBytes.decodeToString())
+                            }
+                        }
+                        break
+                    }
+                    j++
+                }
+                i = j + 1
+            } else {
+                i++
+            }
+        }
+        return urls
+    }
+
+    private fun ByteArray.regionMatches(
+        offset: Int,
+        other: ByteArray,
+    ): Boolean {
+        if (offset + other.size > this.size) return false
+        for (k in other.indices) if (this[offset + k] != other[k]) return false
+        return true
+    }
 }
