@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -93,20 +94,22 @@ fun NestsScreen(
             }
         },
         floatingButton = {
-            FloatingActionButton(
-                onClick = {
-                    if (nestsServers.any { it.startsWith("http") }) {
-                        showCreateSheet = true
-                    } else {
-                        showSetupDialog = true
-                    }
-                },
-                shape = CircleShape,
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Add,
-                    contentDescription = stringRes(R.string.nest_create_fab),
-                )
+            FabBottomBarPadded(nav) {
+                FloatingActionButton(
+                    onClick = {
+                        if (nestsServers.any { it.startsWith("http") }) {
+                            showCreateSheet = true
+                        } else {
+                            showSetupDialog = true
+                        }
+                    },
+                    shape = CircleShape,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Add,
+                        contentDescription = stringRes(R.string.nest_create_fab),
+                    )
+                }
             }
         },
         accountViewModel = accountViewModel,

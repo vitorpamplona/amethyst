@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -180,7 +181,9 @@ fun ChessLobbyScreen(
             )
         },
         floatingActionButton = {
-            NewChessGameButton { showNewGameDialog = true }
+            FabBottomBarPadded(nav) {
+                NewChessGameButton { showNewGameDialog = true }
+            }
         },
     ) { paddingValues ->
         RefresheableBox(

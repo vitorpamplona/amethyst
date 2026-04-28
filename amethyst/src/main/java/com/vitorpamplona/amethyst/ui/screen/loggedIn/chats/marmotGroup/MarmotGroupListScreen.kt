@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
@@ -116,8 +117,10 @@ fun MarmotGroupListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }, shape = CircleShape) {
-                Icon(MaterialSymbols.Add, contentDescription = "Create Group")
+            FabBottomBarPadded(nav) {
+                FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }, shape = CircleShape) {
+                    Icon(MaterialSymbols.Add, contentDescription = "Create Group")
+                }
             }
         },
     ) { padding ->

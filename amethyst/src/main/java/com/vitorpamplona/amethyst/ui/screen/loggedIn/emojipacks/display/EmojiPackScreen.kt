@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -132,18 +133,20 @@ private fun EmojiPackScreenView(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text(text = stringRes(R.string.add_emoji_fab)) },
-                icon = {
-                    Icon(
-                        symbol = MaterialSymbols.Add,
-                        contentDescription = null,
-                    )
-                },
-                onClick = { showAddDialog = true },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-            )
+            FabBottomBarPadded(nav) {
+                ExtendedFloatingActionButton(
+                    text = { Text(text = stringRes(R.string.add_emoji_fab)) },
+                    icon = {
+                        Icon(
+                            symbol = MaterialSymbols.Add,
+                            contentDescription = null,
+                        )
+                    },
+                    onClick = { showAddDialog = true },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                )
+            }
         },
     ) { padding ->
         Column(

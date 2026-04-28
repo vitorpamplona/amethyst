@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -79,7 +80,9 @@ private fun ListManagementView(
             TopBarWithBackButton(caption = stringRes(R.string.post_bookmark_management_title), nav)
         },
         floatingActionButton = {
-            NewListButton { nav.nav(Route.BookmarkGroupMetadataEdit()) }
+            FabBottomBarPadded(nav) {
+                NewListButton { nav.nav(Route.BookmarkGroupMetadataEdit()) }
+            }
         },
     ) { contentPadding ->
         Column(

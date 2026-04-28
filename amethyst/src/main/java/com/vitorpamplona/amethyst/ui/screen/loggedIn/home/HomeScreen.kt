@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -208,7 +209,9 @@ private fun HomePages(
             }
         },
         floatingButton = {
-            HomeScreenFloatingButton(accountViewModel, nav)
+            FabBottomBarPadded(nav) {
+                HomeScreenFloatingButton(accountViewModel, nav)
+            }
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->

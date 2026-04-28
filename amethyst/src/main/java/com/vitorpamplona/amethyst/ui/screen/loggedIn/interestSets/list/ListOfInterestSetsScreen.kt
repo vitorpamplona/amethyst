@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -82,7 +83,10 @@ fun ListOfInterestSetsScreen(
             }
         },
         floatingActionButton = {
-            InterestSetFab(onAdd = { nav.nav(Route.InterestSetMetadataEdit()) })
+            InterestSetFab(
+                onAdd = { nav.nav(Route.InterestSetMetadataEdit()) },
+                modifier = Modifier.fabBottomBarPadding(nav),
+            )
         },
     ) { paddingValues ->
         Column(
@@ -155,7 +159,10 @@ private fun EmptyInterestSets() {
 }
 
 @Composable
-fun InterestSetFab(onAdd: () -> Unit) {
+fun InterestSetFab(
+    onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     ExtendedFloatingActionButton(
         text = {
             Text(text = stringRes(R.string.interest_set_create_btn_label))
@@ -169,5 +176,6 @@ fun InterestSetFab(onAdd: () -> Unit) {
         onClick = onAdd,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
+        modifier = modifier,
     )
 }

@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
@@ -158,29 +159,31 @@ private fun RenderOldBookmarkScreen(
             }
         },
         floatingButton = {
-            ExtendedFloatingActionButton(
-                text = { Text(stringRes(R.string.migrate_bookmarks_button)) },
-                icon = {
-                    Icon(
-                        symbol = MaterialSymbols.AutoMirrored.DriveFileMove,
-                        contentDescription = stringRes(R.string.migrate_bookmarks_button),
-                    )
-                },
-                onClick = {
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.migrateOldBookmarksToNew()
-                        coroutineScope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.migrate_bookmarks_success),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+            FabBottomBarPadded(nav) {
+                ExtendedFloatingActionButton(
+                    text = { Text(stringRes(R.string.migrate_bookmarks_button)) },
+                    icon = {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.DriveFileMove,
+                            contentDescription = stringRes(R.string.migrate_bookmarks_button),
+                        )
+                    },
+                    onClick = {
+                        accountViewModel.launchSigner {
+                            accountViewModel.account.migrateOldBookmarksToNew()
+                            coroutineScope.launch {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(R.string.migrate_bookmarks_success),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            }
                         }
-                    }
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-            )
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                )
+            }
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
