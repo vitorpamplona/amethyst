@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.service.nests.NestForegroundService
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import kotlinx.coroutines.flow.SharedFlow
 
 /**
@@ -84,6 +85,39 @@ internal fun LeaveOnKick(
 ) {
     val wasKicked by viewModel.wasKicked.collectAsState()
     LaunchedEffect(wasKicked) { if (wasKicked) onLeave() }
+}
+
+/**
+ * Bounce out of the room when the host flips the kind-30312
+ * `status` tag to CLOSED (or when [MeetingSpaceEvent.checkStatus]
+ * auto-closes a stale event past the 8 h cutoff). The relay
+ * subscription in [NestRoomFilterAssemblerSubscription] feeds
+ * LocalCache, `observeNoteEvent` upstream emits the new
+ * [MeetingSpaceEvent] reference, and this LaunchedEffect's key
+ * change triggers the leave.
+ *
+ * Without this, a host ending the room only takes effect for
+ * users who back out manually — every other listener / speaker
+ * stays connected to the relay until either the next JWT
+ * expiry or `onCleared()` fires when they finally close the
+ * activity. Users hear silence (no one's publishing) but the
+ * UI shows them as still "in" the room.
+ *
+ * Triggers only when the live event's status is CLOSED; an
+ * initial event in any other state (PLANNED, OPEN, PRIVATE)
+ * is a no-op so the room can finish its connect flow first.
+ */
+@Composable
+internal fun LeaveOnRoomClosed(
+    event: MeetingSpaceEvent,
+    onLeave: () -> Unit,
+) {
+    // `event.isLive()` returns false on CLOSED. Keying on that
+    // boolean (rather than the event reference) means the effect
+    // fires once per live→closed transition, regardless of how
+    // many other tag changes the host pushes alongside.
+    val isLive = event.isLive()
+    LaunchedEffect(isLive) { if (!isLive) onLeave() }
 }
 
 /**

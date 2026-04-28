@@ -28,8 +28,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
@@ -77,8 +79,7 @@ class MoqLiteSessionTest {
 
             val peerHandlesSubscribe =
                 async {
-                    val bidi = serverSide.peerOpenedBidiStreams().first()
-                    val req = readSubscribeRequest(bidi)
+                    val (bidi, req) = nextSubscribeBidi(serverSide)
                     assertEquals("speakerPubkey", req.broadcast)
                     assertEquals("audio/data", req.track)
                     assertEquals(MoqLiteSession.DEFAULT_PRIORITY, req.priority)
@@ -128,8 +129,7 @@ class MoqLiteSessionTest {
 
             val peer =
                 async {
-                    val bidi = serverSide.peerOpenedBidiStreams().first()
-                    readSubscribeRequest(bidi)
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
                     bidi.write(
                         MoqLiteCodec.encodeSubscribeDrop(
                             MoqLiteSubscribeDrop(errorCode = 4L, reasonPhrase = "no such broadcast"),
@@ -203,10 +203,14 @@ class MoqLiteSessionTest {
 
             // Set up two parallel subscriptions — peer accepts both, replies
             // with Ok, then pushes one group per subscription out of order.
+            // Use [nextSubscribeBidi] (not raw `peerOpenedBidiStreams`)
+            // because the session lazy-opens an announce-watch bidi on
+            // first subscribe (publisher-disconnect detection); raw
+            // `.first()` would race with that and occasionally pick up
+            // the announce bidi instead of the subscribe one.
             val subAck =
                 async {
-                    val bidiA = serverSide.peerOpenedBidiStreams().first()
-                    readSubscribeRequest(bidiA)
+                    val (bidiA, _) = nextSubscribeBidi(serverSide)
                     bidiA.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
                     bidiA
                 }
@@ -215,8 +219,7 @@ class MoqLiteSessionTest {
 
             val subAck2 =
                 async {
-                    val bidiB = serverSide.peerOpenedBidiStreams().first()
-                    readSubscribeRequest(bidiB)
+                    val (bidiB, _) = nextSubscribeBidi(serverSide)
                     bidiB.write(MoqLiteCodec.encodeSubscribeOk(okFor(1L)))
                     bidiB
                 }
@@ -391,8 +394,7 @@ class MoqLiteSessionTest {
             var peerBidi: FakeBidiStream? = null
             val peer =
                 async {
-                    val bidi = serverSide.peerOpenedBidiStreams().first()
-                    readSubscribeRequest(bidi)
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
                     bidi.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
                     peerBidi = bidi
                     // Drain whatever the listener writes after Ok — moq-lite
@@ -428,6 +430,47 @@ class MoqLiteSessionTest {
                 ?: error("subscribe body chunk did not contain a complete size-prefixed payload")
         return MoqLiteCodec.decodeSubscribe(payload)
     }
+
+    /**
+     * Pull the next Subscribe bidi the peer's side has accepted,
+     * skipping any housekeeping bidis (e.g. the announce-watch
+     * bidi that [MoqLiteSession.subscribe] lazy-launches once per
+     * session to detect publisher disconnect via `Announce(Ended)`
+     * — see `pumpAnnounceWatch`). Each candidate bidi is peeked
+     * by reading its first chunk; if the control varint is
+     * Subscribe, the bidi + decoded body are returned. Other bidis
+     * are simply abandoned — their pump-side `bidi.incoming()`
+     * collect just sits idle until the test ends.
+     */
+    private suspend fun nextSubscribeBidi(serverSide: FakeWebTransport): Pair<FakeBidiStream, MoqLiteSubscribe> =
+        serverSide
+            .peerOpenedBidiStreams()
+            .transformWhile { bidi ->
+                val firstChunk = bidi.incoming().firstOrNull() ?: return@transformWhile true
+                val code = MoqLiteFrameBuffer().apply { push(firstChunk) }.readVarint()
+                if (code != MoqLiteControlType.Subscribe.code) {
+                    // Housekeeping bidi (announce watch, etc.) —
+                    // drop it on the floor; the session-side
+                    // collector will idle indefinitely, which is
+                    // fine for unit tests under runBlocking +
+                    // pumpScope cleanup.
+                    return@transformWhile true
+                }
+                val bodyChunk =
+                    bidi.incoming().firstOrNull()
+                        ?: error("subscribe stream FIN before body")
+                val payload =
+                    MoqLiteFrameBuffer().apply { push(bodyChunk) }.readSizePrefixed()
+                        ?: error("subscribe body chunk did not contain a complete size-prefixed payload")
+                emit(bidi to MoqLiteCodec.decodeSubscribe(payload))
+                // Terminate upstream collection — without this the
+                // helper would block waiting for a NEXT bidi that
+                // may never come, since `takeWhile` only re-checks
+                // its predicate when the next value emits. Tests
+                // that open exactly two subscribes (no third bidi
+                // to nudge the flow forward) used to hang here.
+                false
+            }.firstOrNull() ?: error("flow ended without a Subscribe bidi")
 
     private fun framePayload(bytes: ByteArray): ByteArray = Varint.encode(bytes.size.toLong()) + bytes
 

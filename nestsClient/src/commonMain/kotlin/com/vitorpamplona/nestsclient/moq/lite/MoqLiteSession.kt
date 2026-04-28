@@ -33,7 +33,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -76,6 +75,17 @@ class MoqLiteSession internal constructor(
 
     /** Lazily-launched relay→us inbound bidi pump; only runs while a publisher is active. */
     private var bidiPump: Job? = null
+
+    /**
+     * Single shared announce-watch pump that runs while we have any
+     * listener-side subscription. Closes the frames channel of any
+     * subscription whose broadcast suffix goes Ended on the relay's
+     * announce stream — see [pumpAnnounceWatch] for why this is the
+     * only reliable signal of publisher disconnect under moq-lite
+     * Lite-03. Lazily launched on first subscribe; lives until the
+     * session scope is cancelled.
+     */
+    private var announceWatchJob: Job? = null
 
     /** Single active publisher per session (moq-lite doesn't model multi-broadcast publishers). */
     private var activePublisher: PublisherStateImpl? = null
@@ -152,6 +162,18 @@ class MoqLiteSession internal constructor(
         endGroup: Long? = null,
     ): MoqLiteSubscribeHandle {
         ensureOpen()
+        // Open the announce-watch bidi BEFORE the subscribe goes
+        // out. moq-rs uses the announce stream to propagate
+        // broadcast availability into the subscriber session — a
+        // subscribe that arrives before our session has any
+        // announce bidi open is rejected with "not found", even
+        // when the publisher's session is alive on the relay. The
+        // bidi must be on the wire before subscribe sends; lazy-
+        // launching after subscribe (the obvious-but-wrong shape)
+        // races the relay's discovery and produces flaky misses,
+        // especially for fresh listener sessions opened after a
+        // wrapper-driven reconnect.
+        ensureAnnounceWatchStarted()
         val id =
             state.withLock {
                 check(!closed) { "session is closed" }
@@ -173,6 +195,27 @@ class MoqLiteSession internal constructor(
         bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
         bidi.write(MoqLiteCodec.encodeSubscribe(request))
 
+        // Single long-running collector pump for the bidi's response
+        // side. Reads the SubscribeResponse, then keeps collecting
+        // until the peer FINs (or scope is cancelled, or
+        // handle.unsubscribe() FINs our side and the relay echoes).
+        // The flow completion IS the moq-lite-03 signal that the
+        // publisher has disconnected mid-broadcast — Lite-03 has no
+        // explicit "publisher gone" message; bidi close is it.
+        // Without this watch, the frames Channel below would never
+        // close on remote disconnect, and any consumer collecting
+        // from the wrapper-level [MoqLiteSubscribeHandle.frames]
+        // flow would sit silent indefinitely after a publisher
+        // cycle even though the relay is happy to serve a fresh
+        // subscribe under the same broadcast suffix.
+        //
+        // Why a single pump (vs separate response read + death
+        // watch): the underlying QUIC stream's `incoming` is
+        // backed by `Channel<ByteArray>.consumeAsFlow()` — which
+        // CANCELS the channel when the first collect ends. A second
+        // collect on a fresh `bidi.incoming()` Flow would see an
+        // already-cancelled channel and fire prematurely. Keeping
+        // one collect alive sidesteps that entirely.
         // moq-lite's subscribe-response is a single size-prefixed
         // message on the response side of the bidi. Read incoming
         // chunks into a buffer until the buffer holds a full payload,
@@ -210,6 +253,102 @@ class MoqLiteSession internal constructor(
                     unsubscribeAction = { unsubscribe(id) },
                 )
             }
+        }
+    }
+
+    /**
+     * Lock that serializes lazy-launch of the announce-watch.
+     * Distinct from [state] so the synchronous `announce(prefix="")`
+     * inside [ensureAnnounceWatchStarted] can suspend without
+     * blocking other state-mutating operations.
+     */
+    private val announceWatchLock = Mutex()
+
+    /**
+     * Open the shared announce-watch bidi *synchronously* (and
+     * launch its collector coroutine) if it isn't already running.
+     * Idempotent. Called from [subscribe] before the subscribe
+     * message goes on the wire so moq-rs has a chance to propagate
+     * broadcast availability into our session before the subscribe
+     * arrives — see the comment in [subscribe].
+     */
+    private suspend fun ensureAnnounceWatchStarted() {
+        announceWatchLock.withLock {
+            if (announceWatchJob != null) return
+            val handle =
+                try {
+                    announce(prefix = "")
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    throw ce
+                } catch (_: Throwable) {
+                    // Couldn't open the announce bidi — best effort,
+                    // bail. Subscriptions still work; we just lose
+                    // automatic cycle detection (the wrapper still
+                    // re-issues on listener swap / explicit failure).
+                    return
+                }
+            announceWatchJob =
+                scope.launch {
+                    try {
+                        pumpAnnounceWatch(handle)
+                    } finally {
+                        announceWatchLock.withLock { announceWatchJob = null }
+                    }
+                }
+        }
+    }
+
+    /**
+     * Single shared announce-watch pump for ALL subscriptions on
+     * this session. Driven by the bidi opened in
+     * [ensureAnnounceWatchStarted]. For each
+     * [MoqLiteAnnounceStatus.Ended] update, iterates the
+     * subscription map and closes the frames channel of any
+     * subscription whose `broadcast` matches the announce suffix.
+     * The closed channel ends the consumer-facing
+     * `frames.consumeAsFlow()` flow naturally — same shape as a
+     * user-driven `handle.unsubscribe()` from the consumer's POV —
+     * which lets the wrapper's re-issuance pump drive a fresh
+     * subscribe against the same broadcast path. moq-lite supports
+     * subscribe-before-announce, so a subscribe issued during the
+     * gap (between Ended and the next Active under the same suffix)
+     * attaches cleanly when the new publisher comes up.
+     *
+     * This pump survives announce-bidi errors via best-effort
+     * silence — the session itself recovers via its own reconnect
+     * path. Cancelled when [scope] is cancelled (session close).
+     */
+    private suspend fun pumpAnnounceWatch(handle: MoqLiteAnnouncesHandle) {
+        try {
+            handle.updates.collect { update ->
+                if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
+                val targets =
+                    state.withLock {
+                        subscriptionsBySubscribeId.values
+                            .filter { it.request.broadcast == update.suffix }
+                            .toList()
+                    }
+                for (sub in targets) {
+                    // Just close the frames channel — the
+                    // wrapper-level collect of `frames.consumeAsFlow()`
+                    // ends naturally and the wrapper pump re-issues.
+                    // Don't fire `unsubscribe(id)` here: that'd FIN
+                    // OUR side of the (still-alive) subscribe bidi,
+                    // and the wrapper's re-issue would have to open
+                    // a fresh bidi anyway. Keeping the subscribe
+                    // bidi open lets a future subscribe-before-
+                    // announce land cleanly.
+                    sub.frames.close()
+                    state.withLock { subscriptionsBySubscribeId.remove(sub.id) }
+                    runCatching { sub.bidi.finish() }
+                }
+            }
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (_: Throwable) {
+            // Announce bidi died — same best-effort fallback.
+        } finally {
+            runCatching { handle.close() }
         }
     }
 
@@ -355,86 +494,106 @@ class MoqLiteSession internal constructor(
     }
 
     private suspend fun handleInboundBidi(bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream) {
-        val buffer = MoqLiteFrameBuffer()
         val publisher = state.withLock { activePublisher } ?: return
+
+        // Single long-running collector for the bidi's full lifetime.
+        // Pre-fix this dispatch was split into a `firstOrNull()` to
+        // peek the control byte + a `readSizePrefixedFromBidiInto`
+        // to read the body — but `bidi.incoming()` is backed by
+        // `Channel<ByteArray>.consumeAsFlow(consume=true)`, which
+        // CANCELS the channel when the first collect ends. Any
+        // attempt to re-collect from the bidi (e.g. to watch for
+        // subscriber-disconnect FIN) saw an immediately-empty
+        // closed flow, firing the cleanup right after registration
+        // and starving the publisher's send path. With one collector
+        // for the bidi's whole life, the dispatch reads the message,
+        // the collector continues silently until peer FIN, and the
+        // post-collect cleanup runs exactly once — same shape the
+        // moq-lite session's [announce] pump already uses.
+        val buffer = MoqLiteFrameBuffer()
+        // typeCode is hoisted outside the collect lambda so it
+        // survives across invocations — `buffer.readVarint()`
+        // advances `pos`, so calling it again on the next collect
+        // tick would read body bytes as if they were the control
+        // varint and tear the dispatch state apart.
+        var typeCode: Long? = null
+        var dispatched = false
+        var inboundSub: MoqLiteSubscribe? = null
         try {
-            // Read the leading ControlType varint from the first chunk.
-            val first =
-                bidi.incoming().firstOrNull() ?: return
-            buffer.push(first)
-            val controlCode = buffer.readVarint() ?: return
-            val controlType = MoqLiteControlType.fromCode(controlCode) ?: return
-            when (controlType) {
-                MoqLiteControlType.Announce -> {
-                    handleAnnounceRequest(bidi, buffer, publisher)
-                }
+            bidi.incoming().collect { chunk ->
+                buffer.push(chunk)
+                if (!dispatched) {
+                    if (typeCode == null) typeCode = buffer.readVarint()
+                    val tc = typeCode ?: return@collect
+                    val controlType =
+                        MoqLiteControlType.fromCode(tc) ?: run {
+                            dispatched = true
+                            runCatching { bidi.finish() }
+                            return@collect
+                        }
+                    when (controlType) {
+                        MoqLiteControlType.Announce -> {
+                            val pleasePayload = buffer.readSizePrefixed() ?: return@collect
+                            val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload)
+                            val emittedSuffix =
+                                MoqLitePath.stripPrefix(please.prefix, publisher.suffix) ?: publisher.suffix
+                            bidi.write(
+                                MoqLiteCodec.encodeAnnounce(
+                                    MoqLiteAnnounce(
+                                        status = MoqLiteAnnounceStatus.Active,
+                                        suffix = emittedSuffix,
+                                        hops = 0L,
+                                    ),
+                                ),
+                            )
+                            publisher.registerAnnounceBidi(bidi, emittedSuffix)
+                            dispatched = true
+                        }
 
-                MoqLiteControlType.Subscribe -> {
-                    handleSubscribeRequest(bidi, buffer, publisher)
-                }
+                        MoqLiteControlType.Subscribe -> {
+                            val subPayload = buffer.readSizePrefixed() ?: return@collect
+                            val sub = MoqLiteCodec.decodeSubscribe(subPayload)
+                            bidi.write(
+                                MoqLiteCodec.encodeSubscribeOk(
+                                    MoqLiteSubscribeOk(
+                                        priority = sub.priority,
+                                        ordered = sub.ordered,
+                                        maxLatencyMillis = sub.maxLatencyMillis,
+                                        startGroup = null,
+                                        endGroup = null,
+                                    ),
+                                ),
+                            )
+                            publisher.registerInboundSubscription(sub)
+                            inboundSub = sub
+                            dispatched = true
+                        }
 
-                else -> {
-                    // Lite-03 treats Session/Fetch/Probe as separate flows;
-                    // we don't implement them here. Drop the bidi.
-                    runCatching { bidi.finish() }
+                        else -> {
+                            // Lite-03 treats Session/Fetch/Probe as
+                            // separate flows; we don't implement them.
+                            runCatching { bidi.finish() }
+                            dispatched = true
+                        }
+                    }
                 }
+                // Post-dispatch chunks are silently discarded —
+                // Lite-03's announce / subscribe bidis are idle
+                // after the response. The signal we care about is
+                // the flow's natural completion (peer FIN =
+                // subscriber-disconnect, or transport drop).
             }
         } catch (ce: CancellationException) {
             throw ce
         } catch (_: Throwable) {
-            runCatching { bidi.finish() }
+            // Bidi errored — fall through to the same cleanup.
         }
-    }
-
-    private suspend fun handleAnnounceRequest(
-        bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
-        seedBuffer: MoqLiteFrameBuffer,
-        publisher: PublisherStateImpl,
-    ) {
-        val pleasePayload = readSizePrefixedFromBidiInto(bidi.incoming(), seedBuffer)
-        val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload)
-        // The relay sets the prefix to the namespace it expects us to
-        // publish under (typically `claims.root`). Our broadcast path
-        // (after stripping the prefix) is `publisher.suffix`. moq-lite
-        // requires the suffix on the wire to be the *remaining* part
-        // after `please.prefix` — so strip it.
-        val emittedSuffix = MoqLitePath.stripPrefix(please.prefix, publisher.suffix) ?: publisher.suffix
-        bidi.write(
-            MoqLiteCodec.encodeAnnounce(
-                MoqLiteAnnounce(
-                    status = MoqLiteAnnounceStatus.Active,
-                    suffix = emittedSuffix,
-                    hops = 0L,
-                ),
-            ),
-        )
-        // Hold the bidi open until the publisher closes; if/when the
-        // application stops broadcasting, send `Ended`.
-        publisher.registerAnnounceBidi(bidi, emittedSuffix)
-    }
-
-    private suspend fun handleSubscribeRequest(
-        bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
-        seedBuffer: MoqLiteFrameBuffer,
-        publisher: PublisherStateImpl,
-    ) {
-        val subPayload = readSizePrefixedFromBidiInto(bidi.incoming(), seedBuffer)
-        val sub = MoqLiteCodec.decodeSubscribe(subPayload)
-        // Reply Ok right away — moq-lite is permissive on the publisher
-        // side; the relay decides whether the subscriber is allowed to
-        // see this broadcast.
-        bidi.write(
-            MoqLiteCodec.encodeSubscribeOk(
-                MoqLiteSubscribeOk(
-                    priority = sub.priority,
-                    ordered = sub.ordered,
-                    maxLatencyMillis = sub.maxLatencyMillis,
-                    startGroup = null,
-                    endGroup = null,
-                ),
-            ),
-        )
-        publisher.registerInboundSubscription(sub)
+        // Flow ended (peer FIN or error). Remove the inbound
+        // subscribe so the publisher's send path stops keying new
+        // groups off this dead subscriber. Announce bidis are
+        // owned by the publisher state for sending Ended on
+        // publisher-close — we don't remove them here.
+        inboundSub?.let { publisher.removeInboundSubscription(it) }
     }
 
     /**
@@ -619,6 +778,24 @@ class MoqLiteSession internal constructor(
             gate.withLock {
                 if (publisherClosed) return
                 inboundSubs += sub
+            }
+        }
+
+        /**
+         * Remove an inbound subscription whose bidi was FIN'd by the
+         * relay (subscriber disconnected). FINs the current group
+         * defensively because [openNextGroupLocked] keys each uni
+         * stream off `inboundSubs.first()`'s id; if the dropped sub
+         * was first, the current uni stream is dead-routed and the
+         * next send must open a fresh group keyed off whatever
+         * live sub is now first.
+         */
+        suspend fun removeInboundSubscription(sub: MoqLiteSubscribe) {
+            gate.withLock {
+                if (publisherClosed) return
+                if (!inboundSubs.remove(sub)) return
+                runCatching { currentGroup?.uni?.finish() }
+                currentGroup = null
             }
         }
 
