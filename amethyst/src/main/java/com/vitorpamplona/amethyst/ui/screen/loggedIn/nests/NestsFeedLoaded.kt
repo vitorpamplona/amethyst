@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.PrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.observeNestRoomLatestPresence
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -91,6 +92,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -222,6 +224,40 @@ data class NestCard(
     val starts: Long?,
 )
 
+/**
+ * Window inside which a kind-10312 presence event still counts the
+ * room as "live": three consecutive 60 s heartbeat periods. Speakers
+ * publish presence on join and re-publish every ~60 s while
+ * broadcasting, so anything fresher than this means at least one
+ * speaker is still in the room. Older means the host crashed
+ * without flipping status to CLOSED, and we should demote the badge
+ * to "ended" even though the kind-30312 event still says OPEN.
+ */
+private const val PRESENCE_FRESHNESS_WINDOW_SECONDS = 180L
+
+/**
+ * Liveness-gated badge for an OPEN room. Optimistically renders
+ * [LiveFlag] on first paint (we have no presence data yet) and
+ * keeps it once a fresh kind-10312 presence lands; flips to
+ * [EndedFlag] once we observe that the latest cached presence is
+ * older than [PRESENCE_FRESHNESS_WINDOW_SECONDS]. Falls back to
+ * [LiveFlag] when the room has no addressable id (defensive — every
+ * 30312 event has one in practice).
+ */
+@Composable
+private fun RenderLiveOrEndedFromPresence(
+    address: Address?,
+    accountViewModel: AccountViewModel,
+) {
+    if (address == null) {
+        LiveFlag()
+        return
+    }
+    val latestPresence by observeNestRoomLatestPresence(address, accountViewModel)
+    val fresh = latestPresence == null || latestPresence!! > TimeUtils.now() - PRESENCE_FRESHNESS_WINDOW_SECONDS
+    if (fresh) LiveFlag() else EndedFlag()
+}
+
 @Composable
 fun RenderLiveSpacesThumb(
     card: NestCard,
@@ -255,7 +291,7 @@ fun RenderLiveSpacesThumb(
                 CrossfadeIfEnabled(targetState = card.status, accountViewModel = accountViewModel) {
                     when (it) {
                         StatusTag.STATUS.OPEN -> {
-                            LiveFlag()
+                            RenderLiveOrEndedFromPresence(card.id, accountViewModel)
                         }
 
                         StatusTag.STATUS.CLOSED -> {
