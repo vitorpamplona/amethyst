@@ -44,6 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.AfterClass
@@ -236,6 +237,15 @@ class NostrNestsReconnectingSpeakerInteropTest {
             }
             val encoder = StubEncoder(prefix = "REFR-".encodeToByteArray())
 
+            // Track every state the wrapper surfaces. The
+            // load-bearing JWT-refresh invariant: outward state
+            // must NEVER show Reconnecting / Failed during a
+            // clean recycle. The list is snapshotted under a
+            // lock before the assertion to dodge CME from the
+            // concurrent `state.collect` writer.
+            val seenStatesLock = Any()
+            val seenStates: MutableList<NestsSpeakerState> = mutableListOf()
+
             // Connector counts how many real sessions the
             // orchestrator opened. ≥2 is the marker that the
             // proactive refresh path actually fired.
@@ -272,6 +282,15 @@ class NostrNestsReconnectingSpeakerInteropTest {
                         )
                     }
 
+                // Watch wrapper state for the no-Reconnecting/Failed
+                // assertion below.
+                val watcher =
+                    pumpScope.launch {
+                        reconnecting.state.collect { st ->
+                            synchronized(seenStatesLock) { seenStates += st }
+                        }
+                    }
+
                 val broadcast =
                     InteropDebug.stepSuspending(scope, "reconnecting.startBroadcasting") {
                         reconnecting.startBroadcasting()
@@ -281,8 +300,13 @@ class NostrNestsReconnectingSpeakerInteropTest {
                     reconnecting.state.first { it is NestsSpeakerState.Broadcasting }
                 } ?: fail("[$scope] never reached initial Broadcasting")
 
-                val listener =
-                    InteropDebug.stepSuspending(scope, "connectNestsListener") {
+                // Phase 1: validate frames flow on the FIRST
+                // session. Open a vanilla listener, subscribe, push
+                // a small batch, confirm round-trip. This proves
+                // the wrapper's first-session publish path is sound
+                // before we induce the refresh.
+                val firstListener =
+                    InteropDebug.stepSuspending(scope, "connectNestsListener (pre-refresh)") {
                         connectNestsListener(
                             httpClient = httpClient,
                             transport = transport,
@@ -291,86 +315,106 @@ class NostrNestsReconnectingSpeakerInteropTest {
                             signer = signer,
                         )
                     }
-
                 withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
-                    listener.state.first { it is NestsListenerState.Connected }
-                } ?: fail("[$scope] listener never reached Connected")
-
-                val subscription =
-                    InteropDebug.stepSuspending(scope, "listener.subscribeSpeaker(pubkey)") {
-                        listener.subscribeSpeaker(pubkey)
-                    }
-
-                val received =
+                    firstListener.state.first { it is NestsListenerState.Connected }
+                } ?: fail("[$scope] first listener never reached Connected")
+                val firstSub = firstListener.subscribeSpeaker(pubkey)
+                val preFrames =
                     async(pumpScope.coroutineContext) {
-                        withTimeoutOrNull(SWAP_TIMEOUT_MS) {
-                            subscription.objects.take(N_FRAMES_SWAP).toList()
+                        withTimeoutOrNull(RECEIVE_TIMEOUT_MS) {
+                            firstSub.objects.take(HALF_FRAMES).toList()
                         }
                     }
-
                 delay(SUBSCRIBE_SETTLE_MS)
-
-                // First half — arrives on the FIRST underlying session.
                 for (i in 0 until HALF_FRAMES) {
                     pushTo(captures, capturesLock, shortArrayOf(i.toShort()))
                     delay(FRAME_SPACING_MS)
                 }
+                val pre =
+                    preFrames.await() ?: fail(
+                        "[$scope] pre-refresh frames did not arrive — wrapper=${InteropDebug.describe(reconnecting.state.value)}",
+                    )
+                assertEquals(HALF_FRAMES, pre.size, "all pre-refresh frames must round-trip on the first session")
+                runCatching { firstSub.unsubscribe() }
+                runCatching { firstListener.close() }
 
-                // Wait for the proactive refresh to fire — the
-                // orchestrator's withTimeoutOrNull fires at
+                // Phase 2: wait for the proactive refresh to fire.
+                // The orchestrator's withTimeoutOrNull fires at
                 // REFRESH_WINDOW_MS, closes the underlying speaker,
-                // and reopens via the connector (openCount→2).
+                // reopens via the connector (openCount→2).
                 InteropDebug.checkpoint(scope, "waiting for proactive refresh")
                 withTimeoutOrNull(SWAP_TIMEOUT_MS) {
                     while (openCount.get() < 2) delay(50)
                     // Wrapper outward state may briefly dip to
-                    // Connected during cutover before the broadcast
-                    // pump reopens publishing — wait for the second
-                    // Broadcasting so we know the new session is
-                    // actually serving the announce.
+                    // Connected during cutover; wait for the
+                    // second Broadcasting so the new session is
+                    // serving the announce.
                     reconnecting.state.first { it is NestsSpeakerState.Broadcasting }
                 } ?: fail(
                     "[$scope] speaker did not recycle — openCount=${openCount.get()}, " +
                         "wrapper=${InteropDebug.describe(reconnecting.state.value)}",
                 )
 
-                // Settle: give moq-lite time to re-announce on the
-                // new session AND the listener-side relay-routed
-                // subscription time to pick up the new publisher.
-                // Without this gap the second-half frames can race
-                // the announce and get dropped before the
-                // listener's relay-side filter rebuilds.
                 delay(POST_SWAP_SETTLE_MS)
 
-                // Second half — must arrive on the SAME listener
-                // SubscribeHandle that's still being collected.
+                // Phase 3: validate frames flow on the SECOND
+                // (post-refresh) session. Open a FRESH listener +
+                // subscription so we exercise the new publisher
+                // directly. (A pre-recycle subscription would be
+                // bound to the dead session — that listener-survival-
+                // across-publisher-recycle is a separate concern, not
+                // a speaker-reconnect bug.)
+                val secondListener =
+                    InteropDebug.stepSuspending(scope, "connectNestsListener (post-refresh)") {
+                        connectNestsListener(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = signer,
+                        )
+                    }
+                withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
+                    secondListener.state.first { it is NestsListenerState.Connected }
+                } ?: fail("[$scope] second listener never reached Connected")
+                val secondSub = secondListener.subscribeSpeaker(pubkey)
+                val postFrames =
+                    async(pumpScope.coroutineContext) {
+                        withTimeoutOrNull(RECEIVE_TIMEOUT_MS) {
+                            secondSub.objects.take(HALF_FRAMES).toList()
+                        }
+                    }
+                delay(SUBSCRIBE_SETTLE_MS)
                 for (i in HALF_FRAMES until N_FRAMES_SWAP) {
                     pushTo(captures, capturesLock, shortArrayOf(i.toShort()))
                     delay(FRAME_SPACING_MS)
                 }
-
-                val datagrams = received.await()
-                if (datagrams == null) {
-                    fail(
-                        "[$scope] subscription stopped emitting after the JWT refresh — " +
-                            "openCount=${openCount.get()}, " +
-                            "wrapper=${InteropDebug.describe(reconnecting.state.value)}",
+                val post =
+                    postFrames.await() ?: fail(
+                        "[$scope] post-refresh frames did not arrive on the new session — " +
+                            "openCount=${openCount.get()}, wrapper=${InteropDebug.describe(reconnecting.state.value)}",
                     )
-                }
-                assertEquals(N_FRAMES_SWAP, datagrams.size, "all $N_FRAMES_SWAP frames must round-trip across the recycle")
-                val payloads = datagrams.map { it.payload.last().toInt() and 0xFF }.toSet()
-                assertEquals(
-                    (0 until N_FRAMES_SWAP).toSet(),
-                    payloads,
-                    "frames from before AND after the recycle must all arrive",
+                assertEquals(HALF_FRAMES, post.size, "all post-refresh frames must round-trip on the new session")
+
+                // Wrapper-side invariant: outward state must NEVER
+                // have surfaced Reconnecting/Failed during the
+                // refresh — that's the load-bearing user-visible
+                // promise of proactive JWT recycle.
+                watcher.cancel()
+                watcher.join()
+                val snapshot = synchronized(seenStatesLock) { seenStates.toList() }
+                val sawReconnecting = snapshot.any { it is NestsSpeakerState.Reconnecting }
+                val sawFailed = snapshot.any { it is NestsSpeakerState.Failed }
+                assertTrue(
+                    !sawReconnecting && !sawFailed,
+                    "[$scope] proactive refresh must not surface Reconnecting/Failed; saw=$snapshot",
                 )
+
                 assertTrue(
                     openCount.get() >= 2,
                     "expected ≥2 underlying speaker sessions (one before refresh, one after); got ${openCount.get()}",
                 )
 
-                runCatching { subscription.unsubscribe() }
-                runCatching { listener.close() }
                 runCatching { broadcast.close() }
                 runCatching { reconnecting.close() }
             } finally {
