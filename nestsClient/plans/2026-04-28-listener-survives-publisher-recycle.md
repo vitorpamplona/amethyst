@@ -1,161 +1,113 @@
-# Listener-survives-publisher-recycle gap
+# Listener-survives-publisher-recycle: resolution + open follow-ups
 
-**Status:** open. Investigation done; first-cut wrapper-layer fix
-attempted and reverted.
+**Status:** ✅ Resolved for the production-relevant case
+(publisher recycles, listener doesn't). One pre-existing test
+exposes a separate, narrower issue that is **out of scope here**
+— see "Open: session-swap test" below.
 
-**Discovered:** while validating
-`NostrNestsReconnectingSpeakerInteropTest` against the real
-`kixelated/moq` relay (`-DnestsInterop=true -DnestsInteropExternal=true`,
-host stack: `cargo build moq-relay` from
-`~/.cache/amethyst-nests-interop/nests/moq` HEAD, host-built moq-auth
-on 8090, relay on 4443 with `--auth-key-dir <dir>` per-kid JWK).
+## What was broken (recap)
 
-## The gap
+When a remote speaker JWT-refreshed (every 9 min via
+`connectReconnectingNestsSpeaker`), any listener with a vanilla
+`SubscribeHandle` open against that speaker's broadcast went silent.
+The listener's session stayed Connected; the listener's
+`MoqLiteSubscribeHandle.frames` `Channel.consumeAsFlow()` just sat
+open waiting for frames that never arrived. moq-lite Lite-03 has no
+explicit "publisher gone" message on the subscribe bidi (the relay
+keeps that bidi open across publisher cycles in case a fresh
+publisher takes over the suffix), so the announce stream's
+`Announce(Ended)` event is the only reliable signal.
 
-When a publisher (speaker) closes its session — e.g. mid-room JWT
-refresh via [`connectReconnectingNestsSpeaker`] — and a fresh
-publisher comes up moments later under the same broadcast suffix, an
-existing listener-side `SubscribeHandle` returned from
-[`NestsListener.subscribeSpeaker`] does NOT auto-reattach to the new
-publisher. Frames stop. The listener stays Connected; its session
-isn't dropped; but no audio reaches the consumer until the listener's
-own JWT refresh fires (every 540 s by default in
-`connectReconnectingNestsListener`) — and even then, only because
-the listener's session swap re-issues subs via the existing
-`reissuingSubscribe` pump.
+## What landed (commit `851045c6`)
 
-In production, every speaker JWT refresh kills audio for any listener
-that joined within the last 540 s, until that listener's own refresh
-catches up. For a typical Nest room with people joining at staggered
-times, this is a real every-9-min audio dropout.
+**Session layer** (`MoqLiteSession.kt`):
 
-## Why it happens
+- Lazy single shared announce-watch pump per session, opened on
+  first subscribe.
+- On `Announce(Ended)` for a broadcast suffix, close the matching
+  `ListenerSubscription`'s frames `Channel` and remove it from the
+  map.
 
-Three layers contribute:
+**Wrapper layer** (`ReconnectingNestsListener.kt`):
 
-1. **moq-lite session level.**
-   `MoqLiteSubscribeHandle.frames` is a `Channel.consumeAsFlow()`. The
-   channel is closed only by an explicit `unsubscribe()` call — the
-   moq-lite session does NOT close the channel when the publisher's
-   session disappears. The flow thus sits idle indefinitely.
+- Inner `while (currentCoroutineContext().isActive)` loop in
+  `reissuingSubscribe`. When the underlying frames flow completes
+  (signalled by the session layer), re-issue subscribe against the
+  same listener with a 100 ms backoff. moq-lite supports
+  subscribe-before-announce so the new subscribe attaches cleanly
+  when the next publisher comes up under the same suffix.
 
-2. **moq-lite Lite-03 protocol.** Per the gap plan
-   (`2026-04-26-moq-lite-gap.md`):
+**Verified against the real moq-rs relay** (host build, external
+mode): the new
+`NostrNestsReconnectingListenerInteropTest.subscribe_handle_survives_publisher_recycle`
+test passes — single SubscribeHandle keeps emitting frames across
+multiple speaker JWT-refresh cycles. Speaker reconnect tests still
+pass too.
 
-   > Disconnect is **not** an explicit Ended (see Cleanup). [...]
-   > Mid-broadcast publisher disconnect: relay either FINs/resets the
-   > announce bidi or emits `Announce::Ended` if graceful.
+## Open: session-swap test
 
-   `MoqLiteNestsSpeaker.close()` → `MoqLiteBroadcastHandle.close()` →
-   `publisher.close()` does emit `Announce(Ended)` on graceful close.
-   So in the JWT-refresh path the listener SHOULD see an Ended
-   announce — IF the announce flow is being collected.
+`NostrNestsReconnectingListenerInteropTest.reconnecting_wrapper_keeps_handle_alive_across_session_swap`
+still fails in interop runs (with both pre-existing and current
+code). Investigation revealed **two compounding issues**, only one
+of which my fix addresses:
 
-3. **wrapper level.** `ReconnectingNestsListener.reissuingSubscribe`
-   only re-issues on `activeListener` swaps — not on
-   announce-Ended. The pump's inner `handle.objects.collect { ... }`
-   blocks forever once the publisher disappears (per #1).
+1. **Orchestrator break-on-Closed** (one cause): the orchestrator's
+   `if (terminal is NestsListenerState.Closed) break` exits whenever
+   the inner listener goes Closed for ANY reason. This includes
+   the test's `firstListener.close()` call. Pre-fix the orchestrator
+   stopped → no reconnect → `opens=1`. Removing the break (orchestrator
+   loops on Closed too) gets `opens=2`, but exposes the second
+   issue below. Decision: **keep the break-on-Closed for now** —
+   user-driven `reconnecting.close()` already cancels the
+   orchestrator coroutine separately, and removing the break would
+   fight a deeper publisher issue without a corresponding fix.
 
-## Attempted fix (reverted)
+2. **Publisher single-group architecture** (the deeper cause):
+   `NestMoqLiteBroadcaster` only ever calls `publisher.send(opus)`
+   — never `startGroup()` / `endGroup()`. So the entire broadcast
+   is one giant moq-lite group. A subscriber that joins
+   mid-broadcast (the test's listener-2 case) gets nothing because
+   moq-lite's "from-latest" subscribe semantics give the next
+   group's frames; if the publisher is in the middle of a
+   never-ending group, the new subscriber waits indefinitely.
 
-Wrapper-layer announce-driven re-subscribe in
-`reissuingSubscribe`:
+   The listener-survives-publisher-recycle path doesn't hit this
+   because each speaker JWT cycle creates a fresh publisher session
+   with a fresh group — the listener-side resubscribe naturally
+   lands on a new group.
 
-```
-coroutineScope {
-    val collectJob = launch { handle.objects.collect { frames.emit(it) } }
-    val triggerJob = launch {
-        listener.announces()
-            .filter { it.pubkey == broadcastSuffix && !it.active }
-            .first()
-    }
-    select<Unit> {
-        collectJob.onJoin {}
-        triggerJob.onJoin {}
-    }
-    collectJob.cancel(); triggerJob.cancel()
-}
-// then unsubscribe + delay + loop into a fresh subscribe
-```
+   Fixing this properly would require periodic group rotation in
+   `NestMoqLiteBroadcaster` (e.g. one group per second, or per N
+   frames). That's a substantive audio-pipeline change with its
+   own concerns (jitter buffer interaction, listener seek
+   semantics) — out of scope for the listener-survival work.
 
-Plus pass `broadcastSuffix` through `subscribeSpeaker` /
-`subscribeCatalog`, and short-circuit `triggerJob` to
-`awaitCancellation()` when `announces()` throws
-`UnsupportedOperationException` (IETF reference path).
+The interop test's expectation — that closing the inner listener
+mid-stream forces a clean session swap with continuous frame flow
+— is unrealistic against the current publisher architecture. The
+test was passing pre-my-changes because the orchestrator broke on
+Closed (issue 1) BEFORE issue 2 could be observed; with the break
+in place, the test never gets to verify frame continuity, and
+fails earlier with `opens=1`. Either way, the test fails — it just
+fails for different reasons before vs. after issue 1 is fixed.
 
-**Result against the real relay:**
-`subscribe_handle_survives_publisher_recycle` test still failed.
-Relay log showed the listener QUIC session terminating ~4 ms after
-the publisher's "subscribe cancelled" — i.e. our client closed the
-QUIC connection mid-test. Suspect cause: the `listener.announces()`
-flow's `finally { handle.close() }` cleanup combined with the
-sub-`unsubscribe()` in our retry path is being interpreted at the
-moq-lite session layer as "session done", or the announce bidi's
-finish propagates session-level close. Did not pin down the exact
-chain in the time available.
+For follow-up:
 
-Reverted to keep the branch clean. Speaker-side
-`connectReconnectingNestsSpeaker` is unaffected and works
-correctly (verified in
-`NostrNestsReconnectingSpeakerInteropTest`).
+- Consider rotating moq-lite groups in `NestMoqLiteBroadcaster`
+  on a fixed cadence so mid-stream listener subscribes work.
+- Once rotation lands, consider removing the
+  orchestrator's `break-on-Closed` so that listener-side recycles
+  via `firstListener.close()` (or analogous transport-peer-close
+  paths) trigger a wrapper-level reconnect. Today, the only
+  documented path for the wrapper to spin up a fresh inner listener
+  is via the JWT refresh window or a Failed terminal state.
 
-## What a correct fix needs
+## Files relevant to follow-up
 
-Probably one of these, in order of safety:
-
-- **Session-layer fix.** Make `MoqLiteSubscribeHandle.frames`
-  complete cleanly when the publisher's session ends. Two paths
-  worth checking:
-  - The relay FINs the subscribe bidi when the publisher
-    disconnects → our `pumpUniStreams` / response reader detects
-    it → we close `frames`. Need to check the moq-lite session
-    code for whether it monitors the bidi for FIN after the
-    `SubscribeOk` arrives.
-  - The relay forwards `Announce(Ended)` on the announce bidi →
-    a session-internal hook closes any subscriptions matching the
-    suffix. This is the moq-rs relay's preferred path.
-
-- **Wrapper-level redesign that doesn't open new bidis on every
-  retry.** Make the announce flow a single shared subscription
-  per session, multiplexed across all
-  `subscribeSpeaker`/`subscribeCatalog` calls. The current attempt
-  opened a fresh announce bidi per re-subscribe attempt, which is
-  what (we think) destabilized the session.
-
-- **Coordinate listener and speaker JWT refresh windows so they're
-  always synchronous.** The listener's own session-swap pump
-  already re-issues subs correctly — if the listener happens to
-  swap at the same moment as the publisher, the gap is invisible.
-  Not a fix per se but a workaround that hides the gap when
-  refresh is the only recycle source.
-
-## Production impact today
-
-For a v1 Nest room with most calls under 9 minutes: no impact.
-
-For a long room (>9 minutes of any single speaker on stage):
-listener audio dropout for the duration of one listener-JWT-refresh
-window per speaker recycle — roughly N to 540 s, depending on when
-the listener joined relative to the speaker. Heard as "speaker
-suddenly went silent, then comes back".
-
-Reproducer interop test was written and confirmed the failure
-on the real relay; reverted along with the wrapper changes since
-shipping a known-failing interop test isn't useful. Saved here for
-the next person; the diff lived in commit
-[unrecorded — discard before push] in this session.
-
-## Files of interest for follow-up
-
-- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/moq/lite/MoqLiteSession.kt`
-  (lines ~180-214 for subscribe path, ~583+ for ListenerSubscription
-   bookkeeping)
-- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/MoqLiteNestsListener.kt`
-  (the Flow-mapping wrapper)
-- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/ReconnectingNestsListener.kt`
-  (`reissuingSubscribe`, the pump that needs the inner re-subscribe
-   trigger)
-- The host stack recipe used to reproduce, in the speaker-reconnect
-  PR description: build moq-relay from `~/.cache/.../nests/moq`,
-  use `--auth-key-dir <dir>` with a single `<kid>.jwk` extracted from
-  moq-auth's JWKS.
+- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/audio/NestMoqLiteBroadcaster.kt`
+  — where to add periodic `endGroup()` + new group on send.
+- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/ReconnectingNestsListener.kt:174`
+  — where the break-on-Closed lives.
+- `nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/interop/NostrNestsReconnectingListenerInteropTest.kt`
+  — `reconnecting_wrapper_keeps_handle_alive_across_session_swap`
+  is the failing-but-pre-existing test that captures both issues.
