@@ -56,7 +56,7 @@ navigationCompose = "2.9.8"
 okhttp = "5.3.2"
 runner = "1.7.0"
 secp256k1KmpJniAndroid = "0.23.0"
-schnorr256k1Kmp = "1.0.0"
+schnorr256k1Kmp = "1.0.3"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.17"
 spotless = "8.4.0"
@@ -178,7 +178,7 @@ okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines",
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
-schnorr256k1-kmp = { group = "com.vitorpamplona", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
+schnorr256k1-kmp = { group = "com.vitorpamplona.schnorr256k1", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
 stream-webrtc-android = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "streamWebrtcAndroid" }
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
