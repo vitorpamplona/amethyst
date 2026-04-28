@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicReference
@@ -263,9 +265,38 @@ private class ReconnectingHandle(
             )
         val liveHandleRef = AtomicReference<SubscribeHandle?>(null)
 
-        // Re-subscribe pump: every time activeListener changes, drop
-        // the prior subscription (collectLatest cancels the inner
-        // body) and open a new one against the fresh session.
+        // Re-subscribe pump. Two re-issue triggers, layered:
+        //
+        //   1. Listener session swap (outer collectLatest) — fires
+        //      when the orchestrator opens a fresh listener after
+        //      the 540 s JWT-refresh window or a transport-loss
+        //      reconnect. collectLatest cancels the prior pump
+        //      iteration so the next iteration runs against the
+        //      new listener.
+        //
+        //   2. Publisher session swap (inner while loop) — fires
+        //      when the underlying SubscribeHandle.objects flow
+        //      completes mid-stream because the *publisher*
+        //      cycled. The moq-lite session layer detects publisher
+        //      disconnect via the announce stream's Ended event
+        //      and closes the underlying frames channel; that
+        //      naturally ends `handle.objects.collect` here. We
+        //      then loop into a fresh subscribe — moq-lite supports
+        //      subscribe-before-announce, so the new subscribe
+        //      attaches cleanly to whichever publisher serves the
+        //      suffix next, including one that comes up AFTER us.
+        //
+        // Without the inner loop, a remote speaker's JWT refresh
+        // (every 9 min on the speaker side via
+        // [connectReconnectingNestsSpeaker]) would silently kill
+        // every listener's audio — the listener's own JWT refresh
+        // fires on a different cadence and can't be relied on to
+        // coincide.
+        //
+        // Bounded by:
+        //   - listener swap → outer collectLatest cancels us
+        //   - unsubscribeAction → pumpJob.cancel()
+        //   - opener-throws → break + wait for next swap
         val pumpJob =
             scope.launch {
                 activeListener.collectLatest { listener ->
@@ -277,14 +308,23 @@ private class ReconnectingHandle(
                                 state is NestsListenerState.Failed
                         }
                     if (terminalOrConnected !is NestsListenerState.Connected) return@collectLatest
-                    val handle =
-                        runCatching { opener(listener) }
-                            .getOrNull() ?: return@collectLatest
-                    liveHandleRef.set(handle)
-                    try {
-                        handle.objects.collect { frames.emit(it) }
-                    } finally {
-                        if (liveHandleRef.get() === handle) liveHandleRef.set(null)
+
+                    while (currentCoroutineContext().isActive) {
+                        val handle =
+                            runCatching { opener(listener) }
+                                .getOrNull() ?: break
+                        liveHandleRef.set(handle)
+                        try {
+                            handle.objects.collect { frames.emit(it) }
+                        } finally {
+                            if (liveHandleRef.get() === handle) liveHandleRef.set(null)
+                        }
+                        // Brief backoff so a permanently-gone
+                        // publisher doesn't tight-loop the relay
+                        // with re-subscribes. 100 ms stays well
+                        // under the SUBSCRIBE_BUFFER's 1.3 s of
+                        // audio headroom.
+                        delay(RESUBSCRIBE_BACKOFF_MS)
                     }
                 }
             }
@@ -317,6 +357,12 @@ private class ReconnectingHandle(
         // dropping speech, short enough that a slow consumer doesn't
         // grow the queue unbounded.
         private const val SUBSCRIBE_BUFFER = 64
+
+        // Inner-pump backoff between publisher-cycle re-subscribes.
+        // Short enough to stay well under the SUBSCRIBE_BUFFER's
+        // ~1.3 s of audio headroom; long enough that a permanently-
+        // gone publisher doesn't spin the relay with re-subscribes.
+        private const val RESUBSCRIBE_BACKOFF_MS = 100L
 
         private val SYNTH_OK =
             SubscribeOk(

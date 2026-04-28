@@ -24,12 +24,14 @@ import com.vitorpamplona.nestsclient.NestsListener
 import com.vitorpamplona.nestsclient.NestsListenerState
 import com.vitorpamplona.nestsclient.NestsReconnectPolicy
 import com.vitorpamplona.nestsclient.NestsRoomConfig
+import com.vitorpamplona.nestsclient.NestsSpeakerState
 import com.vitorpamplona.nestsclient.OkHttpNestsClient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.connectNestsListener
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
 import com.vitorpamplona.nestsclient.connectReconnectingNestsListener
+import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -408,4 +410,176 @@ class NostrNestsReconnectingListenerInteropTest {
             harnessOrNull = null
         }
     }
+
+    /**
+     * Captures the listener-survives-publisher-recycle invariant —
+     * the gap discovered while validating
+     * [connectReconnectingNestsSpeaker]. The setup:
+     *
+     *   - SUT (listener): a [connectReconnectingNestsListener]-backed
+     *     handle, vanilla refresh disabled so the listener's own
+     *     session never recycles during the test.
+     *   - Driver (speaker): a [connectReconnectingNestsSpeaker] with
+     *     a small `tokenRefreshAfterMs`, forcing the publisher's
+     *     session to recycle mid-stream.
+     *
+     * The single [SubscribeHandle] returned from
+     * `subscribeSpeaker(pubkey)` MUST keep emitting frames after the
+     * publisher cycles. The session-layer death-watch in
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession.subscribe]
+     * detects the publisher's bidi-FIN, closes the frames channel,
+     * the wrapper-level `reissuingSubscribe` pump's collect ends
+     * naturally, and the pump re-issues a fresh subscribe via the
+     * outer collectLatest's loop semantics.
+     *
+     * Skipped by default — set `-DnestsInterop=true` to enable.
+     */
+    @Test
+    fun subscribe_handle_survives_publisher_recycle() =
+        runBlocking {
+            NostrNestsHarness.assumeNestsInterop()
+            val harness = harnessOrNull ?: return@runBlocking
+
+            val signer = NostrSignerInternal(KeyPair())
+            val pubkey = signer.pubKey
+            val room =
+                NestsRoomConfig(
+                    authBaseUrl = harness.authBaseUrl,
+                    endpoint = harness.moqEndpoint,
+                    hostPubkey = pubkey,
+                    roomId = "lst-pub-cycle-${System.currentTimeMillis()}",
+                )
+
+            val httpClient = OkHttpNestsClient()
+            val transport =
+                QuicWebTransportFactory(
+                    certificateValidator = PermissiveCertificateValidator(),
+                )
+            val supervisor = SupervisorJob()
+            val pumpScope = CoroutineScope(supervisor + Dispatchers.IO)
+
+            val capturesLock = Any()
+            val captures = mutableListOf<DriverCapture>()
+            val captureFactory: () -> AudioCapture = {
+                val c = DriverCapture()
+                synchronized(capturesLock) { captures += c }
+                c
+            }
+            val encoder = StubEncoder(prefix = "LSP-".encodeToByteArray())
+
+            val speakerOpenCount = AtomicInteger(0)
+
+            val scope = "listener-survives-publisher-recycle"
+            try {
+                val speaker =
+                    InteropDebug.stepSuspending(scope, "connectReconnectingNestsSpeaker (refresh=${PUBCYCLE_REFRESH_MS}ms)") {
+                        connectReconnectingNestsSpeaker(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = signer,
+                            speakerPubkeyHex = pubkey,
+                            captureFactory = captureFactory,
+                            encoderFactory = { encoder },
+                            policy = NestsReconnectPolicy(initialDelayMs = 250L),
+                            tokenRefreshAfterMs = PUBCYCLE_REFRESH_MS,
+                            connector = {
+                                speakerOpenCount.incrementAndGet()
+                                connectNestsSpeaker(
+                                    httpClient = httpClient,
+                                    transport = transport,
+                                    scope = pumpScope,
+                                    room = room,
+                                    signer = signer,
+                                    speakerPubkeyHex = pubkey,
+                                    captureFactory = captureFactory,
+                                    encoderFactory = { encoder },
+                                )
+                            },
+                        )
+                    }
+                val broadcast = speaker.startBroadcasting()
+                withTimeoutOrNull(BROADCAST_READY_MS) {
+                    speaker.state.first { it is NestsSpeakerState.Broadcasting }
+                } ?: fail("[$scope] speaker never reached initial Broadcasting")
+
+                // SUT: reconnecting listener with refresh disabled.
+                val listener =
+                    InteropDebug.stepSuspending(scope, "connectReconnectingNestsListener (refresh disabled)") {
+                        connectReconnectingNestsListener(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = signer,
+                            policy = NestsReconnectPolicy(initialDelayMs = 250L),
+                            tokenRefreshAfterMs = 0L,
+                        )
+                    }
+                withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
+                    listener.state.first { it is NestsListenerState.Connected }
+                } ?: fail("[$scope] listener never reached Connected")
+
+                // The single subscription that MUST survive every
+                // publisher recycle.
+                val subscription = listener.subscribeSpeaker(pubkey)
+                val received =
+                    async(pumpScope.coroutineContext) {
+                        withTimeoutOrNull(LISTENER_SURVIVAL_TIMEOUT_MS) {
+                            subscription.objects.take(N_FRAMES_CYCLE).toList()
+                        }
+                    }
+                kotlinx.coroutines.delay(SUBSCRIBE_SETTLE_MS)
+
+                for (i in 0 until N_FRAMES_CYCLE) {
+                    val current =
+                        synchronized(capturesLock) { captures.lastOrNull() }
+                            ?: error("captureFactory was never invoked")
+                    current.push(shortArrayOf(i.toShort()))
+                    kotlinx.coroutines.delay(CYCLE_FRAME_SPACING_MS)
+                    if (i == N_FRAMES_CYCLE / 2) {
+                        InteropDebug.checkpoint(scope, "midpoint — waiting for speaker recycle")
+                        withTimeoutOrNull(SWAP_TIMEOUT_MS) {
+                            while (speakerOpenCount.get() < 2) kotlinx.coroutines.delay(50)
+                            speaker.state.first { it is NestsSpeakerState.Broadcasting }
+                        } ?: fail("[$scope] speaker did not recycle — openCount=${speakerOpenCount.get()}")
+                        kotlinx.coroutines.delay(POST_RECYCLE_SETTLE_MS)
+                    }
+                }
+
+                val datagrams = received.await()
+                if (datagrams == null) {
+                    fail(
+                        "[$scope] listener subscription went silent across publisher recycle — " +
+                            "speakerOpenCount=${speakerOpenCount.get()}, " +
+                            "listener=${InteropDebug.describe(listener.state.value)}",
+                    )
+                }
+                assertEquals(N_FRAMES_CYCLE, datagrams.size, "all frames must arrive on the SAME subscribe handle across the publisher recycle")
+                val payloads = datagrams.map { it.payload.last().toInt() and 0xFF }.toSet()
+                assertEquals((0 until N_FRAMES_CYCLE).toSet(), payloads, "all frames pre- AND post-recycle must round-trip")
+                assertTrue(
+                    speakerOpenCount.get() >= 2,
+                    "expected ≥2 underlying speaker sessions across the burst (one before, one after recycle); got ${speakerOpenCount.get()}",
+                )
+
+                runCatching { subscription.unsubscribe() }
+                runCatching { listener.close() }
+                runCatching { broadcast.close() }
+                runCatching { speaker.close() }
+            } finally {
+                synchronized(capturesLock) { captures.forEach { runCatching { it.stop() } } }
+                supervisor.cancelAndJoin()
+            }
+            Unit
+        }
 }
+
+private const val PUBCYCLE_REFRESH_MS = 4_000L
+private const val BROADCAST_READY_MS = 15_000L
+private const val LISTENER_SURVIVAL_TIMEOUT_MS = 60_000L
+private const val POST_RECYCLE_SETTLE_MS = 1_500L
+private const val CYCLE_FRAME_SPACING_MS = 80L
+private const val N_FRAMES_CYCLE = 10
+private const val SWAP_TIMEOUT_MS = 60_000L

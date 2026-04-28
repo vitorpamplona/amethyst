@@ -77,6 +77,17 @@ class MoqLiteSession internal constructor(
     /** Lazily-launched relay→us inbound bidi pump; only runs while a publisher is active. */
     private var bidiPump: Job? = null
 
+    /**
+     * Single shared announce-watch pump that runs while we have any
+     * listener-side subscription. Closes the frames channel of any
+     * subscription whose broadcast suffix goes Ended on the relay's
+     * announce stream — see [pumpAnnounceWatch] for why this is the
+     * only reliable signal of publisher disconnect under moq-lite
+     * Lite-03. Lazily launched on first subscribe; lives until the
+     * session scope is cancelled.
+     */
+    private var announceWatchJob: Job? = null
+
     /** Single active publisher per session (moq-lite doesn't model multi-broadcast publishers). */
     private var activePublisher: PublisherStateImpl? = null
 
@@ -173,6 +184,27 @@ class MoqLiteSession internal constructor(
         bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
         bidi.write(MoqLiteCodec.encodeSubscribe(request))
 
+        // Single long-running collector pump for the bidi's response
+        // side. Reads the SubscribeResponse, then keeps collecting
+        // until the peer FINs (or scope is cancelled, or
+        // handle.unsubscribe() FINs our side and the relay echoes).
+        // The flow completion IS the moq-lite-03 signal that the
+        // publisher has disconnected mid-broadcast — Lite-03 has no
+        // explicit "publisher gone" message; bidi close is it.
+        // Without this watch, the frames Channel below would never
+        // close on remote disconnect, and any consumer collecting
+        // from the wrapper-level [MoqLiteSubscribeHandle.frames]
+        // flow would sit silent indefinitely after a publisher
+        // cycle even though the relay is happy to serve a fresh
+        // subscribe under the same broadcast suffix.
+        //
+        // Why a single pump (vs separate response read + death
+        // watch): the underlying QUIC stream's `incoming` is
+        // backed by `Channel<ByteArray>.consumeAsFlow()` — which
+        // CANCELS the channel when the first collect ends. A second
+        // collect on a fresh `bidi.incoming()` Flow would see an
+        // already-cancelled channel and fire prematurely. Keeping
+        // one collect alive sidesteps that entirely.
         // moq-lite's subscribe-response is a single size-prefixed
         // message on the response side of the bidi. Read incoming
         // chunks into a buffer until the buffer holds a full payload,
@@ -202,6 +234,29 @@ class MoqLiteSession internal constructor(
                 state.withLock {
                     subscriptionsBySubscribeId[id] = sub
                     if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
+                    // Lazy-launch the publisher-disconnect watcher
+                    // — one shared announce bidi per session whose
+                    // sole job is to close the frames channel on any
+                    // ListenerSubscription whose broadcast path goes
+                    // Ended. moq-lite Lite-03 has no explicit
+                    // "publisher gone" message on the subscribe
+                    // bidi (the relay keeps that bidi open across
+                    // publisher cycles in case a fresh publisher
+                    // takes over the suffix), so the announce
+                    // stream IS the only signal.
+                    //
+                    // Without this, a wrapper-layer consumer
+                    // collecting from [MoqLiteSubscribeHandle.frames]
+                    // would sit silent indefinitely after a
+                    // publisher cycle even though the relay is happy
+                    // to serve a fresh subscribe under the same
+                    // suffix. The wrapper-level
+                    // [com.vitorpamplona.nestsclient.ReconnectingNestsListener]
+                    // pump's natural collect-completion path then
+                    // re-issues the subscribe.
+                    if (announceWatchJob == null) {
+                        announceWatchJob = scope.launch { pumpAnnounceWatch() }
+                    }
                 }
                 return MoqLiteSubscribeHandle(
                     id = id,
@@ -210,6 +265,71 @@ class MoqLiteSession internal constructor(
                     unsubscribeAction = { unsubscribe(id) },
                 )
             }
+        }
+    }
+
+    /**
+     * Single shared announce-watch pump for ALL subscriptions on
+     * this session. Opens one announce bidi (prefix="") on first
+     * subscribe, then for each [MoqLiteAnnounceStatus.Ended] update
+     * iterates the subscription map and closes the frames channel of
+     * any subscription whose `broadcast` matches the announce
+     * suffix. The closed channel ends the consumer-facing
+     * `frames.consumeAsFlow()` flow naturally — same shape as a
+     * user-driven `handle.unsubscribe()` from the consumer's POV —
+     * which lets the wrapper's re-issuance pump drive a fresh
+     * subscribe against the same broadcast path. moq-lite supports
+     * subscribe-before-announce, so a subscribe issued during the
+     * gap (between Ended and the next Active under the same suffix)
+     * attaches cleanly when the new publisher comes up.
+     *
+     * This pump survives announce-bidi errors via best-effort
+     * silence — the session itself recovers via its own reconnect
+     * path. Cancelled when [scope] is cancelled (session close).
+     */
+    private suspend fun pumpAnnounceWatch() {
+        val handle =
+            try {
+                announce(prefix = "")
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                // Couldn't open the announce bidi — best effort,
+                // bail. Subscriptions still work; we just lose
+                // automatic cycle detection.
+                return
+            }
+        try {
+            handle.updates.collect { update ->
+                if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
+                val targets =
+                    state.withLock {
+                        subscriptionsBySubscribeId.values
+                            .filter { it.request.broadcast == update.suffix }
+                            .toList()
+                    }
+                for (sub in targets) {
+                    // Just close the frames channel — the
+                    // wrapper-level collect of `frames.consumeAsFlow()`
+                    // ends naturally and the wrapper pump re-issues.
+                    // Don't fire `unsubscribe(id)` here: that'd FIN
+                    // OUR side of the (still-alive) subscribe bidi,
+                    // and the wrapper's re-issue would have to open
+                    // a fresh bidi anyway. Keeping the subscribe
+                    // bidi open lets a future subscribe-before-
+                    // announce land cleanly.
+                    sub.frames.close()
+                    state.withLock { subscriptionsBySubscribeId.remove(sub.id) }
+                    runCatching { sub.bidi.finish() }
+                }
+            }
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (_: Throwable) {
+            // Announce bidi died — same best-effort fallback.
+        } finally {
+            runCatching { handle.close() }
+            state.withLock { announceWatchJob = null }
         }
     }
 
