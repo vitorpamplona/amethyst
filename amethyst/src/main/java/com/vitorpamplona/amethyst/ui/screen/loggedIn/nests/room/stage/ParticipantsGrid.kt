@@ -34,6 +34,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -57,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -137,6 +139,7 @@ internal fun StageGrid(
     onLongPressParticipant: ((String) -> Unit)? = null,
     myPubkey: String? = null,
     onTapSelf: (() -> Unit)? = null,
+    listenerCount: Int = 0,
 ) {
     // Float currently-speaking members to the top so the listener can
     // see who they're hearing without scrolling. sortedBy is stable in
@@ -165,12 +168,29 @@ internal fun StageGrid(
                         vertical = STAGE_CARD_PADDING_VERTICAL,
                     ),
         ) {
-            Text(
-                text = stringRes(R.string.nest_stage),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringRes(R.string.nest_stage),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text =
+                        pluralStringResource(
+                            R.plurals.nest_listener_count,
+                            listenerCount,
+                            listenerCount,
+                        ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                LiveChip()
+            }
             if (members.isEmpty()) {
                 EmptyStageHint()
                 return@Column
@@ -200,6 +220,21 @@ internal fun StageGrid(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LiveChip() {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    ) {
+        Text(
+            text = stringRes(R.string.nest_live_chip),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
     }
 }
 
