@@ -92,7 +92,17 @@ actual class UdpSocket private constructor(
             port: Int,
         ): UdpSocket =
             withContext(Dispatchers.IO) {
-                val address = InetAddress.getByName(host)
+                // Prefer IPv4 over IPv6 when both are present. RFC 6724 / the JDK
+                // default put AAAA first, but on the Android emulator and many
+                // dual-stack networks the IPv6 path silently drops packets, so a
+                // QUIC handshake against the AAAA times out indefinitely while
+                // the A would succeed. Fall back to whatever the resolver gave
+                // when no IPv4 entry exists (genuinely v6-only host).
+                val all = InetAddress.getAllByName(host)
+                val address =
+                    all.firstOrNull { it is java.net.Inet4Address }
+                        ?: all.firstOrNull()
+                        ?: throw java.net.UnknownHostException(host)
                 val remote = InetSocketAddress(address, port)
                 val channel = DatagramChannel.open()
                 channel.configureBlocking(true)
