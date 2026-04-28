@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -405,3 +405,11 @@ private fun EndCluster(
         }
     }
 }
+
+@Composable
+private fun connectingLabel(connection: ConnectionUiState.Connecting): String =
+    when (connection.step) {
+        ConnectionUiState.Step.ResolvingRoom -> stringRes(R.string.nest_connecting_resolving)
+        ConnectionUiState.Step.OpeningTransport -> stringRes(R.string.nest_connecting_transport)
+        ConnectionUiState.Step.MoqHandshake -> stringRes(R.string.nest_connecting_handshake)
+    }

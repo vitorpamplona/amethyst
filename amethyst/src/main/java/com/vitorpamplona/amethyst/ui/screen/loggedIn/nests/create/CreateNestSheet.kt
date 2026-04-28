@@ -55,8 +55,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 

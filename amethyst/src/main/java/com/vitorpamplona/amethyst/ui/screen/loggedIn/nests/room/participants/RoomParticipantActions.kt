@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants
 
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -37,7 +37,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
  *
  * Extracted out of the screen Composable so they can be unit-tested
  * without an AccountViewModel / signer (the sign+broadcast path is
- * the only side effect, mirroring [EditNestViewModel.buildEditTemplate]).
+ * the only side effect, mirroring
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestViewModel.buildEditTemplate]).
  *
  * Risk-mitigation: each builder reads ALL participants from
  * [original] and rebuilds the list with one row mutated; never

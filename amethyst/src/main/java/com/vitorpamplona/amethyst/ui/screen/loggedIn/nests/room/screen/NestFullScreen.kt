@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,6 +67,14 @@ import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestChatPanel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestSheet
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants.ParticipantHostActionsSheet
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPickerSheet
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.AudienceGrid
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.HandRaiseQueueSection
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.StageGrid
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
@@ -76,7 +84,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTa
 import kotlinx.coroutines.launch
 
 /**
- * Full-screen layout for [NestActivity]. Vertically split into:
+ * Full-screen layout for [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity]. Vertically split into:
  *
  *   1. TopAppBar — room title + overflow menu (Share, host's Edit).
  *   2. Header strip — LIVE chip, listener count, optional 1-line summary.

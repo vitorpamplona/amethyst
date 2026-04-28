@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity
 
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
@@ -43,9 +43,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Standalone activity that owns the lifetime of an audio-room session. The
- * lobby ([NestJoinCard]) launches this activity when the user taps
- * "Join audio room"; finishing it tears down the MoQ session, the
- * broadcaster (if any), and the foreground notification.
+ * lobby ([com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestJoinCard])
+ * launches this activity when the user taps "Join audio room"; finishing it
+ * tears down the MoQ session, the broadcaster (if any), and the foreground
+ * notification.
  *
  * Picture-in-Picture: pressing Home or the Recents gesture while connected
  * collapses the activity into a small floating window so the user can

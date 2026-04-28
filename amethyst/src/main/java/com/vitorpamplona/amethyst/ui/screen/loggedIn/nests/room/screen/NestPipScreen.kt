@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,7 +46,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTa
  * Compact PIP layout. Shows up to four "on stage" speakers with a ring on
  * whoever is actively delivering audio, plus the room title. The mute /
  * leave actions live in the system PIP overlay as RemoteActions — see
- * [NestActivity.buildPipActions].
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity.buildPipActions].
  */
 @Composable
 internal fun NestPipScreen(

@@ -1570,7 +1570,7 @@ class AccountViewModel(
         callManager.dispose()
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
             .clear()
-        com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.NestBridge
+        com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
             .clear()
         feedStates.destroy()
         super.onCleared()
