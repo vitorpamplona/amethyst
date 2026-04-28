@@ -200,25 +200,6 @@ internal fun NestFullScreen(
                 },
             )
         },
-        bottomBar = {
-            NestActionBar(
-                viewModel = viewModel,
-                ui = ui,
-                isOnStage = isOnStageMe,
-                canBroadcast = viewModel.canBroadcast,
-                speakerPubkeyHex = myPubkey,
-                handRaised = handRaised,
-                onHandRaisedChange = onHandRaisedChange,
-                onShowReactionPicker = { showReactionPicker = true },
-                onLeave = {
-                    if (isHost) {
-                        showHostLeaveConfirm = true
-                    } else {
-                        onLeave()
-                    }
-                },
-            )
-        },
     ) { padding ->
         Column(
             modifier =
@@ -249,6 +230,23 @@ internal fun NestFullScreen(
                 onTapSelf = onTapSelf,
                 listenerCount = presences.size,
                 modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            NestActionBar(
+                viewModel = viewModel,
+                ui = ui,
+                isOnStage = isOnStageMe,
+                canBroadcast = viewModel.canBroadcast,
+                speakerPubkeyHex = myPubkey,
+                handRaised = handRaised,
+                onHandRaisedChange = onHandRaisedChange,
+                onShowReactionPicker = { showReactionPicker = true },
+                onLeave = {
+                    if (isHost) {
+                        showHostLeaveConfirm = true
+                    } else {
+                        onLeave()
+                    }
+                },
             )
             NestTabRow(
                 tabs = tabs,

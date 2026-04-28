@@ -29,14 +29,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
@@ -94,7 +91,6 @@ internal fun NestActionBar(
     onShowReactionPicker: () -> Unit,
     onLeave: () -> Unit,
 ) {
-    val insets = BottomAppBarDefaults.windowInsets
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
@@ -104,9 +100,7 @@ internal fun NestActionBar(
         Column(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(insets)
-                    .consumeWindowInsets(insets),
+                    .fillMaxWidth(),
         ) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             ActionBarStatusStrip(ui = ui)
