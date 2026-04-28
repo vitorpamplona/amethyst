@@ -460,7 +460,7 @@
     <string name="live_streams">直播</string>
     <string name="nests">音频室</string>
     <string name="meeting_room_in_space">在 %1$s</string>
-    <string name="meeting_room_in_space_unknown">一个鸟巢</string>
+    <string name="meeting_room_in_space_unknown">一个语音聊天室</string>
     <string name="nest_stage">阶段</string>
     <string name="nest_audience">观众</string>
     <string name="nest_raise_hand">举手</string>
@@ -516,6 +516,11 @@
     <plurals name="nest_listener_count">
         <item quantity="other">%1$d 位听众</item>
     </plurals>
+    <string name="nest_live_chip">直播</string>
+    <string name="nest_tab_chat">聊天</string>
+    <string name="nest_tab_audience">观众</string>
+    <string name="nest_tab_hands">手</string>
+    <string name="nest_audience_empty">尚无观众。</string>
     <string name="nest_chat_send">发送</string>
     <string name="nest_chat_placeholder">说些什么…</string>
     <string name="nest_chat_empty">还没有消息。成为第一个说话的。</string>
@@ -1082,6 +1087,7 @@
     <string name="live_stream_offline_tag">离线</string>
     <string name="live_stream_ended_tag">已结束</string>
     <string name="live_stream_planned_tag">预定</string>
+    <string name="live_stream_private_tag">私密</string>
     <string name="live_stream_is_offline">直播处于离线状态</string>
     <string name="live_stream_has_ended">直播已结束</string>
     <string name="meeting_space_open_tag">开放</string>
