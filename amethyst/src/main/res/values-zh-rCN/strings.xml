@@ -489,14 +489,14 @@
     <string name="nest_leave_stage">离开舞台</string>
     <string name="nest_mic_mute">麦克风静音</string>
     <string name="nest_mic_unmute">取消麦克风静音</string>
-    <string name="nest_broadcast_connecting">正在开始广播…</string>
+    <string name="nest_broadcast_connecting">上线中…</string>
     <string name="nest_broadcasting">直播中</string>
     <string name="nest_broadcast_failed">广播失败: %1$s</string>
     <string name="nest_record_permission_required">在这个房间进行交谈需要麦克风权限。</string>
     <string name="nest_open_settings">打开设置</string>
-    <string name="nest_notification_channel">音频室</string>
+    <string name="nest_notification_channel">语音聊天房</string>
     <string name="nest_notification_channel_description">当聊天室开放时保持音频播放。</string>
-    <string name="nest_notification_listening">已连接音频聊天室</string>
+    <string name="nest_notification_listening">语音聊天室已连接</string>
     <string name="nest_notification_broadcasting">语音聊天室 — 在线</string>
     <string name="nest_notification_text">轻触返回。</string>
     <string name="nest_notification_stop">停止</string>
