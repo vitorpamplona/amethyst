@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.AutoConnectAndTrackSpeakers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveOnKick
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveOnRoomClosed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestForegroundServiceLifecycle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestPresencePublisher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestRoomEventCollectors
@@ -159,6 +160,11 @@ private fun NestActivityBody(
 
     // Kick → leave the activity.
     LeaveOnKick(viewModel, onLeave)
+
+    // Host ended the room (status: CLOSED) → leave the activity.
+    // Same teardown path as kick — VM.onCleared() releases the
+    // listener + speaker when the activity finishes.
+    LeaveOnRoomClosed(event, onLeave)
 
     val ui by viewModel.uiState.collectAsState()
 
