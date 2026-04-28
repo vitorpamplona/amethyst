@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 
 /**
@@ -35,8 +36,10 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
  * The system-navigation-bar inset is already handled by the surrounding Scaffold, so
  * only the bar's content height needs to be reserved.
  */
+val FABPaddingFromBottom = 30.dp
+
 @Composable
-fun Modifier.fabBottomBarPadding(nav: INav): Modifier = if (nav.canPop()) padding(bottom = AppBottomBarHeight) else this
+fun Modifier.fabBottomBarPadding(nav: INav): Modifier = if (nav.canPop()) padding(bottom = FABPaddingFromBottom) else this
 
 /**
  * Convenience wrapper that places [content] in a [Box] with [fabBottomBarPadding] applied.
