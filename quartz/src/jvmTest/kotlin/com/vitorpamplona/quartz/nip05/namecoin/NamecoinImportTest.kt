@@ -508,6 +508,139 @@ class NamecoinImportTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
+    // ── Integration: BitRelayResolver populates `ip` cache for the Dns hook ──
+
+    @Test
+    fun `BitRelayResolver caches IP from the walked node so cachedIpFor returns it`() =
+        runTest {
+            // The .bit Dns interceptor reads cachedIpFor() to map a .bit
+            // host to a real socket address. This pin verifies the cache
+            // is actually populated when the rewriter resolves a host
+            // whose Namecoin record carries an `ip` field at the walked
+            // node (the common shape: `map.relay.ip`).
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {"map":{"relay":{
+                            "ip":"23.158.233.10",
+                            "relay":"wss://relay.testls.bit/",
+                            "tls":[[2,1,1,"H"]]
+                        }}}
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newRelayResolver(client)
+            val outcome = resolver.resolveRaw("wss://relay.testls.bit")
+            assertTrue("got $outcome", outcome is BitRelayResolver.Resolution.Resolved)
+
+            val ips = resolver.cachedIpFor("relay.testls.bit")
+            assertNotNull("cache miss — expected IPs", ips)
+            assertEquals(listOf("23.158.233.10"), ips)
+        }
+
+    @Test
+    fun `BitRelayResolver returns empty list when ip field is absent`() =
+        runTest {
+            // Publishers may choose not to ship `ip`. Cache should expose
+            // an empty list, NOT null — null means "host not yet
+            // resolved". The Dns adapter falls through to system DNS on
+            // null, but on an empty list it knows the publisher made a
+            // deliberate choice.
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """{"map":{"relay":{"relay":"wss://relay.testls.bit/"}}}""",
+                    )
+                }
+            val resolver = newRelayResolver(client)
+            resolver.resolveRaw("wss://relay.testls.bit")
+
+            val ips = resolver.cachedIpFor("relay.testls.bit")
+            assertNotNull("cache miss", ips)
+            assertTrue("expected empty list, got $ips", ips!!.isEmpty())
+        }
+
+    @Test
+    fun `cachedIpFor returns null before any resolve has happened`() =
+        runTest {
+            val resolver = newRelayResolver(FakeElectrumXClient())
+            assertNull(resolver.cachedIpFor("never-resolved.bit"))
+        }
+
+    @Test
+    fun `BitRelayResolver respects ip array form (multiple addresses)`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register(
+                        "d/testls",
+                        """
+                        {"map":{"relay":{
+                            "ip":["23.158.233.10","203.0.113.5"],
+                            "relay":"wss://relay.testls.bit/"
+                        }}}
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newRelayResolver(client)
+            resolver.resolveRaw("wss://relay.testls.bit")
+            assertEquals(
+                listOf("23.158.233.10", "203.0.113.5"),
+                resolver.cachedIpFor("relay.testls.bit"),
+            )
+        }
+
+    @Test
+    fun `BitRelayResolver follows import to find ip in shared boilerplate`() =
+        runTest {
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/testls", """{"import":"dd/testls-relay"}""")
+                    register(
+                        "dd/testls-relay",
+                        """
+                        {"map":{"relay":{
+                            "ip":"23.158.233.10",
+                            "relay":"wss://relay.testls.bit/"
+                        }}}
+                        """.trimIndent(),
+                    )
+                }
+            val resolver = newRelayResolver(client)
+            resolver.resolveRaw("wss://relay.testls.bit")
+            assertEquals(
+                listOf("23.158.233.10"),
+                resolver.cachedIpFor("relay.testls.bit"),
+            )
+        }
+
+    @Test
+    fun `parseIpAddresses rejects malformed ipv4 strings`() {
+        // Hostnames, IPv6, leading-zero octets, out-of-range octets are
+        // all dropped silently. The relay path doesn't need IPv6 support
+        // yet (that's a separate change wired through OkHttp's address
+        // family handling), and a permissive parser would accept things
+        // like "01.02.03.04" which different libraries interpret
+        // differently (octal vs decimal). Conservative is correct.
+        val raw =
+            """
+            {"map":{"relay":{"ip":[
+                "23.158.233.10",
+                "not-an-ip",
+                "256.256.256.256",
+                "01.02.03.04",
+                "::1",
+                "",
+                "203.0.113.5"
+            ]}}}
+            """.trimIndent()
+        val ips = NamecoinNameResolver.parseIpAddresses(raw, listOf("relay"))
+        assertEquals(listOf("23.158.233.10", "203.0.113.5"), ips)
+    }
+
     private fun parse(s: String): JsonObject = json.parseToJsonElement(s).jsonObject
 
     private fun newRelayResolver(client: IElectrumXClient): BitRelayResolver =
