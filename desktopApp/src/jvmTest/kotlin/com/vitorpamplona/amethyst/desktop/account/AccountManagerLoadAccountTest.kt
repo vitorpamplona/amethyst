@@ -85,7 +85,7 @@ class AccountManagerLoadAccountTest {
         }
 
     @Test
-    fun loadSavedAccountInternalNoPrivkeyReturnsFailure() =
+    fun loadSavedAccountInternalNoPrivkeyFallsBackToReadOnly() =
         runTest {
             val keyPair = KeyPair()
             val npub = keyPair.pubKey.toNpub()
@@ -94,7 +94,9 @@ class AccountManagerLoadAccountTest {
             coEvery { storage.getPrivateKey(npub) } returns null
 
             val result = manager.loadSavedAccount()
-            assertTrue(result.isFailure)
+            assertTrue(result.isSuccess)
+            val state = result.getOrThrow()
+            assertTrue(state.isReadOnly)
         }
 
     @Test

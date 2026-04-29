@@ -88,18 +88,21 @@ fun AddAccountDialog(
                 ) {
                     LoginCard(
                         onLogin = { keyInput ->
-                            // Save current account before switching
+                            // All steps must be sequential — no fire-and-forget
                             scope.launch {
                                 withContext(Dispatchers.IO) {
                                     accountManager.ensureCurrentAccountInStorage()
                                 }
-                            }
-                            accountManager.loginWithKey(keyInput).map {
-                                scope.launch {
-                                    withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
+                                val result = accountManager.loginWithKey(keyInput)
+                                if (result.isSuccess) {
+                                    withContext(Dispatchers.IO) {
+                                        accountManager.saveCurrentAccount()
+                                    }
                                     onAccountAdded()
                                 }
                             }
+                            // Return success to dismiss any error in LoginCard
+                            Result.success(Unit)
                         },
                         onGenerateNew = {
                             scope.launch {
@@ -107,29 +110,28 @@ fun AddAccountDialog(
                                     accountManager.ensureCurrentAccountInStorage()
                                 }
                                 accountManager.generateNewAccount()
-                                withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
+                                withContext(Dispatchers.IO) {
+                                    accountManager.saveCurrentAccount()
+                                }
                                 onAccountAdded()
                             }
                         },
                         onLoginBunker = { bunkerUri ->
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    accountManager.ensureCurrentAccountInStorage()
-                                }
-                            }
-                            accountManager.loginWithBunker(bunkerUri).map {
+                            // ensureCurrentAccountInStorage first, then bunker login
+                            accountManager.ensureCurrentAccountInStorage()
+                            val result = accountManager.loginWithBunker(bunkerUri)
+                            if (result.isSuccess) {
                                 onAccountAdded()
                             }
+                            result.map { }
                         },
                         onLoginNostrConnect = { onUriGenerated ->
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    accountManager.ensureCurrentAccountInStorage()
-                                }
-                            }
-                            accountManager.loginWithNostrConnect(onUriGenerated).map {
+                            accountManager.ensureCurrentAccountInStorage()
+                            val result = accountManager.loginWithNostrConnect(onUriGenerated)
+                            if (result.isSuccess) {
                                 onAccountAdded()
                             }
+                            result.map { }
                         },
                         loginProgress = loginProgress,
                         cardWidth = 420.dp,

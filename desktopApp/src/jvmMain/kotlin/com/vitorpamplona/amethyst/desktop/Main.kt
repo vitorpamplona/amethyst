@@ -673,14 +673,16 @@ fun App(
         }
     }
 
-    // Persist display name when metadata arrives from relays
-    val metadataVersion by localCache.metadataVersion.collectAsState()
-    LaunchedEffect(metadataVersion) {
-        val current = accountManager.currentAccount() ?: return@LaunchedEffect
-        val user = localCache.getUserIfExists(current.pubKeyHex) ?: return@LaunchedEffect
-        val name = user.toBestDisplayName()
-        if (name != user.pubkeyDisplayHex()) {
-            accountManager.updateDisplayName(current.npub, name)
+    // Persist display name when metadata arrives from relays (debounced)
+    LaunchedEffect(Unit) {
+        localCache.metadataVersion.collect {
+            kotlinx.coroutines.delay(2000) // debounce — wait for batch of metadata to settle
+            val current = accountManager.currentAccount() ?: return@collect
+            val user = localCache.getUserIfExists(current.pubKeyHex) ?: return@collect
+            val name = user.toBestDisplayName()
+            if (name != user.pubkeyDisplayHex()) {
+                accountManager.updateDisplayName(current.npub, name)
+            }
         }
     }
 
