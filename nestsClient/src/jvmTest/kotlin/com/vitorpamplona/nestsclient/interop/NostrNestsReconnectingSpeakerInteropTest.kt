@@ -50,8 +50,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -95,7 +95,7 @@ class NostrNestsReconnectingSpeakerInteropTest {
                     roomId = "spk-rec-${System.currentTimeMillis()}",
                 )
 
-            val httpClient = OkHttpNestsClient()
+            val httpClient = OkHttpNestsClient { OkHttpClient() }
             val transport =
                 QuicWebTransportFactory(
                     certificateValidator = PermissiveCertificateValidator(),
