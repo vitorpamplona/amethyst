@@ -91,6 +91,7 @@ class NestsFeedFilter(
             if (!hasMinimumNestFields(noteEvent)) return@filterTo false
             if (!isWithinPlannedWindow(noteEvent, now)) return@filterTo false
             if (!isLiveByPresence(noteEvent, presenceCutoff)) return@filterTo false
+            if (!hasFreshSpeakers(noteEvent, presenceCutoff)) return@filterTo false
 
             if (filterParams.match(noteEvent, it.relays)) return@filterTo true
 
@@ -179,6 +180,37 @@ class NestsFeedFilter(
             if (e is MeetingRoomPresenceEvent && e.createdAt > presenceCutoff) fresh = true
         }
         return fresh
+    }
+
+    /**
+     * Drop OPEN/PRIVATE rooms whose live speaker slate is empty. A room
+     * with no fresh kind-10312 presence carrying `onstage=1` has no one
+     * left on stage — even if the kind-30312 status still says `live`,
+     * there is nothing to listen to and the room has effectively ended.
+     *
+     * Same created-at grace as [isLiveByPresence] so brand-new rooms
+     * surface before the first speaker heartbeat arrives. CLOSED and
+     * PLANNED rooms bypass this gate for the same reasons listed on
+     * [isLiveByPresence].
+     */
+    private fun hasFreshSpeakers(
+        event: MeetingSpaceEvent,
+        presenceCutoff: Long,
+    ): Boolean {
+        val status = event.status()
+        if (status != StatusTag.STATUS.LIVE && status != StatusTag.STATUS.PRIVATE) return true
+        if (event.createdAt > presenceCutoff) return true
+
+        val channel = LocalCache.getLiveActivityChannelIfExists(event.address()) ?: return false
+        var hasSpeaker = false
+        channel.notes.forEach { _, note ->
+            if (hasSpeaker) return@forEach
+            val e = note.event
+            if (e is MeetingRoomPresenceEvent && e.createdAt > presenceCutoff && e.onstage() == true) {
+                hasSpeaker = true
+            }
+        }
+        return hasSpeaker
     }
 
     /**
