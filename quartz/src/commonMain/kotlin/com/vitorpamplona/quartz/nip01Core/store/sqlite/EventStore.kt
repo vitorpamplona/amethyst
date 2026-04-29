@@ -26,11 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.projection.EventStoreProjection
 import kotlinx.coroutines.CoroutineScope
 
 class EventStore(
     dbName: String? = "events.db",
-    relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
+    val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
@@ -67,20 +68,17 @@ class EventStore(
 
     override suspend fun deleteExpiredEvents() = store.deleteExpiredEvents()
 
-    /**
-     * Stream of mutations committed to the store. See [SQLiteEventStore.changes].
-     */
-    val changes get() = store.changes
+    override val inserts get() = store.inserts
 
     /**
-     * Open a reactive [EventStoreProjection] over the store for
-     * [filters]. The projection runs inside [scope]; cancel the scope
-     * (or call [EventStoreProjection.close]) to release it.
+     * Open a reactive [EventStoreProjection] over this store with
+     * NIP-62 vanish scoping bound to the store's [relay]. Cancel
+     * [scope] (or call [EventStoreProjection.close]) to release it.
      */
     fun <T : Event> observe(
         filters: List<Filter>,
         scope: CoroutineScope,
-    ): EventStoreProjection<T> = EventStoreProjection(store, filters, scope)
+    ): EventStoreProjection<T> = EventStoreProjection(this, filters, relay, scope)
 
     fun <T : Event> observe(
         filter: Filter,

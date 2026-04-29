@@ -66,22 +66,18 @@ class SQLiteEventStore(
     val deletionModule = DeletionRequestModule(seedModule::hasher)
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule(seedModule::hasher)
-    val changeLogModule = ChangeLogModule()
 
     /**
-     * Stream of mutations committed to the store. One [StoreChange] per
-     * successful unit of work; rejected inserts and rolled-back
-     * transactions are not emitted. Subscribers see updates in commit
-     * order. See [EventStoreProjection] for a high-level reactive list
-     * that consumes this stream.
+     * Stream of events the store accepted into durable storage. See
+     * [IEventStore.inserts] for the contract.
      */
-    private val _changes =
-        MutableSharedFlow<StoreChange>(
+    private val _inserts =
+        MutableSharedFlow<Event>(
             replay = 0,
             extraBufferCapacity = 256,
             onBufferOverflow = BufferOverflow.SUSPEND,
         )
-    val changes: SharedFlow<StoreChange> = _changes.asSharedFlow()
+    val inserts: SharedFlow<Event> = _inserts.asSharedFlow()
 
     val queryBuilder =
         QueryBuilder(
@@ -139,12 +135,6 @@ class SQLiteEventStore(
                         setUserVersion(this, DATABASE_VERSION)
                     }
                 }
-
-                // After the schema is in place (fresh or already-current
-                // DBs both reach this point), wire the change log onto
-                // the writer connection. TEMP table + TEMP trigger are
-                // connection-scoped, so this runs on the writer only.
-                changeLogModule.installOnWriter(db)
             },
         )
     }
@@ -186,23 +176,10 @@ class SQLiteEventStore(
         }
     }
 
-    suspend fun clearDB() {
+    suspend fun clearDB() =
         pool.useWriter { db ->
             modules.reversed().forEach { it.deleteAll(db) }
-            // The deleteAll cascade fires the change-log trigger for
-            // every removed event_header row. Drain and publish so
-            // open projections drop everything they were holding.
-            publishChange(emptyList(), changeLogModule.drain(db))
         }
-    }
-
-    private suspend fun publishChange(
-        inserted: List<Event>,
-        removedIds: List<HexKey>,
-    ) {
-        if (inserted.isEmpty() && removedIds.isEmpty()) return
-        _changes.emit(StoreChange(inserted, removedIds))
-    }
 
     suspend fun vacuum() =
         pool.useWriter { db ->
@@ -237,12 +214,10 @@ class SQLiteEventStore(
             db.transaction {
                 innerInsertEvent(event, this)
             }
-            // The transaction either committed or threw. On commit, the
-            // change log holds ids superseded by replaceable / addressable
-            // triggers and any NIP-09 / NIP-62 cascades fired by this
-            // event's content. On rollback the temp table was rolled back
-            // with the transaction, so drain returns empty.
-            publishChange(listOf(event), changeLogModule.drain(db))
+            // The transaction either committed or threw. On commit the
+            // event is durable; emit so subscribed projections see it.
+            // On rollback the throw propagates and we never reach this.
+            _inserts.emit(event)
         }
     }
 
@@ -268,7 +243,9 @@ class SQLiteEventStore(
                     body()
                 }
             }
-            publishChange(txn.accepted, changeLogModule.drain(db))
+            // Emit each accepted event after the batch commits — the
+            // projection sees them in the same order they were inserted.
+            for (e in txn.accepted) _inserts.emit(e)
         }
     }
 
@@ -308,31 +285,17 @@ class SQLiteEventStore(
 
     suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters, it) }
 
-    suspend fun delete(filter: Filter) =
-        pool.useWriter { db ->
-            queryBuilder.delete(filter, db)
-            publishChange(emptyList(), changeLogModule.drain(db))
-        }
+    suspend fun delete(filter: Filter) = pool.useWriter { queryBuilder.delete(filter, it) }
 
-    suspend fun delete(filters: List<Filter>) =
-        pool.useWriter { db ->
-            queryBuilder.delete(filters, db)
-            publishChange(emptyList(), changeLogModule.drain(db))
-        }
+    suspend fun delete(filters: List<Filter>) = pool.useWriter { queryBuilder.delete(filters, it) }
 
     suspend fun delete(id: HexKey): Int =
         pool.useWriter { db ->
             db.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
-            val count = db.changes()
-            publishChange(emptyList(), changeLogModule.drain(db))
-            count
+            db.changes()
         }
 
-    suspend fun deleteExpiredEvents() =
-        pool.useWriter { db ->
-            expirationModule.deleteExpiredEvents(db)
-            publishChange(emptyList(), changeLogModule.drain(db))
-        }
+    suspend fun deleteExpiredEvents() = pool.useWriter { expirationModule.deleteExpiredEvents(it) }
 
     fun close() = pool.close()
 }
