@@ -56,11 +56,11 @@ class NestsSubAssembler(
 
     override fun list(key: NestsQueryState) = key.listName()
 
-    fun NestsQueryState.listNameFlow() = account.settings.defaultLiveStreamsFollowList
+    fun NestsQueryState.listNameFlow() = account.settings.defaultNestsFollowList
 
     fun NestsQueryState.listName() = listNameFlow().value
 
-    fun NestsQueryState.followsPerRelayFlow() = account.liveLiveStreamsFollowListsPerRelay
+    fun NestsQueryState.followsPerRelayFlow() = account.liveNestsFollowListsPerRelay
 
     fun NestsQueryState.followsPerRelay() = followsPerRelayFlow().value
 

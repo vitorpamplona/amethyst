@@ -58,7 +58,7 @@ class NestsFeedFilter(
 
     override fun limit() = 50
 
-    fun followList(): TopFilter = account.settings.defaultLiveStreamsFollowList.value
+    fun followList(): TopFilter = account.settings.defaultNestsFollowList.value
 
     private fun TopFilter.isMuteList() = this is TopFilter.MuteList
 
@@ -76,7 +76,7 @@ class NestsFeedFilter(
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val topFilter = account.liveLiveStreamsFollowLists.value
+        val topFilter = account.liveNestsFollowLists.value
         val filterParams =
             FilterByListParams.create(
                 followLists = topFilter,
@@ -198,7 +198,7 @@ class NestsFeedFilter(
         }
 
     override fun sort(items: Set<Note>): List<Note> {
-        val topFilter = account.liveLiveStreamsFollowLists.value
+        val topFilter = account.liveNestsFollowLists.value
         val topFilterAuthors =
             when (topFilter) {
                 is AuthorsByOutboxTopNavFilter -> topFilter.authors

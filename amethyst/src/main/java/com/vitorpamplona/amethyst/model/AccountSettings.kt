@@ -159,6 +159,7 @@ class AccountSettings(
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPublicChatsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLiveStreamsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNestsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
@@ -523,6 +524,17 @@ class AccountSettings(
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultNestsFollowList(name: FeedDefinition) {
+        changeDefaultNestsFollowList(name.code)
+    }
+
+    fun changeDefaultNestsFollowList(name: TopFilter) {
+        if (defaultNestsFollowList.value != name) {
+            defaultNestsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

@@ -105,6 +105,7 @@ private object PrefKeys {
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_PUBLIC_CHATS_FOLLOW_LIST = "defaultPublicChatsFollowList"
     const val DEFAULT_LIVE_STREAMS_FOLLOW_LIST = "defaultLiveStreamsFollowList"
+    const val DEFAULT_NESTS_FOLLOW_LIST = "defaultNestsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
     const val DEFAULT_BADGES_FOLLOW_LIST = "defaultBadgesFollowList"
@@ -357,6 +358,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
                     putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
+                    putString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNestsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
                     putString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBadgesFollowList.value))
@@ -628,6 +630,7 @@ object LocalPreferences {
                         defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
                         defaultPublicChatsFollowList = MutableStateFlow(followListPrefs.publicChats),
                         defaultLiveStreamsFollowList = MutableStateFlow(followListPrefs.liveStreams),
+                        defaultNestsFollowList = MutableStateFlow(followListPrefs.nests),
                         defaultLongsFollowList = MutableStateFlow(followListPrefs.longs),
                         defaultArticlesFollowList = MutableStateFlow(followListPrefs.articles),
                         defaultBadgesFollowList = MutableStateFlow(followListPrefs.badges),
@@ -697,6 +700,7 @@ object LocalPreferences {
         val shorts: TopFilter,
         val publicChats: TopFilter,
         val liveStreams: TopFilter,
+        val nests: TopFilter,
         val longs: TopFilter,
         val articles: TopFilter,
         val badges: TopFilter,
@@ -717,6 +721,7 @@ object LocalPreferences {
             shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
             publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),
             liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),
+            nests = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, null), TopFilter.Global),
             longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
             articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
             badges = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, null), TopFilter.Mine),
