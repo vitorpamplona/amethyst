@@ -981,7 +981,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -1002,21 +1002,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
-
-                        // Audio rooms / live activities pin their relay set
-                        // on the room event itself. Presence (kind 10312) and
-                        // any other event whose `a` tag points at one of these
-                        // must also fan out to that relay list — otherwise a
-                        // hand-raise / mute / publishing update only reaches
-                        // the broadcaster's outbox + the single firstOrNull()
-                        // hint baked into the `a` tag, and a fixed-relay
-                        // listener like nostrnests never sees it.
-                        when (linkedEvent) {
-                            is MeetingSpaceEvent -> relayList.addAll(linkedEvent.allRelayUrls())
-                            is MeetingRoomEvent -> relayList.addAll(linkedEvent.allRelayUrls())
-                            is LiveActivitiesEvent -> relayList.addAll(linkedEvent.allRelayUrls())
-                        }
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -1027,6 +1013,10 @@ class Account(
         }
 
         if (event is MeetingSpaceEvent) {
+            relayList.addAll(event.allRelayUrls())
+        }
+
+        if (event is MeetingRoomEvent) {
             relayList.addAll(event.allRelayUrls())
         }
 
