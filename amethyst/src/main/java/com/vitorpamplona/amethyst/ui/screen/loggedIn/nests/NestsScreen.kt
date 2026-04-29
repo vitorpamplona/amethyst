@@ -97,7 +97,7 @@ fun NestsScreen(
             FabBottomBarPadded(nav) {
                 FloatingActionButton(
                     onClick = {
-                        if (nestsServers.any { it.startsWith("http") }) {
+                        if (nestsServers.any { it.relay.startsWith("http") && it.auth.startsWith("http") }) {
                             showCreateSheet = true
                         } else {
                             showSetupDialog = true
@@ -137,14 +137,26 @@ fun NestsScreen(
 
     if (showSetupDialog) {
         SetUpAudioServerDialog(
-            defaultUrl = CreateNestViewModel.DEFAULT_SERVICE_URL,
+            defaultUrl = CreateNestViewModel.DEFAULT_ENDPOINT_URL,
             onDismiss = { showSetupDialog = false },
             onConfirm = {
                 showSetupDialog = false
                 accountViewModel.launchSigner {
                     try {
+                        // Seed the kind-10112 list with the public nostrnests
+                        // (relay, auth) pair. We can't derive the auth host
+                        // from the relay URL reliably for community-run
+                        // deployments, so the dialog hardcodes the public
+                        // pair; users with their own deployment use the
+                        // Settings → Audio-room servers screen instead.
                         accountViewModel.account.sendNestsServersList(
-                            listOf(CreateNestViewModel.DEFAULT_SERVICE_URL),
+                            listOf(
+                                com.vitorpamplona.quartz.nip53LiveActivities.nestsServers
+                                    .NestsServer(
+                                        relay = CreateNestViewModel.DEFAULT_ENDPOINT_URL,
+                                        auth = CreateNestViewModel.DEFAULT_SERVICE_URL,
+                                    ),
+                            ),
                         )
                         showCreateSheet = true
                     } catch (_: Throwable) {

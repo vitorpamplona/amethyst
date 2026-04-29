@@ -77,7 +77,7 @@ internal object RoomParticipantActions {
             } else {
                 all + ParticipantTag(targetPubkey, null, newRole.code, null)
             }
-        return rebuild(original, mutated, original.status() ?: StatusTag.STATUS.OPEN)
+        return rebuild(original, mutated, original.status() ?: StatusTag.STATUS.LIVE)
     }
 
     /**
@@ -109,7 +109,7 @@ internal object RoomParticipantActions {
         val target = all.firstOrNull { it.pubKey == targetPubkey } ?: return null
         if (target.role.equals(ROLE.HOST.code, ignoreCase = true)) return null
         val remaining = all.filterNot { it.pubKey == targetPubkey }
-        return rebuild(original, remaining, original.status() ?: StatusTag.STATUS.OPEN)
+        return rebuild(original, remaining, original.status() ?: StatusTag.STATUS.LIVE)
     }
 
     private fun rebuild(

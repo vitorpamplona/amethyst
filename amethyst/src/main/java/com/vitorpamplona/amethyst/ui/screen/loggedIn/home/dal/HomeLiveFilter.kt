@@ -239,7 +239,7 @@ class HomeLiveFilter(
             LocalCache.getAddressableNoteIfExists(roomAddress)?.event as? MeetingSpaceEvent
                 ?: return false
         val status = room.status()
-        return status == MeetingSpaceStatusTag.STATUS.OPEN ||
+        return status == MeetingSpaceStatusTag.STATUS.LIVE ||
             status == MeetingSpaceStatusTag.STATUS.PRIVATE
     }
 

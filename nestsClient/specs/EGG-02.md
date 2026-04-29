@@ -11,15 +11,17 @@ auth sidecar (moq-auth) using a NIP-98 HTTP signature, receives a short-lived
 JWT, then opens a WebTransport session against the moq-relay carrying the JWT
 in the URL.
 
-Two separate URLs are involved: the `service` tag from EGG-01 is the auth
-sidecar; the `endpoint` tag is the relay.
+Two separate URLs are involved: the `auth` tag from EGG-01 is the auth
+sidecar (HTTP/1.1 or HTTP/2 over TCP); the `streaming` tag is the moq-relay
+(WebTransport over QUIC). The deployed nostrnests reference puts these on
+different hosts — see EGG-01 §4 for why they cannot be collapsed.
 
 ## Wire format
 
 ### Step 1 — token request
 
 ```
-POST <service>/auth
+POST <auth>/auth
 Authorization: Nostr <base64(NIP-98 kind:27235 event JSON)>
 Content-Type:  application/json; charset=utf-8
 
@@ -29,8 +31,10 @@ Content-Type:  application/json; charset=utf-8
 
 `<kind>` is `30312` for nests audio rooms (EGG-01).
 
-The `<service>` URL is the EGG-01 `service` tag value with any trailing `/`
-stripped, then `/auth` appended literally.
+The `<auth>` URL is the EGG-01 `auth` tag value with any trailing `/`
+stripped, then `/auth` appended literally. (The same path component is
+used regardless of how the host is named — `<auth>` here is just the
+sidecar base URL, so the full request line is `POST <auth-base>/auth`.)
 
 The body is a single-line UTF-8 JSON object — the server hashes the **exact
 bytes sent** to compare against NIP-98's `payload` tag, so producers MUST
@@ -50,7 +54,7 @@ The signed kind 27235 event MUST carry exactly these tags (NIP-98 §1):
   "pubkey": "<requester pubkey hex>",
   "created_at": <unix seconds>,
   "tags": [
-    ["u",       "<service>/auth"],   // exact request URL, scheme included
+    ["u",       "<auth>/auth"],      // exact request URL, scheme included
     ["method",  "POST"],
     ["payload", "<sha256 of request body, lowercase hex>"]
   ],
@@ -91,7 +95,7 @@ RFC 7518 §3.4). The auth sidecar MUST publish its public verification keys
 as a JWKS at:
 
 ```
-GET <service>/.well-known/jwks.json
+GET <auth>/.well-known/jwks.json
 ```
 
 The response is an `application/json` body shaped per RFC 7517:
@@ -108,7 +112,7 @@ The response is an `application/json` body shaped per RFC 7517:
 }
 ```
 
-The relay (EGG-03 endpoint) MUST verify inbound JWTs against this JWKS.
+The relay (EGG-03 streaming endpoint) MUST verify inbound JWTs against this JWKS.
 Relays SHOULD cache the JWKS for at most 5 minutes so a key rotation
 propagates without requiring a relay restart. A relay that cannot reach
 the JWKS endpoint MUST refuse new sessions rather than fall through to
@@ -120,7 +124,7 @@ the JWKS endpoint MUST refuse new sessions rather than fall through to
 :method  = CONNECT
 :protocol = webtransport
 :scheme  = https
-:authority = <host:port from `endpoint`>
+:authority = <host:port from `streaming`>
 :path    = /<namespace>?jwt=<token>
 ```
 
@@ -167,7 +171,7 @@ MAY ignore `reason` but MUST surface `error` to user-facing error toasts.
 | 401    | `wrong_method`       | NIP-98 `method` tag is not `POST`                                    |
 | 401    | `wrong_payload`      | NIP-98 `payload` tag does not match sha256 of the body bytes         |
 | 401    | `stale`              | NIP-98 `created_at` outside the ±60 s tolerance                      |
-| 403    | `room_closed`        | room status is `closed` (EGG-01) or `planned` (EGG-08)               |
+| 403    | `room_closed`        | room status is `ended` (EGG-01) or `planned` (EGG-08)                |
 | 403    | `not_invited`        | room status is `private` and requester is not on the allowlist       |
 | 403    | `publish_forbidden`  | `publish: true` requested but caller is not a speaker per EGG-07     |
 | 410    | `unknown_room`       | no `kind:30312` known to the sidecar for `(host, d)`                 |
@@ -177,7 +181,7 @@ MAY ignore `reason` but MUST surface `error` to user-facing error toasts.
 Receivers MUST treat unknown 4xx slugs as "fatal, do not retry" and
 unknown 5xx slugs as "transient, retry with exponential backoff".
 
-The relay (EGG-03 endpoint) signals authorization failures through
+The relay (EGG-03 streaming endpoint) signals authorization failures through
 WebTransport CONNECT response codes, NOT through the auth-sidecar table:
 
 | WT status | meaning                                                                |
@@ -190,7 +194,7 @@ WebTransport CONNECT response codes, NOT through the auth-sidecar table:
 ## Example
 
 ```
-> POST https://moq.nostrnests.com/auth
+> POST https://moq-auth.nostrnests.com/auth
 > Authorization: Nostr eyJ...kind27235...
 > Content-Type: application/json
 >
