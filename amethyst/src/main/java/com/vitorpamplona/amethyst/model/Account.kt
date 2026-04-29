@@ -195,6 +195,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -980,7 +981,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -1001,7 +1002,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -1012,6 +1013,10 @@ class Account(
         }
 
         if (event is MeetingSpaceEvent) {
+            relayList.addAll(event.allRelayUrls())
+        }
+
+        if (event is MeetingRoomEvent) {
             relayList.addAll(event.allRelayUrls())
         }
 

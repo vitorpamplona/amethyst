@@ -135,7 +135,6 @@ internal fun NestFullScreen(
 
     val isHost = accountViewModel.account.signer.pubKey == event.pubKey
     val myPubkey = accountViewModel.account.signer.pubKey
-    val isOnStageMe = remember(onStage, myPubkey) { onStage.any { it.pubKey == myPubkey } }
     val leaveScope = rememberCoroutineScope()
     val topBarContext = LocalContext.current
 
@@ -151,6 +150,17 @@ internal fun NestFullScreen(
                 participants = event.participants(),
                 presences = presences,
             )
+        }
+    // Tie the action bar's "am I on stage" gate to the same data
+    // source the StageGrid uses (role + presence.onstage flag),
+    // not just the kind-30312 role tag. Otherwise a host who taps
+    // "Leave Stage" flips presence to onstage=0 and disappears
+    // from the StageGrid, but the action bar keeps showing the
+    // Talk + Leave Stage cluster because it's still gated on
+    // role-only.
+    val isOnStageMe =
+        remember(participantGrid, myPubkey) {
+            participantGrid.onStage.any { it.pubkey == myPubkey }
         }
     // Same logic HandRaiseQueueSection uses internally — duplicated
     // here so the tab label can show a count without coupling the
