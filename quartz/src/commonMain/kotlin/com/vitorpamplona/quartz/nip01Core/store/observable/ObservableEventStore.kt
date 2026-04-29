@@ -23,8 +23,11 @@ package com.vitorpamplona.quartz.nip01Core.store.observable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.projection.EventStoreProjection
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -138,6 +141,25 @@ class ObservableEventStore(
     override suspend fun delete(filters: List<Filter>) = inner.delete(filters)
 
     override suspend fun deleteExpiredEvents() = inner.deleteExpiredEvents()
+
+    /**
+     * Open a reactive [EventStoreProjection] over this observable
+     * store. [relay] scopes NIP-62 vanish handling — pass the relay
+     * URL the events are arriving from, or `null` to apply only
+     * unscoped (`ALL_RELAYS`) vanish requests. Cancel [scope] (or
+     * call [EventStoreProjection.close]) to release the projection.
+     */
+    fun <T : Event> observe(
+        filters: List<Filter>,
+        relay: NormalizedRelayUrl?,
+        scope: CoroutineScope,
+    ): EventStoreProjection<T> = EventStoreProjection(this, filters, relay, scope)
+
+    fun <T : Event> observe(
+        filter: Filter,
+        relay: NormalizedRelayUrl?,
+        scope: CoroutineScope,
+    ): EventStoreProjection<T> = observe(listOf(filter), relay, scope)
 
     override fun close() = inner.close()
 }

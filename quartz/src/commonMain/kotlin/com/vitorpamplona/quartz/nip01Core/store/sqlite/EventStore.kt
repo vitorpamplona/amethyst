@@ -26,16 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore
-import com.vitorpamplona.quartz.nip01Core.store.projection.EventStoreProjection
-import kotlinx.coroutines.CoroutineScope
 
 /**
- * SQLite-backed event store with a built-in [ObservableEventStore]
- * façade so [observe] returns an [EventStoreProjection] without
- * extra plumbing. Persistence goes through [SQLiteEventStore]; the
- * observable layer takes care of routing ephemerals (which never hit
- * the DB) to projection collectors.
+ * SQLite-backed [IEventStore] with default DB-file name and relay
+ * scoping. Wrap in `ObservableEventStore` if you want to feed
+ * `EventStoreProjection`.
  */
 class EventStore(
     dbName: String? = "events.db",
@@ -43,14 +38,10 @@ class EventStore(
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
-    val observable = ObservableEventStore(SQLiteAdapter(store))
 
-    /** Stream of events accepted for observation. See [ObservableEventStore.events]. */
-    val events get() = observable.events
+    override suspend fun insert(event: Event) = store.insertEvent(event)
 
-    override suspend fun insert(event: Event) = observable.insert(event)
-
-    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = observable.transaction(body)
+    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = store.transaction(body)
 
     override suspend fun <T : Event> query(filter: Filter) = store.query<T>(filter)
 
@@ -80,66 +71,5 @@ class EventStore(
 
     override suspend fun deleteExpiredEvents() = store.deleteExpiredEvents()
 
-    /**
-     * Open a reactive [EventStoreProjection] over this store with
-     * NIP-62 vanish scoping bound to the store's [relay]. Cancel
-     * [scope] (or call [EventStoreProjection.close]) to release it.
-     */
-    fun <T : Event> observe(
-        filters: List<Filter>,
-        scope: CoroutineScope,
-    ): EventStoreProjection<T> = EventStoreProjection(observable, filters, relay, scope)
-
-    fun <T : Event> observe(
-        filter: Filter,
-        scope: CoroutineScope,
-    ): EventStoreProjection<T> = observe(listOf(filter), scope)
-
     override fun close() = store.close()
-}
-
-/**
- * Adapts the non-IEventStore [SQLiteEventStore] to [IEventStore] for
- * the [ObservableEventStore] wrapper. SQLiteEventStore predates the
- * IEventStore contract; this is a thin forwarder, not a behavioural
- * shim.
- */
-private class SQLiteAdapter(
-    val sqlite: SQLiteEventStore,
-) : IEventStore {
-    override suspend fun insert(event: Event) = sqlite.insertEvent(event)
-
-    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
-        sqlite.transaction { body() }
-    }
-
-    override suspend fun <T : Event> query(filter: Filter) = sqlite.query<T>(filter)
-
-    override suspend fun <T : Event> query(filters: List<Filter>) = sqlite.query<T>(filters)
-
-    override suspend fun <T : Event> query(
-        filter: Filter,
-        onEach: (T) -> Unit,
-    ) = sqlite.query(filter, onEach)
-
-    override suspend fun <T : Event> query(
-        filters: List<Filter>,
-        onEach: (T) -> Unit,
-    ) = sqlite.query(filters, onEach)
-
-    override suspend fun count(filter: Filter) = sqlite.count(filter)
-
-    override suspend fun count(filters: List<Filter>) = sqlite.count(filters)
-
-    override suspend fun delete(filter: Filter) {
-        sqlite.delete(filter)
-    }
-
-    override suspend fun delete(filters: List<Filter>) {
-        sqlite.delete(filters)
-    }
-
-    override suspend fun deleteExpiredEvents() = sqlite.deleteExpiredEvents()
-
-    override fun close() = sqlite.close()
 }

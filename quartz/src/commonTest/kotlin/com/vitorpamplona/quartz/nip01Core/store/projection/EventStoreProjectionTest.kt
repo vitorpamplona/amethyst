@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -53,12 +54,14 @@ class EventStoreProjectionTest {
     private val signer = NostrSignerSync()
     private val otherSigner = NostrSignerSync()
     private lateinit var store: EventStore
+    private lateinit var observable: ObservableEventStore
     private lateinit var scope: CoroutineScope
 
     @BeforeTest
     fun setUp() {
         Secp256k1Instance
         store = EventStore(dbName = null)
+        observable = ObservableEventStore(store)
         scope = CoroutineScope(SupervisorJob())
     }
 
@@ -90,10 +93,10 @@ class EventStoreProjectionTest {
         runBlocking {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
             val b = signer.sign(TextNoteEvent.build("b", createdAt = 200))
-            store.insert(a)
-            store.insert(b)
+            observable.insert(a)
+            observable.insert(b)
 
-            val projection = store.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
 
             val items = projection.items.value
@@ -107,15 +110,15 @@ class EventStoreProjectionTest {
     fun insertAddsNewSlot() =
         runBlocking {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
-            store.insert(a)
+            observable.insert(a)
 
-            val projection = store.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
             val before = projection.items.value
             assertEquals(1, before.size)
 
             val b = signer.sign(TextNoteEvent.build("b", createdAt = 200))
-            store.insert(b)
+            observable.insert(b)
 
             val after = projection.awaitItems { it.size == 2 }
             assertNotSame(before, after, "insert must produce a new list reference")
@@ -127,14 +130,14 @@ class EventStoreProjectionTest {
     fun nonMatchingInsertDoesNotChangeList() =
         runBlocking {
             val text = signer.sign(TextNoteEvent.build("a", createdAt = 100))
-            store.insert(text)
+            observable.insert(text)
 
-            val projection = store.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
             val seed = projection.items.value
 
             val meta = signer.sign(MetadataEvent.createNew("Vitor", createdAt = 200))
-            store.insert(meta)
+            observable.insert(meta)
 
             delay(150)
             assertSame(seed, projection.items.value)
@@ -146,11 +149,12 @@ class EventStoreProjectionTest {
         runBlocking {
             val time = TimeUtils.now()
             val v1 = signer.sign(MetadataEvent.createNew("v1", createdAt = time))
-            store.insert(v1)
+            observable.insert(v1)
 
             val projection =
-                store.observe<MetadataEvent>(
+                observable.observe<MetadataEvent>(
                     Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(v1.pubKey)),
+                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -160,7 +164,7 @@ class EventStoreProjectionTest {
             assertEquals(v1.id, slot.value.id)
 
             val v2 = signer.sign(MetadataEvent.createNew("v2", createdAt = time + 1))
-            store.insert(v2)
+            observable.insert(v2)
 
             awaitFlow(slot) { it.id == v2.id }
             assertSame(seedList, projection.items.value, "replaceable update must not change list reference")
@@ -173,15 +177,16 @@ class EventStoreProjectionTest {
         runBlocking {
             val time = TimeUtils.now()
             val v1 = signer.sign(LongTextNoteEvent.build("blog v1", "title", dTag = "blog", createdAt = time))
-            store.insert(v1)
+            observable.insert(v1)
 
             val projection =
-                store.observe<LongTextNoteEvent>(
+                observable.observe<LongTextNoteEvent>(
                     Filter(
                         kinds = listOf(LongTextNoteEvent.KIND),
                         authors = listOf(v1.pubKey),
                         tags = mapOf("d" to listOf("blog")),
                     ),
+                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -189,7 +194,7 @@ class EventStoreProjectionTest {
             val slot = seedList[0]
 
             val v2 = signer.sign(LongTextNoteEvent.build("blog v2", "title", dTag = "blog", createdAt = time + 1))
-            store.insert(v2)
+            observable.insert(v2)
 
             awaitFlow(slot) { it.id == v2.id }
             assertSame(seedList, projection.items.value, "addressable update must not change list reference")
@@ -212,11 +217,12 @@ class EventStoreProjectionTest {
 
             // Seed the projection with v2 before v1 even hits the store
             // — by inserting v2 first.
-            store.insert(v2)
+            observable.insert(v2)
 
             val projection =
-                store.observe<MetadataEvent>(
+                observable.observe<MetadataEvent>(
                     Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(v1.pubKey)),
+                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -227,7 +233,7 @@ class EventStoreProjectionTest {
             // projection therefore never sees v1 on the inserts
             // stream. The slot must still hold v2.
             try {
-                store.insert(v1)
+                observable.insert(v1)
             } catch (_: Throwable) {
                 // expected — store enforces the same rule
             }
@@ -242,15 +248,15 @@ class EventStoreProjectionTest {
         runBlocking {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
             val b = signer.sign(TextNoteEvent.build("b", createdAt = 200))
-            store.insert(a)
-            store.insert(b)
+            observable.insert(a)
+            observable.insert(b)
 
-            val projection = store.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
             assertEquals(2, projection.items.value.size)
 
             val deletion = signer.sign(DeletionEvent.build(listOf(a)))
-            store.insert(deletion)
+            observable.insert(deletion)
 
             val after = projection.awaitItems { it.size == 1 }
             assertEquals(b.id, after[0].value.id)
@@ -265,15 +271,15 @@ class EventStoreProjectionTest {
     fun nip09CrossAuthorDeletionIsInert() =
         runBlocking {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
-            store.insert(a)
+            observable.insert(a)
 
-            val projection = store.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
             val seed = projection.items.value
             assertEquals(1, seed.size)
 
             val foreignDeletion = otherSigner.sign(DeletionEvent.build(listOf(a)))
-            store.insert(foreignDeletion)
+            observable.insert(foreignDeletion)
 
             // Give the projection time to process the event.
             delay(150)
@@ -292,10 +298,10 @@ class EventStoreProjectionTest {
             val time = TimeUtils.now()
             val a = signer.sign(TextNoteEvent.build("a", createdAt = time))
             val b = signer.sign(TextNoteEvent.build("b", createdAt = time + 1))
-            store.insert(a)
-            store.insert(b)
+            observable.insert(a)
+            observable.insert(b)
 
-            val projection = store.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
             assertEquals(2, projection.items.value.size)
 
@@ -306,7 +312,7 @@ class EventStoreProjectionTest {
                         createdAt = time + 2,
                     ),
                 )
-            store.insert(vanish)
+            observable.insert(vanish)
 
             val after = projection.awaitItems { it.isEmpty() }
             assertTrue(after.isEmpty())
@@ -322,9 +328,9 @@ class EventStoreProjectionTest {
         runBlocking {
             val time = TimeUtils.now()
             val a = signer.sign(TextNoteEvent.build("a", createdAt = time))
-            store.insert(a)
+            observable.insert(a)
 
-            val projection = store.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
             val seed = projection.items.value
 
@@ -335,7 +341,7 @@ class EventStoreProjectionTest {
                         createdAt = time + 2,
                     ),
                 )
-            store.insert(foreignVanish)
+            observable.insert(foreignVanish)
 
             delay(150)
             assertSame(seed, projection.items.value)
@@ -353,13 +359,13 @@ class EventStoreProjectionTest {
             val time = TimeUtils.now()
             val safe = signer.sign(TextNoteEvent.build("safe", createdAt = time) { expiration(time + 100) })
             val short = signer.sign(TextNoteEvent.build("short", createdAt = time) { expiration(time + 1) })
-            store.insert(safe)
-            store.insert(short)
+            observable.insert(safe)
+            observable.insert(short)
 
             // Drive the ticker frequently so the test doesn't sit idle.
             val projection =
                 EventStoreProjection<Event>(
-                    store.observable,
+                    observable,
                     listOf(Filter(kinds = listOf(TextNoteEvent.KIND))),
                     relay = null,
                     scope = scope,
@@ -381,19 +387,20 @@ class EventStoreProjectionTest {
         runBlocking {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
             val b = signer.sign(TextNoteEvent.build("b", createdAt = 200))
-            store.insert(a)
-            store.insert(b)
+            observable.insert(a)
+            observable.insert(b)
 
             val projection =
-                store.observe<TextNoteEvent>(
+                observable.observe<TextNoteEvent>(
                     Filter(kinds = listOf(TextNoteEvent.KIND), limit = 2),
+                    store.relay,
                     scope,
                 )
             projection.ready.await()
             assertEquals(2, projection.items.value.size)
 
             val c = signer.sign(TextNoteEvent.build("c", createdAt = 300))
-            store.insert(c)
+            observable.insert(c)
 
             val after = projection.awaitItems { it[0].value.id == c.id }
             assertEquals(2, after.size)
@@ -406,13 +413,13 @@ class EventStoreProjectionTest {
     fun closeStopsListening() =
         runBlocking {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
-            store.insert(a)
+            observable.insert(a)
 
-            val projection = store.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
             projection.ready.await()
             projection.close()
 
-            store.insert(signer.sign(TextNoteEvent.build("b", createdAt = 200)))
+            observable.insert(signer.sign(TextNoteEvent.build("b", createdAt = 200)))
             delay(150)
             assertTrue(projection.items.value.isEmpty())
         }
@@ -430,7 +437,7 @@ class EventStoreProjectionTest {
         runBlocking {
             val ephemeralKind = 22_000
             val projection =
-                store.observe<Event>(Filter(kinds = listOf(ephemeralKind)), scope)
+                observable.observe<Event>(Filter(kinds = listOf(ephemeralKind)), store.relay, scope)
             projection.ready.await()
             assertTrue(projection.items.value.isEmpty())
 
@@ -441,7 +448,7 @@ class EventStoreProjectionTest {
                     arrayOf(emptyArray()),
                     "live",
                 )
-            store.insert(ephemeral)
+            observable.insert(ephemeral)
 
             val after = projection.awaitItems { it.size == 1 }
             assertEquals(ephemeral.id, after[0].value.id)
@@ -453,7 +460,7 @@ class EventStoreProjectionTest {
             // A fresh projection on the same store gets nothing — the
             // event was only ever live, not durable.
             val freshProjection =
-                store.observe<Event>(Filter(kinds = listOf(ephemeralKind)), scope)
+                observable.observe<Event>(Filter(kinds = listOf(ephemeralKind)), store.relay, scope)
             freshProjection.ready.await()
             assertTrue(freshProjection.items.value.isEmpty())
 
