@@ -518,7 +518,7 @@
     <plurals name="nest_listener_count">
         <item quantity="one">%1$d słuchacz</item>
         <item quantity="few">%1$d słuchaczy</item>
-        <item quantity="many">%1$d słuchaczy</item>
+        <item quantity="many"></item>
         <item quantity="other">%1$d słuchacze</item>
     </plurals>
     <string name="nest_live_chip">NA ŻYWO</string>
@@ -1847,7 +1847,7 @@
     <string name="retry_failed">Powtórka nieudana</string>
     <string name="tap_to_view_details">Kliknij, aby zobaczyć szczegóły</string>
     <string name="event_sent">%1$s wysłano</string>
-    <string name="broadcast_results">Wyniki przekazu</string>
+    <string name="broadcast_results">Wyniki przesłania</string>
     <string name="broadcasts_number">Powtórzeń (%1$d)</string>
     <string name="collapse">Zwiń</string>
     <string name="expand">Rozwiń</string>
@@ -2114,6 +2114,45 @@
     <string name="relay_settings_lower2">lista transmiterów wysyłających</string>
     <string name="relay_settings_lower">ustawienia transmiterów</string>
     <string name="last_seen">Ostatnio widziano %1$s temu</string>
+    <string name="last_seen_on_date">Ostatnio widziano %1$s (%2$s temu)</string>
+    <string name="last_seen_just_now">Ostatnio widziano przed chwilą</string>
+    <string name="last_seen_never">Nigdy nie widziano</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minut</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minuty</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d godzina</item>
+        <item quantity="few">%1$d godzin</item>
+        <item quantity="many">%1$d godzin</item>
+        <item quantity="other">%1$d godziny</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d dzień</item>
+        <item quantity="few">%1$d dni</item>
+        <item quantity="many">%1$d dni</item>
+        <item quantity="other">%1$d dni</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d tydzień</item>
+        <item quantity="few">%1$d tygodni</item>
+        <item quantity="many">%1$d tygodni</item>
+        <item quantity="other">%1$d tygodnie</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d miesiąc</item>
+        <item quantity="few">%1$d miesięcy</item>
+        <item quantity="many">%1$d miesięcy</item>
+        <item quantity="other">%1$d miesiące</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d rok</item>
+        <item quantity="few">%1$d lat</item>
+        <item quantity="many">%1$d lat</item>
+        <item quantity="other">%1$d lata</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Łączenie</string>
     <string name="event_sync_status_downloading">Pobieranie</string>
