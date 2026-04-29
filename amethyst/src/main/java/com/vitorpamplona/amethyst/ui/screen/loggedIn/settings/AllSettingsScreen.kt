@@ -181,6 +181,13 @@ fun AllSettingsScreen(
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.payment_targets,
+                icon = MaterialSymbols.Payment,
+                tint = tint,
+                onClick = { nav.nav(Route.EditPaymentTargets) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.security_filters,
                 icon = MaterialSymbols.Security,
                 tint = tint,
