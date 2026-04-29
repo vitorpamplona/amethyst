@@ -23,12 +23,13 @@ package com.vitorpamplona.amethyst.demo
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.demo.data.Kind1Repository
+import com.vitorpamplona.amethyst.demo.data.EventRepository
 import com.vitorpamplona.amethyst.demo.net.KtorWebSocket
 import com.vitorpamplona.amethyst.demo.ui.FeedScreen
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -41,6 +42,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /** Public relays the demo subscribes to and publishes against. */
 private val DEMO_RELAYS =
@@ -58,7 +60,8 @@ private val FEED_FILTER =
     )
 
 private class AppGraph(
-    val repo: Kind1Repository,
+    val notesRepo: EventRepository<TextNoteEvent>,
+    val signer: NostrSignerInternal,
     val client: NostrClient,
 )
 
@@ -74,16 +77,17 @@ private fun buildAppGraph(): AppGraph {
     // Ktor-driven WebSocket transport (see KtorWebSocket.kt).
     val client = NostrClient(websocketBuilder = KtorWebSocket.Builder())
 
-    val repo =
-        Kind1Repository(
+    // Generic repository, narrowed to TextNoteEvent for this demo.
+    val notesRepo =
+        EventRepository<TextNoteEvent>(
             store = store,
             client = client,
-            signer = signer,
             relays = DEMO_RELAYS,
             scope = scope,
+            accept = { it as? TextNoteEvent },
         )
 
-    return AppGraph(repo, client)
+    return AppGraph(notesRepo, signer, client)
 }
 
 fun main() =
@@ -92,13 +96,22 @@ fun main() =
         Window(onCloseRequest = ::exitApplication, state = state, title = "Nostr Kind 1 Demo") {
             MaterialTheme {
                 val graph = remember { buildAppGraph() }
+                val uiScope = rememberCoroutineScope()
 
                 LaunchedEffect(Unit) {
                     graph.client.connect()
-                    graph.repo.observe(FEED_FILTER)
+                    graph.notesRepo.observe(FEED_FILTER)
                 }
 
-                FeedScreen(graph.repo)
+                FeedScreen(
+                    notesFlow = graph.notesRepo.events,
+                    onSend = { text ->
+                        uiScope.launch {
+                            val signed = graph.signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
+                            graph.notesRepo.publish(signed)
+                        }
+                    },
+                )
             }
         }
     }

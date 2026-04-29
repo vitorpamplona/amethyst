@@ -42,22 +42,22 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.demo.data.Kind1Repository
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedScreen(repository: Kind1Repository) {
-    val notes by repository.notes.collectAsState()
-    val scope = rememberCoroutineScope()
+fun FeedScreen(
+    notesFlow: StateFlow<List<TextNoteEvent>>,
+    onSend: (String) -> Unit,
+) {
+    val notes by notesFlow.collectAsState()
 
     Scaffold(
         topBar = {
@@ -68,7 +68,7 @@ fun FeedScreen(repository: Kind1Repository) {
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Composer(onSend = { text -> scope.launch { repository.publish(text) } })
+            Composer(onSend = onSend)
             HorizontalDivider()
             Feed(notes)
         }
