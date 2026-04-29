@@ -281,6 +281,7 @@ internal fun AudienceGrid(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     onLongPressParticipant: ((String) -> Unit)? = null,
+    onTapParticipant: ((String) -> Unit)? = null,
     myPubkey: String? = null,
 ) {
     if (members.isEmpty()) {
@@ -323,6 +324,7 @@ internal fun AudienceGrid(
                 reactions = emptyList(),
                 accountViewModel = accountViewModel,
                 onLongPressParticipant = onLongPressParticipant,
+                onTapParticipant = onTapParticipant,
                 isSelf = myPubkey != null && member.pubkey == myPubkey,
                 modifier = Modifier.animateItem(),
             )
@@ -343,6 +345,7 @@ private fun MemberCell(
     onLongPressParticipant: ((String) -> Unit)?,
     isSelf: Boolean = false,
     onTapSelf: (() -> Unit)? = null,
+    onTapParticipant: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val mutedRingColor = MaterialTheme.colorScheme.error
@@ -408,14 +411,24 @@ private fun MemberCell(
             onLongPressParticipant?.let { cb -> { hex: String -> cb(hex) } }
         }
     // Self-cell tap shortcut: tap your own avatar to toggle mic-mute
-    // when broadcasting. For other cells we leave tap unhandled so
-    // the existing nav-to-profile path stays consistent (and there's
-    // nothing visually different from a non-clickable avatar).
+    // when broadcasting. For non-self cells, [onTapParticipant] (if
+    // provided) routes the tap to the per-participant context sheet —
+    // used by the audience grid so a host can promote an audience
+    // member to the stage with a single tap, matching the existing
+    // long-press affordance.
     val onClick =
-        if (isSelf && onTapSelf != null) {
-            remember(onTapSelf) { { _: String -> onTapSelf() } }
-        } else {
-            null
+        when {
+            isSelf && onTapSelf != null -> {
+                remember(onTapSelf) { { _: String -> onTapSelf() } }
+            }
+
+            !isSelf && onTapParticipant != null -> {
+                remember(member.pubkey, onTapParticipant) { { hex: String -> onTapParticipant(hex) } }
+            }
+
+            else -> {
+                null
+            }
         }
     val selfTint = if (isSelf) MaterialTheme.colorScheme.primary else Color.Unspecified
     Column(
