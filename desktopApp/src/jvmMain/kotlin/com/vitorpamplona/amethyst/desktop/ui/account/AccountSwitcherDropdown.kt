@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,6 +95,10 @@ fun AccountSwitcherDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var confirmLogoutNpub by remember { mutableStateOf<String?>(null) }
+
+    // Observe metadata version to recompose when user display names load from relays
+    @Suppress("UNUSED_VARIABLE")
+    val metadataVersion by localCache?.metadataVersion?.collectAsState() ?: remember { mutableStateOf(0L) }
 
     Box(modifier = modifier) {
         IconButton(

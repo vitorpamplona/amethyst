@@ -78,6 +78,10 @@ class DesktopLocalCache : ICacheProvider {
     private val _followedUsers = MutableStateFlow<Set<HexKey>>(emptySet())
     val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
 
+    /** Increments on each metadata update — observe to recompose when user names change. */
+    private val _metadataVersion = MutableStateFlow(0L)
+    val metadataVersion: StateFlow<Long> = _metadataVersion.asStateFlow()
+
     companion object {
     }
 
@@ -151,6 +155,7 @@ class DesktopLocalCache : ICacheProvider {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null) {
                 user.updateUserInfo(newUserMetadata, event)
+                _metadataVersion.value++
                 // Invalidate metadata flows on notes by this author that have observers
                 // so QuotedNoteEmbed/FeedNoteCard recompose with updated avatar/name
                 notes.forEach { _, note ->

@@ -536,6 +536,7 @@ class AccountManager internal constructor(
                         npub = keyPair.pubKey.toNpub(),
                         nsec = null,
                         isReadOnly = true,
+                        signerType = SignerType.ViewOnly,
                     )
                 _accountState.value = state
                 Result.success(state)
