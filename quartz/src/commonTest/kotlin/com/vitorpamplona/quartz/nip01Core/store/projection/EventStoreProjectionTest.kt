@@ -359,7 +359,7 @@ class EventStoreProjectionTest {
             // Drive the ticker frequently so the test doesn't sit idle.
             val projection =
                 EventStoreProjection<Event>(
-                    store,
+                    store.observable,
                     listOf(Filter(kinds = listOf(TextNoteEvent.KIND))),
                     relay = null,
                     scope = scope,
@@ -415,5 +415,49 @@ class EventStoreProjectionTest {
             store.insert(signer.sign(TextNoteEvent.build("b", createdAt = 200)))
             delay(150)
             assertTrue(projection.items.value.isEmpty())
+        }
+
+    /**
+     * Ephemeral events (kinds `20000-29999`) are never persisted, so
+     * the inner SQLite store silently drops them. The
+     * `ObservableEventStore` wrapper still routes them onto its
+     * [events][com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore.events]
+     * flow, so an open projection sees them while it's alive. They
+     * vanish from any future seed because the DB never had them.
+     */
+    @Test
+    fun ephemeralEventsAppearInProjection() =
+        runBlocking {
+            val ephemeralKind = 22_000
+            val projection =
+                store.observe<Event>(Filter(kinds = listOf(ephemeralKind)), scope)
+            projection.ready.await()
+            assertTrue(projection.items.value.isEmpty())
+
+            val ephemeral: Event =
+                signer.sign(
+                    TimeUtils.now(),
+                    ephemeralKind,
+                    arrayOf(emptyArray()),
+                    "live",
+                )
+            store.insert(ephemeral)
+
+            val after = projection.awaitItems { it.size == 1 }
+            assertEquals(ephemeral.id, after[0].value.id)
+
+            // Confirmation that the inner SQLite store didn't persist.
+            val persisted = store.query<Event>(Filter(kinds = listOf(ephemeralKind)))
+            assertEquals(0, persisted.size)
+
+            // A fresh projection on the same store gets nothing — the
+            // event was only ever live, not durable.
+            val freshProjection =
+                store.observe<Event>(Filter(kinds = listOf(ephemeralKind)), scope)
+            freshProjection.ready.await()
+            assertTrue(freshProjection.items.value.isEmpty())
+
+            projection.close()
+            freshProjection.close()
         }
 }

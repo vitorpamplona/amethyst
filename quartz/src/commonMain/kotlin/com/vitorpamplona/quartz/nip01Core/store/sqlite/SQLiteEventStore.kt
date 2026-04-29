@@ -34,10 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.EventFactory
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -66,18 +62,6 @@ class SQLiteEventStore(
     val deletionModule = DeletionRequestModule(seedModule::hasher)
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule(seedModule::hasher)
-
-    /**
-     * Stream of events the store accepted into durable storage. See
-     * [IEventStore.inserts] for the contract.
-     */
-    private val _inserts =
-        MutableSharedFlow<Event>(
-            replay = 0,
-            extraBufferCapacity = 256,
-            onBufferOverflow = BufferOverflow.SUSPEND,
-        )
-    val inserts: SharedFlow<Event> = _inserts.asSharedFlow()
 
     val queryBuilder =
         QueryBuilder(
@@ -214,38 +198,27 @@ class SQLiteEventStore(
             db.transaction {
                 innerInsertEvent(event, this)
             }
-            // The transaction either committed or threw. On commit the
-            // event is durable; emit so subscribed projections see it.
-            // On rollback the throw propagates and we never reach this.
-            _inserts.emit(event)
         }
     }
 
     inner class Transaction(
         val db: SQLiteConnection,
     ) : IEventStore.ITransaction {
-        val accepted = ArrayList<Event>()
-
         override fun insert(event: Event) {
             if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
             if (event.kind.isEphemeral()) return
 
             innerInsertEvent(event, db)
-            accepted.add(event)
         }
     }
 
     suspend fun transaction(body: Transaction.() -> Unit) {
         pool.useWriter { db ->
-            val txn = Transaction(db)
             db.transaction {
-                with(txn) {
+                with(Transaction(this)) {
                     body()
                 }
             }
-            // Emit each accepted event after the batch commits — the
-            // projection sees them in the same order they were inserted.
-            for (e in txn.accepted) _inserts.emit(e)
         }
     }
 

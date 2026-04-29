@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.store
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import kotlinx.coroutines.flow.SharedFlow
 
 interface IEventStore : AutoCloseable {
     suspend fun insert(event: Event)
@@ -56,24 +55,6 @@ interface IEventStore : AutoCloseable {
     suspend fun delete(filters: List<Filter>)
 
     suspend fun deleteExpiredEvents()
-
-    /**
-     * Stream of events the store accepted into durable storage. One
-     * emission per successfully inserted event, in commit order.
-     * Rejected inserts (expired, ephemeral, blocked by tombstone /
-     * vanish, NIP-01 supersession loser) emit nothing.
-     *
-     * Consumed by `EventStoreProjection` to maintain a live view —
-     * the projection itself replays NIP-01 supersession, NIP-09
-     * deletion fan-out, NIP-62 vanish cascades, and NIP-40 expiration
-     * from these events, so stores don't need to publish removals.
-     *
-     * Out-of-band removals (`delete(id)`, `delete(filter)`, `clearDB()`,
-     * `deleteExpiredEvents()`) are not visible on this stream — they're
-     * maintenance operations and projections survive a missed mutation
-     * by re-seeding when their scope is restarted.
-     */
-    val inserts: SharedFlow<Event>
 
     override fun close()
 }

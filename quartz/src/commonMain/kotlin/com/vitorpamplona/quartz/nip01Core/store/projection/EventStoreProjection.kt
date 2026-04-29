@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -40,12 +40,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 
 /**
- * A reactive projection over any [IEventStore] for a fixed set of
- * [filters]. Each visible event is wrapped in a [MutableStateFlow] so
+ * A reactive projection over an [ObservableEventStore] for a fixed
+ * set of [filters]. Each visible event is wrapped in a
+ * [MutableStateFlow] so
  * the UI can collect three different kinds of change with the right
  * granularity:
  *
@@ -63,10 +65,10 @@ import kotlinx.coroutines.yield
  *    drops the handle from the list.
  *
  * The seed is materialised by querying the store once at start, after
- * which the projection is driven entirely by [IEventStore.inserts] and
- * its own expiration ticker. The store is never re-queried on
- * mutation, and the projection never asks the store to delete anything
- * — it interprets incoming Nostr events itself:
+ * which the projection is driven entirely by [ObservableEventStore.events]
+ * and its own expiration ticker. The store is never re-queried on
+ * mutation, and the projection never asks the store to delete
+ * anything — it interprets incoming Nostr events itself:
  *
  *  - **NIP-01 supersession.** New replaceable / addressable events
  *    replace prior ones for the same `kind:pubkey[:dtag]`. The
@@ -96,16 +98,23 @@ import kotlinx.coroutines.yield
  *
  * Out-of-band store mutations — `delete(id)`, `delete(filter)`,
  * `clearDB()`, the periodic `deleteExpiredEvents()` sweep — are not
- * visible on [IEventStore.inserts] and won't update an open
+ * visible on [ObservableEventStore.events] and won't update an open
  * projection. Re-open the projection (e.g. cancel and recreate the
  * scope) to pick up an out-of-band change.
+ *
+ * Ephemeral events (kinds `20000-29999`) reach the projection via
+ * [ObservableEventStore.events] without ever being persisted; they
+ * appear in [items] for as long as the projection is alive but never
+ * survive a re-seed. NIP-40 expiration applies to them too — if they
+ * carry an `expiration` tag, the per-projection ticker drops them
+ * when it lapses.
  *
  * Lifecycle: the projection runs a collector + an expiration ticker
  * inside [scope]. Cancel the scope (or call [close]) when the screen
  * using the projection goes away.
  */
 class EventStoreProjection<T : Event>(
-    private val store: IEventStore,
+    private val store: ObservableEventStore,
     private val filters: List<Filter>,
     private val relay: NormalizedRelayUrl?,
     scope: CoroutineScope,
@@ -138,9 +147,16 @@ class EventStoreProjection<T : Event>(
 
     private val collectorJob: Job =
         scope.launch {
-            seed()
-            ready.complete(Unit)
-            store.inserts.collect { event -> apply(event) }
+            // `onSubscription` runs after the SharedFlow subscription is
+            // active but before we pull any events — the buffer absorbs
+            // any emissions that arrive while we seed, and we then drain
+            // them as the collect proceeds. Doing the seed inside
+            // `collect { }` instead would race with concurrent inserts.
+            store.events
+                .onSubscription {
+                    seed()
+                    ready.complete(Unit)
+                }.collect { event -> apply(event) }
         }
 
     private val expirationJob: Job =

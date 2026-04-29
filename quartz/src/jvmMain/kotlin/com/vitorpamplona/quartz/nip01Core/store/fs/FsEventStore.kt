@@ -36,10 +36,6 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -99,40 +95,19 @@ open class FsEventStore(
         planner = FsQueryPlanner(layout, hasher)
     }
 
-    /**
-     * Stream of events newly persisted by this store. See
-     * [IEventStore.inserts] for the contract. Events that are no-op
-     * idempotent retries (canonical already on disk from a previous
-     * call) are not re-emitted; the original insert already published.
-     */
-    private val _inserts =
-        MutableSharedFlow<Event>(
-            replay = 0,
-            extraBufferCapacity = 256,
-            onBufferOverflow = BufferOverflow.SUSPEND,
-        )
-    override val inserts: SharedFlow<Event> = _inserts.asSharedFlow()
-
     // ------------------------------------------------------------------
     // Insert
     // ------------------------------------------------------------------
 
-    override suspend fun insert(event: Event) {
-        val accepted = lockManager.withWriteLock { insertLocked(event) }
-        if (accepted) _inserts.emit(event)
-    }
+    override suspend fun insert(event: Event) =
+        lockManager.withWriteLock {
+            insertLocked(event)
+        }
 
-    /**
-     * Inserts the event under the write lock and returns true iff this
-     * call is the one that newly persisted it. Returns false for the
-     * no-op paths (ephemeral, expired, blocked, supersession loser, or
-     * canonical already on disk from a prior call) so callers can
-     * decide whether to publish on [inserts].
-     */
-    private fun insertLocked(event: Event): Boolean {
-        if (event.kind.isEphemeral()) return false
-        if (isAlreadyExpired(event)) return false
-        if (isBlockedByTombstone(event)) return false
+    private fun insertLocked(event: Event) {
+        if (event.kind.isEphemeral()) return
+        if (isAlreadyExpired(event)) return
+        if (isBlockedByTombstone(event)) return
 
         val slot = slots.slotPathFor(event)
         val existingSlot = slot?.let { slots.readSlot(it) }
@@ -146,7 +121,7 @@ open class FsEventStore(
             // (later createdAt, or same createdAt with the lexically smaller
             // id). Matches the ReplaceableModule / AddressableModule trigger
             // condition in SQLite.
-            return false
+            return
         }
 
         val canonical = layout.canonical(event.id)
@@ -159,7 +134,7 @@ open class FsEventStore(
             }
             if (event is DeletionEvent) processDeletion(event, canonical)
             if (event is RequestToVanishEvent) processVanish(event, canonical)
-            return false
+            return
         }
 
         Files.createDirectories(canonical.parent)
@@ -172,7 +147,7 @@ open class FsEventStore(
                 // A concurrent writer won the race. Canonical is immutable
                 // so the other copy is equivalent — drop our tmp and return.
                 Files.deleteIfExists(tmp)
-                return false
+                return
             }
             Files.setLastModifiedTime(canonical, FileTime.from(event.createdAt, TimeUnit.SECONDS))
             indexer.link(event, canonical)
@@ -181,7 +156,6 @@ open class FsEventStore(
             }
             if (event is DeletionEvent) processDeletion(event, canonical)
             if (event is RequestToVanishEvent) processVanish(event, canonical)
-            return true
         } catch (t: Throwable) {
             Files.deleteIfExists(tmp)
             throw t
@@ -289,21 +263,14 @@ open class FsEventStore(
         }
     }
 
-    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
-        val accepted = ArrayList<Event>()
+    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) =
         lockManager.withWriteLock {
             val txn =
                 object : IEventStore.ITransaction {
-                    override fun insert(event: Event) {
-                        if (insertLocked(event)) accepted.add(event)
-                    }
+                    override fun insert(event: Event) = insertLocked(event)
                 }
             txn.body()
         }
-        // Emit each accepted event in order after the lock releases —
-        // mirrors SQLiteEventStore.transaction.
-        for (e in accepted) _inserts.emit(e)
-    }
 
     // ------------------------------------------------------------------
     // Query

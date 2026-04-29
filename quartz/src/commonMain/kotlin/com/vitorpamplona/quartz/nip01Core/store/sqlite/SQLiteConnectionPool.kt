@@ -107,7 +107,7 @@ class SQLiteConnectionPool(
      * suspend until the lock is released. Cancellation-aware via the
      * coroutine [Mutex].
      */
-    suspend fun <T> useWriter(block: suspend (SQLiteConnection) -> T): T =
+    suspend fun <T> useWriter(block: (SQLiteConnection) -> T): T =
         writerMutex.withLock {
             block(writer)
         }
@@ -118,7 +118,7 @@ class SQLiteConnectionPool(
      * (WAL). With an in-memory DB this falls back to the writer mutex
      * because each `:memory:` connection would be a separate database.
      */
-    suspend fun <T> useReader(block: suspend (SQLiteConnection) -> T): T {
+    suspend fun <T> useReader(block: (SQLiteConnection) -> T): T {
         val ch =
             readerChannel
                 ?: return writerMutex.withLock { block(writer) }

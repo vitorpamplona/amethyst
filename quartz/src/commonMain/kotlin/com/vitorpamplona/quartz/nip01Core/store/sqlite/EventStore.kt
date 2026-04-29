@@ -26,19 +26,31 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.projection.EventStoreProjection
 import kotlinx.coroutines.CoroutineScope
 
+/**
+ * SQLite-backed event store with a built-in [ObservableEventStore]
+ * façade so [observe] returns an [EventStoreProjection] without
+ * extra plumbing. Persistence goes through [SQLiteEventStore]; the
+ * observable layer takes care of routing ephemerals (which never hit
+ * the DB) to projection collectors.
+ */
 class EventStore(
     dbName: String? = "events.db",
     val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
+    val observable = ObservableEventStore(SQLiteAdapter(store))
 
-    override suspend fun insert(event: Event) = store.insertEvent(event)
+    /** Stream of events accepted for observation. See [ObservableEventStore.events]. */
+    val events get() = observable.events
 
-    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = store.transaction(body)
+    override suspend fun insert(event: Event) = observable.insert(event)
+
+    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = observable.transaction(body)
 
     override suspend fun <T : Event> query(filter: Filter) = store.query<T>(filter)
 
@@ -68,8 +80,6 @@ class EventStore(
 
     override suspend fun deleteExpiredEvents() = store.deleteExpiredEvents()
 
-    override val inserts get() = store.inserts
-
     /**
      * Open a reactive [EventStoreProjection] over this store with
      * NIP-62 vanish scoping bound to the store's [relay]. Cancel
@@ -78,7 +88,7 @@ class EventStore(
     fun <T : Event> observe(
         filters: List<Filter>,
         scope: CoroutineScope,
-    ): EventStoreProjection<T> = EventStoreProjection(this, filters, relay, scope)
+    ): EventStoreProjection<T> = EventStoreProjection(observable, filters, relay, scope)
 
     fun <T : Event> observe(
         filter: Filter,
@@ -86,4 +96,50 @@ class EventStore(
     ): EventStoreProjection<T> = observe(listOf(filter), scope)
 
     override fun close() = store.close()
+}
+
+/**
+ * Adapts the non-IEventStore [SQLiteEventStore] to [IEventStore] for
+ * the [ObservableEventStore] wrapper. SQLiteEventStore predates the
+ * IEventStore contract; this is a thin forwarder, not a behavioural
+ * shim.
+ */
+private class SQLiteAdapter(
+    val sqlite: SQLiteEventStore,
+) : IEventStore {
+    override suspend fun insert(event: Event) = sqlite.insertEvent(event)
+
+    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
+        sqlite.transaction { body() }
+    }
+
+    override suspend fun <T : Event> query(filter: Filter) = sqlite.query<T>(filter)
+
+    override suspend fun <T : Event> query(filters: List<Filter>) = sqlite.query<T>(filters)
+
+    override suspend fun <T : Event> query(
+        filter: Filter,
+        onEach: (T) -> Unit,
+    ) = sqlite.query(filter, onEach)
+
+    override suspend fun <T : Event> query(
+        filters: List<Filter>,
+        onEach: (T) -> Unit,
+    ) = sqlite.query(filters, onEach)
+
+    override suspend fun count(filter: Filter) = sqlite.count(filter)
+
+    override suspend fun count(filters: List<Filter>) = sqlite.count(filters)
+
+    override suspend fun delete(filter: Filter) {
+        sqlite.delete(filter)
+    }
+
+    override suspend fun delete(filters: List<Filter>) {
+        sqlite.delete(filters)
+    }
+
+    override suspend fun deleteExpiredEvents() = sqlite.deleteExpiredEvents()
+
+    override fun close() = sqlite.close()
 }
