@@ -60,6 +60,21 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.collections.immutable.ImmutableList
 
 /**
+ * Resolve display name from cache. Returns null if no metadata or name matches hex fallback.
+ */
+private fun resolveDisplayName(
+    npub: String,
+    localCache: DesktopLocalCache?,
+): String? {
+    if (localCache == null) return null
+    val pubkeyHex = decodePublicKeyAsHexOrNull(npub) ?: return null
+    val user = localCache.getUserIfExists(pubkeyHex) ?: return null
+    val name = user.toBestDisplayName()
+    // Don't return hex fallback as "display name"
+    return name.takeIf { it != user.pubkeyDisplayHex() }
+}
+
+/**
  * Middle-truncates an npub: "npub1abcdef...wxyz"
  */
 private fun npubShortMiddle(npub: String): String {
@@ -102,44 +117,47 @@ fun AccountSwitcherDropdown(
             allAccounts.forEach { account ->
                 val isActive = account.npub == activeNpub
 
-                // Resolve display name from cache
-                val displayName =
-                    remember(account.npub, localCache) {
-                        val pubkeyHex = decodePublicKeyAsHexOrNull(account.npub)
-                        if (pubkeyHex != null && localCache != null) {
-                            val user = localCache.getUserIfExists(pubkeyHex)
-                            user?.toBestDisplayName()?.takeIf { it != user.pubkeyDisplayHex() }
-                        } else {
-                            null
-                        }
+                // Resolve display name from cache (no remember — cheap lookup, re-evaluates each recomposition)
+                val displayName = resolveDisplayName(account.npub, localCache)
+                val shortNpub = npubShortMiddle(account.npub)
+                val signerLabel =
+                    when (account.signerType) {
+                        is SignerType.Remote -> " · Bunker"
+                        is SignerType.ViewOnly -> " · View only"
+                        is SignerType.Internal -> ""
                     }
 
                 DropdownMenuItem(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                // Row 1: Display name (or npub if no name)
+                                // Title: display name or npub
                                 Text(
-                                    displayName ?: npubShortMiddle(account.npub),
+                                    displayName ?: shortNpub,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
-                                // Row 2: npub (middle-truncated) + signer type badge
-                                val signerLabel =
-                                    when (account.signerType) {
-                                        is SignerType.Remote -> " · Bunker"
-                                        is SignerType.ViewOnly -> " · View only"
-                                        is SignerType.Internal -> ""
-                                    }
-                                Text(
-                                    npubShortMiddle(account.npub) + signerLabel,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                // Subtitle: only show if different from title
+                                val subtitle = shortNpub + signerLabel
+                                if (displayName != null) {
+                                    Text(
+                                        subtitle,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                } else if (signerLabel.isNotEmpty()) {
+                                    // No display name but has signer label — show it
+                                    Text(
+                                        signerLabel.removePrefix(" · "),
+                                        maxLines = 1,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                             }
                             if (isActive) {
                                 Icon(
@@ -187,15 +205,7 @@ fun AccountSwitcherDropdown(
     // Logout confirmation dialog
     val logoutNpub = confirmLogoutNpub
     if (logoutNpub != null) {
-        val logoutDisplayName =
-            remember(logoutNpub, localCache) {
-                val hex = decodePublicKeyAsHexOrNull(logoutNpub)
-                if (hex != null && localCache != null) {
-                    localCache.getUserIfExists(hex)?.toBestDisplayName()
-                } else {
-                    null
-                }
-            }
+        val logoutDisplayName = resolveDisplayName(logoutNpub, localCache)
 
         AlertDialog(
             onDismissRequest = { confirmLogoutNpub = null },

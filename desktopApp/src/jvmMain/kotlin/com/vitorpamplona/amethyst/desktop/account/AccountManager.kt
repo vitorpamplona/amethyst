@@ -641,6 +641,27 @@ class AccountManager internal constructor(
      * Ensures the currently logged-in account is persisted in multi-account storage.
      * Call before switching to a new account to avoid losing the current one.
      */
+    private fun loadReadOnlyAccount(npub: String): Result<AccountState.LoggedIn> {
+        val pubKeyHex =
+            decodePublicKeyAsHexOrNull(npub)
+                ?: return Result.failure(Exception("Invalid npub: $npub"))
+
+        val keyPair = KeyPair(pubKey = pubKeyHex.hexToByteArray())
+        val signer = NostrSignerInternal(keyPair)
+
+        val state =
+            AccountState.LoggedIn(
+                signer = signer,
+                pubKeyHex = pubKeyHex,
+                npub = npub,
+                nsec = null,
+                isReadOnly = true,
+                signerType = SignerType.ViewOnly,
+            )
+        _accountState.value = state
+        return Result.success(state)
+    }
+
     suspend fun ensureCurrentAccountInStorage() {
         val current = currentAccount() ?: return
         val info = AccountInfo(npub = current.npub, signerType = current.signerType)
@@ -688,7 +709,7 @@ class AccountManager internal constructor(
             when (sType) {
                 is SignerType.Internal -> loadInternalAccount(target.npub)
                 is SignerType.Remote -> loadBunkerAccount(sType.bunkerUri, target.npub)
-                is SignerType.ViewOnly -> loadInternalAccount(target.npub)
+                is SignerType.ViewOnly -> loadReadOnlyAccount(target.npub)
             }
 
         if (newState.isFailure) return newState
