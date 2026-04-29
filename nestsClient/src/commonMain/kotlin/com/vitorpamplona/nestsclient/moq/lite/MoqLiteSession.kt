@@ -553,6 +553,16 @@ class MoqLiteSession internal constructor(
                         MoqLiteControlType.Subscribe -> {
                             val subPayload = buffer.readSizePrefixed() ?: return@collect
                             val sub = MoqLiteCodec.decodeSubscribe(subPayload)
+                            // Register the subscription BEFORE sending Ok so the
+                            // peer's observation of Ok is a happens-after of
+                            // `inboundSubs += sub`. Otherwise on dispatchers that
+                            // resume the peer's `bidi.incoming().first()`
+                            // continuation before this coroutine's continuation
+                            // (notably Windows under Dispatchers.Default), the
+                            // peer's first `publisher.send` after Ok races the
+                            // registration and observes an empty subscriber set.
+                            publisher.registerInboundSubscription(sub)
+                            inboundSub = sub
                             bidi.write(
                                 MoqLiteCodec.encodeSubscribeOk(
                                     MoqLiteSubscribeOk(
@@ -564,8 +574,6 @@ class MoqLiteSession internal constructor(
                                     ),
                                 ),
                             )
-                            publisher.registerInboundSubscription(sub)
-                            inboundSub = sub
                             dispatched = true
                         }
 
