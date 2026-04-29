@@ -349,12 +349,12 @@ class EventStoreProjectionTest {
         }
 
     /**
-     * NIP-40 per-projection ticker: a slot whose `expiration` lapses
-     * after the projection has loaded should be dropped on the next
-     * tick, even though the store hasn't run its sweep yet.
+     * NIP-40 expiration drops slots only when the application calls
+     * `deleteExpiredEvents()` on the observable store — projections
+     * no longer run their own ticker.
      */
     @Test
-    fun nip40ExpirationDroppedByTicker() =
+    fun nip40ExpirationDroppedOnStoreSweep() =
         runBlocking {
             val time = TimeUtils.now()
             val safe = signer.sign(TextNoteEvent.build("safe", createdAt = time) { expiration(time + 100) })
@@ -362,23 +362,56 @@ class EventStoreProjectionTest {
             observable.insert(safe)
             observable.insert(short)
 
-            // Drive the ticker frequently so the test doesn't sit idle.
             val projection =
-                EventStoreProjection<Event>(
-                    observable,
-                    listOf(Filter(kinds = listOf(TextNoteEvent.KIND))),
-                    relay = null,
-                    scope = scope,
-                    expirationTickMs = 100,
+                observable.observe<Event>(
+                    Filter(kinds = listOf(TextNoteEvent.KIND)),
+                    store.relay,
+                    scope,
                 )
             projection.ready.await()
             assertEquals(2, projection.items.value.size)
 
-            // Wait past the short expiration.
+            // Let the short expiration lapse, then ask the store to
+            // sweep — the projection drops the expired slot in
+            // response to the resulting StoreEvent.Delete(Expired).
             delay(2000)
+            observable.deleteExpiredEvents()
 
-            val after = projection.awaitItems(timeoutMs = 5_000) { it.size == 1 }
+            val after = projection.awaitItems { it.size == 1 }
             assertEquals(safe.id, after[0].value.id)
+            projection.close()
+        }
+
+    /**
+     * `delete(filter)` on the observable propagates to open
+     * projections: they drop every slot matching the filter using
+     * the same Filter.match logic the store would.
+     */
+    @Test
+    fun deleteByFilterRemovesMatchingSlots() =
+        runBlocking {
+            val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
+            val b = signer.sign(TextNoteEvent.build("b", createdAt = 200))
+            val foreign = otherSigner.sign(TextNoteEvent.build("foreign", createdAt = 150))
+            observable.insert(a)
+            observable.insert(b)
+            observable.insert(foreign)
+
+            val projection =
+                observable.observe<Event>(
+                    Filter(kinds = listOf(TextNoteEvent.KIND)),
+                    store.relay,
+                    scope,
+                )
+            projection.ready.await()
+            assertEquals(3, projection.items.value.size)
+
+            // Drop everything authored by `signer` — should leave
+            // only the foreign event.
+            observable.delete(Filter(authors = listOf(signer.pubKey)))
+
+            val after = projection.awaitItems { it.size == 1 }
+            assertEquals(foreign.id, after[0].value.id)
             projection.close()
         }
 

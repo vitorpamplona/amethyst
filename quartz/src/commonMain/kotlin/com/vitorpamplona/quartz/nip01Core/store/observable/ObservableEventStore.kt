@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.projection.EventStoreProjection
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -63,18 +64,23 @@ class ObservableEventStore(
     val inner: IEventStore,
 ) : IEventStore {
     private val _events =
-        MutableSharedFlow<Event>(
+        MutableSharedFlow<StoreEvent>(
             replay = 0,
             extraBufferCapacity = 256,
             onBufferOverflow = BufferOverflow.SUSPEND,
         )
 
     /**
-     * Stream of events accepted for observation, persisted or not.
-     * One emission per successful [insert] (or per successful entry
-     * inside [transaction]); rejected inserts emit nothing.
+     * Stream of mutations accepted by the observable layer. One
+     * emission per successful [insert] (or per accepted event in a
+     * [transaction] body), one emission per [delete] / [delete] /
+     * [deleteExpiredEvents] call. Rejected inserts and rolled-back
+     * transactions emit nothing.
+     *
+     * Projections consume this stream — see [EventStoreProjection]
+     * for how each [StoreEvent] is interpreted.
      */
-    val events: SharedFlow<Event> = _events.asSharedFlow()
+    val events: SharedFlow<StoreEvent> = _events.asSharedFlow()
 
     override suspend fun insert(event: Event) {
         if (event.kind.isEphemeral()) {
@@ -82,13 +88,13 @@ class ObservableEventStore(
             // that are already expired — they were never going to live
             // long enough for a UI to render them.
             if (event.isExpired()) return
-            _events.emit(event)
+            _events.emit(StoreEvent.Insert(event))
             return
         }
         // Non-ephemeral: let the inner store enforce expiration,
         // tombstones, supersession, etc. If it throws, we never emit.
         inner.insert(event)
-        _events.emit(event)
+        _events.emit(StoreEvent.Insert(event))
     }
 
     override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
@@ -115,7 +121,7 @@ class ObservableEventStore(
         }
         // Emit only after the inner transaction commits. If it throws
         // / rolls back, `accepted` is discarded.
-        for (e in accepted) _events.emit(e)
+        for (e in accepted) _events.emit(StoreEvent.Insert(e))
     }
 
     override suspend fun <T : Event> query(filter: Filter): List<T> = inner.query(filter)
@@ -136,11 +142,26 @@ class ObservableEventStore(
 
     override suspend fun count(filters: List<Filter>): Int = inner.count(filters)
 
-    override suspend fun delete(filter: Filter) = inner.delete(filter)
+    override suspend fun delete(filter: Filter) {
+        inner.delete(filter)
+        _events.emit(StoreEvent.Delete(DeleteRule.Filtered(listOf(filter))))
+    }
 
-    override suspend fun delete(filters: List<Filter>) = inner.delete(filters)
+    override suspend fun delete(filters: List<Filter>) {
+        inner.delete(filters)
+        _events.emit(StoreEvent.Delete(DeleteRule.Filtered(filters)))
+    }
 
-    override suspend fun deleteExpiredEvents() = inner.deleteExpiredEvents()
+    override suspend fun deleteExpiredEvents() {
+        // Pin the cutoff before forwarding so the projection's drop
+        // matches the store's drop exactly. The store's SQL uses
+        // `unixepoch()` so there's still a small skew, but pinning at
+        // call time is closer than letting each projection use its
+        // own clock when the event is processed.
+        val asOf = TimeUtils.now()
+        inner.deleteExpiredEvents()
+        _events.emit(StoreEvent.Delete(DeleteRule.Expired(asOf)))
+    }
 
     /**
      * Open a reactive [EventStoreProjection] over this observable

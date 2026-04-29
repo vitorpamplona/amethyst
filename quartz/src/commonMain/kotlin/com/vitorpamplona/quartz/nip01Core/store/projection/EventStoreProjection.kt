@@ -27,7 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.observable.DeleteRule
 import com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore
+import com.vitorpamplona.quartz.nip01Core.store.observable.StoreEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -36,7 +38,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,30 +65,35 @@ import kotlinx.coroutines.yield
  *  - **Removal** (NIP-09 deletion, NIP-62 vanish, NIP-40 expiration)
  *    drops the handle from the list.
  *
- * The seed is materialised by querying the store once at start, after
- * which the projection is driven entirely by [ObservableEventStore.events]
- * and its own expiration ticker. The store is never re-queried on
- * mutation, and the projection never asks the store to delete
- * anything — it interprets incoming Nostr events itself:
+ * The seed is materialised by querying the store once at start,
+ * after which the projection is driven entirely by
+ * [ObservableEventStore.events]. Two kinds of mutation arrive on
+ * that stream:
  *
- *  - **NIP-01 supersession.** New replaceable / addressable events
- *    replace prior ones for the same `kind:pubkey[:dtag]`. The
- *    NIP-01 lexical-id tiebreaker (`new.id < old.id` when
- *    `created_at` ties) is honoured.
- *  - **NIP-09 deletions.** A [DeletionEvent] removes any matching
- *    handle owned by the same author (for GiftWrap, the recipient).
- *    Cross-author deletions are inert.
- *  - **NIP-62 right to vanish.** A [RequestToVanishEvent] whose
- *    `shouldVanishFrom([relay])` is true drops every handle from the
- *    same author with `created_at < vanish.created_at`.
- *  - **NIP-40 expiration.** Events with a past `expiration` tag are
- *    rejected at insert time. A periodic ticker drops slots whose
- *    expiration has just lapsed; collectors see the slot disappear.
+ *  - [StoreEvent.Insert] — interpreted in-projection so a single
+ *    arriving event can carry NIP-01 / NIP-09 / NIP-62 semantics:
  *
- * That's the same set of rules the SQLite / FS stores enforce for
- * durability. The duplication is by design — the store enforces them
- * on disk so the file isn't corrupt; the projection enforces them in
- * memory so the live view stays correct without a re-query per event.
+ *      - **NIP-01 supersession.** New replaceable / addressable events
+ *        replace prior ones for the same `kind:pubkey[:dtag]`. The
+ *        NIP-01 lexical-id tiebreaker (`new.id < old.id` when
+ *        `created_at` ties) is honoured.
+ *      - **NIP-09 deletions.** A [DeletionEvent] removes any matching
+ *        handle owned by the same author (for GiftWrap, the recipient).
+ *        Cross-author deletions are inert.
+ *      - **NIP-62 right to vanish.** A [RequestToVanishEvent] whose
+ *        `shouldVanishFrom([relay])` is true drops every handle from
+ *        the same author with `created_at < vanish.created_at`.
+ *      - **NIP-40 expiration.** Events whose `expiration` tag has
+ *        already lapsed at the moment they arrive are dropped before
+ *        they ever enter [items].
+ *
+ *  - [StoreEvent.Delete] — emitted when a caller invokes
+ *    `delete(filter)`, `delete(filters)`, or `deleteExpiredEvents()`
+ *    on the [ObservableEventStore]. The projection drops every slot
+ *    matching the rule using the same [Filter.match] / NIP-40
+ *    expiration semantics the store used. **There is no per-projection
+ *    expiration ticker** — projections only drop expired events when
+ *    the application calls `deleteExpiredEvents()` on the store.
  *
  * Limit handling: the initial query honours the filter `limit`, and
  * we trim to the same cap when an insert pushes the list over. We do
@@ -96,29 +102,23 @@ import kotlinx.coroutines.yield
  * new arrives. That tradeoff matches what callers were already getting
  * from `LocalCache.observeEvents`.
  *
- * Out-of-band store mutations — `delete(id)`, `delete(filter)`,
- * `clearDB()`, the periodic `deleteExpiredEvents()` sweep — are not
- * visible on [ObservableEventStore.events] and won't update an open
- * projection. Re-open the projection (e.g. cancel and recreate the
- * scope) to pick up an out-of-band change.
- *
  * Ephemeral events (kinds `20000-29999`) reach the projection via
  * [ObservableEventStore.events] without ever being persisted; they
  * appear in [items] for as long as the projection is alive but never
- * survive a re-seed. NIP-40 expiration applies to them too — if they
- * carry an `expiration` tag, the per-projection ticker drops them
- * when it lapses.
+ * survive a re-seed. They aren't covered by the store's
+ * `deleteExpiredEvents()` sweep (the DB never had them), so an
+ * ephemeral with an `expiration` tag will linger in the projection
+ * until it's superseded or until the projection is closed.
  *
- * Lifecycle: the projection runs a collector + an expiration ticker
- * inside [scope]. Cancel the scope (or call [close]) when the screen
- * using the projection goes away.
+ * Lifecycle: the projection runs a single collector inside [scope].
+ * Cancel the scope (or call [close]) when the screen using the
+ * projection goes away.
  */
 class EventStoreProjection<T : Event>(
     private val store: ObservableEventStore,
     private val filters: List<Filter>,
     private val relay: NormalizedRelayUrl?,
     scope: CoroutineScope,
-    private val expirationTickMs: Long = 30_000L,
     private val nowProvider: () -> Long = TimeUtils::now,
 ) : AutoCloseable {
     private val _items = MutableStateFlow<List<MutableStateFlow<T>>>(emptyList())
@@ -156,27 +156,17 @@ class EventStoreProjection<T : Event>(
                 .onSubscription {
                     seed()
                     ready.complete(Unit)
-                }.collect { event -> apply(event) }
-        }
-
-    private val expirationJob: Job =
-        scope.launch {
-            // Sleep first so the seed-time sweep covers the initial
-            // contents — see [seed].
-            while (true) {
-                delay(expirationTickMs)
-                sweepExpired()
-            }
+                }.collect { storeEvent -> apply(storeEvent) }
         }
 
     private suspend fun seed() {
         val initial = store.query<T>(filters)
         val now = nowProvider()
         for (event in initial) {
-            // The store should already exclude expired rows from the
-            // result, but it doesn't hurt to skip them here too —
-            // covers any FS / in-memory store that hasn't run a sweep
-            // recently.
+            // Stores don't filter expired events at query time, so we
+            // do it here — otherwise an expired event would briefly
+            // appear in [items] before the next deleteExpiredEvents()
+            // sweep clears it.
             if (isExpiredAt(event, now)) continue
             insertNew(event)
             yield()
@@ -184,7 +174,14 @@ class EventStoreProjection<T : Event>(
         publish()
     }
 
-    private fun apply(event: Event) {
+    private fun apply(storeEvent: StoreEvent) {
+        when (storeEvent) {
+            is StoreEvent.Insert -> applyInsert(storeEvent.event)
+            is StoreEvent.Delete -> applyDelete(storeEvent.rule)
+        }
+    }
+
+    private fun applyInsert(event: Event) {
         if (isExpiredAt(event, nowProvider())) return
 
         var changed = false
@@ -204,6 +201,27 @@ class EventStoreProjection<T : Event>(
             if (handleInsert(event)) changed = true
         }
 
+        if (changed) publish()
+    }
+
+    private fun applyDelete(rule: DeleteRule) {
+        val targets =
+            when (rule) {
+                is DeleteRule.Filtered -> {
+                    if (rule.filters.isEmpty()) return
+                    byId.values.filter { slot -> rule.filters.any { it.match(slot.flow.value) } }
+                }
+
+                is DeleteRule.Expired -> {
+                    val cutoff = rule.asOf ?: nowProvider()
+                    byId.values.filter { isExpiredAt(it.flow.value, cutoff) }
+                }
+            }
+        if (targets.isEmpty()) return
+        var changed = false
+        for (slot in targets) {
+            if (removeSlot(slot)) changed = true
+        }
         if (changed) publish()
     }
 
@@ -280,17 +298,6 @@ class EventStoreProjection<T : Event>(
         return changed
     }
 
-    private fun sweepExpired() {
-        val now = nowProvider()
-        val targets = byId.values.filter { isExpiredAt(it.flow.value, now) }
-        if (targets.isEmpty()) return
-        var changed = false
-        for (slot in targets) {
-            if (removeSlot(slot)) changed = true
-        }
-        if (changed) publish()
-    }
-
     @Suppress("UNCHECKED_CAST")
     private fun insertNew(event: Event) {
         val slot = Slot(event as T)
@@ -325,11 +332,10 @@ class EventStoreProjection<T : Event>(
     /**
      * Stop tracking changes and clear internal state. Idempotent. The
      * scope passed to the constructor keeps running; only this
-     * projection's collector + expiration jobs are cancelled.
+     * projection's collector job is cancelled.
      */
     override fun close() {
         collectorJob.cancel()
-        expirationJob.cancel()
         ordered.clear()
         byId.clear()
         byStableKey.clear()
