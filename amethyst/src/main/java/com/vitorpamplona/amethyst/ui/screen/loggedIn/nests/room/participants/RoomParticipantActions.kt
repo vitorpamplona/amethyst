@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.image
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.participants
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.relays
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.summary
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
@@ -132,6 +133,14 @@ internal object RoomParticipantActions {
             original.endpoint()?.let { endpoint(it) }
             original.summary()?.takeIf { it.isNotBlank() }?.let { summary(it) }
             original.image()?.takeIf { it.isNotBlank() }?.let { image(it) }
+            // Preserve the room's `relays` tag — without it, the
+            // republished kind-30312 fans out only to the host's
+            // outbox, never reaching the room's own relay set
+            // (e.g. nostrnests's fixed five reads). The audience
+            // member would then never see their role grant and
+            // wouldn't appear on stage for any other participant
+            // listening on those relays.
+            original.relays().takeIf { it.isNotEmpty() }?.let { relays(it) }
             if (others.isNotEmpty()) participants(others)
         }
     }
