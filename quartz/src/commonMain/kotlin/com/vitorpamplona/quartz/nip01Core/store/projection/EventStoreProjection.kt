@@ -24,15 +24,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.store.observable.DeleteRule
-import com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore
-import com.vitorpamplona.quartz.nip01Core.store.observable.StoreEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -49,9 +45,8 @@ import kotlinx.coroutines.yield
 /**
  * A reactive projection over an [ObservableEventStore] for a fixed
  * set of [filters]. Each visible event is wrapped in a
- * [MutableStateFlow] so
- * the UI can collect three different kinds of change with the right
- * granularity:
+ * [MutableStateFlow] so the UI can collect three different kinds of
+ * change with the right granularity:
  *
  *  - **Membership** (events arriving or leaving) re-emits a brand new
  *    [List] from [items]. The list reference is stable while membership
@@ -63,17 +58,16 @@ import kotlinx.coroutines.yield
  *    reshuffled when the new version has a later `created_at` — each
  *    slot remembers the sort key it was inserted with, so updates feel
  *    like pure value mutations.
- *  - **Removal** (NIP-09 deletion, NIP-62 vanish, NIP-40 expiration)
- *    drops the handle from the list.
+ *  - **Removal** (NIP-09 deletion, NIP-62 vanish, NIP-40 expiration,
+ *    `delete(filter)`) drops the handle from the list.
  *
- * The seed is materialised by querying the store once at start,
- * after which the projection is driven entirely by
- * [ObservableEventStore.events]. Two kinds of mutation arrive on
+ * The seed is materialised by querying the store once at start, after
+ * which the projection is driven entirely by
+ * [ObservableEventStore.events]. Three kinds of mutation arrive on
  * that stream:
  *
  *  - [StoreEvent.Insert] — interpreted in-projection so a single
  *    arriving event can carry NIP-01 / NIP-09 / NIP-62 semantics:
- *
  *      - **NIP-01 supersession.** New replaceable / addressable events
  *        replace prior ones for the same `kind:pubkey[:dtag]`. The
  *        NIP-01 lexical-id tiebreaker (`new.id < old.id` when
@@ -88,20 +82,23 @@ import kotlinx.coroutines.yield
  *        already lapsed at the moment they arrive are dropped before
  *        they ever enter [items].
  *
- *  - [StoreEvent.Delete] — emitted when a caller invokes
- *    `delete(filter)`, `delete(filters)`, or `deleteExpiredEvents()`
- *    on the [ObservableEventStore]. The projection drops every slot
- *    matching the rule using the same [Filter.match] / NIP-40
- *    expiration semantics the store used. **There is no per-projection
+ *  - [StoreEvent.DeleteByFilter] — emitted on `delete(filter)` /
+ *    `delete(filters)`. The projection drops every slot matching any
+ *    of the rule's filters via [Filter.match].
+ *
+ *  - [StoreEvent.DeleteExpired] — emitted on `deleteExpiredEvents()`.
+ *    The projection drops every slot whose `expiration` has lapsed at
+ *    the cutoff the store pinned. **There is no per-projection
  *    expiration ticker** — projections only drop expired events when
  *    the application calls `deleteExpiredEvents()` on the store.
  *
- * Limit handling: the initial query honours the filter `limit`, and
- * we trim to the same cap when an insert pushes the list over. We do
- * **not** refill from the store after a deletion — if a deletion
- * leaves you under the limit, you stay under the limit until something
- * new arrives. That tradeoff matches what callers were already getting
- * from `LocalCache.observeEvents`.
+ * Limit handling is **per-filter**: each filter retains at most its
+ * own `limit` matches in a private capped set, sorted by created_at
+ * DESC + id ASC. The projection's [items] is the deduped union of
+ * those sets, so when filter A and filter B match disjoint events the
+ * union can be larger than any single filter's `limit`. We do not
+ * refill from the store after a deletion — if a removal leaves a
+ * filter under cap, it stays under cap until another match arrives.
  *
  * Ephemeral events (kinds `20000-29999`) reach the projection via
  * [ObservableEventStore.events] without ever being persisted; they
@@ -138,13 +135,20 @@ class EventStoreProjection<T : Event>(
     private val byAddress = HashMap<Address, Slot<T>>()
 
     /**
-     * Sorted view of the same slots. The comparator uses each slot's
-     * frozen sort key (the seed event's `created_at` + `id`), so
-     * supersession in-place updates never move a slot inside this set.
+     * Per-filter capped sets. Each filter independently retains at most
+     * `filter.limit` matches; a slot is "live" (visible in [items])
+     * iff it appears in at least one of these sets. Identity-keyed —
+     * [Filter] is `@Stable` but not a data class.
      */
-    private val ordered = sortedSetOf(slotComparator<T>())
+    private val perFilter: Map<Filter, java.util.SortedSet<Slot<T>>> =
+        filters.associateWith { sortedSetOf(slotComparator()) }
 
-    private val limit: Int? = filters.mapNotNull { it.limit }.maxOrNull()
+    /**
+     * Sorted union view of every "live" slot. Maintained alongside
+     * [perFilter] — a slot is added the first time any filter retains
+     * it and removed once no filter still holds it.
+     */
+    private val ordered: java.util.SortedSet<Slot<T>> = sortedSetOf(slotComparator())
 
     /** Set when the seed has been written to [items], so callers can suspend until the projection is hot. */
     val ready: CompletableDeferred<Unit> = CompletableDeferred()
@@ -171,8 +175,8 @@ class EventStoreProjection<T : Event>(
             // do it here — otherwise an expired event would briefly
             // appear in [items] before the next deleteExpiredEvents()
             // sweep clears it.
-            if (isExpiredAt(event, now)) continue
-            insertNew(event)
+            if (event.isExpirationBefore(now)) continue
+            applyInsert(event)
             yield()
         }
         publish()
@@ -180,13 +184,23 @@ class EventStoreProjection<T : Event>(
 
     private fun apply(storeEvent: StoreEvent) {
         when (storeEvent) {
-            is StoreEvent.Insert -> applyInsert(storeEvent.event)
-            is StoreEvent.Delete -> applyDelete(storeEvent.rule)
+            is StoreEvent.Insert -> {
+                if (applyInsert(storeEvent.event)) publish()
+            }
+
+            is StoreEvent.DeleteByFilter -> {
+                if (applyDeleteByFilter(storeEvent.filters)) publish()
+            }
+
+            is StoreEvent.DeleteExpired -> {
+                val cutoff = storeEvent.asOf ?: nowProvider()
+                if (applyDeleteExpired(cutoff)) publish()
+            }
         }
     }
 
-    private fun applyInsert(event: Event) {
-        if (isExpiredAt(event, nowProvider())) return
+    private fun applyInsert(event: Event): Boolean {
+        if (event.isExpirationBefore(nowProvider())) return false
 
         var changed = false
 
@@ -201,49 +215,54 @@ class EventStoreProjection<T : Event>(
             if (handleVanish(event)) changed = true
         }
 
-        if (filters.any { it.match(event) }) {
-            if (handleInsert(event)) changed = true
-        }
+        if (handleInsert(event)) changed = true
 
-        if (changed) publish()
+        return changed
     }
 
-    private fun applyDelete(rule: DeleteRule) {
-        val targets =
-            when (rule) {
-                is DeleteRule.Filtered -> {
-                    if (rule.filters.isEmpty()) return
-                    byId.values.filter { slot -> rule.filters.any { it.match(slot.flow.value) } }
-                }
-
-                is DeleteRule.Expired -> {
-                    val cutoff = rule.asOf ?: nowProvider()
-                    byId.values.filter { isExpiredAt(it.flow.value, cutoff) }
-                }
-            }
-        if (targets.isEmpty()) return
+    private fun applyDeleteByFilter(rules: List<Filter>): Boolean {
+        if (rules.isEmpty()) return false
+        val targets = byId.values.filter { slot -> rules.any { it.match(slot.flow.value) } }
+        if (targets.isEmpty()) return false
         var changed = false
         for (slot in targets) {
             if (removeSlot(slot)) changed = true
         }
-        if (changed) publish()
+        return changed
+    }
+
+    private fun applyDeleteExpired(asOf: Long): Boolean {
+        // Store's sweep uses strict `<`; isExpirationBefore is `<=`,
+        // so subtract 1 to match. (Resolution is 1 second; the
+        // off-by-one in the rare equal-timestamp case lines up with
+        // the store's behaviour.)
+        val cutoff = asOf - 1
+        val targets = byId.values.filter { it.flow.value.isExpirationBefore(cutoff) }
+        if (targets.isEmpty()) return false
+        var changed = false
+        for (slot in targets) {
+            if (removeSlot(slot)) changed = true
+        }
+        return changed
     }
 
     /**
-     * Returns true if the event matches the filter and its arrival
-     * caused membership to change (a fresh slot was added). Returns
-     * false when the arrival was an in-place supersession update or
-     * was rejected by the NIP-01 tiebreaker.
+     * Returns true if processing the event caused membership of the
+     * projection's [items] list to change. Returns false for in-place
+     * supersession updates, NIP-01 tiebreaker rejections, and arrivals
+     * that no filter matches.
      */
     @Suppress("UNCHECKED_CAST")
     private fun handleInsert(event: Event): Boolean {
         val address = addressOf(event)
+
         if (address != null) {
             val existing = byAddress[address]
             if (existing != null) {
                 if (!supersedes(event, existing.flow.value)) return false
 
-                // Same address, new winner. Rekey byId and update the
+                // Same address, new winner. Rekey byId from the
+                // previous event id to the new one and update the
                 // handle's value in place — list reference stays the
                 // same; only the handle's collectors re-render.
                 val previousId = existing.flow.value.id
@@ -258,7 +277,34 @@ class EventStoreProjection<T : Event>(
             return false
         }
 
-        insertNew(event)
+        // Genuinely new slot. Offer it to every matching filter; if
+        // any retains it, the slot becomes live.
+        val slot = Slot(event as T)
+        var retained = false
+        for ((f, set) in perFilter) {
+            if (!f.match(event)) continue
+            set.add(slot)
+            retained = true
+            val cap = f.limit ?: continue
+            while (set.size > cap) {
+                val tail = set.last()
+                set.remove(tail)
+                if (tail === slot) {
+                    // We were evicted by our own filter before any
+                    // other filter got a chance to retain us — the
+                    // remaining loop iterations may still pick us up.
+                    retained = false
+                } else if (perFilter.values.none { it.contains(tail) }) {
+                    // Tail no longer retained by any filter — drop it.
+                    dropSlotIndexes(tail)
+                }
+            }
+        }
+        if (!retained) return false
+
+        byId[event.id] = slot
+        if (address != null) byAddress[address] = slot
+        ordered.add(slot)
         return true
     }
 
@@ -275,11 +321,11 @@ class EventStoreProjection<T : Event>(
         }
 
         // NIP-09: delete by address, only original author, only events
-        // with `created_at <= deletion.created_at`.
+        // with `created_at <= deletion.created_at`. `addr` is already
+        // an [Address] — same equals/hashCode as our index keys.
         for (addr in deletion.deleteAddresses()) {
             if (addr.pubKeyHex != deletion.pubKey) continue
-            val key = addressOf(addr.kind, addr.pubKeyHex, addr.dTag) ?: continue
-            val slot = byAddress[key] ?: continue
+            val slot = byAddress[addr] ?: continue
             if (slot.flow.value.createdAt <= deletion.createdAt) {
                 if (removeSlot(slot)) changed = true
             }
@@ -302,31 +348,31 @@ class EventStoreProjection<T : Event>(
         return changed
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun insertNew(event: Event) {
-        val slot = Slot(event as T)
-        byId[event.id] = slot
-        addressOf(event)?.let { byAddress[it] = slot }
-        ordered.add(slot)
-
-        val cap = limit ?: return
-        while (ordered.size > cap) {
-            val tail = ordered.last()
-            removeSlot(tail)
-        }
-    }
-
+    /** Drop a live slot from every index AND from each per-filter set. */
     private fun removeSlot(slot: Slot<T>): Boolean {
         val removed = byId.remove(slot.flow.value.id) != null
         if (!removed) return false
         ordered.remove(slot)
         addressOf(slot.flow.value)?.let { address ->
             // Defensive: only clear the address index if this slot
-            // still owns it. Could be stale after an addressable rekey
-            // raced with another insert.
+            // still owns it.
             if (byAddress[address] === slot) byAddress.remove(address)
         }
+        for (set in perFilter.values) set.remove(slot)
         return true
+    }
+
+    /**
+     * Drop a slot from byId / byAddress / ordered without touching the
+     * per-filter sets. Used when the per-filter eviction loop already
+     * owns the bookkeeping for those sets.
+     */
+    private fun dropSlotIndexes(slot: Slot<T>) {
+        byId.remove(slot.flow.value.id)
+        ordered.remove(slot)
+        addressOf(slot.flow.value)?.let { address ->
+            if (byAddress[address] === slot) byAddress.remove(address)
+        }
     }
 
     private fun publish() {
@@ -343,6 +389,7 @@ class EventStoreProjection<T : Event>(
         ordered.clear()
         byId.clear()
         byAddress.clear()
+        for (set in perFilter.values) set.clear()
         _items.value = emptyList()
     }
 
@@ -351,7 +398,7 @@ class EventStoreProjection<T : Event>(
      * one of these for as long as it survives. The sort key is frozen
      * at construction time — supersession in-place updates rewrite
      * `flow.value` but never the sort key, so the ordering inside
-     * [ordered] is stable across updates.
+     * [ordered] / [perFilter] is stable across updates.
      */
     private class Slot<T : Event>(
         initial: T,
@@ -367,16 +414,10 @@ class EventStoreProjection<T : Event>(
          * supersession. `null` for regular events (which only collide
          * on event id).
          */
-        private fun addressOf(event: Event): Address? = addressOf(event.kind, event.pubKey, (event as? AddressableEvent)?.dTag())
-
-        private fun addressOf(
-            kind: Int,
-            pubKeyHex: HexKey,
-            dTag: String?,
-        ): Address? =
+        private fun addressOf(event: Event): Address? =
             when {
-                kind.isAddressable() -> Address(kind, pubKeyHex, dTag ?: "")
-                kind.isReplaceable() -> Address(kind, pubKeyHex, "")
+                event is AddressableEvent -> event.address()
+                event.kind.isReplaceable() -> Address(event.kind, event.pubKey, "")
                 else -> null
             }
 
@@ -402,14 +443,6 @@ class EventStoreProjection<T : Event>(
          * recipient; for everything else it's `event.pubKey`.
          */
         private fun ownerPubKey(event: Event): HexKey = (event as? GiftWrapEvent)?.recipientPubKey() ?: event.pubKey
-
-        private fun isExpiredAt(
-            event: Event,
-            now: Long,
-        ): Boolean {
-            val exp = event.expiration() ?: return false
-            return exp <= now
-        }
 
         /**
          * created_at DESC, id ASC. The keys are snapshots taken at

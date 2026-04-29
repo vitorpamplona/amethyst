@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore
+import com.vitorpamplona.quartz.nip01Core.store.projection.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -442,6 +442,68 @@ class EventStoreProjectionTest {
             projection.close()
         }
 
+    /**
+     * Per-filter limit: filter A caps at 2, filter B caps at 2, but
+     * the events they match are disjoint, so the projection's union
+     * is 4 (larger than any single filter's cap).
+     */
+    @Test
+    fun perFilterLimitUnionExceedsSingleLimit() =
+        runBlocking {
+            val authorA = NostrSignerSync()
+            val authorB = NostrSignerSync()
+            val a1 = authorA.sign(TextNoteEvent.build("a1", createdAt = 100))
+            val a2 = authorA.sign(TextNoteEvent.build("a2", createdAt = 200))
+            val b1 = authorB.sign(TextNoteEvent.build("b1", createdAt = 110))
+            val b2 = authorB.sign(TextNoteEvent.build("b2", createdAt = 210))
+            observable.insert(a1)
+            observable.insert(a2)
+            observable.insert(b1)
+            observable.insert(b2)
+
+            val filterA = Filter(kinds = listOf(TextNoteEvent.KIND), authors = listOf(authorA.pubKey), limit = 2)
+            val filterB = Filter(kinds = listOf(TextNoteEvent.KIND), authors = listOf(authorB.pubKey), limit = 2)
+            val projection =
+                observable.observe<TextNoteEvent>(
+                    listOf(filterA, filterB),
+                    store.relay,
+                    scope,
+                )
+            projection.ready.await()
+            assertEquals(4, projection.items.value.size, "per-filter caps don't dedupe union")
+            projection.close()
+        }
+
+    /**
+     * Each filter's cap is enforced on its own retained set: filter A
+     * keeps only its 2 newest matches even when more arrive.
+     */
+    @Test
+    fun perFilterLimitEvictsOldestWithinFilter() =
+        runBlocking {
+            val a1 = signer.sign(TextNoteEvent.build("a1", createdAt = 100))
+            val a2 = signer.sign(TextNoteEvent.build("a2", createdAt = 200))
+            val a3 = signer.sign(TextNoteEvent.build("a3", createdAt = 300))
+            observable.insert(a1)
+            observable.insert(a2)
+
+            val projection =
+                observable.observe<TextNoteEvent>(
+                    Filter(kinds = listOf(TextNoteEvent.KIND), limit = 2),
+                    store.relay,
+                    scope,
+                )
+            projection.ready.await()
+            assertEquals(2, projection.items.value.size)
+
+            observable.insert(a3)
+            val after = projection.awaitItems { it[0].value.id == a3.id }
+            assertEquals(2, after.size)
+            assertEquals(a3.id, after[0].value.id)
+            assertEquals(a2.id, after[1].value.id)
+            projection.close()
+        }
+
     @Test
     fun closeStopsListening() =
         runBlocking {
@@ -461,7 +523,7 @@ class EventStoreProjectionTest {
      * Ephemeral events (kinds `20000-29999`) are never persisted, so
      * the inner SQLite store silently drops them. The
      * `ObservableEventStore` wrapper still routes them onto its
-     * [events][com.vitorpamplona.quartz.nip01Core.store.observable.ObservableEventStore.events]
+     * [events][com.vitorpamplona.quartz.nip01Core.store.projection.ObservableEventStore.events]
      * flow, so an open projection sees them while it's alive. They
      * vanish from any future seed because the DB never had them.
      */

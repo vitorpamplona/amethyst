@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.store.observable
+package com.vitorpamplona.quartz.nip01Core.store.projection
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -32,40 +32,26 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  *    layer (persistable or ephemeral). Carries the event itself so
  *    the projection can run its NIP-01 / NIP-09 / NIP-62
  *    interpretation.
- *  - [Delete] is emitted for every out-of-band removal — manual
- *    `delete(filter)` / `delete(filters)` calls and the periodic
- *    `deleteExpiredEvents()` sweep. Carries the rule the store used
- *    so the projection can apply the same selection in memory
- *    without re-querying.
+ *  - [DeleteByFilter] is emitted for every `delete(filter)` /
+ *    `delete(filters)` call on the observable. Carries the same
+ *    filters the store used so projections can apply
+ *    [Filter.match] in memory and drop the matching slots without
+ *    re-querying.
+ *  - [DeleteExpired] is emitted for every `deleteExpiredEvents()`
+ *    sweep. The optional [DeleteExpired.asOf] cutoff lets the store
+ *    pin the timestamp it actually used, so the projection drops
+ *    exactly the events the store dropped.
  */
 sealed interface StoreEvent {
     data class Insert(
         val event: Event,
     ) : StoreEvent
 
-    data class Delete(
-        val rule: DeleteRule,
-    ) : StoreEvent
-}
-
-/**
- * Selection rule for a [StoreEvent.Delete]. [Filtered] mirrors the
- * `delete(filter)` / `delete(filters)` API and OR-combines the
- * filters; [Expired] mirrors `deleteExpiredEvents()` and removes
- * everything whose NIP-40 expiration has lapsed.
- */
-sealed interface DeleteRule {
-    data class Filtered(
+    data class DeleteByFilter(
         val filters: List<Filter>,
-    ) : DeleteRule
+    ) : StoreEvent
 
-    /**
-     * NIP-40 expiration sweep. Optional [asOf] timestamp (unix
-     * seconds) lets the store pin the cutoff it actually used, so
-     * the projection's in-memory drop matches the store's on-disk
-     * drop exactly. When `null` the projection uses its own clock.
-     */
-    data class Expired(
+    data class DeleteExpired(
         val asOf: Long? = null,
-    ) : DeleteRule
+    ) : StoreEvent
 }

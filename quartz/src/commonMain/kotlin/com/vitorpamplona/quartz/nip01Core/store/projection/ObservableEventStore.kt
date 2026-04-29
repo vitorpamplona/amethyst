@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.store.observable
+package com.vitorpamplona.quartz.nip01Core.store.projection
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.projection.EventStoreProjection
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
@@ -144,12 +143,12 @@ class ObservableEventStore(
 
     override suspend fun delete(filter: Filter) {
         inner.delete(filter)
-        _events.emit(StoreEvent.Delete(DeleteRule.Filtered(listOf(filter))))
+        _events.emit(StoreEvent.DeleteByFilter(listOf(filter)))
     }
 
     override suspend fun delete(filters: List<Filter>) {
         inner.delete(filters)
-        _events.emit(StoreEvent.Delete(DeleteRule.Filtered(filters)))
+        _events.emit(StoreEvent.DeleteByFilter(filters))
     }
 
     override suspend fun deleteExpiredEvents() {
@@ -160,7 +159,7 @@ class ObservableEventStore(
         // own clock when the event is processed.
         val asOf = TimeUtils.now()
         inner.deleteExpiredEvents()
-        _events.emit(StoreEvent.Delete(DeleteRule.Expired(asOf)))
+        _events.emit(StoreEvent.DeleteExpired(asOf))
     }
 
     /**
