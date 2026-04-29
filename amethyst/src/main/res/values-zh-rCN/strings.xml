@@ -543,6 +543,8 @@
     <string name="nest_demote_listener">降级为听众</string>
     <string name="nest_force_mute">强制静音演讲者</string>
     <string name="nest_kick_action">踢出</string>
+    <string name="nest_hush_local">消除此演讲者的声音</string>
+    <string name="nest_hush_local_restore">恢复此演讲者的声音</string>
     <string name="nest_participant_view_profile">查看个人资料</string>
     <string name="nest_participant_zap">发送打闪</string>
     <string name="nest_participant_zap_split_unsupported">不支持在聊天内分割打闪。打开个人资料屏发送打闪。</string>
@@ -2113,6 +2115,27 @@
     <string name="relay_settings_lower2">发件箱列表</string>
     <string name="relay_settings_lower">中继设置</string>
     <string name="last_seen">%1$s 前活跃</string>
+    <string name="last_seen_on_date">上次见于 %1$s (%2$s 之前)</string>
+    <string name="last_seen_just_now">刚见到</string>
+    <string name="last_seen_never">从未见过</string>
+    <plurals name="duration_minutes">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="other">%1$d 小时</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="other">%1$d 天</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="other">%1$d 周</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="other">%1$d 个月</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="other">%1$d 年</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">连接中</string>
     <string name="event_sync_status_downloading">下载中</string>
