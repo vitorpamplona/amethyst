@@ -159,9 +159,9 @@ class LiveStreamsFeedFilter(
 
             is MeetingSpaceEvent -> {
                 when (event.status()) {
-                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.OPEN -> 2
+                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.LIVE -> 2
                     com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.PRIVATE -> 1
-                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.CLOSED -> 0
+                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.ENDED -> 0
                     else -> 0
                 }
             }

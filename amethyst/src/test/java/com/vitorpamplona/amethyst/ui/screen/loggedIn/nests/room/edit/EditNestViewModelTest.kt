@@ -44,7 +44,7 @@ class EditNestViewModelTest {
             buildList<Array<String>> {
                 add(arrayOf("d", dTag))
                 add(arrayOf("room", roomName))
-                add(arrayOf("status", StatusTag.STATUS.OPEN.code))
+                add(arrayOf("status", StatusTag.STATUS.LIVE.code))
                 add(arrayOf("service", service))
                 add(arrayOf("endpoint", endpoint))
                 add(arrayOf("summary", summary))
@@ -85,7 +85,7 @@ class EditNestViewModelTest {
         val newForm = form(dTag = "rt-42", roomName = "New name", summary = "New summary")
 
         val template =
-            EditNestViewModel.buildEditTemplate(src, newForm, StatusTag.STATUS.OPEN)
+            EditNestViewModel.buildEditTemplate(src, newForm, StatusTag.STATUS.LIVE)
 
         // Same d-tag → same address → relay treats as replacement.
         val dTag = template.tags.firstOrNull { it.firstOrNull() == "d" }?.getOrNull(1)
@@ -113,7 +113,7 @@ class EditNestViewModelTest {
         val newForm = form(dTag = "rt-1", roomName = "Renamed")
 
         val template =
-            EditNestViewModel.buildEditTemplate(src, newForm, StatusTag.STATUS.OPEN)
+            EditNestViewModel.buildEditTemplate(src, newForm, StatusTag.STATUS.LIVE)
 
         val pTagPubkeys = template.tags.filter { it.firstOrNull() == "p" }.map { it[1] }
         // Host plus two speakers — none can be lost on a rename.
@@ -129,10 +129,10 @@ class EditNestViewModelTest {
         val sameForm = form(dTag = "rt-99", roomName = src.room().orEmpty())
 
         val template =
-            EditNestViewModel.buildEditTemplate(src, sameForm, StatusTag.STATUS.CLOSED)
+            EditNestViewModel.buildEditTemplate(src, sameForm, StatusTag.STATUS.ENDED)
 
         val statusTag = template.tags.firstOrNull { it.firstOrNull() == "status" }?.getOrNull(1)
-        assertEquals(StatusTag.STATUS.CLOSED.code, statusTag)
+        assertEquals(StatusTag.STATUS.ENDED.code, statusTag)
         val dTag = template.tags.firstOrNull { it.firstOrNull() == "d" }?.getOrNull(1)
         assertEquals("rt-99", dTag)
     }
@@ -143,7 +143,7 @@ class EditNestViewModelTest {
         val emptied = form(dTag = "rt-1", roomName = "X", summary = "  ", imageUrl = "")
 
         val template =
-            EditNestViewModel.buildEditTemplate(src, emptied, StatusTag.STATUS.OPEN)
+            EditNestViewModel.buildEditTemplate(src, emptied, StatusTag.STATUS.LIVE)
 
         // Blank inputs MUST NOT carry over from the original; otherwise
         // a "delete the summary" edit would silently fail.

@@ -339,11 +339,11 @@ fun RenderLiveSpacesThumb(
             Box(Modifier.padding(10.dp)) {
                 CrossfadeIfEnabled(targetState = card.status, accountViewModel = accountViewModel) {
                     when (it) {
-                        StatusTag.STATUS.OPEN -> {
+                        StatusTag.STATUS.LIVE -> {
                             RenderLiveOrEndedFromPresence(card.id, accountViewModel)
                         }
 
-                        StatusTag.STATUS.CLOSED -> {
+                        StatusTag.STATUS.ENDED -> {
                             EndedFlag()
                         }
 

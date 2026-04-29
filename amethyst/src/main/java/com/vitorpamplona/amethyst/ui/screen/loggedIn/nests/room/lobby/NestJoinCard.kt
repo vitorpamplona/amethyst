@@ -163,7 +163,7 @@ private fun NestJoinCardContent(
                     }
                     Spacer(StdHorzSpacer)
                     when (status) {
-                        StatusTag.STATUS.OPEN -> {
+                        StatusTag.STATUS.LIVE -> {
                             MeetingSpaceOpenFlag()
                         }
 
@@ -171,7 +171,7 @@ private fun NestJoinCardContent(
                             MeetingSpacePrivateFlag()
                         }
 
-                        StatusTag.STATUS.CLOSED -> {
+                        StatusTag.STATUS.ENDED -> {
                             MeetingSpaceClosedFlag()
                         }
 

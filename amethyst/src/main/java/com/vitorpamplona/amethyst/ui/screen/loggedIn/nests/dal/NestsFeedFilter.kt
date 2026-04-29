@@ -168,7 +168,7 @@ class NestsFeedFilter(
         presenceCutoff: Long,
     ): Boolean {
         val status = event.status()
-        if (status != StatusTag.STATUS.OPEN && status != StatusTag.STATUS.PRIVATE) return true
+        if (status != StatusTag.STATUS.LIVE && status != StatusTag.STATUS.PRIVATE) return true
         if (event.createdAt > presenceCutoff) return true
 
         val channel = LocalCache.getLiveActivityChannelIfExists(event.address()) ?: return false
@@ -231,9 +231,9 @@ class NestsFeedFilter(
 
     private fun convertStatusToOrder(event: MeetingSpaceEvent?): Int =
         when (event?.status()) {
-            StatusTag.STATUS.OPEN -> 2
+            StatusTag.STATUS.LIVE -> 2
             StatusTag.STATUS.PRIVATE -> 1
-            StatusTag.STATUS.CLOSED -> 0
+            StatusTag.STATUS.ENDED -> 0
             else -> 0
         }
 

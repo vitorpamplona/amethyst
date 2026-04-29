@@ -37,7 +37,7 @@ class MeetingSpaceEventBuildTest {
         val template =
             MeetingSpaceEvent.build(
                 room = "Main Hall",
-                status = StatusTag.STATUS.OPEN,
+                status = StatusTag.STATUS.LIVE,
                 service = "https://meet.example.com/hall",
                 host = ParticipantTag(host, null, "Host", null),
                 dTag = "main-hall",
@@ -53,9 +53,9 @@ class MeetingSpaceEventBuildTest {
 
         assertEquals("main-hall", byName["d"]?.single()?.get(1))
         assertEquals("Main Hall", byName["room"]?.single()?.get(1))
-        assertEquals("open", byName["status"]?.single()?.get(1))
-        assertEquals("https://meet.example.com/hall", byName["service"]?.single()?.get(1))
-        assertEquals("https://api.example.com/hall", byName["endpoint"]?.single()?.get(1))
+        assertEquals("live", byName["status"]?.single()?.get(1))
+        assertEquals("https://meet.example.com/hall", byName["auth"]?.single()?.get(1))
+        assertEquals("https://api.example.com/hall", byName["streaming"]?.single()?.get(1))
         assertEquals("The big room", byName["summary"]?.single()?.get(1))
         assertEquals("https://example.com/hall.png", byName["image"]?.single()?.get(1))
         assertEquals(MeetingSpaceEvent.ALT, byName["alt"]?.single()?.get(1))

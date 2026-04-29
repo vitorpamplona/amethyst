@@ -552,7 +552,7 @@ private suspend fun closeMeetingSpace(
         )
     return try {
         val template =
-            EditNestViewModel.buildEditTemplate(event, verbatim, StatusTag.STATUS.CLOSED)
+            EditNestViewModel.buildEditTemplate(event, verbatim, StatusTag.STATUS.ENDED)
         accountViewModel.account.signAndComputeBroadcast(template)
         true
     } catch (_: Throwable) {
