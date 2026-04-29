@@ -34,6 +34,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.EventFactory
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -62,6 +66,22 @@ class SQLiteEventStore(
     val deletionModule = DeletionRequestModule(seedModule::hasher)
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule(seedModule::hasher)
+    val changeLogModule = ChangeLogModule()
+
+    /**
+     * Stream of mutations committed to the store. One [StoreChange] per
+     * successful unit of work; rejected inserts and rolled-back
+     * transactions are not emitted. Subscribers see updates in commit
+     * order. See [EventStoreProjection] for a high-level reactive list
+     * that consumes this stream.
+     */
+    private val _changes =
+        MutableSharedFlow<StoreChange>(
+            replay = 0,
+            extraBufferCapacity = 256,
+            onBufferOverflow = BufferOverflow.SUSPEND,
+        )
+    val changes: SharedFlow<StoreChange> = _changes.asSharedFlow()
 
     val queryBuilder =
         QueryBuilder(
@@ -119,6 +139,12 @@ class SQLiteEventStore(
                         setUserVersion(this, DATABASE_VERSION)
                     }
                 }
+
+                // After the schema is in place (fresh or already-current
+                // DBs both reach this point), wire the change log onto
+                // the writer connection. TEMP table + TEMP trigger are
+                // connection-scoped, so this runs on the writer only.
+                changeLogModule.installOnWriter(db)
             },
         )
     }
@@ -160,10 +186,23 @@ class SQLiteEventStore(
         }
     }
 
-    suspend fun clearDB() =
+    suspend fun clearDB() {
         pool.useWriter { db ->
             modules.reversed().forEach { it.deleteAll(db) }
+            // The deleteAll cascade fires the change-log trigger for
+            // every removed event_header row. Drain and publish so
+            // open projections drop everything they were holding.
+            publishChange(emptyList(), changeLogModule.drain(db))
         }
+    }
+
+    private suspend fun publishChange(
+        inserted: List<Event>,
+        removedIds: List<HexKey>,
+    ) {
+        if (inserted.isEmpty() && removedIds.isEmpty()) return
+        _changes.emit(StoreChange(inserted, removedIds))
+    }
 
     suspend fun vacuum() =
         pool.useWriter { db ->
@@ -198,27 +237,38 @@ class SQLiteEventStore(
             db.transaction {
                 innerInsertEvent(event, this)
             }
+            // The transaction either committed or threw. On commit, the
+            // change log holds ids superseded by replaceable / addressable
+            // triggers and any NIP-09 / NIP-62 cascades fired by this
+            // event's content. On rollback the temp table was rolled back
+            // with the transaction, so drain returns empty.
+            publishChange(listOf(event), changeLogModule.drain(db))
         }
     }
 
     inner class Transaction(
         val db: SQLiteConnection,
     ) : IEventStore.ITransaction {
+        val accepted = ArrayList<Event>()
+
         override fun insert(event: Event) {
             if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
             if (event.kind.isEphemeral()) return
 
             innerInsertEvent(event, db)
+            accepted.add(event)
         }
     }
 
     suspend fun transaction(body: Transaction.() -> Unit) {
         pool.useWriter { db ->
+            val txn = Transaction(db)
             db.transaction {
-                with(Transaction(this)) {
+                with(txn) {
                     body()
                 }
             }
+            publishChange(txn.accepted, changeLogModule.drain(db))
         }
     }
 
@@ -258,17 +308,31 @@ class SQLiteEventStore(
 
     suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters, it) }
 
-    suspend fun delete(filter: Filter) = pool.useWriter { queryBuilder.delete(filter, it) }
+    suspend fun delete(filter: Filter) =
+        pool.useWriter { db ->
+            queryBuilder.delete(filter, db)
+            publishChange(emptyList(), changeLogModule.drain(db))
+        }
 
-    suspend fun delete(filters: List<Filter>) = pool.useWriter { queryBuilder.delete(filters, it) }
+    suspend fun delete(filters: List<Filter>) =
+        pool.useWriter { db ->
+            queryBuilder.delete(filters, db)
+            publishChange(emptyList(), changeLogModule.drain(db))
+        }
 
     suspend fun delete(id: HexKey): Int =
         pool.useWriter { db ->
             db.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
-            db.changes()
+            val count = db.changes()
+            publishChange(emptyList(), changeLogModule.drain(db))
+            count
         }
 
-    suspend fun deleteExpiredEvents() = pool.useWriter { expirationModule.deleteExpiredEvents(it) }
+    suspend fun deleteExpiredEvents() =
+        pool.useWriter { db ->
+            expirationModule.deleteExpiredEvents(db)
+            publishChange(emptyList(), changeLogModule.drain(db))
+        }
 
     fun close() = pool.close()
 }

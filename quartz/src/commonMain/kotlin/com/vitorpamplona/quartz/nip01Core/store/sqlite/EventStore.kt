@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import kotlinx.coroutines.CoroutineScope
 
 class EventStore(
     dbName: String? = "events.db",
@@ -65,6 +66,26 @@ class EventStore(
     }
 
     override suspend fun deleteExpiredEvents() = store.deleteExpiredEvents()
+
+    /**
+     * Stream of mutations committed to the store. See [SQLiteEventStore.changes].
+     */
+    val changes get() = store.changes
+
+    /**
+     * Open a reactive [EventStoreProjection] over the store for
+     * [filters]. The projection runs inside [scope]; cancel the scope
+     * (or call [EventStoreProjection.close]) to release it.
+     */
+    fun <T : Event> observe(
+        filters: List<Filter>,
+        scope: CoroutineScope,
+    ): EventStoreProjection<T> = EventStoreProjection(store, filters, scope)
+
+    fun <T : Event> observe(
+        filter: Filter,
+        scope: CoroutineScope,
+    ): EventStoreProjection<T> = observe(listOf(filter), scope)
 
     override fun close() = store.close()
 }
