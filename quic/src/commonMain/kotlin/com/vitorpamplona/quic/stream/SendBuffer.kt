@@ -37,6 +37,20 @@ package com.vitorpamplona.quic.stream
  * items in `quic/plans/2026-04-26-quic-stack-status.md` — adding
  * retain-until-ACK + retransmit is the first thing to add for general
  * STREAM-heavy use.
+ *
+ * **Concurrency:** [enqueue] / [finish] are invoked by application
+ * coroutines (e.g. WebTransport stream writers in [com.vitorpamplona.quic.webtransport.WtPeerStreamDemux]);
+ * [takeChunk] runs on the [com.vitorpamplona.quic.connection.QuicConnectionDriver] send loop under the
+ * connection mutex. The two paths are NOT serialised by a shared lock,
+ * so the buffer's internal state (`chunks`, `pendingBytes`, `headOffset`,
+ * FIN flags, offsets) is mutated under `synchronized(this)`. The cheap
+ * `readableBytes` / `sentOffset` / `finPending` / `finSent` getters used
+ * by the writer's pre-flight checks are also synchronised so they can't
+ * read torn state. Without this, an `enqueue` racing a `takeChunk`
+ * surfaced as `NoSuchElementException: ArrayDeque is empty` from
+ * `chunks.first()` (the writer saw `pendingBytes > 0` after the
+ * `addLast` but before the matching deque mutation became visible, so
+ * it entered the head-peel branch and tripped on an empty deque).
  */
 class SendBuffer {
     /**
@@ -49,68 +63,72 @@ class SendBuffer {
     private var headOffset: Int = 0
     private var pendingBytes: Int = 0
     private var sentEnd: Long = 0L
-    var nextOffset: Long = 0L
-        private set
-    var finPending: Boolean = false
-        private set
-    var finSent: Boolean = false
-        private set
+    private var _nextOffset: Long = 0L
+    private var _finPending: Boolean = false
+    private var _finSent: Boolean = false
 
-    val readableBytes: Int get() = pendingBytes
+    val nextOffset: Long get() = synchronized(this) { _nextOffset }
+    val finPending: Boolean get() = synchronized(this) { _finPending }
+    val finSent: Boolean get() = synchronized(this) { _finSent }
+
+    val readableBytes: Int get() = synchronized(this) { pendingBytes }
 
     /** Bytes already handed out via [takeChunk]; equal to the next offset to assign. */
-    val sentOffset: Long get() = sentEnd
+    val sentOffset: Long get() = synchronized(this) { sentEnd }
 
     fun enqueue(bytes: ByteArray) {
         if (bytes.isEmpty()) return
-        chunks.addLast(bytes)
-        pendingBytes += bytes.size
-        nextOffset += bytes.size
+        synchronized(this) {
+            chunks.addLast(bytes)
+            pendingBytes += bytes.size
+            _nextOffset += bytes.size
+        }
     }
 
     /** Mark the write side as closing; the next [takeChunk] will set FIN once empty. */
     fun finish() {
-        finPending = true
+        synchronized(this) { _finPending = true }
     }
 
     /** Take up to [maxBytes] bytes off the head of the buffer at the current send offset. */
-    fun takeChunk(maxBytes: Int): Chunk? {
-        if (pendingBytes == 0 && !(finPending && !finSent)) return null
-        val cap = maxBytes.coerceAtLeast(0)
-        if (cap == 0 && pendingBytes > 0) return null
-        val data: ByteArray
-        if (pendingBytes == 0) {
-            data = ByteArray(0)
-        } else {
-            val head = chunks.first()
-            val available = head.size - headOffset
-            if (available <= cap) {
-                // Hand out the rest of the head chunk. Always copy: the caller's
-                // ByteArray (passed to enqueue) MUST stay opaque to the rest of
-                // the stack, since downstream encoders eventually pass it to
-                // AEAD.seal which assumes immutability for the duration of the
-                // encryption call.
-                data =
-                    if (headOffset == 0 && head.size == available) {
-                        head.copyOf()
-                    } else {
-                        head.copyOfRange(headOffset, head.size)
-                    }
-                chunks.removeFirst()
-                headOffset = 0
-                pendingBytes -= available
+    fun takeChunk(maxBytes: Int): Chunk? =
+        synchronized(this) {
+            if (pendingBytes == 0 && !(_finPending && !_finSent)) return@synchronized null
+            val cap = maxBytes.coerceAtLeast(0)
+            if (cap == 0 && pendingBytes > 0) return@synchronized null
+            val data: ByteArray
+            if (pendingBytes == 0) {
+                data = ByteArray(0)
             } else {
-                data = head.copyOfRange(headOffset, headOffset + cap)
-                headOffset += cap
-                pendingBytes -= cap
+                val head = chunks.first()
+                val available = head.size - headOffset
+                if (available <= cap) {
+                    // Hand out the rest of the head chunk. Always copy: the caller's
+                    // ByteArray (passed to enqueue) MUST stay opaque to the rest of
+                    // the stack, since downstream encoders eventually pass it to
+                    // AEAD.seal which assumes immutability for the duration of the
+                    // encryption call.
+                    data =
+                        if (headOffset == 0 && head.size == available) {
+                            head.copyOf()
+                        } else {
+                            head.copyOfRange(headOffset, head.size)
+                        }
+                    chunks.removeFirst()
+                    headOffset = 0
+                    pendingBytes -= available
+                } else {
+                    data = head.copyOfRange(headOffset, headOffset + cap)
+                    headOffset += cap
+                    pendingBytes -= cap
+                }
             }
+            val offset = sentEnd
+            sentEnd += data.size
+            val fin = _finPending && pendingBytes == 0
+            if (fin) _finSent = true
+            Chunk(offset, data, fin)
         }
-        val offset = sentEnd
-        sentEnd += data.size
-        val fin = finPending && pendingBytes == 0
-        if (fin) finSent = true
-        return Chunk(offset, data, fin)
-    }
 
     data class Chunk(
         val offset: Long,
