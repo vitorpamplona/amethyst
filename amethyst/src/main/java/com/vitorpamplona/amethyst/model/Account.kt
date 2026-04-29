@@ -195,6 +195,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -1002,6 +1003,20 @@ class Account(
 
                     linkedNote.event?.let { linkedEvent ->
                         relayList.addAll(computeRelaysForChannels(linkedEvent))
+
+                        // Audio rooms / live activities pin their relay set
+                        // on the room event itself. Presence (kind 10312) and
+                        // any other event whose `a` tag points at one of these
+                        // must also fan out to that relay list — otherwise a
+                        // hand-raise / mute / publishing update only reaches
+                        // the broadcaster's outbox + the single firstOrNull()
+                        // hint baked into the `a` tag, and a fixed-relay
+                        // listener like nostrnests never sees it.
+                        when (linkedEvent) {
+                            is MeetingSpaceEvent -> relayList.addAll(linkedEvent.allRelayUrls())
+                            is MeetingRoomEvent -> relayList.addAll(linkedEvent.allRelayUrls())
+                            is LiveActivitiesEvent -> relayList.addAll(linkedEvent.allRelayUrls())
+                        }
                     }
                 }
             }
