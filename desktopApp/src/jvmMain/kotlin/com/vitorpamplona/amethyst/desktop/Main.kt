@@ -673,15 +673,37 @@ fun App(
         }
     }
 
-    // Persist display name when metadata arrives from relays (debounced)
+    // Fetch metadata for all accounts in the switcher + persist display names
+    val allAccountsForMetadata by accountManager.allAccounts.collectAsState()
+    LaunchedEffect(allAccountsForMetadata, accountState) {
+        if (accountState !is AccountState.LoggedIn) return@LaunchedEffect
+        // Wait for relay connections before requesting metadata
+        relayManager.connectedRelays.first { it.isNotEmpty() }
+        // Request metadata for all account pubkeys
+        val pubkeys =
+            allAccountsForMetadata.mapNotNull { info ->
+                com.vitorpamplona.quartz.nip19Bech32
+                    .decodePublicKeyAsHexOrNull(info.npub)
+            }
+        if (pubkeys.isNotEmpty()) {
+            subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys)
+        }
+    }
+
+    // Persist display names when metadata arrives (debounced)
     LaunchedEffect(Unit) {
         localCache.metadataVersion.collect {
-            kotlinx.coroutines.delay(2000) // debounce — wait for batch of metadata to settle
-            val current = accountManager.currentAccount() ?: return@collect
-            val user = localCache.getUserIfExists(current.pubKeyHex) ?: return@collect
-            val name = user.toBestDisplayName()
-            if (name != user.pubkeyDisplayHex()) {
-                accountManager.updateDisplayName(current.npub, name)
+            kotlinx.coroutines.delay(3000)
+            val accounts = accountManager.allAccounts.value
+            for (info in accounts) {
+                val hex =
+                    com.vitorpamplona.quartz.nip19Bech32
+                        .decodePublicKeyAsHexOrNull(info.npub) ?: continue
+                val user = localCache.getUserIfExists(hex) ?: continue
+                val name = user.toBestDisplayName()
+                if (name != user.pubkeyDisplayHex() && name != info.displayName) {
+                    accountManager.updateDisplayName(info.npub, name)
+                }
             }
         }
     }
