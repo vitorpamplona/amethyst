@@ -93,5 +93,7 @@ class MockWritingAssistant : WritingAssistant {
             .replace("wont ", "won't ")
             .replace("i ", "I ")
 
-    override fun close() {}
+    override fun close() {
+        // no-op: mock holds no native handles or background workers to release.
+    }
 }
