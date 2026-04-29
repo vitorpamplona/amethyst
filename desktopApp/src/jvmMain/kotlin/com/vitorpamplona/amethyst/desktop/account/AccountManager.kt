@@ -460,30 +460,35 @@ class AccountManager internal constructor(
     suspend fun saveCurrentAccount(): Result<Unit> {
         val current = currentAccount() ?: return Result.failure(Exception("No account logged in"))
 
-        // Bunker accounts are saved during loginWithBunker
-        if (current.signerType is SignerType.Remote) return Result.success(Unit)
-
-        if (current.isReadOnly || current.nsec == null) {
-            return Result.failure(Exception("Cannot save read-only account"))
-        }
-
-        return try {
-            val privKeyHex =
-                decodePrivateKeyAsHexOrNull(current.nsec)
-                    ?: return Result.failure(Exception("Invalid nsec format"))
-
-            secureStorage.savePrivateKey(current.npub, privKeyHex)
-            saveLastNpub(current.npub)
-
-            // Also save to multi-account storage
+        // Bunker accounts: private key saved during loginWithBunker
+        if (current.signerType is SignerType.Remote) {
+            // Still ensure multi-account storage is updated
             val info = AccountInfo(npub = current.npub, signerType = current.signerType)
             addAccountToStorage(info)
             accountStorage.setCurrentAccount(current.npub)
-
-            Result.success(Unit)
-        } catch (e: SecureStorageException) {
-            Result.failure(e)
+            return Result.success(Unit)
         }
+
+        // Save private key if available (skip for read-only)
+        if (!current.isReadOnly && current.nsec != null) {
+            try {
+                val privKeyHex =
+                    decodePrivateKeyAsHexOrNull(current.nsec)
+                        ?: return Result.failure(Exception("Invalid nsec format"))
+                secureStorage.savePrivateKey(current.npub, privKeyHex)
+            } catch (e: SecureStorageException) {
+                return Result.failure(e)
+            }
+        }
+
+        saveLastNpub(current.npub)
+
+        // Always save to multi-account storage (including read-only)
+        val info = AccountInfo(npub = current.npub, signerType = current.signerType)
+        addAccountToStorage(info)
+        accountStorage.setCurrentAccount(current.npub)
+
+        return Result.success(Unit)
     }
 
     fun generateNewAccount(): AccountState.LoggedIn {

@@ -149,11 +149,14 @@ class AccountManagerKeyLoginTest {
         }
 
     @Test
-    fun saveCurrentAccountReadOnlyFails() =
+    fun saveCurrentAccountReadOnlySavesToStorage() =
         runTest {
             val keyPair = KeyPair()
             manager.loginWithKey(keyPair.pubKey.toNpub())
             val result = manager.saveCurrentAccount()
-            assertTrue(result.isFailure)
+            assertTrue(result.isSuccess)
+            // Verify it's in multi-account storage
+            val accounts = manager.accountStorage.loadAccounts()
+            assertTrue(accounts.any { it.npub == keyPair.pubKey.toNpub() })
         }
 }
