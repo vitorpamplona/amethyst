@@ -247,23 +247,26 @@ class AccountManager internal constructor(
         }
 
     private suspend fun loadInternalAccount(npub: String): Result<AccountState.LoggedIn> {
-        val privKeyHex =
-            secureStorage.getPrivateKey(npub)
-                ?: return Result.failure(Exception("Private key not found for $npub"))
+        val privKeyHex = secureStorage.getPrivateKey(npub)
 
-        val keyPair = KeyPair(privKey = privKeyHex.hexToByteArray())
-        val signer = NostrSignerInternal(keyPair)
+        if (privKeyHex != null) {
+            val keyPair = KeyPair(privKey = privKeyHex.hexToByteArray())
+            val signer = NostrSignerInternal(keyPair)
 
-        val state =
-            AccountState.LoggedIn(
-                signer = signer,
-                pubKeyHex = keyPair.pubKey.toHexKey(),
-                npub = keyPair.pubKey.toNpub(),
-                nsec = keyPair.privKey?.toNsec(),
-                isReadOnly = false,
-            )
-        _accountState.value = state
-        return Result.success(state)
+            val state =
+                AccountState.LoggedIn(
+                    signer = signer,
+                    pubKeyHex = keyPair.pubKey.toHexKey(),
+                    npub = keyPair.pubKey.toNpub(),
+                    nsec = keyPair.privKey?.toNsec(),
+                    isReadOnly = false,
+                )
+            _accountState.value = state
+            return Result.success(state)
+        }
+
+        // No private key — fall back to read-only
+        return loadReadOnlyAccount(npub)
     }
 
     private suspend fun loadBunkerAccount(
@@ -663,11 +666,28 @@ class AccountManager internal constructor(
         return Result.success(state)
     }
 
-    suspend fun ensureCurrentAccountInStorage() {
+    suspend fun ensureCurrentAccountInStorage(displayName: String? = null) {
         val current = currentAccount() ?: return
-        val info = AccountInfo(npub = current.npub, signerType = current.signerType)
+        // Merge with existing stored info to preserve display name if not provided
+        val existing = accountStorage.loadAccounts().find { it.npub == current.npub }
+        val info =
+            AccountInfo(
+                npub = current.npub,
+                signerType = current.signerType,
+                displayName = displayName ?: existing?.displayName,
+            )
         accountStorage.saveAccount(info)
         accountStorage.setCurrentAccount(current.npub)
+    }
+
+    suspend fun updateDisplayName(
+        npub: String,
+        displayName: String,
+    ) {
+        val accounts = accountStorage.loadAccounts()
+        val existing = accounts.find { it.npub == npub } ?: return
+        accountStorage.saveAccount(existing.copy(displayName = displayName))
+        refreshAccountList()
     }
 
     suspend fun removeAccountFromStorage(npub: String) {

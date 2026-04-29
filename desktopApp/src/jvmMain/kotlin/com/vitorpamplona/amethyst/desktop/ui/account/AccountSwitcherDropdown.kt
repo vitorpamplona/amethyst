@@ -122,8 +122,8 @@ fun AccountSwitcherDropdown(
             allAccounts.forEach { account ->
                 val isActive = account.npub == activeNpub
 
-                // Resolve display name from cache (no remember — cheap lookup, re-evaluates each recomposition)
-                val displayName = resolveDisplayName(account.npub, localCache)
+                // Use persisted display name first, fall back to cache lookup
+                val displayName = account.displayName ?: resolveDisplayName(account.npub, localCache)
                 val shortNpub = npubShortMiddle(account.npub)
                 val signerLabel =
                     when (account.signerType) {
@@ -210,7 +210,8 @@ fun AccountSwitcherDropdown(
     // Logout confirmation dialog
     val logoutNpub = confirmLogoutNpub
     if (logoutNpub != null) {
-        val logoutDisplayName = resolveDisplayName(logoutNpub, localCache)
+        val logoutAccount = allAccounts.find { it.npub == logoutNpub }
+        val logoutDisplayName = logoutAccount?.displayName ?: resolveDisplayName(logoutNpub, localCache)
 
         AlertDialog(
             onDismissRequest = { confirmLogoutNpub = null },

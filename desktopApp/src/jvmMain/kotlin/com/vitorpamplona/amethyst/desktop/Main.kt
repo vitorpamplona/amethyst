@@ -673,6 +673,17 @@ fun App(
         }
     }
 
+    // Persist display name when metadata arrives from relays
+    val metadataVersion by localCache.metadataVersion.collectAsState()
+    LaunchedEffect(metadataVersion) {
+        val current = accountManager.currentAccount() ?: return@LaunchedEffect
+        val user = localCache.getUserIfExists(current.pubKeyHex) ?: return@LaunchedEffect
+        val name = user.toBestDisplayName()
+        if (name != user.pubkeyDisplayHex()) {
+            accountManager.updateDisplayName(current.npub, name)
+        }
+    }
+
     // Try to load saved account on startup
     DisposableEffect(Unit) {
         relayManager.addDefaultRelays()

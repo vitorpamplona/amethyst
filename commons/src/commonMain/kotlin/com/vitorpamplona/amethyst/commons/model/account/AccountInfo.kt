@@ -30,5 +30,6 @@ import androidx.compose.runtime.Immutable
 data class AccountInfo(
     val npub: String,
     val signerType: SignerType,
+    val displayName: String? = null,
     val isTransient: Boolean = false,
 )

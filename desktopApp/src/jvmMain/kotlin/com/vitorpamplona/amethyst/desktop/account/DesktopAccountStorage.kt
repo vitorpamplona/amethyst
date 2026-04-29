@@ -198,6 +198,7 @@ internal data class AccountInfoDto(
     val npub: String,
     val signerKind: String, // "internal", "remote", "viewonly"
     val bunkerUri: String? = null,
+    val displayName: String? = null,
     val isTransient: Boolean = false,
 ) {
     fun toAccountInfo(): AccountInfo =
@@ -209,6 +210,7 @@ internal data class AccountInfoDto(
                     "viewonly" -> SignerType.ViewOnly
                     else -> SignerType.Internal
                 },
+            displayName = displayName,
             isTransient = isTransient,
         )
 
@@ -223,6 +225,7 @@ internal data class AccountInfoDto(
                         is SignerType.ViewOnly -> "viewonly"
                     },
                 bunkerUri = (info.signerType as? SignerType.Remote)?.bunkerUri,
+                displayName = info.displayName,
                 isTransient = info.isTransient,
             )
     }
