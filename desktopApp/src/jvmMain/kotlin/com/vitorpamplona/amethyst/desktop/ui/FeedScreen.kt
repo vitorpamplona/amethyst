@@ -207,8 +207,9 @@ fun FeedNoteCard(
             }
         }
     } else {
-        // Regular note rendering (unchanged)
+        // Regular note rendering
         val flowSet = remember(note) { note.flow() }
+        val metadataState by flowSet.metadata.stateFlow.collectAsState()
         val reactionsState by flowSet.reactions.stateFlow.collectAsState()
         val repliesState by flowSet.replies.stateFlow.collectAsState()
         val zapsState by flowSet.zaps.stateFlow.collectAsState()
