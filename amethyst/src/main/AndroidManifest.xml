@@ -226,6 +226,7 @@
             android:launchMode="singleTask"
             android:exported="false"
             android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Amethyst" />
 
         <activity
