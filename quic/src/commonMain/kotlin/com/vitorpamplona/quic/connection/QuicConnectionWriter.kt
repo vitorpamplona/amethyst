@@ -72,8 +72,8 @@ fun drainOutbound(
     val handshakeHasContent = handshakeFrames != null && handshakeState.sendProtection != null
 
     // Build natural-size first.
-    val initialNatural = if (initialHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.INITIAL, initialFrames!!, padBytes = 0) else null
-    val handshakeNatural = if (handshakeHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.HANDSHAKE, handshakeFrames!!, padBytes = 0) else null
+    val initialNatural = if (initialHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.INITIAL, initialFrames, padBytes = 0) else null
+    val handshakeNatural = if (handshakeHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.HANDSHAKE, handshakeFrames, padBytes = 0) else null
 
     val firstPass = listOfNotNull(initialNatural, handshakeNatural, applicationPkt)
     if (firstPass.isEmpty()) return null
