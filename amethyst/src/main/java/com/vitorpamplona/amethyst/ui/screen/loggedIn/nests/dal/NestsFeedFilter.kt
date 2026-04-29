@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
@@ -34,8 +35,11 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Drawer feed for NIP-53 kind 30312 (Interactive Rooms / audio spaces).
@@ -72,15 +76,34 @@ class NestsFeedFilter(
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val topFilter = account.liveLiveStreamsFollowLists.value
         val filterParams =
             FilterByListParams.create(
-                followLists = account.liveLiveStreamsFollowLists.value,
+                followLists = topFilter,
                 hiddenUsers = account.hiddenUsers.flow.value,
             )
+        val expandableAuthors = followsAuthorsForExpansion(topFilter)
+        val now = TimeUtils.now()
+        val presenceCutoff = now - PRESENCE_FRESHNESS_WINDOW_SECONDS
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event as? MeetingSpaceEvent ?: return@filterTo false
-            hasMinimumNestFields(noteEvent) && filterParams.match(noteEvent, it.relays)
+            if (!hasMinimumNestFields(noteEvent)) return@filterTo false
+            if (!isWithinPlannedWindow(noteEvent, now)) return@filterTo false
+            if (!isLiveByPresence(noteEvent, presenceCutoff)) return@filterTo false
+
+            if (filterParams.match(noteEvent, it.relays)) return@filterTo true
+
+            // p-tag follow expansion: surface rooms whose host fails the
+            // top filter but where any p-tagged speaker is in the user's
+            // follows. Mirrors NostrNests' "Following" tab. Limited to
+            // follow-style top filters via [followsAuthorsForExpansion]
+            // so mute/relay/global filters keep their existing behavior.
+            val authors = expandableAuthors ?: return@filterTo false
+            if (!filterParams.isNotInTheFuture(noteEvent)) return@filterTo false
+            if (!filterParams.isHiddenList && !filterParams.isNotHidden(noteEvent.pubKey)) return@filterTo false
+            if (filterParams.hasExcessiveHashtags(noteEvent)) return@filterTo false
+            noteEvent.participantsIntersect(authors)
         }
     }
 
@@ -91,15 +114,88 @@ class NestsFeedFilter(
      * relays sometimes leak) don't render an empty card with a broken
      * Join button.
      *
+     * Also rejects non-HTTPS service/endpoint URLs — mirrors the
+     * NostrNests guard that drops legacy `wss+livekit://` streaming URLs
+     * from first-generation servers a moq-lite client cannot reach.
+     *
      * Closed rooms with all four fields ARE rendered — they may carry a
      * recording (EGG-11) and the listen-back card is the audience's
      * only path to that audio post-close.
      */
-    private fun hasMinimumNestFields(event: MeetingSpaceEvent): Boolean =
-        !event.room().isNullOrBlank() &&
+    private fun hasMinimumNestFields(event: MeetingSpaceEvent): Boolean {
+        val service = event.service()
+        val endpoint = event.endpoint()
+        return !event.room().isNullOrBlank() &&
             event.status() != null &&
-            !event.service().isNullOrBlank() &&
-            !event.endpoint().isNullOrBlank()
+            !service.isNullOrBlank() &&
+            !endpoint.isNullOrBlank() &&
+            service.startsWith("https://") &&
+            endpoint.startsWith("https://")
+    }
+
+    /**
+     * For PLANNED rooms only: drop entries whose `starts` time is more
+     * than [PLANNED_STALE_SECONDS] in the past (host never went live)
+     * or more than [PLANNED_MAX_FUTURE_SECONDS] in the future (likely
+     * spam or a mis-set timestamp). Mirrors the NostrNests planned
+     * bucket window. Other statuses pass through.
+     */
+    private fun isWithinPlannedWindow(
+        event: MeetingSpaceEvent,
+        now: Long,
+    ): Boolean {
+        if (event.status() != StatusTag.STATUS.PLANNED) return true
+        val starts = event.starts() ?: return true
+        return starts > now - PLANNED_STALE_SECONDS &&
+            starts < now + PLANNED_MAX_FUTURE_SECONDS
+    }
+
+    /**
+     * Drop OPEN/PRIVATE rooms that have no kind-10312 presence in the
+     * last [PRESENCE_FRESHNESS_WINDOW_SECONDS] AND were not created in
+     * the same window. The "created recently" grace lets brand-new
+     * rooms surface before any speaker has had time to publish their
+     * first heartbeat. Mirrors the NostrNests lobby gate — needs the
+     * lobby-wide kind-10312 REQ added in `filterNestsGlobal` to be
+     * meaningful.
+     *
+     * CLOSED and PLANNED rooms bypass this gate: CLOSED rooms may
+     * carry a recording (EGG-11), and PLANNED rooms have not started
+     * yet so no presence is expected.
+     */
+    private fun isLiveByPresence(
+        event: MeetingSpaceEvent,
+        presenceCutoff: Long,
+    ): Boolean {
+        val status = event.status()
+        if (status != StatusTag.STATUS.OPEN && status != StatusTag.STATUS.PRIVATE) return true
+        if (event.createdAt > presenceCutoff) return true
+
+        val channel = LocalCache.getLiveActivityChannelIfExists(event.address()) ?: return false
+        var fresh = false
+        channel.notes.forEach { _, note ->
+            if (fresh) return@forEach
+            val e = note.event
+            if (e is MeetingRoomPresenceEvent && e.createdAt > presenceCutoff) fresh = true
+        }
+        return fresh
+    }
+
+    /**
+     * Author set used for p-tag follow expansion. Returns null for
+     * top filters where expansion is not meaningful (mute/block, the
+     * relay filter, global) so we don't accidentally widen feeds the
+     * user explicitly narrowed to a specific axis.
+     */
+    private fun followsAuthorsForExpansion(topFilter: IFeedTopNavFilter?): Set<HexKey>? =
+        when (topFilter) {
+            is AuthorsByOutboxTopNavFilter -> topFilter.authors
+            is AuthorsByProxyTopNavFilter -> topFilter.authors
+            is AllFollowsByOutboxTopNavFilter -> topFilter.authors
+            is AllFollowsByProxyTopNavFilter -> topFilter.authors
+            is SingleCommunityTopNavFilter -> topFilter.authors
+            else -> null
+        }
 
     override fun sort(items: Set<Note>): List<Note> {
         val topFilter = account.liveLiveStreamsFollowLists.value
@@ -140,4 +236,27 @@ class NestsFeedFilter(
             StatusTag.STATUS.CLOSED -> 0
             else -> 0
         }
+
+    companion object {
+        /**
+         * Window inside which a kind-10312 presence event still counts
+         * an OPEN room as live. Same 10-minute cutoff NostrNests uses
+         * in its lobby. Speakers heartbeat every ~60 s, so a 10-minute
+         * window tolerates up to ~9 missed heartbeats before the room
+         * is hidden as crashed.
+         */
+        private const val PRESENCE_FRESHNESS_WINDOW_SECONDS = 10L * 60L
+
+        /**
+         * PLANNED rooms whose `starts` is more than 1 h in the past
+         * are considered stale: the host never opened the room.
+         */
+        private const val PLANNED_STALE_SECONDS = 60L * 60L
+
+        /**
+         * PLANNED rooms whose `starts` is more than 30 d in the
+         * future are likely spam or mis-set timestamps.
+         */
+        private const val PLANNED_MAX_FUTURE_SECONDS = 30L * 24L * 60L * 60L
+    }
 }
