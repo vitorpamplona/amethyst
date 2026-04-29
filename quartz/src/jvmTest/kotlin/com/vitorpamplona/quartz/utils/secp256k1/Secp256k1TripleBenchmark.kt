@@ -112,14 +112,18 @@ class Secp256k1TripleBenchmark {
         // Verify signature compatibility
         assertTrue(acinqSig.contentEquals(kotlinSig), "ACINQ and Kotlin signatures must match")
 
-        // Probe libschnorr256k1's native lib — skip the C row if the JNI .so
-        // isn't packaged for this platform (e.g. obscure JVM target).
+        // Probe libschnorr256k1's native lib — skip the C row if the JNI lib
+        // isn't packaged for this platform (e.g. obscure JVM target, or
+        // Windows where the loader raises IllegalStateException instead of
+        // UnsatisfiedLinkError).
         var cAvailable = false
         try {
             Schnorr256k1.seckeyVerify(ByteArray(32) { 1 })
             cAvailable = true
         } catch (e: UnsatisfiedLinkError) {
             println("NOTE: libschnorr256k1 native lib not available (${e.message})")
+        } catch (e: Throwable) {
+            println("NOTE: libschnorr256k1 init failed (${e.message})")
         }
 
         val cPubKey = if (cAvailable) Schnorr256k1.pubkeyCompress(Schnorr256k1.pubkeyCreate(privKey)!!)!! else null
