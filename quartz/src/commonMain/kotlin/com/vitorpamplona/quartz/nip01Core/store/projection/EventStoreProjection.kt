@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.projection
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -128,10 +129,13 @@ class EventStoreProjection<T : Event>(
     private val byId = HashMap<HexKey, Slot<T>>()
 
     /**
-     * Slots keyed by `kind:pubkey:dtag` (or `kind:pubkey:` for plain
-     * replaceables) for in-place updates and supersession lookups.
+     * Slots keyed by replaceable / addressable address for in-place
+     * updates and supersession lookups. Plain replaceables (kind 0/3,
+     * 10000-19999) live under an [Address] with an empty `dTag`,
+     * matching how the SQLite store keys its `addressable_idx` /
+     * `replaceable_idx`.
      */
-    private val byStableKey = HashMap<String, Slot<T>>()
+    private val byAddress = HashMap<Address, Slot<T>>()
 
     /**
      * Sorted view of the same slots. The comparator uses each slot's
@@ -233,9 +237,9 @@ class EventStoreProjection<T : Event>(
      */
     @Suppress("UNCHECKED_CAST")
     private fun handleInsert(event: Event): Boolean {
-        val key = stableKey(event)
-        if (key != null) {
-            val existing = byStableKey[key]
+        val address = addressOf(event)
+        if (address != null) {
+            val existing = byAddress[address]
             if (existing != null) {
                 if (!supersedes(event, existing.flow.value)) return false
 
@@ -274,8 +278,8 @@ class EventStoreProjection<T : Event>(
         // with `created_at <= deletion.created_at`.
         for (addr in deletion.deleteAddresses()) {
             if (addr.pubKeyHex != deletion.pubKey) continue
-            val key = stableKey(addr.kind, addr.pubKeyHex, addr.dTag) ?: continue
-            val slot = byStableKey[key] ?: continue
+            val key = addressOf(addr.kind, addr.pubKeyHex, addr.dTag) ?: continue
+            val slot = byAddress[key] ?: continue
             if (slot.flow.value.createdAt <= deletion.createdAt) {
                 if (removeSlot(slot)) changed = true
             }
@@ -302,7 +306,7 @@ class EventStoreProjection<T : Event>(
     private fun insertNew(event: Event) {
         val slot = Slot(event as T)
         byId[event.id] = slot
-        stableKey(event)?.let { byStableKey[it] = slot }
+        addressOf(event)?.let { byAddress[it] = slot }
         ordered.add(slot)
 
         val cap = limit ?: return
@@ -316,11 +320,11 @@ class EventStoreProjection<T : Event>(
         val removed = byId.remove(slot.flow.value.id) != null
         if (!removed) return false
         ordered.remove(slot)
-        stableKey(slot.flow.value)?.let { key ->
-            // Defensive: only clear the stable-key map if this slot
+        addressOf(slot.flow.value)?.let { address ->
+            // Defensive: only clear the address index if this slot
             // still owns it. Could be stale after an addressable rekey
             // raced with another insert.
-            if (byStableKey[key] === slot) byStableKey.remove(key)
+            if (byAddress[address] === slot) byAddress.remove(address)
         }
         return true
     }
@@ -338,7 +342,7 @@ class EventStoreProjection<T : Event>(
         collectorJob.cancel()
         ordered.clear()
         byId.clear()
-        byStableKey.clear()
+        byAddress.clear()
         _items.value = emptyList()
     }
 
@@ -359,19 +363,20 @@ class EventStoreProjection<T : Event>(
 
     companion object {
         /**
-         * The lookup key for replaceable / addressable supersession.
-         * `null` for regular events (which only collide on event id).
+         * The lookup [Address] for replaceable / addressable
+         * supersession. `null` for regular events (which only collide
+         * on event id).
          */
-        private fun stableKey(event: Event): String? = stableKey(event.kind, event.pubKey, (event as? AddressableEvent)?.dTag())
+        private fun addressOf(event: Event): Address? = addressOf(event.kind, event.pubKey, (event as? AddressableEvent)?.dTag())
 
-        private fun stableKey(
+        private fun addressOf(
             kind: Int,
             pubKeyHex: HexKey,
             dTag: String?,
-        ): String? =
+        ): Address? =
             when {
-                kind.isAddressable() -> "$kind:$pubKeyHex:${dTag ?: ""}"
-                kind.isReplaceable() -> "$kind:$pubKeyHex:"
+                kind.isAddressable() -> Address(kind, pubKeyHex, dTag ?: "")
+                kind.isReplaceable() -> Address(kind, pubKeyHex, "")
                 else -> null
             }
 
