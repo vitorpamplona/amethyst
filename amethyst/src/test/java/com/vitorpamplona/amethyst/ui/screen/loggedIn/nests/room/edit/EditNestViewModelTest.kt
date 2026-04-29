@@ -91,8 +91,12 @@ class EditNestViewModelTest {
         val dTag = template.tags.firstOrNull { it.firstOrNull() == "d" }?.getOrNull(1)
         assertEquals("rt-42", dTag)
 
-        val roomTag = template.tags.firstOrNull { it.firstOrNull() == "room" }?.getOrNull(1)
-        assertEquals("New name", roomTag)
+        // The rebuilt template emits the canonical `title` tag (per the
+        // deployed nostrnests reference); a legacy `room` tag from the
+        // source event MUST be dropped, not duplicated.
+        val titleTag = template.tags.firstOrNull { it.firstOrNull() == "title" }?.getOrNull(1)
+        assertEquals("New name", titleTag)
+        assertNull(template.tags.firstOrNull { it.firstOrNull() == "room" })
 
         val summaryTag = template.tags.firstOrNull { it.firstOrNull() == "summary" }?.getOrNull(1)
         assertEquals("New summary", summaryTag)

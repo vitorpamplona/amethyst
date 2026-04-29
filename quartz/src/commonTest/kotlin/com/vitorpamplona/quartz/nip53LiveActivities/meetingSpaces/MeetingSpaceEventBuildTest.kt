@@ -52,7 +52,7 @@ class MeetingSpaceEventBuildTest {
         val byName = template.tags.groupBy { it[0] }
 
         assertEquals("main-hall", byName["d"]?.single()?.get(1))
-        assertEquals("Main Hall", byName["room"]?.single()?.get(1))
+        assertEquals("Main Hall", byName["title"]?.single()?.get(1))
         assertEquals("live", byName["status"]?.single()?.get(1))
         assertEquals("https://meet.example.com/hall", byName["auth"]?.single()?.get(1))
         assertEquals("https://api.example.com/hall", byName["streaming"]?.single()?.get(1))

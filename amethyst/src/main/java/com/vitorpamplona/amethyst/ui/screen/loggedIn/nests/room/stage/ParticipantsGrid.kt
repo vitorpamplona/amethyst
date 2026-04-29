@@ -355,10 +355,15 @@ private fun MemberCell(
     // Both color and width crossfade so going idle → speaking → idle
     // doesn't snap; the color animates from Transparent through the
     // speaking green and the width tracks the live peak amplitude.
+    // A speaker on stage with mic-mute on emits kind-10312 with
+    // `publishing=0, muted=1` (deployed nostrnests semantics — see
+    // EGG-04 / NestRoomPresencePublisher), so the muted ring must NOT
+    // gate on `publishing`; muting would otherwise hide the very
+    // indicator it was supposed to surface.
     val targetRingColor =
         when {
             isSpeaking -> NEST_SPEAKING_COLOR
-            showMicBadge && member.publishing && member.muted == true -> mutedRingColor
+            showMicBadge && member.muted == true -> mutedRingColor
             else -> Color.Transparent
         }
     val targetRingWidth =
@@ -445,7 +450,13 @@ private fun MemberCell(
                     modifier = Modifier.align(Alignment.TopEnd),
                 )
             }
-            if (showMicBadge && member.publishing) {
+            // Show the mic badge for any on-stage speaker that has
+            // an audio state to surface — currently broadcasting
+            // (`publishing=1`) OR mic-muted (`muted=1, publishing=0`).
+            // Gating only on `publishing` would hide the muted icon
+            // the moment the user mutes, which is exactly when it's
+            // supposed to appear.
+            if (showMicBadge && (member.publishing || member.muted == true)) {
                 MicStateBadge(
                     isSpeaking = isSpeaking,
                     isMuted = member.muted == true,
