@@ -79,7 +79,8 @@ class CreateNestViewModel : ViewModel() {
                 .firstOrNull()
                 ?.takeIf { it.startsWith("http") }
         if (savedFirst != null) {
-            _state.update { it.copy(serviceUrl = savedFirst, endpointUrl = savedFirst) }
+            val (service, endpoint) = resolveServerPair(savedFirst)
+            _state.update { it.copy(serviceUrl = service, endpointUrl = endpoint) }
         }
     }
 
@@ -355,8 +356,38 @@ class CreateNestViewModel : ViewModel() {
          * Public nostrnests deployment — a blank form produces a working
          * room here. Users can edit either field to point at their own
          * moq-auth / moq-relay pair.
+         *
+         * The auth sidecar (moq-auth) and the WebTransport relay
+         * (moq-rs) are on different hosts: moq-auth speaks regular
+         * HTTPS on :443 to mint JWTs; moq.nostrnests.com:4443 is the
+         * QUIC/WebTransport endpoint and does NOT accept TCP. Don't
+         * collapse them back into a single URL — OkHttp can't speak
+         * HTTP/3, so a TCP POST to :4443 will hang and fail.
          */
-        const val DEFAULT_SERVICE_URL: String = "https://moq.nostrnests.com:4443"
+        const val DEFAULT_SERVICE_URL: String = "https://moq-auth.nostrnests.com"
         const val DEFAULT_ENDPOINT_URL: String = "https://moq.nostrnests.com:4443"
+
+        /**
+         * Map a single saved kind-10112 URL onto the (service, endpoint)
+         * pair the kind-30312 event needs. Recognises the public
+         * nostrnests deployment (whether the user has the auth host or
+         * the relay host saved — earlier app versions stored the relay
+         * URL by mistake), and falls back to using the URL for both
+         * tags so community-run deployments that genuinely co-locate
+         * keep working.
+         */
+        internal fun resolveServerPair(savedUrl: String): Pair<String, String> =
+            when (savedUrl.trimEnd('/')) {
+                "https://moq-auth.nostrnests.com",
+                "https://moq.nostrnests.com:4443",
+                "https://moq.nostrnests.com",
+                -> {
+                    DEFAULT_SERVICE_URL to DEFAULT_ENDPOINT_URL
+                }
+
+                else -> {
+                    savedUrl to savedUrl
+                }
+            }
     }
 }

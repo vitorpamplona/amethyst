@@ -115,7 +115,11 @@ class NestsServersViewModel : ViewModel() {
 
     private fun displayHostName(url: String): String =
         try {
-            Rfc3986.host(url).removePrefix("moq.").removePrefix("nests.")
+            Rfc3986
+                .host(url)
+                .removePrefix("moq-auth.")
+                .removePrefix("moq.")
+                .removePrefix("nests.")
         } catch (_: Throwable) {
             url
         }
@@ -124,7 +128,10 @@ class NestsServersViewModel : ViewModel() {
 /**
  * Display-friendly entry for [NestsServersViewModel].
  *   - [name] — short host label (e.g. `nostrnests.com`)
- *   - [baseUrl] — exact bytes that go on the wire (`https://moq.nostrnests.com`)
+ *   - [baseUrl] — exact bytes that go on the wire as the kind-30312
+ *     `service` tag (`https://moq-auth.nostrnests.com`). The matching
+ *     WebTransport endpoint is resolved at room-create time, not
+ *     stored here.
  */
 data class NestsServer(
     val name: String,

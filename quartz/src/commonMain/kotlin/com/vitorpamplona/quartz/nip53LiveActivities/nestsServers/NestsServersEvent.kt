@@ -42,19 +42,23 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *       "kind": 10112,
  *       "tags": [
  *         ["alt", "Audio-room (nests) MoQ servers used by the author"],
- *         ["server", "https://moq.nostrnests.com"],
+ *         ["server", "https://moq-auth.nostrnests.com"],
  *         ["server", "https://moq.example.org"],
  *         ...
  *       ],
  *       "content": ""
  *     }
  *
- * The `server` URL points at the moq-rs / moq-auth deployment's base
- * URL — Amethyst's `CreateNestSheet` uses it for both the
- * `service` (auth sidecar) and `endpoint` (WebTransport relay) tags
- * on the kind-30312 event, since nostrnests's reference deployment
- * co-locates them. A future revision can split the two into separate
- * tag fields if the community pulls them apart.
+ * The `server` URL is the moq-auth (JWT mint) base — that's also the
+ * URL that goes into the kind-30312 `service` tag. The matching
+ * WebTransport relay endpoint is NOT part of this list; reference
+ * deployments like nostrnests run the auth sidecar on regular HTTPS
+ * (e.g. `https://moq-auth.nostrnests.com`) and the QUIC relay on a
+ * separate host/port (e.g. `https://moq.nostrnests.com:4443`), so
+ * Amethyst's `CreateNestSheet` resolves the pair via a known-deployment
+ * mapping (with a fallback that reuses the saved URL for both tags
+ * when a community deployment genuinely co-locates them). A future
+ * revision can split the two into separate tag fields if needed.
  *
  * This event is shaped 1:1 after `BlossomServersEvent` (kind 10063,
  * NIP-B7) so existing list-state / settings UI patterns translate

@@ -247,8 +247,13 @@ private fun NestsServerEntry(
  * Built-in suggestion list shown under "Recommended servers". Today
  * just the public `nostrnests.com` deployment; add new entries here
  * as community-run moq-rs / moq-auth instances come online.
+ *
+ * The stored URL is the moq-auth (service / JWT mint) base — that's
+ * the URL that ends up in the kind-30312 `service` tag. The matching
+ * WebTransport relay endpoint is resolved by
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create.CreateNestViewModel.resolveServerPair].
  */
 val DEFAULT_NESTS_SERVERS: List<NestsServer> =
     listOf(
-        NestsServer(name = "nostrnests.com", baseUrl = "https://moq.nostrnests.com:4443"),
+        NestsServer(name = "nostrnests.com", baseUrl = "https://moq-auth.nostrnests.com"),
     )
