@@ -285,10 +285,16 @@ internal fun NestFullScreen(
                 }
 
                 NestTab.Audience -> {
+                    // Tap and long-press on an audience avatar both open
+                    // the per-participant sheet — the host's primary path
+                    // for promoting a listener to the stage. Without the
+                    // tap binding, the only way to reach "Promote to
+                    // Speaker" is the discoverability-poor long-press.
                     AudienceGrid(
                         members = participantGrid.audience,
                         accountViewModel = accountViewModel,
                         onLongPressParticipant = onLongPressParticipant,
+                        onTapParticipant = onLongPressParticipant,
                         myPubkey = myPubkey,
                         modifier =
                             Modifier
