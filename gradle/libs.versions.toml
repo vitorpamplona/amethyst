@@ -27,6 +27,7 @@ firebaseBom = "34.12.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.21.2"
+ktor = "3.4.1"
 javaKeyring = "1.0.4"
 jtorctl = "0.4.5.7"
 kmpTorRuntime = "2.6.0"
@@ -158,6 +159,9 @@ java-keyring = { group = "com.github.javakeyring", name = "java-keyring", versio
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", version.ref = "kmpTorRuntime" }
 kmp-tor-resource-exec-tor = { group = "io.matthewnelson.kmp-tor", name = "resource-exec-tor", version.ref = "kmpTorResource" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
+ktor-client-websockets = { group = "io.ktor", name = "ktor-client-websockets", version.ref = "ktor" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
