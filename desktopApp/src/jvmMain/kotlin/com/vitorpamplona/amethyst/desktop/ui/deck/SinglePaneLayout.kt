@@ -183,6 +183,7 @@ fun SinglePaneLayout(
                 AccountSwitcherDropdown(
                     activeNpub = accountManager.currentAccount()?.npub,
                     allAccounts = allAccountsState,
+                    localCache = localCache,
                     onSwitchAccount = { npub ->
                         singlePaneScope.launch(Dispatchers.IO) {
                             accountManager.switchAccount(npub)

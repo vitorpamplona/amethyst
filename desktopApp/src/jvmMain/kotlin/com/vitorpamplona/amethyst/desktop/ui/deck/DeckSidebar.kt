@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.ui.account.AccountSwitcherDropdown
 import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 import kotlinx.collections.immutable.ImmutableList
@@ -50,6 +51,7 @@ import kotlinx.collections.immutable.ImmutableList
 fun DeckSidebar(
     activeNpub: String?,
     allAccounts: ImmutableList<AccountInfo>,
+    localCache: DesktopLocalCache?,
     onSwitchAccount: (String) -> Unit,
     onAddAccount: () -> Unit,
     onRemoveAccount: (String) -> Unit,
@@ -73,6 +75,7 @@ fun DeckSidebar(
         AccountSwitcherDropdown(
             activeNpub = activeNpub,
             allAccounts = allAccounts,
+            localCache = localCache,
             onSwitchAccount = onSwitchAccount,
             onAddAccount = onAddAccount,
             onRemoveAccount = onRemoveAccount,

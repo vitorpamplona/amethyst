@@ -101,8 +101,8 @@ class TopNavFilterState(
         FeedDefinition(
             code = TopFilter.Mine,
             name = ResourceName(R.string.follow_list_mine),
-          )
-        
+        )
+
     val allFavoriteAlgoFeedsFollow =
         FeedDefinition(
             code = TopFilter.AllFavoriteAlgoFeeds,

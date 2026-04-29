@@ -55,12 +55,23 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.collections.immutable.ImmutableList
+
+/**
+ * Middle-truncates an npub: "npub1abcdef...wxyz"
+ */
+private fun npubShortMiddle(npub: String): String {
+    if (npub.length <= 20) return npub
+    return "${npub.take(10)}...${npub.takeLast(6)}"
+}
 
 @Composable
 fun AccountSwitcherDropdown(
     activeNpub: String?,
     allAccounts: ImmutableList<AccountInfo>,
+    localCache: DesktopLocalCache?,
     onSwitchAccount: (String) -> Unit,
     onAddAccount: () -> Unit,
     onRemoveAccount: (String) -> Unit,
@@ -90,29 +101,45 @@ fun AccountSwitcherDropdown(
         ) {
             allAccounts.forEach { account ->
                 val isActive = account.npub == activeNpub
+
+                // Resolve display name from cache
+                val displayName =
+                    remember(account.npub, localCache) {
+                        val pubkeyHex = decodePublicKeyAsHexOrNull(account.npub)
+                        if (pubkeyHex != null && localCache != null) {
+                            val user = localCache.getUserIfExists(pubkeyHex)
+                            user?.toBestDisplayName()?.takeIf { it != user.pubkeyDisplayHex() }
+                        } else {
+                            null
+                        }
+                    }
+
                 DropdownMenuItem(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
+                                // Row 1: Display name (or npub if no name)
                                 Text(
-                                    account.npub.take(16) + "...",
+                                    displayName ?: npubShortMiddle(account.npub),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
-                                val label =
+                                // Row 2: npub (middle-truncated) + signer type badge
+                                val signerLabel =
                                     when (account.signerType) {
-                                        is SignerType.Remote -> "Bunker"
-                                        is SignerType.ViewOnly -> "View only"
-                                        is SignerType.Internal -> null
+                                        is SignerType.Remote -> " · Bunker"
+                                        is SignerType.ViewOnly -> " · View only"
+                                        is SignerType.Internal -> ""
                                     }
-                                if (label != null) {
-                                    Text(
-                                        label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
+                                Text(
+                                    npubShortMiddle(account.npub) + signerLabel,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                             if (isActive) {
                                 Icon(
@@ -160,11 +187,24 @@ fun AccountSwitcherDropdown(
     // Logout confirmation dialog
     val logoutNpub = confirmLogoutNpub
     if (logoutNpub != null) {
+        val logoutDisplayName =
+            remember(logoutNpub, localCache) {
+                val hex = decodePublicKeyAsHexOrNull(logoutNpub)
+                if (hex != null && localCache != null) {
+                    localCache.getUserIfExists(hex)?.toBestDisplayName()
+                } else {
+                    null
+                }
+            }
+
         AlertDialog(
             onDismissRequest = { confirmLogoutNpub = null },
             title = { Text("Remove Account") },
             text = {
-                Text("Remove ${logoutNpub.take(16)}...? This will delete the account from this device.")
+                Text(
+                    "Remove ${logoutDisplayName ?: npubShortMiddle(logoutNpub)}? " +
+                        "This will delete the account from this device.",
+                )
             },
             confirmButton = {
                 TextButton(

@@ -729,8 +729,9 @@ fun App(
                             if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                                 accountManager.startHeartbeat(scope)
                             }
-                            // Refresh account list for switcher
+                            // Ensure account is in multi-account storage + refresh list
                             scope.launch(Dispatchers.IO) {
+                                accountManager.ensureCurrentAccountInStorage()
                                 accountManager.refreshAccountList()
                             }
                         },
@@ -1050,6 +1051,7 @@ fun MainContent(
                             DeckSidebar(
                                 activeNpub = accountManager.currentAccount()?.npub,
                                 allAccounts = allAccountsState,
+                                localCache = localCache,
                                 onSwitchAccount = { npub ->
                                     scope.launch(Dispatchers.IO) {
                                         accountManager.switchAccount(npub)
