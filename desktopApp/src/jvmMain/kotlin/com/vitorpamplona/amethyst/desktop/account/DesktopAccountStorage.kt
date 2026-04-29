@@ -62,19 +62,22 @@ class DesktopAccountStorage(
     private val mapper = jacksonObjectMapper()
     private val amethystDir by lazy { File(homeDir, ".amethyst") }
 
+    // In-memory cache — read from disk once, then serve from memory
+    private var cachedMetadata: AccountMetadata? = null
+
     // --- AccountStorage interface ---
 
-    override suspend fun loadAccounts(): List<AccountInfo> = readMetadata().accounts.map { it.toAccountInfo() }
+    override suspend fun loadAccounts(): List<AccountInfo> = getCachedMetadata().accounts.map { it.toAccountInfo() }
 
     override suspend fun saveAccount(info: AccountInfo) {
-        val metadata = readMetadata()
+        val metadata = getCachedMetadata()
         val dto = AccountInfoDto.from(info)
         val updated = metadata.accounts.filter { it.npub != info.npub } + dto
-        writeMetadata(metadata.copy(accounts = updated))
+        writeCachedMetadata(metadata.copy(accounts = updated))
     }
 
     override suspend fun deleteAccount(npub: String) {
-        val metadata = readMetadata()
+        val metadata = getCachedMetadata()
         val updated = metadata.accounts.filter { it.npub != npub }
         val newActive =
             if (metadata.activeNpub == npub) {
@@ -82,19 +85,33 @@ class DesktopAccountStorage(
             } else {
                 metadata.activeNpub
             }
-        writeMetadata(metadata.copy(accounts = updated, activeNpub = newActive))
+        writeCachedMetadata(metadata.copy(accounts = updated, activeNpub = newActive))
     }
 
-    override suspend fun currentAccount(): String? = readMetadata().activeNpub
+    override suspend fun currentAccount(): String? = getCachedMetadata().activeNpub
 
     override suspend fun setCurrentAccount(npub: String) {
-        val metadata = readMetadata()
-        writeMetadata(metadata.copy(activeNpub = npub))
+        val metadata = getCachedMetadata()
+        writeCachedMetadata(metadata.copy(activeNpub = npub))
+    }
+
+    // --- Cached I/O ---
+
+    private suspend fun getCachedMetadata(): AccountMetadata {
+        cachedMetadata?.let { return it }
+        val loaded = readMetadataFromDisk()
+        cachedMetadata = loaded
+        return loaded
+    }
+
+    private suspend fun writeCachedMetadata(metadata: AccountMetadata) {
+        cachedMetadata = metadata
+        writeMetadataToDisk(metadata)
     }
 
     // --- Encrypted file I/O ---
 
-    private suspend fun readMetadata(): AccountMetadata {
+    private suspend fun readMetadataFromDisk(): AccountMetadata {
         val file = getAccountsFile()
         if (!file.exists()) return AccountMetadata()
 
@@ -108,7 +125,7 @@ class DesktopAccountStorage(
         }
     }
 
-    private suspend fun writeMetadata(metadata: AccountMetadata) {
+    private suspend fun writeMetadataToDisk(metadata: AccountMetadata) {
         ensureDir()
         val json = mapper.writeValueAsBytes(metadata)
         val encrypted = encrypt(json)
@@ -126,12 +143,21 @@ class DesktopAccountStorage(
 
     // --- AES-256-GCM encryption ---
 
+    private var cachedKey: ByteArray? = null
+
     private suspend fun getOrCreateKey(): ByteArray {
+        cachedKey?.let { return it }
+
         val existing = secureStorage.getPrivateKey(METADATA_KEY_ALIAS)
-        if (existing != null) return Base64.getDecoder().decode(existing)
+        if (existing != null) {
+            val key = Base64.getDecoder().decode(existing)
+            cachedKey = key
+            return key
+        }
 
         val key = ByteArray(AES_KEY_SIZE).also { SecureRandom().nextBytes(it) }
         secureStorage.savePrivateKey(METADATA_KEY_ALIAS, Base64.getEncoder().encodeToString(key))
+        cachedKey = key
         return key
     }
 
