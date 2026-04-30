@@ -572,6 +572,10 @@
     <string name="nests_servers_my_section">Vaše servery</string>
     <string name="nests_servers_my_explainer">Uloženo jako nahraditelná událost typu kind-10112, aby ostatní klienti mohli číst vaše preference.</string>
     <string name="nests_servers_add_field">Přidat nest server</string>
+    <string name="nests_servers_add_relay_field">URL relay (WebTransport)</string>
+    <string name="nests_servers_add_auth_field">URL pro autentizaci (JWT mint)</string>
+    <string name="nests_servers_add_pair_button">Přidat</string>
+    <string name="nests_servers_auth_label">Autentizace</string>
     <string name="nests_servers_recommended_section">Doporučené servery</string>
     <string name="nests_servers_recommended_explainer">Vestavěné návrhy, které můžete jedním klepnutím přidat do svého seznamu.</string>
     <string name="nests_servers_use_defaults">Použít výchozí Amethyst</string>
@@ -2105,6 +2109,9 @@
     <string name="relay_settings_lower2">odchozí seznamy</string>
     <string name="relay_settings_lower">nastavení relé</string>
     <string name="last_seen">Naposledy viděn před %1$s</string>
+    <string name="last_seen_on_date">Naposledy viděn %1$s (před %2$s)</string>
+    <string name="last_seen_just_now">Naposledy viděn právě teď</string>
+    <string name="last_seen_never">Nikdy neviděn</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Připojování</string>
     <string name="event_sync_status_downloading">Stahování</string>
@@ -2366,14 +2373,4 @@
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\" stejně jako veřejná.</string>
     <string name="gif">Gif</string>
-    <string name="last_seen_just_now">Naposledy viděn právě teď</string>
-    <string name="last_seen_never">Nikdy neviděn</string>
-    <string name="last_seen_on_date">Naposledy viděn %1$s (před %2$s)</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_tab_chat">Chat</string>
-    <string name="nests_servers_add_auth_field">URL pro autentizaci (JWT mint)</string>
-    <string name="nests_servers_add_pair_button">Přidat</string>
-    <string name="nests_servers_add_relay_field">URL relay (WebTransport)</string>
-    <string name="nests_servers_auth_label">Autentizace</string>
-    <string name="nests_servers_relay_label">Relay</string>
 </resources>
