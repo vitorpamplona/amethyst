@@ -60,10 +60,11 @@ abstract class IdentityClaimTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
+            ensure(':' in tag[1]) { return null }
             return try {
                 create(tag[1], tag[2])
             } catch (e: Exception) {
-                Log.e("IdentityClaim", "Can't parse identity [${tag.joinToString { "," }}]", e)
+                Log.e("IdentityClaim", "Can't parse identity [${tag.joinToString(", ")}]", e)
                 null
             }
         }
