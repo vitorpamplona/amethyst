@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
@@ -102,6 +103,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
@@ -174,6 +179,21 @@ class AppModules(
     }
 
     val torManager = TorManager(torPrefs, appContext, applicationIOScope)
+
+    // Whenever the underlying network identity changes (wifi↔cellular, regained from
+    // offline, etc.) we clear any active Tor session bypass so the manager re-attempts
+    // bootstrap on the new network. The remembered-approval window is unaffected: if Tor
+    // stays stuck we will silently bypass again after the timeout fires.
+    init {
+        applicationIOScope.launch {
+            connManager.status
+                .map { (it as? ConnectivityStatus.Active)?.networkId }
+                .filterNotNull()
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { torManager.clearSessionBypass() }
+        }
+    }
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
