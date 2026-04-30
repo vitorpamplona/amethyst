@@ -1560,12 +1560,27 @@ object LocalCache : ILocalCache, ICacheProvider {
      * Also indexed under [LiveActivitiesChannel.presenceNotes] keyed
      * by author so the Nests feed can answer "are there speakers on
      * stage?" without scanning the chat-dominated `notes` map.
+     *
+     * Cross-room move handling: kind-10312 is replaceable per author,
+     * but the room a presence points to (`a`-tag) can change when a
+     * speaker hops between rooms. The replaceable cache only swaps the
+     * addressable's content — it has no notion of which channel the
+     * old version was attached to. Without explicit eviction the old
+     * room would keep surfacing as "live" via the stale entry until it
+     * dropped out of the freshness window. Capture the prior room
+     * before replacement and, when it differs, drop the author from
+     * the old channel's presence index and the old version note from
+     * its main `notes` index.
      */
     fun consume(
         event: MeetingRoomPresenceEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        val priorVersion = getAddressableNoteIfExists(event.address())?.event as? MeetingRoomPresenceEvent
+        val priorRoomAddress = priorVersion?.interactiveRoom()?.address
+        val isReplacement = priorVersion != null && event.createdAt > priorVersion.createdAt
+
         val new = consumeBaseReplaceable(event, relay, wasVerified)
 
         // The replaceable cache keys this on the AUTHOR's address
@@ -1574,6 +1589,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         // note to the room's channel keyed by its kind-30312 address.
         val roomAddress = event.interactiveRoom()?.address ?: return new
         if (roomAddress.kind != MeetingSpaceEvent.KIND) return new
+
+        if (isReplacement && priorRoomAddress != null && priorRoomAddress != roomAddress) {
+            getLiveActivityChannelIfExists(priorRoomAddress)?.let { priorChannel ->
+                priorChannel.removePresenceNote(event.pubKey)
+                getNoteIfExists(priorVersion.id)?.let { priorChannel.removeNote(it) }
+            }
+        }
+
         val channel = getOrCreateLiveChannel(roomAddress)
         val versionNote = getOrCreateNote(event.id)
         channel.addNote(versionNote, relay)

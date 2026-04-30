@@ -60,6 +60,17 @@ class LiveActivitiesChannel(
         presenceNotes.put(author, note)
     }
 
+    /**
+     * Drop an author's presence entry. Called by `LocalCache` when a
+     * replaceable kind-10312 from this author lands in a *different*
+     * room — without this eviction, the old room would keep surfacing
+     * as "live" via stale presence until it drops out of the
+     * freshness window.
+     */
+    fun removePresenceNote(author: HexKey) {
+        presenceNotes.remove(author)
+    }
+
     fun address() = address
 
     override fun relays() = info?.allRelayUrls()?.toSet()?.ifEmpty { null } ?: super.relays()
