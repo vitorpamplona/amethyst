@@ -33,17 +33,14 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.onSubscription
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 
 /**
- * Lifecycle state of an [EventStoreProjection]'s [state][EventStoreProjection.state].
+ * Lifecycle state of an [ObservableEventStore.project] flow.
  *
  *  - [Loading] is the initial state before the seed query completes.
  *    The UI should show a spinner / skeleton here.
@@ -60,31 +57,28 @@ sealed interface ProjectionState<out T : Event> {
 }
 
 /**
- * A reactive projection over an [ObservableEventStore] for a fixed
- * set of [filters]. Each visible event is wrapped in a
- * [MutableStateFlow] so the UI can collect three different kinds of
- * change with the right granularity:
+ * State machine that maintains a reactive view over an
+ * [ObservableEventStore] for a fixed set of [filters]. Each visible
+ * event is wrapped in a [MutableStateFlow] so the UI can collect
+ * three different kinds of change with the right granularity:
  *
- *  - **Membership** (events arriving or leaving) re-emits a brand new
- *    [List] from [items]. The list reference is stable while membership
- *    is unchanged.
+ *  - **Membership** (events arriving or leaving) produces a brand
+ *    new [List] in [snapshot]. The list reference is stable while
+ *    membership is unchanged.
  *  - **In-place replaceable / addressable update** (a new version of
- *    the same `kind:pubkey:dtag` arrives) updates the existing handle's
- *    [MutableStateFlow.value] without touching the list. Only collectors
- *    of that one handle re-render. The list ordering is *not*
- *    reshuffled when the new version has a later `created_at` — each
- *    slot remembers the sort key it was inserted with, so updates feel
- *    like pure value mutations.
+ *    the same `kind:pubkey:dtag` arrives) updates the existing
+ *    handle's [MutableStateFlow.value] without changing membership.
+ *    Only collectors of that one handle re-render. The list ordering
+ *    is *not* reshuffled when the new version has a later
+ *    `created_at` — each slot remembers the sort key it was inserted
+ *    with, so updates feel like pure value mutations.
  *  - **Removal** (NIP-09 deletion, NIP-62 vanish, NIP-40 expiration,
  *    `delete(filter)`) drops the handle from the list.
  *
- * The seed is materialised by querying the store once at start, after
- * which the projection is driven entirely by
- * [ObservableEventStore.changes]. Three kinds of mutation arrive on
- * that stream:
+ * Three kinds of [StoreChange] are interpreted in-projection:
  *
- *  - [StoreChange.Insert] — interpreted in-projection so a single
- *    arriving event can carry NIP-01 / NIP-09 / NIP-62 semantics:
+ *  - [StoreChange.Insert] — a single arriving event can carry NIP-01
+ *    / NIP-09 / NIP-62 semantics:
  *      - **NIP-01 supersession.** New replaceable / addressable events
  *        replace prior ones for the same `kind:pubkey[:dtag]`. The
  *        NIP-01 lexical-id tiebreaker (`new.id < old.id` when
@@ -97,55 +91,43 @@ sealed interface ProjectionState<out T : Event> {
  *        from the same author with `created_at < vanish.created_at`.
  *      - **NIP-40 expiration.** Events whose `expiration` tag has
  *        already lapsed at the moment they arrive are dropped before
- *        they ever enter [items].
- *
+ *        they ever enter the snapshot.
  *  - [StoreChange.DeleteByFilter] — emitted on `delete(filter)` /
- *    `delete(filters)`. The projection drops every slot matching any
- *    of the rule's filters via [Filter.match].
- *
+ *    `delete(filters)`. Drops every slot matching any of the rule's
+ *    filters via [Filter.match].
  *  - [StoreChange.DeleteExpired] — emitted on `deleteExpiredEvents()`.
- *    The projection drops every slot whose `expiration` has lapsed at
- *    the cutoff the store pinned. **There is no per-projection
- *    expiration ticker** — projections only drop expired events when
- *    the application calls `deleteExpiredEvents()` on the store.
+ *    Drops every slot whose `expiration` has lapsed at the cutoff the
+ *    store pinned. **There is no per-projection expiration ticker** —
+ *    expiration only triggers when the application calls
+ *    `deleteExpiredEvents()` on the store.
  *
  * Limit handling is **per-filter**: each filter retains at most its
  * own `limit` matches in a private capped set, sorted by created_at
- * DESC + id ASC. The projection's [items] is the deduped union of
- * those sets, so when filter A and filter B match disjoint events the
- * union can be larger than any single filter's `limit`. We do not
- * refill from the store after a deletion — if a removal leaves a
- * filter under cap, it stays under cap until another match arrives.
+ * DESC + id ASC. The snapshot is the deduped union of those sets, so
+ * when filter A and filter B match disjoint events the union can be
+ * larger than any single filter's `limit`. We do not refill from the
+ * store after a deletion — if a removal leaves a filter under cap, it
+ * stays under cap until another match arrives.
  *
- * Ephemeral events (kinds `20000-29999`) reach the projection via
- * [ObservableEventStore.changes] without ever being persisted; they
- * appear in [items] for as long as the projection is alive but never
- * survive a re-seed. They aren't covered by the store's
- * `deleteExpiredEvents()` sweep (the DB never had them), so an
- * ephemeral with an `expiration` tag will linger in the projection
+ * Ephemeral events (kinds `20000-29999`) reach the projection without
+ * ever being persisted; they appear in the snapshot for as long as
+ * the projection is alive but never survive a re-seed. They aren't
+ * covered by the store's `deleteExpiredEvents()` sweep (the DB never
+ * had them), so an ephemeral with an `expiration` tag will linger
  * until it's superseded or until the projection is closed.
  *
- * Lifecycle: the projection runs a single collector inside [scope].
- * Cancel the scope (or call [close]) when the screen using the
- * projection goes away.
+ * **Lifecycle**: this class is a pure state machine with no
+ * coroutine ownership. Construct it, call [seed] once, then call
+ * [apply] for each [StoreChange] from [ObservableEventStore.changes].
+ * For the standard "wrap into a Flow and collect from a ViewModel"
+ * use case, use the [ObservableEventStore.project] extension which
+ * does this composition for you.
  */
 class EventStoreProjection<T : Event>(
     private val store: ObservableEventStore,
     private val filters: List<Filter>,
-    scope: CoroutineScope,
     private val nowProvider: () -> Long = TimeUtils::now,
-) : AutoCloseable {
-    private val _state = MutableStateFlow<ProjectionState<T>>(ProjectionState.Loading)
-
-    /**
-     * Current projection state. Starts as [ProjectionState.Loading]
-     * until the seed query completes; thereafter every membership
-     * change publishes a fresh [ProjectionState.Loaded] with the new
-     * list. Distinguishing `Loading` from `Loaded(emptyList())` lets
-     * the UI tell "still seeding" apart from "seeded but no matches".
-     */
-    val state: StateFlow<ProjectionState<T>> = _state.asStateFlow()
-
+) {
     /** Slots keyed by the *current* event id. Re-keyed when a replaceable / addressable handle takes a new version. */
     private val byId = HashMap<HexKey, Slot<T>>()
 
@@ -161,51 +143,56 @@ class EventStoreProjection<T : Event>(
     private val perFilter: Map<Filter, java.util.SortedSet<Slot<T>>> =
         filters.associateWith { sortedSetOf(slotComparator()) }
 
-    private val collectorJob: Job =
-        scope.launch {
-            // `onSubscription` runs after the SharedFlow subscription is
-            // active but before we pull any events — the buffer absorbs
-            // emissions arriving during seed and drains them once collect
-            // proceeds. Doing the seed inside `collect { }` would race
-            // with concurrent inserts.
-            store.changes
-                .onSubscription {
-                    seed()
-                }.collect { storeEvent -> apply(storeEvent) }
-        }
-
-    private suspend fun seed() {
+    /**
+     * Run the seed query against the store and populate the indexes.
+     * Call once, before the first [apply]. Expired events are skipped
+     * (the store doesn't filter them at query time, so we do here).
+     */
+    suspend fun seed() {
         val now = nowProvider()
         for (event in store.query<T>(filters)) {
-            // Stores don't filter expired rows at query time, so do it
-            // here — otherwise an expired event would briefly appear
-            // in [items] before the next deleteExpiredEvents() sweep.
             if (event.isExpirationBefore(now)) continue
             applyInsert(event)
             yield()
         }
-        publish()
     }
 
-    private fun apply(storeEvent: StoreChange) {
-        val changed =
-            when (storeEvent) {
-                is StoreChange.Insert -> {
-                    applyInsert(storeEvent.event)
-                }
-
-                is StoreChange.DeleteByFilter -> {
-                    dropWhere { ev -> storeEvent.filters.any { it.match(ev) } }
-                }
-
-                // Store's sweep uses strict `<`; isExpirationBefore is
-                // `<=`, so subtract 1 to match.
-                is StoreChange.DeleteExpired -> {
-                    val cutoff = (storeEvent.asOf ?: nowProvider()) - 1
-                    dropWhere { it.isExpirationBefore(cutoff) }
-                }
+    /**
+     * Apply a [StoreChange] from [ObservableEventStore.changes].
+     * Returns true if the change altered membership (caller should
+     * publish a fresh [snapshot]); false for in-place addressable
+     * updates, NIP-01 tiebreaker rejections, and arrivals that no
+     * filter matches.
+     */
+    fun apply(storeEvent: StoreChange): Boolean =
+        when (storeEvent) {
+            is StoreChange.Insert -> {
+                applyInsert(storeEvent.event)
             }
-        if (changed) publish()
+
+            is StoreChange.DeleteByFilter -> {
+                dropWhere { ev -> storeEvent.filters.any { it.match(ev) } }
+            }
+
+            // Store's sweep uses strict `<`; isExpirationBefore is
+            // `<=`, so subtract 1 to match.
+            is StoreChange.DeleteExpired -> {
+                val cutoff = (storeEvent.asOf ?: nowProvider()) - 1
+                dropWhere { it.isExpirationBefore(cutoff) }
+            }
+        }
+
+    /**
+     * Current snapshot as a [ProjectionState.Loaded]. Cheap — the
+     * deduped sorted union over [perFilter] sets is computed on
+     * demand. Returns an empty [ProjectionState.Loaded] when no slots
+     * are live.
+     */
+    fun snapshot(): ProjectionState.Loaded<T> {
+        if (byId.isEmpty()) return ProjectionState.Loaded(emptyList())
+        val union = sortedSetOf(slotComparator<T>())
+        for (set in perFilter.values) union.addAll(set)
+        return ProjectionState.Loaded(union.map { it.flow })
     }
 
     private fun applyInsert(event: Event): Boolean {
@@ -341,32 +328,6 @@ class EventStoreProjection<T : Event>(
         return true
     }
 
-    private fun publish() {
-        // Lazily compute the deduped sorted union from per-filter
-        // sets. Cheaper than maintaining a separate `ordered` field
-        // alongside every insert / remove.
-        if (byId.isEmpty()) {
-            _state.value = ProjectionState.Loaded(emptyList())
-            return
-        }
-        val union = sortedSetOf(slotComparator<T>())
-        for (set in perFilter.values) union.addAll(set)
-        _state.value = ProjectionState.Loaded(union.map { it.flow })
-    }
-
-    /**
-     * Stop tracking changes and clear internal state. Idempotent. The
-     * scope passed to the constructor keeps running; only this
-     * projection's collector job is cancelled.
-     */
-    override fun close() {
-        collectorJob.cancel()
-        byId.clear()
-        byAddress.clear()
-        for (set in perFilter.values) set.clear()
-        _state.value = ProjectionState.Loaded(emptyList())
-    }
-
     /**
      * Internal slot. Each event added to the projection lives inside
      * one of these for as long as it survives. The sort key is frozen
@@ -430,17 +391,41 @@ class EventStoreProjection<T : Event>(
 }
 
 /**
- * Convenience: open a projection over this observable store. NIP-62
- * vanish handling is scoped by the inner store's `relay`. Cancel
- * [scope] (or call [EventStoreProjection.close]) to release the
- * projection.
+ * Open a cold reactive projection over this observable store for the
+ * given [filters]. The returned flow:
+ *
+ *  - emits [ProjectionState.Loading] on subscription;
+ *  - runs the seed query against the store;
+ *  - emits [ProjectionState.Loaded] with the seeded list;
+ *  - then emits a fresh [ProjectionState.Loaded] every time membership
+ *    changes (in-place addressable updates do not re-emit — collectors
+ *    of the slot's own [MutableStateFlow] handle those).
+ *
+ * Each collection allocates its own state machine, runs its own seed,
+ * and unsubscribes when the collector cancels — there's no
+ * `close()`. For multiple collectors on the same view, share with
+ * `stateIn(scope, SharingStarted.WhileSubscribed(...), Loading)` (the
+ * standard ViewModel pattern).
+ *
+ * NIP-62 vanish handling is scoped by the inner store's `relay`.
  */
-fun <T : Event> ObservableEventStore.observe(
-    filters: List<Filter>,
-    scope: CoroutineScope,
-): EventStoreProjection<T> = EventStoreProjection(this, filters, scope)
+fun <T : Event> ObservableEventStore.project(filters: List<Filter>): Flow<ProjectionState<T>> =
+    channelFlow {
+        val projection = EventStoreProjection<T>(this@project, filters)
+        send(ProjectionState.Loading)
+        // `onSubscription` runs after the SharedFlow subscription is
+        // active but before we pull events — the buffer absorbs
+        // emissions arriving during the seed query and we drain them
+        // through `apply` once collect proceeds. Doing the seed
+        // inside `collect { }` instead would race with concurrent
+        // inserts.
+        changes
+            .onSubscription {
+                projection.seed()
+                send(projection.snapshot())
+            }.collect { change ->
+                if (projection.apply(change)) send(projection.snapshot())
+            }
+    }
 
-fun <T : Event> ObservableEventStore.observe(
-    filter: Filter,
-    scope: CoroutineScope,
-): EventStoreProjection<T> = EventStoreProjection(this, listOf(filter), scope)
+fun <T : Event> ObservableEventStore.project(filter: Filter): Flow<ProjectionState<T>> = project(listOf(filter))
