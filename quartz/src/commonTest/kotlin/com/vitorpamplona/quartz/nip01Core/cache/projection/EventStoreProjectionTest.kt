@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -206,6 +207,49 @@ class EventStoreProjectionTest {
 
             awaitFlow(slot) { it.id == v2.id }
             assertSame(seedList, projection.items, "addressable update must not change list reference")
+        }
+
+    /**
+     * If v2 of an addressable no longer matches the filter (e.g.
+     * tag list changed), the slot is dropped. The projection
+     * re-evaluates filter membership on every supersession.
+     */
+    @Test
+    fun addressableUpdateDropsSlotWhenFilterStopsMatching() =
+        runBlocking {
+            val time = TimeUtils.now()
+            // v1 carries tag "nostr"; v2 changes the tag to "bitcoin".
+            val v1 =
+                signer.sign(
+                    LongTextNoteEvent.build("blog v1", "title", dTag = "blog", createdAt = time) {
+                        hashtag("nostr")
+                    },
+                )
+            observable.insert(v1)
+
+            // Filter narrows to events that ALSO carry hashtag "nostr".
+            val projection =
+                projectionOf<LongTextNoteEvent>(
+                    Filter(
+                        kinds = listOf(LongTextNoteEvent.KIND),
+                        authors = listOf(v1.pubKey),
+                        tags = mapOf("t" to listOf("nostr")),
+                    ),
+                )
+            projection.awaitLoaded()
+            assertEquals(1, projection.items.size)
+
+            val v2 =
+                signer.sign(
+                    LongTextNoteEvent.build("blog v2", "title", dTag = "blog", createdAt = time + 1) {
+                        hashtag("bitcoin")
+                    },
+                )
+            observable.insert(v2)
+
+            // v2 doesn't match — slot drops and the snapshot is empty.
+            val after = projection.awaitItems { it.isEmpty() }
+            assertTrue(after.isEmpty())
         }
 
     /**

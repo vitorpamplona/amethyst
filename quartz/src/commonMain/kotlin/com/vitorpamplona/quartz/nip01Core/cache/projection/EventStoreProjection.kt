@@ -71,12 +71,13 @@ sealed interface ProjectionState<out T : Event> {
  *    list. Stable list reference while membership is unchanged.
  *  - **In-place replaceable / addressable update**: same slot, new
  *    [MutableStateFlow.value]. Only collectors of that handle
- *    re-render. The slot's sort key is frozen at insertion, so the
- *    list does not reshuffle when the new version has a later
- *    `created_at`. *Caveat: the slot stays in whatever filters
- *    matched the original version; if the new version no longer
- *    matches a filter (e.g. its tags changed), the slot is not
- *    re-evaluated and remains live.*
+ *    re-render. The slot's sort key is frozen at insertion so the
+ *    list ordering doesn't reshuffle on a later `created_at`. Filter
+ *    membership *is* re-evaluated against the new event, so a v2
+ *    that no longer matches a filter (e.g. tag changed) drops out;
+ *    a v2 that newly matches another filter joins it. In the common
+ *    case (filter on `kinds + authors`) v2 still matches and the
+ *    list reference stays stable.
  *  - **Removal**: NIP-09, NIP-62, NIP-40 expiration, `delete(filter)`.
  *
  * Limit is **per-filter**: each filter retains at most its own
@@ -194,17 +195,37 @@ class EventStoreProjection<T : Event>(
             if (existing != null) {
                 if (!supersedes(event, existing.flow.value)) return false
 
-                // Same address, new winner. Rekey byId from the
-                // previous event id to the new one and update the
-                // handle's value in place — list reference stays the
-                // same; only the handle's collectors re-render.
+                // Same address, new winner. Rekey byId, mutate
+                // flow.value in place, then re-evaluate filter
+                // membership against the new event — v2 may add
+                // matches or lose previously-matching filters.
                 val previousId = existing.flow.value.id
                 if (previousId != event.id) {
                     byId.remove(previousId)
                     byId[event.id] = existing
                 }
                 existing.flow.value = event as T
-                return false
+
+                var changed = false
+                for ((f, set) in perFilter) {
+                    val nowMatches = f.match(event)
+                    val wasIn = set.contains(existing)
+                    when {
+                        nowMatches && !wasIn -> {
+                            if (admit(existing, f, set)) changed = true
+                        }
+
+                        !nowMatches && wasIn -> {
+                            set.remove(existing)
+                            changed = true
+                        }
+                    }
+                }
+                // If no filter retains the slot anymore, fully drop it.
+                if (perFilter.values.none { it.contains(existing) }) {
+                    if (removeIndexes(existing)) changed = true
+                }
+                return changed
             }
         } else if (byId.containsKey(event.id)) {
             return false
@@ -213,32 +234,42 @@ class EventStoreProjection<T : Event>(
         // Genuinely new slot. Offer it to every matching filter; if
         // any filter still holds it after cap-eviction, the slot
         // becomes live and gets indexed.
-        var membershipChanged = false
+        var changed = false
         val slot = Slot(event as T)
         for ((f, set) in perFilter) {
             if (!f.match(event)) continue
-            set.add(slot)
-            val cap = f.limit ?: continue
-            while (set.size > cap) {
-                val tail = set.last()
-                set.remove(tail)
-                if (tail !== slot && perFilter.values.none { it.contains(tail) }) {
-                    // Tail no longer retained by any filter — fully drop.
-                    if (removeIndexes(tail)) membershipChanged = true
-                }
-            }
+            if (admit(slot, f, set)) changed = true
         }
-
-        // The slot survived cap-eviction in at least one filter, so it
-        // belongs in the indexes. Otherwise nothing was indexed and
-        // the only membership effect is whatever evictions happened
-        // along the way.
         if (perFilter.values.any { it.contains(slot) }) {
             byId[event.id] = slot
             if (address != null) byAddress[address] = slot
-            membershipChanged = true
+            changed = true
         }
-        return membershipChanged
+        return changed
+    }
+
+    /**
+     * Add [slot] to filter [f]'s [set] and evict the tail if the cap
+     * is exceeded. Returns true if an eviction triggered a slot drop
+     * from the indexes (its only filter retention was the evicted
+     * one).
+     */
+    private fun admit(
+        slot: Slot<T>,
+        f: Filter,
+        set: java.util.SortedSet<Slot<T>>,
+    ): Boolean {
+        set.add(slot)
+        val cap = f.limit ?: return false
+        var changed = false
+        while (set.size > cap) {
+            val tail = set.last()
+            set.remove(tail)
+            if (tail !== slot && perFilter.values.none { it.contains(tail) }) {
+                if (removeIndexes(tail)) changed = true
+            }
+        }
+        return changed
     }
 
     private fun handleDeletion(deletion: DeletionEvent): Boolean {
