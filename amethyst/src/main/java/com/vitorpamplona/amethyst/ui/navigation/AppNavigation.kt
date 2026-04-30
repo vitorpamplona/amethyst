@@ -128,6 +128,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.FollowList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
@@ -247,6 +248,7 @@ fun BuildNavigation(
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.NestLobby> { NestLobbyScreen(it.addressValue, accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }

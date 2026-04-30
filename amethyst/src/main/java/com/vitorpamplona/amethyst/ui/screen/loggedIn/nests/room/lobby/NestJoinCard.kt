@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -260,7 +261,7 @@ private fun NestJoinCardContent(
                 ) {
                     JoinNestButton(
                         event = event,
-                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }
@@ -269,12 +270,15 @@ private fun NestJoinCardContent(
 }
 
 /**
- * Standalone "Join nest" button. Reusable from any composable that has
- * a [MeetingSpaceEvent] in hand — the lobby card, the in-feed note
- * renderer (so a `nostr:naddr1...` deep-link to a kind-30312 lands one
- * tap away from the room), and any future room-list surface. Renders
- * nothing for events without a service / endpoint / d-tag — those
- * rooms can't be joined on the audio plane.
+ * "Join nest" entry button — navigates to [NestLobbyScreen] rather
+ * than launching the audio activity directly. The lobby is read-only
+ * (cached chat, host, status), so a user who's just coming back to
+ * check on an old room doesn't trigger a MoQ handshake or the host's
+ * kind-30312 republish path. The actual room launch lives behind
+ * [OpenNestRoomButton] inside the lobby.
+ *
+ * Renders nothing for events without a service / endpoint / d-tag —
+ * those rooms can't be joined on the audio plane.
  *
  * [primaryColorOverride] lets the lobby card paint the button with
  * the room's themed primary color (`["c", hex, "primary"]`); other
@@ -283,7 +287,7 @@ private fun NestJoinCardContent(
 @Composable
 fun JoinNestButton(
     event: MeetingSpaceEvent,
-    accountViewModel: AccountViewModel,
+    nav: INav,
     primaryColorOverride: Color? = null,
 ) {
     val serviceBase = event.service()
@@ -291,7 +295,6 @@ fun JoinNestButton(
     val roomId = event.address().dTag
     if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
-    val context = LocalContext.current
     val colors =
         if (primaryColorOverride != null) {
             androidx.compose.material3.ButtonDefaults
@@ -301,6 +304,33 @@ fun JoinNestButton(
                 .buttonColors()
         }
 
+    val addressValue = event.address().toValue()
+    Button(
+        onClick = { nav.nav(Route.NestLobby(addressValue)) },
+        colors = colors,
+    ) {
+        Text(stringRes(R.string.nest_join))
+    }
+}
+
+/**
+ * Lobby's primary CTA. This is the only place that actually launches
+ * [NestActivity] — meaning a host re-entering an old room only
+ * triggers the audio session (and any rejoin-time event refresh)
+ * when they explicitly opt in here.
+ */
+@Composable
+fun OpenNestRoomButton(
+    event: MeetingSpaceEvent,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val serviceBase = event.service()
+    val endpoint = event.endpoint()
+    val roomId = event.address().dTag
+    if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
+
+    val context = LocalContext.current
     Button(
         onClick = {
             NestBridge.set(accountViewModel)
@@ -309,8 +339,8 @@ fun JoinNestButton(
                 addressValue = event.address().toValue(),
             )
         },
-        colors = colors,
+        modifier = modifier,
     ) {
-        Text(stringRes(R.string.nest_join))
+        Text(stringRes(R.string.nest_lobby_open_room))
     }
 }
