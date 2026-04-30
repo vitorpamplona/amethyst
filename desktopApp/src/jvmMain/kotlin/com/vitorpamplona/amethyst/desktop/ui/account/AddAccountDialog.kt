@@ -20,36 +20,31 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.account
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.ui.auth.LoginCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAccountDialog(
     accountManager: AccountManager,
@@ -59,86 +54,75 @@ fun AddAccountDialog(
     val scope = rememberCoroutineScope()
     val loginProgress by accountManager.loginProgress.collectAsState()
 
-    DialogWindow(
-        onCloseRequest = onDismiss,
-        title = "Add Account",
-        state = rememberDialogState(size = DpSize(480.dp, 600.dp)),
-        resizable = false,
-    ) {
-        MaterialTheme {
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("Add Account") },
-                        navigationIcon = {
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                )
-                            }
-                        },
+    Dialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.width(480.dp).padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                // Header with title + close button
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Add Account",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
                     )
-                },
-            ) { padding ->
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    LoginCard(
-                        onLogin = { keyInput ->
-                            // All steps must be sequential — no fire-and-forget
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    accountManager.ensureCurrentAccountInStorage()
-                                }
-                                val result = accountManager.loginWithKey(keyInput)
-                                if (result.isSuccess) {
-                                    withContext(Dispatchers.IO) {
-                                        accountManager.saveCurrentAccount()
-                                    }
-                                    onAccountAdded()
-                                }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                LoginCard(
+                    onLogin = { keyInput ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                accountManager.ensureCurrentAccountInStorage()
                             }
-                            // Return success to dismiss any error in LoginCard
-                            Result.success(Unit)
-                        },
-                        onGenerateNew = {
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    accountManager.ensureCurrentAccountInStorage()
-                                }
-                                accountManager.generateNewAccount()
+                            val result = accountManager.loginWithKey(keyInput)
+                            if (result.isSuccess) {
                                 withContext(Dispatchers.IO) {
                                     accountManager.saveCurrentAccount()
                                 }
                                 onAccountAdded()
                             }
-                        },
-                        onLoginBunker = { bunkerUri ->
-                            // ensureCurrentAccountInStorage first, then bunker login
-                            accountManager.ensureCurrentAccountInStorage()
-                            val result = accountManager.loginWithBunker(bunkerUri)
-                            if (result.isSuccess) {
-                                onAccountAdded()
+                        }
+                        Result.success(Unit)
+                    },
+                    onGenerateNew = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                accountManager.ensureCurrentAccountInStorage()
                             }
-                            result.map { }
-                        },
-                        onLoginNostrConnect = { onUriGenerated ->
-                            accountManager.ensureCurrentAccountInStorage()
-                            val result = accountManager.loginWithNostrConnect(onUriGenerated)
-                            if (result.isSuccess) {
-                                onAccountAdded()
+                            accountManager.generateNewAccount()
+                            withContext(Dispatchers.IO) {
+                                accountManager.saveCurrentAccount()
                             }
-                            result.map { }
-                        },
-                        loginProgress = loginProgress,
-                        cardWidth = 420.dp,
-                        title = "Import Account",
-                        subtitle = "Paste nsec, npub (view-only), or use a remote signer",
-                    )
-                }
+                            onAccountAdded()
+                        }
+                    },
+                    onLoginBunker = { bunkerUri ->
+                        accountManager.ensureCurrentAccountInStorage()
+                        val result = accountManager.loginWithBunker(bunkerUri)
+                        if (result.isSuccess) {
+                            onAccountAdded()
+                        }
+                        result.map { }
+                    },
+                    onLoginNostrConnect = { onUriGenerated ->
+                        accountManager.ensureCurrentAccountInStorage()
+                        val result = accountManager.loginWithNostrConnect(onUriGenerated)
+                        if (result.isSuccess) {
+                            onAccountAdded()
+                        }
+                        result.map { }
+                    },
+                    loginProgress = loginProgress,
+                    cardWidth = 420.dp,
+                    title = "Import Account",
+                    subtitle = "Paste nsec, npub (view-only), or use a remote signer",
+                )
             }
         }
     }
