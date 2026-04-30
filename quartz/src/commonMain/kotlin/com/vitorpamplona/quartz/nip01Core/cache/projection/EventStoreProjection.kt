@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.yield
 
@@ -410,9 +410,13 @@ class EventStoreProjection<T : Event>(
  * NIP-62 vanish handling is scoped by the inner store's `relay`.
  */
 fun <T : Event> ObservableEventStore.project(filters: List<Filter>): Flow<ProjectionState<T>> =
-    channelFlow {
+    flow {
         val projection = EventStoreProjection<T>(this@project, filters)
-        send(ProjectionState.Loading)
+        // Capture the outer collector so we can emit ProjectionState
+        // from inside `changes.onSubscription { }` and `collect { }`,
+        // where the implicit `this` is FlowCollector<StoreChange>.
+        val outer = this
+        emit(ProjectionState.Loading)
         // `onSubscription` runs after the SharedFlow subscription is
         // active but before we pull events — the buffer absorbs
         // emissions arriving during the seed query and we drain them
@@ -422,9 +426,9 @@ fun <T : Event> ObservableEventStore.project(filters: List<Filter>): Flow<Projec
         changes
             .onSubscription {
                 projection.seed()
-                send(projection.snapshot())
+                outer.emit(projection.snapshot())
             }.collect { change ->
-                if (projection.apply(change)) send(projection.snapshot())
+                if (projection.apply(change)) outer.emit(projection.snapshot())
             }
     }
 
