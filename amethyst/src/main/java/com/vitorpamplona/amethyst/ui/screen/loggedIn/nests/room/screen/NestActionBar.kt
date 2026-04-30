@@ -31,14 +31,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -263,19 +266,34 @@ private fun OnStageControls(
 
     when (val broadcast = ui.broadcast) {
         BroadcastUiState.Idle -> {
-            Button(onClick = {
-                val granted =
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.RECORD_AUDIO,
-                    ) == PackageManager.PERMISSION_GRANTED
-                if (granted) {
-                    viewModel.startBroadcast(speakerPubkeyHex)
-                } else {
-                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            }) {
-                Text(stringRes(R.string.nest_talk))
+            // Mic OFF visual: filled primary button signals "tap to go live".
+            // Sized larger than the surrounding 40.dp icon buttons so the
+            // mic state is unmistakable at a glance.
+            FilledIconButton(
+                onClick = {
+                    val granted =
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.RECORD_AUDIO,
+                        ) == PackageManager.PERMISSION_GRANTED
+                    if (granted) {
+                        viewModel.startBroadcast(speakerPubkeyHex)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                modifier = Modifier.size(56.dp),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.MicOff,
+                    contentDescription = stringRes(R.string.nest_talk),
+                    modifier = Modifier.size(28.dp),
+                )
             }
             OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
                 Text(stringRes(R.string.nest_leave_stage))
@@ -336,8 +354,23 @@ private fun OnStageControls(
                         ),
                 )
             }
-            OutlinedButton(onClick = { viewModel.stopBroadcast() }) {
-                Text(stringRes(R.string.nest_stop_talking))
+            // Mic ON visual: filled error-color button screams "MIC IS LIVE,
+            // tap to stop transmitting". Same large footprint as the Idle
+            // mic button so the state swap is impossible to miss.
+            FilledIconButton(
+                onClick = { viewModel.stopBroadcast() },
+                modifier = Modifier.size(56.dp),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Mic,
+                    contentDescription = stringRes(R.string.nest_stop_talking),
+                    modifier = Modifier.size(28.dp),
+                )
             }
             OutlinedButton(onClick = {
                 viewModel.stopBroadcast()
@@ -348,8 +381,20 @@ private fun OnStageControls(
         }
 
         is BroadcastUiState.Failed -> {
-            Button(onClick = { viewModel.startBroadcast(speakerPubkeyHex) }) {
-                Text(stringRes(R.string.nest_talk))
+            FilledIconButton(
+                onClick = { viewModel.startBroadcast(speakerPubkeyHex) },
+                modifier = Modifier.size(56.dp),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.MicOff,
+                    contentDescription = stringRes(R.string.nest_talk),
+                    modifier = Modifier.size(28.dp),
+                )
             }
         }
     }
