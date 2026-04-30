@@ -31,14 +31,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.demo.data.projectFromRelays
 import com.vitorpamplona.amethyst.demo.net.KtorWebSocket
 import com.vitorpamplona.amethyst.demo.ui.FeedScreen
 import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
 import com.vitorpamplona.quartz.nip01Core.cache.projection.ProjectionState
+import com.vitorpamplona.quartz.nip01Core.cache.projection.project
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -48,22 +49,9 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-
-/** Public relays the demo subscribes to and publishes against. */
-private val DEMO_RELAYS =
-    setOf(
-        "wss://relay.damus.io".normalizeRelayUrl(),
-        "wss://nos.lol".normalizeRelayUrl(),
-        "wss://relay.nostr.band".normalizeRelayUrl(),
-    )
-
-/** Show the latest 100 kind:1 text notes from the firehose. */
-private val FEED_FILTER =
-    Filter(
-        kinds = listOf(TextNoteEvent.KIND),
-        limit = 100,
-    )
 
 /**
  * Layered Quartz stack from the README:
@@ -72,9 +60,9 @@ private val FEED_FILTER =
  *
  * The [collector] is a single connection-level listener that drops
  * every event the [client] receives — across every subscription on
- * every relay — into [db]. UI projections are independent cold flows:
- * see `projectFromRelays` for how each one drives its own relay
- * subscription on the collection lifecycle.
+ * every relay — into [db]. UI projections are independent cold flows;
+ * each one owns its own `client.subscribe`/`unsubscribe` pair tied to
+ * its collection lifecycle.
  */
 private class AppGraph(
     val client: NostrClient,
@@ -113,11 +101,26 @@ fun main() =
                 val graph = remember { buildAppGraph() }
                 val uiScope = rememberCoroutineScope()
 
-                // The flow holds open the relay subscription only while
-                // collected: subscribe on collect, unsubscribe on cancel.
+                val relays =
+                    remember {
+                        setOf(
+                            "wss://relay.damus.io".normalizeRelayUrl(),
+                            "wss://nos.lol".normalizeRelayUrl(),
+                            "wss://relay.nostr.band".normalizeRelayUrl(),
+                        )
+                    }
+
+                // Cold projection over the local store. While being
+                // collected, it holds open one relay subscription for
+                // the same filter; cancellation tears it down.
                 val projection =
-                    remember(graph) {
-                        graph.db.projectFromRelays<TextNoteEvent>(graph.client, DEMO_RELAYS, FEED_FILTER)
+                    remember(graph, relays) {
+                        val subId = newSubId()
+                        val filter = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 100)
+                        graph.db
+                            .project<TextNoteEvent>(filter)
+                            .onStart { graph.client.subscribe(subId, relays.associateWith { listOf(filter) }) }
+                            .onCompletion { graph.client.unsubscribe(subId) }
                     }
                 val projectionState by projection.collectAsState(initial = ProjectionState.Loading)
 
@@ -130,7 +133,7 @@ fun main() =
                             val signed = graph.signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
                             // Hits the bus → projection picks it up alongside any inbound relay copy.
                             graph.db.insert(signed)
-                            graph.client.publish(signed, DEMO_RELAYS)
+                            graph.client.publish(signed, relays)
                         }
                     },
                 )
