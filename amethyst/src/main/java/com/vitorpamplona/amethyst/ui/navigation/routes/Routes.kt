@@ -91,6 +91,10 @@ sealed class Route {
 
     @Serializable object Nests : Route()
 
+    @Serializable data class NestLobby(
+        val addressValue: String,
+    ) : Route()
+
     @Serializable object Longs : Route()
 
     @Serializable object Articles : Route()

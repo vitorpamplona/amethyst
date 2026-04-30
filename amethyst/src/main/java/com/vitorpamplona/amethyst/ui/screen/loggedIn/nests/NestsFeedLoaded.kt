@@ -49,7 +49,6 @@ import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.Gallery
@@ -77,8 +77,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -137,9 +135,10 @@ fun NestsFeedLoaded(
 
 /**
  * Audio-rooms list card. Mirrors [ObserveAndRenderSpace] visually but
- * routes a tap straight into [NestActivity] when the underlying event
- * is a [MeetingSpaceEvent], instead of the thread view that the generic
- * `ChannelCardCompose` → `ClickableNote` chain would otherwise open.
+ * routes a tap into the in-app [NestLobbyScreen] when the underlying
+ * event is a joinable [MeetingSpaceEvent]. The lobby is read-only —
+ * launching the audio activity (and any host-side kind-30312 refresh)
+ * still requires an explicit tap on the lobby's Open Room button.
  */
 @Composable
 private fun NestFeedCard(
@@ -149,7 +148,6 @@ private fun NestFeedCard(
     nav: INav,
 ) {
     val meetingEvent = baseNote.event as? MeetingSpaceEvent ?: return
-    val context = LocalContext.current
 
     val onClick =
         remember(meetingEvent) {
@@ -158,11 +156,7 @@ private fun NestFeedCard(
                 val endpoint = meetingEvent.endpoint()
                 val dTag = meetingEvent.address().dTag
                 if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
-                    NestBridge.set(accountViewModel)
-                    NestActivity.launch(
-                        context = context,
-                        addressValue = meetingEvent.address().toValue(),
-                    )
+                    nav.nav(Route.NestLobby(meetingEvent.address().toValue()))
                 } else {
                     nav.nav { routeFor(baseNote, accountViewModel.account) }
                 }

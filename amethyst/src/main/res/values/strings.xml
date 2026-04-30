@@ -521,10 +521,10 @@
     <string name="nest_mic_mute">Mute mic</string>
     <string name="nest_mic_unmute">Unmute mic</string>
     <string name="nest_broadcast_connecting">Going live…</string>
-    <string name="nest_broadcasting">Live</string>
     <string name="nest_broadcast_failed">Broadcast failed: %1$s</string>
+    <string name="nest_mute_failed">Mute failed: %1$s</string>
     <string name="nest_record_permission_required">Microphone access is required to talk in this room.</string>
-    <string name="nest_open_settings">Open settings</string>
+    <string name="nest_open_settings">No permissions</string>
     <string name="nest_notification_channel">Nests</string>
     <string name="nest_notification_channel_description">Keeps audio playing while a room is open.</string>
     <string name="nest_notification_listening">Nest connected</string>
@@ -533,6 +533,10 @@
     <string name="nest_notification_stop">Stop</string>
     <string name="nest_join">Join nest</string>
     <string name="nest_lobby_host_label">Host</string>
+    <string name="nest_lobby_open_room">Open room</string>
+    <string name="nest_lobby_recent_chat">Recent chat</string>
+    <string name="nest_lobby_no_listeners">No one is in the room right now.</string>
+    <string name="nest_lobby_listeners_count">%1$d listening</string>
     <string name="nest_role_host">Host</string>
     <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Microphone muted</string>
@@ -1491,6 +1495,10 @@
     <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
 
     <string name="could_not_connect_to_tor">Could not connect to Tor</string>
+    <string name="tor_connection_failed_title">Tor isn\'t connecting</string>
+    <string name="tor_connection_failed_body">Amethyst couldn\'t finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We\'ll remember this choice for the next hour and re-try Tor after that.</string>
+    <string name="tor_continue_without_for_session">Use regular connection</string>
+    <string name="tor_keep_waiting">Keep waiting</string>
     <string name="unable_to_download_relay_document">Download relay document unavailable</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>

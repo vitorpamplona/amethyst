@@ -177,7 +177,7 @@ fun RenderMeetingSpaceEventInner(
         } else {
             com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.JoinNestButton(
                 event = noteEvent,
-                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     }
