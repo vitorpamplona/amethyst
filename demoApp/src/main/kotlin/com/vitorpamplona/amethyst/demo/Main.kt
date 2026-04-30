@@ -42,7 +42,10 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Layered Quartz stack from the README:
@@ -76,6 +79,16 @@ private fun buildAppGraph(): AppGraph {
         EventCollector(client) { event, _ ->
             scope.launch { runCatching { db.insert(event) } }
         }
+
+    // Periodic NIP-40 sweep — drops expired events from SQLite and
+    // emits StoreChange.DeleteExpired so live projections drop them
+    // too. Without this the on-disk store grows monotonically.
+    scope.launch {
+        while (isActive) {
+            delay(15.minutes)
+            runCatching { db.deleteExpiredEvents() }
+        }
+    }
 
     // Throwaway identity for the demo. Restart the app -> new keys.
     val signer = NostrSignerInternal(KeyPair())
