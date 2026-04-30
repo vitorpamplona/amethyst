@@ -242,7 +242,6 @@ private fun OnStageControls(
 
         is BroadcastUiState.Broadcasting -> {
             MicMuteToggle(isMuted = broadcast.isMuted, onToggle = viewModel::setMicMuted)
-            StopBroadcastButton(onClick = viewModel::stopBroadcast)
             LeaveStageButton(onClick = leaveStage)
         }
 
@@ -413,10 +412,10 @@ private fun MicMuteToggle(
     FilledTonalIconToggleButton(
         checked = isMuted,
         onCheckedChange = onToggle,
-        modifier = Modifier.size(width = 40.dp, height = ButtonDefaults.MinHeight),
+        modifier = Modifier.size(56.dp),
     ) {
         Icon(
-            symbol = if (isMuted) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
+            symbol = if (isMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
             contentDescription = stringRes(if (isMuted) R.string.nest_mic_unmute else R.string.nest_mic_mute),
         )
     }

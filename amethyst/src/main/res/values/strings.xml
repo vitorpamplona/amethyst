@@ -533,7 +533,7 @@
     <string name="nest_notification_stop">Stop</string>
     <string name="nest_join">Join nest</string>
     <string name="nest_lobby_host_label">Host</string>
-    <string name="nest_lobby_open_room">Open room</string>
+    <string name="nest_lobby_open_action">Open</string>
     <string name="nest_lobby_recent_chat">Recent chat</string>
     <string name="nest_lobby_no_listeners">No one is in the room right now.</string>
     <string name="nest_lobby_listeners_count">%1$d listening</string>

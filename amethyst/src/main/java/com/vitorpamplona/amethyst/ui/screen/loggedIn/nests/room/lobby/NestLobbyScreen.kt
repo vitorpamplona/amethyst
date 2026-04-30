@@ -20,20 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,19 +51,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -66,6 +78,10 @@ import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestEditFieldRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -76,20 +92,25 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * In-app navigation lobby for a NIP-53 audio room (kind-30312). Sits
  * between the feed / share-link entry points and [com.vitorpamplona.amethyst
  * .ui.screen.loggedIn.nests.room.activity.NestActivity], so a user who's
  * just coming back to read the chat or check who's hosting doesn't
- * trigger a MoQ handshake or a host-side kind-30312 republish. Only the
- * "Open room" button on this screen launches the audio activity.
+ * trigger a MoQ handshake or a host-side kind-30312 republish. The
+ * top-bar "Open" action launches the audio activity.
  *
- * The lobby is read-only: it mounts the room's relay subscription
- * ([NestRoomFilterAssemblerSubscription]) so cached chat / presence
- * stay fresh, but it does NOT open a [com.vitorpamplona.amethyst.commons
- * .viewmodels.NestViewModel], does NOT publish kind-10312 presence,
- * and does NOT touch the audio pipeline.
+ * The lobby keeps the room's relay subscription
+ * ([NestRoomFilterAssemblerSubscription]) warm so cached chat / presence
+ * stay fresh, renders the kind-1311 transcript with the same
+ * `LazyColumn(reverseLayout = true)` list the in-room screen uses, and
+ * exposes the same composer (kind-1311 chat) — so users can chime in
+ * without ever joining the audio plane. It does NOT open a
+ * [com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel], does
+ * NOT publish kind-10312 presence, and does NOT touch the audio pipeline.
  */
 @Composable
 fun NestLobbyScreen(
@@ -105,6 +126,7 @@ fun NestLobbyScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NestLobbyContent(
     event: MeetingSpaceEvent,
@@ -114,54 +136,157 @@ private fun NestLobbyContent(
     val roomATag = remember(event) { event.address().toValue() }
 
     // Keep cached chat / presence warm while the user is on the lobby.
-    // No MoQ session is opened — that's gated behind the Open Room button.
+    // No MoQ session is opened — that's gated behind the Open action.
     NestRoomFilterAssemblerSubscription(roomATag, accountViewModel)
 
+    // Composer for kind-1311 chat. Same widget the in-room screen uses,
+    // so the user gets @-mention picker, file uploads, draft auto-save,
+    // emoji suggestions, and reply preview without joining audio.
+    val nestScreenModel: NestNewMessageViewModel =
+        viewModel(key = "NestLobby/$roomATag")
+    nestScreenModel.init(accountViewModel)
+    nestScreenModel.load(event)
+
+    val messages by produceState(initialValue = emptyList<Note>(), roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeNotes(filter).collect { notes ->
+            value = notes.sortedByDescending { it.createdAt() ?: 0L }.take(LOBBY_CHAT_LIMIT)
+        }
+    }
+
+    val routeForLastRead = remember(roomATag) { "NestLobbyChat/$roomATag" }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
-            TopBarWithBackButton(
-                caption = event.room().orEmpty(),
-                nav = nav,
+            ShorterTopAppBar(
+                title = {
+                    Text(
+                        text = event.room().orEmpty(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    if (nav.canPop()) {
+                        IconButton(nav::popBack) {
+                            ArrowBackIcon()
+                        }
+                    }
+                },
+                actions = {
+                    OpenNestRoomAction(
+                        event = event,
+                        accountViewModel = accountViewModel,
+                    )
+                },
             )
         },
-        bottomBar = {
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .consumeWindowInsets(padding)
+                    .imePadding(),
+        ) {
+            RoomHeader(event, accountViewModel, nav)
+            CachedListenerCount(roomATag)
+
+            // Reverse-layout LazyColumn keyed by note id, same shape as
+            // NestFullScreen's chat list. The lobby reads cached
+            // LocalCache notes instead of an active NestViewModel.chat.
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                state = listState,
+                reverseLayout = true,
+            ) {
+                if (messages.isEmpty()) {
+                    item("chat-empty") {
+                        Text(
+                            text = stringRes(R.string.nest_chat_empty),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                items(
+                    items = messages,
+                    key = { it.idHex },
+                ) { note ->
+                    ChatroomMessageCompose(
+                        baseNote = note,
+                        routeForLastRead = routeForLastRead,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onWantsToReply = nestScreenModel::reply,
+                        onWantsToEditDraft = nestScreenModel::editFromDraft,
+                    )
+                }
+            }
+
+            // The composer sits above the 3-button nav when the keyboard
+            // is closed and above the keyboard when it's open. The chat
+            // list above is free to scroll behind the navigation bar.
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(16.dp),
+                        .windowInsetsPadding(WindowInsets.navigationBars),
             ) {
-                OpenNestRoomButton(
-                    event = event,
+                NestEditFieldRow(
+                    nestScreenModel = nestScreenModel,
                     accountViewModel = accountViewModel,
-                    modifier = Modifier.fillMaxWidth(),
+                    onSendNewMessage = {
+                        scope.launch {
+                            delay(100)
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    nav = nav,
                 )
             }
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            state = rememberLazyListState(),
-        ) {
-            item("header") {
-                RoomHeader(event, accountViewModel, nav)
-            }
-            item("listeners") {
-                CachedListenerCount(roomATag)
-            }
-            item("chat-header") {
-                Text(
-                    text = stringRes(R.string.nest_lobby_recent_chat),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-            cachedChatItems(roomATag, accountViewModel, nav)
         }
+    }
+}
+
+@Composable
+private fun OpenNestRoomAction(
+    event: MeetingSpaceEvent,
+    accountViewModel: AccountViewModel,
+) {
+    val serviceBase = event.service()
+    val endpoint = event.endpoint()
+    val roomId = event.address().dTag
+    if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
+
+    val context = LocalContext.current
+    // Filled button so the primary CTA is unmistakable; the actions
+    // Row in the AppBar already centers its children vertically, but
+    // we trim the default end padding so the button sits flush with
+    // the bar's trailing edge.
+    Button(
+        onClick = {
+            NestBridge.set(accountViewModel)
+            NestActivity.launch(
+                context = context,
+                addressValue = event.address().toValue(),
+            )
+        },
+        contentPadding = ButtonDefaults.ContentPadding,
+        modifier = Modifier.padding(end = 8.dp),
+    ) {
+        Text(stringRes(R.string.nest_lobby_open_action))
     }
 }
 
@@ -323,61 +448,6 @@ private fun CachedListenerCount(roomATag: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     )
-}
-
-private fun LazyListScope.cachedChatItems(
-    roomATag: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    item("chat-list") {
-        CachedChatList(roomATag, accountViewModel, nav)
-    }
-}
-
-@Composable
-private fun CachedChatList(
-    roomATag: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val messages by produceState(initialValue = emptyList<Note>(), roomATag) {
-        val filter =
-            Filter(
-                kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                tags = mapOf("a" to listOf(roomATag)),
-            )
-        LocalCache.observeNotes(filter).collect { notes ->
-            value = notes.sortedByDescending { it.createdAt() ?: 0L }.take(LOBBY_CHAT_LIMIT)
-        }
-    }
-
-    val routeForLastRead = remember(roomATag) { "NestLobbyChat/$roomATag" }
-
-    if (messages.isEmpty()) {
-        Text(
-            text = stringRes(R.string.nest_chat_empty),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        return
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        messages.forEach { note ->
-            ChatroomMessageCompose(
-                baseNote = note,
-                routeForLastRead = routeForLastRead,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onWantsToReply = {},
-                onWantsToEditDraft = {},
-            )
-        }
-    }
 }
 
 private const val LOBBY_CHAT_LIMIT = 50

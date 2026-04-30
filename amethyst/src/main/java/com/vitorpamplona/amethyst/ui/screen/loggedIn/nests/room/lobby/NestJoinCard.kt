@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby
 
-import android.R.attr.textColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -60,8 +58,6 @@ import com.vitorpamplona.amethyst.ui.note.types.MeetingSpaceOpenFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePlannedFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -271,11 +267,11 @@ private fun NestJoinCardContent(
 
 /**
  * "Join nest" entry button — navigates to [NestLobbyScreen] rather
- * than launching the audio activity directly. The lobby is read-only
- * (cached chat, host, status), so a user who's just coming back to
- * check on an old room doesn't trigger a MoQ handshake or the host's
- * kind-30312 republish path. The actual room launch lives behind
- * [OpenNestRoomButton] inside the lobby.
+ * than launching the audio activity directly. The lobby exposes the
+ * cached chat plus an active composer, so a user who's just coming
+ * back to read or chime in doesn't trigger a MoQ handshake or the
+ * host's kind-30312 republish path. The actual room launch lives
+ * behind the lobby's top-bar "Open" action.
  *
  * Renders nothing for events without a service / endpoint / d-tag —
  * those rooms can't be joined on the audio plane.
@@ -310,37 +306,5 @@ fun JoinNestButton(
         colors = colors,
     ) {
         Text(stringRes(R.string.nest_join))
-    }
-}
-
-/**
- * Lobby's primary CTA. This is the only place that actually launches
- * [NestActivity] — meaning a host re-entering an old room only
- * triggers the audio session (and any rejoin-time event refresh)
- * when they explicitly opt in here.
- */
-@Composable
-fun OpenNestRoomButton(
-    event: MeetingSpaceEvent,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier,
-) {
-    val serviceBase = event.service()
-    val endpoint = event.endpoint()
-    val roomId = event.address().dTag
-    if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
-
-    val context = LocalContext.current
-    Button(
-        onClick = {
-            NestBridge.set(accountViewModel)
-            NestActivity.launch(
-                context = context,
-                addressValue = event.address().toValue(),
-            )
-        },
-        modifier = modifier,
-    ) {
-        Text(stringRes(R.string.nest_lobby_open_room))
     }
 }
