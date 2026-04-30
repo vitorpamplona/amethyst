@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
@@ -92,18 +91,9 @@ fun main() =
             MaterialTheme {
                 val graph = remember { buildAppGraph() }
 
-                val relays =
-                    remember {
-                        setOf(
-                            "wss://relay.damus.io".normalizeRelayUrl(),
-                            "wss://nos.lol".normalizeRelayUrl(),
-                            "wss://relay.nostr.band".normalizeRelayUrl(),
-                        )
-                    }
-
                 val viewModel =
-                    remember(graph, relays) {
-                        FeedViewModel(graph.db, graph.client, graph.signer, relays)
+                    remember(graph) {
+                        FeedViewModel(graph.db, graph.client, graph.signer)
                     }
                 val notes by viewModel.notes.collectAsState()
 

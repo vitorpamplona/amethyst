@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.cache.projection.project
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -57,10 +57,15 @@ class FeedViewModel(
     private val db: ObservableEventStore,
     private val client: NostrClient,
     private val signer: NostrSignerInternal,
-    private val relays: Set<NormalizedRelayUrl>,
 ) : ViewModel() {
     private val subId = newSubId()
     private val filter = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 100)
+    private val relays =
+        setOf(
+            "wss://relay.damus.io".normalizeRelayUrl(),
+            "wss://nos.lol".normalizeRelayUrl(),
+            "wss://relay.nostr.band".normalizeRelayUrl(),
+        )
 
     val notes: StateFlow<ProjectionState<TextNoteEvent>> =
         db
