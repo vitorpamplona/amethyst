@@ -32,29 +32,13 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.utils.SortedList
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.yield
-
-/**
- * Lifecycle state of an [ObservableEventStore.project] flow.
- *
- *  - [Loading] is the initial state before the seed query completes.
- *    The UI should show a spinner / skeleton here.
- *  - [Loaded] holds the current deduped, sorted list of slots. Every
- *    membership change publishes a fresh [Loaded] instance; in-place
- *    addressable updates do *not* publish (the slots' own flows do).
- */
-sealed interface ProjectionState<out T : Event> {
-    data object Loading : ProjectionState<Nothing>
-
-    data class Loaded<T : Event>(
-        val items: List<MutableStateFlow<T>>,
-    ) : ProjectionState<T>
-}
 
 /**
  * State machine that maintains a reactive view over an
@@ -106,8 +90,8 @@ class EventStoreProjection<T : Event>(
      * least one of these sets. Identity-keyed — [Filter] is `@Stable`
      * but not a data class.
      */
-    private val perFilter: Map<Filter, java.util.SortedSet<Slot<T>>> =
-        filters.associateWith { sortedSetOf(slotComparator()) }
+    private val perFilter: Map<Filter, SortedList<Slot<T>>> =
+        filters.associateWith { SortedList(slotComparator<T>()) }
 
     /**
      * Run the seed query against the store and populate the indexes.
@@ -158,7 +142,7 @@ class EventStoreProjection<T : Event>(
         if (perFilter.size == 1) {
             return ProjectionState.Loaded(perFilter.values.first().map { it.flow })
         }
-        val union = sortedSetOf(slotComparator<T>())
+        val union = SortedList(slotComparator<T>())
         for (set in perFilter.values) union.addAll(set)
         return ProjectionState.Loaded(union.map { it.flow })
     }
@@ -260,7 +244,7 @@ class EventStoreProjection<T : Event>(
     private fun admit(
         slot: Slot<T>,
         f: Filter,
-        set: java.util.SortedSet<Slot<T>>,
+        set: SortedList<Slot<T>>,
     ): Boolean {
         set.add(slot)
         val cap = f.limit ?: return false
