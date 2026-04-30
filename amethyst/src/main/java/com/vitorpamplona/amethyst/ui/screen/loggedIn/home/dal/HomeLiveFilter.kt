@@ -103,6 +103,16 @@ class HomeLiveFilter(
             return true
         }
 
+        // Audio-room presence (kind-10312) lives in `presenceNotes`,
+        // not `notes`. Check it separately so a follow broadcasting in
+        // a Nest still surfaces the bubble even if no chat happened.
+        val hasPresence =
+            channel.presenceNotes
+                .filter { _, note ->
+                    acceptableChatEvent(note, filterParams, timeLimit)
+                }.isNotEmpty()
+        if (hasPresence) return true
+
         return channel.notes
             .filter { _, value ->
                 acceptableChatEvent(value, filterParams, timeLimit)
@@ -279,6 +289,18 @@ class HomeLiveFilter(
             val author = value.author
             if (author != null) {
                 if (followingSet == null || author.pubkeyHex in followingSet) {
+                    count++
+                }
+            }
+        }
+
+        // Audio-room presence is indexed separately from `notes`. Add
+        // its author count so audio-room hosts/speakers still factor
+        // into the follow-participation sort even when they haven't
+        // chatted in the room.
+        if (channel is LiveActivitiesChannel) {
+            channel.presenceNotes.forEach { authorHex, _ ->
+                if (followingSet == null || authorHex in followingSet) {
                     count++
                 }
             }

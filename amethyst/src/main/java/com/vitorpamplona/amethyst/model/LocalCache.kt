@@ -1549,28 +1549,24 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     /**
-     * Audio-room presence (kind-10312) — addressable storage AND
-     * attach the version note to the room's [LiveActivitiesChannel].
-     * The home live-bubble surfaces a room when a follow is
-     * publishing in it; that fan-out walks `channel.notes`, so the
-     * presence event needs to be in there alongside chat. Without
-     * this, presence-driven inclusion can't see follows broadcasting
-     * in the room (only chat-driven inclusion would fire).
+     * Audio-room presence (kind-10312) — addressable storage plus an
+     * author-keyed entry in the room's
+     * [LiveActivitiesChannel.presenceNotes] index.
      *
-     * Also indexed under [LiveActivitiesChannel.presenceNotes] keyed
-     * by author so the Nests feed can answer "are there speakers on
-     * stage?" without scanning the chat-dominated `notes` map.
+     * Presence is intentionally NOT added to `channel.notes`: that
+     * map is dominated by chat in active rooms and feeds that care
+     * about presence (Nests drawer, home live-bubble, NestsFeedLoaded)
+     * iterate `presenceNotes` directly for an O(speakers) scan.
      *
      * Cross-room move handling: kind-10312 is replaceable per author,
      * but the room a presence points to (`a`-tag) can change when a
-     * speaker hops between rooms. The replaceable cache only swaps the
-     * addressable's content — it has no notion of which channel the
-     * old version was attached to. Without explicit eviction the old
-     * room would keep surfacing as "live" via the stale entry until it
-     * dropped out of the freshness window. Capture the prior room
-     * before replacement and, when it differs, drop the author from
-     * the old channel's presence index and the old version note from
-     * its main `notes` index.
+     * speaker hops between rooms. The replaceable cache only swaps
+     * the addressable's content — it has no notion of which channel
+     * the old version was attached to. Without explicit eviction the
+     * old room would keep surfacing as "live" via the stale entry
+     * until it dropped out of the freshness window. Capture the prior
+     * room before replacement and, when it differs, drop the author
+     * from the old channel's presence index.
      */
     fun consume(
         event: MeetingRoomPresenceEvent,
@@ -1583,24 +1579,17 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         val new = consumeBaseReplaceable(event, relay, wasVerified)
 
-        // The replaceable cache keys this on the AUTHOR's address
-        // (kind=10312, pubkey, fixed-d-tag) — independent of the
-        // room. To wire the room bubble we also attach the version
-        // note to the room's channel keyed by its kind-30312 address.
         val roomAddress = event.interactiveRoom()?.address ?: return new
         if (roomAddress.kind != MeetingSpaceEvent.KIND) return new
 
         if (isReplacement && priorRoomAddress != null && priorRoomAddress != roomAddress) {
-            getLiveActivityChannelIfExists(priorRoomAddress)?.let { priorChannel ->
-                priorChannel.removePresenceNote(event.pubKey)
-                getNoteIfExists(priorVersion.id)?.let { priorChannel.removeNote(it) }
-            }
+            getLiveActivityChannelIfExists(priorRoomAddress)?.removePresenceNote(event.pubKey)
         }
 
         val channel = getOrCreateLiveChannel(roomAddress)
         val versionNote = getOrCreateNote(event.id)
-        channel.addNote(versionNote, relay)
         channel.addPresenceNote(versionNote)
+        if (relay != null) channel.addRelay(relay)
 
         return new
     }

@@ -49,15 +49,22 @@ class LiveActivitiesChannel(
      * unbounded the way `notes` does. Empty for streaming channels
      * (kind-30311) — only kind-30312 rooms publish presence.
      *
-     * Lets feeds answer "is anyone live on stage in this room?"
-     * without scanning the chat-dominated `notes` map. See
-     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter].
+     * Presence lives ONLY here, not in the base `notes` map: the
+     * mixed-kind `notes` is dominated by chat in active rooms and
+     * iterating it just to find presence is wasteful. Feeds that need
+     * "is anyone live on stage in this room?" iterate this index
+     * directly. See
+     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter]
+     * and [com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter].
      */
     val presenceNotes = LargeCache<HexKey, Note>()
 
     fun addPresenceNote(note: Note) {
         val author = note.author?.pubkeyHex ?: return
+        val previous = presenceNotes.get(author)
+        if (previous?.idHex == note.idHex) return
         presenceNotes.put(author, note)
+        flowSet?.notes?.invalidateData()
     }
 
     /**
@@ -68,7 +75,9 @@ class LiveActivitiesChannel(
      * freshness window.
      */
     fun removePresenceNote(author: HexKey) {
+        if (!presenceNotes.containsKey(author)) return
         presenceNotes.remove(author)
+        flowSet?.notes?.invalidateData()
     }
 
     fun address() = address
