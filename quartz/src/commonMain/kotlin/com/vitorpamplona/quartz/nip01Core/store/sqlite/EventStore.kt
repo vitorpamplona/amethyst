@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.vitorpamplona.quartz.nip01Core.cache.EventInterner
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.EventInterner
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl

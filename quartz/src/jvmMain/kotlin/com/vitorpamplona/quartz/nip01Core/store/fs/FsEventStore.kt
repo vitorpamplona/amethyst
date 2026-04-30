@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
+import com.vitorpamplona.quartz.nip01Core.cache.EventInterner
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.EventInterner
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral

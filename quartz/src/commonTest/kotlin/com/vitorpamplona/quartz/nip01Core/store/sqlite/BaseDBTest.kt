@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import com.vitorpamplona.quartz.nip01Core.core.EventInterner
+import com.vitorpamplona.quartz.nip01Core.cache.EventInterner
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
