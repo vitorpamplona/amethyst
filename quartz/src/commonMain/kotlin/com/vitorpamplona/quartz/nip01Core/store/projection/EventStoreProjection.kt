@@ -63,10 +63,10 @@ import kotlinx.coroutines.yield
  *
  * The seed is materialised by querying the store once at start, after
  * which the projection is driven entirely by
- * [ObservableEventStore.events]. Three kinds of mutation arrive on
+ * [ObservableEventStore.changes]. Three kinds of mutation arrive on
  * that stream:
  *
- *  - [StoreEvent.Insert] — interpreted in-projection so a single
+ *  - [StoreChange.Insert] — interpreted in-projection so a single
  *    arriving event can carry NIP-01 / NIP-09 / NIP-62 semantics:
  *      - **NIP-01 supersession.** New replaceable / addressable events
  *        replace prior ones for the same `kind:pubkey[:dtag]`. The
@@ -82,11 +82,11 @@ import kotlinx.coroutines.yield
  *        already lapsed at the moment they arrive are dropped before
  *        they ever enter [items].
  *
- *  - [StoreEvent.DeleteByFilter] — emitted on `delete(filter)` /
+ *  - [StoreChange.DeleteByFilter] — emitted on `delete(filter)` /
  *    `delete(filters)`. The projection drops every slot matching any
  *    of the rule's filters via [Filter.match].
  *
- *  - [StoreEvent.DeleteExpired] — emitted on `deleteExpiredEvents()`.
+ *  - [StoreChange.DeleteExpired] — emitted on `deleteExpiredEvents()`.
  *    The projection drops every slot whose `expiration` has lapsed at
  *    the cutoff the store pinned. **There is no per-projection
  *    expiration ticker** — projections only drop expired events when
@@ -101,7 +101,7 @@ import kotlinx.coroutines.yield
  * filter under cap, it stays under cap until another match arrives.
  *
  * Ephemeral events (kinds `20000-29999`) reach the projection via
- * [ObservableEventStore.events] without ever being persisted; they
+ * [ObservableEventStore.changes] without ever being persisted; they
  * appear in [items] for as long as the projection is alive but never
  * survive a re-seed. They aren't covered by the store's
  * `deleteExpiredEvents()` sweep (the DB never had them), so an
@@ -147,7 +147,7 @@ class EventStoreProjection<T : Event>(
             // emissions arriving during seed and drains them once collect
             // proceeds. Doing the seed inside `collect { }` would race
             // with concurrent inserts.
-            store.events
+            store.changes
                 .onSubscription {
                     seed()
                     ready.complete(Unit)
@@ -167,20 +167,20 @@ class EventStoreProjection<T : Event>(
         publish()
     }
 
-    private fun apply(storeEvent: StoreEvent) {
+    private fun apply(storeEvent: StoreChange) {
         val changed =
             when (storeEvent) {
-                is StoreEvent.Insert -> {
+                is StoreChange.Insert -> {
                     applyInsert(storeEvent.event)
                 }
 
-                is StoreEvent.DeleteByFilter -> {
+                is StoreChange.DeleteByFilter -> {
                     dropWhere { ev -> storeEvent.filters.any { it.match(ev) } }
                 }
 
                 // Store's sweep uses strict `<`; isExpirationBefore is
                 // `<=`, so subtract 1 to match.
-                is StoreEvent.DeleteExpired -> {
+                is StoreChange.DeleteExpired -> {
                     val cutoff = (storeEvent.asOf ?: nowProvider()) - 1
                     dropWhere { it.isExpirationBefore(cutoff) }
                 }

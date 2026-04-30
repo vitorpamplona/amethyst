@@ -44,26 +44,26 @@ import kotlinx.coroutines.flow.asSharedFlow
  *  - **Non-ephemeral events** are forwarded to the inner store. If the
  *    inner store rejects (expired, NIP-09 / NIP-62 tombstone, NIP-01
  *    supersession loser), the rejection propagates and nothing is
- *    emitted on [events].
+ *    emitted on [changes].
  *  - **Ephemeral events** (kinds `20000-29999`) skip the inner store
  *    entirely — they're never persisted — but they still emit on
- *    [events] so projections can render them while they live. Already
+ *    [changes] so projections can render them while they live. Already
  *    expired ephemerals are silently dropped.
  *
  * Wrap any store you want to observe — [SQLiteEventStore], FS-backed,
  * an in-memory test fake — and feed [EventStoreProjection] from the
- * resulting [events] flow.
+ * resulting [changes] flow.
  *
  * Reads (`query`, `count`) and out-of-band writes (`delete`,
  * `deleteExpiredEvents`) forward to the inner store unchanged. The
- * latter are *not* surfaced on [events] — see the projection's
+ * latter are *not* surfaced on [changes] — see the projection's
  * docstring for the rationale.
  */
 class ObservableEventStore(
     val inner: IEventStore,
 ) : IEventStore {
-    private val _events =
-        MutableSharedFlow<StoreEvent>(
+    private val _changes =
+        MutableSharedFlow<StoreChange>(
             replay = 0,
             extraBufferCapacity = 256,
             onBufferOverflow = BufferOverflow.SUSPEND,
@@ -77,9 +77,9 @@ class ObservableEventStore(
      * transactions emit nothing.
      *
      * Projections consume this stream — see [EventStoreProjection]
-     * for how each [StoreEvent] is interpreted.
+     * for how each [StoreChange] is interpreted.
      */
-    val events: SharedFlow<StoreEvent> = _events.asSharedFlow()
+    val changes: SharedFlow<StoreChange> = _changes.asSharedFlow()
 
     override suspend fun insert(event: Event) {
         if (event.kind.isEphemeral()) {
@@ -87,13 +87,13 @@ class ObservableEventStore(
             // that are already expired — they were never going to live
             // long enough for a UI to render them.
             if (event.isExpired()) return
-            _events.emit(StoreEvent.Insert(event))
+            _changes.emit(StoreChange.Insert(event))
             return
         }
         // Non-ephemeral: let the inner store enforce expiration,
         // tombstones, supersession, etc. If it throws, we never emit.
         inner.insert(event)
-        _events.emit(StoreEvent.Insert(event))
+        _changes.emit(StoreChange.Insert(event))
     }
 
     override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
@@ -120,7 +120,7 @@ class ObservableEventStore(
         }
         // Emit only after the inner transaction commits. If it throws
         // / rolls back, `accepted` is discarded.
-        for (e in accepted) _events.emit(StoreEvent.Insert(e))
+        for (e in accepted) _changes.emit(StoreChange.Insert(e))
     }
 
     override suspend fun <T : Event> query(filter: Filter): List<T> = inner.query(filter)
@@ -143,12 +143,12 @@ class ObservableEventStore(
 
     override suspend fun delete(filter: Filter) {
         inner.delete(filter)
-        _events.emit(StoreEvent.DeleteByFilter(listOf(filter)))
+        _changes.emit(StoreChange.DeleteByFilter(listOf(filter)))
     }
 
     override suspend fun delete(filters: List<Filter>) {
         inner.delete(filters)
-        _events.emit(StoreEvent.DeleteByFilter(filters))
+        _changes.emit(StoreChange.DeleteByFilter(filters))
     }
 
     override suspend fun deleteExpiredEvents() {
@@ -159,7 +159,7 @@ class ObservableEventStore(
         // own clock when the event is processed.
         val asOf = TimeUtils.now()
         inner.deleteExpiredEvents()
-        _events.emit(StoreEvent.DeleteExpired(asOf))
+        _changes.emit(StoreChange.DeleteExpired(asOf))
     }
 
     /**

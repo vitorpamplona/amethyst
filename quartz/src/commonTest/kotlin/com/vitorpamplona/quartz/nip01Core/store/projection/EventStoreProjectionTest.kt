@@ -373,7 +373,7 @@ class EventStoreProjectionTest {
 
             // Let the short expiration lapse, then ask the store to
             // sweep — the projection drops the expired slot in
-            // response to the resulting StoreEvent.Delete(Expired).
+            // response to the resulting StoreChange.Delete(Expired).
             delay(2000)
             observable.deleteExpiredEvents()
 
@@ -523,7 +523,7 @@ class EventStoreProjectionTest {
      * Ephemeral events (kinds `20000-29999`) are never persisted, so
      * the inner SQLite store silently drops them. The
      * `ObservableEventStore` wrapper still routes them onto its
-     * [events][com.vitorpamplona.quartz.nip01Core.store.projection.ObservableEventStore.events]
+     * [events][com.vitorpamplona.quartz.nip01Core.store.projection.ObservableEventStore.changes]
      * flow, so an open projection sees them while it's alive. They
      * vanish from any future seed because the DB never had them.
      */

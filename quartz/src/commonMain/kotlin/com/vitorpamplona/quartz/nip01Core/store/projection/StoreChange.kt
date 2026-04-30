@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
- * Mutations published by [ObservableEventStore.events]. Projections
+ * Mutations published by [ObservableEventStore.changes]. Projections
  * react to these to keep their in-memory view in sync with the
  * underlying store.
  *
@@ -42,16 +42,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  *    pin the timestamp it actually used, so the projection drops
  *    exactly the events the store dropped.
  */
-sealed interface StoreEvent {
+sealed interface StoreChange {
     data class Insert(
         val event: Event,
-    ) : StoreEvent
+    ) : StoreChange
 
     data class DeleteByFilter(
         val filters: List<Filter>,
-    ) : StoreEvent
+    ) : StoreChange
 
     data class DeleteExpired(
         val asOf: Long? = null,
-    ) : StoreEvent
+    ) : StoreChange
 }
