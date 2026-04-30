@@ -213,6 +213,7 @@ private fun StartCluster(
                     FilledTonalIconToggleButton(
                         checked = ui.isMuted,
                         onCheckedChange = { viewModel.setMuted(it) },
+                        modifier = Modifier.size(width = 40.dp, height = ButtonDefaults.MinHeight),
                     ) {
                         Icon(
                             symbol =
@@ -340,6 +341,7 @@ private fun OnStageControls(
             FilledTonalIconToggleButton(
                 checked = broadcast.isMuted,
                 onCheckedChange = { viewModel.setMicMuted(it) },
+                modifier = Modifier.size(width = 40.dp, height = ButtonDefaults.MinHeight),
             ) {
                 Icon(
                     symbol =
