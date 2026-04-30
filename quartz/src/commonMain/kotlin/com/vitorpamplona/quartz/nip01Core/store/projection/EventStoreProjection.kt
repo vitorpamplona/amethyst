@@ -125,30 +125,17 @@ class EventStoreProjection<T : Event>(
     /** Slots keyed by the *current* event id. Re-keyed when a replaceable / addressable handle takes a new version. */
     private val byId = HashMap<HexKey, Slot<T>>()
 
-    /**
-     * Slots keyed by replaceable / addressable address for in-place
-     * updates and supersession lookups. Plain replaceables (kind 0/3,
-     * 10000-19999) live under an [Address] with an empty `dTag`,
-     * matching how the SQLite store keys its `addressable_idx` /
-     * `replaceable_idx`.
-     */
+    /** Slots keyed by replaceable / addressable [Address] for in-place updates and supersession lookups. */
     private val byAddress = HashMap<Address, Slot<T>>()
 
     /**
      * Per-filter capped sets. Each filter independently retains at most
-     * `filter.limit` matches; a slot is "live" (visible in [items])
-     * iff it appears in at least one of these sets. Identity-keyed —
-     * [Filter] is `@Stable` but not a data class.
+     * `filter.limit` matches; a slot is "live" iff it appears in at
+     * least one of these sets. Identity-keyed — [Filter] is `@Stable`
+     * but not a data class.
      */
     private val perFilter: Map<Filter, java.util.SortedSet<Slot<T>>> =
         filters.associateWith { sortedSetOf(slotComparator()) }
-
-    /**
-     * Sorted union view of every "live" slot. Maintained alongside
-     * [perFilter] — a slot is added the first time any filter retains
-     * it and removed once no filter still holds it.
-     */
-    private val ordered: java.util.SortedSet<Slot<T>> = sortedSetOf(slotComparator())
 
     /** Set when the seed has been written to [items], so callers can suspend until the projection is hot. */
     val ready: CompletableDeferred<Unit> = CompletableDeferred()
@@ -157,9 +144,9 @@ class EventStoreProjection<T : Event>(
         scope.launch {
             // `onSubscription` runs after the SharedFlow subscription is
             // active but before we pull any events — the buffer absorbs
-            // any emissions that arrive while we seed, and we then drain
-            // them as the collect proceeds. Doing the seed inside
-            // `collect { }` instead would race with concurrent inserts.
+            // emissions arriving during seed and drains them once collect
+            // proceeds. Doing the seed inside `collect { }` would race
+            // with concurrent inserts.
             store.events
                 .onSubscription {
                     seed()
@@ -168,13 +155,11 @@ class EventStoreProjection<T : Event>(
         }
 
     private suspend fun seed() {
-        val initial = store.query<T>(filters)
         val now = nowProvider()
-        for (event in initial) {
-            // Stores don't filter expired events at query time, so we
-            // do it here — otherwise an expired event would briefly
-            // appear in [items] before the next deleteExpiredEvents()
-            // sweep clears it.
+        for (event in store.query<T>(filters)) {
+            // Stores don't filter expired rows at query time, so do it
+            // here — otherwise an expired event would briefly appear
+            // in [items] before the next deleteExpiredEvents() sweep.
             if (event.isExpirationBefore(now)) continue
             applyInsert(event)
             yield()
@@ -183,20 +168,24 @@ class EventStoreProjection<T : Event>(
     }
 
     private fun apply(storeEvent: StoreEvent) {
-        when (storeEvent) {
-            is StoreEvent.Insert -> {
-                if (applyInsert(storeEvent.event)) publish()
-            }
+        val changed =
+            when (storeEvent) {
+                is StoreEvent.Insert -> {
+                    applyInsert(storeEvent.event)
+                }
 
-            is StoreEvent.DeleteByFilter -> {
-                if (applyDeleteByFilter(storeEvent.filters)) publish()
-            }
+                is StoreEvent.DeleteByFilter -> {
+                    dropWhere { ev -> storeEvent.filters.any { it.match(ev) } }
+                }
 
-            is StoreEvent.DeleteExpired -> {
-                val cutoff = storeEvent.asOf ?: nowProvider()
-                if (applyDeleteExpired(cutoff)) publish()
+                // Store's sweep uses strict `<`; isExpirationBefore is
+                // `<=`, so subtract 1 to match.
+                is StoreEvent.DeleteExpired -> {
+                    val cutoff = (storeEvent.asOf ?: nowProvider()) - 1
+                    dropWhere { it.isExpirationBefore(cutoff) }
+                }
             }
-        }
+        if (changed) publish()
     }
 
     private fun applyInsert(event: Event): Boolean {
@@ -204,15 +193,14 @@ class EventStoreProjection<T : Event>(
 
         var changed = false
 
-        // Apply NIP-09 / NIP-62 side effects of the event before we
-        // consider matching the event itself against the filter — a
-        // deletion event that arrives at the same instant as a
-        // matching event still removes its targets.
+        // NIP-09 / NIP-62 side effects come first — a deletion event
+        // that arrives at the same instant as a matching event still
+        // removes its targets.
         if (event is DeletionEvent) {
             if (handleDeletion(event)) changed = true
         }
         if (event is RequestToVanishEvent && event.shouldVanishFrom(relay)) {
-            if (handleVanish(event)) changed = true
+            if (dropWhere { ev -> ownerOf(ev) == event.pubKey && ev.createdAt < event.createdAt }) changed = true
         }
 
         if (handleInsert(event)) changed = true
@@ -220,37 +208,11 @@ class EventStoreProjection<T : Event>(
         return changed
     }
 
-    private fun applyDeleteByFilter(rules: List<Filter>): Boolean {
-        if (rules.isEmpty()) return false
-        val targets = byId.values.filter { slot -> rules.any { it.match(slot.flow.value) } }
-        if (targets.isEmpty()) return false
-        var changed = false
-        for (slot in targets) {
-            if (removeSlot(slot)) changed = true
-        }
-        return changed
-    }
-
-    private fun applyDeleteExpired(asOf: Long): Boolean {
-        // Store's sweep uses strict `<`; isExpirationBefore is `<=`,
-        // so subtract 1 to match. (Resolution is 1 second; the
-        // off-by-one in the rare equal-timestamp case lines up with
-        // the store's behaviour.)
-        val cutoff = asOf - 1
-        val targets = byId.values.filter { it.flow.value.isExpirationBefore(cutoff) }
-        if (targets.isEmpty()) return false
-        var changed = false
-        for (slot in targets) {
-            if (removeSlot(slot)) changed = true
-        }
-        return changed
-    }
-
     /**
-     * Returns true if processing the event caused membership of the
-     * projection's [items] list to change. Returns false for in-place
-     * supersession updates, NIP-01 tiebreaker rejections, and arrivals
-     * that no filter matches.
+     * Returns true if processing the event caused the projection's
+     * membership to change. Returns false for in-place supersession
+     * updates, NIP-01 tiebreaker rejections, and arrivals that no
+     * filter matches.
      */
     @Suppress("UNCHECKED_CAST")
     private fun handleInsert(event: Event): Boolean {
@@ -278,105 +240,98 @@ class EventStoreProjection<T : Event>(
         }
 
         // Genuinely new slot. Offer it to every matching filter; if
-        // any retains it, the slot becomes live.
+        // any filter still holds it after cap-eviction, the slot
+        // becomes live and gets indexed.
+        var membershipChanged = false
         val slot = Slot(event as T)
-        var retained = false
         for ((f, set) in perFilter) {
             if (!f.match(event)) continue
             set.add(slot)
-            retained = true
             val cap = f.limit ?: continue
             while (set.size > cap) {
                 val tail = set.last()
                 set.remove(tail)
-                if (tail === slot) {
-                    // We were evicted by our own filter before any
-                    // other filter got a chance to retain us — the
-                    // remaining loop iterations may still pick us up.
-                    retained = false
-                } else if (perFilter.values.none { it.contains(tail) }) {
-                    // Tail no longer retained by any filter — drop it.
-                    dropSlotIndexes(tail)
+                if (tail !== slot && perFilter.values.none { it.contains(tail) }) {
+                    // Tail no longer retained by any filter — fully drop.
+                    if (removeIndexes(tail)) membershipChanged = true
                 }
             }
         }
-        if (!retained) return false
 
-        byId[event.id] = slot
-        if (address != null) byAddress[address] = slot
-        ordered.add(slot)
-        return true
+        // The slot survived cap-eviction in at least one filter, so it
+        // belongs in the indexes. Otherwise nothing was indexed and
+        // the only membership effect is whatever evictions happened
+        // along the way.
+        if (perFilter.values.any { it.contains(slot) }) {
+            byId[event.id] = slot
+            if (address != null) byAddress[address] = slot
+            membershipChanged = true
+        }
+        return membershipChanged
     }
 
     private fun handleDeletion(deletion: DeletionEvent): Boolean {
         var changed = false
 
-        // NIP-09: delete by id, but only if the deletion's author owns
-        // the target. For GiftWrap, the owner is the p-tag recipient.
+        // NIP-09 by id, only if the deletion's author owns the target.
+        // For GiftWrap, the owner is the p-tag recipient.
         for (id in deletion.deleteEventIds()) {
             val slot = byId[id] ?: continue
-            val ev = slot.flow.value
-            val owner = ownerPubKey(ev)
-            if (owner == deletion.pubKey && removeSlot(slot)) changed = true
+            if (ownerOf(slot.flow.value) == deletion.pubKey && removeSlot(slot)) changed = true
         }
 
-        // NIP-09: delete by address, only original author, only events
-        // with `created_at <= deletion.created_at`. `addr` is already
-        // an [Address] — same equals/hashCode as our index keys.
+        // NIP-09 by address, only original author, only events with
+        // `created_at <= deletion.created_at`. `addr` is already an
+        // [Address] — same equals/hashCode as our index keys.
         for (addr in deletion.deleteAddresses()) {
             if (addr.pubKeyHex != deletion.pubKey) continue
             val slot = byAddress[addr] ?: continue
-            if (slot.flow.value.createdAt <= deletion.createdAt) {
-                if (removeSlot(slot)) changed = true
-            }
+            if (slot.flow.value.createdAt <= deletion.createdAt && removeSlot(slot)) changed = true
         }
 
         return changed
     }
 
-    private fun handleVanish(vanish: RequestToVanishEvent): Boolean {
+    /** Drop every live slot whose current event matches [predicate]. */
+    private inline fun dropWhere(predicate: (Event) -> Boolean): Boolean {
+        // Snapshot before mutating — removeSlot mutates byId.
+        val targets = byId.values.filter { predicate(it.flow.value) }
         var changed = false
-        // Snapshot first because removeSlot mutates byId.
-        val targets =
-            byId.values.filter {
-                val ev = it.flow.value
-                ownerPubKey(ev) == vanish.pubKey && ev.createdAt < vanish.createdAt
-            }
         for (slot in targets) {
             if (removeSlot(slot)) changed = true
         }
         return changed
     }
 
-    /** Drop a live slot from every index AND from each per-filter set. */
+    /** Remove a live slot from every index AND from each per-filter set. */
     private fun removeSlot(slot: Slot<T>): Boolean {
-        val removed = byId.remove(slot.flow.value.id) != null
-        if (!removed) return false
-        ordered.remove(slot)
-        addressOf(slot.flow.value)?.let { address ->
-            // Defensive: only clear the address index if this slot
-            // still owns it.
-            if (byAddress[address] === slot) byAddress.remove(address)
-        }
         for (set in perFilter.values) set.remove(slot)
-        return true
+        return removeIndexes(slot)
     }
 
     /**
-     * Drop a slot from byId / byAddress / ordered without touching the
-     * per-filter sets. Used when the per-filter eviction loop already
-     * owns the bookkeeping for those sets.
+     * Remove a slot from [byId] / [byAddress] without touching the
+     * per-filter sets. Used by the per-filter eviction loop, which
+     * already owns the bookkeeping for those.
      */
-    private fun dropSlotIndexes(slot: Slot<T>) {
-        byId.remove(slot.flow.value.id)
-        ordered.remove(slot)
-        addressOf(slot.flow.value)?.let { address ->
-            if (byAddress[address] === slot) byAddress.remove(address)
-        }
+    private fun removeIndexes(slot: Slot<T>): Boolean {
+        val removed = byId.remove(slot.flow.value.id) != null
+        if (!removed) return false
+        addressOf(slot.flow.value)?.let(byAddress::remove)
+        return true
     }
 
     private fun publish() {
-        _items.value = ordered.map { it.flow }
+        // Lazily compute the deduped sorted union from per-filter
+        // sets. Cheaper than maintaining a separate `ordered` field
+        // alongside every insert / remove.
+        if (byId.isEmpty()) {
+            _items.value = emptyList()
+            return
+        }
+        val union = sortedSetOf(slotComparator<T>())
+        for (set in perFilter.values) union.addAll(set)
+        _items.value = union.map { it.flow }
     }
 
     /**
@@ -386,7 +341,6 @@ class EventStoreProjection<T : Event>(
      */
     override fun close() {
         collectorJob.cancel()
-        ordered.clear()
         byId.clear()
         byAddress.clear()
         for (set in perFilter.values) set.clear()
@@ -397,8 +351,8 @@ class EventStoreProjection<T : Event>(
      * Internal slot. Each event added to the projection lives inside
      * one of these for as long as it survives. The sort key is frozen
      * at construction time — supersession in-place updates rewrite
-     * `flow.value` but never the sort key, so the ordering inside
-     * [ordered] / [perFilter] is stable across updates.
+     * `flow.value` but never the sort key, so the position inside
+     * each [perFilter] set is stable across updates.
      */
     private class Slot<T : Event>(
         initial: T,
@@ -409,11 +363,7 @@ class EventStoreProjection<T : Event>(
     }
 
     companion object {
-        /**
-         * The lookup [Address] for replaceable / addressable
-         * supersession. `null` for regular events (which only collide
-         * on event id).
-         */
+        /** [Address] for replaceable / addressable supersession; `null` for regular events. */
         private fun addressOf(event: Event): Address? =
             when {
                 event is AddressableEvent -> event.address()
@@ -422,10 +372,9 @@ class EventStoreProjection<T : Event>(
             }
 
         /**
-         * NIP-01 supersession tiebreaker. The new event wins iff:
-         *  - its `created_at` is strictly greater, OR
-         *  - the timestamps tie and its `id` is lexically smaller.
-         * Otherwise the existing slot keeps its place.
+         * NIP-01 supersession tiebreaker. The new event wins iff its
+         * `created_at` is strictly greater, or the timestamps tie and
+         * its `id` is lexically smaller.
          */
         private fun supersedes(
             new: Event,
@@ -442,13 +391,13 @@ class EventStoreProjection<T : Event>(
          * NIP-62 vanish target). For GiftWrap the owner is the p-tag
          * recipient; for everything else it's `event.pubKey`.
          */
-        private fun ownerPubKey(event: Event): HexKey = (event as? GiftWrapEvent)?.recipientPubKey() ?: event.pubKey
+        private fun ownerOf(event: Event): HexKey = (event as? GiftWrapEvent)?.recipientPubKey() ?: event.pubKey
 
         /**
          * created_at DESC, id ASC. The keys are snapshots taken at
-         * insertion time, so the ordering of a slot never changes
-         * after it joins the set. Distinct events have distinct ids,
-         * so no third-key tiebreak is needed.
+         * insertion time, so a slot's position never changes after it
+         * joins a set. Distinct events have distinct ids, so no third
+         * tiebreak is needed.
          */
         private fun <T : Event> slotComparator(): Comparator<Slot<T>> =
             Comparator { a, b ->
