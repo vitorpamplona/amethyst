@@ -573,6 +573,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nests_servers_my_section">Deine Server</string>
     <string name="nests_servers_my_explainer">Wird als ersetzbares kind-10112-Ereignis gespeichert, damit andere Clients deine Einstellung lesen können.</string>
     <string name="nests_servers_add_field">Nest-Server hinzufügen</string>
+    <string name="nests_servers_add_relay_field">Relay-URL (WebTransport)</string>
+    <string name="nests_servers_add_auth_field">Auth-URL (JWT-Mint)</string>
+    <string name="nests_servers_add_pair_button">Hinzufügen</string>
     <string name="nests_servers_recommended_section">Empfohlene Server</string>
     <string name="nests_servers_recommended_explainer">Eingebaute Vorschläge, die du mit einem Tippen zu deiner Liste hinzufügen kannst.</string>
     <string name="nests_servers_use_defaults">Amethyst-Standards verwenden</string>
@@ -2105,6 +2108,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_settings_lower2">Ausgangs-Listen</string>
     <string name="relay_settings_lower">relaiseinstellungen</string>
     <string name="last_seen">Zuletzt gesehen vor %1$s</string>
+    <string name="last_seen_on_date">Zuletzt gesehen am %1$s (vor %2$s)</string>
+    <string name="last_seen_just_now">Gerade eben gesehen</string>
+    <string name="last_seen_never">Nie gesehen</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Verbinden</string>
     <string name="event_sync_status_downloading">Herunterladen</string>
@@ -2366,14 +2372,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigung wie öffentliche.</string>
     <string name="gif">Gif</string>
-    <string name="last_seen_just_now">Gerade eben gesehen</string>
-    <string name="last_seen_never">Nie gesehen</string>
-    <string name="last_seen_on_date">Zuletzt gesehen am %1$s (vor %2$s)</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_tab_chat">Chat</string>
-    <string name="nests_servers_add_auth_field">Auth-URL (JWT-Mint)</string>
-    <string name="nests_servers_add_pair_button">Hinzufügen</string>
-    <string name="nests_servers_add_relay_field">Relay-URL (WebTransport)</string>
-    <string name="nests_servers_auth_label">Auth</string>
-    <string name="nests_servers_relay_label">Relay</string>
 </resources>

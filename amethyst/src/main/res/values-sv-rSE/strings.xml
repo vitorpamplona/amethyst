@@ -569,6 +569,10 @@
     <string name="nests_servers_my_section">Dina servrar</string>
     <string name="nests_servers_my_explainer">Sparas som en utbytbar händelse av typ kind-10112 så andra klienter kan läsa dina inställningar.</string>
     <string name="nests_servers_add_field">Lägg till en nest-server</string>
+    <string name="nests_servers_add_relay_field">Relä-URL (WebTransport)</string>
+    <string name="nests_servers_add_auth_field">Auth-URL (JWT mint)</string>
+    <string name="nests_servers_add_pair_button">Lägg till</string>
+    <string name="nests_servers_relay_label">Relä</string>
     <string name="nests_servers_recommended_section">Rekommenderade servrar</string>
     <string name="nests_servers_recommended_explainer">Inbyggda förslag som du kan lägga till i din lista med ett tryck.</string>
     <string name="nests_servers_use_defaults">Använd Amethysts standard</string>
@@ -2101,6 +2105,9 @@
     <string name="relay_settings_lower2">utgående listor</string>
     <string name="relay_settings_lower">relä inställningar</string>
     <string name="last_seen">Senast sedd för %1$s sedan</string>
+    <string name="last_seen_on_date">Senast sedd %1$s (för %2$s sedan)</string>
+    <string name="last_seen_just_now">Senast sedd just nu</string>
+    <string name="last_seen_never">Aldrig sedd</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Ansluter</string>
     <string name="event_sync_status_downloading">Laddar ner</string>
@@ -2362,13 +2369,4 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
-    <string name="last_seen_just_now">Senast sedd just nu</string>
-    <string name="last_seen_never">Aldrig sedd</string>
-    <string name="last_seen_on_date">Senast sedd %1$s (för %2$s sedan)</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nests_servers_add_auth_field">Auth-URL (JWT mint)</string>
-    <string name="nests_servers_add_pair_button">Lägg till</string>
-    <string name="nests_servers_add_relay_field">Relä-URL (WebTransport)</string>
-    <string name="nests_servers_auth_label">Auth</string>
-    <string name="nests_servers_relay_label">Relä</string>
 </resources>

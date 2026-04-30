@@ -572,6 +572,10 @@
     <string name="nests_servers_my_section">Seus servidores</string>
     <string name="nests_servers_my_explainer">Salvo como evento substituível kind-10112 para que outros clientes possam ler sua preferência.</string>
     <string name="nests_servers_add_field">Adicionar servidor de nest</string>
+    <string name="nests_servers_add_relay_field">URL do relay (WebTransport)</string>
+    <string name="nests_servers_add_auth_field">URL de autenticação (JWT mint)</string>
+    <string name="nests_servers_add_pair_button">Adicionar</string>
+    <string name="nests_servers_auth_label">Autenticação</string>
     <string name="nests_servers_recommended_section">Servidores recomendados</string>
     <string name="nests_servers_recommended_explainer">Sugestões integradas que você pode adicionar à sua lista com um toque.</string>
     <string name="nests_servers_use_defaults">Usar padrões do Amethyst</string>
@@ -2105,6 +2109,9 @@
     <string name="relay_settings_lower2">listas de saída</string>
     <string name="relay_settings_lower">configurações de Relay</string>
     <string name="last_seen">Visto pela última vez há %1$s</string>
+    <string name="last_seen_on_date">Visto pela última vez em %1$s (há %2$s)</string>
+    <string name="last_seen_just_now">Visto agora mesmo</string>
+    <string name="last_seen_never">Nunca visto</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Conectando</string>
     <string name="event_sync_status_downloading">Baixando</string>
@@ -2366,14 +2373,4 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
-    <string name="last_seen_just_now">Visto agora mesmo</string>
-    <string name="last_seen_never">Nunca visto</string>
-    <string name="last_seen_on_date">Visto pela última vez em %1$s (há %2$s)</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_tab_chat">Chat</string>
-    <string name="nests_servers_add_auth_field">URL de autenticação (JWT mint)</string>
-    <string name="nests_servers_add_pair_button">Adicionar</string>
-    <string name="nests_servers_add_relay_field">URL do relay (WebTransport)</string>
-    <string name="nests_servers_auth_label">Autenticação</string>
-    <string name="nests_servers_relay_label">Relay</string>
 </resources>

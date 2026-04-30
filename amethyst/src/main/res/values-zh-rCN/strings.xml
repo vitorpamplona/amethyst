@@ -579,6 +579,11 @@
     <string name="nests_servers_my_section">您的服务器</string>
     <string name="nests_servers_my_explainer">保存为 10112 类型的可替换事件，以便其他客户端可以读取您的首选项。</string>
     <string name="nests_servers_add_field">添加语音聊天服务器</string>
+    <string name="nests_servers_add_relay_field">中继 (WebTransport) URL</string>
+    <string name="nests_servers_add_auth_field">认证(JWT mint) URL</string>
+    <string name="nests_servers_add_pair_button">添加</string>
+    <string name="nests_servers_relay_label">中继</string>
+    <string name="nests_servers_auth_label">认证</string>
     <string name="nests_servers_recommended_section">推荐的服务器</string>
     <string name="nests_servers_recommended_explainer">内置建议，您可轻触添加到列表中。</string>
     <string name="nests_servers_use_defaults">使用 Amethyst 默认值</string>
