@@ -1491,6 +1491,10 @@
     <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
 
     <string name="could_not_connect_to_tor">Could not connect to Tor</string>
+    <string name="tor_connection_failed_title">Tor isn\'t connecting</string>
+    <string name="tor_connection_failed_body">Amethyst couldn\'t finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We\'ll remember this choice for the next hour and re-try Tor after that.</string>
+    <string name="tor_continue_without_for_session">Use regular connection</string>
+    <string name="tor_keep_waiting">Keep waiting</string>
     <string name="unable_to_download_relay_document">Download relay document unavailable</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>

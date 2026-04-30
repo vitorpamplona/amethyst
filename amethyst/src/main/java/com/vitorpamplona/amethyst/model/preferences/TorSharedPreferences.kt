@@ -25,6 +25,7 @@ import androidx.compose.runtime.Stable
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -65,10 +66,15 @@ class TorSharedPreferences(
                 value.toSettings(),
             )
 
+    suspend fun loadLastBypassApprovalMs(): Long = TorSharedPreferences.loadLastBypassApprovalMs(context)
+
+    suspend fun saveLastBypassApprovalMs(value: Long) = TorSharedPreferences.saveLastBypassApprovalMs(value, context)
+
     companion object {
         // loads faster when individualized
         val TOR_TYPE_KEY = stringPreferencesKey("tor.torType")
         val EXTERNAL_SOCKS_PORT_KEY = intPreferencesKey("tor.externalSocksPort")
+        val LAST_BYPASS_APPROVAL_MS_KEY = longPreferencesKey("tor.lastBypassApprovalMs")
         val ONION_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.onionRelaysViaTor")
         val DM_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.dmRelaysViaTor")
         val NEW_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.newRelaysViaTor")
@@ -131,6 +137,29 @@ class TorSharedPreferences(
                 if (e is CancellationException) throw e
                 // Log any errors that occur while reading the DataStore.
                 Log.e("SharedPreferences") { "Error saving DataStore preferences: ${e.message}" }
+            }
+        }
+
+        suspend fun loadLastBypassApprovalMs(context: Context): Long =
+            try {
+                context.sharedPreferencesDataStore.data.first()[LAST_BYPASS_APPROVAL_MS_KEY] ?: 0L
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("SharedPreferences") { "Error reading lastBypassApprovalMs: ${e.message}" }
+                0L
+            }
+
+        suspend fun saveLastBypassApprovalMs(
+            value: Long,
+            context: Context,
+        ) {
+            try {
+                context.sharedPreferencesDataStore.edit { prefs ->
+                    prefs[LAST_BYPASS_APPROVAL_MS_KEY] = value
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("SharedPreferences") { "Error saving lastBypassApprovalMs: ${e.message}" }
             }
         }
     }
