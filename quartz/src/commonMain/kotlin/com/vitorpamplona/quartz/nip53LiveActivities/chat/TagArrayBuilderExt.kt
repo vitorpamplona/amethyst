@@ -29,9 +29,12 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.toMarkedETag
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 
 fun TagArrayBuilder<LiveActivitiesChatMessageEvent>.activity(rep: ATag) = addUnique(rep.toATagArray())
+
+fun TagArrayBuilder<LiveActivitiesChatMessageEvent>.room(rep: EventHintBundle<MeetingSpaceEvent>) = addUnique(rep.toATag().toATagArray())
 
 fun TagArrayBuilder<LiveActivitiesChatMessageEvent>.activity(rep: EventHintBundle<LiveActivitiesEvent>) = addUnique(rep.toATag().toATagArray())
 

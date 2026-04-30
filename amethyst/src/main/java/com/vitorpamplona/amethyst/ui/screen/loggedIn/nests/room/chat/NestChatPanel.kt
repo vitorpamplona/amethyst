@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -80,6 +81,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 @Composable
 internal fun ColumnScope.NestChatPanel(
     event: MeetingSpaceEvent,
+    roomNote: AddressableNote,
     viewModel: NestViewModel,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
@@ -94,7 +96,7 @@ internal fun ColumnScope.NestChatPanel(
     val nestScreenModel: NestNewMessageViewModel =
         composeViewModel(key = "Nest/${event.address().toValue()}")
     nestScreenModel.init(accountViewModel)
-    nestScreenModel.load(event)
+    nestScreenModel.load(roomNote)
 
     val listState = rememberLazyListState()
 

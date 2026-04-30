@@ -147,7 +147,7 @@ private fun NestLobbyContent(
     val nestScreenModel: NestNewMessageViewModel =
         viewModel(key = "NestLobby/$roomATag")
     nestScreenModel.init(accountViewModel)
-    nestScreenModel.load(event)
+    nestScreenModel.load(addressableNote)
 
     val messages by produceState(initialValue = emptyList<Note>(), roomATag) {
         val filter =

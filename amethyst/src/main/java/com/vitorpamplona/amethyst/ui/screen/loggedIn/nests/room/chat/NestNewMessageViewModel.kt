@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.model.Account
@@ -65,7 +66,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -133,7 +133,7 @@ open class NestNewMessageViewModel :
 
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
-    var room: MeetingSpaceEvent? = null
+    var room: AddressableNote? = null
 
     val replyTo = mutableStateOf<Note?>(null)
 
@@ -202,7 +202,7 @@ open class NestNewMessageViewModel :
         this.uploadState = ChatFileUploadState(account.settings.defaultFileServer, account.settings.stripLocationOnUpload)
     }
 
-    open fun load(room: MeetingSpaceEvent) {
+    open fun load(room: AddressableNote) {
         this.room = room
     }
 
@@ -397,18 +397,8 @@ open class NestNewMessageViewModel :
         }
     }
 
-    private fun roomATag(): ATag? {
-        val r = room ?: return null
-        return ATag(
-            kind = r.kind,
-            pubKeyHex = r.pubKey,
-            dTag = r.dTag(),
-            relay = null,
-        )
-    }
-
     private suspend fun createTemplate(): EventTemplate<out Event>? {
-        val activity = roomATag() ?: return null
+        val room = room?.toEventHint<MeetingSpaceEvent>() ?: return null
         val messageText = message.text.toString()
         val tagger =
             NewMessageTagger(
@@ -446,7 +436,7 @@ open class NestNewMessageViewModel :
                 imetas(usedAttachments)
             }
         } else {
-            LiveActivitiesChatMessageEvent.message(tagger.message, activity) {
+            LiveActivitiesChatMessageEvent.roomMessage(tagger.message, room) {
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))

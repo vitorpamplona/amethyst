@@ -276,6 +276,7 @@ internal fun NestFullScreen(
                 NestTab.Chat -> {
                     NestChatPanel(
                         event = event,
+                        roomNote = roomNote,
                         viewModel = viewModel,
                         accountViewModel = accountViewModel,
                         modifier =
