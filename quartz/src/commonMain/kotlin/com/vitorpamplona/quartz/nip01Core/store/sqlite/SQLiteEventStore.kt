@@ -24,7 +24,6 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.SQLiteException
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import com.vitorpamplona.quartz.nip01Core.cache.EventInterner
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
@@ -42,7 +41,6 @@ class SQLiteEventStore(
     val relay: NormalizedRelayUrl? = null,
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
     val numReaders: Int = 4,
-    val interner: EventInterner = EventInterner.Default,
 ) {
     companion object {
         const val DATABASE_VERSION = 2
@@ -70,7 +68,6 @@ class SQLiteEventStore(
             fullTextSearchModule,
             seedModule::hasher,
             indexStrategy,
-            interner,
         )
 
     val modules =

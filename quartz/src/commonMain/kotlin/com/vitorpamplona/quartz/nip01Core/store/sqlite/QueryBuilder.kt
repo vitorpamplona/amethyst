@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
-import com.vitorpamplona.quartz.nip01Core.cache.EventInterner
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
@@ -36,7 +35,6 @@ class QueryBuilder(
     val fts: FullTextSearchModule,
     val hasher: (db: SQLiteConnection) -> TagNameValueHasher,
     val indexStrategy: IndexingStrategy,
-    val interner: EventInterner = EventInterner.Default,
 ) {
     // ------------
     // Main methods
@@ -234,23 +232,16 @@ class QueryBuilder(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun <T : Event> SQLiteStatement.toEvent(): T {
-        val event =
-            EventFactory.create<T>(
-                getText(0),
-                getText(1),
-                getLong(2),
-                getInt(3),
-                OptimizedJsonMapper.fromJsonToTagArray(getText(4)),
-                getText(5),
-                getText(6),
-            )
-        // Events read from durable storage were valid when written, so
-        // interning their reconstruction is safe. Multiple projections
-        // re-querying the same id end up sharing one Event instance.
-        return interner.intern(event) as T
-    }
+    private fun <T : Event> SQLiteStatement.toEvent(): T =
+        EventFactory.create<T>(
+            getText(0),
+            getText(1),
+            getLong(2),
+            getInt(3),
+            OptimizedJsonMapper.fromJsonToTagArray(getText(4)),
+            getText(5),
+            getText(6),
+        )
 
     private fun SQLiteStatement.toRawEvent() =
         RawEvent(
