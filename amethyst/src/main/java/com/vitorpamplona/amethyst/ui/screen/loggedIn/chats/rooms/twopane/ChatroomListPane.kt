@@ -21,22 +21,15 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
-import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
@@ -69,25 +62,6 @@ fun ChatroomList(
             }
         }
 
-    // The outer DisappearingScaffold publishes its top-app-bar height through
-    // LocalDisappearingScaffoldPadding so single-pane feeds can clear the bar via
-    // rememberFeedContentPadding. In the two-pane layout the tabs sit inside the
-    // column (not the scaffold's top slot), so the inner LazyColumn must not add
-    // that top inset again — otherwise it shows up as a gap below the TabRow.
-    // Drop only the top component; keep start/end/bottom so feeds still clear
-    // the bottom bar.
-    val outerScaffoldPadding = LocalDisappearingScaffoldPadding.current
-    val layoutDirection = LocalLayoutDirection.current
-    val innerScaffoldPadding =
-        remember(outerScaffoldPadding, layoutDirection) {
-            PaddingValues(
-                start = outerScaffoldPadding.calculateStartPadding(layoutDirection),
-                top = 0.dp,
-                end = outerScaffoldPadding.calculateEndPadding(layoutDirection),
-                bottom = outerScaffoldPadding.calculateBottomPadding(),
-            )
-        }
-
     Column {
         MessagesTabHeader(
             pagerState,
@@ -96,13 +70,11 @@ fun ChatroomList(
             { accountViewModel.markAllChatNotesAsRead(newFeedContentState.visibleNotes()) },
         )
 
-        CompositionLocalProvider(LocalDisappearingScaffoldPadding provides innerScaffoldPadding) {
-            MessagesPager(
-                pagerState,
-                tabs,
-                accountViewModel,
-                nav,
-            )
-        }
+        MessagesPager(
+            pagerState,
+            tabs,
+            accountViewModel,
+            nav,
+        )
     }
 }
