@@ -35,6 +35,11 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.StringResSetup
+import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
+import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -138,6 +143,18 @@ class NestActivity : AppCompatActivity() {
 
         setContent {
             AmethystTheme {
+                StringResSetup()
+
+                // Pauses relay services when the app pauses
+                ManageRelayServices()
+                ManageWebOkHttp()
+
+                // Adds this account to the authentication procedures for relays.
+                RelayAuthSubscription(accountViewModel)
+
+                // Loads account information + DMs and Notifications from Relays.
+                AccountFilterAssemblerSubscription(accountViewModel)
+
                 NestActivityContent(
                     addressValue = addressValue,
                     accountViewModel = accountViewModel,
