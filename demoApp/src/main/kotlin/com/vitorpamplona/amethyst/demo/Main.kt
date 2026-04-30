@@ -72,13 +72,13 @@ private val FEED_FILTER =
  *
  * The [collector] is a single connection-level listener that drops
  * every event the [client] receives — across every subscription on
- * every relay — into [observable]. UI projections are independent
- * cold flows: see `projectFromRelays` for how each one drives its own
- * relay subscription on the collection lifecycle.
+ * every relay — into [db]. UI projections are independent cold flows:
+ * see `projectFromRelays` for how each one drives its own relay
+ * subscription on the collection lifecycle.
  */
 private class AppGraph(
     val client: NostrClient,
-    val observable: ObservableEventStore,
+    val db: ObservableEventStore,
     val signer: NostrSignerInternal,
     val collector: EventCollector,
 )
@@ -88,7 +88,7 @@ private fun buildAppGraph(): AppGraph {
 
     val sqlite = EventStore(dbName = "demo-events.db")
     val interned = InterningEventStore(sqlite)
-    val observable = ObservableEventStore(interned)
+    val db = ObservableEventStore(interned)
 
     val client = NostrClient(websocketBuilder = KtorWebSocket.Builder())
 
@@ -96,13 +96,13 @@ private fun buildAppGraph(): AppGraph {
     // in the store, regardless of which subscription pulled it.
     val collector =
         EventCollector(client) { event, _ ->
-            scope.launch { runCatching { observable.insert(event) } }
+            scope.launch { runCatching { db.insert(event) } }
         }
 
     // Throwaway identity for the demo. Restart the app -> new keys.
     val signer = NostrSignerInternal(KeyPair())
 
-    return AppGraph(client, observable, signer, collector)
+    return AppGraph(client, db, signer, collector)
 }
 
 fun main() =
@@ -117,7 +117,7 @@ fun main() =
                 // collected: subscribe on collect, unsubscribe on cancel.
                 val projection =
                     remember(graph) {
-                        graph.observable.projectFromRelays<TextNoteEvent>(graph.client, DEMO_RELAYS, FEED_FILTER)
+                        graph.db.projectFromRelays<TextNoteEvent>(graph.client, DEMO_RELAYS, FEED_FILTER)
                     }
                 val projectionState by projection.collectAsState(initial = ProjectionState.Loading)
 
@@ -129,7 +129,7 @@ fun main() =
                         uiScope.launch {
                             val signed = graph.signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
                             // Hits the bus → projection picks it up alongside any inbound relay copy.
-                            graph.observable.insert(signed)
+                            graph.db.insert(signed)
                             graph.client.publish(signed, DEMO_RELAYS)
                         }
                     },
