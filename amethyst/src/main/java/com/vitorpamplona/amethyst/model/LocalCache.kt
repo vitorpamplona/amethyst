@@ -1556,6 +1556,10 @@ object LocalCache : ILocalCache, ICacheProvider {
      * presence event needs to be in there alongside chat. Without
      * this, presence-driven inclusion can't see follows broadcasting
      * in the room (only chat-driven inclusion would fire).
+     *
+     * Also indexed under [LiveActivitiesChannel.presenceNotes] keyed
+     * by author so the Nests feed can answer "are there speakers on
+     * stage?" without scanning the chat-dominated `notes` map.
      */
     fun consume(
         event: MeetingRoomPresenceEvent,
@@ -1573,6 +1577,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         val channel = getOrCreateLiveChannel(roomAddress)
         val versionNote = getOrCreateNote(event.id)
         channel.addNote(versionNote, relay)
+        channel.addPresenceNote(versionNote)
 
         return new
     }

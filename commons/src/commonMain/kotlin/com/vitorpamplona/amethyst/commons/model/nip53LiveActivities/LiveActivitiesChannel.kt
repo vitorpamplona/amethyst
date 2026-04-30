@@ -26,9 +26,11 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 
 @Stable
 class LiveActivitiesChannel(
@@ -39,6 +41,24 @@ class LiveActivitiesChannel(
 
     // Important to keep this long-term reference because LocalCache uses WeakReferences.
     var infoNote: Note? = null
+
+    /**
+     * Audio-room presence index (NIP-53 kind-10312) keyed by author
+     * pubkey. Presence is replaceable (one per author), so keying on
+     * the author auto-collapses heartbeat versions instead of growing
+     * unbounded the way `notes` does. Empty for streaming channels
+     * (kind-30311) — only kind-30312 rooms publish presence.
+     *
+     * Lets feeds answer "is anyone live on stage in this room?"
+     * without scanning the chat-dominated `notes` map. See
+     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter].
+     */
+    val presenceNotes = LargeCache<HexKey, Note>()
+
+    fun addPresenceNote(note: Note) {
+        val author = note.author?.pubkeyHex ?: return
+        presenceNotes.put(author, note)
+    }
 
     fun address() = address
 
