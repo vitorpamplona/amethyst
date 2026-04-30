@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +41,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
+
+/**
+ * Lifecycle state of an [EventStoreProjection]'s [state][EventStoreProjection.state].
+ *
+ *  - [Loading] is the initial state before the seed query completes.
+ *    The UI should show a spinner / skeleton here.
+ *  - [Loaded] holds the current deduped, sorted list of slots. Every
+ *    membership change publishes a fresh [Loaded] instance; in-place
+ *    addressable updates do *not* publish (the slots' own flows do).
+ */
+sealed interface ProjectionState<out T : Event> {
+    data object Loading : ProjectionState<Nothing>
+
+    data class Loaded<T : Event>(
+        val items: List<MutableStateFlow<T>>,
+    ) : ProjectionState<T>
+}
 
 /**
  * A reactive projection over an [ObservableEventStore] for a fixed
@@ -119,8 +135,16 @@ class EventStoreProjection<T : Event>(
     scope: CoroutineScope,
     private val nowProvider: () -> Long = TimeUtils::now,
 ) : AutoCloseable {
-    private val _items = MutableStateFlow<List<MutableStateFlow<T>>>(emptyList())
-    val items: StateFlow<List<MutableStateFlow<T>>> = _items.asStateFlow()
+    private val _state = MutableStateFlow<ProjectionState<T>>(ProjectionState.Loading)
+
+    /**
+     * Current projection state. Starts as [ProjectionState.Loading]
+     * until the seed query completes; thereafter every membership
+     * change publishes a fresh [ProjectionState.Loaded] with the new
+     * list. Distinguishing `Loading` from `Loaded(emptyList())` lets
+     * the UI tell "still seeding" apart from "seeded but no matches".
+     */
+    val state: StateFlow<ProjectionState<T>> = _state.asStateFlow()
 
     /** Slots keyed by the *current* event id. Re-keyed when a replaceable / addressable handle takes a new version. */
     private val byId = HashMap<HexKey, Slot<T>>()
@@ -137,9 +161,6 @@ class EventStoreProjection<T : Event>(
     private val perFilter: Map<Filter, java.util.SortedSet<Slot<T>>> =
         filters.associateWith { sortedSetOf(slotComparator()) }
 
-    /** Set when the seed has been written to [items], so callers can suspend until the projection is hot. */
-    val ready: CompletableDeferred<Unit> = CompletableDeferred()
-
     private val collectorJob: Job =
         scope.launch {
             // `onSubscription` runs after the SharedFlow subscription is
@@ -150,7 +171,6 @@ class EventStoreProjection<T : Event>(
             store.changes
                 .onSubscription {
                     seed()
-                    ready.complete(Unit)
                 }.collect { storeEvent -> apply(storeEvent) }
         }
 
@@ -326,12 +346,12 @@ class EventStoreProjection<T : Event>(
         // sets. Cheaper than maintaining a separate `ordered` field
         // alongside every insert / remove.
         if (byId.isEmpty()) {
-            _items.value = emptyList()
+            _state.value = ProjectionState.Loaded(emptyList())
             return
         }
         val union = sortedSetOf(slotComparator<T>())
         for (set in perFilter.values) union.addAll(set)
-        _items.value = union.map { it.flow }
+        _state.value = ProjectionState.Loaded(union.map { it.flow })
     }
 
     /**
@@ -344,7 +364,7 @@ class EventStoreProjection<T : Event>(
         byId.clear()
         byAddress.clear()
         for (set in perFilter.values) set.clear()
-        _items.value = emptyList()
+        _state.value = ProjectionState.Loaded(emptyList())
     }
 
     /**
