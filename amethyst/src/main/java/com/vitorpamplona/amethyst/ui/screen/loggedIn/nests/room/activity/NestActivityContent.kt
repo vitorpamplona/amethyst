@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.call.KeepScreenOn
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
@@ -175,6 +176,12 @@ private fun NestActivityBody(
     LeaveOnRoomClosed(event, onLeave)
 
     val ui by viewModel.uiState.collectAsState()
+
+    // Hold a screen-on lock while the user is actively in the room so the
+    // device doesn't lock and interrupt the audio session UI.
+    if (ui.connection is ConnectionUiState.Connected) {
+        KeepScreenOn()
+    }
 
     // System bridges: PIP overlay actions + foreground service.
     PipBridge(ui, pipMuteSignal, viewModel, onMuteState, onConnectedChange)
