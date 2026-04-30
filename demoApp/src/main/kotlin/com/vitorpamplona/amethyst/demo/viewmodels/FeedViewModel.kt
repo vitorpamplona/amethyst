@@ -23,67 +23,48 @@ package com.vitorpamplona.amethyst.demo.viewmodels
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.demo.data.NotesFeed
 import com.vitorpamplona.quartz.nip01Core.cache.projection.ProjectionState
-import com.vitorpamplona.quartz.nip01Core.cache.projection.filterItems
-import com.vitorpamplona.quartz.nip01Core.cache.projection.project
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * State + actions for the kind:1 "new threads" feed.
+ * UI scaffolding around a [NotesFeed]:
  *
- *  - [notes] is a [StateFlow] of [ProjectionState] over the local
- *    store, narrowed to top-level notes via [filterItems]. While it is
- *    being collected the view model holds a relay subscription open
- *    for the same filter; when the last collector goes away (5 s
- *    debounce) the subscription is released, then re-opened on the
- *    next collector.
- *  - [send] signs a new kind:1 event, drops it on the local bus, and
- *    publishes it to the relays.
+ *  - [feed] hot-shares the cold projection inside [viewModelScope] so
+ *    multiple collectors share one relay subscription, and
+ *    `WhileSubscribed(5_000)` debounces relay tear-down when the UI
+ *    leaves composition.
+ *  - [send] takes a [NostrSigner] at call time rather than capturing
+ *    one at construction, so the app can swap signers (login /
+ *    logout) without rebuilding the view model.
  */
 @Stable
 class FeedViewModel(
     private val db: ObservableEventStore,
     private val client: NostrClient,
-    private val signer: NostrSignerInternal,
 ) : ViewModel() {
-    private val subId = newSubId()
-    private val filter = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 100)
-    private val relays =
-        setOf(
-            "wss://relay.damus.io".normalizeRelayUrl(),
-            "wss://nos.lol".normalizeRelayUrl(),
-            "wss://relay.nostr.band".normalizeRelayUrl(),
-        )
+    private val notesFeed = NotesFeed(db, client)
 
-    val notes: StateFlow<ProjectionState<TextNoteEvent>> =
-        db
-            .project<TextNoteEvent>(filter)
-            .filterItems { it.value.isNewThread() }
-            .onStart { client.subscribe(subId, relays.associateWith { listOf(filter) }) }
-            .onCompletion { client.unsubscribe(subId) }
+    val feed: StateFlow<ProjectionState<TextNoteEvent>> =
+        notesFeed.notes
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProjectionState.Loading)
 
-    fun send(text: String) {
+    fun send(
+        text: String,
+        signer: NostrSigner,
+    ) {
         viewModelScope.launch {
             val signed = signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
             // Hits the bus → projection picks it up alongside any inbound relay copy.
             db.insert(signed)
-            client.publish(signed, relays)
+            client.publish(signed, notesFeed.relays)
         }
     }
 }
-
-/** A kind:1 note is a "new thread" iff it isn't a reply to anything. */
-private fun TextNoteEvent.isNewThread(): Boolean = replyingTo() == null

@@ -29,91 +29,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.demo.net.KtorWebSocket
 import com.vitorpamplona.amethyst.demo.ui.FeedScreen
 import com.vitorpamplona.amethyst.demo.viewmodels.FeedViewModel
-import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.minutes
 
-/**
- * Layered Quartz stack from the README:
- *
- *   NostrClient → ObservableEventStore → InterningEventStore → EventStore (SQLite)
- *
- * The [collector] is a single connection-level listener that drops
- * every event the [client] receives — across every subscription on
- * every relay — into [db]. Per-feed state + actions live in their
- * own ViewModels (see [FeedViewModel]).
- */
-private class AppGraph(
-    val client: NostrClient,
-    val db: ObservableEventStore,
-    val signer: NostrSignerInternal,
-    val collector: EventCollector,
-)
-
-private fun buildAppGraph(): AppGraph {
-    val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    val sqlite = EventStore(dbName = "demo-events.db")
-    val interned = InterningEventStore(sqlite)
-    val db = ObservableEventStore(interned)
-
-    val client = NostrClient(websocketBuilder = KtorWebSocket.Builder())
-
-    // Connection-wide drain: every EventMessage on every relay lands
-    // in the store, regardless of which subscription pulled it.
-    val collector =
-        EventCollector(client) { event, _ ->
-            scope.launch { runCatching { db.insert(event) } }
-        }
-
-    // Periodic NIP-40 sweep — drops expired events from SQLite and
-    // emits StoreChange.DeleteExpired so live projections drop them
-    // too. Without this the on-disk store grows monotonically.
-    scope.launch {
-        while (isActive) {
-            delay(15.minutes)
-            runCatching { db.deleteExpiredEvents() }
-        }
-    }
-
-    // Throwaway identity for the demo. Restart the app -> new keys.
-    val signer = NostrSignerInternal(KeyPair())
-
-    return AppGraph(client, db, signer, collector)
-}
-
-fun main() {
-    // Process-singleton dependencies — built once, before any UI mounts.
-    // NostrClient starts active by default and connects relays
-    // on-demand when subscriptions arrive, so no client.connect() needed.
-    val graph = buildAppGraph()
-
+fun main() =
     application {
         val state = rememberWindowState(size = DpSize(560.dp, 720.dp))
         Window(onCloseRequest = ::exitApplication, state = state, title = "Nostr Kind 1 Demo") {
             MaterialTheme {
-                val viewModel =
-                    remember {
-                        FeedViewModel(graph.db, graph.client, graph.signer)
-                    }
-                val notes by viewModel.notes.collectAsState()
+                val viewModel = remember { FeedViewModel(AppGraph.db, AppGraph.client) }
+                val notes by viewModel.feed.collectAsState()
 
-                FeedScreen(state = notes, onSend = viewModel::send)
+                FeedScreen(
+                    state = notes,
+                    onSend = { text -> viewModel.send(text, AppGraph.signer) },
+                )
             }
         }
     }
-}
