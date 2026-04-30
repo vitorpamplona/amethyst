@@ -489,7 +489,6 @@
     <string name="nest_mic_mute">Silenciar microfone</string>
     <string name="nest_mic_unmute">Ativar microfone</string>
     <string name="nest_broadcast_connecting">Entrando ao vivo…</string>
-    <string name="nest_broadcasting">Ao vivo</string>
     <string name="nest_broadcast_failed">Transmissão falhou: %1$s</string>
     <string name="nest_record_permission_required">É necessário acesso ao microfone para falar nesta sala.</string>
     <string name="nest_open_settings">Abrir configurações</string>

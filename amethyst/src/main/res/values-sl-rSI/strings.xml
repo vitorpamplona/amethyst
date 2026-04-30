@@ -502,7 +502,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_mic_mute">Izklopi mikrofon</string>
     <string name="nest_mic_unmute">Vklopi mikrofon</string>
     <string name="nest_broadcast_connecting">Grem v živo…</string>
-    <string name="nest_broadcasting">V živo</string>
     <string name="nest_broadcast_failed">Oddajanje neuspešno: %1$s</string>
     <string name="nest_record_permission_required">Za govor v tej sobi je potreben dostop do mikrofona.</string>
     <string name="nest_open_settings">Odpri nastavitve</string>
@@ -838,7 +837,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         \n\n1. Namesti [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Zaženi Orbot aplikacijo
         \n3. V Orbot aplikaciji, preveri \"Socks port\". Pradnastavitev uporablja vrata 9050
-        \n4. Po potrebi spremenite vrata v Orbot 
+        \n4. Po potrebi spremenite vrata v Orbot
         \n5. Prilagodi vrata na tem zaslonu
         \n6. Pritisni gumb aktiviraj za uporabo Orbot aplikacije kot proxy
     </string>

@@ -489,7 +489,6 @@
     <string name="nest_mic_mute">Ztlumit mikrofon</string>
     <string name="nest_mic_unmute">Zapnout mikrofon</string>
     <string name="nest_broadcast_connecting">Začíná vysílání…</string>
-    <string name="nest_broadcasting">Živě</string>
     <string name="nest_broadcast_failed">Vysílání selhalo: %1$s</string>
     <string name="nest_record_permission_required">Pro mluvení v této místnosti je vyžadován přístup k mikrofonu.</string>
     <string name="nest_open_settings">Otevřít nastavení</string>

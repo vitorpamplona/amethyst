@@ -491,7 +491,6 @@
     <string name="nest_mic_mute">麦克风静音</string>
     <string name="nest_mic_unmute">取消麦克风静音</string>
     <string name="nest_broadcast_connecting">上线中…</string>
-    <string name="nest_broadcasting">直播中</string>
     <string name="nest_broadcast_failed">广播失败: %1$s</string>
     <string name="nest_record_permission_required">在这个房间进行交谈需要麦克风权限。</string>
     <string name="nest_open_settings">打开设置</string>

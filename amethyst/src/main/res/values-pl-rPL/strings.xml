@@ -487,7 +487,6 @@
     <string name="nest_mic_mute">Wycisz mikrofon</string>
     <string name="nest_mic_unmute">Włącz mikrofon</string>
     <string name="nest_broadcast_connecting">Wejdź na żywo…</string>
-    <string name="nest_broadcasting">Na żywo</string>
     <string name="nest_broadcast_failed">Nieudana transmisja: %1$s</string>
     <string name="nest_record_permission_required">Dostęp do mikrofonu jest wymagany, aby rozmawiać w tym pokoju.</string>
     <string name="nest_open_settings">Otwórz ustawienia</string>

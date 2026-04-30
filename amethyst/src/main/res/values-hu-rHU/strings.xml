@@ -491,7 +491,6 @@
     <string name="nest_mic_mute">Mikrofon némítása</string>
     <string name="nest_mic_unmute">Mikrofon némításának megszüntetése</string>
     <string name="nest_broadcast_connecting">Élő közvetítés elkezdése…</string>
-    <string name="nest_broadcasting">Élő</string>
     <string name="nest_broadcast_failed">Nem sikerült a közvetítés: %1$s</string>
     <string name="nest_record_permission_required">Az Amethystnek hozzáférésre van szüksége a mikrofonhoz a beszélgetéshez ebben a szobában.</string>
     <string name="nest_open_settings">Beállítások menyitása</string>
