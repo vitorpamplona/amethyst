@@ -21,27 +21,22 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -77,8 +72,7 @@ fun MessagesTwoPane(
     val act = LocalContext.current.getActivity()
     val displayFeatures = calculateDisplayFeatures(act)
 
-    DisappearingScaffold(
-        isInvertedLayout = false,
+    Scaffold(
         topBar = {
             UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
         },
@@ -92,39 +86,24 @@ fun MessagesTwoPane(
                 }
             }
         },
-        accountViewModel = accountViewModel,
     ) { padding ->
         TwoPane(
             first = {
-                // The chatroom-list pane owns its own TabRow, so it doesn't
-                // need the outer scaffold's top bar to layer over it. Apply
-                // the scaffold padding directly and reset
-                // LocalDisappearingScaffoldPadding to zero so descendants
-                // (e.g. the LazyColumn inside ChatroomListFeedView via
-                // rememberFeedContentPadding) don't add the bar inset a
-                // second time, which would otherwise show up as a gap
-                // between the TabRow and the first list item.
-                CompositionLocalProvider(LocalDisappearingScaffoldPadding provides PaddingValues(0.dp)) {
-                    Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
-                        ChatroomList(
-                            knownFeedContentState,
-                            newFeedContentState,
-                            accountViewModel,
-                            twoPaneNav,
-                        )
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
+                    ChatroomList(
+                        knownFeedContentState,
+                        newFeedContentState,
+                        accountViewModel,
+                        twoPaneNav,
+                    )
 
-                        Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
-                            ChannelFabColumn(nav)
-                        }
+                    Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
+                        ChannelFabColumn(nav)
                     }
                 }
             },
             second = {
-                // The chat-view pane brings its own DisappearingScaffold
-                // (with its own chat header), so it stays edge-to-edge under
-                // the outer search bar via systemBarsPadding instead of the
-                // scaffold padding.
-                Box(Modifier.fillMaxSize().systemBarsPadding()) {
+                Box(Modifier.fillMaxSize().padding(padding)) {
                     twoPaneNav.innerNav.value?.let {
                         if (it is Route.Room) {
                             ChatroomView(
