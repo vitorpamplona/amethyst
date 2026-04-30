@@ -32,31 +32,18 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * A reactive façade over any [IEventStore] that publishes every event
- * accepted for *observation* — a superset of the events the inner
- * store persists.
+ * Reactive façade over any [IEventStore]. Publishes a [StoreChange]
+ * on [changes] for every accepted mutation so projections can stay in
+ * sync without re-querying.
  *
- * The split between persistence and observation is the whole point of
- * this class:
- *
- *  - **Non-ephemeral events** are forwarded to the inner store. If the
- *    inner store rejects (expired, NIP-09 / NIP-62 tombstone, NIP-01
- *    supersession loser), the rejection propagates and nothing is
- *    emitted on [changes].
- *  - **Ephemeral events** (kinds `20000-29999`) skip the inner store
- *    entirely — they're never persisted — but they still emit on
- *    [changes] so projections can render them while they live. Already
- *    expired ephemerals are silently dropped.
- *
- * Wrap any store you want to observe — `SQLiteEventStore`, FS-backed,
- * an in-memory test fake — and feed `EventStoreProjection` from the
- * resulting [changes] flow.
- *
- * Reads (`query`, `count`) and out-of-band writes (`delete`,
- * `deleteExpiredEvents`) forward to the inner store; the latter are
- * also surfaced on [changes] as [StoreChange.DeleteByFilter] /
- * [StoreChange.DeleteExpired] so projections can drop the matching
- * slots in memory without re-querying.
+ * - Non-ephemeral [insert] / [transaction] entries forward to the
+ *   inner store. On rejection (expired, NIP-09 / NIP-62 tombstone,
+ *   NIP-01 supersession loser) the throw propagates and nothing is
+ *   emitted.
+ * - Ephemeral events (kinds `20000-29999`) skip the inner store but
+ *   still emit. Already-expired ephemerals are silently dropped.
+ * - [delete] and [deleteExpiredEvents] also emit so projections drop
+ *   the matching slots in memory.
  */
 class ObservableEventStore(
     val inner: IEventStore,
@@ -70,35 +57,15 @@ class ObservableEventStore(
             onBufferOverflow = BufferOverflow.SUSPEND,
         )
 
-    /**
-     * Stream of mutations accepted by the observable layer. One
-     * emission per successful [insert] (or per accepted event in a
-     * [transaction] body), one emission per [delete] /
-     * [deleteExpiredEvents] call. Rejected inserts and rolled-back
-     * transactions emit nothing.
-     *
-     * Projections consume this stream — see `EventStoreProjection`
-     * for how each [StoreChange] is interpreted.
-     */
+    /** Stream of mutations accepted by this layer. See [StoreChange] for the cases. */
     val changes: SharedFlow<StoreChange> = _changes.asSharedFlow()
 
     /**
-     * Mutations published by [changes]. Projections react to these to
-     * keep their in-memory view in sync with the underlying store.
-     *
-     *  - [Insert] is emitted for every event accepted by the
-     *    observable layer (persistable or ephemeral). Carries the
-     *    event itself so the projection can run its NIP-01 / NIP-09 /
-     *    NIP-62 interpretation.
-     *  - [DeleteByFilter] is emitted for every `delete(filter)` /
-     *    `delete(filters)` call on the observable. Carries the same
-     *    filters the store used so projections can apply
-     *    [Filter.match] in memory and drop the matching slots without
-     *    re-querying.
-     *  - [DeleteExpired] is emitted for every `deleteExpiredEvents()`
-     *    sweep. The optional [DeleteExpired.asOf] cutoff lets the
-     *    store pin the timestamp it actually used, so the projection
-     *    drops exactly the events the store dropped.
+     * One [Insert] per accepted event; one [DeleteByFilter] per
+     * `delete(filter[s])`; one [DeleteExpired] per
+     * `deleteExpiredEvents()` sweep. The cutoff carried by
+     * [DeleteExpired] is pinned at the moment the sweep ran so
+     * projections drop exactly the events the store dropped.
      */
     sealed interface StoreChange {
         data class Insert(

@@ -58,70 +58,35 @@ sealed interface ProjectionState<out T : Event> {
 
 /**
  * State machine that maintains a reactive view over an
- * [ObservableEventStore] for a fixed set of [filters]. Each visible
- * event is wrapped in a [MutableStateFlow] so the UI can collect
- * three different kinds of change with the right granularity:
+ * [ObservableEventStore] for a fixed set of [filters]. Pure logic, no
+ * coroutine ownership: construct, [seed] once, then [apply] each
+ * [StoreChange] and read [snapshot]. For the standard "wrap into a
+ * cold Flow and collect from a ViewModel" path, use
+ * [ObservableEventStore.project] which composes this class.
  *
- *  - **Membership** (events arriving or leaving) produces a brand
- *    new [List] in [snapshot]. The list reference is stable while
- *    membership is unchanged.
- *  - **In-place replaceable / addressable update** (a new version of
- *    the same `kind:pubkey:dtag` arrives) updates the existing
- *    handle's [MutableStateFlow.value] without changing membership.
- *    Only collectors of that one handle re-render. The list ordering
- *    is *not* reshuffled when the new version has a later
- *    `created_at` — each slot remembers the sort key it was inserted
- *    with, so updates feel like pure value mutations.
- *  - **Removal** (NIP-09 deletion, NIP-62 vanish, NIP-40 expiration,
- *    `delete(filter)`) drops the handle from the list.
+ * Each visible event is wrapped in a [MutableStateFlow], giving the
+ * UI three change granularities:
  *
- * Three kinds of [StoreChange] are interpreted in-projection:
+ *  - **Membership** (insert / removal): [snapshot] returns a fresh
+ *    list. Stable list reference while membership is unchanged.
+ *  - **In-place replaceable / addressable update**: same slot, new
+ *    [MutableStateFlow.value]. Only collectors of that handle
+ *    re-render. The slot's sort key is frozen at insertion, so the
+ *    list does not reshuffle when the new version has a later
+ *    `created_at`. *Caveat: the slot stays in whatever filters
+ *    matched the original version; if the new version no longer
+ *    matches a filter (e.g. its tags changed), the slot is not
+ *    re-evaluated and remains live.*
+ *  - **Removal**: NIP-09, NIP-62, NIP-40 expiration, `delete(filter)`.
  *
- *  - [StoreChange.Insert] — a single arriving event can carry NIP-01
- *    / NIP-09 / NIP-62 semantics:
- *      - **NIP-01 supersession.** New replaceable / addressable events
- *        replace prior ones for the same `kind:pubkey[:dtag]`. The
- *        NIP-01 lexical-id tiebreaker (`new.id < old.id` when
- *        `created_at` ties) is honoured.
- *      - **NIP-09 deletions.** A [DeletionEvent] removes any matching
- *        handle owned by the same author (for GiftWrap, the recipient).
- *        Cross-author deletions are inert.
- *      - **NIP-62 right to vanish.** A [RequestToVanishEvent] whose
- *        `shouldVanishFrom(store.relay)` is true drops every handle
- *        from the same author with `created_at < vanish.created_at`.
- *      - **NIP-40 expiration.** Events whose `expiration` tag has
- *        already lapsed at the moment they arrive are dropped before
- *        they ever enter the snapshot.
- *  - [StoreChange.DeleteByFilter] — emitted on `delete(filter)` /
- *    `delete(filters)`. Drops every slot matching any of the rule's
- *    filters via [Filter.match].
- *  - [StoreChange.DeleteExpired] — emitted on `deleteExpiredEvents()`.
- *    Drops every slot whose `expiration` has lapsed at the cutoff the
- *    store pinned. **There is no per-projection expiration ticker** —
- *    expiration only triggers when the application calls
- *    `deleteExpiredEvents()` on the store.
+ * Limit is **per-filter**: each filter retains at most its own
+ * `limit` matches; the snapshot is the deduped union, so disjoint
+ * matches across filters can exceed any single cap. Removed slots
+ * are not refilled from the store.
  *
- * Limit handling is **per-filter**: each filter retains at most its
- * own `limit` matches in a private capped set, sorted by created_at
- * DESC + id ASC. The snapshot is the deduped union of those sets, so
- * when filter A and filter B match disjoint events the union can be
- * larger than any single filter's `limit`. We do not refill from the
- * store after a deletion — if a removal leaves a filter under cap, it
- * stays under cap until another match arrives.
- *
- * Ephemeral events (kinds `20000-29999`) reach the projection without
- * ever being persisted; they appear in the snapshot for as long as
- * the projection is alive but never survive a re-seed. They aren't
- * covered by the store's `deleteExpiredEvents()` sweep (the DB never
- * had them), so an ephemeral with an `expiration` tag will linger
- * until it's superseded or until the projection is closed.
- *
- * **Lifecycle**: this class is a pure state machine with no
- * coroutine ownership. Construct it, call [seed] once, then call
- * [apply] for each [StoreChange] from [ObservableEventStore.changes].
- * For the standard "wrap into a Flow and collect from a ViewModel"
- * use case, use the [ObservableEventStore.project] extension which
- * does this composition for you.
+ * Ephemeral events appear in the snapshot for as long as the
+ * projection is alive; they never survive a re-seed (the inner store
+ * never had them) and aren't touched by `deleteExpiredEvents()`.
  */
 class EventStoreProjection<T : Event>(
     private val store: ObservableEventStore,
@@ -174,9 +139,8 @@ class EventStoreProjection<T : Event>(
                 dropWhere { ev -> storeEvent.filters.any { it.match(ev) } }
             }
 
-            // Store's sweep uses strict `<`; isExpirationBefore is
-            // `<=`, so subtract 1 to match.
             is StoreChange.DeleteExpired -> {
+                // Store's sweep uses strict `<`; isExpirationBefore is `<=`, so subtract 1.
                 val cutoff = (storeEvent.asOf ?: nowProvider()) - 1
                 dropWhere { it.isExpirationBefore(cutoff) }
             }

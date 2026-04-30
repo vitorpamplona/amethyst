@@ -24,31 +24,21 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * Process-wide interner that canonicalises [Event] instances by id so
- * every consumer (relay client, store deserialization, projections,
- * tests) sees the same object reference for the same event id.
+ * Canonicalises [Event] instances by id so every consumer sees the
+ * same object reference for the same event id.
  *
  * Backed by weak references — entries vanish when no live consumer
- * holds the event, so the cache only grows as long as projections /
- * UI state actually need the events. Sized for ~5000 hot events; the
- * underlying map resizes if usage exceeds that.
- *
- * Use [intern] on every event arrival path. The first occurrence wins
- * and becomes canonical; subsequent equivalent decodes return that
- * canonical instance.
+ * holds the event. First-seen wins; equivalence is by event id, so
+ * callers must trust ids are content-derived (signed events satisfy
+ * this). Sized for ~5000 hot entries; resizes if usage exceeds that.
  *
  * Platforms without weak references fall back to a passthrough that
- * returns [event] unchanged — no canonicalisation, but no leaks
- * either.
+ * returns [event] unchanged — no canonicalisation, no leaks.
  */
 expect class EventInterner() {
     /**
-     * Returns the canonical [Event] for [event]'s id. If a live
-     * canonical instance already exists for this id, returns it;
-     * otherwise stores [event] as the new canonical and returns it.
-     *
-     * Equivalence is by event id only — callers must trust the id
-     * was content-derived (signed events satisfy this).
+     * Returns the canonical [Event] for [event]'s id, storing
+     * [event] as canonical if no live entry exists.
      */
     fun intern(event: Event): Event
 
@@ -62,7 +52,7 @@ expect class EventInterner() {
     fun clear()
 
     companion object {
-        /** Process-wide default interner used by [Event.fromJson]. */
+        /** Process-wide shared instance. */
         val Default: EventInterner
     }
 }
