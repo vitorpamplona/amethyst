@@ -616,7 +616,7 @@ fun ZapVote(
                     zappingProgress = 0f
                 },
                 onChangeAmount = { wantsToZap = false },
-                onError = { title, message, user ->
+                onError = { title, message, _ ->
                     showErrorMessageDialog = StringToastMsg(title, message)
                     zappingProgress = 0f
                 },

@@ -38,7 +38,7 @@ class ChannelFeedFilter(
     override fun changesFlow() = channel.changesFlow()
 
     // returns the last Note of each user.
-    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { key, it -> isChatEvent(it) && account.isAcceptable(it) })
+    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { _, it -> isChatEvent(it) && account.isAcceptable(it) })
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> =
         newItems

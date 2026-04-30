@@ -128,7 +128,7 @@ fun debugState(context: Context) {
             "Private Chats $key: " +
                 room.rooms.size() +
                 " / " +
-                room.rooms.sumOf { key, value -> value.messages.size }
+                room.rooms.sumOf { _, value -> value.messages.size }
         }
     }
     Log.d(

@@ -73,7 +73,7 @@ fun ChannelCardCompose(
                 showHiddenWarning = false,
                 accountViewModel = accountViewModel,
                 nav = nav,
-            ) { canPreview ->
+            ) { _ ->
                 NormalChannelCard(
                     baseNote = baseNote,
                     routeForLastRead = routeForLastRead,

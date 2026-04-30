@@ -159,7 +159,7 @@ fun RenderStrangeNamePreview() {
         RenderRegular(
             "If you want to FreeFrom Official \uD80C\uDD66 stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm at wss://relay.damus.io can you here",
             EmptyTagList,
-        ) { paragraph, state, spaceWidth, modifier ->
+        ) { paragraph, _, spaceWidth, modifier ->
             RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
                 when (word) {
                     is BechSegment -> {

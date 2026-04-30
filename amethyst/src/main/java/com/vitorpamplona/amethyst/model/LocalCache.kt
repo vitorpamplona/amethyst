@@ -1173,7 +1173,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                         }
                     }
 
-                notes.forEach { key, note ->
+                notes.forEach { _, note ->
                     val noteEvent = note.event
                     if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
                         if (noteEvent.pubKey == event.pubKey && noteEvent.createdAt <= event.createdAt) {
@@ -2485,7 +2485,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         val event = newNote.event as Event
 
         val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { t, u ->
+            java.util.function.BiConsumer<Observable, Observable> { _, u ->
                 u.new(event, newNote)
             }
 
@@ -2495,7 +2495,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     private fun refreshDeletedNoteObservers(newNote: Note) {
         val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { t, u ->
+            java.util.function.BiConsumer<Observable, Observable> { _, u ->
                 u.remove(newNote)
             }
 
