@@ -169,7 +169,6 @@ private fun NestFeedCard(
                 presence != null && presence <= TimeUtils.now() - PRESENCE_FRESHNESS_WINDOW_SECONDS
             }
 
-            StatusTag.STATUS.PLANNED,
             StatusTag.STATUS.PRIVATE,
             -> {
                 false
