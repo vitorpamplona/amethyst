@@ -1,155 +1,207 @@
-# Quartz
+# Quartz Guide for Clients
 
-A Kotlin Multiplatform Nostr library — protocol, signing, relay client, event store, and reactive projections. No UI, no Android dependencies in `commonMain`. Targets Android, JVM/Desktop, iOS, and Linux.
+Here's how to structure a new Twitter-like client.
 
-## Layered architecture
+## Architecture
 
-Build apps by composing layers from durable storage at the bottom up to UI projections at the top:
-
-```
-┌──────────────────────────────────────────┐
-│  UI / ViewModel                          │
-│  observable.project<T>(filter)           │
-│      .stateIn(scope, ...)                │  ← reactive list of MutableStateFlow<Event>
-└──────────────────────────────────────────┘
-                  ▲
-┌──────────────────────────────────────────┐
-│  ObservableEventStore                    │
-│  publishes StoreChange on `changes`      │  ← bus for reactive consumers
-└──────────────────────────────────────────┘
-                  ▲
-┌──────────────────────────────────────────┐
-│  InterningEventStore                     │
-│  one Event instance per id, weak refs    │  ← shared identity across reads
-└──────────────────────────────────────────┘
-                  ▲
-┌──────────────────────────────────────────┐
-│  EventStore (SQLite) / FsEventStore      │
-│  durable, NIP-01/09/40/62 enforced       │  ← persistence + Nostr semantics
-└──────────────────────────────────────────┘
-                  ▲
-┌──────────────────────────────────────────┐
-│  NostrClient                             │
-│  relay subscriptions, NIP-01 messages    │  ← network
-└──────────────────────────────────────────┘
-```
-
-Each layer is optional — you can use just `NostrClient` (see [CLIENT.md](CLIENT.md)), just `EventStore` (see [the SQLite store README](src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/sqlite/README.md)), or compose the full pipeline below.
-
-## Wiring relays into the store
-
-`NostrClient` delivers every event it receives through a connection-level message stream. Quartz ships an [`EventCollector`](src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/client/accessories/EventCollector.kt) that taps into this stream once and forwards every `EventMessage` into a sink — typically the store. Wire it once at app init and the cache-write path is decoupled from "what we ask for":
+Set up a Context class to wire Quartz components together. Usually there is only
+one instance of this class.
 
 ```kotlin
-// Application init — one set of these per process. Construct before any UI mounts.
-val sqlite = EventStore(dbName = "events.db", relay = "wss://relay.damus.io".normalizeRelayUrl())
-val db = ObservableEventStore(InterningEventStore(sqlite))
+object AppGraph {
+    // the local db
+    val sqlite = EventStore(dbName = "demo-events.db")
 
-val client = NostrClient(websocketBuilder = ktorBuilder)
+    // the local cache that keeps only one copy of each event in memory
+    val interned = InterningEventStore(sqlite)
 
-// Connection-wide drain: every EventMessage on every subscription on every
-// relay lands in the store, regardless of which subscription pulled it.
-val collector = EventCollector(client) { event, _ ->
-    appScope.launch { runCatching { db.insert(event) } }
-}
+    // the observable db, that you can produce flows that auto update
+    val db = ObservableEventStore(interned)
 
-// Periodic NIP-40 sweep — projections drop expired events when this fires.
-appScope.launch {
-    while (isActive) { delay(15.minutes); db.deleteExpiredEvents() }
+    // the client to access relays
+    val client = NostrClient(websocketBuilder = KtorWebSocket.Builder())
+
+    // sends all events, regardless of the subscription, to the local db
+    val collector = EventCollector(client) { event, _ ->
+        runCatching {
+            db.insert(event)
+        }
+    }
+
+    // update this variable when a user logs in, starts with a guest
+    var signer: NostrSigner = NostrSignerInternal(KeyPair())
 }
 ```
 
-`db.insert(event)` is idempotent under NIP-01 supersession (older replaceables / addressables are rejected by the inner store) and validates expiration / vanish tombstones, so it's safe to fire-and-forget for every relay arrival.
+Then use a view model to subscribe to relays and the local db at the same time,
+like this:
 
-`InterningEventStore` keeps one `Event` instance alive per id (weakly, via `EventInterner.Default`), so events that re-arrive from multiple relays — or get re-read by query — share the same object reference as long as some projection holds them.
+```kotlin
+class NotesFeed(
+    private val db: ObservableEventStore,
+    private val client: NostrClient,
+) {
+    private val subId = newSubId()
+    private val filter = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 100)
+    private val relays =
+        setOf(
+            "wss://relay.damus.io".normalizeRelayUrl(),
+            "wss://nos.lol".normalizeRelayUrl(),
+            "wss://relay.nostr.band".normalizeRelayUrl(),
+        )
+
+    val notes: Flow<ProjectionState<TextNoteEvent>> =
+        db
+            .project<TextNoteEvent>(filter)
+            .filterItems { it.value.isNewThread() }
+            .onStart { client.subscribe(subId, relays.associateWith { listOf(filter) }) }
+            .onCompletion { client.unsubscribe(subId) }
+}
+
+class FeedViewModel(
+    private val db: ObservableEventStore,
+    private val client: NostrClient,
+) : ViewModel() {
+    val notesFeed = NotesFeed(db, client)
+
+    val feed = notesFeed
+        .flow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProjectionState.Loading)
+
+    fun send(text: String, signer: NostrSigner) {
+        viewModelScope.launch {
+            val signed = signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
+            // Hits the bus → projection picks it up alongside any inbound relay copy.
+            db.insert(signed)
+            client.publish(signed, relays)
+        }
+    }
+}
+```
+
+Notice that the `notes` flow is ready for the UI and automatically subscribes
+and unsubscribes to any group of relays and filters the user wants. Similarly,
+the `send` function updates both the local db and the relay.
 
 `NostrClient` connects on-demand: the first `subscribe(...)` or `publish(...)` to a relay triggers the socket. There's no need to call `client.connect()` at startup — it's only useful for resuming after a prior `disconnect()`.
 
 ## Building a reactive feed UI
 
-A feed reads from the store via `ObservableEventStore.project()`, which returns a cold `Flow<ProjectionState<T>>`. The recommended pattern is to construct it inside a `ViewModel` so `viewModelScope` owns the `stateIn` lifecycle, and to tie the relay-side `subscribe` / `unsubscribe` to the projection's collection lifetime via `onStart` / `onCompletion`:
+A feed screen reads from the view model's feed flow, which only updates when
+new events arrive or are deleted due to kind 5 deletions, vanish requests or
+expirations.
 
 ```kotlin
-@Stable
-class HomeFeedViewModel(
-    private val db: ObservableEventStore,
-    private val client: NostrClient,
-    private val relays: Set<NormalizedRelayUrl>,
-    followedAuthors: List<HexKey>,
-) : ViewModel() {
-    private val subId = newSubId()
-    private val filter = Filter(kinds = listOf(1), authors = followedAuthors, limit = 200)
-
-    val state: StateFlow<ProjectionState<TextNoteEvent>> =
-        db
-            .project<TextNoteEvent>(filter)
-            // Optional: narrow the live projection without re-querying the store.
-            // ProjectionState.filterItems / mapItems lift over Loading / Loaded.
-            .filterItems { it.value.replyingTo() == null }
-            .onStart { client.subscribe(subId, relays.associateWith { listOf(filter) }) }
-            .onCompletion { client.unsubscribe(subId) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProjectionState.Loading)
+fun main() {
+    application {
+        val state = rememberWindowState(size = DpSize(560.dp, 720.dp))
+        Window(onCloseRequest = ::exitApplication, state = state, title = "Nostr Kind 1 Demo") {
+            MaterialTheme {
+                val viewModel = remember {
+                    FeedViewModel(AppGraph.db, AppGraph.client, AppGraph.signer)
+                }
+                val notes by viewModel.feed.collectAsState()
+                FeedScreen(state = notes, onSend = viewModel::send)
+            }
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeFeedScreen(vm: HomeFeedViewModel) {
-    val state by vm.state.collectAsState()
-    when (val s = state) {
-        is ProjectionState.Loading -> SpinnerScaffold()
-        is ProjectionState.Loaded -> {
-            // Layer 1: list reference is stable while membership is unchanged.
-            // LazyColumn only invalidates structure on inserts / removals.
-            LazyColumn {
-                items(s.items, key = { it.value.id }) { handle ->
-                    NoteRow(handle)
-                }
+fun FeedScreen(
+    state: ProjectionState<TextNoteEvent>,
+    onSend: (String) -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Nostr Kind 1 Demo") },
+            )
+        },
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Composer(onSend = onSend)
+            HorizontalDivider()
+            when (state) {
+                is ProjectionState.Loading -> LoadingFeed()
+                is ProjectionState.Loaded -> Feed(state.items)
             }
         }
     }
 }
 
 @Composable
-fun NoteRow(handle: MutableStateFlow<TextNoteEvent>) {
-    // Layer 2: only collectors of THIS handle re-render when the
-    // event mutates in place (addressable supersession, etc.).
-    val event by handle.collectAsState()
-    Column {
-        Text(event.content)
-        // Layer 3: derived flows — e.g. counters reactive to OTHER projections.
-        ReactionRow(event.id)
+private fun Composer(onSend: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("What's on your mind?") },
+            maxLines = 4,
+        )
+        Button(
+            onClick = {
+                if (text.isNotBlank()) {
+                    onSend(text)
+                    text = ""
+                }
+            },
+            enabled = text.isNotBlank(),
+        ) { Text("Post") }
+    }
+}
+
+@Composable
+private fun LoadingFeed() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun Feed(items: List<MutableStateFlow<TextNoteEvent>>) {
+    // The list reference is stable while membership is unchanged, so
+    // LazyColumn only invalidates structure on insert / removal.
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(items = items, key = { it.value.id }) { handle ->
+            NoteRow(handle)
+            HorizontalDivider()
+        }
+    }
+}
+
+@Composable
+private fun NoteRow(handle: MutableStateFlow<TextNoteEvent>) {
+    // Only collectors of THIS handle re-render when the event mutates
+    // in place (addressable supersession, etc.).
+    val note by handle.collectAsState()
+    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = note.pubKey.take(12) + "…",
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+                text = formatTime(note.createdAt),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+        Text(
+            text = note.content,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 ```
 
-The three layers map cleanly to Compose's recomposition model:
-
-- `state` re-renders the screen scaffolding (`Loading` vs `Loaded`).
-- `s.items` re-emits only when membership changes (insert, NIP-09 deletion, NIP-62 vanish, NIP-40 expiration sweep, manual `delete(filter)`, or a `filterItems` predicate flip).
-- `handle` re-emits only when its specific event mutates in place (e.g. a new version of a kind-30023 long-form post supersedes the previous one).
-
-`SharingStarted.WhileSubscribed(5_000)` ties the relay subscription's lifetime to the UI: when the last collector goes away (composable leaves the tree, window minimised, etc.), `onCompletion` fires after a 5 s debounce and `client.unsubscribe(subId)` runs. A new collector restarts the upstream and `onStart` re-opens the subscription — the cache stays warm in SQLite the whole time.
-
-## Publishing from the UI
-
-Sign locally, drop on the bus, then broadcast to relays:
-
-```kotlin
-val signer = NostrSignerInternal(KeyPair())
-
-fun send(text: String) {
-    viewModelScope.launch {
-        val signed = signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
-        db.insert(signed)              // hits the bus → all open projections see it
-        client.publish(signed, relays) // broadcast to relays
-    }
-}
-```
-
-`db.insert(signed)` enforces NIP-01 supersession, NIP-09 author checks, NIP-62 vanish scoping, and NIP-40 expiration on the way in; the projection layer applies the same rules on top. UI code never needs to know any of these details.
-
-## Where to read more
-
-- [`CLIENT.md`](CLIENT.md) — building a relay client with `NostrClient` and Ktor.
-- [`RELAY.md`](RELAY.md) — running a relay server with Quartz.
-- [SQLite event store README](src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/sqlite/README.md) — query planner, indexing strategies, NIP-09/40/62 enforcement details.
-- KDoc on `EventStoreProjection`, `ObservableEventStore`, `EventInterner` — package-level reference for the projection layer.
+Notice how each how also subscribe for changes. This is important to receive
+updates from replaceable and addressable events.
