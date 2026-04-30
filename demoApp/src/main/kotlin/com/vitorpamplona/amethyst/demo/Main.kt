@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.demo
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -84,22 +83,24 @@ private fun buildAppGraph(): AppGraph {
     return AppGraph(client, db, signer, collector)
 }
 
-fun main() =
+fun main() {
+    // Process-singleton dependencies — built once, before any UI mounts.
+    // NostrClient starts active by default and connects relays
+    // on-demand when subscriptions arrive, so no client.connect() needed.
+    val graph = buildAppGraph()
+
     application {
         val state = rememberWindowState(size = DpSize(560.dp, 720.dp))
         Window(onCloseRequest = ::exitApplication, state = state, title = "Nostr Kind 1 Demo") {
             MaterialTheme {
-                val graph = remember { buildAppGraph() }
-
                 val viewModel =
-                    remember(graph) {
+                    remember {
                         FeedViewModel(graph.db, graph.client, graph.signer)
                     }
                 val notes by viewModel.notes.collectAsState()
-
-                LaunchedEffect(Unit) { graph.client.connect() }
 
                 FeedScreen(state = notes, onSend = viewModel::send)
             }
         }
     }
+}
