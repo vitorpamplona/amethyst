@@ -90,7 +90,7 @@ class NestsFeedFilter(
             val noteEvent = it.event as? MeetingSpaceEvent ?: return@filterTo false
             if (!hasMinimumNestFields(noteEvent)) return@filterTo false
             if (!isWithinPlannedWindow(noteEvent, now)) return@filterTo false
-            if (!isLiveByPresence(noteEvent, presenceCutoff)) return@filterTo false
+            if (!hasFreshSpeakers(noteEvent, presenceCutoff)) return@filterTo false
 
             if (filterParams.match(noteEvent, it.relays)) return@filterTo true
 
@@ -151,19 +151,24 @@ class NestsFeedFilter(
     }
 
     /**
-     * Drop OPEN/PRIVATE rooms that have no kind-10312 presence in the
-     * last [PRESENCE_FRESHNESS_WINDOW_SECONDS] AND were not created in
-     * the same window. The "created recently" grace lets brand-new
-     * rooms surface before any speaker has had time to publish their
-     * first heartbeat. Mirrors the NostrNests lobby gate — needs the
-     * lobby-wide kind-10312 REQ added in `filterNestsGlobal` to be
-     * meaningful.
+     * Drop OPEN/PRIVATE rooms whose live speaker slate is empty. A room
+     * with no fresh kind-10312 presence carrying `onstage=1` published
+     * in the last [PRESENCE_FRESHNESS_WINDOW_SECONDS] has no one left
+     * on stage — even if the kind-30312 status still says `live`,
+     * there is nothing to listen to and the room has effectively
+     * ended. Mirrors (and tightens) the NostrNests lobby gate.
      *
-     * CLOSED and PLANNED rooms bypass this gate: CLOSED rooms may
-     * carry a recording (EGG-11), and PLANNED rooms have not started
-     * yet so no presence is expected.
+     * Brand-new rooms get a created-at grace so they surface before
+     * the first speaker heartbeat arrives. CLOSED rooms bypass this
+     * gate (they may carry a recording — EGG-11), as do PLANNED rooms
+     * (not started yet, no presence expected).
+     *
+     * Reads the room's [LiveActivitiesChannel.presenceNotes] index
+     * (keyed by author, populated by
+     * `LocalCache.consume(MeetingRoomPresenceEvent)`) so the scan is
+     * O(speakers) instead of O(all chat + zaps + presence).
      */
-    private fun isLiveByPresence(
+    private fun hasFreshSpeakers(
         event: MeetingSpaceEvent,
         presenceCutoff: Long,
     ): Boolean {
@@ -172,13 +177,15 @@ class NestsFeedFilter(
         if (event.createdAt > presenceCutoff) return true
 
         val channel = LocalCache.getLiveActivityChannelIfExists(event.address()) ?: return false
-        var fresh = false
-        channel.notes.forEach { _, note ->
-            if (fresh) return@forEach
+        var hasSpeaker = false
+        channel.presenceNotes.forEach { _, note ->
+            if (hasSpeaker) return@forEach
             val e = note.event
-            if (e is MeetingRoomPresenceEvent && e.createdAt > presenceCutoff) fresh = true
+            if (e is MeetingRoomPresenceEvent && e.createdAt > presenceCutoff && e.onstage() == true) {
+                hasSpeaker = true
+            }
         }
-        return fresh
+        return hasSpeaker
     }
 
     /**

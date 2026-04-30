@@ -291,9 +291,9 @@ private fun observeRoomLatestPresence(
             channel
                 .flow()
                 .notes.stateFlow
-                .mapLatest { state ->
+                .mapLatest { _ ->
                     var max: Long? = null
-                    state.channel.notes.forEach { _, note ->
+                    channel.presenceNotes.forEach { _, note ->
                         val event = note.event
                         if (event is MeetingRoomPresenceEvent) {
                             val createdAt = event.createdAt
