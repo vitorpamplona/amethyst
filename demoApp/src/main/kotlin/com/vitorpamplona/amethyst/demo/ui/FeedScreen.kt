@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.demo.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -43,10 +45,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.quartz.nip01Core.cache.projection.ProjectionState
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,11 +58,9 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
-    notesFlow: StateFlow<List<TextNoteEvent>>,
+    state: ProjectionState<TextNoteEvent>,
     onSend: (String) -> Unit,
 ) {
-    val notes by notesFlow.collectAsState()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -70,7 +72,10 @@ fun FeedScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Composer(onSend = onSend)
             HorizontalDivider()
-            Feed(notes)
+            when (state) {
+                is ProjectionState.Loading -> LoadingFeed()
+                is ProjectionState.Loaded -> Feed(state.items)
+            }
         }
     }
 }
@@ -103,17 +108,29 @@ private fun Composer(onSend: (String) -> Unit) {
 }
 
 @Composable
-private fun Feed(notes: List<TextNoteEvent>) {
+private fun LoadingFeed() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun Feed(items: List<MutableStateFlow<TextNoteEvent>>) {
+    // The list reference is stable while membership is unchanged, so
+    // LazyColumn only invalidates structure on insert / removal.
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(items = notes, key = { it.id }) { note ->
-            NoteRow(note)
+        items(items = items, key = { it.value.id }) { handle ->
+            NoteRow(handle)
             HorizontalDivider()
         }
     }
 }
 
 @Composable
-private fun NoteRow(note: TextNoteEvent) {
+private fun NoteRow(handle: MutableStateFlow<TextNoteEvent>) {
+    // Only collectors of THIS handle re-render when the event mutates
+    // in place (addressable supersession, etc.).
+    val note by handle.collectAsState()
     Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(

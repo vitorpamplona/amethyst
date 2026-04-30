@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.demo
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.DpSize
@@ -29,15 +31,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.demo.data.EventRepository
+import com.vitorpamplona.amethyst.demo.data.RelayBridge
 import com.vitorpamplona.amethyst.demo.net.KtorWebSocket
 import com.vitorpamplona.amethyst.demo.ui.FeedScreen
+import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
+import com.vitorpamplona.quartz.nip01Core.cache.projection.ProjectionState
+import com.vitorpamplona.quartz.nip01Core.cache.projection.project
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.SQLiteEventStore
+import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,35 +65,44 @@ private val FEED_FILTER =
         limit = 100,
     )
 
+/**
+ * Single object holding the layered Quartz stack from the README:
+ *
+ *   NostrClient  →  ObservableEventStore  →  InterningEventStore  →  EventStore (SQLite)
+ *
+ * `bridge` pumps relay events into `observable.insert`. The UI reads
+ * via `observable.project<TextNoteEvent>(filter)` — no hand-rolled flow.
+ */
 private class AppGraph(
-    val notesRepo: EventRepository<TextNoteEvent>,
-    val signer: NostrSignerInternal,
     val client: NostrClient,
+    val observable: ObservableEventStore,
+    val signer: NostrSignerInternal,
+    val bridge: RelayBridge,
 )
 
 private fun buildAppGraph(): AppGraph {
     val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // Bottom: durable SQLite-backed event store.
+    val sqlite = EventStore(dbName = "demo-events.db")
+
+    // Middle: weak-ref interner so the same id deserialises to the
+    // same Event instance across reads.
+    val interned = InterningEventStore(sqlite)
+
+    // Top: reactive bus for projections.
+    val observable = ObservableEventStore(interned)
+
+    // Network: Ktor-driven WebSocket transport for relays.
+    val client = NostrClient(websocketBuilder = KtorWebSocket.Builder())
+
+    // Bridge: pumps every relay arrival into observable.insert.
+    val bridge = RelayBridge(client, observable, DEMO_RELAYS, scope)
+
     // Throwaway identity for the demo. Restart the app -> new keys.
     val signer = NostrSignerInternal(KeyPair())
 
-    // Quartz's bundled SQLite driver, file-backed in the working directory.
-    val store = SQLiteEventStore(dbName = "demo-events.db")
-
-    // Ktor-driven WebSocket transport (see KtorWebSocket.kt).
-    val client = NostrClient(websocketBuilder = KtorWebSocket.Builder())
-
-    // Generic repository, narrowed to TextNoteEvent for this demo.
-    val notesRepo =
-        EventRepository<TextNoteEvent>(
-            store = store,
-            client = client,
-            relays = DEMO_RELAYS,
-            scope = scope,
-            accept = { it as? TextNoteEvent },
-        )
-
-    return AppGraph(notesRepo, signer, client)
+    return AppGraph(client, observable, signer, bridge)
 }
 
 fun main() =
@@ -98,17 +113,29 @@ fun main() =
                 val graph = remember { buildAppGraph() }
                 val uiScope = rememberCoroutineScope()
 
+                // Projection over the local store. Compose collects this
+                // directly — Loading until the seed query completes,
+                // then a fresh Loaded snapshot per membership change.
+                val projection =
+                    remember(graph) {
+                        graph.observable.project<TextNoteEvent>(FEED_FILTER)
+                    }
+                val projectionState by projection.collectAsState(initial = ProjectionState.Loading)
+
                 LaunchedEffect(Unit) {
                     graph.client.connect()
-                    graph.notesRepo.observe(FEED_FILTER)
+                    graph.bridge.start(FEED_FILTER)
                 }
 
                 FeedScreen(
-                    notesFlow = graph.notesRepo.events,
+                    state = projectionState,
                     onSend = { text ->
                         uiScope.launch {
                             val signed = graph.signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
-                            graph.notesRepo.publish(signed)
+                            // Hits the bus → the projection picks it up
+                            // alongside any inbound relay copy.
+                            graph.observable.insert(signed)
+                            graph.client.publish(signed, DEMO_RELAYS)
                         }
                     },
                 )
