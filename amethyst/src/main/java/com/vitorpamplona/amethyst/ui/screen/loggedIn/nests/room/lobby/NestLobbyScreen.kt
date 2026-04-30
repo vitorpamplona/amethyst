@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -122,7 +123,7 @@ fun NestLobbyScreen(
     LoadAddressableNote(address, accountViewModel) { addressableNote ->
         addressableNote ?: return@LoadAddressableNote
         val event = addressableNote.event as? MeetingSpaceEvent ?: return@LoadAddressableNote
-        NestLobbyContent(event, accountViewModel, nav)
+        NestLobbyContent(event, addressableNote, accountViewModel, nav)
     }
 }
 
@@ -130,6 +131,7 @@ fun NestLobbyScreen(
 @Composable
 private fun NestLobbyContent(
     event: MeetingSpaceEvent,
+    addressableNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -137,7 +139,7 @@ private fun NestLobbyContent(
 
     // Keep cached chat / presence warm while the user is on the lobby.
     // No MoQ session is opened — that's gated behind the Open action.
-    NestRoomFilterAssemblerSubscription(roomATag, accountViewModel)
+    NestRoomFilterAssemblerSubscription(addressableNote, accountViewModel)
 
     // Composer for kind-1311 chat. Same widget the in-room screen uses,
     // so the user gets @-mention picker, file uploads, draft auto-save,

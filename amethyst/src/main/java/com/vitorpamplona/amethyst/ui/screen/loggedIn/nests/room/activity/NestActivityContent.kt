@@ -161,7 +161,7 @@ private fun NestActivityBody(
 
     // Single REQ per relay covering chat, presence, reactions, admin
     // commands. See NestRoomFilterAssembler for the filter shape.
-    NestRoomFilterAssemblerSubscription(roomATag, accountViewModel)
+    NestRoomFilterAssemblerSubscription(roomNote, accountViewModel)
 
     // Read side: LocalCache → VM. Each kind has its own collector
     // (different VM hook per kind) plus the two eviction tickers.

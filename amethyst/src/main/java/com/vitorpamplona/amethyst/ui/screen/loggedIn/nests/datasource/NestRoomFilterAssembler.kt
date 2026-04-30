@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 
 /**
@@ -46,7 +48,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresence
  */
 @Stable
 class NestRoomQueryState(
-    val roomATag: String,
+    val note: AddressableNote,
     val account: Account,
 )
 
@@ -79,7 +81,8 @@ class NestRoomFilterSubAssembler(
         key: NestRoomQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val relays = key.account.outboxRelays.flow.value
+        val relays = key.account.outboxRelays.flow.value + key.note.relays + ((key.note.event as? MeetingSpaceEvent)?.relays()?.toSet() ?: emptySet())
+
         return relays.flatMap { relay ->
             listOf(
                 RelayBasedFilter(
@@ -92,7 +95,7 @@ class NestRoomFilterSubAssembler(
                                     MeetingRoomPresenceEvent.KIND,
                                     ReactionEvent.KIND,
                                 ),
-                            tags = mapOf("a" to listOf(key.roomATag)),
+                            tags = mapOf("a" to listOf(key.note.idHex)),
                             since = since?.get(relay)?.time,
                         ),
                 ),
@@ -101,7 +104,7 @@ class NestRoomFilterSubAssembler(
                     filter =
                         Filter(
                             kinds = listOf(AdminCommandEvent.KIND),
-                            tags = mapOf("a" to listOf(key.roomATag), "p" to listOf(key.account.pubKey)),
+                            tags = mapOf("a" to listOf(key.note.idHex), "p" to listOf(key.account.pubKey)),
                             since = since?.get(relay)?.time,
                         ),
                 ),
@@ -109,7 +112,7 @@ class NestRoomFilterSubAssembler(
         }
     }
 
-    override fun id(key: NestRoomQueryState): String = key.roomATag
+    override fun id(key: NestRoomQueryState): String = key.note.idHex
 }
 
 @Stable
@@ -135,23 +138,23 @@ class NestRoomFilterAssembler(
  */
 @Composable
 fun NestRoomFilterAssemblerSubscription(
-    roomATag: String,
+    note: AddressableNote,
     accountViewModel: AccountViewModel,
 ) = NestRoomFilterAssemblerSubscription(
-    roomATag,
+    note,
     accountViewModel.account,
     accountViewModel.dataSources().nestRoom,
 )
 
 @Composable
 fun NestRoomFilterAssemblerSubscription(
-    roomATag: String,
+    note: AddressableNote,
     account: Account,
     filterAssembler: NestRoomFilterAssembler,
 ) {
     val state =
-        remember(roomATag, account.pubKey) {
-            NestRoomQueryState(roomATag, account)
+        remember(note, account.pubKey) {
+            NestRoomQueryState(note, account)
         }
     KeyDataSourceSubscription(state, filterAssembler)
 }

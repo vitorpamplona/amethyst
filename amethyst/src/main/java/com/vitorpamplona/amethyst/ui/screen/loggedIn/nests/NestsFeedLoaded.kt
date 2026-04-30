@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
@@ -176,6 +177,7 @@ private fun NestFeedCard(
                 true
             }
         }
+    val addressableNote = baseNote as? AddressableNote ?: return
 
     val onClick =
         remember(meetingEvent, isUiClosed) {
@@ -205,7 +207,7 @@ private fun NestFeedCard(
                 note = baseNote,
                 accountViewModel = accountViewModel,
             ) {
-                ObserveAndRenderSpace(baseNote, accountViewModel, nav)
+                ObserveAndRenderSpace(addressableNote, accountViewModel, nav)
             }
         }
     }
@@ -213,7 +215,7 @@ private fun NestFeedCard(
 
 @Composable
 fun ObserveAndRenderSpace(
-    baseNote: Note,
+    baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -284,14 +286,14 @@ private const val PRESENCE_FRESHNESS_WINDOW_SECONDS = 180L
  */
 @Composable
 private fun RenderLiveOrEndedFromPresence(
-    address: Address?,
+    note: AddressableNote?,
     accountViewModel: AccountViewModel,
 ) {
-    if (address == null) {
+    if (note == null) {
         LiveFlag()
         return
     }
-    val latestPresence by observeRoomLatestPresence(address, accountViewModel)
+    val latestPresence by observeRoomLatestPresence(note, accountViewModel)
     val fresh = latestPresence == null || latestPresence!! > TimeUtils.now() - PRESENCE_FRESHNESS_WINDOW_SECONDS
     if (fresh) LiveFlag() else EndedFlag()
 }
@@ -310,12 +312,12 @@ private fun RenderLiveOrEndedFromPresence(
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 private fun observeRoomLatestPresence(
-    address: Address,
+    note: AddressableNote,
     accountViewModel: AccountViewModel,
 ): State<Long?> {
-    NestRoomFilterAssemblerSubscription(address.toValue(), accountViewModel)
+    NestRoomFilterAssemblerSubscription(note, accountViewModel)
 
-    val channel = remember(address) { LocalCache.getOrCreateLiveChannel(address) }
+    val channel = remember(note.idHex) { LocalCache.getOrCreateLiveChannel(note.address) }
     val flow =
         remember(channel) {
             channel
@@ -340,7 +342,7 @@ private fun observeRoomLatestPresence(
 @Composable
 fun RenderLiveSpacesThumb(
     card: NestCard,
-    baseNote: Note,
+    baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -370,7 +372,7 @@ fun RenderLiveSpacesThumb(
                 CrossfadeIfEnabled(targetState = card.status, accountViewModel = accountViewModel) {
                     when (it) {
                         StatusTag.STATUS.LIVE -> {
-                            RenderLiveOrEndedFromPresence(card.id, accountViewModel)
+                            RenderLiveOrEndedFromPresence(baseNote, accountViewModel)
                         }
 
                         StatusTag.STATUS.ENDED -> {
@@ -419,7 +421,7 @@ fun RenderLiveSpacesThumb(
 @Composable
 fun SpaceHostAndReactions(
     name: String?,
-    baseNote: Note,
+    baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
