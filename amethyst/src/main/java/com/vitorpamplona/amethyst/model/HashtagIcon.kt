@@ -61,7 +61,7 @@ fun RenderHashTagIconsPreview() {
         RenderRegular(
             "Testing rendering of hashtags: #flowerstr #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate, #gamestr, #gamechain",
             EmptyTagList,
-        ) { paragraph, state, spaceWidth, modifier ->
+        ) { paragraph, _, spaceWidth, modifier ->
             RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
                 when (word) {
                     is HashTagSegment -> HashTag(word, EmptyNav())

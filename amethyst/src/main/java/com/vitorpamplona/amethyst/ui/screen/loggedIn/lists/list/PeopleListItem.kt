@@ -127,7 +127,7 @@ private fun PeopleListItemPreview() {
                 peopleList = samplePeopleList1,
                 onClick = {},
                 onEditMetadata = {},
-                onClone = { newName, newDesc -> },
+                onClone = { _, _ -> },
                 onDelete = {},
             )
             PeopleListItem(
@@ -135,7 +135,7 @@ private fun PeopleListItemPreview() {
                 peopleList = samplePeopleList2,
                 onClick = {},
                 onEditMetadata = {},
-                onClone = { newName, newDesc -> },
+                onClone = { _, _ -> },
                 onDelete = {},
             )
             PeopleListItem(
@@ -143,7 +143,7 @@ private fun PeopleListItemPreview() {
                 peopleList = samplePeopleList3,
                 onClick = {},
                 onEditMetadata = {},
-                onClone = { newName, newDesc -> },
+                onClone = { _, _ -> },
                 onDelete = {},
             )
             PeopleListItem(
@@ -151,7 +151,7 @@ private fun PeopleListItemPreview() {
                 peopleList = samplePeopleList4,
                 onClick = {},
                 onEditMetadata = {},
-                onClone = { newName, newDesc -> },
+                onClone = { _, _ -> },
                 onDelete = {},
             )
         }
@@ -341,7 +341,7 @@ private fun ListOptionsMenu(
             onCloneDescChange = {
                 optionalCloneDescription.value = it
             },
-            onCloneCreate = { name, description ->
+            onCloneCreate = { _, _ ->
                 onListClone(optionalCloneName.value, optionalCloneDescription.value)
             },
             onDismiss = { isCopyDialogOpen.value = false },

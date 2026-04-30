@@ -65,10 +65,10 @@ class HomeLiveFilter(
         val fifteenMinsAgo = limitTime()
 
         val list =
-            LocalCache.ephemeralChannels.filter { id, channel ->
+            LocalCache.ephemeralChannels.filter { _, channel ->
                 shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
             } +
-                LocalCache.liveChatChannels.filter { id, channel ->
+                LocalCache.liveChatChannels.filter { _, channel ->
                     shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
                 }
 
@@ -81,7 +81,7 @@ class HomeLiveFilter(
         timeLimit: Long,
     ): Boolean =
         channel.notes
-            .filter { key, value ->
+            .filter { _, value ->
                 acceptableChatEvent(value, filterParams, timeLimit)
             }.isNotEmpty()
 
@@ -104,7 +104,7 @@ class HomeLiveFilter(
         }
 
         return channel.notes
-            .filter { key, value ->
+            .filter { _, value ->
                 acceptableChatEvent(value, filterParams, timeLimit)
             }.isNotEmpty()
     }
@@ -275,7 +275,7 @@ class HomeLiveFilter(
     ): Int {
         var count = 0
 
-        channel.notes.forEach { key, value ->
+        channel.notes.forEach { _, value ->
             val author = value.author
             if (author != null) {
                 if (followingSet == null || author.pubkeyHex in followingSet) {

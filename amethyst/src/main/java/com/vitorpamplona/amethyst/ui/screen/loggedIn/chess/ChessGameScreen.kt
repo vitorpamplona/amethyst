@@ -345,7 +345,7 @@ fun ChessGameScreen(
                     modifier = Modifier.padding(paddingValues),
                     gameState = gameState,
                     opponentName = opponentDisplayName,
-                    onMoveMade = { from, to, san ->
+                    onMoveMade = { from, to, _ ->
                         chessViewModel.publishMove(gameId, from, to)
                     },
                     onResign = { chessViewModel.resign(gameId) },

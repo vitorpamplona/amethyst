@@ -56,7 +56,7 @@ fun GalleryCardCompose(
             showHiddenWarning = true,
             accountViewModel = accountViewModel,
             nav = nav,
-        ) { canPreview ->
+        ) { _ ->
             val galleryEvent = baseNote.event
 
             val redirectToEventId =

@@ -59,7 +59,7 @@ class LiveStreamsFeedFilter(
 
     override fun feed(): List<Note> {
         val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
-        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
+        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { _, it -> it.event is LiveActivitiesEvent } }.flatten()
 
         val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
 

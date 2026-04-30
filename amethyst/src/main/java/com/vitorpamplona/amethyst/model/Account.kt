@@ -1046,7 +1046,7 @@ class Account(
                     client
                         .fetchFirst(
                             filters =
-                                note.relays.associateWith { relay ->
+                                note.relays.associateWith { _ ->
                                     listOf(
                                         Filter(
                                             kinds = listOf(host.kind),
