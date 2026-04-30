@@ -108,6 +108,7 @@ fun HomeScreen(
         liveFeedState = accountViewModel.feedStates.homeLive,
         newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
         repliesFeedState = accountViewModel.feedStates.homeReplies,
+        everythingFeedState = accountViewModel.feedStates.homeEverything,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -119,18 +120,20 @@ fun HomeScreen(
     liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
+    everythingFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchAccountForHomeScreen(liveFeedState, newThreadsFeedState, repliesFeedState, accountViewModel)
+    WatchAccountForHomeScreen(liveFeedState, newThreadsFeedState, repliesFeedState, everythingFeedState, accountViewModel)
 
     WatchLifecycleAndUpdateModel(liveFeedState)
     WatchLifecycleAndUpdateModel(newThreadsFeedState)
     WatchLifecycleAndUpdateModel(repliesFeedState)
+    WatchLifecycleAndUpdateModel(everythingFeedState)
 
     HomeFilterAssemblerSubscription(accountViewModel)
 
-    AssembleHomeTabs(newThreadsFeedState, repliesFeedState, liveFeedState) { pagerState, tabItems ->
+    AssembleHomeTabs(newThreadsFeedState, repliesFeedState, everythingFeedState, liveFeedState, accountViewModel) { pagerState, tabItems ->
         HomePages(pagerState, tabItems, accountViewModel, nav)
     }
 }
@@ -140,32 +143,73 @@ fun HomeScreen(
 private fun AssembleHomeTabs(
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
+    everythingFeedState: FeedContentState,
     liveFeedState: ChannelFeedContentState,
+    accountViewModel: AccountViewModel,
     inner: @Composable (PagerState, ImmutableList<TabItem>) -> Unit,
 ) {
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { 2 }
+    val showNewThreads by accountViewModel.settings.uiSettingsFlow.showHomeNewThreadsTab
+        .collectAsStateWithLifecycle()
+    val showConversations by accountViewModel.settings.uiSettingsFlow.showHomeConversationsTab
+        .collectAsStateWithLifecycle()
+    val showEverything by accountViewModel.settings.uiSettingsFlow.showHomeEverythingTab
+        .collectAsStateWithLifecycle()
 
     val tabs by
-        remember(newThreadsFeedState, repliesFeedState) {
+        remember(newThreadsFeedState, repliesFeedState, everythingFeedState, showNewThreads, showConversations, showEverything) {
             mutableStateOf(
-                listOf(
-                    TabItem(
-                        resource = R.string.new_threads,
-                        feedState = newThreadsFeedState,
-                        routeForLastRead = "HomeFollows",
-                        scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
-                        liveSection = liveFeedState,
-                    ),
-                    TabItem(
-                        resource = R.string.conversations,
-                        feedState = repliesFeedState,
-                        routeForLastRead = "HomeFollowsReplies",
-                        scrollStateKey = ScrollStateKeys.HOME_REPLIES,
-                        liveSection = liveFeedState,
-                    ),
-                ).toImmutableList(),
+                buildList {
+                    if (showNewThreads) {
+                        add(
+                            TabItem(
+                                resource = R.string.new_threads,
+                                feedState = newThreadsFeedState,
+                                routeForLastRead = "HomeFollows",
+                                scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                    if (showConversations) {
+                        add(
+                            TabItem(
+                                resource = R.string.conversations,
+                                feedState = repliesFeedState,
+                                routeForLastRead = "HomeFollowsReplies",
+                                scrollStateKey = ScrollStateKeys.HOME_REPLIES,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                    if (showEverything) {
+                        add(
+                            TabItem(
+                                resource = R.string.home_tab_everything,
+                                feedState = everythingFeedState,
+                                routeForLastRead = "HomeFollowsEverything",
+                                scrollStateKey = ScrollStateKeys.HOME_EVERYTHING,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                    // Always render at least one tab so the screen doesn't go blank
+                    // if the user disables every option.
+                    if (isEmpty()) {
+                        add(
+                            TabItem(
+                                resource = R.string.new_threads,
+                                feedState = newThreadsFeedState,
+                                routeForLastRead = "HomeFollows",
+                                scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                }.toImmutableList(),
             )
         }
+
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { tabs.size }
 
     inner(pagerState, tabs)
 }
@@ -182,19 +226,21 @@ private fun HomePages(
         topBar = {
             Column {
                 HomeTopBar(accountViewModel, nav)
-                SecondaryTabRow(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    modifier = TabRowHeight,
-                    selectedTabIndex = pagerState.currentPage,
-                ) {
-                    val coroutineScope = rememberCoroutineScope()
-                    tabs.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            text = { Text(text = stringRes(tab.resource)) },
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                        )
+                if (tabs.size > 1) {
+                    SecondaryTabRow(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.onBackground,
+                        modifier = TabRowHeight,
+                        selectedTabIndex = pagerState.currentPage,
+                    ) {
+                        val coroutineScope = rememberCoroutineScope()
+                        tabs.forEachIndexed { index, tab ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                text = { Text(text = stringRes(tab.resource)) },
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                            )
+                        }
                     }
                 }
             }
@@ -506,6 +552,7 @@ fun WatchAccountForHomeScreen(
     liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
+    everythingFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     val homeFollowList by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
@@ -513,6 +560,7 @@ fun WatchAccountForHomeScreen(
     LaunchedEffect(accountViewModel, homeFollowList) {
         newThreadsFeedState.checkKeysInvalidateDataAndSendToTop()
         repliesFeedState.checkKeysInvalidateDataAndSendToTop()
+        everythingFeedState.checkKeysInvalidateDataAndSendToTop()
         liveFeedState.checkKeysInvalidateDataAndSendToTop()
     }
 }

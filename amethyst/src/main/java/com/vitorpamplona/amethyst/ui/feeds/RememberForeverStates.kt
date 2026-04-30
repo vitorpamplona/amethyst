@@ -41,6 +41,7 @@ object ScrollStateKeys {
     const val VIDEO_SCREEN = "VideoFeed"
     const val HOME_FOLLOWS = "HomeFollowsFeed"
     const val HOME_REPLIES = "HomeFollowsRepliesFeed"
+    const val HOME_EVERYTHING = "HomeFollowsEverythingFeed"
     const val MESSAGES_KNOWN = "MessagesKnown"
     const val MESSAGES_NEW = "MessagesNew"
     const val PROFILE_GALLERY = "ProfileGalleryFeed"

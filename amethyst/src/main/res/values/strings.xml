@@ -1726,6 +1726,9 @@
     <string name="bottom_bar_settings_description">Drag to reorder. Toggle to add or remove an item from the bottom bar. With zero items the bottom bar is hidden.</string>
     <string name="bottom_bar_settings_available">Available</string>
     <string name="bottom_bar_settings_reorder">Reorder</string>
+    <string name="home_tabs_settings">Home Tabs</string>
+    <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
+    <string name="home_tab_everything">Everything</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
