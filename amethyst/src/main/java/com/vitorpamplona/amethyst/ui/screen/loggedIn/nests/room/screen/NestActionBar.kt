@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledIconButton
@@ -338,15 +337,6 @@ private fun OnStageControls(
         }
 
         is BroadcastUiState.Broadcasting -> {
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text(stringRes(R.string.nest_broadcasting)) },
-                colors =
-                    AssistChipDefaults.assistChipColors(
-                        disabledLabelColor = MaterialTheme.colorScheme.error,
-                    ),
-            )
             FilledTonalIconToggleButton(
                 checked = broadcast.isMuted,
                 onCheckedChange = { viewModel.setMicMuted(it) },

@@ -521,7 +521,6 @@
     <string name="nest_mic_mute">Mute mic</string>
     <string name="nest_mic_unmute">Unmute mic</string>
     <string name="nest_broadcast_connecting">Going live…</string>
-    <string name="nest_broadcasting">Live</string>
     <string name="nest_broadcast_failed">Broadcast failed: %1$s</string>
     <string name="nest_mute_failed">Mute failed: %1$s</string>
     <string name="nest_record_permission_required">Microphone access is required to talk in this room.</string>
