@@ -66,7 +66,7 @@ open class FsEventStore(
      * `null`, only "ALL_RELAYS" vanish requests cascade — matches
      * `SQLiteEventStore`'s relay arg semantics.
      */
-    private val relay: NormalizedRelayUrl? = null,
+    override val relay: NormalizedRelayUrl? = null,
     /**
      * How to render an event to JSON before writing the canonical file.
      * Default is the compact NIP-01 form ([Event.toJson]); CLIs that

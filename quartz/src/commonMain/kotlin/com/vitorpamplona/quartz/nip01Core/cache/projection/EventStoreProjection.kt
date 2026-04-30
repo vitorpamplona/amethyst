@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.store.projection
+package com.vitorpamplona.quartz.nip01Core.cache.projection
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -26,7 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
+import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore.StoreChange
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -76,8 +77,8 @@ import kotlinx.coroutines.yield
  *        handle owned by the same author (for GiftWrap, the recipient).
  *        Cross-author deletions are inert.
  *      - **NIP-62 right to vanish.** A [RequestToVanishEvent] whose
- *        `shouldVanishFrom([relay])` is true drops every handle from
- *        the same author with `created_at < vanish.created_at`.
+ *        `shouldVanishFrom(store.relay)` is true drops every handle
+ *        from the same author with `created_at < vanish.created_at`.
  *      - **NIP-40 expiration.** Events whose `expiration` tag has
  *        already lapsed at the moment they arrive are dropped before
  *        they ever enter [items].
@@ -115,7 +116,6 @@ import kotlinx.coroutines.yield
 class EventStoreProjection<T : Event>(
     private val store: ObservableEventStore,
     private val filters: List<Filter>,
-    private val relay: NormalizedRelayUrl?,
     scope: CoroutineScope,
     private val nowProvider: () -> Long = TimeUtils::now,
 ) : AutoCloseable {
@@ -199,7 +199,7 @@ class EventStoreProjection<T : Event>(
         if (event is DeletionEvent) {
             if (handleDeletion(event)) changed = true
         }
-        if (event is RequestToVanishEvent && event.shouldVanishFrom(relay)) {
+        if (event is RequestToVanishEvent && event.shouldVanishFrom(store.relay)) {
             if (dropWhere { ev -> ownerOf(ev) == event.pubKey && ev.createdAt < event.createdAt }) changed = true
         }
 
@@ -408,3 +408,19 @@ class EventStoreProjection<T : Event>(
             }
     }
 }
+
+/**
+ * Convenience: open a projection over this observable store. NIP-62
+ * vanish handling is scoped by the inner store's `relay`. Cancel
+ * [scope] (or call [EventStoreProjection.close]) to release the
+ * projection.
+ */
+fun <T : Event> ObservableEventStore.observe(
+    filters: List<Filter>,
+    scope: CoroutineScope,
+): EventStoreProjection<T> = EventStoreProjection(this, filters, scope)
+
+fun <T : Event> ObservableEventStore.observe(
+    filter: Filter,
+    scope: CoroutineScope,
+): EventStoreProjection<T> = EventStoreProjection(this, listOf(filter), scope)

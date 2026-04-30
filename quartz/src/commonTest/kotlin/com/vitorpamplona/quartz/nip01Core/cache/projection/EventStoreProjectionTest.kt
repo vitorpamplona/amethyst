@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.store.projection
+package com.vitorpamplona.quartz.nip01Core.cache.projection
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip01Core.store.projection.ObservableEventStore
+import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -96,7 +96,7 @@ class EventStoreProjectionTest {
             observable.insert(a)
             observable.insert(b)
 
-            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
 
             val items = projection.items.value
@@ -112,7 +112,7 @@ class EventStoreProjectionTest {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
             observable.insert(a)
 
-            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
             val before = projection.items.value
             assertEquals(1, before.size)
@@ -132,7 +132,7 @@ class EventStoreProjectionTest {
             val text = signer.sign(TextNoteEvent.build("a", createdAt = 100))
             observable.insert(text)
 
-            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
             val seed = projection.items.value
 
@@ -154,7 +154,6 @@ class EventStoreProjectionTest {
             val projection =
                 observable.observe<MetadataEvent>(
                     Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(v1.pubKey)),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -186,7 +185,6 @@ class EventStoreProjectionTest {
                         authors = listOf(v1.pubKey),
                         tags = mapOf("d" to listOf("blog")),
                     ),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -222,7 +220,6 @@ class EventStoreProjectionTest {
             val projection =
                 observable.observe<MetadataEvent>(
                     Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(v1.pubKey)),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -251,7 +248,7 @@ class EventStoreProjectionTest {
             observable.insert(a)
             observable.insert(b)
 
-            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
             assertEquals(2, projection.items.value.size)
 
@@ -273,7 +270,7 @@ class EventStoreProjectionTest {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
             observable.insert(a)
 
-            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
             val seed = projection.items.value
             assertEquals(1, seed.size)
@@ -301,7 +298,7 @@ class EventStoreProjectionTest {
             observable.insert(a)
             observable.insert(b)
 
-            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
             assertEquals(2, projection.items.value.size)
 
@@ -330,7 +327,7 @@ class EventStoreProjectionTest {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = time))
             observable.insert(a)
 
-            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
             val seed = projection.items.value
 
@@ -365,7 +362,6 @@ class EventStoreProjectionTest {
             val projection =
                 observable.observe<Event>(
                     Filter(kinds = listOf(TextNoteEvent.KIND)),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -400,7 +396,6 @@ class EventStoreProjectionTest {
             val projection =
                 observable.observe<Event>(
                     Filter(kinds = listOf(TextNoteEvent.KIND)),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -426,7 +421,6 @@ class EventStoreProjectionTest {
             val projection =
                 observable.observe<TextNoteEvent>(
                     Filter(kinds = listOf(TextNoteEvent.KIND), limit = 2),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -466,7 +460,6 @@ class EventStoreProjectionTest {
             val projection =
                 observable.observe<TextNoteEvent>(
                     listOf(filterA, filterB),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -490,7 +483,6 @@ class EventStoreProjectionTest {
             val projection =
                 observable.observe<TextNoteEvent>(
                     Filter(kinds = listOf(TextNoteEvent.KIND), limit = 2),
-                    store.relay,
                     scope,
                 )
             projection.ready.await()
@@ -510,7 +502,7 @@ class EventStoreProjectionTest {
             val a = signer.sign(TextNoteEvent.build("a", createdAt = 100))
             observable.insert(a)
 
-            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), store.relay, scope)
+            val projection = observable.observe<TextNoteEvent>(Filter(kinds = listOf(TextNoteEvent.KIND)), scope)
             projection.ready.await()
             projection.close()
 
@@ -532,7 +524,7 @@ class EventStoreProjectionTest {
         runBlocking {
             val ephemeralKind = 22_000
             val projection =
-                observable.observe<Event>(Filter(kinds = listOf(ephemeralKind)), store.relay, scope)
+                observable.observe<Event>(Filter(kinds = listOf(ephemeralKind)), scope)
             projection.ready.await()
             assertTrue(projection.items.value.isEmpty())
 
@@ -555,7 +547,7 @@ class EventStoreProjectionTest {
             // A fresh projection on the same store gets nothing — the
             // event was only ever live, not durable.
             val freshProjection =
-                observable.observe<Event>(Filter(kinds = listOf(ephemeralKind)), store.relay, scope)
+                observable.observe<Event>(Filter(kinds = listOf(ephemeralKind)), scope)
             freshProjection.ready.await()
             assertTrue(freshProjection.items.value.isEmpty())
 

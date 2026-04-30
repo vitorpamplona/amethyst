@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
  */
 class EventStore(
     dbName: String? = "events.db",
-    val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
+    override val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)

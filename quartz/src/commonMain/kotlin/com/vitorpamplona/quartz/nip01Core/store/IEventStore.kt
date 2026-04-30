@@ -22,8 +22,17 @@ package com.vitorpamplona.quartz.nip01Core.store
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 interface IEventStore : AutoCloseable {
+    /**
+     * Relay URL this store is acting on behalf of, or `null` for an
+     * unscoped store. Used by NIP-62 right-to-vanish handling: only
+     * vanish requests whose `relays` list contains this URL (or
+     * `ALL_RELAYS`) cascade.
+     */
+    val relay: NormalizedRelayUrl?
+
     suspend fun insert(event: Event)
 
     interface ITransaction {

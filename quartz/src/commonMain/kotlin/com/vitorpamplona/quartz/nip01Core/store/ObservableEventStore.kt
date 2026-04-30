@@ -18,16 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.store.projection
+package com.vitorpamplona.quartz.nip01Core.store
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -50,18 +48,21 @@ import kotlinx.coroutines.flow.asSharedFlow
  *    [changes] so projections can render them while they live. Already
  *    expired ephemerals are silently dropped.
  *
- * Wrap any store you want to observe — [SQLiteEventStore], FS-backed,
- * an in-memory test fake — and feed [EventStoreProjection] from the
+ * Wrap any store you want to observe — `SQLiteEventStore`, FS-backed,
+ * an in-memory test fake — and feed `EventStoreProjection` from the
  * resulting [changes] flow.
  *
  * Reads (`query`, `count`) and out-of-band writes (`delete`,
- * `deleteExpiredEvents`) forward to the inner store unchanged. The
- * latter are *not* surfaced on [changes] — see the projection's
- * docstring for the rationale.
+ * `deleteExpiredEvents`) forward to the inner store; the latter are
+ * also surfaced on [changes] as [StoreChange.DeleteByFilter] /
+ * [StoreChange.DeleteExpired] so projections can drop the matching
+ * slots in memory without re-querying.
  */
 class ObservableEventStore(
     val inner: IEventStore,
 ) : IEventStore {
+    override val relay: NormalizedRelayUrl? get() = inner.relay
+
     private val _changes =
         MutableSharedFlow<StoreChange>(
             replay = 0,
@@ -72,14 +73,46 @@ class ObservableEventStore(
     /**
      * Stream of mutations accepted by the observable layer. One
      * emission per successful [insert] (or per accepted event in a
-     * [transaction] body), one emission per [delete] / [delete] /
+     * [transaction] body), one emission per [delete] /
      * [deleteExpiredEvents] call. Rejected inserts and rolled-back
      * transactions emit nothing.
      *
-     * Projections consume this stream — see [EventStoreProjection]
+     * Projections consume this stream — see `EventStoreProjection`
      * for how each [StoreChange] is interpreted.
      */
     val changes: SharedFlow<StoreChange> = _changes.asSharedFlow()
+
+    /**
+     * Mutations published by [changes]. Projections react to these to
+     * keep their in-memory view in sync with the underlying store.
+     *
+     *  - [Insert] is emitted for every event accepted by the
+     *    observable layer (persistable or ephemeral). Carries the
+     *    event itself so the projection can run its NIP-01 / NIP-09 /
+     *    NIP-62 interpretation.
+     *  - [DeleteByFilter] is emitted for every `delete(filter)` /
+     *    `delete(filters)` call on the observable. Carries the same
+     *    filters the store used so projections can apply
+     *    [Filter.match] in memory and drop the matching slots without
+     *    re-querying.
+     *  - [DeleteExpired] is emitted for every `deleteExpiredEvents()`
+     *    sweep. The optional [DeleteExpired.asOf] cutoff lets the
+     *    store pin the timestamp it actually used, so the projection
+     *    drops exactly the events the store dropped.
+     */
+    sealed interface StoreChange {
+        data class Insert(
+            val event: Event,
+        ) : StoreChange
+
+        data class DeleteByFilter(
+            val filters: List<Filter>,
+        ) : StoreChange
+
+        data class DeleteExpired(
+            val asOf: Long? = null,
+        ) : StoreChange
+    }
 
     override suspend fun insert(event: Event) {
         if (event.kind.isEphemeral()) {
@@ -161,25 +194,6 @@ class ObservableEventStore(
         inner.deleteExpiredEvents()
         _changes.emit(StoreChange.DeleteExpired(asOf))
     }
-
-    /**
-     * Open a reactive [EventStoreProjection] over this observable
-     * store. [relay] scopes NIP-62 vanish handling — pass the relay
-     * URL the events are arriving from, or `null` to apply only
-     * unscoped (`ALL_RELAYS`) vanish requests. Cancel [scope] (or
-     * call [EventStoreProjection.close]) to release the projection.
-     */
-    fun <T : Event> observe(
-        filters: List<Filter>,
-        relay: NormalizedRelayUrl?,
-        scope: CoroutineScope,
-    ): EventStoreProjection<T> = EventStoreProjection(this, filters, relay, scope)
-
-    fun <T : Event> observe(
-        filter: Filter,
-        relay: NormalizedRelayUrl?,
-        scope: CoroutineScope,
-    ): EventStoreProjection<T> = observe(listOf(filter), relay, scope)
 
     override fun close() = inner.close()
 }

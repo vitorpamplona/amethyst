@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.cache.interning
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 
 /**
@@ -51,6 +52,8 @@ class InternedEventStore(
     private val inner: IEventStore,
     private val interner: EventInterner = EventInterner.Default,
 ) : IEventStore {
+    override val relay: NormalizedRelayUrl? get() = inner.relay
+
     override suspend fun insert(event: Event) = inner.insert(event)
 
     override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = inner.transaction(body)
