@@ -148,13 +148,16 @@ class EventStoreProjection<T : Event>(
         }
 
     /**
-     * Current snapshot as a [ProjectionState.Loaded]. Cheap — the
-     * deduped sorted union over [perFilter] sets is computed on
-     * demand. Returns an empty [ProjectionState.Loaded] when no slots
-     * are live.
+     * Current snapshot as a [ProjectionState.Loaded]. The
+     * single-filter case skips the union pass — that filter's set
+     * is already sorted. Multi-filter projections dedup + merge
+     * via a transient TreeSet.
      */
     fun snapshot(): ProjectionState.Loaded<T> {
         if (byId.isEmpty()) return ProjectionState.Loaded(emptyList())
+        if (perFilter.size == 1) {
+            return ProjectionState.Loaded(perFilter.values.first().map { it.flow })
+        }
         val union = sortedSetOf(slotComparator<T>())
         for (set in perFilter.values) union.addAll(set)
         return ProjectionState.Loaded(union.map { it.flow })
@@ -314,20 +317,19 @@ class EventStoreProjection<T : Event>(
     /**
      * Remove a slot from [byId] / [byAddress] without touching the
      * per-filter sets. Used by the per-filter eviction loop, which
-     * already owns the bookkeeping for those.
+     * already owns that bookkeeping.
      */
     private fun removeIndexes(slot: Slot<T>): Boolean {
         val removed = byId.remove(slot.flow.value.id) != null
         if (!removed) return false
-        addressOf(slot.flow.value)?.let(byAddress::remove)
+        slot.address?.let(byAddress::remove)
         return true
     }
 
     /**
-     * Internal slot. Each event added to the projection lives inside
-     * one of these for as long as it survives. The sort key is frozen
-     * at construction time — supersession in-place updates rewrite
-     * `flow.value` but never the sort key, so the position inside
+     * Wraps an event with the indexes the projection needs. Sort key
+     * and address are frozen at construction — in-place supersession
+     * updates rewrite `flow.value` but the slot's position inside
      * each [perFilter] set is stable across updates.
      */
     private class Slot<T : Event>(
@@ -335,6 +337,7 @@ class EventStoreProjection<T : Event>(
     ) {
         val sortCreatedAt: Long = initial.createdAt
         val sortId: HexKey = initial.id
+        val address: Address? = addressOf(initial)
         val flow: MutableStateFlow<T> = MutableStateFlow(initial)
     }
 
@@ -370,18 +373,25 @@ class EventStoreProjection<T : Event>(
         private fun ownerOf(event: Event): HexKey = (event as? GiftWrapEvent)?.recipientPubKey() ?: event.pubKey
 
         /**
-         * created_at DESC, id ASC. The keys are snapshots taken at
-         * insertion time, so a slot's position never changes after it
+         * created_at DESC, id ASC. Sort keys are frozen at slot
+         * construction, so a slot's position never changes after it
          * joins a set. Distinct events have distinct ids, so no third
          * tiebreak is needed.
+         *
+         * Singleton — stored as `Comparator<Slot<*>>` and cast at the
+         * use site, since the comparator only reads `sortCreatedAt`
+         * and `sortId` which don't depend on `T`.
          */
-        private fun <T : Event> slotComparator(): Comparator<Slot<T>> =
+        private val SLOT_COMPARATOR: Comparator<Slot<*>> =
             Comparator { a, b ->
                 if (a === b) return@Comparator 0
                 val byTime = b.sortCreatedAt.compareTo(a.sortCreatedAt)
                 if (byTime != 0) return@Comparator byTime
                 a.sortId.compareTo(b.sortId)
             }
+
+        @Suppress("UNCHECKED_CAST")
+        private fun <T : Event> slotComparator(): Comparator<Slot<T>> = SLOT_COMPARATOR as Comparator<Slot<T>>
     }
 }
 
@@ -407,17 +417,13 @@ class EventStoreProjection<T : Event>(
 fun <T : Event> ObservableEventStore.project(filters: List<Filter>): Flow<ProjectionState<T>> =
     flow {
         val projection = EventStoreProjection<T>(this@project, filters)
-        // Capture the outer collector so we can emit ProjectionState
-        // from inside `changes.onSubscription { }` and `collect { }`,
-        // where the implicit `this` is FlowCollector<StoreChange>.
+        // `onSubscription` runs after the SharedFlow subscription is
+        // active but before events are pulled, so emissions during
+        // seed land in the buffer and we drain them via `apply` when
+        // collect proceeds. `outer` bridges the StoreChange-typed
+        // collectors back to our ProjectionState output.
         val outer = this
         emit(ProjectionState.Loading)
-        // `onSubscription` runs after the SharedFlow subscription is
-        // active but before we pull events — the buffer absorbs
-        // emissions arriving during the seed query and we drain them
-        // through `apply` once collect proceeds. Doing the seed
-        // inside `collect { }` instead would race with concurrent
-        // inserts.
         changes
             .onSubscription {
                 projection.seed()
