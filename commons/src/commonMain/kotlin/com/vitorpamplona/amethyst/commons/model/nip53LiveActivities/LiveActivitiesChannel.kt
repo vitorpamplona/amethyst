@@ -80,6 +80,27 @@ class LiveActivitiesChannel(
         flowSet?.notes?.invalidateData()
     }
 
+    /**
+     * Drop presence entries older than [cutoff]. Without this, every
+     * author who ever heartbeats in this room would leave an entry
+     * here forever, even though the freshness check in
+     * `NestsFeedFilter` already treats anything past
+     * `PRESENCE_FRESHNESS_WINDOW_SECONDS` (10 min) as dead. Run on the
+     * same schedule as [pruneOldMessages] with a generous cutoff (2×
+     * the freshness window) so a presence still inside any feed's
+     * window can never be pruned.
+     */
+    fun pruneStalePresence(cutoff: Long): Int {
+        val toRemove = mutableListOf<HexKey>()
+        presenceNotes.forEach { author, note ->
+            val createdAt = note.event?.createdAt
+            if (createdAt == null || createdAt < cutoff) toRemove.add(author)
+        }
+        toRemove.forEach { presenceNotes.remove(it) }
+        if (toRemove.isNotEmpty()) flowSet?.notes?.invalidateData()
+        return toRemove.size
+    }
+
     fun address() = address
 
     override fun relays() = info?.allRelayUrls()?.toSet()?.ifEmpty { null } ?: super.relays()

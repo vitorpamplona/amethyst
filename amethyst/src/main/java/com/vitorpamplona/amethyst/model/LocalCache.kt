@@ -2241,6 +2241,11 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
+    // 2× the 10-min `PRESENCE_FRESHNESS_WINDOW_SECONDS` used by
+    // `NestsFeedFilter` so a presence still inside any feed's window
+    // can never be pruned.
+    private val PRESENCE_PRUNE_AGE_SECONDS = 20L * 60L
+
     fun pruneOldMessagesChannel(channel: Channel) {
         val toBeRemoved = channel.pruneOldMessages()
 
@@ -2253,6 +2258,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         removeFromCache(childrenToBeRemoved)
+
+        // Audio-room presence is keyed separately from `notes` and
+        // never gets reaped by the top-N rule. Drop entries older
+        // than 2× the 10-min freshness window so the index doesn't
+        // grow unbounded with every author who ever heartbeat here.
+        if (channel is LiveActivitiesChannel) {
+            channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
+        }
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
             println(
