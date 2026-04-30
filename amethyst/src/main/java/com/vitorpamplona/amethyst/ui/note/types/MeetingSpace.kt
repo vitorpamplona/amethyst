@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoI
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
@@ -529,8 +530,11 @@ fun MeetingSpaceClosedFlag() {
  * "Live now" once the moment passes).
  */
 @Composable
-fun MeetingSpacePlannedFlag(startsUnixSec: Long?) {
-    Column(horizontalAlignment = Alignment.End) {
+fun MeetingSpacePlannedFlag(
+    startsUnixSec: Long?,
+    horizontalAlignment: Alignment.Horizontal = Alignment.End,
+) {
+    Column(horizontalAlignment = horizontalAlignment, verticalArrangement = SpacedBy5dp) {
         Text(
             text = stringRes(id = R.string.meeting_space_planned_tag),
             color = Color.White,

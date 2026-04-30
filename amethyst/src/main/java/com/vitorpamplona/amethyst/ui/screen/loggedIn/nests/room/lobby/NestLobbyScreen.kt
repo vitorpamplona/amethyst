@@ -342,7 +342,7 @@ private fun RoomHeader(
                     }
 
                     StatusTag.STATUS.PLANNED -> {
-                        MeetingSpacePlannedFlag(starts)
+                        MeetingSpacePlannedFlag(starts, horizontalAlignment = Alignment.Start)
                     }
 
                     null -> {}
