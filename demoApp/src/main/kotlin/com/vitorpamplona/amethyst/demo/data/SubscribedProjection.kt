@@ -29,15 +29,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
 
 /**
  * A [project] flow that drives a relay subscription for the same
  * [filter] for as long as the projection is being collected.
  *
- *  - On `collect`: allocate a fresh subId and call [client] `subscribe`,
- *    then start emitting the cold projection.
+ *  - On `collect`: call [client] `subscribe`, then start emitting the
+ *    cold projection.
  *  - On cancel / completion / error: `unsubscribe`.
  *
  * The relay-side cache-write path lives separately in
@@ -53,13 +53,9 @@ fun <T : Event> ObservableEventStore.projectFromRelays(
     client: NostrClient,
     relays: Set<NormalizedRelayUrl>,
     filter: Filter,
-): Flow<ProjectionState<T>> =
-    flow {
-        val subId = newSubId()
-        try {
-            client.subscribe(subId, relays.associateWith { listOf(filter) })
-            emitAll(project<T>(filter))
-        } finally {
-            client.unsubscribe(subId)
-        }
-    }
+): Flow<ProjectionState<T>> {
+    val subId = newSubId()
+    return project<T>(filter)
+        .onStart { client.subscribe(subId, relays.associateWith { listOf(filter) }) }
+        .onCompletion { client.unsubscribe(subId) }
+}
