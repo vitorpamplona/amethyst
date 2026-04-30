@@ -39,11 +39,20 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
  * val observable = ObservableEventStore(cached)
  * ```
  *
- * Writes (`insert`, `transaction`, `delete*`) pass through unchanged
- * — the decorator never substitutes the caller's event for a cached
- * one on the way in (sigs may differ across "same id, different
- * decode" cases). Canonicalisation only happens on results coming
- * back out of the store.
+ * Writes ([insert] / [transaction]) forward to the inner store and,
+ * on success, register the accepted event with the interner. The
+ * caller's instance becomes canonical for that id (so a later read
+ * of the same id returns the same `===` reference, until the weak
+ * ref is collected). The decorator does *not* substitute the
+ * caller's event for a previously-cached one on the way in — sigs
+ * may differ across "same id, different decode" cases, and the
+ * caller's instance is the freshest.
+ *
+ * Reads ([query]) pipe results through `interner.intern`, returning
+ * canonical instances for ids that have a live cached entry.
+ *
+ * Out-of-band removals (`delete*`, `deleteExpiredEvents`) pass
+ * through unchanged.
  *
  * The default [interner] is [EventInterner.Default]; pass a fresh
  * instance for tests or any context that needs isolation.
@@ -54,9 +63,31 @@ class InterningEventStore(
 ) : IEventStore {
     override val relay: NormalizedRelayUrl? get() = inner.relay
 
-    override suspend fun insert(event: Event) = inner.insert(event)
+    override suspend fun insert(event: Event) {
+        inner.insert(event)
+        // Inner accepted (didn't throw) — register the canonical
+        // instance so subsequent reads share the same reference.
+        interner.intern(event)
+    }
 
-    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = inner.transaction(body)
+    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
+        // Capture every accepted event so we can intern after the
+        // inner transaction commits. If body throws or the inner
+        // rolls back, `accepted` is discarded with the txn.
+        val accepted = ArrayList<Event>()
+        inner.transaction {
+            val innerTxn = this
+            val wrapped =
+                object : IEventStore.ITransaction {
+                    override fun insert(event: Event) {
+                        innerTxn.insert(event)
+                        accepted.add(event)
+                    }
+                }
+            wrapped.body()
+        }
+        for (e in accepted) interner.intern(e)
+    }
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun <T : Event> query(filter: Filter): List<T> = inner.query<T>(filter).map { interner.intern(it) as T }
