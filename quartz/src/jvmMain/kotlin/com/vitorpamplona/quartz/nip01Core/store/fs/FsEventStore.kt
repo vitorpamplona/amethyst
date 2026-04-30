@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.fs
 
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.EventInterner
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
@@ -75,6 +76,7 @@ open class FsEventStore(
      * verification re-canonicalises — so format is purely a UX choice.
      */
     private val eventToJson: (Event) -> String = Event::toJson,
+    private val interner: EventInterner = EventInterner.Default,
 ) : IEventStore {
     private val layout = FsLayout(root)
     private val hasher: TagNameValueHasher
@@ -508,7 +510,10 @@ open class FsEventStore(
         val p = layout.canonical(id)
         if (!p.exists()) return null
         return try {
-            Event.fromJson(p.readText())
+            // Events on disk were valid when written, so interning
+            // their reconstruction is safe and lets multiple readers
+            // of the same id share one Event instance.
+            interner.intern(Event.fromJson(p.readText()))
         } catch (_: java.nio.file.NoSuchFileException) {
             null
         }

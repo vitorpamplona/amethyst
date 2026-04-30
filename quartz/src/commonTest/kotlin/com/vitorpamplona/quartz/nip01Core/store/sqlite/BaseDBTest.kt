@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import com.vitorpamplona.quartz.nip01Core.core.EventInterner
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,6 +64,12 @@ open class BaseDBTest {
                             EventStore(
                                 dbName = null,
                                 indexStrategy = indexStrategy,
+                                // Each store gets its own interner so
+                                // parallel forEachDB runs don't share a
+                                // canonical Event for the same id —
+                                // tests sign with random sigs that
+                                // would otherwise cross-pollinate.
+                                interner = EventInterner(),
                             )
                     }
                 }

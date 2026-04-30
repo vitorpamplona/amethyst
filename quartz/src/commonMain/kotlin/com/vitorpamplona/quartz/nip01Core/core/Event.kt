@@ -67,7 +67,7 @@ open class Event(
     fun toJson(): String = OptimizedJsonMapper.toJson(this)
 
     companion object {
-        fun fromJson(json: String): Event = EventInterner.Default.intern(OptimizedJsonMapper.fromJson(json))
+        fun fromJson(json: String): Event = OptimizedJsonMapper.fromJson(json)
 
         fun fromJsonOrNull(json: String) =
             try {
