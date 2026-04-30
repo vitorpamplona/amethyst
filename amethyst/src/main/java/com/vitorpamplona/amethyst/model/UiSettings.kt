@@ -44,6 +44,9 @@ data class UiSettings(
     val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
     val useTrackedBroadcasts: BooleanType = BooleanType.ALWAYS,
     val bottomBarItems: List<NavBarItem> = DefaultBottomBarItems,
+    val showHomeNewThreadsTab: Boolean = true,
+    val showHomeConversationsTab: Boolean = true,
+    val showHomeEverythingTab: Boolean = false,
 )
 
 enum class ThemeType(

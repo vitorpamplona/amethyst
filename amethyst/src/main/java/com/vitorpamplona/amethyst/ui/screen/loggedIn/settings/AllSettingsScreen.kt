@@ -251,6 +251,13 @@ fun AllSettingsScreen(
                 tint = tint,
                 onClick = { nav.nav(Route.BottomBarSettings) },
             )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.home_tabs_settings,
+                icon = MaterialSymbols.Home,
+                tint = tint,
+                onClick = { nav.nav(Route.HomeTabsSettings) },
+            )
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.danger_zone)
             accountViewModel.account.settings.keyPair.privKey?.let {
