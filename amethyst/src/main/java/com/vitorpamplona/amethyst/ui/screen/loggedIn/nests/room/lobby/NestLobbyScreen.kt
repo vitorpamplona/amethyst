@@ -38,12 +38,13 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -283,7 +284,11 @@ private fun OpenNestRoomAction(
     if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
     val context = LocalContext.current
-    TextButton(
+    // Filled button so the primary CTA is unmistakable; the actions
+    // Row in the AppBar already centers its children vertically, but
+    // we trim the default end padding so the button sits flush with
+    // the bar's trailing edge.
+    Button(
         onClick = {
             NestBridge.set(accountViewModel)
             NestActivity.launch(
@@ -291,6 +296,8 @@ private fun OpenNestRoomAction(
                 addressValue = event.address().toValue(),
             )
         },
+        contentPadding = ButtonDefaults.ContentPadding,
+        modifier = Modifier.padding(end = 8.dp),
     ) {
         Text(stringRes(R.string.nest_lobby_open_action))
     }
