@@ -22,6 +22,7 @@ package com.vitorpamplona.quic.tls
 
 import com.vitorpamplona.quic.QuicCodecException
 import java.io.ByteArrayInputStream
+import java.lang.reflect.InvocationTargetException
 import java.net.IDN
 import java.net.InetAddress
 import java.security.KeyStore
@@ -83,7 +84,22 @@ class JdkCertificateValidator(
                     // RFC 8422 ext, no dedicated TLS 1.3 string
                     else -> "ECDHE_ECDSA"
                 }
-            trustManager.checkServerTrusted(parsed.toTypedArray(), authType)
+            // Android's RootTrustManager rejects the 2-arg overload when the
+            // app has Network Security Config domain-specific entries and
+            // requires the hostname-aware 3-arg variant. That overload is
+            // Android-specific (not on standard X509TrustManager), so we
+            // discover it by reflection and fall back on plain JVM.
+            val chainArray = parsed.toTypedArray()
+            val hostnameAware = hostnameAwareCheckServerTrusted(trustManager)
+            if (hostnameAware != null) {
+                try {
+                    hostnameAware.invoke(trustManager, chainArray, authType, expectedHost)
+                } catch (e: InvocationTargetException) {
+                    throw e.cause ?: e
+                }
+            } else {
+                trustManager.checkServerTrusted(chainArray, authType)
+            }
         } catch (t: Throwable) {
             throw QuicCodecException("certificate chain validation failed: ${t.message}", t)
         }
@@ -245,5 +261,17 @@ class JdkCertificateValidator(
             tmf.init(null as KeyStore?)
             return tmf.trustManagers.firstNotNullOf { it as? X509TrustManager }
         }
+
+        private fun hostnameAwareCheckServerTrusted(tm: X509TrustManager): java.lang.reflect.Method? =
+            try {
+                tm.javaClass.getMethod(
+                    "checkServerTrusted",
+                    Array<X509Certificate>::class.java,
+                    String::class.java,
+                    String::class.java,
+                )
+            } catch (_: NoSuchMethodException) {
+                null
+            }
     }
 }
