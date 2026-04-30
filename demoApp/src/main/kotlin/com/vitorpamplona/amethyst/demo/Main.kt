@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -119,7 +120,17 @@ fun main() =
                         val filter = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 100)
                         graph.db
                             .project<TextNoteEvent>(filter)
-                            .onStart { graph.client.subscribe(subId, relays.associateWith { listOf(filter) }) }
+                            .map { state ->
+                                when (state) {
+                                    is ProjectionState.Loading -> {
+                                        state
+                                    }
+
+                                    is ProjectionState.Loaded -> {
+                                        ProjectionState.Loaded(state.items.filter { it.value.isNewThread() })
+                                    }
+                                }
+                            }.onStart { graph.client.subscribe(subId, relays.associateWith { listOf(filter) }) }
                             .onCompletion { graph.client.unsubscribe(subId) }
                     }
                 val projectionState by projection.collectAsState(initial = ProjectionState.Loading)
@@ -140,3 +151,6 @@ fun main() =
             }
         }
     }
+
+/** A kind:1 note is a "new thread" iff it isn't a reply to anything. */
+private fun TextNoteEvent.isNewThread(): Boolean = replyingTo() == null
