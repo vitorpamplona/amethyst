@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.demo.net.KtorWebSocket
 import com.vitorpamplona.amethyst.demo.ui.FeedScreen
 import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
 import com.vitorpamplona.quartz.nip01Core.cache.projection.ProjectionState
+import com.vitorpamplona.quartz.nip01Core.cache.projection.filterItems
 import com.vitorpamplona.quartz.nip01Core.cache.projection.project
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -49,7 +50,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -120,17 +120,8 @@ fun main() =
                         val filter = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 100)
                         graph.db
                             .project<TextNoteEvent>(filter)
-                            .map { state ->
-                                when (state) {
-                                    is ProjectionState.Loading -> {
-                                        state
-                                    }
-
-                                    is ProjectionState.Loaded -> {
-                                        ProjectionState.Loaded(state.items.filter { it.value.isNewThread() })
-                                    }
-                                }
-                            }.onStart { graph.client.subscribe(subId, relays.associateWith { listOf(filter) }) }
+                            .filterItems { it.value.isNewThread() }
+                            .onStart { graph.client.subscribe(subId, relays.associateWith { listOf(filter) }) }
                             .onCompletion { graph.client.unsubscribe(subId) }
                     }
                 val projectionState by projection.collectAsState(initial = ProjectionState.Loading)
