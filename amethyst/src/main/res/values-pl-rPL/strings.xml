@@ -488,6 +488,7 @@
     <string name="nest_mic_unmute">Włącz mikrofon</string>
     <string name="nest_broadcast_connecting">Wejdź na żywo…</string>
     <string name="nest_broadcast_failed">Nieudana transmisja: %1$s</string>
+    <string name="nest_mute_failed">Nieudane wyciszenie: %1$s</string>
     <string name="nest_record_permission_required">Dostęp do mikrofonu jest wymagany, aby rozmawiać w tym pokoju.</string>
     <string name="nest_open_settings">Otwórz ustawienia</string>
     <string name="nest_notification_channel">Nests</string>
@@ -498,6 +499,10 @@
     <string name="nest_notification_stop">Zatrzymaj</string>
     <string name="nest_join">Dołącz do Nest</string>
     <string name="nest_lobby_host_label">Kreator</string>
+    <string name="nest_lobby_open_action">Otwórz</string>
+    <string name="nest_lobby_recent_chat">Ostatni czat</string>
+    <string name="nest_lobby_no_listeners">Nikogo nie ma w pokoju.</string>
+    <string name="nest_lobby_listeners_count">%1$d słucha</string>
     <string name="nest_role_host">Kreator</string>
     <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon wyciszony</string>
@@ -577,6 +582,11 @@
     <string name="nests_servers_my_section">Twoje serwery</string>
     <string name="nests_servers_my_explainer">Zapisano jako zdarzenie typ-10112 z możliwością zmiany, aby inne aplikacje klienckie mogły odczytać Twoje preferencje.</string>
     <string name="nests_servers_add_field">Dodaj serwer Nest</string>
+    <string name="nests_servers_add_relay_field">URL transmitera (Sieć przesyłu)</string>
+    <string name="nests_servers_add_auth_field">URL uwierzytelniania (JWT mint)</string>
+    <string name="nests_servers_add_pair_button">Dodaj</string>
+    <string name="nests_servers_relay_label">Transmiter</string>
+    <string name="nests_servers_auth_label">Autoryzacja</string>
     <string name="nests_servers_recommended_section">Polecane serwery</string>
     <string name="nests_servers_recommended_explainer">Wbudowane sugestie można dodać do listy jednym dotknięciem.</string>
     <string name="nests_servers_use_defaults">Użyj domyślnych ustawień Ametyst</string>
@@ -1307,6 +1317,10 @@
     <string name="error_unable_to_fetch_invoice">Nie można pobrać faktury z serwerów odbiorcy</string>
     <string name="wallet_connect_pay_invoice_error_error">Twój dostawca połączenia z portfelem zwrócił następujący błąd: %1$s</string>
     <string name="could_not_connect_to_tor">Połączenie z serwerem Tor nieudane</string>
+    <string name="tor_connection_failed_title">Tor nie łączy się</string>
+    <string name="tor_connection_failed_body">Amethyst nie zdołał uruchomić sieci Tor. Czy można skorzystać ze zwykłego połączenia (nie przez Tor), aby strona mogła się załadować? Zapamiętamy ten wybór na najbliższą godzinę, a potem spróbujemy ponownie połączyć się przez Tor.</string>
+    <string name="tor_continue_without_for_session">Użyj zwykłego połączenia</string>
+    <string name="tor_keep_waiting">Czekaj</string>
     <string name="unable_to_download_relay_document">Nie można pobrać pliku z transmitera</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nie można stworzyć LNUrl z Adresu  \"%1$s\". Sprawdź konfigurację użytkownika</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Usługa lightning odbiorcy w %1$s jest niedostępna. Została obliczona na podstawie adresu lightning \"%2$s\". Błąd: %3$s. Sprawdź, czy serwer jest gotowy i czy adres lightning jest poprawny</string>
@@ -1512,6 +1526,8 @@
     <string name="bottom_bar_settings_description">Przeciągnij, aby zmienić kolejność. Przełącz, aby dodać lub usunąć element z dolnego paska. Gdy nie ma żadnych elementów, dolny pasek jest ukryty.</string>
     <string name="bottom_bar_settings_available">Dostępne</string>
     <string name="bottom_bar_settings_reorder">Zmień kolejność</string>
+    <string name="home_tabs_settings_description">Wybierz, które karty pojawiają się na ekranie głównym. Gdy tylko jedna karta jest aktywna, pasek karty jest ukryty.</string>
+    <string name="home_tab_everything">Wszystko</string>
     <string name="reactions_settings">Ustawienia reakcji</string>
     <string name="reactions_settings_description">Skonfiguruj które przyciski reakcji będą wyświetlane, ich kolejność i czy wyświetlić liczniki.</string>
     <string name="reactions_settings_enabled">Włączone</string>
