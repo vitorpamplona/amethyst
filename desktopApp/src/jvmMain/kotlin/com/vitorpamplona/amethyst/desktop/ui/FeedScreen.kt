@@ -180,8 +180,9 @@ fun FeedNoteCard(
             }
 
             // Original note content
+            val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
             NoteCard(
-                note = originalEvent.toNoteDisplayData(localCache),
+                note = displayData,
                 localCache = localCache,
                 onClick = { onNavigateToThread(originalEvent.id) },
                 onAuthorClick = onNavigateToProfile,
@@ -228,8 +229,9 @@ fun FeedNoteCard(
         }
 
         Column {
+            val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
             NoteCard(
-                note = event.toNoteDisplayData(localCache),
+                note = displayData,
                 localCache = localCache,
                 onClick = { onNavigateToThread(event.id) },
                 onAuthorClick = onNavigateToProfile,
