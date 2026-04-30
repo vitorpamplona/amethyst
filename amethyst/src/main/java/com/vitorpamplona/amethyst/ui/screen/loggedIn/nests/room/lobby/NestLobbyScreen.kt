@@ -197,30 +197,17 @@ private fun NestLobbyContent(
                     .consumeWindowInsets(padding)
                     .imePadding(),
         ) {
-            // Same chat list shape as NestFullScreen: a reverse-layout
-            // LazyColumn keyed by note id. The lobby uses cached
-            // LocalCache notes instead of an active NestViewModel.chat,
-            // and stacks the room metadata (header, listener count,
-            // "Recent chat" label) above the oldest message so the
-            // user can scroll up through history into the room info.
+            RoomHeader(event, accountViewModel, nav)
+            CachedListenerCount(roomATag)
+
+            // Reverse-layout LazyColumn keyed by note id, same shape as
+            // NestFullScreen's chat list. The lobby reads cached
+            // LocalCache notes instead of an active NestViewModel.chat.
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxSize(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 state = listState,
                 reverseLayout = true,
             ) {
-                items(
-                    items = messages,
-                    key = { it.idHex },
-                ) { note ->
-                    ChatroomMessageCompose(
-                        baseNote = note,
-                        routeForLastRead = routeForLastRead,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        onWantsToReply = nestScreenModel::reply,
-                        onWantsToEditDraft = nestScreenModel::editFromDraft,
-                    )
-                }
                 if (messages.isEmpty()) {
                     item("chat-empty") {
                         Text(
@@ -233,18 +220,18 @@ private fun NestLobbyContent(
                         )
                     }
                 }
-                item("chat-header") {
-                    Text(
-                        text = stringRes(R.string.nest_lobby_recent_chat),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                items(
+                    items = messages,
+                    key = { it.idHex },
+                ) { note ->
+                    ChatroomMessageCompose(
+                        baseNote = note,
+                        routeForLastRead = routeForLastRead,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onWantsToReply = nestScreenModel::reply,
+                        onWantsToEditDraft = nestScreenModel::editFromDraft,
                     )
-                }
-                item("listeners") {
-                    CachedListenerCount(roomATag)
-                }
-                item("header") {
-                    RoomHeader(event, accountViewModel, nav)
                 }
             }
 

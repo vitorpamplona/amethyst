@@ -83,6 +83,8 @@ Notice that the `notes` flow is ready for the UI and automatically subscribes
 and unsubscribes to any group of relays and filters the user wants. Similarly,
 the `send` function updates both the local db and the relay.
 
+`NostrClient` connects on-demand: the first `subscribe(...)` or `publish(...)` to a relay triggers the socket. There's no need to call `client.connect()` at startup — it's only useful for resuming after a prior `disconnect()`.
+
 ## Building a reactive feed UI
 
 A feed screen reads from the view model's feed flow, which only updates when
