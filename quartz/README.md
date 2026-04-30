@@ -38,53 +38,56 @@ Each layer is optional — you can use just `NostrClient` (see [CLIENT.md](CLIEN
 
 ## Wiring relays into the store
 
-`NostrClient` delivers events through a `SubscriptionListener.onEvent` callback. Pipe each event into the `ObservableEventStore`, which persists it (via the inner store) and publishes it to every open projection:
+`NostrClient` delivers every event it receives through a connection-level message stream. Quartz ships an [`EventCollector`](src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/client/accessories/EventCollector.kt) that taps into this stream once and forwards every `EventMessage` into a sink — typically the store. Wire it once at app init and the cache-write path is decoupled from "what we ask for":
 
 ```kotlin
-// Application init — one set of these per process.
+// Application init — one set of these per process. Construct before any UI mounts.
 val sqlite = EventStore(dbName = "events.db", relay = "wss://relay.damus.io".normalizeRelayUrl())
-val observable = ObservableEventStore(InterningEventStore(sqlite))
+val db = ObservableEventStore(InterningEventStore(sqlite))
 
 val client = NostrClient(websocketBuilder = ktorBuilder)
-client.connect()
 
-// Open a relay subscription that pumps every arriving event into the store.
-client.subscribe(
-    subId = "home",
-    filters = mapOf(
-        "wss://relay.damus.io".normalizeRelayUrl() to listOf(
-            Filter(kinds = listOf(1), authors = followedAuthors, limit = 500),
-        ),
-    ),
-    listener = object : SubscriptionListener {
-        override fun onEvent(event: Event, isLive: Boolean, relay: NormalizedRelayUrl, forFilters: List<Filter>?) {
-            applicationScope.launch { observable.insert(event) }
-        }
-    },
-)
+// Connection-wide drain: every EventMessage on every subscription on every
+// relay lands in the store, regardless of which subscription pulled it.
+val collector = EventCollector(client) { event, _ ->
+    appScope.launch { runCatching { db.insert(event) } }
+}
 
 // Periodic NIP-40 sweep — projections drop expired events when this fires.
-applicationScope.launch {
-    while (isActive) { delay(15.minutes); observable.deleteExpiredEvents() }
+appScope.launch {
+    while (isActive) { delay(15.minutes); db.deleteExpiredEvents() }
 }
 ```
 
-`observable.insert(event)` is idempotent under NIP-01 supersession (older replaceables / addressables are rejected by the inner store) and validates expiration / vanish tombstones, so it's safe to fire-and-forget for every relay arrival.
+`db.insert(event)` is idempotent under NIP-01 supersession (older replaceables / addressables are rejected by the inner store) and validates expiration / vanish tombstones, so it's safe to fire-and-forget for every relay arrival.
 
 `InterningEventStore` keeps one `Event` instance alive per id (weakly, via `EventInterner.Default`), so events that re-arrive from multiple relays — or get re-read by query — share the same object reference as long as some projection holds them.
 
+`NostrClient` connects on-demand: the first `subscribe(...)` or `publish(...)` to a relay triggers the socket. There's no need to call `client.connect()` at startup — it's only useful for resuming after a prior `disconnect()`.
+
 ## Building a reactive feed UI
 
-A feed screen reads from the store via `ObservableEventStore.project()`, which returns a cold `Flow<ProjectionState<T>>`. Wrap it with `stateIn(...)` in a ViewModel and collect from Compose:
+A feed reads from the store via `ObservableEventStore.project()`, which returns a cold `Flow<ProjectionState<T>>`. The recommended pattern is to construct it inside a `ViewModel` so `viewModelScope` owns the `stateIn` lifecycle, and to tie the relay-side `subscribe` / `unsubscribe` to the projection's collection lifetime via `onStart` / `onCompletion`:
 
 ```kotlin
+@Stable
 class HomeFeedViewModel(
-    observable: ObservableEventStore,
+    private val db: ObservableEventStore,
+    private val client: NostrClient,
+    private val relays: Set<NormalizedRelayUrl>,
     followedAuthors: List<HexKey>,
 ) : ViewModel() {
+    private val subId = newSubId()
+    private val filter = Filter(kinds = listOf(1), authors = followedAuthors, limit = 200)
+
     val state: StateFlow<ProjectionState<TextNoteEvent>> =
-        observable
-            .project<TextNoteEvent>(Filter(kinds = listOf(1), authors = followedAuthors, limit = 200))
+        db
+            .project<TextNoteEvent>(filter)
+            // Optional: narrow the live projection without re-querying the store.
+            // ProjectionState.filterItems / mapItems lift over Loading / Loaded.
+            .filterItems { it.value.replyingTo() == null }
+            .onStart { client.subscribe(subId, relays.associateWith { listOf(filter) }) }
+            .onCompletion { client.unsubscribe(subId) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProjectionState.Loading)
 }
 
@@ -121,19 +124,28 @@ fun NoteRow(handle: MutableStateFlow<TextNoteEvent>) {
 The three layers map cleanly to Compose's recomposition model:
 
 - `state` re-renders the screen scaffolding (`Loading` vs `Loaded`).
-- `s.items` re-emits only when membership changes (insert, NIP-09 deletion, NIP-62 vanish, NIP-40 expiration sweep, manual `delete(filter)`).
+- `s.items` re-emits only when membership changes (insert, NIP-09 deletion, NIP-62 vanish, NIP-40 expiration sweep, manual `delete(filter)`, or a `filterItems` predicate flip).
 - `handle` re-emits only when its specific event mutates in place (e.g. a new version of a kind-30023 long-form post supersedes the previous one).
+
+`SharingStarted.WhileSubscribed(5_000)` ties the relay subscription's lifetime to the UI: when the last collector goes away (composable leaves the tree, window minimised, etc.), `onCompletion` fires after a 5 s debounce and `client.unsubscribe(subId)` runs. A new collector restarts the upstream and `onStart` re-opens the subscription — the cache stays warm in SQLite the whole time.
 
 ## Publishing from the UI
 
+Sign locally, drop on the bus, then broadcast to relays:
+
 ```kotlin
 val signer = NostrSignerInternal(KeyPair())
-val signed = signer.sign(TextNoteEvent.build("hello nostr", createdAt = TimeUtils.now()))
-observable.insert(signed)             // hits the bus → all open projections see it
-client.send(signed, relays = ...)     // also publish to relays
+
+fun send(text: String) {
+    viewModelScope.launch {
+        val signed = signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
+        db.insert(signed)              // hits the bus → all open projections see it
+        client.publish(signed, relays) // broadcast to relays
+    }
+}
 ```
 
-The projection runs NIP-01 supersession, NIP-09 author checks, NIP-62 vanish scoping, and NIP-40 expiration filtering automatically. UI code never needs to know any of those rules.
+`db.insert(signed)` enforces NIP-01 supersession, NIP-09 author checks, NIP-62 vanish scoping, and NIP-40 expiration on the way in; the projection layer applies the same rules on top. UI code never needs to know any of these details.
 
 ## Where to read more
 
