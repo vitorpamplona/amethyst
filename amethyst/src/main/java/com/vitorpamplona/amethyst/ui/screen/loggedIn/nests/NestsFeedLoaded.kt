@@ -156,13 +156,15 @@ private fun NestFeedCard(
     nav: INav,
 ) {
     val meetingEvent = baseNote.event as? MeetingSpaceEvent ?: return
+    val addressableNote = baseNote as? AddressableNote ?: return
+
     val context = LocalContext.current
     val status = meetingEvent.checkStatus(meetingEvent.status())
 
     val isUiClosed =
         when (status) {
             StatusTag.STATUS.LIVE -> {
-                val latestPresence by observeRoomLatestPresence(meetingEvent.address(), accountViewModel)
+                val latestPresence by observeRoomLatestPresence(addressableNote, accountViewModel)
                 val presence = latestPresence
                 presence != null && presence <= TimeUtils.now() - PRESENCE_FRESHNESS_WINDOW_SECONDS
             }
@@ -177,7 +179,6 @@ private fun NestFeedCard(
                 true
             }
         }
-    val addressableNote = baseNote as? AddressableNote ?: return
 
     val onClick =
         remember(meetingEvent, isUiClosed) {
