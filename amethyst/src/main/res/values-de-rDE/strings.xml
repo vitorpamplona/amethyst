@@ -2366,4 +2366,14 @@ anz der Bedingungen ist erforderlich</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigung wie öffentliche.</string>
     <string name="gif">Gif</string>
+    <string name="last_seen_just_now">Gerade eben gesehen</string>
+    <string name="last_seen_never">Nie gesehen</string>
+    <string name="last_seen_on_date">Zuletzt gesehen am %1$s (vor %2$s)</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_tab_chat">Chat</string>
+    <string name="nests_servers_add_auth_field">Auth-URL (JWT-Mint)</string>
+    <string name="nests_servers_add_pair_button">Hinzufügen</string>
+    <string name="nests_servers_add_relay_field">Relay-URL (WebTransport)</string>
+    <string name="nests_servers_auth_label">Auth</string>
+    <string name="nests_servers_relay_label">Relay</string>
 </resources>

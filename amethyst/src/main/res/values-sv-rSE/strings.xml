@@ -2362,4 +2362,13 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
+    <string name="last_seen_just_now">Senast sedd just nu</string>
+    <string name="last_seen_never">Aldrig sedd</string>
+    <string name="last_seen_on_date">Senast sedd %1$s (för %2$s sedan)</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nests_servers_add_auth_field">Auth-URL (JWT mint)</string>
+    <string name="nests_servers_add_pair_button">Lägg till</string>
+    <string name="nests_servers_add_relay_field">Relä-URL (WebTransport)</string>
+    <string name="nests_servers_auth_label">Auth</string>
+    <string name="nests_servers_relay_label">Relä</string>
 </resources>

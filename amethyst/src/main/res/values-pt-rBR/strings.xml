@@ -2366,4 +2366,14 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
+    <string name="last_seen_just_now">Visto agora mesmo</string>
+    <string name="last_seen_never">Nunca visto</string>
+    <string name="last_seen_on_date">Visto pela última vez em %1$s (há %2$s)</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_tab_chat">Chat</string>
+    <string name="nests_servers_add_auth_field">URL de autenticação (JWT mint)</string>
+    <string name="nests_servers_add_pair_button">Adicionar</string>
+    <string name="nests_servers_add_relay_field">URL do relay (WebTransport)</string>
+    <string name="nests_servers_auth_label">Autenticação</string>
+    <string name="nests_servers_relay_label">Relay</string>
 </resources>
