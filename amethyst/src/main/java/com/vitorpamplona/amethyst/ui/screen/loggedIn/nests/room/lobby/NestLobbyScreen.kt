@@ -36,20 +36,22 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,6 +92,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * In-app navigation lobby for a NIP-53 audio room (kind-30312). Sits
@@ -101,11 +105,12 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * The lobby keeps the room's relay subscription
  * ([NestRoomFilterAssemblerSubscription]) warm so cached chat / presence
- * stay fresh, and exposes an active kind-1311 chat composer (same widget
- * the in-room screen uses) so users can chime in without ever joining
- * the audio plane. It does NOT open a [com.vitorpamplona.amethyst.commons
- * .viewmodels.NestViewModel], does NOT publish kind-10312 presence,
- * and does NOT touch the audio pipeline.
+ * stay fresh, renders the kind-1311 transcript with the same
+ * `LazyColumn(reverseLayout = true)` list the in-room screen uses, and
+ * exposes the same composer (kind-1311 chat) — so users can chime in
+ * without ever joining the audio plane. It does NOT open a
+ * [com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel], does
+ * NOT publish kind-10312 presence, and does NOT touch the audio pipeline.
  */
 @Composable
 fun NestLobbyScreen(
@@ -142,6 +147,21 @@ private fun NestLobbyContent(
     nestScreenModel.init(accountViewModel)
     nestScreenModel.load(event)
 
+    val messages by produceState(initialValue = emptyList<Note>(), roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeNotes(filter).collect { notes ->
+            value = notes.sortedByDescending { it.createdAt() ?: 0L }.take(LOBBY_CHAT_LIMIT)
+        }
+    }
+
+    val routeForLastRead = remember(roomATag) { "NestLobbyChat/$roomATag" }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
@@ -177,15 +197,41 @@ private fun NestLobbyContent(
                     .consumeWindowInsets(padding)
                     .imePadding(),
         ) {
+            // Same chat list shape as NestFullScreen: a reverse-layout
+            // LazyColumn keyed by note id. The lobby uses cached
+            // LocalCache notes instead of an active NestViewModel.chat,
+            // and stacks the room metadata (header, listener count,
+            // "Recent chat" label) above the oldest message so the
+            // user can scroll up through history into the room info.
             LazyColumn(
-                modifier = Modifier.weight(1f),
-                state = rememberLazyListState(),
+                modifier = Modifier.weight(1f).fillMaxSize(),
+                state = listState,
+                reverseLayout = true,
             ) {
-                item("header") {
-                    RoomHeader(event, accountViewModel, nav)
+                items(
+                    items = messages,
+                    key = { it.idHex },
+                ) { note ->
+                    ChatroomMessageCompose(
+                        baseNote = note,
+                        routeForLastRead = routeForLastRead,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onWantsToReply = nestScreenModel::reply,
+                        onWantsToEditDraft = nestScreenModel::editFromDraft,
+                    )
                 }
-                item("listeners") {
-                    CachedListenerCount(roomATag)
+                if (messages.isEmpty()) {
+                    item("chat-empty") {
+                        Text(
+                            text = stringRes(R.string.nest_chat_empty),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 item("chat-header") {
                     Text(
@@ -194,7 +240,12 @@ private fun NestLobbyContent(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
-                cachedChatItems(roomATag, accountViewModel, nav)
+                item("listeners") {
+                    CachedListenerCount(roomATag)
+                }
+                item("header") {
+                    RoomHeader(event, accountViewModel, nav)
+                }
             }
 
             // The composer sits above the 3-button nav when the keyboard
@@ -209,7 +260,12 @@ private fun NestLobbyContent(
                 NestEditFieldRow(
                     nestScreenModel = nestScreenModel,
                     accountViewModel = accountViewModel,
-                    onSendNewMessage = {},
+                    onSendNewMessage = {
+                        scope.launch {
+                            delay(100)
+                            listState.animateScrollToItem(0)
+                        }
+                    },
                     nav = nav,
                 )
             }
@@ -228,7 +284,11 @@ private fun OpenNestRoomAction(
     if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
     val context = LocalContext.current
-    TextButton(
+    // Filled button so the primary CTA is unmistakable; the actions
+    // Row in the AppBar already centers its children vertically, but
+    // we trim the default end padding so the button sits flush with
+    // the bar's trailing edge.
+    Button(
         onClick = {
             NestBridge.set(accountViewModel)
             NestActivity.launch(
@@ -236,6 +296,8 @@ private fun OpenNestRoomAction(
                 addressValue = event.address().toValue(),
             )
         },
+        contentPadding = ButtonDefaults.ContentPadding,
+        modifier = Modifier.padding(end = 8.dp),
     ) {
         Text(stringRes(R.string.nest_lobby_open_action))
     }
@@ -399,61 +461,6 @@ private fun CachedListenerCount(roomATag: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     )
-}
-
-private fun LazyListScope.cachedChatItems(
-    roomATag: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    item("chat-list") {
-        CachedChatList(roomATag, accountViewModel, nav)
-    }
-}
-
-@Composable
-private fun CachedChatList(
-    roomATag: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val messages by produceState(initialValue = emptyList<Note>(), roomATag) {
-        val filter =
-            Filter(
-                kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                tags = mapOf("a" to listOf(roomATag)),
-            )
-        LocalCache.observeNotes(filter).collect { notes ->
-            value = notes.sortedByDescending { it.createdAt() ?: 0L }.take(LOBBY_CHAT_LIMIT)
-        }
-    }
-
-    val routeForLastRead = remember(roomATag) { "NestLobbyChat/$roomATag" }
-
-    if (messages.isEmpty()) {
-        Text(
-            text = stringRes(R.string.nest_chat_empty),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        return
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        messages.forEach { note ->
-            ChatroomMessageCompose(
-                baseNote = note,
-                routeForLastRead = routeForLastRead,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onWantsToReply = {},
-                onWantsToEditDraft = {},
-            )
-        }
-    }
 }
 
 private const val LOBBY_CHAT_LIMIT = 50
