@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
  *
  * ```
  * val sqlite = EventStore(...)
- * val cached = InternedEventStore(sqlite)
+ * val cached = InterningEventStore(sqlite)
  * val observable = ObservableEventStore(cached)
  * ```
  *
@@ -48,7 +48,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
  * The default [interner] is [EventInterner.Default]; pass a fresh
  * instance for tests or any context that needs isolation.
  */
-class InternedEventStore(
+class InterningEventStore(
     private val inner: IEventStore,
     private val interner: EventInterner = EventInterner.Default,
 ) : IEventStore {
