@@ -31,14 +31,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.demo.data.RelayBridge
+import com.vitorpamplona.amethyst.demo.data.projectFromRelays
 import com.vitorpamplona.amethyst.demo.net.KtorWebSocket
 import com.vitorpamplona.amethyst.demo.ui.FeedScreen
 import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
 import com.vitorpamplona.quartz.nip01Core.cache.projection.ProjectionState
-import com.vitorpamplona.quartz.nip01Core.cache.projection.project
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -66,43 +66,43 @@ private val FEED_FILTER =
     )
 
 /**
- * Single object holding the layered Quartz stack from the README:
+ * Layered Quartz stack from the README:
  *
- *   NostrClient  →  ObservableEventStore  →  InterningEventStore  →  EventStore (SQLite)
+ *   NostrClient → ObservableEventStore → InterningEventStore → EventStore (SQLite)
  *
- * `bridge` pumps relay events into `observable.insert`. The UI reads
- * via `observable.project<TextNoteEvent>(filter)` — no hand-rolled flow.
+ * The [collector] is a single connection-level listener that drops
+ * every event the [client] receives — across every subscription on
+ * every relay — into [observable]. UI projections are independent
+ * cold flows: see `projectFromRelays` for how each one drives its own
+ * relay subscription on the collection lifecycle.
  */
 private class AppGraph(
     val client: NostrClient,
     val observable: ObservableEventStore,
     val signer: NostrSignerInternal,
-    val bridge: RelayBridge,
+    val collector: EventCollector,
 )
 
 private fun buildAppGraph(): AppGraph {
     val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Bottom: durable SQLite-backed event store.
     val sqlite = EventStore(dbName = "demo-events.db")
-
-    // Middle: weak-ref interner so the same id deserialises to the
-    // same Event instance across reads.
     val interned = InterningEventStore(sqlite)
-
-    // Top: reactive bus for projections.
     val observable = ObservableEventStore(interned)
 
-    // Network: Ktor-driven WebSocket transport for relays.
     val client = NostrClient(websocketBuilder = KtorWebSocket.Builder())
 
-    // Bridge: pumps every relay arrival into observable.insert.
-    val bridge = RelayBridge(client, observable, DEMO_RELAYS, scope)
+    // Connection-wide drain: every EventMessage on every relay lands
+    // in the store, regardless of which subscription pulled it.
+    val collector =
+        EventCollector(client) { event, _ ->
+            scope.launch { runCatching { observable.insert(event) } }
+        }
 
     // Throwaway identity for the demo. Restart the app -> new keys.
     val signer = NostrSignerInternal(KeyPair())
 
-    return AppGraph(client, observable, signer, bridge)
+    return AppGraph(client, observable, signer, collector)
 }
 
 fun main() =
@@ -113,27 +113,22 @@ fun main() =
                 val graph = remember { buildAppGraph() }
                 val uiScope = rememberCoroutineScope()
 
-                // Projection over the local store. Compose collects this
-                // directly — Loading until the seed query completes,
-                // then a fresh Loaded snapshot per membership change.
+                // The flow holds open the relay subscription only while
+                // collected: subscribe on collect, unsubscribe on cancel.
                 val projection =
                     remember(graph) {
-                        graph.observable.project<TextNoteEvent>(FEED_FILTER)
+                        graph.observable.projectFromRelays<TextNoteEvent>(graph.client, DEMO_RELAYS, FEED_FILTER)
                     }
                 val projectionState by projection.collectAsState(initial = ProjectionState.Loading)
 
-                LaunchedEffect(Unit) {
-                    graph.client.connect()
-                    graph.bridge.start(FEED_FILTER)
-                }
+                LaunchedEffect(Unit) { graph.client.connect() }
 
                 FeedScreen(
                     state = projectionState,
                     onSend = { text ->
                         uiScope.launch {
                             val signed = graph.signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
-                            // Hits the bus → the projection picks it up
-                            // alongside any inbound relay copy.
+                            // Hits the bus → projection picks it up alongside any inbound relay copy.
                             graph.observable.insert(signed)
                             graph.client.publish(signed, DEMO_RELAYS)
                         }
