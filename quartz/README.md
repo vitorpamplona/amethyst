@@ -9,6 +9,9 @@ one instance of this class.
 
 ```kotlin
 object AppGraph {
+    // application-wide scope
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     // the local db
     val sqlite = EventStore(dbName = "demo-events.db")
 
@@ -30,6 +33,18 @@ object AppGraph {
 
     // update this variable when a user logs in, starts with a guest
     var signer: NostrSigner = NostrSignerInternal(KeyPair())
+
+    init {
+        // Periodic NIP-40 sweep — drops expired events from SQLite and
+        // emits StoreChange.DeleteExpired so live projections drop them
+        // too. Without this the on-disk store grows monotonically.
+        scope.launch {
+            while (isActive) {
+                delay(15.minutes)
+                runCatching { db.deleteExpiredEvents() }
+            }
+        }
+    }
 }
 ```
 
@@ -100,61 +115,14 @@ fun main() {
                 val viewModel = remember {
                     FeedViewModel(AppGraph.db, AppGraph.client, AppGraph.signer)
                 }
-                val notes by viewModel.feed.collectAsState()
-                FeedScreen(state = notes, onSend = viewModel::send)
-            }
-        }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FeedScreen(
-    state: ProjectionState<TextNoteEvent>,
-    onSend: (String) -> Unit,
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Nostr Kind 1 Demo") },
-            )
-        },
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Composer(onSend = onSend)
-            HorizontalDivider()
-            when (state) {
-                is ProjectionState.Loading -> LoadingFeed()
-                is ProjectionState.Loaded -> Feed(state.items)
-            }
-        }
-    }
-}
-
-@Composable
-private fun Composer(onSend: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("What's on your mind?") },
-            maxLines = 4,
-        )
-        Button(
-            onClick = {
-                if (text.isNotBlank()) {
-                    onSend(text)
-                    text = ""
+                val noteState by viewModel.feed.collectAsStateWithLifecycle()
+                when (noteState) {
+                    is ProjectionState.Loading -> LoadingFeed()
+                    is ProjectionState.Loaded -> Feed(noteState.items)
                 }
-            },
-            enabled = text.isNotBlank(),
-        ) { Text("Post") }
+            }
+        }
     }
 }
 
@@ -167,8 +135,6 @@ private fun LoadingFeed() {
 
 @Composable
 private fun Feed(items: List<MutableStateFlow<TextNoteEvent>>) {
-    // The list reference is stable while membership is unchanged, so
-    // LazyColumn only invalidates structure on insert / removal.
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(items = items, key = { it.value.id }) { handle ->
             NoteRow(handle)
@@ -179,27 +145,12 @@ private fun Feed(items: List<MutableStateFlow<TextNoteEvent>>) {
 
 @Composable
 private fun NoteRow(handle: MutableStateFlow<TextNoteEvent>) {
-    // Only collectors of THIS handle re-render when the event mutates
-    // in place (addressable supersession, etc.).
-    val note by handle.collectAsState()
-    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = note.pubKey.take(12) + "…",
-                style = MaterialTheme.typography.labelMedium,
-            )
-            Text(
-                text = formatTime(note.createdAt),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-            )
-        }
-        Text(
-            text = note.content,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 4.dp),
-        )
-    }
+    val event by handle.collectAsStateWithLifecycle()
+    Text(
+        text = event.content,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(top = 4.dp),
+    )
 }
 ```
 
