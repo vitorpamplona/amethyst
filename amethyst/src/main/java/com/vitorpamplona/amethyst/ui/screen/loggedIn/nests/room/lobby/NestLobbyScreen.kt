@@ -1,0 +1,386 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.types.MeetingSpaceClosedFlag
+import com.vitorpamplona.amethyst.ui.note.types.MeetingSpaceOpenFlag
+import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePlannedFlag
+import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePrivateFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
+import com.vitorpamplona.quartz.utils.TimeUtils
+
+/**
+ * In-app navigation lobby for a NIP-53 audio room (kind-30312). Sits
+ * between the feed / share-link entry points and [com.vitorpamplona.amethyst
+ * .ui.screen.loggedIn.nests.room.activity.NestActivity], so a user who's
+ * just coming back to read the chat or check who's hosting doesn't
+ * trigger a MoQ handshake or a host-side kind-30312 republish. Only the
+ * "Open room" button on this screen launches the audio activity.
+ *
+ * The lobby is read-only: it mounts the room's relay subscription
+ * ([NestRoomFilterAssemblerSubscription]) so cached chat / presence
+ * stay fresh, but it does NOT open a [com.vitorpamplona.amethyst.commons
+ * .viewmodels.NestViewModel], does NOT publish kind-10312 presence,
+ * and does NOT touch the audio pipeline.
+ */
+@Composable
+fun NestLobbyScreen(
+    addressValue: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val address = remember(addressValue) { Address.parse(addressValue) } ?: return
+    LoadAddressableNote(address, accountViewModel) { addressableNote ->
+        addressableNote ?: return@LoadAddressableNote
+        val event = addressableNote.event as? MeetingSpaceEvent ?: return@LoadAddressableNote
+        NestLobbyContent(event, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun NestLobbyContent(
+    event: MeetingSpaceEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val roomATag = remember(event) { event.address().toValue() }
+
+    // Keep cached chat / presence warm while the user is on the lobby.
+    // No MoQ session is opened — that's gated behind the Open Room button.
+    NestRoomFilterAssemblerSubscription(roomATag, accountViewModel)
+
+    Scaffold(
+        topBar = {
+            TopBarWithBackButton(
+                caption = event.room().orEmpty(),
+                nav = nav,
+            )
+        },
+        bottomBar = {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp),
+            ) {
+                OpenNestRoomButton(
+                    event = event,
+                    accountViewModel = accountViewModel,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            state = rememberLazyListState(),
+        ) {
+            item("header") {
+                RoomHeader(event, accountViewModel, nav)
+            }
+            item("listeners") {
+                CachedListenerCount(roomATag)
+            }
+            item("chat-header") {
+                Text(
+                    text = stringRes(R.string.nest_lobby_recent_chat),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            cachedChatItems(roomATag, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+private fun RoomHeader(
+    event: MeetingSpaceEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val image = remember(event) { event.image() }
+    val summary = remember(event) { event.summary() }
+    val status = remember(event) { event.status() }
+    val starts = remember(event) { event.starts() }
+    val hostPubkey = event.pubKey
+    val participants = remember(event) { event.participants() }
+    val speakers =
+        remember(participants, hostPubkey) {
+            participants.filter { p ->
+                p.pubKey != hostPubkey &&
+                    (p.role.equals(ROLE.SPEAKER.code, true) || p.role.equals(ROLE.MODERATOR.code, true))
+            }
+        }
+    val hostUser = remember(hostPubkey) { LocalCache.getOrCreateUser(hostPubkey) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (!image.isNullOrBlank()) {
+            AsyncImage(
+                model = image,
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f),
+                contentScale = ContentScale.Crop,
+            )
+        }
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                when (status) {
+                    StatusTag.STATUS.LIVE -> {
+                        MeetingSpaceOpenFlag()
+                    }
+
+                    StatusTag.STATUS.PRIVATE -> {
+                        MeetingSpacePrivateFlag()
+                    }
+
+                    StatusTag.STATUS.ENDED -> {
+                        MeetingSpaceClosedFlag()
+                    }
+
+                    StatusTag.STATUS.PLANNED -> {
+                        MeetingSpacePlannedFlag(starts)
+                    }
+
+                    null -> {}
+                }
+            }
+
+            if (!summary.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ClickableUserPicture(
+                    baseUser = hostUser,
+                    size = 40.dp,
+                    accountViewModel = accountViewModel,
+                    onClick = { user -> nav.nav(routeFor(user)) },
+                )
+                Spacer(StdHorzSpacer)
+                UsernameDisplay(
+                    baseUser = hostUser,
+                    weight = Modifier.weight(1f),
+                    accountViewModel = accountViewModel,
+                )
+                Spacer(StdHorzSpacer)
+                Text(
+                    text = stringRes(R.string.nest_lobby_host_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (speakers.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    val cap = 8
+                    val visible = remember(speakers) { speakers.take(cap) }
+                    visible.forEach { tag ->
+                        ClickableUserPicture(
+                            baseUserHex = tag.pubKey,
+                            size = 28.dp,
+                            accountViewModel = accountViewModel,
+                            onClick = { hex ->
+                                nav.nav(
+                                    com.vitorpamplona.amethyst.ui.navigation.routes.Route
+                                        .Profile(hex),
+                                )
+                            },
+                        )
+                    }
+                    if (speakers.size > visible.size) {
+                        Text(
+                            text = "+${speakers.size - visible.size}",
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Live listener count from cached kind-10312 presence events. Mirrors
+ * the staleness window used inside the room (PRESENCE_STALE_THRESHOLD_SEC
+ * in NestRoomEventCollectors): a peer that's missed one heartbeat plus a
+ * 5-min "still here" window stops counting.
+ */
+@Composable
+private fun CachedListenerCount(roomATag: String) {
+    var count by remember(roomATag) { mutableStateOf(0) }
+    LaunchedEffect(roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(MeetingRoomPresenceEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeEvents<MeetingRoomPresenceEvent>(filter).collect { events ->
+            // Latest event per pubkey within the staleness window.
+            val cutoff = TimeUtils.now() - LISTENER_FRESHNESS_SEC
+            count =
+                events
+                    .groupBy { it.pubKey }
+                    .values
+                    .count { perAuthor -> perAuthor.maxOf { it.createdAt } >= cutoff }
+        }
+    }
+    Text(
+        text =
+            if (count == 0) {
+                stringRes(R.string.nest_lobby_no_listeners)
+            } else {
+                stringRes(R.string.nest_lobby_listeners_count, count)
+            },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+private fun LazyListScope.cachedChatItems(
+    roomATag: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    item("chat-list") {
+        CachedChatList(roomATag, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun CachedChatList(
+    roomATag: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val messages by produceState(initialValue = emptyList<Note>(), roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeNotes(filter).collect { notes ->
+            value = notes.sortedByDescending { it.createdAt() ?: 0L }.take(LOBBY_CHAT_LIMIT)
+        }
+    }
+
+    val routeForLastRead = remember(roomATag) { "NestLobbyChat/$roomATag" }
+
+    if (messages.isEmpty()) {
+        Text(
+            text = stringRes(R.string.nest_chat_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        messages.forEach { note ->
+            ChatroomMessageCompose(
+                baseNote = note,
+                routeForLastRead = routeForLastRead,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onWantsToReply = {},
+                onWantsToEditDraft = {},
+            )
+        }
+    }
+}
+
+private const val LOBBY_CHAT_LIMIT = 50
+
+// 6 minutes — matches PRESENCE_STALE_THRESHOLD_SEC in NestRoomEventCollectors.
+private const val LISTENER_FRESHNESS_SEC: Long = 6L * 60L
