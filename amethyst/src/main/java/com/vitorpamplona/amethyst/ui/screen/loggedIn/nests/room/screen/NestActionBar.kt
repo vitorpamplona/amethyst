@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -65,21 +69,25 @@ import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
- * Sticky bottom action bar for the room screen. Replaces the three
- * separate rows (`ConnectionRow`, `TalkRow`, hand/react/leave) that
- * used to scroll away with the rest of the metadata.
+ * Sticky bottom action bar for the room screen.
  *
- * Layout adapts to connection / broadcast / on-stage state:
- *   - Disconnected → `[Connect]` (start) · `[Leave]` (end)
- *   - Connecting / Reconnecting → state chip · `[Leave]`
- *   - Connected, audience → `[Listen mute toggle]` · `[Hand] [React] [Leave]`
- *   - Connected, on-stage idle → `[Talk] [Leave stage]` · `[React] [Leave]`
- *   - Connected, on-stage live → `[Mic mute] [Stop] [Leave stage]` · `[React] [Leave]`
- *   - Failed (connection or broadcast) → status strip above the bar
- *     plus a retry button in the start cluster.
+ * Layout: `[ start cluster ] · · · [ end cluster ]` with an optional
+ * red status strip above for connection / broadcast / mute failures.
  *
- * The Hand button hides when the user is already on stage — the
- * action it represents ("I want to speak") doesn't apply once you can.
+ * Start cluster — driven by connection × broadcast × on-stage state:
+ *
+ * | State                                       | Start cluster contents                  |
+ * |---------------------------------------------|-----------------------------------------|
+ * | Idle / Closed / Failed connection           | `[Connect]`                             |
+ * | Connecting / Reconnecting                   | status chip                             |
+ * | Connected, audience                         | empty (system volume keys are enough)   |
+ * | Connected, on stage, !canBroadcast          | `[Leave the Stage]`                     |
+ * | Connected, on stage, mic idle               | `[Talk] [Leave the Stage]` (+ pill)     |
+ * | Connected, on stage, going live             | status chip + `[Leave the Stage]`       |
+ * | Connected, on stage, broadcasting           | `[MicMute] [Stop] [Leave the Stage]`    |
+ * | Connected, on stage, broadcast failed       | `[Retry] [Leave the Stage]`             |
+ *
+ * End cluster: hand-raise (audience + connected only), react, leave room.
  */
 @Composable
 internal fun NestActionBar(
@@ -99,18 +107,11 @@ internal fun NestActionBar(
         contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 3.dp,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(),
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             ActionBarStatusStrip(ui = ui)
             Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -136,39 +137,29 @@ internal fun NestActionBar(
     }
 }
 
+/** Single-line red error strip. Surfaces the most relevant failure. */
 @Composable
 private fun ActionBarStatusStrip(ui: NestUiState) {
-    val text =
-        when (val connection = ui.connection) {
-            is ConnectionUiState.Failed -> {
-                stringRes(R.string.nest_audio_failed, connection.reason)
-            }
-
-            else -> {
-                when (val broadcast = ui.broadcast) {
-                    is BroadcastUiState.Failed -> {
-                        stringRes(R.string.nest_broadcast_failed, broadcast.reason)
-                    }
-
-                    is BroadcastUiState.Broadcasting -> {
-                        broadcast.muteError?.let {
-                            stringRes(R.string.nest_mute_failed, it)
-                        }
-                    }
-
-                    else -> {
-                        null
-                    }
-                }
-            }
-        }
-    if (text == null) return
+    val text = ui.statusStripText() ?: return
     Text(
         text = text,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
     )
+}
+
+@Composable
+private fun NestUiState.statusStripText(): String? {
+    val connection = connection
+    if (connection is ConnectionUiState.Failed) {
+        return stringRes(R.string.nest_audio_failed, connection.reason)
+    }
+    return when (val b = broadcast) {
+        is BroadcastUiState.Failed -> stringRes(R.string.nest_broadcast_failed, b.reason)
+        is BroadcastUiState.Broadcasting -> b.muteError?.let { stringRes(R.string.nest_mute_failed, it) }
+        else -> null
+    }
 }
 
 @Composable
@@ -184,26 +175,19 @@ private fun StartCluster(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         when (val connection = ui.connection) {
-            is ConnectionUiState.Idle, is ConnectionUiState.Closed -> {
-                Button(onClick = { viewModel.connect() }) {
-                    Text(stringRes(R.string.nest_connect))
-                }
+            is ConnectionUiState.Idle,
+            is ConnectionUiState.Closed,
+            is ConnectionUiState.Failed,
+            -> {
+                ConnectButton(onClick = viewModel::connect)
             }
 
             is ConnectionUiState.Connecting -> {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(connectingLabel(connection)) },
-                )
+                StatusChip(label = connectingLabel(connection))
             }
 
             is ConnectionUiState.Reconnecting -> {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(stringRes(R.string.nest_reconnecting)) },
-                )
+                StatusChip(label = stringRes(R.string.nest_reconnecting))
             }
 
             is ConnectionUiState.Connected -> {
@@ -211,29 +195,20 @@ private fun StartCluster(
                     canBroadcast && isOnStage -> {
                         OnStageControls(
                             viewModel = viewModel,
-                            ui = ui,
+                            broadcast = ui.broadcast,
                             speakerPubkeyHex = speakerPubkeyHex,
                         )
                     }
 
+                    // On stage but no signing/permission — only thing we can do is step down.
                     isOnStage -> {
-                        // On stage but cannot broadcast (no signer / no permission).
-                        // Only sensible affordance is to step back down to audience.
-                        OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
-                            Text(stringRes(R.string.nest_leave_stage))
-                        }
+                        LeaveStageButton(onClick = { viewModel.setOnStage(false) })
                     }
 
+                    // Audience: nothing here. Phone volume keys cover local volume.
                     else -> {
-                        // Audience: nothing to do here. System volume keys cover
-                        // local volume; the mute toggle was redundant.
+                        Unit
                     }
-                }
-            }
-
-            is ConnectionUiState.Failed -> {
-                Button(onClick = { viewModel.connect() }) {
-                    Text(stringRes(R.string.nest_connect))
                 }
             }
         }
@@ -243,163 +218,78 @@ private fun StartCluster(
 @Composable
 private fun OnStageControls(
     viewModel: NestViewModel,
-    ui: NestUiState,
+    broadcast: BroadcastUiState,
+    speakerPubkeyHex: String,
+) {
+    val leaveStage = {
+        viewModel.stopBroadcast()
+        viewModel.setOnStage(false)
+    }
+    when (broadcast) {
+        BroadcastUiState.Idle -> {
+            OnStageIdleControls(
+                viewModel = viewModel,
+                speakerPubkeyHex = speakerPubkeyHex,
+            )
+        }
+
+        BroadcastUiState.Connecting -> {
+            StatusChip(label = stringRes(R.string.nest_broadcast_connecting))
+            // stopBroadcast() cancels the in-flight speakerConnectJob,
+            // so leaving mid-handshake is safe.
+            LeaveStageButton(onClick = leaveStage)
+        }
+
+        is BroadcastUiState.Broadcasting -> {
+            MicMuteToggle(isMuted = broadcast.isMuted, onToggle = viewModel::setMicMuted)
+            StopBroadcastButton(onClick = viewModel::stopBroadcast)
+            LeaveStageButton(onClick = leaveStage)
+        }
+
+        is BroadcastUiState.Failed -> {
+            // Reason is shown in the status strip; this button retries.
+            TalkButton(
+                onClick = { viewModel.startBroadcast(speakerPubkeyHex) },
+                contentDescription = stringRes(R.string.nest_talk),
+            )
+            LeaveStageButton(onClick = { viewModel.setOnStage(false) })
+        }
+    }
+}
+
+@Composable
+private fun OnStageIdleControls(
+    viewModel: NestViewModel,
     speakerPubkeyHex: String,
 ) {
     val context = LocalContext.current
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                permissionDenied = false
+            permissionDenied = !granted
+            if (granted) viewModel.startBroadcast(speakerPubkeyHex)
+        }
+    // The launcher callback never fires for Settings-deep-link grants, so
+    // re-check on every recomposition to auto-clear the warning.
+    val showDenialWarning =
+        permissionDenied && !context.hasMicPermission()
+
+    TalkButton(
+        onClick = {
+            if (context.hasMicPermission()) {
                 viewModel.startBroadcast(speakerPubkeyHex)
             } else {
-                permissionDenied = true
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
-        }
-    // If the user grants RECORD_AUDIO via the system Settings deep-link
-    // and returns to the activity, the launcher callback never fires —
-    // recompute every time so the warning auto-clears.
-    val showDenialWarning =
-        permissionDenied &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
-            PackageManager.PERMISSION_GRANTED
-
-    when (val broadcast = ui.broadcast) {
-        BroadcastUiState.Idle -> {
-            // Mic OFF visual: filled primary button signals "tap to go live".
-            // Sized larger than the surrounding 40.dp icon buttons so the
-            // mic state is unmistakable at a glance.
-            FilledIconButton(
-                onClick = {
-                    val granted =
-                        ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO,
-                        ) == PackageManager.PERMISSION_GRANTED
-                    if (granted) {
-                        viewModel.startBroadcast(speakerPubkeyHex)
-                    } else {
-                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                    }
-                },
-                modifier = Modifier.size(56.dp),
-                colors =
-                    IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.MicOff,
-                    contentDescription = stringRes(R.string.nest_talk),
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
-                Text(stringRes(R.string.nest_leave_stage))
-            }
-            if (showDenialWarning) {
-                // After "Don't ask again" the permission launcher
-                // silently returns false; surface a Settings deep-link.
-                OutlinedButton(onClick = {
-                    runCatching {
-                        context.startActivity(
-                            android.content
-                                .Intent(
-                                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                    android.net.Uri.fromParts("package", context.packageName, null),
-                                ).apply {
-                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                },
-                        )
-                    }
-                }) {
-                    Text(stringRes(R.string.nest_open_settings))
-                }
-            }
-        }
-
-        BroadcastUiState.Connecting -> {
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text(stringRes(R.string.nest_broadcast_connecting)) },
-            )
-            // Always offer a way down. stopBroadcast() cancels the
-            // in-flight speakerConnectJob (NestViewModel.teardownBroadcast).
-            OutlinedButton(onClick = {
-                viewModel.stopBroadcast()
-                viewModel.setOnStage(false)
-            }) {
-                Text(stringRes(R.string.nest_leave_stage))
-            }
-        }
-
-        is BroadcastUiState.Broadcasting -> {
-            FilledTonalIconToggleButton(
-                checked = broadcast.isMuted,
-                onCheckedChange = { viewModel.setMicMuted(it) },
-                modifier = Modifier.size(width = 40.dp, height = ButtonDefaults.MinHeight),
-            ) {
-                Icon(
-                    symbol =
-                        if (broadcast.isMuted) {
-                            MaterialSymbols.AutoMirrored.VolumeOff
-                        } else {
-                            MaterialSymbols.AutoMirrored.VolumeUp
-                        },
-                    contentDescription =
-                        stringRes(
-                            if (broadcast.isMuted) R.string.nest_mic_unmute else R.string.nest_mic_mute,
-                        ),
-                )
-            }
-            // Mic ON visual: filled error-color button screams "MIC IS LIVE,
-            // tap to stop transmitting". Same large footprint as the Idle
-            // mic button so the state swap is impossible to miss.
-            FilledIconButton(
-                onClick = { viewModel.stopBroadcast() },
-                modifier = Modifier.size(56.dp),
-                colors =
-                    IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Mic,
-                    contentDescription = stringRes(R.string.nest_stop_talking),
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            OutlinedButton(onClick = {
-                viewModel.stopBroadcast()
-                viewModel.setOnStage(false)
-            }) {
-                Text(stringRes(R.string.nest_leave_stage))
-            }
-        }
-
-        is BroadcastUiState.Failed -> {
-            FilledIconButton(
-                onClick = { viewModel.startBroadcast(speakerPubkeyHex) },
-                modifier = Modifier.size(56.dp),
-                colors =
-                    IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.MicOff,
-                    contentDescription = stringRes(R.string.nest_talk),
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
-                Text(stringRes(R.string.nest_leave_stage))
-            }
+        },
+        contentDescription = stringRes(R.string.nest_talk),
+    )
+    LeaveStageButton(onClick = { viewModel.setOnStage(false) })
+    if (showDenialWarning) {
+        // After "Don't ask again" the launcher silently returns false;
+        // expose a Settings deep-link.
+        OutlinedButton(onClick = { context.openAppSettings() }) {
+            Text(stringRes(R.string.nest_open_settings))
         }
     }
 }
@@ -417,25 +307,13 @@ private fun EndCluster(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // Hand-raise only makes sense for audience that's actually
-        // connected — if you're already on stage you don't need to ask,
-        // and raising while disconnected can't be delivered to the room.
+        // Hand-raise: only meaningful for connected audience. On stage
+        // it's moot; disconnected it can't reach the room.
         if (!isOnStage && isConnected) {
-            FilledTonalIconToggleButton(
-                checked = handRaised,
-                onCheckedChange = onHandRaisedChange,
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.PanTool,
-                    contentDescription =
-                        stringRes(
-                            if (handRaised) R.string.nest_lower_hand else R.string.nest_raise_hand,
-                        ),
-                )
-            }
+            HandRaiseToggle(handRaised = handRaised, onToggle = onHandRaisedChange)
         }
-        // React is always visible — even disconnected users can
-        // (un)react via the reactions picker on the room note.
+        // React works in any state — even disconnected users can react
+        // via the room note.
         FilledTonalIconButton(onClick = onShowReactionPicker) {
             Icon(
                 symbol = MaterialSymbols.EmojiEmotions,
@@ -443,21 +321,139 @@ private fun EndCluster(
             )
         }
         Spacer(Modifier.width(4.dp))
-        OutlinedButton(
-            onClick = onLeave,
-            colors =
-                ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-        ) {
-            Icon(
-                symbol = MaterialSymbols.AutoMirrored.Logout,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(stringRes(R.string.nest_leave))
-        }
+        LeaveRoomButton(onClick = onLeave)
+    }
+}
+
+// ── Reusable affordances ────────────────────────────────────────────────
+
+@Composable
+private fun ConnectButton(onClick: () -> Unit) {
+    Button(onClick = onClick) {
+        Text(stringRes(R.string.nest_connect))
+    }
+}
+
+/** Disabled assist chip used as a status indicator (no click target). */
+@Composable
+private fun StatusChip(label: String) {
+    AssistChip(
+        onClick = {},
+        enabled = false,
+        label = { Text(label) },
+    )
+}
+
+@Composable
+private fun LeaveStageButton(onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick) {
+        Text(stringRes(R.string.nest_leave_stage))
+    }
+}
+
+/**
+ * Big primary 56dp mic button shown in the off-states (Idle, Failed)
+ * to invite the user to start broadcasting. Larger than surrounding
+ * 40dp icon buttons so the mic state is unmistakable.
+ */
+@Composable
+private fun TalkButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+) {
+    FilledIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(56.dp),
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.MicOff,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(28.dp),
+        )
+    }
+}
+
+/**
+ * Big error-color 56dp mic button shown while broadcasting. Same
+ * footprint as [TalkButton] so the on/off swap is impossible to miss.
+ */
+@Composable
+private fun StopBroadcastButton(onClick: () -> Unit) {
+    FilledIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(56.dp),
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError,
+            ),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Mic,
+            contentDescription = stringRes(R.string.nest_stop_talking),
+            modifier = Modifier.size(28.dp),
+        )
+    }
+}
+
+/**
+ * Cheap broadcast-side mute toggle. Keeps the MoQ session open and
+ * just stops sending audio frames; unmute is sample-accurate.
+ */
+@Composable
+private fun MicMuteToggle(
+    isMuted: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    FilledTonalIconToggleButton(
+        checked = isMuted,
+        onCheckedChange = onToggle,
+        modifier = Modifier.size(width = 40.dp, height = ButtonDefaults.MinHeight),
+    ) {
+        Icon(
+            symbol = if (isMuted) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
+            contentDescription = stringRes(if (isMuted) R.string.nest_mic_unmute else R.string.nest_mic_mute),
+        )
+    }
+}
+
+@Composable
+private fun HandRaiseToggle(
+    handRaised: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    FilledTonalIconToggleButton(
+        checked = handRaised,
+        onCheckedChange = onToggle,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.PanTool,
+            contentDescription = stringRes(if (handRaised) R.string.nest_lower_hand else R.string.nest_raise_hand),
+        )
+    }
+}
+
+@Composable
+private fun LeaveRoomButton(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.AutoMirrored.Logout,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(stringRes(R.string.nest_leave))
     }
 }
 
@@ -468,3 +464,20 @@ private fun connectingLabel(connection: ConnectionUiState.Connecting): String =
         ConnectionUiState.Step.OpeningTransport -> stringRes(R.string.nest_connecting_transport)
         ConnectionUiState.Step.MoqHandshake -> stringRes(R.string.nest_connecting_handshake)
     }
+
+// ── Permission helpers ──────────────────────────────────────────────────
+
+private fun Context.hasMicPermission(): Boolean =
+    ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+        PackageManager.PERMISSION_GRANTED
+
+private fun Context.openAppSettings() {
+    runCatching {
+        startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", packageName, null),
+            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+        )
+    }
+}
