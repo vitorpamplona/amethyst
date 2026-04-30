@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,6 +78,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -134,11 +137,15 @@ fun NestsFeedLoaded(
 }
 
 /**
- * Audio-rooms list card. Mirrors [ObserveAndRenderSpace] visually but
- * routes a tap into the in-app [NestLobbyScreen] when the underlying
- * event is a joinable [MeetingSpaceEvent]. The lobby is read-only —
- * launching the audio activity (and any host-side kind-30312 refresh)
- * still requires an explicit tap on the lobby's Open Room button.
+ * Audio-rooms list card. Mirrors [ObserveAndRenderSpace] visually and
+ * gates a tap on the underlying [MeetingSpaceEvent] by the same liveness
+ * heuristic the badge uses: cards rendering as [EndedFlag] (status =
+ * ENDED, status = LIVE with stale presence, or unknown status) route
+ * through the read-only [NestLobbyScreen] so re-entry can't accidentally
+ * boot the audio pipeline or trigger a host-side kind-30312 refresh on
+ * a dead room. Cards that the UI still shows as live, scheduled, or
+ * private launch [NestActivity] directly — the lobby's purpose is only
+ * to gate stale rooms.
  */
 @Composable
 private fun NestFeedCard(
@@ -148,15 +155,44 @@ private fun NestFeedCard(
     nav: INav,
 ) {
     val meetingEvent = baseNote.event as? MeetingSpaceEvent ?: return
+    val context = LocalContext.current
+    val status = meetingEvent.checkStatus(meetingEvent.status())
+
+    val isUiClosed =
+        when (status) {
+            StatusTag.STATUS.LIVE -> {
+                val latestPresence by observeRoomLatestPresence(meetingEvent.address(), accountViewModel)
+                val presence = latestPresence
+                presence != null && presence <= TimeUtils.now() - PRESENCE_FRESHNESS_WINDOW_SECONDS
+            }
+
+            StatusTag.STATUS.PLANNED,
+            StatusTag.STATUS.PRIVATE,
+            -> {
+                false
+            }
+
+            else -> {
+                true
+            }
+        }
 
     val onClick =
-        remember(meetingEvent) {
+        remember(meetingEvent, isUiClosed) {
             {
                 val service = meetingEvent.service()
                 val endpoint = meetingEvent.endpoint()
                 val dTag = meetingEvent.address().dTag
                 if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
-                    nav.nav(Route.NestLobby(meetingEvent.address().toValue()))
+                    if (isUiClosed) {
+                        nav.nav(Route.NestLobby(meetingEvent.address().toValue()))
+                    } else {
+                        NestBridge.set(accountViewModel)
+                        NestActivity.launch(
+                            context = context,
+                            addressValue = meetingEvent.address().toValue(),
+                        )
+                    }
                 } else {
                     nav.nav { routeFor(baseNote, accountViewModel.account) }
                 }
