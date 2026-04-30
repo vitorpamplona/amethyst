@@ -126,6 +126,7 @@ internal fun NestActionBar(
                 }
                 EndCluster(
                     isOnStage = isOnStage,
+                    isConnected = ui.connection is ConnectionUiState.Connected,
                     handRaised = handRaised,
                     onHandRaisedChange = onHandRaisedChange,
                     onShowReactionPicker = onShowReactionPicker,
@@ -148,6 +149,12 @@ private fun ActionBarStatusStrip(ui: NestUiState) {
                 when (val broadcast = ui.broadcast) {
                     is BroadcastUiState.Failed -> {
                         stringRes(R.string.nest_broadcast_failed, broadcast.reason)
+                    }
+
+                    is BroadcastUiState.Broadcasting -> {
+                        broadcast.muteError?.let {
+                            stringRes(R.string.nest_mute_failed, it)
+                        }
                     }
 
                     else -> {
@@ -201,32 +208,26 @@ private fun StartCluster(
             }
 
             is ConnectionUiState.Connected -> {
-                if (canBroadcast && isOnStage) {
-                    OnStageControls(
-                        viewModel = viewModel,
-                        ui = ui,
-                        speakerPubkeyHex = speakerPubkeyHex,
-                    )
-                } else {
-                    // Audience: a single mute toggle for the inbound
-                    // listener stream. Mirrors the old ConnectionRow.
-                    FilledTonalIconToggleButton(
-                        checked = ui.isMuted,
-                        onCheckedChange = { viewModel.setMuted(it) },
-                        modifier = Modifier.size(width = 40.dp, height = ButtonDefaults.MinHeight),
-                    ) {
-                        Icon(
-                            symbol =
-                                if (ui.isMuted) {
-                                    MaterialSymbols.AutoMirrored.VolumeOff
-                                } else {
-                                    MaterialSymbols.AutoMirrored.VolumeUp
-                                },
-                            contentDescription =
-                                stringRes(
-                                    if (ui.isMuted) R.string.nest_unmute else R.string.nest_mute,
-                                ),
+                when {
+                    canBroadcast && isOnStage -> {
+                        OnStageControls(
+                            viewModel = viewModel,
+                            ui = ui,
+                            speakerPubkeyHex = speakerPubkeyHex,
                         )
+                    }
+
+                    isOnStage -> {
+                        // On stage but cannot broadcast (no signer / no permission).
+                        // Only sensible affordance is to step back down to audience.
+                        OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
+                            Text(stringRes(R.string.nest_leave_stage))
+                        }
+                    }
+
+                    else -> {
+                        // Audience: nothing to do here. System volume keys cover
+                        // local volume; the mute toggle was redundant.
                     }
                 }
             }
@@ -326,6 +327,14 @@ private fun OnStageControls(
                 enabled = false,
                 label = { Text(stringRes(R.string.nest_broadcast_connecting)) },
             )
+            // Always offer a way down. stopBroadcast() cancels the
+            // in-flight speakerConnectJob (NestViewModel.teardownBroadcast).
+            OutlinedButton(onClick = {
+                viewModel.stopBroadcast()
+                viewModel.setOnStage(false)
+            }) {
+                Text(stringRes(R.string.nest_leave_stage))
+            }
         }
 
         is BroadcastUiState.Broadcasting -> {
@@ -398,6 +407,9 @@ private fun OnStageControls(
                     modifier = Modifier.size(28.dp),
                 )
             }
+            OutlinedButton(onClick = { viewModel.setOnStage(false) }) {
+                Text(stringRes(R.string.nest_leave_stage))
+            }
         }
     }
 }
@@ -405,6 +417,7 @@ private fun OnStageControls(
 @Composable
 private fun EndCluster(
     isOnStage: Boolean,
+    isConnected: Boolean,
     handRaised: Boolean,
     onHandRaisedChange: (Boolean) -> Unit,
     onShowReactionPicker: () -> Unit,
@@ -414,9 +427,10 @@ private fun EndCluster(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // Hand-raise only makes sense for audience: if you're already
-        // on stage, you don't need to ask. Hidden when on-stage.
-        if (!isOnStage) {
+        // Hand-raise only makes sense for audience that's actually
+        // connected — if you're already on stage you don't need to ask,
+        // and raising while disconnected can't be delivered to the room.
+        if (!isOnStage && isConnected) {
             FilledTonalIconToggleButton(
                 checked = handRaised,
                 onCheckedChange = onHandRaisedChange,
