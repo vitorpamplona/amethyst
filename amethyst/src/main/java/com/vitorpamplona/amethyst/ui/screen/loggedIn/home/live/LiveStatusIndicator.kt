@@ -90,7 +90,7 @@ private suspend fun checkChannelIsOnline(
                     // the red dot whenever the room is OPEN/PRIVATE.
                     if (channel.address.kind == MeetingSpaceEvent.KIND) {
                         val room = LocalCache.getAddressableNoteIfExists(channel.address)?.event as? MeetingSpaceEvent
-                        room?.status() == MeetingSpaceStatusTag.STATUS.OPEN ||
+                        room?.status() == MeetingSpaceStatusTag.STATUS.LIVE ||
                             room?.status() == MeetingSpaceStatusTag.STATUS.PRIVATE
                     } else {
                         // Check if streaming URL is online, fall back to relay check

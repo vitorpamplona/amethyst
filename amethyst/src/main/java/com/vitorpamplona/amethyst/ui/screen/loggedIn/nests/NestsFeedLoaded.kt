@@ -291,9 +291,9 @@ private fun observeRoomLatestPresence(
             channel
                 .flow()
                 .notes.stateFlow
-                .mapLatest { state ->
+                .mapLatest { _ ->
                     var max: Long? = null
-                    state.channel.notes.forEach { _, note ->
+                    channel.presenceNotes.forEach { _, note ->
                         val event = note.event
                         if (event is MeetingRoomPresenceEvent) {
                             val createdAt = event.createdAt
@@ -339,11 +339,11 @@ fun RenderLiveSpacesThumb(
             Box(Modifier.padding(10.dp)) {
                 CrossfadeIfEnabled(targetState = card.status, accountViewModel = accountViewModel) {
                     when (it) {
-                        StatusTag.STATUS.OPEN -> {
+                        StatusTag.STATUS.LIVE -> {
                             RenderLiveOrEndedFromPresence(card.id, accountViewModel)
                         }
 
-                        StatusTag.STATUS.CLOSED -> {
+                        StatusTag.STATUS.ENDED -> {
                             EndedFlag()
                         }
 

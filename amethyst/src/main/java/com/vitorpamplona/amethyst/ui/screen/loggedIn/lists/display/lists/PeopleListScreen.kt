@@ -310,7 +310,7 @@ private fun PeopleListViewPreview() {
         Column {
             PeopleListView(
                 memberList = persistentListOf(user1, user2, user3),
-                onDeleteUser = { user -> },
+                onDeleteUser = { _ -> },
                 accountViewModel = accountViewModel,
                 nav = EmptyNav(),
             )

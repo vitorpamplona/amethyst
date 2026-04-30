@@ -195,6 +195,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -980,7 +981,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -1001,7 +1002,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -1012,6 +1013,10 @@ class Account(
         }
 
         if (event is MeetingSpaceEvent) {
+            relayList.addAll(event.allRelayUrls())
+        }
+
+        if (event is MeetingRoomEvent) {
             relayList.addAll(event.allRelayUrls())
         }
 
@@ -1041,7 +1046,7 @@ class Account(
                     client
                         .fetchFirst(
                             filters =
-                                note.relays.associateWith { relay ->
+                                note.relays.associateWith { _ ->
                                     listOf(
                                         Filter(
                                             kinds = listOf(host.kind),
@@ -3087,7 +3092,7 @@ class Account(
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
-    suspend fun sendNestsServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
+    suspend fun sendNestsServersList(servers: List<com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 
     suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
 

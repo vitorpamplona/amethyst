@@ -232,7 +232,7 @@ class QueryBuilder(
         }
     }
 
-    private fun <T : Event> SQLiteStatement.toEvent() =
+    private fun <T : Event> SQLiteStatement.toEvent(): T =
         EventFactory.create<T>(
             getText(0),
             getText(1),

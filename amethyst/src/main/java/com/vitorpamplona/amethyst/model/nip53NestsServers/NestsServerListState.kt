@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,15 +41,16 @@ import kotlinx.coroutines.flow.stateIn
  * [BlossomServerListState] for the nests use case.
  *
  * Surfaces:
- *   - [flow] — current `List<String>` of saved server base URLs
+ *   - [flow] — current `List<NestsServer>` of saved (relay, auth) pairs
  *   - [getNestsServersListFlow] — reactive `StateFlow<NoteState>` for
  *     downstream UI to recompose on event arrivals
  *   - [saveNestsServersList] — build + sign a new replaceable kind 10112
  *     event (preserving prior tags' alt etc.)
  *
- * The list is consumed by `CreateNestViewModel` to default the
- * "MoQ service URL" / "MoQ endpoint URL" fields when starting a new
- * space, and by the Settings screen for edit / add / remove.
+ * Each saved entry carries the **two** URLs the kind-30312 event needs:
+ * the moq-relay WebTransport endpoint and the moq-auth sidecar base.
+ * They live on different hosts in the deployed nostrnests reference, so
+ * the pair MUST stay together.
  */
 class NestsServerListState(
     val signer: NostrSigner,
@@ -64,12 +66,12 @@ class NestsServerListState(
 
     fun getNestsServersList(): NestsServersEvent? = nestsListNote.event as? NestsServersEvent
 
-    fun normalizeServers(note: Note): List<String> {
+    fun normalizeServers(note: Note): List<NestsServer> {
         val event = note.event as? NestsServersEvent
         return event?.servers() ?: emptyList()
     }
 
-    val flow: StateFlow<List<String>> =
+    val flow: StateFlow<List<NestsServer>> =
         getNestsServersListFlow()
             .map {
                 normalizeServers(it.note)
@@ -80,7 +82,7 @@ class NestsServerListState(
                 emptyList(),
             )
 
-    suspend fun saveNestsServersList(servers: List<String>): NestsServersEvent {
+    suspend fun saveNestsServersList(servers: List<NestsServer>): NestsServersEvent {
         val serverList = getNestsServersList()
 
         return if (serverList != null && serverList.tags.isNotEmpty()) {
@@ -91,7 +93,7 @@ class NestsServerListState(
             )
         } else {
             NestsServersEvent.createFromScratch(
-                relays = servers,
+                servers = servers,
                 signer = signer,
             )
         }

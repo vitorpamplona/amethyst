@@ -610,6 +610,11 @@
     <string name="nests_servers_my_section">Your servers</string>
     <string name="nests_servers_my_explainer">Saved as a kind-10112 replaceable event so other clients can read your preference.</string>
     <string name="nests_servers_add_field">Add a nest server</string>
+    <string name="nests_servers_add_relay_field">Relay (WebTransport) URL</string>
+    <string name="nests_servers_add_auth_field">Auth (JWT mint) URL</string>
+    <string name="nests_servers_add_pair_button">Add</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="nests_servers_auth_label">Auth</string>
     <string name="nests_servers_recommended_section">Recommended servers</string>
     <string name="nests_servers_recommended_explainer">Built-in suggestions you can add to your list with one tap.</string>
     <string name="nests_servers_use_defaults">Use Amethyst defaults</string>
@@ -1721,6 +1726,9 @@
     <string name="bottom_bar_settings_description">Drag to reorder. Toggle to add or remove an item from the bottom bar. With zero items the bottom bar is hidden.</string>
     <string name="bottom_bar_settings_available">Available</string>
     <string name="bottom_bar_settings_reorder">Reorder</string>
+    <string name="home_tabs_settings">Home Tabs</string>
+    <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
+    <string name="home_tab_everything">Everything</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
@@ -2379,6 +2387,34 @@
     <string name="relay_settings_lower2">outbox lists</string>
     <string name="relay_settings_lower">relay settings</string>
     <string name="last_seen">Last seen %1$s ago</string>
+    <string name="last_seen_on_date">Last seen on %1$s (%2$s ago)</string>
+    <string name="last_seen_just_now">Last seen just now</string>
+    <string name="last_seen_never">Never seen</string>
+
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d week</item>
+        <item quantity="other">%1$d weeks</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d month</item>
+        <item quantity="other">%1$d months</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d year</item>
+        <item quantity="other">%1$d years</item>
+    </plurals>
 
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Connecting</string>

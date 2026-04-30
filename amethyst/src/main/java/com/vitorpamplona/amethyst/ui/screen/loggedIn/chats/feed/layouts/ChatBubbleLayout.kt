@@ -232,7 +232,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
-        ) { bgColor ->
+        ) { _ ->
             Text("This is my note")
         }
 
@@ -266,7 +266,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
-        ) { bgColor ->
+        ) { _ ->
             Text("This is a very long long loong note")
         }
 
@@ -300,7 +300,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
-        ) { bgColor ->
+        ) { _ ->
             Text("This is a draft note")
         }
 
@@ -334,7 +334,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
-        ) { bgColor ->
+        ) { _ ->
             Text("Short note")
         }
     }

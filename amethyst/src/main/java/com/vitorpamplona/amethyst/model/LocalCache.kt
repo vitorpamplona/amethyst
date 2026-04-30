@@ -1173,7 +1173,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                         }
                     }
 
-                notes.forEach { key, note ->
+                notes.forEach { _, note ->
                     val noteEvent = note.event
                     if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
                         if (noteEvent.pubKey == event.pubKey && noteEvent.createdAt <= event.createdAt) {
@@ -1549,30 +1549,47 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     /**
-     * Audio-room presence (kind-10312) — addressable storage AND
-     * attach the version note to the room's [LiveActivitiesChannel].
-     * The home live-bubble surfaces a room when a follow is
-     * publishing in it; that fan-out walks `channel.notes`, so the
-     * presence event needs to be in there alongside chat. Without
-     * this, presence-driven inclusion can't see follows broadcasting
-     * in the room (only chat-driven inclusion would fire).
+     * Audio-room presence (kind-10312) — addressable storage plus an
+     * author-keyed entry in the room's
+     * [LiveActivitiesChannel.presenceNotes] index.
+     *
+     * Presence is intentionally NOT added to `channel.notes`: that
+     * map is dominated by chat in active rooms and feeds that care
+     * about presence (Nests drawer, home live-bubble, NestsFeedLoaded)
+     * iterate `presenceNotes` directly for an O(speakers) scan.
+     *
+     * Cross-room move handling: kind-10312 is replaceable per author,
+     * but the room a presence points to (`a`-tag) can change when a
+     * speaker hops between rooms. The replaceable cache only swaps
+     * the addressable's content — it has no notion of which channel
+     * the old version was attached to. Without explicit eviction the
+     * old room would keep surfacing as "live" via the stale entry
+     * until it dropped out of the freshness window. Capture the prior
+     * room before replacement and, when it differs, drop the author
+     * from the old channel's presence index.
      */
     fun consume(
         event: MeetingRoomPresenceEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        val priorVersion = getAddressableNoteIfExists(event.address())?.event as? MeetingRoomPresenceEvent
+        val priorRoomAddress = priorVersion?.interactiveRoom()?.address
+        val isReplacement = priorVersion != null && event.createdAt > priorVersion.createdAt
+
         val new = consumeBaseReplaceable(event, relay, wasVerified)
 
-        // The replaceable cache keys this on the AUTHOR's address
-        // (kind=10312, pubkey, fixed-d-tag) — independent of the
-        // room. To wire the room bubble we also attach the version
-        // note to the room's channel keyed by its kind-30312 address.
         val roomAddress = event.interactiveRoom()?.address ?: return new
         if (roomAddress.kind != MeetingSpaceEvent.KIND) return new
+
+        if (isReplacement && priorRoomAddress != null && priorRoomAddress != roomAddress) {
+            getLiveActivityChannelIfExists(priorRoomAddress)?.removePresenceNote(event.pubKey)
+        }
+
         val channel = getOrCreateLiveChannel(roomAddress)
         val versionNote = getOrCreateNote(event.id)
-        channel.addNote(versionNote, relay)
+        channel.addPresenceNote(versionNote)
+        if (relay != null) channel.addRelay(relay)
 
         return new
     }
@@ -2224,6 +2241,11 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
+    // 2× the 10-min `PRESENCE_FRESHNESS_WINDOW_SECONDS` used by
+    // `NestsFeedFilter` so a presence still inside any feed's window
+    // can never be pruned.
+    private val PRESENCE_PRUNE_AGE_SECONDS = 20L * 60L
+
     fun pruneOldMessagesChannel(channel: Channel) {
         val toBeRemoved = channel.pruneOldMessages()
 
@@ -2236,6 +2258,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         removeFromCache(childrenToBeRemoved)
+
+        // Audio-room presence is keyed separately from `notes` and
+        // never gets reaped by the top-N rule. Drop entries older
+        // than 2× the 10-min freshness window so the index doesn't
+        // grow unbounded with every author who ever heartbeat here.
+        if (channel is LiveActivitiesChannel) {
+            channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
+        }
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
             println(
@@ -2485,7 +2515,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         val event = newNote.event as Event
 
         val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { t, u ->
+            java.util.function.BiConsumer<Observable, Observable> { _, u ->
                 u.new(event, newNote)
             }
 
@@ -2495,7 +2525,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     private fun refreshDeletedNoteObservers(newNote: Note) {
         val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { t, u ->
+            java.util.function.BiConsumer<Observable, Observable> { _, u ->
                 u.remove(newNote)
             }
 

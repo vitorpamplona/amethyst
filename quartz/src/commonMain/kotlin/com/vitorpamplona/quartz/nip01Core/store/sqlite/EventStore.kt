@@ -27,9 +27,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 
+/**
+ * SQLite-backed [IEventStore] with default DB-file name and relay
+ * scoping. Wrap in `ObservableEventStore` if you want to feed
+ * `EventStoreProjection`.
+ */
 class EventStore(
     dbName: String? = "events.db",
-    relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
+    override val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)

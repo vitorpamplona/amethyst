@@ -179,12 +179,16 @@ interface EventHandler<T : IEvent> {
         event: T,
         eventNote: Note,
         publicNote: Note,
-    ) {}
+    ) {
+        // no-op default: handlers that only care about deletes (or only adds) skip overriding this.
+    }
 
     suspend fun delete(
         event: T,
         eventNote: Note,
-    ) {}
+    ) {
+        // no-op default: handlers that only care about adds (or only deletes) skip overriding this.
+    }
 }
 
 class ChatHandler(

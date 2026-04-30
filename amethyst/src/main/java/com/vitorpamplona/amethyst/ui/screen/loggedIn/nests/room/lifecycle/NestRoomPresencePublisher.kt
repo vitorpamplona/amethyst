@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.model.Account
@@ -43,9 +45,12 @@ import kotlinx.coroutines.launch
  *     onstage transition, then every [PRESENCE_REFRESH_MS]. Mute
  *     and publishing flags are intentionally NOT keys: every mute
  *     toggle would otherwise round-trip a presence emit (audit
- *     Android #11). The next heartbeat picks them up within 30 s,
- *     which is well within the user's "did the peer see my mute"
- *     tolerance.
+ *     Android #11). The heartbeat reads them via
+ *     [rememberUpdatedState] so each refresh picks up the latest
+ *     value WITHOUT cancelling and restarting the loop — without
+ *     that wrapper the captured-at-launch values stay frozen and
+ *     a 30 s refresh would overwrite a fresh mute toggle with the
+ *     pre-toggle state, hiding the avatar's mute icon.
  *
  *   - **Debounce** — after a mute toggle, wait
  *     [PRESENCE_DEBOUNCE_MS] for further changes before sending a
@@ -77,11 +82,21 @@ internal fun NestPresencePublisher(
     val publishingTag: Boolean = ui.publishingNow
     val onstageTag: Boolean = ui.onStageNow
 
+    // Latest snapshots for the heartbeat. Without these, the
+    // LaunchedEffect captures the values from FIRST composition; the
+    // 30 s refresh would then overwrite a recent mute toggle with the
+    // pre-toggle state, which presented as "the mute icon disappeared
+    // a few seconds after I muted, but the mic is still hot."
+    val currentHandRaised by rememberUpdatedState(handRaised)
+    val currentMicMuted by rememberUpdatedState(micMutedTag)
+    val currentPublishing by rememberUpdatedState(publishingTag)
+    val currentOnstage by rememberUpdatedState(onstageTag)
+
     LaunchedEffect(event.address().toValue(), handRaised, onstageTag) {
-        publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
+        publishPresence(account, event, currentHandRaised, currentMicMuted, currentPublishing, currentOnstage)
         while (isActive) {
             delay(PRESENCE_REFRESH_MS)
-            publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
+            publishPresence(account, event, currentHandRaised, currentMicMuted, currentPublishing, currentOnstage)
         }
     }
 

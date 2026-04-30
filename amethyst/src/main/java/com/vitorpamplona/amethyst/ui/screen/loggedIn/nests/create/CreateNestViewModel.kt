@@ -74,12 +74,11 @@ class CreateNestViewModel : ViewModel() {
         // first-time use flows naturally from the Settings screen. If
         // the list is empty (or the user hasn't published one yet), keep
         // the nostrnests.com defaults already in [FormState.defaults].
-        val savedFirst =
+        val first =
             accountViewModel.account.nestsServers.flow.value
                 .firstOrNull()
-                ?.takeIf { it.startsWith("http") }
-        if (savedFirst != null) {
-            _state.update { it.copy(serviceUrl = savedFirst, endpointUrl = savedFirst) }
+        if (first != null && first.relay.startsWith("http") && first.auth.startsWith("http")) {
+            _state.update { it.copy(serviceUrl = first.auth, endpointUrl = first.relay) }
         }
     }
 
@@ -249,7 +248,7 @@ class CreateNestViewModel : ViewModel() {
         _state.update { it.copy(isPublishing = true, error = null) }
         val accountModel = account.account
         val hostPubkey = accountModel.userProfile().pubkeyHex
-        val targetStatus = if (current.scheduled) StatusTag.STATUS.PLANNED else StatusTag.STATUS.OPEN
+        val targetStatus = if (current.scheduled) StatusTag.STATUS.PLANNED else StatusTag.STATUS.LIVE
         val template =
             MeetingSpaceEvent.build(
                 room = current.roomName.trim(),
@@ -355,8 +354,17 @@ class CreateNestViewModel : ViewModel() {
          * Public nostrnests deployment — a blank form produces a working
          * room here. Users can edit either field to point at their own
          * moq-auth / moq-relay pair.
+         *
+         * The auth sidecar (moq-auth) and the WebTransport relay
+         * (moq-rs) live on different hosts: moq-auth speaks regular
+         * HTTPS on :443 to mint JWTs; moq.nostrnests.com:4443 is the
+         * QUIC/WebTransport endpoint and does NOT accept TCP. Don't
+         * collapse them back into a single URL — OkHttp can't speak
+         * HTTP/3, so a TCP POST to :4443 will hang and fail. Both
+         * defaults are emitted on the kind-30312 event as the deployed
+         * `streaming` (relay) and `auth` (sidecar) tags.
          */
-        const val DEFAULT_SERVICE_URL: String = "https://moq.nostrnests.com:4443"
+        const val DEFAULT_SERVICE_URL: String = "https://moq-auth.nostrnests.com"
         const val DEFAULT_ENDPOINT_URL: String = "https://moq.nostrnests.com:4443"
     }
 }

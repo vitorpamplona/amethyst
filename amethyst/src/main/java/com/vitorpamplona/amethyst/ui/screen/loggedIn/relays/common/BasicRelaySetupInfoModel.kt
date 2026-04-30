@@ -80,7 +80,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
-                    onError = { url, errorCode, exceptionMessage -> },
+                    onError = { _, _, _ -> },
                 )
             }
         }
@@ -163,7 +163,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     }
 
     fun deleteAll() {
-        _relays.update { relays -> emptyList() }
+        _relays.update { _ -> emptyList() }
         hasModified = true
     }
 

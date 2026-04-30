@@ -159,7 +159,6 @@ class InMemoryQuicPipe(
                 when (peeked.type) {
                     LongHeaderType.INITIAL -> initialPnSpace
                     LongHeaderType.HANDSHAKE -> handshakePnSpace
-                    else -> return
                 }
             val parsed =
                 LongHeaderPacket.parseAndDecrypt(

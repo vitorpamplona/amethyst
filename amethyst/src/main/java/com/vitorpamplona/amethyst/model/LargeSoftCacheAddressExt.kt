@@ -44,7 +44,7 @@ fun kindStart(kind: Int) = kindStart(kind, START_KEY)
 
 fun kindEnd(kind: Int) = kindEnd(kind, END_KEY)
 
-val ACCEPT_ALL_FILTER = CacheCollectors.BiFilter<Address, AddressableNote> { key, note -> true }
+val ACCEPT_ALL_FILTER = CacheCollectors.BiFilter<Address, AddressableNote> { _, _ -> true }
 
 fun LargeSoftCache<Address, AddressableNote>.filter(
     kind: Int,

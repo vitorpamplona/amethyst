@@ -59,7 +59,7 @@ open class DiscoverLiveFeedFilter(
 
     override fun feed(): List<Note> {
         val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
-        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
+        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { _, it -> it.event is LiveActivitiesEvent } }.flatten()
 
         val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
 
@@ -159,9 +159,9 @@ open class DiscoverLiveFeedFilter(
 
             is MeetingSpaceEvent -> {
                 when (event.status()) {
-                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.OPEN -> 2
+                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.LIVE -> 2
                     com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.PRIVATE -> 1
-                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.CLOSED -> 0
+                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.ENDED -> 0
                     else -> 0
                 }
             }

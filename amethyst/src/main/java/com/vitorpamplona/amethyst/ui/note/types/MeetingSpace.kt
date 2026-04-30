@@ -125,7 +125,7 @@ fun RenderMeetingSpaceEventInner(
 
         CrossfadeIfEnabled(targetState = status, label = "MeetingSpaceStatus", accountViewModel = accountViewModel) {
             when (it) {
-                MeetingSpaceStatusTag.STATUS.OPEN -> {
+                MeetingSpaceStatusTag.STATUS.LIVE -> {
                     MeetingSpaceOpenFlag()
                 }
 
@@ -133,7 +133,7 @@ fun RenderMeetingSpaceEventInner(
                     MeetingSpacePrivateFlag()
                 }
 
-                MeetingSpaceStatusTag.STATUS.CLOSED -> {
+                MeetingSpaceStatusTag.STATUS.ENDED -> {
                     MeetingSpaceClosedFlag()
                 }
 
@@ -170,7 +170,7 @@ fun RenderMeetingSpaceEventInner(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.End,
     ) {
-        if (status == MeetingSpaceStatusTag.STATUS.CLOSED) {
+        if (status == MeetingSpaceStatusTag.STATUS.ENDED) {
             recording?.let {
                 ListenToRecordingButton(url = it, accountViewModel = accountViewModel)
             }

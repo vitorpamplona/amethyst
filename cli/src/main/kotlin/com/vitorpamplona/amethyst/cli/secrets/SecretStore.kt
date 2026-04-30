@@ -211,6 +211,7 @@ internal object MacosKeychainBackend : SecretBackend {
 internal object SecretServiceBackend : SecretBackend {
     const val BACKEND_ID = "secret-service"
     private const val SERVICE_ATTR = "amy-nostr"
+    private const val SECRET_TOOL_BIN = "secret-tool"
 
     override val name: String = "keychain:$BACKEND_ID"
 
@@ -224,7 +225,7 @@ internal object SecretServiceBackend : SecretBackend {
         ) {
             return false
         }
-        return which("secret-tool") != null
+        return which(SECRET_TOOL_BIN) != null
     }
 
     override fun store(
@@ -233,7 +234,7 @@ internal object SecretServiceBackend : SecretBackend {
     ): IdentitySecret {
         val res =
             runProc(
-                "secret-tool",
+                SECRET_TOOL_BIN,
                 "store",
                 "--label=amy Nostr identity ${pubKeyHex.take(8)}",
                 "service",
@@ -250,7 +251,7 @@ internal object SecretServiceBackend : SecretBackend {
 
     override fun resolve(secret: IdentitySecret): String {
         require(secret is IdentitySecret.Keychain)
-        val res = runProc("secret-tool", "lookup", "service", secret.service, "account", secret.account)
+        val res = runProc(SECRET_TOOL_BIN, "lookup", "service", secret.service, "account", secret.account)
         if (res.exit != 0 || res.stdout.isBlank()) {
             throw RuntimeException("secret-tool lookup failed (exit=${res.exit}): ${res.stderr.trim()}")
         }
@@ -259,7 +260,7 @@ internal object SecretServiceBackend : SecretBackend {
 
     override fun delete(secret: IdentitySecret) {
         require(secret is IdentitySecret.Keychain)
-        runProc("secret-tool", "clear", "service", secret.service, "account", secret.account)
+        runProc(SECRET_TOOL_BIN, "clear", "service", secret.service, "account", secret.account)
     }
 
     private fun which(cmd: String): File? {

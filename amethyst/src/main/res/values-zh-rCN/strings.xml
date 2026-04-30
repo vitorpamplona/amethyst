@@ -462,6 +462,7 @@
     <string name="meeting_room_in_space">在 %1$s</string>
     <string name="meeting_room_in_space_unknown">一个语音聊天室</string>
     <string name="nest_stage">阶段</string>
+    <string name="nest_stage_empty">正等待演讲者…</string>
     <string name="nest_audience">观众</string>
     <string name="nest_raise_hand">举手</string>
     <string name="nest_lower_hand">放下手</string>
@@ -502,6 +503,11 @@
     <string name="nest_notification_stop">停止</string>
     <string name="nest_join">加入语音聊天室</string>
     <string name="nest_lobby_host_label">主持人</string>
+    <string name="nest_role_host">主持人</string>
+    <string name="nest_role_moderator">协管</string>
+    <string name="nest_state_muted">麦克风已静音</string>
+    <string name="nest_state_speaking">正在发言</string>
+    <string name="nest_state_mic_open">麦克风已打开</string>
     <string name="nest_presence_raised_hand">举手</string>
     <string name="nest_presence_on_stage">步入舞台</string>
     <string name="nest_presence_speaking">正在说话</string>
@@ -533,8 +539,12 @@
     <string name="nest_hand_raise_queue_title">举手</string>
     <string name="nest_hand_raise_approve">批准</string>
     <string name="nest_promote_speaker">提升为演讲者</string>
+    <string name="nest_promote_moderator">提升为协管</string>
     <string name="nest_demote_listener">降级为听众</string>
+    <string name="nest_force_mute">强制静音演讲者</string>
     <string name="nest_kick_action">踢出</string>
+    <string name="nest_hush_local">消除此演讲者的声音</string>
+    <string name="nest_hush_local_restore">恢复此演讲者的声音</string>
     <string name="nest_participant_view_profile">查看个人资料</string>
     <string name="nest_participant_zap">发送打闪</string>
     <string name="nest_participant_zap_split_unsupported">不支持在聊天内分割打闪。打开个人资料屏发送打闪。</string>
@@ -543,6 +553,9 @@
     <string name="nest_participant_mute">静音</string>
     <string name="nest_participant_unmute">取消静音</string>
     <string name="nest_share_action">分享聊天室</string>
+    <string name="nest_minimize">最小化</string>
+    <string name="nest_minimize_description">最小化以继续收听</string>
+    <string name="nest_audio_dropped">音频已断开</string>
     <string name="nest_create_fab">启动空间</string>
     <string name="nest_no_server_title">设置语音聊天室服务器</string>
     <string name="nest_no_server_body">您尚未选择语音聊天服务器。添加 %1$s 到您的服务器列表并继续吗？\n\n您可以稍后在设置中更改此设置。</string>
@@ -566,6 +579,11 @@
     <string name="nests_servers_my_section">您的服务器</string>
     <string name="nests_servers_my_explainer">保存为 10112 类型的可替换事件，以便其他客户端可以读取您的首选项。</string>
     <string name="nests_servers_add_field">添加语音聊天服务器</string>
+    <string name="nests_servers_add_relay_field">中继 (WebTransport) URL</string>
+    <string name="nests_servers_add_auth_field">认证(JWT mint) URL</string>
+    <string name="nests_servers_add_pair_button">添加</string>
+    <string name="nests_servers_relay_label">中继</string>
+    <string name="nests_servers_auth_label">认证</string>
     <string name="nests_servers_recommended_section">推荐的服务器</string>
     <string name="nests_servers_recommended_explainer">内置建议，您可轻触添加到列表中。</string>
     <string name="nests_servers_use_defaults">使用 Amethyst 默认值</string>
@@ -2102,6 +2120,27 @@
     <string name="relay_settings_lower2">发件箱列表</string>
     <string name="relay_settings_lower">中继设置</string>
     <string name="last_seen">%1$s 前活跃</string>
+    <string name="last_seen_on_date">上次见于 %1$s (%2$s 之前)</string>
+    <string name="last_seen_just_now">刚见到</string>
+    <string name="last_seen_never">从未见过</string>
+    <plurals name="duration_minutes">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="other">%1$d 小时</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="other">%1$d 天</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="other">%1$d 周</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="other">%1$d 个月</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="other">%1$d 年</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">连接中</string>
     <string name="event_sync_status_downloading">下载中</string>

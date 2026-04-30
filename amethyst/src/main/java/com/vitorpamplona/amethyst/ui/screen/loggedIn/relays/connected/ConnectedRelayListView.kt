@@ -62,7 +62,7 @@ fun LazyListScope.renderConnectedItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Connected" + item.relay.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Connected" + item.relay.url }) { _, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = null,
