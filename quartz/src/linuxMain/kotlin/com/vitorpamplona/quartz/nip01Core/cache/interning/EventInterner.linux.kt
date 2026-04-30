@@ -18,18 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.cache
+package com.vitorpamplona.quartz.nip01Core.cache.interning
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-/**
- * Apple actual: passthrough. Kotlin/Native has weak refs but no
- * built-in concurrent map; rather than ship a half-baked impl, we
- * skip canonicalisation entirely on Apple targets and let
- * [Event.fromJson] return whatever the deserializer produced. Can
- * be revisited if Amethyst's iOS port wants the memory savings.
- */
+/** Linux native actual: passthrough. See `EventInterner.apple.kt`. */
 actual class EventInterner {
     actual fun intern(event: Event): Event = event
 
