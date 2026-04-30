@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -33,25 +32,18 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.demo.net.KtorWebSocket
 import com.vitorpamplona.amethyst.demo.ui.FeedScreen
+import com.vitorpamplona.amethyst.demo.viewmodels.FeedViewModel
 import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
-import com.vitorpamplona.quartz.nip01Core.cache.projection.ProjectionState
-import com.vitorpamplona.quartz.nip01Core.cache.projection.filterItems
-import com.vitorpamplona.quartz.nip01Core.cache.projection.project
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 
 /**
@@ -61,9 +53,8 @@ import kotlinx.coroutines.launch
  *
  * The [collector] is a single connection-level listener that drops
  * every event the [client] receives — across every subscription on
- * every relay — into [db]. UI projections are independent cold flows;
- * each one owns its own `client.subscribe`/`unsubscribe` pair tied to
- * its collection lifecycle.
+ * every relay — into [db]. Per-feed state + actions live in their
+ * own ViewModels (see [FeedViewModel]).
  */
 private class AppGraph(
     val client: NostrClient,
@@ -100,7 +91,6 @@ fun main() =
         Window(onCloseRequest = ::exitApplication, state = state, title = "Nostr Kind 1 Demo") {
             MaterialTheme {
                 val graph = remember { buildAppGraph() }
-                val uiScope = rememberCoroutineScope()
 
                 val relays =
                     remember {
@@ -111,37 +101,15 @@ fun main() =
                         )
                     }
 
-                // Cold projection over the local store. While being
-                // collected, it holds open one relay subscription for
-                // the same filter; cancellation tears it down.
-                val projection =
+                val viewModel =
                     remember(graph, relays) {
-                        val subId = newSubId()
-                        val filter = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 100)
-                        graph.db
-                            .project<TextNoteEvent>(filter)
-                            .filterItems { it.value.isNewThread() }
-                            .onStart { graph.client.subscribe(subId, relays.associateWith { listOf(filter) }) }
-                            .onCompletion { graph.client.unsubscribe(subId) }
+                        FeedViewModel(graph.db, graph.client, graph.signer, relays)
                     }
-                val projectionState by projection.collectAsState(initial = ProjectionState.Loading)
+                val notes by viewModel.notes.collectAsState()
 
                 LaunchedEffect(Unit) { graph.client.connect() }
 
-                FeedScreen(
-                    state = projectionState,
-                    onSend = { text ->
-                        uiScope.launch {
-                            val signed = graph.signer.sign<TextNoteEvent>(TextNoteEvent.build(text))
-                            // Hits the bus → projection picks it up alongside any inbound relay copy.
-                            graph.db.insert(signed)
-                            graph.client.publish(signed, relays)
-                        }
-                    },
-                )
+                FeedScreen(state = notes, onSend = viewModel::send)
             }
         }
     }
-
-/** A kind:1 note is a "new thread" iff it isn't a reply to anything. */
-private fun TextNoteEvent.isNewThread(): Boolean = replyingTo() == null

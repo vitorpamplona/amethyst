@@ -27,6 +27,9 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.jetbrains.compose.material3)
 
+    // ViewModel + viewModelScope for the feed state
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.swing)
