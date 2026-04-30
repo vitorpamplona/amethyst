@@ -704,16 +704,20 @@ class AccountManager internal constructor(
             secureStorage.deletePrivateKey(npub)
         } catch (_: SecureStorageException) {
         }
+        try {
+            secureStorage.deletePrivateKey(bunkerEphemeralKeyAlias(npub))
+        } catch (_: SecureStorageException) {
+        }
 
         refreshAccountList()
 
-        // If we removed the active account, load the next one or log out
+        // If we removed the active account, switch to next or log out
         if (current?.npub == npub) {
-            val next = accountStorage.currentAccount()
-            if (next != null) {
-                loadSavedAccount()
+            val nextNpub = accountStorage.currentAccount()
+            if (nextNpub != null) {
+                switchAccount(nextNpub)
             } else {
-                logout(deleteKey = false)
+                logout(deleteKey = true)
             }
         }
     }
