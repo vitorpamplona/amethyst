@@ -62,11 +62,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
@@ -210,6 +212,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -1672,6 +1675,8 @@ fun FirstUserInfoRow(
 
         Expiration(baseNote)
 
+        JumpToParentReplyButton(baseNote, accountViewModel, nav)
+
         TimeAgo(baseNote)
 
         if (moreOptions == null) {
@@ -1690,6 +1695,48 @@ fun PinnedMark() {
         modifier = Modifier.padding(start = 5.dp).size(16.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
     )
+}
+
+@Composable
+fun JumpToParentReplyButton(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (!accountViewModel.settings.isCompleteUIMode()) return
+    if (baseNote.event !is BaseThreadedEvent) return
+
+    val parentNote =
+        remember(baseNote) {
+            val noteEvent = baseNote.event as? BaseThreadedEvent ?: return@remember null
+            val replyingTo = noteEvent.replyingToAddressOrEvent()
+            val resolved =
+                if (replyingTo != null) {
+                    val newNote = accountViewModel.getNoteIfExists(replyingTo)
+                    if (newNote != null && LocalCache.getAnyChannel(newNote) == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
+                        newNote
+                    } else {
+                        baseNote.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
+                    }
+                } else {
+                    baseNote.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
+                }
+            resolved?.takeIf { LocalCache.getAnyChannel(it) == null }
+        } ?: return
+
+    ClickableBox(
+        modifier = Modifier.padding(start = 5.dp).size(20.dp),
+        onClick = {
+            nav.nav { routeFor(parentNote, accountViewModel.account) }
+        },
+    ) {
+        Icon(
+            symbol = MaterialSymbols.KeyboardArrowUp,
+            contentDescription = stringRes(R.string.jump_to_parent_reply),
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
 }
 
 @Composable
