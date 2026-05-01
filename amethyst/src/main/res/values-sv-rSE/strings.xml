@@ -2369,4 +2369,18 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
+
+    <string name="home_tab_everything">Allt</string>
+    <string name="home_tabs_settings">Hemflikar</string>
+    <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
+    <string name="nest_lobby_listeners_count">%1$d lyssnar</string>
+    <string name="nest_lobby_no_listeners">Ingen är i rummet just nu.</string>
+    <string name="nest_lobby_open_action">Öppna</string>
+    <string name="nest_lobby_recent_chat">Senaste chatt</string>
+    <string name="nest_mute_failed">Tystning misslyckades: %1$s</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="tor_connection_failed_body">Amethyst kunde inte slutföra uppstart av Tor. Vill du använda en vanlig (icke-Tor) anslutning så att flödet kan laddas? Vi kommer ihåg ditt val under nästa timme och försöker sedan Tor igen.</string>
+    <string name="tor_connection_failed_title">Tor ansluter inte</string>
+    <string name="tor_continue_without_for_session">Använd vanlig anslutning</string>
+    <string name="tor_keep_waiting">Fortsätt vänta</string>
 </resources>

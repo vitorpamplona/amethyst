@@ -2372,4 +2372,20 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
+
+    <string name="home_tab_everything">Tudo</string>
+    <string name="home_tabs_settings">Abas da Tela Inicial</string>
+    <string name="home_tabs_settings_description">Escolha quais abas aparecem na Tela Inicial. Quando apenas uma aba está ativa, a barra de abas fica oculta.</string>
+    <string name="nest_lobby_listeners_count">%1$d ouvindo</string>
+    <string name="nest_lobby_no_listeners">Não há ninguém na sala no momento.</string>
+    <string name="nest_lobby_open_action">Abrir</string>
+    <string name="nest_lobby_recent_chat">Conversa recente</string>
+    <string name="nest_mute_failed">Falha ao silenciar: %1$s</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_tab_chat">Chat</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="tor_connection_failed_body">O Amethyst não conseguiu concluir a inicialização do Tor. Usar uma conexão normal (sem Tor) para que o feed possa carregar? Vamos lembrar dessa escolha pela próxima hora e tentar o Tor novamente depois.</string>
+    <string name="tor_connection_failed_title">O Tor não está conectando</string>
+    <string name="tor_continue_without_for_session">Usar conexão normal</string>
+    <string name="tor_keep_waiting">Continuar esperando</string>
 </resources>
