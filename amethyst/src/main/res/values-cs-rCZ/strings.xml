@@ -493,6 +493,7 @@
     <string name="nest_mute_failed">Ztlumení selhalo: %1$s</string>
     <string name="nest_record_permission_required">Pro mluvení v této místnosti je vyžadován přístup k mikrofonu.</string>
     <string name="nest_open_settings">Otevřít nastavení</string>
+    <string name="nest_notification_channel">Nests</string>
     <string name="nest_notification_channel_description">Přehrává zvuk, dokud je místnost otevřená.</string>
     <string name="nest_notification_listening">Nest připojen</string>
     <string name="nest_notification_broadcasting">Nest — Živě</string>
@@ -521,6 +522,7 @@
     <string name="nest_leave_host_just_leave">Jen odejít</string>
     <string name="nest_leave_host_close_failed">Místnost se nepodařilo označit jako zavřenou. Odcházíte i tak — místnost se zavře automaticky.</string>
     <string name="nest_live_chip">ŽIVĚ</string>
+    <string name="nest_tab_chat">Chat</string>
     <string name="nest_tab_audience">Publikum</string>
     <string name="nest_tab_hands">Ruce</string>
     <string name="nest_audience_empty">V publiku zatím nikdo není.</string>
@@ -579,6 +581,7 @@
     <string name="nests_servers_add_relay_field">URL relay (WebTransport)</string>
     <string name="nests_servers_add_auth_field">URL pro autentizaci (JWT mint)</string>
     <string name="nests_servers_add_pair_button">Přidat</string>
+    <string name="nests_servers_relay_label">Relé</string>
     <string name="nests_servers_auth_label">Autentizace</string>
     <string name="nests_servers_recommended_section">Doporučené servery</string>
     <string name="nests_servers_recommended_explainer">Vestavěné návrhy, které můžete jedním klepnutím přidat do svého seznamu.</string>
@@ -1508,6 +1511,7 @@
     <string name="open_all_reactions_to_this_post">Otevřít všechny reakce pro tento příspěvek</string>
     <string name="close_all_reactions_to_this_post">Zavřít všechny reakce na tento příspěvek</string>
     <string name="reply_description">Odpověď</string>
+    <string name="jump_to_parent_reply">Přejít na původní příspěvek této odpovědi</string>
     <string name="boost_or_quote_description">Zvýšit nebo citovat</string>
     <string name="like_description">Olajkovat</string>
     <string name="zap_description">Zap</string>
@@ -1516,6 +1520,7 @@
     <string name="bottom_bar_settings_description">Přetažením změníte pořadí. Přepnutím položku přidáte nebo odeberete ze spodní lišty. S nulovým počtem položek bude lišta skryta.</string>
     <string name="bottom_bar_settings_available">Dostupné</string>
     <string name="bottom_bar_settings_reorder">Změnit pořadí</string>
+    <string name="bottom_bar_settings_restore_default">Obnovit výchozí</string>
     <string name="home_tabs_settings">Záložky domovské obrazovky</string>
     <string name="home_tabs_settings_description">Vyberte, které záložky se zobrazí na domovské obrazovce. Pokud je aktivní jen jedna záložka, lišta záložek se skryje.</string>
     <string name="home_tab_everything">Vše</string>
@@ -2384,7 +2389,4 @@
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\" stejně jako veřejná.</string>
     <string name="gif">Gif</string>
-
-    <string name="bottom_bar_settings_restore_default">Obnovit výchozí</string>
-    <string name="jump_to_parent_reply">Přejít na původní příspěvek této odpovědi</string>
 </resources>
