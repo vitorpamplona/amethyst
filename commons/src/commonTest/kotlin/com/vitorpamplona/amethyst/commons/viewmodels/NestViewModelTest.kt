@@ -464,7 +464,10 @@ class NestViewModelTest {
             mutable.value = s
         }
 
-        override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = error("subscribeSpeaker not exercised in these tests — see NestPlayerTest in :nestsClient")
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle = error("subscribeSpeaker not exercised in these tests — see NestPlayerTest in :nestsClient")
 
         override suspend fun close() {
             closeCallCount++
