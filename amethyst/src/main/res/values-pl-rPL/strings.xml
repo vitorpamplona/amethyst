@@ -468,6 +468,7 @@
     <string name="nest_mute">Wycisz</string>
     <string name="nest_unmute">Włącz dźwięk</string>
     <string name="nest_connecting">Łączenie…</string>
+    <string name="nest_connecting_resolving">Podłączanie pokoju</string>
     <string name="nest_connecting_transport">Otwarcie przesyłu</string>
     <string name="nest_connecting_handshake">Nawiązywanie kontaktu audio</string>
     <string name="nest_connected">Dźwięk podłączony</string>
@@ -1518,6 +1519,7 @@
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
     <string name="reply_description">Odpowiedź</string>
+    <string name="jump_to_parent_reply">Przejdź do wpisu, do którego odnosi się ta odpowiedź</string>
     <string name="boost_or_quote_description">Powtórz lub Zacytuj</string>
     <string name="like_description">Lubię</string>
     <string name="zap_description">Zap</string>
@@ -1526,6 +1528,8 @@
     <string name="bottom_bar_settings_description">Przeciągnij, aby zmienić kolejność. Przełącz, aby dodać lub usunąć element z dolnego paska. Gdy nie ma żadnych elementów, dolny pasek jest ukryty.</string>
     <string name="bottom_bar_settings_available">Dostępne</string>
     <string name="bottom_bar_settings_reorder">Zmień kolejność</string>
+    <string name="bottom_bar_settings_restore_default">Przywróć domyślne ustawienia</string>
+    <string name="home_tabs_settings">Karty główne</string>
     <string name="home_tabs_settings_description">Wybierz, które karty pojawiają się na ekranie głównym. Gdy tylko jedna karta jest aktywna, pasek karty jest ukryty.</string>
     <string name="home_tab_everything">Wszystko</string>
     <string name="reactions_settings">Ustawienia reakcji</string>
