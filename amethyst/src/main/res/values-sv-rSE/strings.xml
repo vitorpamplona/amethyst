@@ -2381,4 +2381,7 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
+
+    <string name="bottom_bar_settings_restore_default">Återställ standard</string>
+    <string name="jump_to_parent_reply">Hoppa till noten som detta svar svarar på</string>
 </resources>

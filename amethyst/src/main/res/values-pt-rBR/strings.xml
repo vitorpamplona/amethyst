@@ -2384,4 +2384,7 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
+
+    <string name="bottom_bar_settings_restore_default">Restaurar padrão</string>
+    <string name="jump_to_parent_reply">Ir para a nota à qual esta resposta está respondendo</string>
 </resources>

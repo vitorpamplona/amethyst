@@ -2384,4 +2384,7 @@
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\" stejně jako veřejná.</string>
     <string name="gif">Gif</string>
+
+    <string name="bottom_bar_settings_restore_default">Obnovit výchozí</string>
+    <string name="jump_to_parent_reply">Přejít na původní příspěvek této odpovědi</string>
 </resources>

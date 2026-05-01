@@ -2384,4 +2384,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigung wie öffentliche.</string>
     <string name="gif">Gif</string>
+
+    <string name="bottom_bar_settings_restore_default">Standard wiederherstellen</string>
+    <string name="jump_to_parent_reply">Zur Notiz springen, auf die diese Antwort antwortet</string>
 </resources>
