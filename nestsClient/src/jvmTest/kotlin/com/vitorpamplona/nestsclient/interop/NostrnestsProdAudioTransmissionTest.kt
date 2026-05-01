@@ -569,6 +569,188 @@ class NostrnestsProdAudioTransmissionTest {
             Unit
         }
 
+    /**
+     * Instrumented variant of [sustained_real_time_cadence_two_users]
+     * that BYPASSES [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster]
+     * and calls [com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle.send]
+     * directly so we can capture per-frame send results.
+     *
+     * Motivation: the production broadcaster wraps every send in
+     * `runCatching { publisher.send(opus); publisher.endGroup() }.onFailure {…}`
+     * and IGNORES the boolean. `send` returns false when
+     * `publisherClosed` or `inboundSubs.isEmpty()`, AND
+     * `runCatching { uni.write(framed) }` swallows write failures while
+     * still returning true. Frame loss is structurally invisible to the
+     * broadcaster.
+     *
+     * This test reproduces the speaker side WITHOUT the broadcaster:
+     *   - same auth (OkHttpNestsClient.mintToken)
+     *   - same transport (QuicWebTransportFactory)
+     *   - same MoqLiteSession.client + session.publish() the
+     *     broadcaster uses internally
+     *   - records [MoqLitePublisherHandle.send]'s Boolean per frame and
+     *     prints it alongside the listener's gap pattern
+     *
+     * Diagnostic table interpretation (sent vs. received per group):
+     *   - send=false  → speaker dropped the frame at the moq-lite layer
+     *     (no inbound subscribers OR publisher closed)
+     *   - send=true, received=false → frame was queued by moq-lite, then
+     *     lost downstream (uni-stream write swallowed an exception, OR
+     *     QUIC flow control / relay dropped the stream)
+     *   - send=true, received=true → frame arrived (control)
+     */
+    @Test
+    fun sustained_per_frame_send_outcomes_two_users() =
+        runBlocking {
+            assumeProd()
+            val scope = "send-trace"
+
+            val hostSigner = NostrSignerInternal(KeyPair())
+            val audienceSigner = NostrSignerInternal(KeyPair())
+            val room = freshRoom(hostPubkey = hostSigner.pubKey)
+            val httpClient = OkHttpNestsClient { OkHttpClient() }
+            val transport = QuicWebTransportFactory()
+
+            val supervisor = SupervisorJob()
+            val pumpScope = CoroutineScope(supervisor + Dispatchers.IO)
+
+            InteropDebug.checkpoint(
+                scope,
+                "host=${hostSigner.pubKey.take(8)}… audience=${audienceSigner.pubKey.take(8)}… " +
+                    "ns=${room.moqNamespace()} frames=$REAL_TIME_FRAMES cadence=${REAL_TIME_FRAME_MS}ms",
+            )
+
+            // ---- speaker side: build session manually so we can call
+            // session.publish() directly and capture per-frame send results.
+            val publishToken =
+                InteropDebug.stepSuspending(scope, "host: mintToken(publish=true)") {
+                    httpClient.mintToken(room = room, publish = true, signer = hostSigner)
+                }
+            val (authority, path) =
+                com.vitorpamplona.nestsclient.buildRelayConnectTarget(
+                    endpoint = room.endpoint,
+                    namespace = room.moqNamespace(),
+                    token = publishToken,
+                )
+            val speakerWt =
+                InteropDebug.stepSuspending(scope, "host: WebTransport.connect") {
+                    transport.connect(authority = authority, path = path, bearerToken = null)
+                }
+            val speakerSession =
+                com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+                    .client(speakerWt, pumpScope)
+            val publisher =
+                InteropDebug.stepSuspending(scope, "host: session.publish(broadcastSuffix=hostPub)") {
+                    speakerSession.publish(broadcastSuffix = hostSigner.pubKey)
+                }
+
+            // ---- listener side: production code path, unchanged.
+            val listener =
+                InteropDebug.stepSuspending(scope, "audience: connectNestsListener") {
+                    connectNestsListener(
+                        httpClient = httpClient,
+                        transport = transport,
+                        scope = pumpScope,
+                        room = room,
+                        signer = audienceSigner,
+                    )
+                }
+            InteropDebug.assertListenerReached(scope, "Connected", listener.state.value)
+
+            val subscription =
+                InteropDebug.stepSuspending(scope, "audience: subscribeSpeaker(host)") {
+                    listener.subscribeSpeaker(hostSigner.pubKey)
+                }
+
+            data class Arrival(
+                val wallMs: Long,
+                val groupId: Long,
+            )
+            val received = java.util.concurrent.CopyOnWriteArrayList<Arrival>()
+            val sendOutcomes = BooleanArray(REAL_TIME_FRAMES)
+            val endGroupErrors = arrayOfNulls<String>(REAL_TIME_FRAMES)
+            val collectStart = System.currentTimeMillis()
+            val collected =
+                async(pumpScope.coroutineContext) {
+                    withTimeoutOrNull(REAL_TIME_RECEIVE_TIMEOUT_MS) {
+                        subscription.objects
+                            .onEach { obj ->
+                                received += Arrival(System.currentTimeMillis() - collectStart, obj.groupId)
+                            }.take(REAL_TIME_FRAMES)
+                            .toList()
+                    }
+                }
+
+            try {
+                delay(SUBSCRIBE_SETTLE_MS)
+
+                val payloadPrefix = ByteArray(79) { 0x4F.toByte() } + byteArrayOf(0x00)
+                val started = System.currentTimeMillis()
+                for (i in 0 until REAL_TIME_FRAMES) {
+                    val payload = payloadPrefix + byteArrayOf(i.toByte())
+                    sendOutcomes[i] = publisher.send(payload)
+                    runCatching { publisher.endGroup() }
+                        .onFailure { endGroupErrors[i] = it::class.simpleName + ": " + it.message }
+                    delay(REAL_TIME_FRAME_MS)
+                }
+                val pumpDurationMs = System.currentTimeMillis() - started
+
+                collected.await()
+                val frames = received.toList()
+                val receivedGroups = frames.map { it.groupId }.toHashSet()
+
+                val sendCount = sendOutcomes.count { it }
+                val firstFalseSend = sendOutcomes.indexOfFirst { !it }
+                val sendOnlyMissing = (0 until REAL_TIME_FRAMES).filter { sendOutcomes[it] && it.toLong() !in receivedGroups }
+                val firstUnreceivedAfterSend = sendOnlyMissing.firstOrNull() ?: -1
+
+                InteropDebug.checkpoint(
+                    scope,
+                    "sendTrue=$sendCount/$REAL_TIME_FRAMES received=${frames.size}/$REAL_TIME_FRAMES " +
+                        "firstFalseSend=$firstFalseSend " +
+                        "firstSentButLost=$firstUnreceivedAfterSend " +
+                        "pumpDuration=${pumpDurationMs}ms",
+                )
+                // Per-frame table: SEND TRUE / FALSE  +  RECV YES / NO
+                for (i in 0 until REAL_TIME_FRAMES) {
+                    val sentOk = sendOutcomes[i]
+                    val recv = i.toLong() in receivedGroups
+                    val tag =
+                        when {
+                            sentOk && recv -> "ok"
+                            sentOk && !recv -> "SENT-LOST"
+                            !sentOk && !recv -> "send=false"
+                            else -> "ghost?"
+                        }
+                    val err = endGroupErrors[i]?.let { ", endGroup err=$it" } ?: ""
+                    InteropDebug.checkpoint(scope, "  i=$i $tag$err")
+                }
+
+                if (firstFalseSend >= 0) {
+                    fail(
+                        "[$scope] publisher.send returned false starting at frame $firstFalseSend — " +
+                            "speaker's MoqLiteSession dropped the frame at the source. " +
+                            "Likely cause: inboundSubs cleared (relay tore down our SUBSCRIBE bidi) or publisherClosed.",
+                    )
+                }
+                if (firstUnreceivedAfterSend >= 0) {
+                    fail(
+                        "[$scope] publisher.send returned true for ALL frames, but listener missed " +
+                            "${REAL_TIME_FRAMES - frames.size} of them starting at $firstUnreceivedAfterSend. " +
+                            "Loss is downstream of moq-lite — uni-stream write threw (swallowed by runCatching), " +
+                            "QUIC flow control wedged, or the relay dropped the stream.",
+                    )
+                }
+            } finally {
+                runCatching { subscription.unsubscribe() }
+                runCatching { publisher.close() }
+                runCatching { speakerWt.close(0, "test done") }
+                runCatching { listener.close() }
+                supervisor.cancelAndJoin()
+            }
+            Unit
+        }
+
     // ----- helpers -----
 
     private fun freshRoom(hostPubkey: String): NestsRoomConfig =
