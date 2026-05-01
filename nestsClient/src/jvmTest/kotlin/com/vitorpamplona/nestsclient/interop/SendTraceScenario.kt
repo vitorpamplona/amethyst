@@ -94,8 +94,18 @@ data class Scenario(
      * subscriber over an independent uni stream.
      */
     val parallelSubscriptions: Int = 1,
-    /** Larger payloads (e.g. 4 KB) test stream-write vs stream-creation cost. */
-    val verbosePerFrame: Boolean = true,
+    /**
+     * Emit a `tx i=…` log line per send and an `rx[idx] gid=…` log
+     * line per arrival. Useful for debugging a specific scenario but
+     * produces a lot of stdout — at 50 frames/sec the JUnit capture
+     * thread can serialise the receive coroutine and starve the QUIC
+     * read loop, biasing the recorded `received` count downward.
+     *
+     * Default `false`. Opt in for a known-short test if you need the
+     * per-frame timeline. The summary line (`sub[…] received=N/M …`)
+     * always prints regardless.
+     */
+    val verbosePerFrame: Boolean = false,
 )
 
 /**
@@ -208,6 +218,11 @@ object SendTraceScenario {
                     "peerInitMaxStreamsUni=${snap.peerInitialMaxStreamsUni} " +
                     "sendCredit=${snap.sendConnectionFlowCredit} consumed=${snap.sendConnectionFlowConsumed} " +
                     "peerMaxStreamsUniNow=${snap.peerMaxStreamsUniCurrent} " +
+                    "advertisedMaxStreamsUni=${snap.advertisedMaxStreamsUni} " +
+                    "peerInitiatedUni=${snap.peerInitiatedUniCount} " +
+                    "udpDatagrams=${snap.udp?.receivedDatagrams} " +
+                    "udpBytes=${snap.udp?.receivedBytes} " +
+                    "udpRcvBuf=${snap.udp?.receiveBufferSizeBytes} " +
                     "nextLocalUniIdx=${snap.nextLocalUniIndex} " +
                     "pendingBytes=${snap.totalEnqueuedNotSentBytes} " +
                     "pendingStreams=${snap.streamsWithPendingBytes}/${snap.totalStreamsTracked}",
@@ -217,9 +232,18 @@ object SendTraceScenario {
         val sendOutcomes = BooleanArray(scenario.frameCount)
         val sendDurationsMicros = LongArray(scenario.frameCount)
         val endGroupErrors = arrayOfNulls<String>(scenario.frameCount)
-        val arrivalsPerSubscriber =
+        // Pre-sized synchronized ArrayList per subscriber.
+        // CopyOnWriteArrayList (the previous choice) is O(N) per add —
+        // at 50 frames/sec sustained, the cumulative copying becomes
+        // a non-trivial back-pressure on the receive coroutine and
+        // biases the recorded `received` count downward on long runs
+        // (sweep_30s went from 99/1500 to 653/1500 with the
+        // MAX_STREAMS fix; the residual gap is largely this and
+        // verbosePerFrame stdout). Synchronized ArrayList with a
+        // capacity hint is O(1) amortized.
+        val arrivalsPerSubscriber: List<MutableList<FrameArrival>> =
             List(scenario.parallelSubscriptions) {
-                java.util.concurrent.CopyOnWriteArrayList<FrameArrival>()
+                java.util.Collections.synchronizedList(ArrayList<FrameArrival>(scenario.frameCount))
             }
         val collectStart = System.currentTimeMillis()
 
@@ -314,6 +338,10 @@ object SendTraceScenario {
                     "consumed=${snap.sendConnectionFlowConsumed} " +
                     "(remaining=${snap.sendConnectionFlowCredit - snap.sendConnectionFlowConsumed}) " +
                     "peerMaxStreamsUniNow=${snap.peerMaxStreamsUniCurrent} " +
+                    "advertisedMaxStreamsUni=${snap.advertisedMaxStreamsUni} " +
+                    "peerInitiatedUni=${snap.peerInitiatedUniCount} " +
+                    "udpDatagrams=${snap.udp?.receivedDatagrams} " +
+                    "udpBytes=${snap.udp?.receivedBytes} " +
                     "nextLocalUniIdx=${snap.nextLocalUniIndex} " +
                     "pendingBytes=${snap.totalEnqueuedNotSentBytes} " +
                     "pendingStreams=${snap.streamsWithPendingBytes}/${snap.totalStreamsTracked}",
@@ -335,6 +363,10 @@ object SendTraceScenario {
                     "consumed=${snap.sendConnectionFlowConsumed} " +
                     "(remaining=${snap.sendConnectionFlowCredit - snap.sendConnectionFlowConsumed}) " +
                     "peerMaxStreamsUniNow=${snap.peerMaxStreamsUniCurrent} " +
+                    "advertisedMaxStreamsUni=${snap.advertisedMaxStreamsUni} " +
+                    "peerInitiatedUni=${snap.peerInitiatedUniCount} " +
+                    "udpDatagrams=${snap.udp?.receivedDatagrams} " +
+                    "udpBytes=${snap.udp?.receivedBytes} " +
                     "nextLocalUniIdx=${snap.nextLocalUniIndex} " +
                     "pendingBytes=${snap.totalEnqueuedNotSentBytes} " +
                     "pendingStreams=${snap.streamsWithPendingBytes}/${snap.totalStreamsTracked}",
@@ -346,7 +378,12 @@ object SendTraceScenario {
             sendOutcomes = sendOutcomes,
             sendDurationsMicros = sendDurationsMicros,
             endGroupErrors = endGroupErrors,
-            arrivalsPerSubscriber = arrivalsPerSubscriber.map { it.toList() },
+            // Snapshot under lock — synchronizedList iteration must
+            // be guarded explicitly per the JDK contract.
+            arrivalsPerSubscriber =
+                arrivalsPerSubscriber.map { sink ->
+                    synchronized(sink) { ArrayList(sink) }
+                },
             pumpStartedAtMs = pumpStart - collectStart,
             pumpDurationMs = pumpDuration,
             collectStartedAtMs = collectStart,
@@ -359,7 +396,7 @@ object SendTraceScenario {
         listener: NestsListener,
         speakerPubkeyHex: String,
         scenario: Scenario,
-        sink: java.util.concurrent.CopyOnWriteArrayList<FrameArrival>,
+        sink: MutableList<FrameArrival>,
         collectStart: Long,
         pumpScope: CoroutineScope,
     ): Job =

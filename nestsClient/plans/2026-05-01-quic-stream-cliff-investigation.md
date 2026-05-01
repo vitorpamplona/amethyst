@@ -57,52 +57,79 @@ matches frame count) — so the loss is on the relay→listener path.
 (no late delivery during grace), confirming the listener never
 recovers once it stalls.
 
-## Next investigation: relay-side per-subscription buffer
+## Round 2 — chasing the residual
 
-The post-fix profile suggests a *relay-side* per-subscriber forward
-buffer or rate-limiter that drops new uni streams once the listener
-falls behind. Hypotheses to test:
+After the original `MAX_STREAMS_UNI` fix, residual loss appeared in
+sustained / bursty scenarios. Three round-2 changes against
+likely contributors:
 
-1. **Listener QUIC RX coalescing.** Our `:quic` reads packets from
-   the UDP socket one at a time. Under high stream-creation rate
-   the kernel's UDP receive buffer might drop datagrams before we
-   pick them up. `recv` overhead per packet (we use a fresh
-   `ByteBuffer` per call in `UdpSocket.kt:60-70`) compounds. Worth
-   profiling with `dropwatch` or just `cat /proc/net/snmp | grep -i
-   udp` (RcvbufErrors counter) during a stuck run.
+### 2a. Test-side stdout serialisation (hypothesis 2)
 
-2. **Receive-side `MAX_STREAM_DATA` extension.** Symmetric to the
-   `MAX_STREAMS` fix: if our writer's threshold for re-crediting
-   per-stream data is too conservative under high stream count,
-   the relay's per-stream send credit to us could starve. Current
-   threshold is "consumed > limit - window/2" with `window =
-   1 MB`. With 80-byte audio frames we'd never hit it on a single
-   stream, but for the 16 KB payload test, 8 KB consumed per
-   stream is well under the 500 KB threshold — so this isn't the
-   primary cause.
+`SendTraceScenario.Scenario.verbosePerFrame` defaulted to `true`,
+which logged a per-frame `tx i=…` and `rx[idx] gid=…` line via
+`InteropDebug.checkpoint`. Under JUnit's stdout capture, that's a
+synchronous write per event. At 50 frames/sec sustained the
+capture thread can serialise the receive coroutine and starve the
+QUIC read loop, biasing the `received` count downward. **Default
+flipped to `false`**; specific tests opt in for debugging.
 
-3. **Application-thread stalling on the listener side.** Our test
-   `SendTraceScenario` collector logs every `rx[…]` line via
-   `InteropDebug.checkpoint`, which writes to stdout under a JUnit
-   capture. Under 50+ stream/sec rates the stdout flush may
-   serialize the receive coroutine. Worth disabling
-   `verbosePerFrame` and re-running long scenarios — if numbers
-   improve dramatically, the receive side is application-rate
-   limited, not transport-bound.
+### 2b. Test-side `CopyOnWriteArrayList` add cost
 
-4. **moq-rs relay's `--cluster-replication` / per-subscriber queue
-   policy.** Some upstream knobs control how many in-flight uni
-   streams the relay queues per subscriber before dropping new
-   ones. Worth checking `moq-relay --help | grep -i buffer` or
-   filing an issue at `kixelated/moq` for the relay's behaviour
-   spec under saturation.
+The collector accumulated arrivals in a `CopyOnWriteArrayList`,
+which is O(N) per add — copying the entire underlying array on
+every `+=`. For 1500-frame runs that's ~1.1 M element copies and
+~35 MB of memory ops cumulative across the run. Replaced with
+`Collections.synchronizedList(ArrayList(capacityHint))` for O(1)
+amortized adds. Snapshot at end via
+`synchronized(sink) { ArrayList(sink) }`.
 
-The MAIN production bug (audio cuts out mid-broadcast at frame ~99
-in two-user rooms) is FIXED. The residual is a separate
-investigation that mostly affects extreme scenarios — long
-broadcasts, large payloads, fan-out asymmetry, fast bursts — and
-should be tracked as a separate plan once one of the hypotheses
-above is confirmed.
+### 2c. Listener-side kernel UDP receive buffer (hypothesis 1)
+
+`UdpSocket.connect` did not configure `SO_RCVBUF`, so the kernel's
+default applied (~200 KB on Linux/macOS, similarly small on
+Android). At MTU-sized datagrams that's room for ~130 packets. A
+multi-second moq-lite broadcast that the relay fans out across
+multiple subscribers can transiently exceed this — anything
+queued past `rmem` is silently dropped by the kernel and never
+reaches our QUIC stack, manifesting as "subscription stops
+mid-broadcast even though `publisher.send` keeps returning true".
+Bumped to 4 MiB at socket-bind time (Linux doubles + clamps via
+`rmem_max`, so the effective cap is whatever the kernel allows up
+to `min(8 MiB, rmem_max)`).
+
+Added lifetime UDP datagram counters (`receivedDatagramCount`,
+`receivedByteCount`, `receiveBufferSizeBytes`) to the `UdpSocket`
+expect surface; the driver wires them into the existing
+`QuicConnection.flowControlSnapshot` via a `udpStatsSupplier` hook.
+The `fc-pre / fc-post-pump / fc-post-grace` lines now include
+`udpDatagrams=…  udpBytes=…  udpRcvBuf=…` so a future sweep can
+correlate "frames missing on subscription" against "datagrams the
+kernel actually delivered".
+
+### Hypotheses still open after round 2
+
+3. **moq-rs relay per-subscriber queue policy.** Even if our
+   listener kernel + collector are infinitely fast, the relay
+   itself may have an in-flight uni-stream cap per subscriber that
+   drops new groups once the listener falls behind. The
+   asymmetric loss in `sweep_3subs sub[2]` (77/100 while sub[0]
+   and sub[1] got 100/100) is consistent with a per-subscriber
+   queue rather than a connection- or relay-wide limit. Worth
+   filing an issue at `kixelated/moq` once we have one more sweep
+   confirming the round-2 changes don't already close the gap.
+
+4. **Receive-side `MAX_STREAM_DATA` thresholds.** Probably not
+   the cause for 80-byte audio frames (1 MB per-stream window vs
+   ~80 bytes used per stream) but may bite the 16 KB-payload
+   scenario. Worth a follow-up only if `sweep_payload_16kb`
+   doesn't recover.
+
+## Re-running after round 2
+
+The acceptance criterion is the same: every sweep row showing
+`received=N/N missing=[]`, except the explicit late-join scenarios
+(`sweep_late_subscribe_after_25` / `_after_50`) which legitimately
+report `received < N` due to from-latest semantics.
 
 **Reproduces against:** `https://moq.nostrnests.com:4443` (production
 relay). Not consistently reproducible against the local

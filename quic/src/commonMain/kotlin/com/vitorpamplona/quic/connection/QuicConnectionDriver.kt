@@ -73,6 +73,17 @@ class QuicConnectionDriver(
 
     fun start() {
         connection.start()
+        // Wire the diagnostic UDP-stats supplier so
+        // QuicConnection.flowControlSnapshot can surface
+        // kernel-delivered datagram counters alongside the QUIC
+        // flow-control fields.
+        connection.udpStatsSupplier = {
+            UdpSocketStats(
+                receivedDatagrams = socket.receivedDatagramCount,
+                receivedBytes = socket.receivedByteCount,
+                receiveBufferSizeBytes = socket.receiveBufferSizeBytes,
+            )
+        }
         readJob = scope.launch { readLoop() }
         sendJob = scope.launch { sendLoop() }
         // Initial nudge so the ClientHello goes out immediately.

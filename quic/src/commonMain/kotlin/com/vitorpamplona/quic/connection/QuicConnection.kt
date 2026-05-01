@@ -173,6 +173,18 @@ class QuicConnection(
     internal var advertisedMaxStreamsBidi: Long = config.initialMaxStreamsBidi
 
     /**
+     * Optional supplier of underlying UDP-socket counters. Wired by the
+     * platform-specific driver since `UdpSocket`'s counters are
+     * JVM-side fields the commonMain side can't see directly.
+     * Diagnostic-only: surfaces in [flowControlSnapshot] so a test
+     * can correlate "frames lost on the wire" against "datagrams the
+     * kernel actually delivered to the application". Null when no
+     * driver is attached (in-process tests etc).
+     */
+    @Volatile
+    internal var udpStatsSupplier: (() -> UdpSocketStats)? = null
+
+    /**
      * Round-robin starting index for the writer's stream-drain iteration.
      * Without rotation, streams created earlier always drain first under MTU
      * pressure, starving later streams indefinitely.
@@ -451,6 +463,7 @@ class QuicConnection(
                     pendingStreamCount += 1
                 }
             }
+            val udp = udpStatsSupplier?.invoke()
             QuicFlowControlSnapshot(
                 peerInitialMaxData = tp?.initialMaxData,
                 peerInitialMaxStreamDataUni = tp?.initialMaxStreamDataUni,
@@ -463,9 +476,14 @@ class QuicConnection(
                 peerMaxStreamsBidiCurrent = peerMaxStreamsBidi,
                 nextLocalUniIndex = nextLocalUniIndex,
                 nextLocalBidiIndex = nextLocalBidiIndex,
+                advertisedMaxStreamsUni = advertisedMaxStreamsUni,
+                advertisedMaxStreamsBidi = advertisedMaxStreamsBidi,
+                peerInitiatedUniCount = peerInitiatedUniCount,
+                peerInitiatedBidiCount = peerInitiatedBidiCount,
                 totalEnqueuedNotSentBytes = pending,
                 streamsWithPendingBytes = pendingStreamCount,
                 totalStreamsTracked = streamsList.size,
+                udp = udp,
             )
         }
 
@@ -766,4 +784,50 @@ data class QuicFlowControlSnapshot(
     val streamsWithPendingBytes: Int,
     /** Number of streams currently tracked (alive + closed-but-retained). */
     val totalStreamsTracked: Int,
+    /**
+     * Outbound peer-initiated stream cap we've currently advertised.
+     * Starts at `config.initialMaxStreams*` and grows as the writer
+     * emits `MAX_STREAMS_*` frames. If this stays at the initial cap
+     * while [peerInitiatedUniCount] climbs into the same range, the
+     * peer's stream-id allowance against us is starving — see
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+     */
+    val advertisedMaxStreamsUni: Long,
+    /** Bidi counterpart of [advertisedMaxStreamsUni]. */
+    val advertisedMaxStreamsBidi: Long,
+    /**
+     * Lifetime count of peer-initiated unidirectional streams accepted
+     * by `getOrCreatePeerStreamLocked`. Compared against
+     * [advertisedMaxStreamsUni] by the writer to decide when to extend
+     * the cap.
+     */
+    val peerInitiatedUniCount: Long,
+    /** Bidi counterpart of [peerInitiatedUniCount]. */
+    val peerInitiatedBidiCount: Long,
+    /**
+     * Underlying UDP-socket counters when the connection has a
+     * platform driver attached. Null otherwise (in-process tests
+     * have no real socket). Lets a test answer "did the kernel
+     * actually deliver these datagrams to us?" by diffing
+     * [UdpSocketStats.receivedDatagrams] over the test window.
+     */
+    val udp: UdpSocketStats?,
+)
+
+/**
+ * Lifetime UDP-socket counters surfaced through
+ * [QuicFlowControlSnapshot]. The driver populates this from its
+ * platform-specific `UdpSocket` impl.
+ */
+data class UdpSocketStats(
+    /** Number of `recv()` calls that returned a non-null datagram. */
+    val receivedDatagrams: Long,
+    /** Sum of payload bytes returned by [receivedDatagrams] calls. */
+    val receivedBytes: Long,
+    /**
+     * Effective `SO_RCVBUF` value the kernel reports. On Linux the
+     * application requested value is *doubled* and then capped at
+     * `rmem_max`, so this is what the kernel actually allocates.
+     */
+    val receiveBufferSizeBytes: Int,
 )
