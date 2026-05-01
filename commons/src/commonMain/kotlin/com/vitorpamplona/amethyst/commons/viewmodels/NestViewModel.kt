@@ -139,10 +139,11 @@ class NestViewModel(
 
     /**
      * Chat ledger for the live-activities chat panel (#1) — every
-     * kind-1311 ([LiveActivitiesChatMessageEvent])
-     * tagged with this room's `a`-pointer, ordered by `created_at`
-     * ascending so the newest message is at the end (the panel
-     * auto-scrolls to it).
+     * kind-1311 ([LiveActivitiesChatMessageEvent]) tagged with this
+     * room's `a`-pointer, ordered by [DefaultFeedOrder] (descending
+     * `created_at`, then by id for stability). The chat panel renders
+     * with `LazyColumn(reverseLayout = true)`, which puts data index 0
+     * (the newest message) at the bottom of the viewport.
      *
      * Dedupes by event id — a relay re-emit on reconnect can't
      * produce a duplicate row.
@@ -155,8 +156,8 @@ class NestViewModel(
     /**
      * Recent kind-7 reactions for the floating speaker-avatar overlay
      * (#3). Keyed by target pubkey; room-wide reactions land under the
-     * empty-string key. Sliding 30 s window driven by the platform
-     * layer's tick (typically every 1 s).
+     * empty-string key. Sliding [REACTION_WINDOW_SEC] window driven
+     * by the platform layer's tick (typically every 1 s).
      */
     private val reactionsAgg = RoomReactionsAggregator()
     private val _recentReactions = MutableStateFlow<Map<String, List<RoomReaction>>>(emptyMap())
@@ -371,7 +372,11 @@ class NestViewModel(
      */
     fun onPresenceEvent(event: com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent) {
         if (closed) return
-        _presences.value = presenceAgg.apply(event)
+        // Skip the StateFlow write when the aggregator says nothing
+        // changed — saves a snapshot copy + an O(N) map equality check
+        // per replay in big rooms (LocalCache.observeEvents re-emits
+        // the full list on every cache mutation).
+        presenceAgg.applyOrNull(event)?.let { _presences.value = it }
     }
 
     /**
@@ -401,8 +406,8 @@ class NestViewModel(
     /**
      * Apply one kind-7 reaction event to the sliding-window aggregator.
      * Caller passes [nowSec] (so tests can be deterministic) and the
-     * fixed 30-s window. Mirror of [evictReactions] for the per-tick
-     * cleanup.
+     * fixed [REACTION_WINDOW_SEC] window. Mirror of [evictReactions]
+     * for the per-tick cleanup.
      */
     fun onReactionEvent(
         event: com.vitorpamplona.quartz.nip25Reactions.ReactionEvent,
@@ -1222,10 +1227,13 @@ const val LEVEL_TICK_MS: Long = 100L
 /**
  * How long a kind-7 reaction stays in
  * [NestViewModel.recentReactions] before the eviction sweep
- * drops it. Matches the duration of the floating-up animation in the
- * SpeakerReactionOverlay.
+ * drops it. Reactions are about what the speaker is talking about
+ * RIGHT NOW — a 10 s window keeps the floating-emoji overlay
+ * timely (a reaction to one sentence shouldn't bleed into the
+ * next paragraph) and matches the duration of the fade-up
+ * animation in the SpeakerReactionOverlay.
  */
-const val REACTION_WINDOW_SEC: Long = 30L
+const val REACTION_WINDOW_SEC: Long = 10L
 
 /**
  * Indirection over the top-level `connectNestsListener` so tests can drive
