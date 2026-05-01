@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.namecoin.BitRelayUrlRewriter
+import com.vitorpamplona.amethyst.service.namecoin.TlsaConnectionPolicy
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
@@ -88,8 +90,10 @@ import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.BitRelayResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
@@ -233,20 +237,28 @@ class AppModules(
         client
     }
 
+    /**
+     * Single source of truth for which ElectrumX servers to query, shared
+     * by [namecoinResolver] (NIP-05 identity path) and [bitRelayResolver]
+     * (`.bit` relay path). User-configured custom servers take priority,
+     * otherwise we pick a Tor-aware default list.
+     */
+    val namecoinServerListProvider: () -> List<ElectrumxServer> =
+        {
+            namecoinPrefs.customServersOrNull
+                ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
+                    TOR_ELECTRUMX_SERVERS
+                } else {
+                    DEFAULT_ELECTRUMX_SERVERS
+                }
+        }
+
     val namecoinResolver by
         lazy {
             Log.d("AppModules", "Namecoin Resolver Init")
             NamecoinNameResolver(
                 electrumxClient = electrumXClient,
-                serverListProvider = {
-                    // User-configured custom servers take priority
-                    namecoinPrefs.customServersOrNull
-                        ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                            TOR_ELECTRUMX_SERVERS
-                        } else {
-                            DEFAULT_ELECTRUMX_SERVERS
-                        }
-                },
+                serverListProvider = namecoinServerListProvider,
             )
         }
 
@@ -292,12 +304,63 @@ class AppModules(
             scope = applicationIOScope,
         )
 
+    // Resolves `.bit` (Namecoin) relay hostnames to their underlying real wss:// endpoint
+    // at WebSocket-handshake time. Delegates the ElectrumX call to the same
+    // [namecoinResolver] used by the NIP-05 identity path, so Tor / pinned-cert /
+    // server-selection / timeout / exception-translation behaviour carries over for free.
+    val bitRelayResolver by lazy {
+        Log.d("AppModules", "BitRelayResolver Init")
+        BitRelayResolver(nameResolver = namecoinResolver)
+    }
+
+    // Pins the TLS handshake of `.bit` relay connections to the TLSA records
+    // published in the same Namecoin record we already used to rewrite the
+    // URL. No extra ElectrumX call: [BitRelayResolver] already cached the
+    // records when the rewriter ran.
+    val tlsaConnectionPolicy = TlsaConnectionPolicy(bitRelayResolver)
+
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
-        OkHttpWebSocket.Builder { url ->
-            val useTor = torEvaluatorFlow.flow.value.useTor(url)
-            okHttpClientForRelays.getHttpClient(useTor)
-        }
+        OkHttpWebSocket.Builder(
+            httpClient = { url ->
+                // When the user has Tor enabled with onion routing for relays
+                // AND this is a `.bit` relay, the URL rewriter may produce a
+                // `ws://...onion/` target. The OkHttp client we hand back
+                // here MUST be Tor-routed in that case, otherwise OkHttp
+                // asks the system resolver for the `.onion` (which fails
+                // with `Unable to resolve host`). The decision mirrors
+                // [BitRelayUrlRewriter.preferOnion] so the two stay in
+                // sync; conservatively forcing Tor for any `.bit` relay
+                // when Tor + onionRelaysViaTor are on is correct — if the
+                // record has no onion alias the rewriter falls back to
+                // clearnet, but routing that clearnet through Tor is also
+                // what the user implicitly asked for by enabling onion
+                // routing for relays.
+                val torSettings = torEvaluatorFlow.torSettings.value
+                val torEnabled = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
+                val forceTorForBitOnion =
+                    torEnabled &&
+                        torSettings.onionRelaysViaTor &&
+                        com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.BitRelayResolver
+                            .isBitRelay(url)
+                val useTor = forceTorForBitOnion || torEvaluatorFlow.flow.value.useTor(url)
+                okHttpClientForRelays.getHttpClient(useTor)
+            },
+            urlRewriter =
+                BitRelayUrlRewriter(
+                    resolver = bitRelayResolver,
+                    // Prefer the Namecoin record's `.onion` alias when the
+                    // user has Tor enabled and onion routing for relays is
+                    // on. Re-evaluated on every connect so toggling the
+                    // setting takes effect on the next reconnect.
+                    preferOnion = { _ ->
+                        val settings = torEvaluatorFlow.torSettings.value
+                        settings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF &&
+                            settings.onionRelaysViaTor
+                    },
+                ),
+            clientDecorator = tlsaConnectionPolicy::decorate,
+        )
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache
@@ -478,9 +541,21 @@ class AppModules(
     val crashReportCache = CrashReportCache(appContext)
 
     // cache for NIP-11 documents
+    //
+    // For `.bit` relays, the HTTP path that fetches NIP-11 (and any
+    // future per-relay HTTP request) also needs the BitRelayDns + TLSA
+    // decoration that the WebSocket path gets via OkHttpWebSocket's
+    // clientDecorator hook. Without it, `https://relay.testls.bit/`
+    // hits ICANN DNS, sees no record, and surfaces FAIL_TO_ASSEMBLE_URL
+    // even when the WebSocket connection is happily live. We wrap the
+    // base client provider so the same TlsaConnectionPolicy.decorate
+    // applies for both transports.
     val nip11Cache: Nip11CachedRetriever by lazy {
         Log.d("AppModules", "Nip11CachedRetriever Init")
-        Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay)
+        Nip11CachedRetriever { url ->
+            val base = torEvaluatorFlow.okHttpClientForRelay(url)
+            tlsaConnectionPolicy.decorate(url, base)
+        }
     }
 
     fun setImageLoader() {
