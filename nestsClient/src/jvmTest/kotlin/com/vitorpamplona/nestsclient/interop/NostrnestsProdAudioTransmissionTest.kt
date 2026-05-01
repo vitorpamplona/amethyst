@@ -944,7 +944,7 @@ class NostrnestsProdAudioTransmissionTest {
         expectAllReceived: Boolean = false,
     ) = runBlocking {
         assumeProd()
-        withProdSpeakerAndListeners(scope, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope, flowControlSnapshot ->
+        withProdSpeakerAndListeners(scope, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope, flowControlSnapshot, listenerFlowControlSnapshots ->
             val result =
                 SendTraceScenario.run(
                     scope = scope,
@@ -954,6 +954,7 @@ class NostrnestsProdAudioTransmissionTest {
                     scenario = scenario,
                     pumpScope = pumpScope,
                     flowControlSnapshot = flowControlSnapshot,
+                    listenerFlowControlSnapshots = listenerFlowControlSnapshots,
                 )
             SendTraceScenario.reportAndAssert(scope, result, expectAllReceived)
         }
@@ -978,6 +979,7 @@ class NostrnestsProdAudioTransmissionTest {
             speakerPubkeyHex: String,
             pumpScope: CoroutineScope,
             flowControlSnapshot: suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot,
+            listenerFlowControlSnapshots: List<suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot>,
         ) -> Unit,
     ) {
         val hostSigner = NostrSignerInternal(KeyPair())
@@ -1032,18 +1034,32 @@ class NostrnestsProdAudioTransmissionTest {
                 listeners += listener
             }
 
-            // Diagnostics passthrough: cast the speaker WT to the
-            // concrete QUIC adapter so the scenario can read the
-            // underlying connection's flow-control snapshot. See
-            // `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+            // Diagnostics passthrough: cast the speaker WT and each
+            // listener's underlying WT to the concrete QUIC adapter
+            // so the scenario can read flow-control snapshots from
+            // both sides. The cliff investigation
+            // (`nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`)
+            // needs the listener-side numbers because the
+            // peer-initiated stream count is what bites us at the
+            // audience.
             val quicSpeakerWt =
                 speakerWt as com.vitorpamplona.nestsclient.transport.QuicWebTransportSession
+            val listenerSnapshots =
+                listeners.map { listener ->
+                    val listenerWt =
+                        (listener as com.vitorpamplona.nestsclient.MoqLiteNestsListener)
+                            .transport as com.vitorpamplona.nestsclient.transport.QuicWebTransportSession
+                    val supplier: suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot =
+                        { listenerWt.quicFlowControlSnapshot() }
+                    supplier
+                }
             block(
                 publisher,
                 listeners,
                 hostSigner.pubKey,
                 pumpScope,
                 { quicSpeakerWt.quicFlowControlSnapshot() },
+                listenerSnapshots,
             )
         } finally {
             for (listener in listeners) {

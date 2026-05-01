@@ -49,6 +49,25 @@ expect class UdpSocket {
     /** Local port the OS assigned to the socket. */
     val localPort: Int
 
+    /**
+     * Lifetime count of datagrams successfully returned by [receive].
+     * Diagnostic-only — surfaces in
+     * [com.vitorpamplona.quic.connection.QuicFlowControlSnapshot.udp]
+     * so a test can correlate apparent stream loss against the
+     * datagrams the kernel actually delivered to the application.
+     */
+    val receivedDatagramCount: Long
+
+    /** Sum of payload bytes returned by [receive]. */
+    val receivedByteCount: Long
+
+    /**
+     * Effective `SO_RCVBUF` value the kernel reports. On Linux the
+     * application-requested value is doubled and then capped at
+     * `rmem_max`, so this is what the kernel actually allocates.
+     */
+    val receiveBufferSizeBytes: Int
+
     companion object {
         /** Open a UDP socket connected to [host]:[port]. Throws on resolution / bind / connect failure. */
         suspend fun connect(

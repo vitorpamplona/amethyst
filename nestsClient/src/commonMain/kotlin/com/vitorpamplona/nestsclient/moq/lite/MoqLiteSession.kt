@@ -65,7 +65,14 @@ import kotlinx.coroutines.sync.withLock
  * layout.
  */
 class MoqLiteSession internal constructor(
-    private val transport: WebTransportSession,
+    /**
+     * `internal` (not `private`) so test code in the same module can
+     * downcast to a platform [WebTransportSession] (typically
+     * `QuicWebTransportSession`) and read diagnostic flow-control
+     * counters from the underlying QUIC connection. Production code
+     * paths inside this file continue to use `transport` as before.
+     */
+    internal val transport: WebTransportSession,
     private val scope: CoroutineScope,
 ) {
     private val state = Mutex()

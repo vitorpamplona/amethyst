@@ -49,27 +49,42 @@ class NestMoqLiteBroadcaster(
      * varint-prefixed frames; [MoqLitePublisherHandle.endGroup] FINs
      * the stream and the next [send] starts a fresh group.
      *
-     * **Default = 1 (one Opus frame per group).** Matches the JS
-     * reference broadcaster's wire shape and gives any late-joining
-     * subscriber a sub-20 ms initial audio gap (moq-lite "from-latest"
-     * semantics — new subscribers pick up at the next group boundary).
+     * **Default = 5 (≈ 100 ms of audio per group → 10 streams/sec).**
      *
-     * Earlier versions defaulted to 5 as a mitigation for a production
-     * cliff at frame ~99: the relay would only forward the first ~100
-     * uni streams to a listener for the lifetime of the connection.
-     * The actual root cause was on the listener's *receive* side —
-     * our `:quic` never emitted `MAX_STREAMS_UNI` frames to extend
-     * the peer-initiated stream-id cap, so the relay's initial 100
-     * uni-stream allowance was the lifetime maximum. Once
-     * [com.vitorpamplona.quic.connection.QuicConnectionWriter]
-     * started emitting periodic `MAX_STREAMS_*` extensions, packing
-     * stopped being necessary. See
-     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+     * The story:
      *
-     * Set to a higher value to amortise per-stream overhead (CPU,
-     * relay bookkeeping) at the cost of late-join latency: with
-     * `framesPerGroup = 5` the late-join initial gap is ≤ 100 ms
-     * instead of ≤ 20 ms.
+     * Round 1 found that the production relay's lifetime peer-uni
+     * stream cap of 100 was bitten by our `:quic` never emitting
+     * `MAX_STREAMS_UNI` extensions; that fix landed and short
+     * broadcasts (≤ 100 frames) now deliver 100/100.
+     *
+     * Round 2 surfaced a *separate* residual cliff on **sustained**
+     * broadcasts: the production relay's per-subscriber forward
+     * pipeline runs at ≈ 40 streams/sec sustained. With one Opus
+     * frame per group = 50 streams/sec, the relay falls behind by
+     * ~9 streams/sec; once its per-subscriber buffer fills (after
+     * 6–14 seconds of sustained push) it stops forwarding to that
+     * subscriber entirely. Production sweeps reproduced this on
+     * `sweep_30s` (610/1500), `sweep_120s` (227/6000),
+     * `sweep_frames400` (36/400 in some runs, 400/400 in others —
+     * highly variance-prone). Listener-side flow-control snapshots
+     * confirm every stream the relay forwarded reached the
+     * application; the relay simply stops opening new uni streams
+     * once its queue overflows.
+     *
+     * Packing 5 frames per group cuts stream-creation rate to 10/sec,
+     * comfortably below the relay's sustained-forward ceiling. Sweep
+     * results with `framesPerGroup = 5` show 100/100 across every
+     * scenario including 30 s and 120 s broadcasts. Late-join gap
+     * grows from ≤ 20 ms (one frame per group) to ≤ 100 ms (five
+     * frames per group) — imperceptible for live audio rooms.
+     *
+     * See `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+     *
+     * Set to 1 to match the JS reference broadcaster's wire shape
+     * exactly — fine for short / bursty broadcasts and useful when
+     * pointing at a relay deployment without the per-subscriber
+     * forward limit (e.g. self-hosted moq-rs with tuned config).
      */
     private val framesPerGroup: Int = DEFAULT_FRAMES_PER_GROUP,
 ) {
@@ -198,10 +213,14 @@ class NestMoqLiteBroadcaster(
 
     companion object {
         /**
-         * Default moq-lite group size = 1 Opus frame per group, matching
-         * the JS reference broadcaster's wire shape. See [framesPerGroup]
-         * kdoc for the full rationale + history.
+         * Default moq-lite group size = 5 Opus frames ≈ 100 ms of audio.
+         * Picked to keep the QUIC uni-stream creation rate
+         * (10 streams/sec at 20 ms cadence) under the production
+         * nostrnests relay's sustained per-subscriber forward
+         * ceiling (~40 streams/sec) while still giving late-joining
+         * subscribers a sub-100 ms initial audio gap. See
+         * [framesPerGroup] kdoc for the full rationale + history.
          */
-        const val DEFAULT_FRAMES_PER_GROUP: Int = 1
+        const val DEFAULT_FRAMES_PER_GROUP: Int = 5
     }
 }

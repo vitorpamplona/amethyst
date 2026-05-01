@@ -65,6 +65,16 @@ class MoqLiteNestsListener internal constructor(
 ) : NestsListener {
     override val state: StateFlow<NestsListenerState> = mutableState.asStateFlow()
 
+    /**
+     * `internal` accessor for diagnostics: a test downcasts the
+     * returned [WebTransportSession] to a platform-specific type
+     * (e.g. `QuicWebTransportSession`) to read flow-control counters
+     * from the underlying QUIC connection. Not part of the public
+     * [com.vitorpamplona.nestsclient.NestsListener] surface.
+     */
+    internal val transport
+        get() = session.transport
+
     override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = AUDIO_TRACK)
 
     override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = CATALOG_TRACK)
