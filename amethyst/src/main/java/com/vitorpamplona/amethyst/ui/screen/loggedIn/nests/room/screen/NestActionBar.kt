@@ -74,18 +74,17 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * Layout: `[ start cluster ] · · · [ end cluster ]` with an optional
  * red status strip above for connection / broadcast / mute failures.
  *
- * Start cluster — driven by connection × broadcast × on-stage state:
+ * Start cluster — driven by connection state only:
  *
- * | State                                       | Start cluster contents                  |
- * |---------------------------------------------|-----------------------------------------|
- * | Idle / Closed / Failed connection           | `[Connect]`                             |
- * | Connecting / Reconnecting                   | status chip                             |
- * | Connected, audience                         | empty (system volume keys are enough)   |
- * | Connected, on stage, !canBroadcast          | `[Leave the Stage]`                     |
- * | Connected, on stage, mic idle               | `[Talk] [Leave the Stage]` (+ pill)     |
- * | Connected, on stage, going live             | status chip + `[Leave the Stage]`       |
- * | Connected, on stage, broadcasting           | `[MicMute] [Stop] [Leave the Stage]`    |
- * | Connected, on stage, broadcast failed       | `[Retry] [Leave the Stage]`             |
+ * | State                              | Start cluster contents |
+ * |------------------------------------|------------------------|
+ * | Idle / Closed / Failed connection  | `[Connect]`            |
+ * | Connecting                         | status chip            |
+ * | Reconnecting                       | status chip            |
+ * | Connected                          | empty                  |
+ *
+ * On-stage controls (Talk / MicMute / Leave the Stage) live in
+ * [StageControlsBar], attached to the bottom of the Stage card.
  *
  * End cluster: hand-raise (audience + connected only), react, leave room.
  */
@@ -94,8 +93,6 @@ internal fun NestActionBar(
     viewModel: NestViewModel,
     ui: NestUiState,
     isOnStage: Boolean,
-    canBroadcast: Boolean,
-    speakerPubkeyHex: String,
     handRaised: Boolean,
     onHandRaisedChange: (Boolean) -> Unit,
     onShowReactionPicker: () -> Unit,
@@ -116,13 +113,7 @@ internal fun NestActionBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Box(modifier = Modifier.weight(1f, fill = true)) {
-                    StartCluster(
-                        viewModel = viewModel,
-                        ui = ui,
-                        isOnStage = isOnStage,
-                        canBroadcast = canBroadcast,
-                        speakerPubkeyHex = speakerPubkeyHex,
-                    )
+                    StartCluster(viewModel = viewModel, ui = ui)
                 }
                 EndCluster(
                     isOnStage = isOnStage,
@@ -133,6 +124,57 @@ internal fun NestActionBar(
                     onLeave = onLeave,
                 )
             }
+        }
+    }
+}
+
+/**
+ * Controls strip that attaches under the Stage card. Contains
+ * everything a speaker needs while on stage: Talk / MicMute / Retry +
+ * Leave the Stage. Renders nothing when the local user isn't on stage.
+ *
+ * Visibility uses two signals AND'd together:
+ *   - [isOnStage] — derived from `participantGrid.onStage` (kind-30312
+ *     role + presence `onstage` flag); flips on a real promote/demote
+ *     after the round-trip lands. Connection blips, broadcast state
+ *     churn, mute toggles, and permission flows do NOT change it.
+ *   - [ui.onStageNow] — the LOCAL intent flag. Flips synchronously on
+ *     `setOnStage(false)` so a Leave-the-Stage tap hides the bar on
+ *     the next frame, instead of waiting for the presence event to
+ *     sign, broadcast, and loop back through LocalCache (a delay made
+ *     visible in scenario "broadcast → mute → unmute → leave", where
+ *     the signer queues behind a pending mute frame + 500 ms debounce).
+ *
+ * AND-of-both also handles host demotion correctly: intent stays true
+ * but the aggregator drops us, so the bar still hides.
+ */
+@Composable
+internal fun StageControlsBar(
+    viewModel: NestViewModel,
+    ui: NestUiState,
+    isOnStage: Boolean,
+    canBroadcast: Boolean,
+    speakerPubkeyHex: String,
+    modifier: Modifier = Modifier,
+) {
+    if (!isOnStage || !ui.onStageNow) return
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (canBroadcast) {
+            OnStageControls(
+                viewModel = viewModel,
+                broadcast = ui.broadcast,
+                speakerPubkeyHex = speakerPubkeyHex,
+            )
+        } else {
+            // No signing/permission — only thing we can do is step down.
+            LeaveStageButton(onClick = { viewModel.setOnStage(false) })
         }
     }
 }
@@ -166,9 +208,6 @@ private fun NestUiState.statusStripText(): String? {
 private fun StartCluster(
     viewModel: NestViewModel,
     ui: NestUiState,
-    isOnStage: Boolean,
-    canBroadcast: Boolean,
-    speakerPubkeyHex: String,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -190,26 +229,10 @@ private fun StartCluster(
                 StatusChip(label = stringRes(R.string.nest_reconnecting))
             }
 
+            // On-stage controls live in [StageControlsBar]; audience
+            // has nothing to do here (system volume keys are enough).
             is ConnectionUiState.Connected -> {
-                when {
-                    canBroadcast && isOnStage -> {
-                        OnStageControls(
-                            viewModel = viewModel,
-                            broadcast = ui.broadcast,
-                            speakerPubkeyHex = speakerPubkeyHex,
-                        )
-                    }
-
-                    // On stage but no signing/permission — only thing we can do is step down.
-                    isOnStage -> {
-                        LeaveStageButton(onClick = { viewModel.setOnStage(false) })
-                    }
-
-                    // Audience: nothing here. Phone volume keys cover local volume.
-                    else -> {
-                        Unit
-                    }
-                }
+                Unit
             }
         }
     }
@@ -242,10 +265,6 @@ private fun OnStageControls(
 
         is BroadcastUiState.Broadcasting -> {
             MicMuteToggle(isMuted = broadcast.isMuted, onToggle = viewModel::setMicMuted)
-            // Stop sending audio without leaving the stage — viewer
-            // can pause the mic and resume later via Talk. Distinct
-            // from [LeaveStageButton], which also vacates the slot.
-            StopBroadcastButton(onClick = viewModel::stopBroadcast)
             LeaveStageButton(onClick = leaveStage)
         }
 
@@ -376,29 +395,6 @@ private fun TalkButton(
         Icon(
             symbol = MaterialSymbols.MicOff,
             contentDescription = contentDescription,
-            modifier = Modifier.size(28.dp),
-        )
-    }
-}
-
-/**
- * Big error-color 56dp mic button shown while broadcasting. Same
- * footprint as [TalkButton] so the on/off swap is impossible to miss.
- */
-@Composable
-private fun StopBroadcastButton(onClick: () -> Unit) {
-    FilledIconButton(
-        onClick = onClick,
-        modifier = Modifier.size(56.dp),
-        colors =
-            IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
-            ),
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Mic,
-            contentDescription = stringRes(R.string.nest_stop_talking),
             modifier = Modifier.size(28.dp),
         )
     }

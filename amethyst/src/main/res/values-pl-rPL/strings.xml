@@ -483,7 +483,6 @@
     <string name="nest_audio_failed">Błąd dźwięku: %1$s</string>
     <string name="nest_audio_unavailable">Dźwięk nie jest dostępny dla tego pokoju</string>
     <string name="nest_talk">Mów</string>
-    <string name="nest_stop_talking">Przestań mówić</string>
     <string name="nest_leave_stage">Zejść ze sceny</string>
     <string name="nest_mic_mute">Wycisz mikrofon</string>
     <string name="nest_mic_unmute">Włącz mikrofon</string>

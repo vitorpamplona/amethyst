@@ -486,7 +486,6 @@
     <string name="nest_audio_failed">音频失败: %1$s</string>
     <string name="nest_audio_unavailable">此聊天室没有音频可用</string>
     <string name="nest_talk">交谈</string>
-    <string name="nest_stop_talking">停止交谈</string>
     <string name="nest_leave_stage">离开舞台</string>
     <string name="nest_mic_mute">麦克风静音</string>
     <string name="nest_mic_unmute">取消麦克风静音</string>

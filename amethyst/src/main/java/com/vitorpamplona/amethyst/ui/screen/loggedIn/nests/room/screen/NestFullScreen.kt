@@ -246,13 +246,25 @@ internal fun NestFullScreen(
                 onTapSelf = onTapSelf,
                 listenerCount = presences.size,
                 modifier = Modifier.padding(horizontal = 16.dp),
+                // Speaker controls live inside the Stage card so they
+                // only render when the user is actually on stage. This
+                // keeps the action bar narrow for audience and makes
+                // the controls appearing/disappearing a deliberate
+                // signal that the mic is now (or no longer) available.
+                bottomBar = {
+                    StageControlsBar(
+                        viewModel = viewModel,
+                        ui = ui,
+                        isOnStage = isOnStageMe,
+                        canBroadcast = viewModel.canBroadcast,
+                        speakerPubkeyHex = myPubkey,
+                    )
+                },
             )
             NestActionBar(
                 viewModel = viewModel,
                 ui = ui,
                 isOnStage = isOnStageMe,
-                canBroadcast = viewModel.canBroadcast,
-                speakerPubkeyHex = myPubkey,
                 handRaised = handRaised,
                 onHandRaisedChange = onHandRaisedChange,
                 onShowReactionPicker = { showReactionPicker = true },
@@ -360,6 +372,17 @@ internal fun NestFullScreen(
                                     R.string.nest_leave_host_close_failed,
                                 )
                             }
+                            // Tear down the speaker session + listener
+                            // BEFORE finishing the activity so the
+                            // AudioRecord (and the system mic indicator)
+                            // releases promptly. onCleared() alone runs
+                            // late in the destroy lifecycle and can
+                            // leave the mic held while the activity is
+                            // queued for destruction. Only the
+                            // "Close the Room" path triggers this — the
+                            // "Just leave" and non-host leave paths
+                            // still rely on onCleared.
+                            viewModel.leave()
                             onLeave()
                         }
                     },
@@ -371,6 +394,15 @@ internal fun NestFullScreen(
                 TextButton(
                     onClick = {
                         showHostLeaveConfirm = false
+                        // Tear down the speaker session + listener before
+                        // finishing so the AudioRecord (and the system mic
+                        // indicator) releases promptly. Same reasoning as
+                        // the Close the Room path — onCleared() runs late
+                        // in the destroy lifecycle and can leave the mic
+                        // held while the activity is queued for destruction.
+                        // Unlike Close the Room, this path leaves the
+                        // kind-30312 meeting space open for other users.
+                        viewModel.leave()
                         onLeave()
                     },
                 ) {

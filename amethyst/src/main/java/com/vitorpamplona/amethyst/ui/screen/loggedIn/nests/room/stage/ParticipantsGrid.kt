@@ -126,6 +126,10 @@ private val STAGE_MAX_HEIGHT = 320.dp
  *
  * When [members] is empty, renders an "Waiting for speakers…" hint
  * instead so the strip stays visually anchored.
+ *
+ * [bottomBar] is rendered inside the same Surface, below the grid —
+ * used to anchor speaker controls to the stage card so they only
+ * appear when the local user is on stage.
  */
 @Composable
 internal fun StageGrid(
@@ -140,6 +144,7 @@ internal fun StageGrid(
     myPubkey: String? = null,
     onTapSelf: (() -> Unit)? = null,
     listenerCount: Int = 0,
+    bottomBar: (@Composable () -> Unit)? = null,
 ) {
     // Float currently-speaking members to the top so the listener can
     // see who they're hearing without scrolling. sortedBy is stable in
@@ -193,32 +198,33 @@ internal fun StageGrid(
             }
             if (members.isEmpty()) {
                 EmptyStageHint()
-                return@Column
-            }
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(STAGE_CELL_MIN),
-                modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),
-                horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
-                verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
-            ) {
-                items(items = sortedMembers, key = { it.pubkey }) { member ->
-                    val isSelf = myPubkey != null && member.pubkey == myPubkey
-                    MemberCell(
-                        member = member,
-                        avatarSize = STAGE_AVATAR,
-                        isSpeaking = member.pubkey in speakingNow,
-                        audioLevel = audioLevels[member.pubkey] ?: 0f,
-                        isConnecting = member.pubkey in connectingSpeakers,
-                        showMicBadge = true,
-                        reactions = reactionsByPubkey[member.pubkey].orEmpty(),
-                        accountViewModel = accountViewModel,
-                        onLongPressParticipant = onLongPressParticipant,
-                        isSelf = isSelf,
-                        onTapSelf = if (isSelf) onTapSelf else null,
-                        modifier = Modifier.animateItem(),
-                    )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(STAGE_CELL_MIN),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),
+                    horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
+                    verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
+                ) {
+                    items(items = sortedMembers, key = { it.pubkey }) { member ->
+                        val isSelf = myPubkey != null && member.pubkey == myPubkey
+                        MemberCell(
+                            member = member,
+                            avatarSize = STAGE_AVATAR,
+                            isSpeaking = member.pubkey in speakingNow,
+                            audioLevel = audioLevels[member.pubkey] ?: 0f,
+                            isConnecting = member.pubkey in connectingSpeakers,
+                            showMicBadge = true,
+                            reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                            accountViewModel = accountViewModel,
+                            onLongPressParticipant = onLongPressParticipant,
+                            isSelf = isSelf,
+                            onTapSelf = if (isSelf) onTapSelf else null,
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
                 }
             }
+            bottomBar?.invoke()
         }
     }
 }

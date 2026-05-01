@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -273,6 +275,19 @@ private fun NestActivityBody(
     // System bridges: PIP overlay actions + foreground service.
     PipBridge(ui, pipMuteSignal, viewModel, onMuteState, onConnectedChange)
     NestForegroundServiceLifecycle(ui)
+
+    // Tell NestActivity how to tear the session down when the user
+    // closes PIP. Both close paths in PIP — the overlay's Leave
+    // action and a swipe-dismiss while in PIP — invoke this so the
+    // speaker handle close (releases AudioRecord and clears the
+    // system mic indicator) and the listener close run on
+    // cleanupScope/GlobalScope before the activity destruction
+    // queue eats viewModelScope.
+    val activity = LocalContext.current as? NestActivity
+    DisposableEffect(activity, viewModel) {
+        activity?.setPipCleanupAction { viewModel.leave() }
+        onDispose { activity?.setPipCleanupAction(null) }
+    }
 
     // Hand-raise is screen-local UI state; presence-publish picks it
     // up via the heartbeat and emits onstage / muted / publishing

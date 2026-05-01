@@ -460,7 +460,6 @@
     <string name="nest_audio_failed">Audio mislukt: %1$s</string>
     <string name="nest_audio_unavailable">Audio is niet beschikbaar voor deze ruimte</string>
     <string name="nest_talk">Praten</string>
-    <string name="nest_stop_talking">Stoppen met praten</string>
     <string name="nest_leave_stage">Podium verlaten</string>
     <string name="nest_force_mute">Spreker forceren te dempen</string>
     <string name="nest_kick_action">Kicken</string>
