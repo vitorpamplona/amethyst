@@ -133,12 +133,20 @@ internal fun NestActionBar(
  * everything a speaker needs while on stage: Talk / MicMute / Retry +
  * Leave the Stage. Renders nothing when the local user isn't on stage.
  *
- * Visibility is gated on [isOnStage] alone — a stable signal driven
- * by the kind-30312 role + presence `onstage` flag — so connection
- * blips, broadcast state churn, mute toggles, and permission flows
- * never make the bar appear or disappear. It only shows up on a real
- * promote, and only goes away on a real demote (or the user tapping
- * Leave the Stage).
+ * Visibility uses two signals AND'd together:
+ *   - [isOnStage] — derived from `participantGrid.onStage` (kind-30312
+ *     role + presence `onstage` flag); flips on a real promote/demote
+ *     after the round-trip lands. Connection blips, broadcast state
+ *     churn, mute toggles, and permission flows do NOT change it.
+ *   - [ui.onStageNow] — the LOCAL intent flag. Flips synchronously on
+ *     `setOnStage(false)` so a Leave-the-Stage tap hides the bar on
+ *     the next frame, instead of waiting for the presence event to
+ *     sign, broadcast, and loop back through LocalCache (a delay made
+ *     visible in scenario "broadcast → mute → unmute → leave", where
+ *     the signer queues behind a pending mute frame + 500 ms debounce).
+ *
+ * AND-of-both also handles host demotion correctly: intent stays true
+ * but the aggregator drops us, so the bar still hides.
  */
 @Composable
 internal fun StageControlsBar(
@@ -149,7 +157,7 @@ internal fun StageControlsBar(
     speakerPubkeyHex: String,
     modifier: Modifier = Modifier,
 ) {
-    if (!isOnStage) return
+    if (!isOnStage || !ui.onStageNow) return
     Row(
         modifier =
             modifier
