@@ -98,4 +98,10 @@ tasks.withType<Test>().configureEach {
     System.getProperty("nestsInteropMoqRev")?.let { systemProperty("nestsInteropMoqRev", it) }
     System.getProperty("nestsInteropExternal")?.let { systemProperty("nestsInteropExternal", it) }
     System.getProperty("nestsInteropDebug")?.let { systemProperty("nestsInteropDebug", it) }
+    // Opt-in for tests that hit the real nostrnests.com infrastructure
+    // (see NostrnestsProdAudioTransmissionTest). Forwarded the same way
+    // the harness flags are.
+    System.getProperty("nestsProd")?.let { systemProperty("nestsProd", it) }
+    System.getProperty("nestsProdEndpoint")?.let { systemProperty("nestsProdEndpoint", it) }
+    System.getProperty("nestsProdAuth")?.let { systemProperty("nestsProdAuth", it) }
 }
