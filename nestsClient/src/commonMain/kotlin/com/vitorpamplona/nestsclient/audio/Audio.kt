@@ -153,6 +153,9 @@ class AudioException(
         /** Decoder rejected an Opus packet (corrupted bytes, unsupported config). */
         DecoderError,
 
+        /** Encoder rejected a PCM frame. */
+        EncoderError,
+
         /** Audio device resource (AudioTrack/AudioRecord) couldn't be allocated. */
         DeviceUnavailable,
 

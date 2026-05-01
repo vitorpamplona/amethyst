@@ -204,7 +204,17 @@ data class MoqLiteSubscribeOk(
     val maxLatencyMillis: Long,
     val startGroup: Long?,
     val endGroup: Long?,
-)
+) {
+    init {
+        // Mirror the bounds [MoqLiteSubscribe] enforces on the request side
+        // so a publisher building a malformed Ok reply fails loudly here
+        // rather than silently writing a truncated byte on the wire.
+        require(priority in 0..255) { "moq-lite priority must fit in a byte: $priority" }
+        require(maxLatencyMillis >= 0) { "maxLatencyMillis must be non-negative: $maxLatencyMillis" }
+        if (startGroup != null) require(startGroup >= 0) { "startGroup must be non-negative: $startGroup" }
+        if (endGroup != null) require(endGroup >= 0) { "endGroup must be non-negative: $endGroup" }
+    }
+}
 
 /**
  * Publisher's reject / drop reply. moq-lite has no SUBSCRIBE_ERROR

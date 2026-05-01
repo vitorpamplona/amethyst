@@ -25,6 +25,7 @@ import com.vitorpamplona.nestsclient.moq.MoqWriter
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -202,37 +203,104 @@ class MoqLiteSession internal constructor(
         bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
         bidi.write(MoqLiteCodec.encodeSubscribe(request))
 
-        // Single long-running collector pump for the bidi's response
-        // side. Reads the SubscribeResponse, then keeps collecting
-        // until the peer FINs (or scope is cancelled, or
-        // handle.unsubscribe() FINs our side and the relay echoes).
-        // The flow completion IS the moq-lite-03 signal that the
-        // publisher has disconnected mid-broadcast — Lite-03 has no
-        // explicit "publisher gone" message; bidi close is it.
-        // Without this watch, the frames Channel below would never
-        // close on remote disconnect, and any consumer collecting
-        // from the wrapper-level [MoqLiteSubscribeHandle.frames]
-        // flow would sit silent indefinitely after a publisher
-        // cycle even though the relay is happy to serve a fresh
-        // subscribe under the same broadcast suffix.
+        // Single long-running collector for the bidi's whole lifetime.
+        // The collector parses the SubscribeResponse inline, signals it
+        // via [responseDeferred], then continues draining the bidi
+        // until the peer FINs (publisher disconnect under moq-lite
+        // Lite-03) or the transport tears down. On collector exit,
+        // the frames channel is closed so the consumer's
+        // `frames.consumeAsFlow()` ends naturally.
         //
-        // Why a single pump (vs separate response read + death
-        // watch): the underlying QUIC stream's `incoming` is
-        // backed by `Channel<ByteArray>.consumeAsFlow()` — which
-        // CANCELS the channel when the first collect ends. A second
-        // collect on a fresh `bidi.incoming()` Flow would see an
-        // already-cancelled channel and fire prematurely. Keeping
-        // one collect alive sidesteps that entirely.
-        // moq-lite's subscribe-response is a single size-prefixed
-        // message on the response side of the bidi. Read incoming
-        // chunks into a buffer until the buffer holds a full payload,
-        // then stop. We don't need a separate collector pump because
-        // post-Ok the bidi is idle (group data flows on its own uni
-        // streams).
-        val responseBuffer = MoqLiteFrameBuffer()
-        val responsePayload = readSubscribeResponseFromBidi(bidi.incoming(), responseBuffer, id)
-        when (val resp = MoqLiteCodec.decodeSubscribeResponse(responsePayload)) {
+        // Why one collector (vs separate response read + lifetime
+        // watch): the underlying QUIC stream's `incoming` is backed
+        // by `Channel<ByteArray>.consumeAsFlow()` which CANCELS the
+        // channel when the first collect ends. A second collect on a
+        // fresh `bidi.incoming()` Flow would see the already-cancelled
+        // channel and fire prematurely.
+        //
+        // Why we need a lifetime watch at all: pumpAnnounceWatch only
+        // closes frames when the relay actively sends Announce(Ended).
+        // A silent transport black-hole never reaches that path; without
+        // a per-subscription bidi watch, consumers would hang forever
+        // on dead UDP paths.
+        val frames = Channel<MoqLiteFrame>(capacity = DEFAULT_FRAME_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        val responseDeferred = CompletableDeferred<MoqLiteCodec.SubscribeResponse>()
+
+        // Pre-register the subscription BEFORE launching the collector.
+        // Otherwise: if the publisher FINs the bidi immediately after
+        // sending Ok, the collector's exit-cleanup races subscribe()'s
+        // post-await registration — collector exits, runs `remove(id)`
+        // against an empty map, no-ops; subscribe() then inserts; the
+        // frames channel is now in the map with no live collector to
+        // close it on transport tear-down. Consumer hangs forever.
+        // Pre-registering means the collector's idempotent
+        // remove+close cleanup always finds and closes the frames
+        // channel, regardless of timing.
+        val sub =
+            ListenerSubscription(
+                id = id,
+                request = request,
+                bidi = bidi,
+                frames = frames,
+            )
+        state.withLock {
+            subscriptionsBySubscribeId[id] = sub
+            if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
+        }
+
+        scope.launch {
+            val responseBuffer = MoqLiteFrameBuffer()
+            var responseParsed = false
+            try {
+                bidi.incoming().collect { chunk ->
+                    if (!responseParsed) {
+                        responseBuffer.push(chunk)
+                        val typeCode = responseBuffer.readVarint() ?: return@collect
+                        val body = responseBuffer.readSizePrefixed() ?: return@collect
+                        val out = MoqWriter()
+                        out.writeVarint(typeCode)
+                        out.writeVarint(body.size.toLong())
+                        out.writeBytes(body)
+                        val resp = MoqLiteCodec.decodeSubscribeResponse(out.toByteArray())
+                        responseDeferred.complete(resp)
+                        responseParsed = true
+                    }
+                    // Post-response chunks are silently discarded —
+                    // moq-lite leaves the bidi idle post-Ok. The signal
+                    // we care about is the flow's natural completion.
+                }
+            } catch (ce: CancellationException) {
+                if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(ce)
+                throw ce
+            } catch (t: Throwable) {
+                if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(t)
+            }
+            if (!responseDeferred.isCompleted) {
+                responseDeferred.completeExceptionally(
+                    MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id"),
+                )
+            }
+            // Idempotent: if subscribe() unwound on a Dropped response
+            // (or any throw from await), it already removed the
+            // subscription before throwing. Either way: remove + close.
+            val removed = state.withLock { subscriptionsBySubscribeId.remove(id) }
+            removed?.frames?.close()
+        }
+
+        val resp =
+            try {
+                responseDeferred.await()
+            } catch (t: Throwable) {
+                state.withLock { subscriptionsBySubscribeId.remove(id) }
+                frames.close()
+                runCatching { bidi.finish() }
+                throw t
+            }
+        when (resp) {
             is MoqLiteCodec.SubscribeResponse.Dropped -> {
+                state.withLock { subscriptionsBySubscribeId.remove(id) }
+                frames.close()
+                runCatching { bidi.finish() }
                 throw MoqLiteSubscribeException(
                     "publisher rejected subscribe id=$id: errorCode=${resp.drop.errorCode} " +
                         "reason='${resp.drop.reasonPhrase}'",
@@ -240,19 +308,6 @@ class MoqLiteSession internal constructor(
             }
 
             is MoqLiteCodec.SubscribeResponse.Ok -> {
-                val frames = Channel<MoqLiteFrame>(capacity = DEFAULT_FRAME_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-                val sub =
-                    ListenerSubscription(
-                        id = id,
-                        request = request,
-                        ok = resp.ok,
-                        bidi = bidi,
-                        frames = frames,
-                    )
-                state.withLock {
-                    subscriptionsBySubscribeId[id] = sub
-                    if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
-                }
                 return MoqLiteSubscribeHandle(
                     id = id,
                     ok = resp.ok,
@@ -371,8 +426,15 @@ class MoqLiteSession internal constructor(
      */
     private suspend fun pumpUniStreams() {
         try {
-            transport.incomingUniStreams().collect { stream ->
-                scope.launch { drainOneGroup(stream) }
+            // coroutineScope binds each per-stream drain to this pump's
+            // job — when the pump is cancelled (session close), every
+            // drain is cancelled with it instead of leaking as a
+            // sibling on the outer [scope] until the transport's flow
+            // independently errors out.
+            kotlinx.coroutines.coroutineScope {
+                transport.incomingUniStreams().collect { stream ->
+                    launch { drainOneGroup(stream) }
+                }
             }
         } catch (ce: CancellationException) {
             throw ce
@@ -490,8 +552,13 @@ class MoqLiteSession internal constructor(
      */
     private suspend fun pumpInboundBidis() {
         try {
-            transport.incomingBidiStreams().collect { bidi ->
-                scope.launch { handleInboundBidi(bidi) }
+            // Bind each per-bidi handler to this pump's job (see
+            // [pumpUniStreams]'s identical comment) so they don't outlive
+            // bidiPump.cancelAndJoin() in [close].
+            kotlinx.coroutines.coroutineScope {
+                transport.incomingBidiStreams().collect { bidi ->
+                    launch { handleInboundBidi(bidi) }
+                }
             }
         } catch (ce: CancellationException) {
             throw ce
@@ -626,43 +693,6 @@ class MoqLiteSession internal constructor(
         return uni
     }
 
-    /**
-     * Read a size-prefixed payload from a bidi, seeded with whatever's
-     * already in [buffer] (the ControlType byte may have arrived with
-     * extra bytes). Used internally by the publisher inbound dispatch.
-     */
-    private suspend fun readSizePrefixedFromBidiInto(
-        incoming: kotlinx.coroutines.flow.Flow<ByteArray>,
-        buffer: MoqLiteFrameBuffer,
-    ): ByteArray {
-        // Try the buffer first — first chunk often contains the whole
-        // body since moq-lite messages are small and arrive as single
-        // QUIC sends.
-        buffer.readSizePrefixed()?.let { return it }
-        var done: ByteArray? = null
-        try {
-            incoming.collect { chunk ->
-                buffer.push(chunk)
-                buffer.readSizePrefixed()?.let {
-                    done = it
-                    throw EarlyExit
-                }
-            }
-        } catch (_: EarlyExit) {
-            // expected
-        } catch (ce: CancellationException) {
-            throw ce
-        }
-        return done
-            ?: throw MoqCodecException("incoming bidi closed before a complete size-prefixed body arrived")
-    }
-
-    private object EarlyExit : RuntimeException() {
-        private fun readResolve(): Any = EarlyExit
-
-        override fun fillInStackTrace(): Throwable = this
-    }
-
     suspend fun close() {
         if (closed) return
         closed = true
@@ -688,71 +718,9 @@ class MoqLiteSession internal constructor(
         check(!closed) { "MoqLiteSession is closed" }
     }
 
-    /**
-     * Read a moq-lite-03 SubscribeResponse off the bidi response side.
-     * The wire format is `[type_varint][body_size_varint][body_bytes]`
-     * — type lives OUTSIDE the size prefix (see
-     * `rs/moq-lite/src/lite/subscribe.rs::SubscribeResponse::encode`).
-     *
-     * Walks chunks into [buffer] until both the type discriminator and
-     * the size-prefixed body have arrived, then returns the contiguous
-     * `type+size+body` byte slab so [MoqLiteCodec.decodeSubscribeResponse]
-     * can parse it self-contained.
-     *
-     * Throws [MoqLiteSubscribeException] if the bidi closes before a
-     * full message arrives — that's the relay rejecting the subscribe
-     * with FIN instead of a SubscribeDrop reply.
-     */
-    private suspend fun readSubscribeResponseFromBidi(
-        incoming: kotlinx.coroutines.flow.Flow<ByteArray>,
-        buffer: MoqLiteFrameBuffer,
-        id: Long,
-    ): ByteArray {
-        // Snapshot the buffer's pos before each varint so we can roll
-        // back if not enough bytes have arrived yet — without this, a
-        // partial varint advances `pos` and the next chunk's bytes
-        // can't reconstitute it.
-        var typeCode: Long? = null
-        var body: ByteArray? = null
-        try {
-            // Some bytes may already be buffered (extra arrived with a
-            // prior message); try first without waiting for new chunks.
-            typeCode = buffer.readVarint()
-            if (typeCode != null) body = buffer.readSizePrefixed()
-            if (body != null) throw EarlyExit
-            incoming.collect { chunk ->
-                buffer.push(chunk)
-                if (typeCode == null) typeCode = buffer.readVarint()
-                if (typeCode != null && body == null) body = buffer.readSizePrefixed()
-                if (body != null) throw EarlyExit
-            }
-        } catch (_: EarlyExit) {
-            // expected
-        } catch (ce: CancellationException) {
-            throw ce
-        }
-        if (typeCode == null) {
-            throw MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id")
-        }
-        if (body == null) {
-            throw MoqLiteSubscribeException(
-                "subscribe stream FIN mid-body for id=$id (type=$typeCode)",
-            )
-        }
-        // Re-emit the contiguous `[type][size][body]` slab so
-        // [MoqLiteCodec.decodeSubscribeResponse] can parse it
-        // self-contained.
-        val out = MoqWriter()
-        out.writeVarint(typeCode!!)
-        out.writeVarint(body!!.size.toLong())
-        out.writeBytes(body!!)
-        return out.toByteArray()
-    }
-
     private class ListenerSubscription(
         val id: Long,
         val request: MoqLiteSubscribe,
-        val ok: MoqLiteSubscribeOk,
         val bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
         val frames: Channel<MoqLiteFrame>,
     )
@@ -827,8 +795,30 @@ class MoqLiteSession internal constructor(
                 if (publisherClosed) return false
                 if (inboundSubs.isEmpty()) return false
                 val group = currentGroup ?: openNextGroupLocked().also { currentGroup = it }
-                val framed = Varint.encode(payload.size.toLong()) + payload
-                runCatching { group.uni.write(framed) }
+                // Single-allocation framing: write the varint length
+                // directly into a buffer sized for `varint + payload`,
+                // then copy the payload after it. The previous shape
+                // (`Varint.encode(...) + payload`) allocated twice per
+                // Opus frame — once for the varint, once for the `+`
+                // concatenation — at 50 fps × N speakers that's measurable
+                // young-gen pressure on the audio hot path.
+                val payloadSize = payload.size
+                val varintLen = Varint.size(payloadSize.toLong())
+                val framed = ByteArray(varintLen + payloadSize)
+                Varint.writeTo(payloadSize.toLong(), framed, 0)
+                payload.copyInto(framed, varintLen)
+                val writeResult = runCatching { group.uni.write(framed) }
+                if (writeResult.isFailure) {
+                    // The uni stream errored (peer reset, transport closed,
+                    // FIN'd by removeInboundSubscription). Drop the dead
+                    // stream so the next send opens a fresh group instead of
+                    // re-trying on a corpse, and surface the failure to the
+                    // caller — the prior contract of "always true on
+                    // not-muted" silently masked publisher disconnects.
+                    runCatching { group.uni.finish() }
+                    currentGroup = null
+                    return false
+                }
             }
             return true
         }

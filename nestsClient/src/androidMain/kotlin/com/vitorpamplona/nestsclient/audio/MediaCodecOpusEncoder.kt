@@ -21,7 +21,6 @@
 package com.vitorpamplona.nestsclient.audio
 
 import android.media.MediaCodec
-import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import java.nio.ByteOrder
 
@@ -66,7 +65,7 @@ class MediaCodecOpusEncoder(
         val inputBuffer =
             codec.getInputBuffer(inputIndex)
                 ?: throw AudioException(
-                    AudioException.Kind.DecoderError,
+                    AudioException.Kind.EncoderError,
                     "MediaCodec returned null input buffer at index $inputIndex",
                 )
         inputBuffer.clear()
@@ -76,7 +75,12 @@ class MediaCodecOpusEncoder(
         presentationTimeUs += FRAME_DURATION_US
 
         // One PCM frame produces one Opus packet (sometimes after one warmup
-        // round). Drain the output queue once.
+        // round). Drain the output queue once. The format-change signal
+        // fires at most once on encoder startup; absorb it then re-poll,
+        // but never loop on it (some buggy encoders re-emit FORMAT_CHANGED
+        // without producing output, which would otherwise busy-spin at
+        // 100 Hz against the 10 ms dequeue timeout).
+        var formatChangeAbsorbed = false
         while (true) {
             val outputIndex = codec.dequeueOutputBuffer(bufferInfo, DEQUEUE_TIMEOUT_US)
             when {
@@ -91,6 +95,8 @@ class MediaCodecOpusEncoder(
                 }
 
                 outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                    if (formatChangeAbsorbed) return ByteArray(0)
+                    formatChangeAbsorbed = true
                     continue
                 }
 
@@ -128,12 +134,11 @@ class MediaCodecOpusEncoder(
                 ).apply {
                     setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
                     setInteger(MediaFormat.KEY_PCM_ENCODING, android.media.AudioFormat.ENCODING_PCM_16BIT)
-                    // Encoder-side AAC/Opus profile selection: SignalingDelaySamples
-                    // is implicit; nothing else required for mono speech.
-                    setInteger(
-                        MediaFormat.KEY_AAC_PROFILE,
-                        MediaCodecInfo.CodecProfileLevel.AACObjectLC,
-                    )
+                    // KEY_AAC_PROFILE on an audio/opus encoder is meaningless
+                    // (Opus has no AAC profile); historically it was silently
+                    // ignored, but stricter Codec2 stacks on Android 13+
+                    // reject the configure() call with IllegalArgumentException
+                    // and surface as DeviceUnavailable.
                 }
     }
 }

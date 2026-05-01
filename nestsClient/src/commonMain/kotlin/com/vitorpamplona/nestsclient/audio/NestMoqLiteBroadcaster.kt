@@ -103,8 +103,20 @@ class NestMoqLiteBroadcaster(
      * Returns immediately. Calling twice is an error. If
      * [AudioCapture.start] throws, the broadcaster is left stopped and
      * the exception propagates.
+     *
+     * [onTerminalFailure] fires exactly once when the loop bails after
+     * [MAX_CONSECUTIVE_SEND_ERRORS] consecutive `publisher.send`
+     * failures. The broadcaster has stopped capturing by the time this
+     * callback runs; the caller (typically [MoqLiteNestsSpeaker]) is
+     * expected to mark the speaker `Failed` so the reconnect
+     * orchestrator can recycle the session — without this signal the
+     * outward speaker state stays stuck on `Broadcasting` and the
+     * orchestrator never knows to act.
      */
-    fun start(onError: (AudioException) -> Unit = { /* swallow */ }) {
+    fun start(
+        onTerminalFailure: () -> Unit = { /* swallow */ },
+        onError: (AudioException) -> Unit = { /* swallow */ },
+    ) {
         check(!stopped) { "NestMoqLiteBroadcaster already stopped" }
         check(job == null) { "NestMoqLiteBroadcaster.start already called" }
 
@@ -123,6 +135,15 @@ class NestMoqLiteBroadcaster(
                 // [MoqLitePublisherHandle.send]'s "open on first frame"
                 // contract.
                 var framesInCurrentGroup = 0
+                // Consecutive publisher.send / endGroup throw count. A
+                // permanently-dead transport (session closed under us,
+                // every openUniStream rejected) keeps producing errors at
+                // capture cadence; without a guard the broadcaster would
+                // hold the mic open forever, drain battery, and spam
+                // onError. After [MAX_CONSECUTIVE_SEND_ERRORS] failures
+                // we bail. publisher.send returning `false` (no inbound
+                // subscriber) is NOT counted — empty rooms are normal.
+                var consecutiveSendErrors = 0
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
@@ -134,7 +155,7 @@ class NestMoqLiteBroadcaster(
                             } catch (t: Throwable) {
                                 onError(
                                     AudioException(
-                                        AudioException.Kind.DecoderError,
+                                        AudioException.Kind.EncoderError,
                                         "Opus encode failed for a frame",
                                         t,
                                     ),
@@ -147,23 +168,48 @@ class NestMoqLiteBroadcaster(
                         // into the same moq-lite group / QUIC uni stream
                         // before FINning. See the [framesPerGroup] kdoc
                         // for the production cliff this works around.
-                        runCatching {
-                            publisher.send(opus)
-                            framesInCurrentGroup += 1
-                            if (framesInCurrentGroup >= framesPerGroup) {
-                                publisher.endGroup()
-                                framesInCurrentGroup = 0
+                        val sendOutcome =
+                            runCatching {
+                                publisher.send(opus)
+                                framesInCurrentGroup += 1
+                                if (framesInCurrentGroup >= framesPerGroup) {
+                                    publisher.endGroup()
+                                    framesInCurrentGroup = 0
+                                }
                             }
-                        }.onFailure { t ->
-                            if (t is CancellationException) throw t
-                            onError(
-                                AudioException(
-                                    AudioException.Kind.PlaybackFailed,
-                                    "publisher.send failed",
-                                    t,
-                                ),
-                            )
-                        }
+                        sendOutcome
+                            .onSuccess {
+                                consecutiveSendErrors = 0
+                            }.onFailure { t ->
+                                if (t is CancellationException) throw t
+                                consecutiveSendErrors += 1
+                                onError(
+                                    AudioException(
+                                        AudioException.Kind.PlaybackFailed,
+                                        "publisher.send failed",
+                                        t,
+                                    ),
+                                )
+                                if (consecutiveSendErrors >= MAX_CONSECUTIVE_SEND_ERRORS) {
+                                    onError(
+                                        AudioException(
+                                            AudioException.Kind.PlaybackFailed,
+                                            "broadcast pipeline gave up after " +
+                                                "$consecutiveSendErrors consecutive send failures",
+                                            t,
+                                        ),
+                                    )
+                                    // Surface the bail so the speaker
+                                    // can flip to Failed and the
+                                    // reconnect orchestrator recycles
+                                    // the session. Caller still owns
+                                    // [stop] — we don't release the mic
+                                    // ourselves to avoid double-stop
+                                    // races with a concurrent caller.
+                                    runCatching { onTerminalFailure() }
+                                    return@launch
+                                }
+                            }
                     }
                     // EOF on the capture side. Flush whatever's in the
                     // open group so the relay sees its FIN and the
@@ -222,5 +268,14 @@ class NestMoqLiteBroadcaster(
          * [framesPerGroup] kdoc for the full rationale + history.
          */
         const val DEFAULT_FRAMES_PER_GROUP: Int = 5
+
+        /**
+         * Maximum consecutive [MoqLitePublisherHandle.send] / [endGroup]
+         * exceptions before the broadcaster bails. At 50 fps, 250 frames
+         * is ≈ 5 s of solid failures — far longer than any transient
+         * relay hiccup, short enough to stop draining the mic when the
+         * transport is irrecoverably dead.
+         */
+        const val MAX_CONSECUTIVE_SEND_ERRORS: Int = 250
     }
 }

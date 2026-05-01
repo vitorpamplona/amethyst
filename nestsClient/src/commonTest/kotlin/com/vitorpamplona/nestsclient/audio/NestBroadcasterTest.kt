@@ -112,6 +112,45 @@ class NestBroadcasterTest {
         }
 
     @Test
+    fun onTerminalFailure_fires_once_after_consecutive_send_failures() =
+        runTest {
+            // Drive MAX_CONSECUTIVE_SEND_ERRORS + 1 frames through a
+            // publisher that always throws. The broadcaster must:
+            //   - keep going past one failure (we already cover that)
+            //   - bail eventually
+            //   - fire onTerminalFailure exactly once
+            //   - stop pulling from capture
+            val frameCount = NestBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS + 50
+            val frames = List(frameCount) { shortArrayOf(it.toShort()) }
+            val capture = ScriptedCapture(frames)
+            val encoder = ScriptedEncoder(prefix = byteArrayOf(0xFF.toByte()))
+            val publisher = ThrowingPublisher()
+            val broadcaster = NestBroadcaster(capture, encoder, publisher, backgroundScope)
+            val errors = mutableListOf<AudioException>()
+            var terminalFailureCount = 0
+
+            broadcaster.start(
+                onTerminalFailure = { terminalFailureCount += 1 },
+                onError = { errors.add(it) },
+            )
+
+            // Wait until the broadcaster has bailed. The bail closes the
+            // launched job, but capture.awaitDrained only fires on EOF —
+            // so poll on the terminal-failure counter instead.
+            while (terminalFailureCount == 0) kotlinx.coroutines.yield()
+
+            assertEquals(1, terminalFailureCount, "onTerminalFailure should fire exactly once")
+            // We saw at least MAX_CONSECUTIVE_SEND_ERRORS failures before
+            // the bail, plus one "gave up" message. ScriptedEncoder
+            // doesn't fail, so all errors are publisher.send failures.
+            assertTrue(
+                errors.size >= NestBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS,
+                "should have seen ≥ ${NestBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS} errors, got ${errors.size}",
+            )
+            broadcaster.stop()
+        }
+
+    @Test
     fun stop_is_idempotent() =
         runTest {
             val capture = ScriptedCapture(listOf(shortArrayOf(1)))
@@ -206,5 +245,14 @@ class NestBroadcasterTest {
         override suspend fun close() {
             closed = true
         }
+    }
+
+    /** Publisher whose send() always throws — used to drive the bail path. */
+    private class ThrowingPublisher : MoqSession.TrackPublisher {
+        override val name: ByteArray = "throwing".encodeToByteArray()
+
+        override suspend fun send(payload: ByteArray): Boolean = error("publisher.send failure")
+
+        override suspend fun close() {}
     }
 }

@@ -386,6 +386,66 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun frames_flow_completes_when_peer_FINs_the_subscribe_bidi() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val peerBidi =
+                async {
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
+                    bidi.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
+                    bidi
+                }
+
+            val handle = session.subscribe("speakerY", "audio/data")
+            val bidi = withTimeout(2_000) { peerBidi.await() }
+
+            // Peer FINs the subscribe bidi — moq-lite Lite-03's signal
+            // for "publisher gone, no more data ever". Without the
+            // per-subscription bidi-watch, this would leave the
+            // consumer-facing frames flow hanging forever; with the
+            // watch, the frames Channel closes and `toList()` returns.
+            bidi.finish()
+
+            withTimeout(2_000) { handle.frames.toList() }
+
+            session.close()
+        }
+
+    @Test
+    fun frames_flow_completes_when_peer_FINs_immediately_after_Ok() =
+        runBlocking {
+            // Race regression: an earlier shape of subscribe() pre-registered
+            // the subscription AFTER awaiting the Ok response. If the peer
+            // FIN'd between sending Ok and subscribe() resuming, the
+            // collector's exit-cleanup ran first against an empty map, and
+            // subscribe() then inserted the subscription — leaving the
+            // frames channel registered with no live collector to ever close
+            // it. This test forces the order by writing Ok and FIN before
+            // the listener has a chance to consume them.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val peerJob =
+                async {
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
+                    bidi.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
+                    bidi.finish()
+                }
+
+            val handle = session.subscribe("speakerZ", "audio/data")
+            withTimeout(2_000) { peerJob.await() }
+
+            // frames flow must complete naturally regardless of whether
+            // the FIN landed before or after subscribe()'s post-await
+            // registration.
+            withTimeout(2_000) { handle.frames.toList() }
+
+            session.close()
+        }
+
+    @Test
     fun unsubscribe_FINs_the_subscribe_bidi() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()

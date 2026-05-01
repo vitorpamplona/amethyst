@@ -65,7 +65,16 @@ class NestBroadcaster(
      * a stopped state and the exception propagates so the caller can
      * surface it to the user.
      */
-    fun start(onError: (AudioException) -> Unit = { /* swallow */ }) {
+    fun start(
+        /**
+         * See [NestMoqLiteBroadcaster.start]'s `onTerminalFailure` kdoc —
+         * fires once when the loop bails after MAX_CONSECUTIVE_SEND_ERRORS
+         * so the speaker can transition to Failed and the orchestrator
+         * can recycle.
+         */
+        onTerminalFailure: () -> Unit = { /* swallow */ },
+        onError: (AudioException) -> Unit = { /* swallow */ },
+    ) {
         check(!stopped) { "NestBroadcaster already stopped" }
         check(job == null) { "NestBroadcaster.start already called" }
 
@@ -82,6 +91,11 @@ class NestBroadcaster(
         }
         job =
             scope.launch {
+                // Consecutive publisher.send error count — see the
+                // moq-lite broadcaster's identical guard for rationale:
+                // a permanently-dead transport spins the mic + encoder
+                // forever without a threshold.
+                var consecutiveSendErrors = 0
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
@@ -93,7 +107,7 @@ class NestBroadcaster(
                             } catch (t: Throwable) {
                                 onError(
                                     AudioException(
-                                        AudioException.Kind.DecoderError,
+                                        AudioException.Kind.EncoderError,
                                         "Opus encode failed for a frame",
                                         t,
                                     ),
@@ -102,9 +116,13 @@ class NestBroadcaster(
                             }
                         if (opus.isEmpty()) continue
                         if (muted) continue
-                        runCatching { publisher.send(opus) }
-                            .onFailure { t ->
+                        val sendOutcome = runCatching { publisher.send(opus) }
+                        sendOutcome
+                            .onSuccess {
+                                consecutiveSendErrors = 0
+                            }.onFailure { t ->
                                 if (t is CancellationException) throw t
+                                consecutiveSendErrors += 1
                                 // Network drop on send is recoverable — log via onError but
                                 // don't stop the loop; the next frame may go through.
                                 onError(
@@ -114,6 +132,18 @@ class NestBroadcaster(
                                         t,
                                     ),
                                 )
+                                if (consecutiveSendErrors >= MAX_CONSECUTIVE_SEND_ERRORS) {
+                                    onError(
+                                        AudioException(
+                                            AudioException.Kind.PlaybackFailed,
+                                            "broadcast pipeline gave up after " +
+                                                "$consecutiveSendErrors consecutive send failures",
+                                            t,
+                                        ),
+                                    )
+                                    runCatching { onTerminalFailure() }
+                                    return@launch
+                                }
                             }
                     }
                 } catch (ce: CancellationException) {
@@ -159,5 +189,10 @@ class NestBroadcaster(
         runCatching { capture.stop() }
         runCatching { encoder.release() }
         runCatching { publisher.close() }
+    }
+
+    companion object {
+        /** See [NestMoqLiteBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS]. */
+        const val MAX_CONSECUTIVE_SEND_ERRORS: Int = 250
     }
 }

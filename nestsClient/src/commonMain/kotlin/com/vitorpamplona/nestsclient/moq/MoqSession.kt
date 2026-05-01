@@ -412,9 +412,18 @@ class MoqSession private constructor(
                 val decoded =
                     try {
                         MoqCodec.decode(buffer) ?: break
+                    } catch (e: MoqUnknownTypeException) {
+                        // Forward-compat: a peer sending a draft-17 control
+                        // message we don't enumerate (FETCH, GOAWAY,
+                        // MAX_SUBSCRIBE_ID, …) shouldn't poison the rest of
+                        // the buffer. Skip just this frame and parse on.
+                        buffer = buffer.copyOfRange(e.bytesConsumed, buffer.size)
+                        continue
                     } catch (e: MoqCodecException) {
-                        // Drop the corrupted buffer; keep the pump alive so the
-                        // next valid frame can recover the session.
+                        // Genuinely-corrupted bytes — we have no idea where
+                        // the next valid frame starts. Drop the buffer; the
+                        // pump stays alive so the next valid frame can
+                        // recover the session.
                         buffer = ByteArray(0)
                         break
                     }

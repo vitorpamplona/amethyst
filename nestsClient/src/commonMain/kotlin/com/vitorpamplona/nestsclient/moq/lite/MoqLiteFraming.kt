@@ -42,27 +42,42 @@ import kotlinx.coroutines.CancellationException
  * Not thread-safe — used from a single coroutine per stream.
  */
 class MoqLiteFrameBuffer {
+    // [buf] is the capacity-sized backing array; [size] tracks the
+    // high-water mark of valid data inside it. Decoupling capacity from
+    // length is what makes power-of-two growth actually amortise — the
+    // earlier shape (`buf = grown.copyOf(needed)`) immediately truncated
+    // back to `needed`, defeating the doubling and forcing a fresh
+    // allocation on every push.
     private var buf: ByteArray = ByteArray(0)
+    private var size: Int = 0
     private var pos: Int = 0
 
     /** Append [chunk] to the buffer, growing/compacting as needed. */
     fun push(chunk: ByteArray) {
         if (chunk.isEmpty()) return
         compact()
-        val needed = buf.size + chunk.size
-        // Power-of-two doubling matches MoqWriter's growth policy and
-        // avoids quadratic copies under bursty arrivals.
-        var newCap = if (buf.size == 0) 64 else buf.size
-        while (newCap < needed) newCap *= 2
-        val grown = ByteArray(newCap)
-        buf.copyInto(grown, 0, 0, buf.size)
-        chunk.copyInto(grown, buf.size, 0, chunk.size)
-        buf = grown.copyOf(needed)
+        val needed = size + chunk.size
+        if (needed > buf.size) {
+            // Power-of-two doubling matches MoqWriter's growth policy and
+            // avoids quadratic copies under bursty arrivals.
+            var newCap = if (buf.size == 0) 64 else buf.size
+            while (newCap < needed) newCap *= 2
+            val grown = ByteArray(newCap)
+            buf.copyInto(grown, 0, 0, size)
+            buf = grown
+        }
+        chunk.copyInto(buf, size, 0, chunk.size)
+        size = needed
     }
 
     /** Try to read one varint. Returns null if not enough bytes. */
     fun readVarint(): Long? {
+        if (pos >= size) return null
         val dec = Varint.decode(buf, pos) ?: return null
+        // Reject a varint whose declared length runs past the live region
+        // — Varint.decode only checks against [buf]'s capacity, but slack
+        // capacity is unfilled garbage, not real bytes from the peer.
+        if (pos + dec.bytesConsumed > size) return null
         pos += dec.bytesConsumed
         return dec.value
     }
@@ -79,7 +94,7 @@ class MoqLiteFrameBuffer {
         if (len < 0 || len > Int.MAX_VALUE) {
             throw MoqCodecException("absurd moq-lite size prefix: $len")
         }
-        if (pos + len.toInt() > buf.size) {
+        if (pos + len.toInt() > size) {
             // Roll the cursor back so the next call sees the same
             // varint and only commits when the whole payload arrives.
             pos = savedPos
@@ -91,16 +106,15 @@ class MoqLiteFrameBuffer {
     }
 
     /** Bytes still buffered after [pos] — exposed for diagnostic / EOF detection. */
-    val remaining: Int get() = buf.size - pos
+    val remaining: Int get() = size - pos
 
     /** Drop the consumed prefix when half the buffer is dead weight. */
     private fun compact() {
         if (pos == 0) return
-        if (pos < buf.size / 2) return
-        val live = buf.size - pos
-        val newBuf = ByteArray(live)
-        buf.copyInto(newBuf, 0, pos, buf.size)
-        buf = newBuf
+        if (pos < size / 2) return
+        val live = size - pos
+        if (live > 0) buf.copyInto(buf, 0, pos, size)
+        size = live
         pos = 0
     }
 }

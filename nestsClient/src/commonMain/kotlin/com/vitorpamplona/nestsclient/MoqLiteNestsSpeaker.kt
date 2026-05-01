@@ -76,21 +76,40 @@ class MoqLiteNestsSpeaker internal constructor(
             // Per the audio-rooms NIP draft + JS reference
             // (`@moq/publish/screen-B680RFft.js:5641`), publishers
             // claim a broadcast suffix equal to their pubkey hex.
-            val publisher =
+            val publisher = session.publish(broadcastSuffix = speakerPubkeyHex)
+            // From here on, the publisher is registered in the session
+            // and has a live announce/subscribe path. Anything that
+            // throws before we hand a working handle back to the caller
+            // must close the publisher to avoid leaking it inside the
+            // session's `activePublisher` slot — otherwise a subsequent
+            // startBroadcasting fails with "already publishing" and the
+            // publisher's announce state never tears down.
+            val broadcaster =
                 try {
-                    session.publish(broadcastSuffix = speakerPubkeyHex)
+                    NestMoqLiteBroadcaster(
+                        capture = captureFactory(),
+                        encoder = encoderFactory(),
+                        publisher = publisher,
+                        scope = scope,
+                        framesPerGroup = framesPerGroup,
+                    ).also {
+                        it.start(
+                            onTerminalFailure = {
+                                // Broadcaster bailed after sustained
+                                // publisher.send failures. Flip to
+                                // Failed so the reconnect orchestrator
+                                // sees a terminal state and recycles
+                                // the session — without this signal the
+                                // outward state stays on Broadcasting
+                                // and the room is silently mute.
+                                onBroadcastTerminalFailure()
+                            },
+                        )
+                    }
                 } catch (t: Throwable) {
+                    runCatching { publisher.close() }
                     throw t
                 }
-            val broadcaster =
-                NestMoqLiteBroadcaster(
-                    capture = captureFactory(),
-                    encoder = encoderFactory(),
-                    publisher = publisher,
-                    scope = scope,
-                    framesPerGroup = framesPerGroup,
-                )
-            broadcaster.start()
             mutableState.value =
                 NestsSpeakerState.Broadcasting(
                     room = current.room,
@@ -123,6 +142,22 @@ class MoqLiteNestsSpeaker internal constructor(
         }
     }
 
+    /**
+     * Called from the broadcaster's `onTerminalFailure` callback (off
+     * the speaker's coroutine). Transitions the speaker to `Failed` so
+     * the reconnect orchestrator (`ReconnectingNestsSpeaker`) observes
+     * a terminal state and recycles the session. No-op if the speaker
+     * is already in a terminal state.
+     */
+    private fun onBroadcastTerminalFailure() {
+        val current = mutableState.value
+        if (current is NestsSpeakerState.Failed || current is NestsSpeakerState.Closed) return
+        mutableState.value =
+            NestsSpeakerState.Failed(
+                reason = "broadcast pipeline gave up — likely transport loss",
+            )
+    }
+
     internal fun reportMuteState(muted: Boolean) {
         val current = mutableState.value
         if (current is NestsSpeakerState.Broadcasting) {
@@ -141,8 +176,25 @@ class MoqLiteNestsSpeaker internal constructor(
             activeHandle = null
             mutableState.value = NestsSpeakerState.Closed
         }
-        handle?.runCatching { close() }
-        runCatching { session.close() }
+        // Don't `runCatching { handle.close() }` — that swallows
+        // CancellationException too, breaking structured cancellation
+        // when the parent scope is cancelling teardown.
+        if (handle != null) {
+            try {
+                handle.close()
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                // Best-effort — already cleared activeHandle.
+            }
+        }
+        try {
+            session.close()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (_: Throwable) {
+            // Best-effort.
+        }
     }
 }
 
@@ -167,11 +219,29 @@ internal class MoqLiteBroadcastHandle(
     override suspend fun close() {
         if (closed) return
         closed = true
-        runCatching { broadcaster.stop() }
+        try {
+            broadcaster.stop()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            // Even on cancel, run the rest of cleanup before rethrowing
+            // — broadcaster.stop already cancels its own job, so the
+            // mic + encoder + publisher are owed their close paths.
+            runCatching { publisher.close() }
+            parent.broadcastClosed(this)
+            throw ce
+        } catch (_: Throwable) {
+            // Best-effort; fall through to the defensive publisher.close.
+        }
         // broadcaster.stop() already calls publisher.close(); call again
         // defensively to make this method idempotent against partial
         // failures on the broadcaster.stop path.
-        runCatching { publisher.close() }
+        try {
+            publisher.close()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            parent.broadcastClosed(this)
+            throw ce
+        } catch (_: Throwable) {
+            // Best-effort.
+        }
         parent.broadcastClosed(this)
     }
 }
