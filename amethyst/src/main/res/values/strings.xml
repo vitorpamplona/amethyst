@@ -596,6 +596,10 @@
     <string name="nest_unjoinable_body">The room is missing an audio service or endpoint. The host needs to update its details before listeners can connect.</string>
     <string name="nest_unjoinable_back">Back</string>
     <string name="nest_create_fab">Start space</string>
+    <string name="nests_section_live_now">Live now</string>
+    <string name="nests_section_scheduled">Scheduled</string>
+    <string name="nests_section_recently_ended">Recently ended</string>
+    <string name="nests_ended_ago">Ended %1$s ago</string>
     <string name="nest_no_server_title">Set up a nest server</string>
     <string name="nest_no_server_body">You haven\'t picked a nest server yet. Add %1$s to your server list and continue?\n\nYou can change this later in Settings.</string>
     <string name="nest_no_server_use_default">Use default</string>
