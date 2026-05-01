@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
  */
 @Immutable
 data class RoomReaction(
+    /** Source event id — used for dedup across re-emits. */
+    val eventId: String,
     /** Who reacted. */
     val sourcePubkey: String,
     /** Speaker the reaction is aimed at, or `null` for room-wide. */
@@ -52,6 +54,7 @@ data class RoomReaction(
          */
         fun from(event: ReactionEvent): RoomReaction =
             RoomReaction(
+                eventId = event.id,
                 sourcePubkey = event.pubKey,
                 targetPubkey = event.originalAuthor().firstOrNull(),
                 content = event.content,
@@ -61,16 +64,19 @@ data class RoomReaction(
 }
 
 /**
- * Sliding-window aggregator. Holds reactions keyed by target pubkey
- * (with `null` lumped under the empty-string key so the map's
- * value-type is uniform); the room screen reads
- * `byTarget()` per render and the UI naturally fades as the window
- * slides.
+ * Sliding-window aggregator. Holds reactions keyed by event id (so
+ * re-emits from `LocalCache.observeEvents` — which republishes the
+ * full matching list on every cache mutation — collapse into a
+ * single overlay entry instead of stacking duplicates), and surfaces
+ * them grouped by target pubkey for the UI (with `null` lumped under
+ * the empty-string key so the map's value-type is uniform).
  *
  * Not thread-safe — call from the VM's single coroutine.
  */
 class RoomReactionsAggregator {
-    private val all = mutableListOf<RoomReaction>()
+    // Insertion-ordered so groupBy preserves arrival order; keyed by
+    // event id so the same kind-7 from two relays only counts once.
+    private val byEventId = LinkedHashMap<String, RoomReaction>()
 
     /** Stable key for room-wide reactions in the returned map. */
     private val roomWideKey = ""
@@ -81,7 +87,13 @@ class RoomReactionsAggregator {
         nowSec: Long,
         windowSec: Long,
     ): Map<String, List<RoomReaction>> {
-        all += RoomReaction.from(event)
+        val incoming = RoomReaction.from(event)
+        // Dedup: a relay re-delivery (or LocalCache.observeEvents's
+        // full-list re-emit) of the same kind-7 must not stack.
+        if (byEventId.put(incoming.eventId, incoming) != null) {
+            // Re-emit of an existing reaction: just return the post-
+            // evict snapshot without growing the map.
+        }
         return evictAndSnapshot(nowSec - windowSec)
     }
 
@@ -92,7 +104,13 @@ class RoomReactionsAggregator {
      * per-Composable timer).
      */
     fun evictAndSnapshot(olderThanSec: Long): Map<String, List<RoomReaction>> {
-        all.removeAll { it.createdAtSec < olderThanSec }
-        return all.groupBy { it.targetPubkey ?: roomWideKey }
+        val it = byEventId.entries.iterator()
+        while (it.hasNext()) {
+            if (it.next().value.createdAtSec < olderThanSec) it.remove()
+        }
+        return byEventId.values.groupBy { it.targetPubkey ?: roomWideKey }
     }
+
+    /** Whether the aggregator currently holds any unevicted reactions. */
+    fun isEmpty(): Boolean = byEventId.isEmpty()
 }

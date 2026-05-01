@@ -24,22 +24,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.RoomPresence
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants.RoomParticipantActions
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -68,54 +75,79 @@ internal fun HandRaiseQueueSection(
     modifier: Modifier = Modifier,
 ) {
     val presences by viewModel.presences.collectAsState()
+    // Memoize the on-stage gate so a heartbeat that doesn't change
+    // the kind-30312 doesn't re-build the set every recompose. The
+    // event reference is stable across recompositions until the host
+    // republishes; presence updates run through the second remember.
     val onStageKeys =
-        event
-            .participants()
-            .filter { it.canSpeak() }
-            .map { it.pubKey }
-            .toSet()
+        remember(event) {
+            event
+                .participants()
+                .filter { it.canSpeak() }
+                .map { it.pubKey }
+                .toSet()
+        }
     val hands =
-        presences.values
-            .filter { it.handRaised && it.pubkey !in onStageKeys }
-            .sortedBy { it.updatedAtSec }
+        remember(presences, onStageKeys) {
+            presences.values
+                .filter { it.handRaised && it.pubkey !in onStageKeys }
+                .sortedBy { it.updatedAtSec }
+        }
 
     if (hands.isEmpty()) return
 
     val scope = rememberCoroutineScope()
-    Column(modifier = modifier.fillMaxWidth().padding(top = 12.dp)) {
+    Column(modifier = modifier.fillMaxSize().padding(top = 12.dp)) {
         Text(
             text = stringRes(R.string.nest_hand_raise_queue_title),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        hands.forEach { hand ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ClickableUserPicture(
-                    baseUserHex = hand.pubkey,
-                    size = Size35dp,
+        // LazyColumn so a flood of raised hands doesn't render every
+        // row every recompose. Stable key by pubkey lets Compose
+        // animate row entry/exit instead of teardown-rebuild.
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 6.dp)) {
+            items(items = hands, key = { it.pubkey }) { hand ->
+                HandRaiseRow(
+                    hand = hand,
                     accountViewModel = accountViewModel,
-                )
-                Text(
-                    text = hand.pubkey.take(8),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(4.dp))
-                Button(
-                    onClick = {
+                    onApprove = {
                         scope.launch {
                             val template = RoomParticipantActions.setRole(event, hand.pubkey, ROLE.SPEAKER)
                             template?.let { runCatching { accountViewModel.account.signAndComputeBroadcast(it) } }
                         }
                     },
-                ) {
-                    Text(stringRes(R.string.nest_hand_raise_approve))
-                }
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun HandRaiseRow(
+    hand: RoomPresence,
+    accountViewModel: AccountViewModel,
+    onApprove: () -> Unit,
+) {
+    val user = remember(hand.pubkey) { LocalCache.getOrCreateUser(hand.pubkey) }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ClickableUserPicture(
+            baseUserHex = hand.pubkey,
+            size = Size35dp,
+            accountViewModel = accountViewModel,
+        )
+        UsernameDisplay(
+            baseUser = user,
+            weight = Modifier.weight(1f),
+            accountViewModel = accountViewModel,
+        )
+        Spacer(Modifier.width(4.dp))
+        Button(onClick = onApprove) {
+            Text(stringRes(R.string.nest_hand_raise_approve))
         }
     }
 }

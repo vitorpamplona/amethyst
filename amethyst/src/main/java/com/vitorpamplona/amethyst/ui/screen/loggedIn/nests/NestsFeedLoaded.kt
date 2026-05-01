@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.PrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLivenessProbeSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -300,14 +300,14 @@ private fun RenderLiveOrEndedFromPresence(
 
 /**
  * Most recent kind-10312 presence `createdAt` cached for [address],
- * or null until one arrives. Reuses the room's existing assembler
- * subscription (`NestRoomFilterAssemblerSubscription`) — same
- * subscription that warms up when the user actually opens the room
- * — and reads version notes off the room's [LocalCache] channel,
- * which `LocalCache.consume(MeetingRoomPresenceEvent, …)` attaches
- * by `#a=room`. Trade-off: that REQ also pulls chat + reactions, so
- * a thumbnail probe pays a popular room's full message history. If
- * that load matters, swap to a dedicated limit:1 assembler.
+ * or null until one arrives. Uses the dedicated
+ * [NestRoomLivenessProbeSubscription] — `kinds=[10312], #a=[roomA],
+ * limit=1` per outbox relay — so a feed of N rooms doesn't pay
+ * each popular room's chat-history pull just to render a LIVE /
+ * ENDED badge. The assembler reads version notes off the room's
+ * [LocalCache] channel, which `LocalCache.consume(MeetingRoomPresenceEvent, …)`
+ * attaches by `#a=room`. The full chat / reaction / admin REQs
+ * stay gated behind the join flow (see [NestRoomFilterAssemblerSubscription]).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
@@ -315,7 +315,7 @@ private fun observeRoomLatestPresence(
     note: AddressableNote,
     accountViewModel: AccountViewModel,
 ): State<Long?> {
-    NestRoomFilterAssemblerSubscription(note, accountViewModel)
+    NestRoomLivenessProbeSubscription(note, accountViewModel)
 
     val channel = remember(note.idHex) { LocalCache.getOrCreateLiveChannel(note.address) }
     val flow =

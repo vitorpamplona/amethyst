@@ -331,6 +331,12 @@ class AccountSessionManager(
         accountInfo: AccountInfo,
         routeBuilder: ((account: Account) -> Route?)? = null,
     ) {
+        // The Nest audio-room activity reads the active AccountViewModel
+        // through a process-singleton bridge. Drop the previous user's
+        // ref before swapping so a stale ref can't survive into the new
+        // session — see [NestBridge].
+        com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
+            .clear()
         localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(routeBuilder)
     }
@@ -351,6 +357,11 @@ class AccountSessionManager(
     fun logOff(accountInfo: AccountInfo) {
         scope.launch(Dispatchers.IO) {
             if (accountInfo.npub == currentAccountNPub()) {
+                // Drop the Nest bridge ref before tearing down the
+                // current account so the audio-room activity can't
+                // pick up a stale AccountViewModel — see [NestBridge].
+                com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
+                    .clear()
                 // log off and relogin with the 0 account
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())

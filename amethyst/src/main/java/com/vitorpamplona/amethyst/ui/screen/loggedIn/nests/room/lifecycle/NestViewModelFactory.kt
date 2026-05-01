@@ -47,7 +47,11 @@ internal class NestViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         NestViewModel(
-            httpClient = OkHttpNestsClient(Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForVideo),
+            // Named parameter — `OkHttpNestsClient`'s primary constructor
+            // declares `callTimeoutMs` first with a default, so the
+            // function reference must be passed explicitly to the
+            // `httpClient` slot rather than as the first positional arg.
+            httpClient = OkHttpNestsClient(httpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForVideo),
             transport = QuicWebTransportFactory(),
             decoderFactory = { MediaCodecOpusDecoder() },
             playerFactory = { AudioTrackPlayer() },

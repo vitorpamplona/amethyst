@@ -286,13 +286,19 @@ class NestViewModelTest {
             val alice = "a".repeat(64)
             val bob = "b".repeat(64)
 
+            // Vary id per reaction so the dedup gate doesn't collapse
+            // distinct kind-7s; the relay-replay dedup case has its own
+            // assertion below.
+            var nextId = 1
+
             fun rxn(
                 from: String,
                 to: String,
                 content: String,
                 createdAt: Long,
+                id: String = "%064x".format(nextId++),
             ) = com.vitorpamplona.quartz.nip25Reactions.ReactionEvent(
-                id = "0".repeat(64),
+                id = id,
                 pubKey = from,
                 createdAt = createdAt,
                 tags = arrayOf(arrayOf("a", "30312:host:room"), arrayOf("p", to)),
@@ -305,7 +311,15 @@ class NestViewModelTest {
             vm.onReactionEvent(rxn(alice, bob, "👏", 105L), nowSec = 105L)
             assertEquals(2, vm.recentReactions.value[bob]!!.size)
 
-            // Tick advances past the window — both reactions evicted.
+            // LocalCache.observeEvents re-emits the full matching list
+            // on every cache mutation; the same kind-7 must collapse
+            // into one overlay entry instead of stacking on each replay.
+            val replayed = rxn(alice, bob, "🔥", 100L, id = "f".repeat(64))
+            vm.onReactionEvent(replayed, nowSec = 105L)
+            vm.onReactionEvent(replayed, nowSec = 105L)
+            assertEquals(3, vm.recentReactions.value[bob]!!.size)
+
+            // Tick advances past the window — all reactions evicted.
             vm.evictReactions(olderThanSec = 200L)
             assertEquals(emptyMap(), vm.recentReactions.value)
         }
@@ -464,7 +478,10 @@ class NestViewModelTest {
             mutable.value = s
         }
 
-        override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = error("subscribeSpeaker not exercised in these tests — see NestPlayerTest in :nestsClient")
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle = error("subscribeSpeaker not exercised in these tests — see NestPlayerTest in :nestsClient")
 
         override suspend fun close() {
             closeCallCount++

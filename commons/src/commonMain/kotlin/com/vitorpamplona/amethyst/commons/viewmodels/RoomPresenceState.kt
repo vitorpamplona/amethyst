@@ -79,13 +79,31 @@ data class RoomPresence(
 class RoomPresenceAggregator {
     private val byPubkey = mutableMapOf<String, RoomPresence>()
 
-    /** Apply one presence event. Returns the updated snapshot. */
-    fun apply(event: MeetingRoomPresenceEvent): Map<String, RoomPresence> {
+    /**
+     * Apply one presence event. Returns a fresh snapshot when state
+     * actually changed, or `null` when the event was a no-op (older
+     * or equal to the cached presence for the same pubkey).
+     *
+     * `LocalCache.observeEvents` re-emits the full matching list on
+     * every cache mutation, so in a 200-peer room the VM forwards
+     * 200 events for a single new heartbeat. Returning `null` for
+     * the 199 no-op replays lets the VM skip the
+     * `_presences.value = ...` write — saves both the snapshot copy
+     * and the StateFlow equality check (both O(N) per call).
+     */
+    fun applyOrNull(event: MeetingRoomPresenceEvent): Map<String, RoomPresence>? {
         val incoming = RoomPresence.from(event)
         val current = byPubkey[incoming.pubkey]
-        if (current == null || current.updatedAtSec < incoming.updatedAtSec) {
-            byPubkey[incoming.pubkey] = incoming
+        if (current != null && current.updatedAtSec >= incoming.updatedAtSec) {
+            return null
         }
+        byPubkey[incoming.pubkey] = incoming
+        return snapshot()
+    }
+
+    /** Apply-or-no-op variant kept for tests + callers that always want a snapshot. */
+    fun apply(event: MeetingRoomPresenceEvent): Map<String, RoomPresence> {
+        applyOrNull(event)
         return snapshot()
     }
 

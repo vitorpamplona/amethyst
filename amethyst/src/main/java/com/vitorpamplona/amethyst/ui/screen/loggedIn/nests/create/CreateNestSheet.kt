@@ -331,23 +331,25 @@ private fun ScheduleStartPicker(
                 TextButton(onClick = {
                     val dayMillisUtc = datePickerState.selectedDateMillis
                     if (dayMillisUtc != null) {
-                        // DatePicker hands back UTC midnight of the selected
-                        // calendar date. Add the picked hour:minute (local)
-                        // to its seconds, then subtract the local offset to
-                        // land on the correct UTC unix second — same shape
-                        // as ExpirationDatePicker.
-                        val localSeconds =
-                            dayMillisUtc / 1000L +
-                                timePickerState.hour * 3600L +
-                                timePickerState.minute * 60L
-                        val offsetSec =
-                            java.time.ZoneId
-                                .systemDefault()
-                                .rules
-                                .getOffset(java.time.Instant.now())
-                                .totalSeconds
-                                .toLong()
-                        onChange(localSeconds - offsetSec)
+                        // DatePicker hands back UTC midnight of the
+                        // selected calendar date. Reinterpret that
+                        // calendar date as local + the picked
+                        // hour:minute, then convert to UTC seconds
+                        // using the zone offset AT THE PICKED INSTANT.
+                        // The previous code used `Instant.now()`'s
+                        // offset, which was off by one hour for rooms
+                        // scheduled across a DST transition.
+                        val zone = java.time.ZoneId.systemDefault()
+                        val localDate =
+                            java.time.Instant
+                                .ofEpochMilli(dayMillisUtc)
+                                .atZone(java.time.ZoneOffset.UTC)
+                                .toLocalDate()
+                        val pickedZdt =
+                            localDate
+                                .atTime(timePickerState.hour, timePickerState.minute)
+                                .atZone(zone)
+                        onChange(pickedZdt.toEpochSecond())
                     }
                     showTime = false
                 }) { Text(stringRes(R.string.nest_create_submit)) }
