@@ -93,7 +93,7 @@ class NestBroadcaster(
                             } catch (t: Throwable) {
                                 onError(
                                     AudioException(
-                                        AudioException.Kind.DecoderError,
+                                        AudioException.Kind.EncoderError,
                                         "Opus encode failed for a frame",
                                         t,
                                     ),

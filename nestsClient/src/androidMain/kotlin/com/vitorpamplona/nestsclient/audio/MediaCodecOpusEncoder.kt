@@ -66,7 +66,7 @@ class MediaCodecOpusEncoder(
         val inputBuffer =
             codec.getInputBuffer(inputIndex)
                 ?: throw AudioException(
-                    AudioException.Kind.DecoderError,
+                    AudioException.Kind.EncoderError,
                     "MediaCodec returned null input buffer at index $inputIndex",
                 )
         inputBuffer.clear()

@@ -386,6 +386,34 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun frames_flow_completes_when_peer_FINs_the_subscribe_bidi() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val peerBidi =
+                async {
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
+                    bidi.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
+                    bidi
+                }
+
+            val handle = session.subscribe("speakerY", "audio/data")
+            val bidi = withTimeout(2_000) { peerBidi.await() }
+
+            // Peer FINs the subscribe bidi — moq-lite Lite-03's signal
+            // for "publisher gone, no more data ever". Without the
+            // per-subscription bidi-watch, this would leave the
+            // consumer-facing frames flow hanging forever; with the
+            // watch, the frames Channel closes and `toList()` returns.
+            bidi.finish()
+
+            withTimeout(2_000) { handle.frames.toList() }
+
+            session.close()
+        }
+
+    @Test
     fun unsubscribe_FINs_the_subscribe_bidi() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()

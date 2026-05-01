@@ -40,6 +40,14 @@ import com.vitorpamplona.quic.Varint
  */
 object MoqCodec {
     /**
+     * Upper bound on a control-message payload length. MoQ-transport control
+     * messages are small (subscribes, announces, parameter blocks) — 16 MiB
+     * is well above any legitimate body and below any value where `.toInt()`
+     * would risk overflow. Anything bigger is treated as a malformed peer.
+     */
+    const val MAX_CONTROL_PAYLOAD_LEN: Long = 16L * 1024L * 1024L
+
+    /**
      * Encode a full control-stream frame (type + length + payload).
      */
     fun encode(message: MoqMessage): ByteArray {
@@ -65,6 +73,15 @@ object MoqCodec {
         val typeDec = Varint.decode(src, offset) ?: return null
         val lenDec = Varint.decode(src, offset + typeDec.bytesConsumed) ?: return null
         val payloadStart = offset + typeDec.bytesConsumed + lenDec.bytesConsumed
+        // Bound the payload length before .toInt() — varint can carry up to
+        // 2^62, which silently overflows to a negative or absurd payloadEnd
+        // and makes the (payloadEnd > src.size) check return null forever,
+        // wedging the parser. Reject anything larger than the cap up front.
+        if (lenDec.value < 0L || lenDec.value > MAX_CONTROL_PAYLOAD_LEN) {
+            throw MoqCodecException(
+                "MoQ control payload length out of bounds: ${lenDec.value} (max $MAX_CONTROL_PAYLOAD_LEN)",
+            )
+        }
         val payloadEnd = payloadStart + lenDec.value.toInt()
         if (payloadEnd > src.size) return null
 
