@@ -1709,18 +1709,12 @@ fun JumpToParentReplyButton(
     val parentNote =
         remember(baseNote) {
             val noteEvent = baseNote.event as? BaseThreadedEvent ?: return@remember null
-            val replyingTo = noteEvent.replyingToAddressOrEvent()
-            val resolved =
-                if (replyingTo != null) {
-                    val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                    if (newNote != null && LocalCache.getAnyChannel(newNote) == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
-                        newNote
-                    } else {
-                        baseNote.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                    }
-                } else {
-                    baseNote.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                }
+            val direct =
+                noteEvent
+                    .replyingToAddressOrEvent()
+                    ?.let { accountViewModel.getNoteIfExists(it) }
+                    ?.takeIf { it.event !is CommunityDefinitionEvent && LocalCache.getAnyChannel(it) == null }
+            val resolved = direct ?: baseNote.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }
             resolved?.takeIf { LocalCache.getAnyChannel(it) == null }
         } ?: return
 
