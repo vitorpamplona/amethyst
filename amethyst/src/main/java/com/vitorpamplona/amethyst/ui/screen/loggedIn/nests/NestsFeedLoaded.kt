@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -76,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -97,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -313,7 +316,7 @@ private fun NestFeedCard(
                     note = baseNote,
                     accountViewModel = accountViewModel,
                 ) {
-                    ObserveAndRenderSpace(addressableNote, accountViewModel, nav)
+                    ObserveAndRenderSpace(addressableNote, accountViewModel, nav, showQuickAction)
                 }
             }
         }
@@ -412,6 +415,13 @@ private fun NestEndedCompactCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+
+            ClickableBox(
+                modifier = Modifier.size(Size40dp),
+                onClick = showQuickAction,
+            ) {
+                VerticalDotsIcon()
+            }
         }
     }
 }
@@ -456,6 +466,7 @@ fun ObserveAndRenderSpace(
     baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onMore: (() -> Unit)? = null,
 ) {
     val card by observeNoteAndMap(baseNote, accountViewModel) {
         when (val noteEvent = it.event) {
@@ -485,6 +496,7 @@ fun ObserveAndRenderSpace(
             baseNote,
             accountViewModel,
             nav,
+            onMore,
         )
     }
 }
@@ -583,6 +595,7 @@ fun RenderLiveSpacesThumb(
     baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onMore: (() -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -652,6 +665,7 @@ fun RenderLiveSpacesThumb(
             baseNote,
             accountViewModel,
             nav,
+            onMore,
         )
     }
 }
@@ -662,6 +676,7 @@ fun SpaceHostAndReactions(
     baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onMore: (() -> Unit)? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         val creator = baseNote.author
@@ -722,6 +737,15 @@ fun SpaceHostAndReactions(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+            if (onMore != null) {
+                Spacer(modifier = StdHorzSpacer)
+                ClickableBox(
+                    modifier = Modifier.size(Size35dp),
+                    onClick = onMore,
+                ) {
+                    VerticalDotsIcon()
+                }
+            }
         }
     }
 }
