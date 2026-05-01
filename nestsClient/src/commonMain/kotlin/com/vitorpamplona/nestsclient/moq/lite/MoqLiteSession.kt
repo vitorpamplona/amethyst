@@ -225,6 +225,29 @@ class MoqLiteSession internal constructor(
         // on dead UDP paths.
         val frames = Channel<MoqLiteFrame>(capacity = DEFAULT_FRAME_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
         val responseDeferred = CompletableDeferred<MoqLiteCodec.SubscribeResponse>()
+
+        // Pre-register the subscription BEFORE launching the collector.
+        // Otherwise: if the publisher FINs the bidi immediately after
+        // sending Ok, the collector's exit-cleanup races subscribe()'s
+        // post-await registration — collector exits, runs `remove(id)`
+        // against an empty map, no-ops; subscribe() then inserts; the
+        // frames channel is now in the map with no live collector to
+        // close it on transport tear-down. Consumer hangs forever.
+        // Pre-registering means the collector's idempotent
+        // remove+close cleanup always finds and closes the frames
+        // channel, regardless of timing.
+        val sub =
+            ListenerSubscription(
+                id = id,
+                request = request,
+                bidi = bidi,
+                frames = frames,
+            )
+        state.withLock {
+            subscriptionsBySubscribeId[id] = sub
+            if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
+        }
+
         scope.launch {
             val responseBuffer = MoqLiteFrameBuffer()
             var responseParsed = false
@@ -257,10 +280,9 @@ class MoqLiteSession internal constructor(
                     MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id"),
                 )
             }
-            // Close any frames channel registered for this id. The
-            // subscription may not be registered (response was Dropped
-            // or arrival raced cleanup) — in that case the snapshot
-            // returns null and we no-op.
+            // Idempotent: if subscribe() unwound on a Dropped response
+            // (or any throw from await), it already removed the
+            // subscription before throwing. Either way: remove + close.
             val removed = state.withLock { subscriptionsBySubscribeId.remove(id) }
             removed?.frames?.close()
         }
@@ -269,11 +291,15 @@ class MoqLiteSession internal constructor(
             try {
                 responseDeferred.await()
             } catch (t: Throwable) {
+                state.withLock { subscriptionsBySubscribeId.remove(id) }
+                frames.close()
                 runCatching { bidi.finish() }
                 throw t
             }
         when (resp) {
             is MoqLiteCodec.SubscribeResponse.Dropped -> {
+                state.withLock { subscriptionsBySubscribeId.remove(id) }
+                frames.close()
                 runCatching { bidi.finish() }
                 throw MoqLiteSubscribeException(
                     "publisher rejected subscribe id=$id: errorCode=${resp.drop.errorCode} " +
@@ -282,18 +308,6 @@ class MoqLiteSession internal constructor(
             }
 
             is MoqLiteCodec.SubscribeResponse.Ok -> {
-                val sub =
-                    ListenerSubscription(
-                        id = id,
-                        request = request,
-                        ok = resp.ok,
-                        bidi = bidi,
-                        frames = frames,
-                    )
-                state.withLock {
-                    subscriptionsBySubscribeId[id] = sub
-                    if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
-                }
                 return MoqLiteSubscribeHandle(
                     id = id,
                     ok = resp.ok,
@@ -707,7 +721,6 @@ class MoqLiteSession internal constructor(
     private class ListenerSubscription(
         val id: Long,
         val request: MoqLiteSubscribe,
-        val ok: MoqLiteSubscribeOk,
         val bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
         val frames: Channel<MoqLiteFrame>,
     )

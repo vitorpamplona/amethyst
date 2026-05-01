@@ -146,13 +146,29 @@ class MoqLiteNestsListener internal constructor(
                     )
                 }
             } finally {
-                runCatching { handle.close() }
+                // The flow's `finally` runs on both normal completion
+                // and cancellation — let cancel propagate after closing
+                // the announce handle.
+                try {
+                    handle.close()
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    throw ce
+                } catch (_: Throwable) {
+                    // Best-effort.
+                }
             }
         }
 
     override suspend fun close() {
         if (state.value is NestsListenerState.Closed) return
-        runCatching { session.close() }
+        try {
+            session.close()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            mutableState.value = NestsListenerState.Closed
+            throw ce
+        } catch (_: Throwable) {
+            // Best-effort.
+        }
         mutableState.value = NestsListenerState.Closed
     }
 

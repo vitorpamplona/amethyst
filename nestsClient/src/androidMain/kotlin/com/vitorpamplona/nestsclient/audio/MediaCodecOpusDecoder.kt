@@ -74,33 +74,47 @@ class MediaCodecOpusDecoder : OpusDecoder {
         // Drain whatever output is ready right now. A single Opus packet
         // typically yields exactly one output buffer, but on some devices the
         // first call returns INFO_OUTPUT_FORMAT_CHANGED before the PCM frame.
-        val collected = ArrayList<Short>(AudioFormat.FRAME_SIZE_SAMPLES)
-        while (true) {
+        //
+        // Write the decoded samples directly into a pre-sized ShortArray
+        // via ShortBuffer.get(dst, off, len) — the previous shape went via
+        // ArrayList<Short>, which boxed every PCM sample (one heap object
+        // per Short × 960 samples × 50 fps × N speakers ≈ 48 000
+        // allocations/sec/speaker on the audio hot path).
+        val out = ShortArray(AudioFormat.FRAME_SIZE_SAMPLES)
+        var outPos = 0
+        var formatChangeAbsorbed = false
+        drain@ while (true) {
             val outputIndex = codec.dequeueOutputBuffer(bufferInfo, DEQUEUE_TIMEOUT_US)
             when {
                 outputIndex >= 0 -> {
                     val outputBuffer =
                         codec.getOutputBuffer(outputIndex)
-                            ?: continue
+                            ?: continue@drain
                     if (bufferInfo.size > 0) {
                         outputBuffer.position(bufferInfo.offset)
                         outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
                         val shorts = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
-                        val tmp = ShortArray(shorts.remaining())
-                        shorts.get(tmp)
-                        for (s in tmp) collected.add(s)
+                        val toCopy = minOf(shorts.remaining(), out.size - outPos)
+                        if (toCopy > 0) {
+                            shorts.get(out, outPos, toCopy)
+                            outPos += toCopy
+                        }
                     }
                     codec.releaseOutputBuffer(outputIndex, false)
                     if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break
                     // No more buffered output for this packet.
                     if (bufferInfo.size == 0) break
-                    if (collected.size >= AudioFormat.FRAME_SIZE_SAMPLES) break
+                    if (outPos >= out.size) break
                 }
 
                 outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                    // The format change carries no audio data; loop to read
-                    // the actual PCM frame.
-                    continue
+                    // The format change carries no audio data; absorb it
+                    // once and loop to read the actual PCM frame. Buggy
+                    // decoders that re-fire format-change without
+                    // producing output would otherwise busy-spin.
+                    if (formatChangeAbsorbed) break
+                    formatChangeAbsorbed = true
+                    continue@drain
                 }
 
                 outputIndex == MediaCodec.INFO_TRY_AGAIN_LATER -> {
@@ -112,7 +126,7 @@ class MediaCodecOpusDecoder : OpusDecoder {
                 }
             }
         }
-        return ShortArray(collected.size) { collected[it] }
+        return if (outPos == out.size) out else out.copyOf(outPos)
     }
 
     override fun release() {
