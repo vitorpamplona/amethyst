@@ -107,7 +107,10 @@ class ReconnectingNestsListenerTest {
         val subscribeCount: Int get() = _subscribeCount.get()
         val unsubscribeCount: Int get() = _unsubscribeCount.get()
 
-        override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle {
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle {
             val id = _subscribeCount.incrementAndGet().toLong()
             return SubscribeHandle(
                 subscribeId = id,
