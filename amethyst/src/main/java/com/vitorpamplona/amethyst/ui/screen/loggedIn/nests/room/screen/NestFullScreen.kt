@@ -246,18 +246,20 @@ internal fun NestFullScreen(
                 onTapSelf = onTapSelf,
                 listenerCount = presences.size,
                 modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            // Speaker controls live attached to the Stage card so they
-            // only render when the user is actually on stage. This keeps
-            // the action bar narrow for audience and makes the controls
-            // appearing/disappearing a deliberate signal that the mic
-            // is now (or no longer) available.
-            StageControlsBar(
-                viewModel = viewModel,
-                ui = ui,
-                isOnStage = isOnStageMe,
-                canBroadcast = viewModel.canBroadcast,
-                speakerPubkeyHex = myPubkey,
+                // Speaker controls live inside the Stage card so they
+                // only render when the user is actually on stage. This
+                // keeps the action bar narrow for audience and makes
+                // the controls appearing/disappearing a deliberate
+                // signal that the mic is now (or no longer) available.
+                bottomBar = {
+                    StageControlsBar(
+                        viewModel = viewModel,
+                        ui = ui,
+                        isOnStage = isOnStageMe,
+                        canBroadcast = viewModel.canBroadcast,
+                        speakerPubkeyHex = myPubkey,
+                    )
+                },
             )
             NestActionBar(
                 viewModel = viewModel,
