@@ -1,7 +1,7 @@
 # QUIC stream cliff against nostrnests.com — investigation plan
 
-**Status: ROOT-CAUSED + FIXED.** Our `:quic` client never emitted
-`MAX_STREAMS_*` frames to extend the peer-initiated stream-id cap.
+**Status: CLOSED.** Our `:quic` client never emitted `MAX_STREAMS_*`
+frames to extend the peer-initiated stream-id cap.
 [QuicConnectionConfig.initialMaxStreamsUni] (default `100`) was the
 *lifetime* maximum the peer could ever open. The relay forwards each
 broadcast group as a fresh peer-initiated uni stream, so any
@@ -11,9 +11,13 @@ Fixed by tracking [QuicConnection.peerInitiatedUniCount] and emitting
 peer's usage crosses the half-window threshold — same pattern as the
 existing `MAX_DATA` / `MAX_STREAM_DATA` extension.
 
-The `framesPerGroup = 5` mitigation in [NestMoqLiteBroadcaster] can
-be reverted to `1` to match the JS reference broadcaster's wire
-shape now that the underlying QUIC bug is gone.
+Production validation: `sweep_frames_200` against `nostrnests.com`
+went from `received=99/200 missing=[99-199]` (pre-fix) to
+`received=200/200 missing=[]` (post-fix). The
+[NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP] mitigation has
+been reverted from `5` back to `1` so the broadcaster matches the
+JS reference's wire shape (one Opus frame per moq-lite group → ≤ 20 ms
+late-join initial gap).
 
 **Reproduces against:** `https://moq.nostrnests.com:4443` (production
 relay). Not consistently reproducible against the local
