@@ -74,6 +74,11 @@ class NestForegroundService : Service() {
      * call lowers the room volume cleanly instead of mixing two
      * voices on top of each other. Acquired once per service
      * lifetime; released in [onDestroy].
+     *
+     * Matches the playback `AudioAttributes` we set on `AudioTrack`
+     * in `AudioTrackPlayer` (USAGE_MEDIA + CONTENT_TYPE_SPEECH) so
+     * the focus request applies to the same stream the audio
+     * actually renders on.
      */
     private fun requestAudioFocus() {
         if (audioFocusRequest != null) return
@@ -81,7 +86,7 @@ class NestForegroundService : Service() {
         val attrs =
             android.media.AudioAttributes
                 .Builder()
-                .setUsage(android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
                 .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
                 .build()
         val request =
