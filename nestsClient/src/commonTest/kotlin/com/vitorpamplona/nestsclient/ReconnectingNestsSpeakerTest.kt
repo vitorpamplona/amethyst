@@ -346,9 +346,16 @@ class ReconnectingNestsSpeakerTest {
                 }
                 assertTrue(first.handles[0].isMuted, "first handle should be muted by user toggle")
 
-                // Wait for refresh to swap to the second session.
+                // Wait for refresh to swap to the second session AND
+                // for the pump to replay mute intent on the new handle.
+                // `startCount > 0` is published from inside
+                // ScriptedSpeaker.startBroadcasting BEFORE the pump
+                // gets to run `if (desiredMuted) handle.setMuted(true)`,
+                // so polling startCount alone races the replay step
+                // under load (observed flake on CI). Wait for the
+                // post-condition the assertion is about instead.
                 withTimeout(5_000L) {
-                    while (second.startCount == 0) delay(5)
+                    while (second.handles.isEmpty() || !second.handles[0].isMuted) delay(5)
                 }
 
                 // Critical postcondition: the new underlying handle
