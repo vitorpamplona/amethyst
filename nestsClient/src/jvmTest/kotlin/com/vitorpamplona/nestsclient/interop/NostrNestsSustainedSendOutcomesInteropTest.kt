@@ -386,7 +386,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
     ) = runBlocking {
         NostrNestsHarness.assumeNestsInterop()
         val harness = harnessOrNull ?: return@runBlocking
-        withHarnessSpeakerAndListeners(scope, harness, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope, flowControlSnapshot ->
+        withHarnessSpeakerAndListeners(scope, harness, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope, flowControlSnapshot, listenerFlowControlSnapshots ->
             val result =
                 SendTraceScenario.run(
                     scope = scope,
@@ -396,6 +396,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
                     scenario = scenario,
                     pumpScope = pumpScope,
                     flowControlSnapshot = flowControlSnapshot,
+                    listenerFlowControlSnapshots = listenerFlowControlSnapshots,
                 )
             SendTraceScenario.reportAndAssert(scope, result, expectAllReceived)
         }
@@ -412,6 +413,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
             speakerPubkeyHex: String,
             pumpScope: CoroutineScope,
             flowControlSnapshot: suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot,
+            listenerFlowControlSnapshots: List<suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot>,
         ) -> Unit,
     ) {
         val hostSigner = NostrSignerInternal(KeyPair())
@@ -474,12 +476,22 @@ class NostrNestsSustainedSendOutcomesInteropTest {
             // — see that helper's comment for rationale.
             val quicSpeakerWt =
                 speakerWt as com.vitorpamplona.nestsclient.transport.QuicWebTransportSession
+            val listenerSnapshots =
+                listeners.map { listener ->
+                    val listenerWt =
+                        (listener as com.vitorpamplona.nestsclient.MoqLiteNestsListener)
+                            .transport as com.vitorpamplona.nestsclient.transport.QuicWebTransportSession
+                    val supplier: suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot =
+                        { listenerWt.quicFlowControlSnapshot() }
+                    supplier
+                }
             block(
                 publisher,
                 listeners,
                 hostSigner.pubKey,
                 pumpScope,
                 { quicSpeakerWt.quicFlowControlSnapshot() },
+                listenerSnapshots,
             )
         } finally {
             for (listener in listeners) {
