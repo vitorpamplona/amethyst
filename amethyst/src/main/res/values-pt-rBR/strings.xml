@@ -490,6 +490,7 @@
     <string name="nest_mic_unmute">Ativar microfone</string>
     <string name="nest_broadcast_connecting">Entrando ao vivo…</string>
     <string name="nest_broadcast_failed">Transmissão falhou: %1$s</string>
+    <string name="nest_mute_failed">Falha ao silenciar: %1$s</string>
     <string name="nest_record_permission_required">É necessário acesso ao microfone para falar nesta sala.</string>
     <string name="nest_open_settings">Abrir configurações</string>
     <string name="nest_notification_channel_description">Mantém o áudio tocando enquanto a sala está aberta.</string>
@@ -499,6 +500,10 @@
     <string name="nest_notification_stop">Parar</string>
     <string name="nest_join">Entrar no nest</string>
     <string name="nest_lobby_host_label">Anfitrião</string>
+    <string name="nest_lobby_open_action">Abrir</string>
+    <string name="nest_lobby_recent_chat">Conversa recente</string>
+    <string name="nest_lobby_no_listeners">Não há ninguém na sala no momento.</string>
+    <string name="nest_lobby_listeners_count">%1$d ouvindo</string>
     <string name="nest_role_host">Anfitrião</string>
     <string name="nest_role_moderator">Moderador</string>
     <string name="nest_state_muted">Microfone silenciado</string>
@@ -1302,6 +1307,10 @@
     <string name="error_unable_to_fetch_invoice">Não foi possível obter a fatura dos servidores do destinatário</string>
     <string name="wallet_connect_pay_invoice_error_error">Seu provedor de Wallet Connect retornou o seguinte erro: %1$s</string>
     <string name="could_not_connect_to_tor">Não foi possível conectar ao Tor</string>
+    <string name="tor_connection_failed_title">O Tor não está conectando</string>
+    <string name="tor_connection_failed_body">O Amethyst não conseguiu concluir a inicialização do Tor. Usar uma conexão normal (sem Tor) para que o feed possa carregar? Vamos lembrar dessa escolha pela próxima hora e tentar o Tor novamente depois.</string>
+    <string name="tor_continue_without_for_session">Usar conexão normal</string>
+    <string name="tor_keep_waiting">Continuar esperando</string>
     <string name="unable_to_download_relay_document">O baixar do documento do relay indisponível</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Não foi possível montar o LNUrl a partir do Endereço Lightning \"%1$s\". Verifique a configuração do usuário</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">O serviço Lightning do destinatário em %1$s não está disponível. Foi calculado a partir do endereço Lightning \"%2$s\". Erro: %3$s. Verifique se o servidor está funcionando e se o endereço Lightning está correto</string>
@@ -1507,6 +1516,9 @@
     <string name="bottom_bar_settings_description">Arraste para reordenar. Alterne para adicionar ou remover um item da barra inferior. Com zero itens, a barra inferior fica oculta.</string>
     <string name="bottom_bar_settings_available">Disponíveis</string>
     <string name="bottom_bar_settings_reorder">Reordenar</string>
+    <string name="home_tabs_settings">Abas da Tela Inicial</string>
+    <string name="home_tabs_settings_description">Escolha quais abas aparecem na Tela Inicial. Quando apenas uma aba está ativa, a barra de abas fica oculta.</string>
+    <string name="home_tab_everything">Tudo</string>
     <string name="reactions_settings">Configurações de Reações</string>
     <string name="reactions_settings_description">Configure quais botões de reação são exibidos, sua ordem e se os contadores devem ser mostrados.</string>
     <string name="reactions_settings_enabled">Ativado</string>
@@ -2372,20 +2384,4 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
-
-    <string name="home_tab_everything">Tudo</string>
-    <string name="home_tabs_settings">Abas da Tela Inicial</string>
-    <string name="home_tabs_settings_description">Escolha quais abas aparecem na Tela Inicial. Quando apenas uma aba está ativa, a barra de abas fica oculta.</string>
-    <string name="nest_lobby_listeners_count">%1$d ouvindo</string>
-    <string name="nest_lobby_no_listeners">Não há ninguém na sala no momento.</string>
-    <string name="nest_lobby_open_action">Abrir</string>
-    <string name="nest_lobby_recent_chat">Conversa recente</string>
-    <string name="nest_mute_failed">Falha ao silenciar: %1$s</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_tab_chat">Chat</string>
-    <string name="nests_servers_relay_label">Relay</string>
-    <string name="tor_connection_failed_body">O Amethyst não conseguiu concluir a inicialização do Tor. Usar uma conexão normal (sem Tor) para que o feed possa carregar? Vamos lembrar dessa escolha pela próxima hora e tentar o Tor novamente depois.</string>
-    <string name="tor_connection_failed_title">O Tor não está conectando</string>
-    <string name="tor_continue_without_for_session">Usar conexão normal</string>
-    <string name="tor_keep_waiting">Continuar esperando</string>
 </resources>

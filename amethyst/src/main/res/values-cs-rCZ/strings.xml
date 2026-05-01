@@ -490,6 +490,7 @@
     <string name="nest_mic_unmute">Zapnout mikrofon</string>
     <string name="nest_broadcast_connecting">Začíná vysílání…</string>
     <string name="nest_broadcast_failed">Vysílání selhalo: %1$s</string>
+    <string name="nest_mute_failed">Ztlumení selhalo: %1$s</string>
     <string name="nest_record_permission_required">Pro mluvení v této místnosti je vyžadován přístup k mikrofonu.</string>
     <string name="nest_open_settings">Otevřít nastavení</string>
     <string name="nest_notification_channel_description">Přehrává zvuk, dokud je místnost otevřená.</string>
@@ -499,6 +500,10 @@
     <string name="nest_notification_stop">Zastavit</string>
     <string name="nest_join">Připojit se k nestu</string>
     <string name="nest_lobby_host_label">Hostitel</string>
+    <string name="nest_lobby_open_action">Otevřít</string>
+    <string name="nest_lobby_recent_chat">Nedávný chat</string>
+    <string name="nest_lobby_no_listeners">V místnosti právě nikdo není.</string>
+    <string name="nest_lobby_listeners_count">%1$d poslouchá</string>
     <string name="nest_role_host">Hostitel</string>
     <string name="nest_role_moderator">Moderátor</string>
     <string name="nest_state_muted">Mikrofon ztlumen</string>
@@ -1302,6 +1307,10 @@
     <string name="error_unable_to_fetch_invoice">Nebylo možné načíst fakturu ze serverů příjemce</string>
     <string name="wallet_connect_pay_invoice_error_error">Poskytovatel připojení vaší peněženky vrátil následující chybu: %1$s</string>
     <string name="could_not_connect_to_tor">Nepodařilo se připojit k Tor</string>
+    <string name="tor_connection_failed_title">Tor se nepřipojuje</string>
+    <string name="tor_connection_failed_body">Amethystu se nepodařilo dokončit připojení k síti Tor. Chcete použít běžné připojení (bez Toru), aby se feed mohl načíst? Tuto volbu si zapamatujeme na hodinu a poté znovu zkusíme Tor.</string>
+    <string name="tor_continue_without_for_session">Použít běžné připojení</string>
+    <string name="tor_keep_waiting">Pokračovat v čekání</string>
     <string name="unable_to_download_relay_document">Stáhnout relé dokument není k dispozici</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nepodařilo se sestavit LNUrl z Lightning adresy \"%1$s\". Zkontrolujte nastavení uživatele</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Služba blesku příjemce v %1$s není k dispozici. Byla vypočtena z adresy blesku \"%2$s\". Chyba: %3$s. Zkontrolujte, zda je server aktivní a zda je adresa blesku správná</string>
@@ -1507,6 +1516,9 @@
     <string name="bottom_bar_settings_description">Přetažením změníte pořadí. Přepnutím položku přidáte nebo odeberete ze spodní lišty. S nulovým počtem položek bude lišta skryta.</string>
     <string name="bottom_bar_settings_available">Dostupné</string>
     <string name="bottom_bar_settings_reorder">Změnit pořadí</string>
+    <string name="home_tabs_settings">Záložky domovské obrazovky</string>
+    <string name="home_tabs_settings_description">Vyberte, které záložky se zobrazí na domovské obrazovce. Pokud je aktivní jen jedna záložka, lišta záložek se skryje.</string>
+    <string name="home_tab_everything">Vše</string>
     <string name="reactions_settings">Nastavení reakcí</string>
     <string name="reactions_settings_description">Nastavte, která tlačítka reakcí se zobrazují, jejich pořadí a zda se mají zobrazovat počty.</string>
     <string name="reactions_settings_enabled">Povoleno</string>
@@ -2372,20 +2384,4 @@
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\" stejně jako veřejná.</string>
     <string name="gif">Gif</string>
-
-    <string name="home_tab_everything">Vše</string>
-    <string name="home_tabs_settings">Záložky domovské obrazovky</string>
-    <string name="home_tabs_settings_description">Vyberte, které záložky se zobrazí na domovské obrazovce. Pokud je aktivní jen jedna záložka, lišta záložek se skryje.</string>
-    <string name="nest_lobby_listeners_count">%1$d poslouchá</string>
-    <string name="nest_lobby_no_listeners">V místnosti právě nikdo není.</string>
-    <string name="nest_lobby_open_action">Otevřít</string>
-    <string name="nest_lobby_recent_chat">Nedávný chat</string>
-    <string name="nest_mute_failed">Ztlumení selhalo: %1$s</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_tab_chat">Chat</string>
-    <string name="nests_servers_relay_label">Relay</string>
-    <string name="tor_connection_failed_body">Amethystu se nepodařilo dokončit připojení k síti Tor. Chcete použít běžné připojení (bez Toru), aby se feed mohl načíst? Tuto volbu si zapamatujeme na hodinu a poté znovu zkusíme Tor.</string>
-    <string name="tor_connection_failed_title">Tor se nepřipojuje</string>
-    <string name="tor_continue_without_for_session">Použít běžné připojení</string>
-    <string name="tor_keep_waiting">Pokračovat v čekání</string>
 </resources>
