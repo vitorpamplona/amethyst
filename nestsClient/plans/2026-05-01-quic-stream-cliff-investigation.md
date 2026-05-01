@@ -33,6 +33,72 @@ The remaining open work is **upstream**: file an issue at
 limitation so future relay versions can either lift the ceiling or
 expose it as a config knob.
 
+### Upstream confirmation (moq-rs 0.10.25 source audit)
+
+I read the `kixelated/moq` Rust source at the version production
+nostrnests is running (`moq-relay 0.10.25-5063dbfe`). Three
+architectural issues compound to produce the observed silent
+stream-stop:
+
+1. **Per-track group queue is unbounded.**
+   `moq/rs/moq-lite/src/model/track.rs:69-90` —
+   ```rust
+   groups: VecDeque<Option<(GroupProducer, tokio::time::Instant)>>,
+   ```
+   Inserts are unconditional (subscriber.rs:363-393); the only
+   eviction is age-based at `MAX_GROUP_AGE = 30 s`
+   (track.rs:29). So when a subscriber falls behind, groups pile
+   up indefinitely until they age out 30 s later.
+
+2. **`serve_group` blocks on `open_uni().await` with no timeout.**
+   `moq/rs/moq-lite/src/lite/publisher.rs:317-379` — the per-group
+   forward task does
+   ```rust
+   let stream = session.open_uni().await.map_err(Error::from_transport)?;
+   ```
+   If the subscriber's Quinn CWND has collapsed (because *our*
+   ACK rate slipped) or the subscriber's advertised
+   `MAX_STREAMS_UNI` is exhausted, this `await` blocks the task
+   forever. There's no `select!` against a deadline.
+
+3. **No bounded task pool feeding the awaits.**
+   The publisher pushes blocked `serve_group` tasks into a
+   `FuturesUnordered` (publisher.rs:325, 346) which is itself
+   unbounded. The receive loop (line 334) keeps spawning more
+   serve tasks as upstream groups arrive. So we end up with N
+   blocked tasks all waiting on `open_uni`, and **no
+   backpressure path back to the publisher** to slow upstream
+   ingestion or drop.
+
+4. **`max_concurrent_uni_streams = 10_000`** in
+   `moq/rs/moq-native/src/quinn.rs:30-33` (override of Quinn's
+   default 1024). High enough that we never hit the connection's
+   stream-id cap on our listener side at typical audio rates —
+   confirmed by our `peerMaxStreamsUniNow=10000` snapshots — so
+   the stall is *not* about Quinn's stream-concurrency limit per
+   se. It's the cascade in (1)+(2)+(3): once any in-flight
+   write blocks (CWND, per-stream credit, etc.), all the queued
+   `serve_group` tasks that follow also block, and the publisher
+   loop happily keeps adding more tasks until the per-track
+   queue ages everything out.
+
+5. **No "lagging consumer" detection / RESET / STOP_SENDING.**
+   The relay never proactively gives up on a subscriber that's
+   falling behind. So from the subscriber's POV the subscription
+   stays "active", `peerInitiatedUni` is frozen, and the connection
+   stays alive — exactly the symptom we observed.
+
+That's three specific architectural gaps any of which on its own
+would cause the symptom. The `framesPerGroup = 5` mitigation works
+because it cuts the upstream-publisher rate to ~10 streams/sec —
+slow enough that even a temporarily-stalled subscriber's queue
+drains before any of (1)/(2)/(3) accumulate beyond recovery. It
+doesn't fix the underlying gaps.
+
+Suggested upstream issue text to file at `kixelated/moq` is
+captured in the commit message of `85691cce` and can be expanded
+with the specific file:line cites above.
+
 **Original root cause: FIXED.** Our `:quic` client never emitted
 `MAX_STREAMS_*` frames to extend the peer-initiated stream-id cap.
 [QuicConnectionConfig.initialMaxStreamsUni] (default `100`) was the
