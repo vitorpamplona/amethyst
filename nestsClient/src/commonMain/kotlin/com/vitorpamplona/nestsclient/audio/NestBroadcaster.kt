@@ -82,6 +82,11 @@ class NestBroadcaster(
         }
         job =
             scope.launch {
+                // Consecutive publisher.send error count — see the
+                // moq-lite broadcaster's identical guard for rationale:
+                // a permanently-dead transport spins the mic + encoder
+                // forever without a threshold.
+                var consecutiveSendErrors = 0
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
@@ -102,9 +107,13 @@ class NestBroadcaster(
                             }
                         if (opus.isEmpty()) continue
                         if (muted) continue
-                        runCatching { publisher.send(opus) }
-                            .onFailure { t ->
+                        val sendOutcome = runCatching { publisher.send(opus) }
+                        sendOutcome
+                            .onSuccess {
+                                consecutiveSendErrors = 0
+                            }.onFailure { t ->
                                 if (t is CancellationException) throw t
+                                consecutiveSendErrors += 1
                                 // Network drop on send is recoverable — log via onError but
                                 // don't stop the loop; the next frame may go through.
                                 onError(
@@ -114,6 +123,17 @@ class NestBroadcaster(
                                         t,
                                     ),
                                 )
+                                if (consecutiveSendErrors >= MAX_CONSECUTIVE_SEND_ERRORS) {
+                                    onError(
+                                        AudioException(
+                                            AudioException.Kind.PlaybackFailed,
+                                            "broadcast pipeline gave up after " +
+                                                "$consecutiveSendErrors consecutive send failures",
+                                            t,
+                                        ),
+                                    )
+                                    return@launch
+                                }
                             }
                     }
                 } catch (ce: CancellationException) {
@@ -159,5 +179,10 @@ class NestBroadcaster(
         runCatching { capture.stop() }
         runCatching { encoder.release() }
         runCatching { publisher.close() }
+    }
+
+    companion object {
+        /** See [NestMoqLiteBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS]. */
+        const val MAX_CONSECUTIVE_SEND_ERRORS: Int = 250
     }
 }

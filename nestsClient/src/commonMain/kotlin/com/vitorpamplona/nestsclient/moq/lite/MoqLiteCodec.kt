@@ -153,9 +153,16 @@ object MoqLiteCodec {
         typeCode: Long,
         body: MoqWriter,
     ): ByteArray {
-        val out = MoqWriter()
+        // Inline the size-prefix wrap so we don't allocate body→ByteArray
+        // and a separate wrapper buffer just to copy them into `out`. The
+        // earlier shape (`out.writeBytes(wrapSizePrefixed(body))`) made
+        // three ByteArrays per response — varintless small frames don't
+        // matter, but this is on the publisher's reply path and the
+        // pattern is cheap to fix.
+        val payload = body.toByteArray()
+        val out = MoqWriter(payload.size + 16)
         out.writeVarint(typeCode)
-        out.writeBytes(wrapSizePrefixed(body))
+        out.writeLengthPrefixedBytes(payload)
         return out.toByteArray()
     }
 
