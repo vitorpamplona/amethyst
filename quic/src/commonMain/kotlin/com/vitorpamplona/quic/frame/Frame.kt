@@ -242,6 +242,27 @@ class MaxStreamsFrame(
     }
 }
 
+/**
+ * RFC 9000 §19.14. Sent by an endpoint that wants to open a stream of the
+ * given direction but has exhausted its peer-granted cap. Carries the
+ * highest stream id the sender currently believes it is allowed to open
+ * (i.e. the count it received in the last MAX_STREAMS frame for that
+ * direction).
+ *
+ * Required for proper flow-control bookkeeping — without it, the peer
+ * has no signal that we're starved and may delay extending credit. The
+ * frame itself is informational; it doesn't mutate the cap.
+ */
+class StreamsBlockedFrame(
+    val bidi: Boolean,
+    val streamLimit: Long,
+) : Frame() {
+    override fun encode(out: QuicWriter) {
+        out.writeByte(if (bidi) FrameType.STREAMS_BLOCKED_BIDI.toInt() else FrameType.STREAMS_BLOCKED_UNI.toInt())
+        out.writeVarint(streamLimit)
+    }
+}
+
 class DatagramFrame(
     val data: ByteArray,
     val explicitLength: Boolean = true,
@@ -391,8 +412,12 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                 r.readVarint()
             }
 
-            type == FrameType.STREAMS_BLOCKED_BIDI || type == FrameType.STREAMS_BLOCKED_UNI -> {
-                r.readVarint()
+            type == FrameType.STREAMS_BLOCKED_BIDI -> {
+                out += StreamsBlockedFrame(bidi = true, streamLimit = r.readVarint())
+            }
+
+            type == FrameType.STREAMS_BLOCKED_UNI -> {
+                out += StreamsBlockedFrame(bidi = false, streamLimit = r.readVarint())
             }
 
             type == FrameType.NEW_CONNECTION_ID -> {

@@ -35,6 +35,7 @@ import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
+import com.vitorpamplona.quic.frame.StreamsBlockedFrame
 import com.vitorpamplona.quic.frame.decodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
@@ -286,15 +287,30 @@ private fun dispatchFrames(
                 // RFC 9000 §19.11: MAX_STREAMS only ever raises the cap.
                 // Frames with values smaller than the current cap are ignored.
                 // Bidi vs uni is signaled via the frame's `bidi` flag.
+                var raised = false
                 if (frame.bidi) {
                     if (frame.maxStreams > conn.peerMaxStreamsBidi) {
                         conn.peerMaxStreamsBidi = frame.maxStreams
+                        raised = true
                     }
                 } else {
                     if (frame.maxStreams > conn.peerMaxStreamsUni) {
                         conn.peerMaxStreamsUni = frame.maxStreams
+                        raised = true
                     }
                 }
+                // Wake any [openBidiStream] / [openUniStream] callers blocked
+                // on the previous cap so they re-evaluate. Caller (read loop)
+                // already holds [conn.lock], so the notifier swap is safe.
+                if (raised) conn.signalStreamCapLocked()
+            }
+
+            is StreamsBlockedFrame -> {
+                // We don't currently advertise dynamic stream caps to the
+                // peer beyond the initial transport parameters, so the
+                // peer's STREAMS_BLOCKED is informational only. The frame
+                // is ack-eliciting per RFC 9000 §13.2.1.
+                ackEliciting = true
             }
 
             is ResetStreamFrame -> {

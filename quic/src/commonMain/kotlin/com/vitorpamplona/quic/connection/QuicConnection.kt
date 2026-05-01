@@ -193,6 +193,58 @@ class QuicConnection(
      */
     private val closedSignal = Channel<Unit>(Channel.CONFLATED)
 
+    /**
+     * Notifier completed every time the peer extends our stream cap (either
+     * direction) via a MAX_STREAMS frame, OR when the connection closes.
+     * Suspended [openBidiStream] / [openUniStream] callers await the current
+     * notifier; once it fires, they re-acquire the lock and re-check whether
+     * they have credit. The notifier is replaced after each fire so a fresh
+     * await reads the next cycle.
+     *
+     * Only mutated under [lock]. Reading the reference is safe without the
+     * lock IF the caller subsequently takes the lock and re-checks the cap —
+     * the read might be stale, the await might be stale, but the loop
+     * guarantees forward progress because the parser also signals after each
+     * cap raise.
+     */
+    private var streamCapNotifier: kotlinx.coroutines.CompletableDeferred<Unit> =
+        kotlinx.coroutines.CompletableDeferred()
+
+    /**
+     * Stream-limit values we owe the peer in STREAMS_BLOCKED frames. Set
+     * when [openBidiStream] / [openUniStream] discover the cap is exhausted.
+     * Cleared by [QuicConnectionWriter] after the frame is emitted. Per RFC
+     * 9000 §19.14 we should send STREAMS_BLOCKED at most once per cap value
+     * — null means "nothing to send". Reset to a new value if the cap
+     * advances and we hit it again later.
+     */
+    internal var pendingStreamsBlockedBidi: Long? = null
+    internal var pendingStreamsBlockedUni: Long? = null
+
+    /**
+     * Hook invoked when the connection wants to nudge the writer (e.g. a
+     * suspended opener queued STREAMS_BLOCKED and needs the writer to
+     * flush). Wired by [QuicConnectionDriver.start] and reset on close.
+     * Null while the driver is not running (in-process tests etc) — the
+     * connection still works, just without an external send loop.
+     */
+    @Volatile
+    internal var sendWakeupHook: (() -> Unit)? = null
+
+    /**
+     * Wake any suspended [openBidiStream] / [openUniStream] callers. Called
+     * by the parser after each MAX_STREAMS frame raises a cap, and by the
+     * close path so blocked openers can throw [QuicConnectionClosedException]
+     * instead of suspending forever.
+     *
+     * Caller must hold [lock] (the notifier ref is mutated here).
+     */
+    internal fun signalStreamCapLocked() {
+        val old = streamCapNotifier
+        streamCapNotifier = kotlinx.coroutines.CompletableDeferred()
+        old.complete(Unit)
+    }
+
     private val tlsListener =
         object : TlsSecretsListener {
             override fun onHandshakeKeysReady(
@@ -338,47 +390,98 @@ class QuicConnection(
     val lock: Mutex = Mutex()
 
     /**
-     * Allocate a new client-initiated bidirectional stream. Locked.
+     * Allocate a new client-initiated bidirectional stream.
      *
-     * Throws [QuicStreamLimitException] if the peer has not granted enough
-     * bidirectional stream credit yet. Use [peerMaxStreamsBidiSnapshot] to
-     * check capacity proactively if the caller wants to back-pressure rather
-     * than throw.
+     * If the peer has not granted enough bidi stream credit yet, this
+     * method **suspends** (not throws) until either:
+     *   - an inbound MAX_STREAMS frame raises the cap (RFC 9000 §19.11),
+     *     or
+     *   - the connection closes — in which case
+     *     [QuicConnectionClosedException] is thrown.
+     *
+     * Before suspending, queues a STREAMS_BLOCKED_BIDI frame (RFC 9000
+     * §19.14) so the peer knows we want more credit. Without this, a
+     * conservative peer that only extends MAX_STREAMS in response to
+     * STREAMS_BLOCKED would never grant new credit, deadlocking the
+     * client.
      */
-    suspend fun openBidiStream(): QuicStream =
-        lock.withLock {
-            if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
-                throw QuicStreamLimitException(
-                    "peer-granted bidi stream cap reached " +
-                        "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
-                )
-            }
-            val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
-            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
-            stream.receiveLimit = config.initialMaxStreamDataBidiLocal
-            streams[id] = stream
-            streamsList += stream
-            stream
-        }
+    suspend fun openBidiStream(): QuicStream = openClientStream(uni = false)
 
-    /** Allocate a new client-initiated unidirectional (write-only) stream. Locked. */
-    suspend fun openUniStream(): QuicStream =
-        lock.withLock {
-            if (nextLocalUniIndex >= peerMaxStreamsUni) {
-                throw QuicStreamLimitException(
-                    "peer-granted uni stream cap reached " +
-                        "(used=$nextLocalUniIndex limit=$peerMaxStreamsUni)",
-                )
+    /**
+     * Allocate a new client-initiated unidirectional (write-only) stream.
+     * Suspends if the peer has exhausted our uni stream cap; see
+     * [openBidiStream] for the semantics.
+     */
+    suspend fun openUniStream(): QuicStream = openClientStream(uni = true)
+
+    /**
+     * Shared body for [openBidiStream] / [openUniStream]. The two paths
+     * are byte-for-byte symmetric except for the StreamId kind, the per-
+     * direction caps + indices, the per-direction `sendCredit` source,
+     * and the receive limit (uni-out streams cannot receive).
+     *
+     * Re-acquires the lock on every retry — required to read the current
+     * `peerMaxStreams*` (mutated by the parser under the lock) and to
+     * mutate `nextLocal*Index` atomically with the streams map.
+     */
+    private suspend fun openClientStream(uni: Boolean): QuicStream {
+        while (true) {
+            // Capture under lock: either we have credit and allocate, or
+            // we record our blocked-at limit and grab a notifier ref to
+            // await *outside* the lock (otherwise the parser couldn't
+            // acquire the lock to raise the cap, deadlocking).
+            val notifier: kotlinx.coroutines.CompletableDeferred<Unit>
+            lock.withLock {
+                if (status == Status.CLOSED) {
+                    throw QuicConnectionClosedException(
+                        "connection closed before stream could be allocated",
+                    )
+                }
+                val nextIndex = if (uni) nextLocalUniIndex else nextLocalBidiIndex
+                val cap = if (uni) peerMaxStreamsUni else peerMaxStreamsBidi
+                if (nextIndex < cap) {
+                    val id =
+                        StreamId.build(
+                            if (uni) StreamId.Kind.CLIENT_UNI else StreamId.Kind.CLIENT_BIDI,
+                            nextIndex,
+                        )
+                    if (uni) nextLocalUniIndex++ else nextLocalBidiIndex++
+                    val stream =
+                        QuicStream(
+                            id,
+                            if (uni) QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE else QuicStream.Direction.BIDIRECTIONAL,
+                        )
+                    stream.sendCredit =
+                        if (uni) {
+                            peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
+                        } else {
+                            peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
+                        }
+                    stream.receiveLimit = if (uni) 0L else config.initialMaxStreamDataBidiLocal
+                    streams[id] = stream
+                    streamsList += stream
+                    return stream
+                }
+                // Out of credit. Queue a STREAMS_BLOCKED frame at the
+                // current cap (per RFC 9000 §19.14, "stream limit" =
+                // count from MAX_STREAMS) so the peer knows we want more.
+                // Replace any earlier pending entry — we only ever owe
+                // the peer one STREAMS_BLOCKED per cap value.
+                if (uni) {
+                    pendingStreamsBlockedUni = cap
+                } else {
+                    pendingStreamsBlockedBidi = cap
+                }
+                notifier = streamCapNotifier
             }
-            val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE)
-            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
-            stream.receiveLimit = 0L // can't receive
-            streams[id] = stream
-            streamsList += stream
-            stream
+            // Nudge the writer so STREAMS_BLOCKED actually leaves the
+            // host. Without this, a quiescent connection (no other
+            // writes pending) would hold the frame in the writer's
+            // queue until the next unrelated wakeup.
+            sendWakeupHook?.invoke()
+            notifier.await()
         }
+    }
 
     /** Snapshot of peer-granted bidi cap. Reads do not need the lock — long writes are atomic on every supported platform. */
     fun peerMaxStreamsBidiSnapshot(): Long = peerMaxStreamsBidi
@@ -485,6 +588,11 @@ class QuicConnection(
         closedSignal.close()
         peerStreamSignal.close()
         incomingDatagramSignal.close()
+        // Wake any openBidiStream / openUniStream callers blocked on the
+        // stream-cap notifier so they re-acquire the lock, observe
+        // status == CLOSED, and throw QuicConnectionClosedException
+        // instead of hanging forever.
+        if (!streamCapNotifier.isCompleted) streamCapNotifier.complete(Unit)
     }
 
     /**
