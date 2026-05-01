@@ -74,18 +74,17 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * Layout: `[ start cluster ] · · · [ end cluster ]` with an optional
  * red status strip above for connection / broadcast / mute failures.
  *
- * Start cluster — driven by connection × broadcast × on-stage state:
+ * Start cluster — driven by connection state only:
  *
- * | State                                       | Start cluster contents                  |
- * |---------------------------------------------|-----------------------------------------|
- * | Idle / Closed / Failed connection           | `[Connect]`                             |
- * | Connecting / Reconnecting                   | status chip                             |
- * | Connected, audience                         | empty (system volume keys are enough)   |
- * | Connected, on stage, !canBroadcast          | `[Leave the Stage]`                     |
- * | Connected, on stage, mic idle               | `[Talk] [Leave the Stage]` (+ pill)     |
- * | Connected, on stage, going live             | status chip + `[Leave the Stage]`       |
- * | Connected, on stage, broadcasting           | `[MicMute] [Leave the Stage]`           |
- * | Connected, on stage, broadcast failed       | `[Retry] [Leave the Stage]`             |
+ * | State                              | Start cluster contents |
+ * |------------------------------------|------------------------|
+ * | Idle / Closed / Failed connection  | `[Connect]`            |
+ * | Connecting                         | status chip            |
+ * | Reconnecting                       | status chip            |
+ * | Connected                          | empty                  |
+ *
+ * On-stage controls (Talk / MicMute / Leave the Stage) live in
+ * [StageControlsBar], attached to the bottom of the Stage card.
  *
  * End cluster: hand-raise (audience + connected only), react, leave room.
  */
@@ -94,8 +93,6 @@ internal fun NestActionBar(
     viewModel: NestViewModel,
     ui: NestUiState,
     isOnStage: Boolean,
-    canBroadcast: Boolean,
-    speakerPubkeyHex: String,
     handRaised: Boolean,
     onHandRaisedChange: (Boolean) -> Unit,
     onShowReactionPicker: () -> Unit,
@@ -116,13 +113,7 @@ internal fun NestActionBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Box(modifier = Modifier.weight(1f, fill = true)) {
-                    StartCluster(
-                        viewModel = viewModel,
-                        ui = ui,
-                        isOnStage = isOnStage,
-                        canBroadcast = canBroadcast,
-                        speakerPubkeyHex = speakerPubkeyHex,
-                    )
+                    StartCluster(viewModel = viewModel, ui = ui)
                 }
                 EndCluster(
                     isOnStage = isOnStage,
@@ -133,6 +124,49 @@ internal fun NestActionBar(
                     onLeave = onLeave,
                 )
             }
+        }
+    }
+}
+
+/**
+ * Controls strip that attaches under the Stage card. Contains
+ * everything a speaker needs while on stage: Talk / MicMute / Retry +
+ * Leave the Stage. Renders nothing when the local user isn't on stage.
+ *
+ * Visibility is gated on [isOnStage] alone — a stable signal driven
+ * by the kind-30312 role + presence `onstage` flag — so connection
+ * blips, broadcast state churn, mute toggles, and permission flows
+ * never make the bar appear or disappear. It only shows up on a real
+ * promote, and only goes away on a real demote (or the user tapping
+ * Leave the Stage).
+ */
+@Composable
+internal fun StageControlsBar(
+    viewModel: NestViewModel,
+    ui: NestUiState,
+    isOnStage: Boolean,
+    canBroadcast: Boolean,
+    speakerPubkeyHex: String,
+    modifier: Modifier = Modifier,
+) {
+    if (!isOnStage) return
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (canBroadcast) {
+            OnStageControls(
+                viewModel = viewModel,
+                broadcast = ui.broadcast,
+                speakerPubkeyHex = speakerPubkeyHex,
+            )
+        } else {
+            // No signing/permission — only thing we can do is step down.
+            LeaveStageButton(onClick = { viewModel.setOnStage(false) })
         }
     }
 }
@@ -166,9 +200,6 @@ private fun NestUiState.statusStripText(): String? {
 private fun StartCluster(
     viewModel: NestViewModel,
     ui: NestUiState,
-    isOnStage: Boolean,
-    canBroadcast: Boolean,
-    speakerPubkeyHex: String,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -190,26 +221,10 @@ private fun StartCluster(
                 StatusChip(label = stringRes(R.string.nest_reconnecting))
             }
 
+            // On-stage controls live in [StageControlsBar]; audience
+            // has nothing to do here (system volume keys are enough).
             is ConnectionUiState.Connected -> {
-                when {
-                    canBroadcast && isOnStage -> {
-                        OnStageControls(
-                            viewModel = viewModel,
-                            broadcast = ui.broadcast,
-                            speakerPubkeyHex = speakerPubkeyHex,
-                        )
-                    }
-
-                    // On stage but no signing/permission — only thing we can do is step down.
-                    isOnStage -> {
-                        LeaveStageButton(onClick = { viewModel.setOnStage(false) })
-                    }
-
-                    // Audience: nothing here. Phone volume keys cover local volume.
-                    else -> {
-                        Unit
-                    }
-                }
+                Unit
             }
         }
     }
