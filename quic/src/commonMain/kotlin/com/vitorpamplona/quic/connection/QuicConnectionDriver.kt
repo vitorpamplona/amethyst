@@ -73,11 +73,6 @@ class QuicConnectionDriver(
 
     fun start() {
         connection.start()
-        // Wire the connection's sendWakeupHook so internal events
-        // (a suspended openUniStream queueing STREAMS_BLOCKED, the close
-        // path completing handshakeDoneSignal, etc) can nudge the send
-        // loop without callers having to know about the driver.
-        connection.sendWakeupHook = { sendWakeup.trySend(Unit) }
         readJob = scope.launch { readLoop() }
         sendJob = scope.launch { sendLoop() }
         // Initial nudge so the ClientHello goes out immediately.

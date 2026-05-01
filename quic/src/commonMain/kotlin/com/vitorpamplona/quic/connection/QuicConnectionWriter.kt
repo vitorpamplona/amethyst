@@ -27,7 +27,6 @@ import com.vitorpamplona.quic.frame.Frame
 import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.StreamFrame
-import com.vitorpamplona.quic.frame.StreamsBlockedFrame
 import com.vitorpamplona.quic.frame.encodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderPlaintextPacket
@@ -250,19 +249,6 @@ private fun buildApplicationPacket(
     // beyond half the previously-advertised limit. Emits MAX_STREAM_DATA per
     // stream and MAX_DATA at the connection level.
     appendFlowControlUpdates(conn, frames)
-
-    // RFC 9000 §19.14: tell the peer we're starving for stream IDs.
-    // Drained on each emission so we send at most one STREAMS_BLOCKED per
-    // cap value per direction (re-set by [openClientStream] only if we
-    // hit the cap again with a higher value).
-    conn.pendingStreamsBlockedBidi?.let { limit ->
-        frames += StreamsBlockedFrame(bidi = true, streamLimit = limit)
-        conn.pendingStreamsBlockedBidi = null
-    }
-    conn.pendingStreamsBlockedUni?.let { limit ->
-        frames += StreamsBlockedFrame(bidi = false, streamLimit = limit)
-        conn.pendingStreamsBlockedUni = null
-    }
 
     // Pending datagrams
     while (conn.pendingDatagramsLocked().isNotEmpty()) {
