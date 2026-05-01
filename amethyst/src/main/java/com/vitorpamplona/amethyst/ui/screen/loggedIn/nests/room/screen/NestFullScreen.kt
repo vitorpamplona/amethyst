@@ -394,6 +394,15 @@ internal fun NestFullScreen(
                 TextButton(
                     onClick = {
                         showHostLeaveConfirm = false
+                        // Tear down the speaker session + listener before
+                        // finishing so the AudioRecord (and the system mic
+                        // indicator) releases promptly. Same reasoning as
+                        // the Close the Room path — onCleared() runs late
+                        // in the destroy lifecycle and can leave the mic
+                        // held while the activity is queued for destruction.
+                        // Unlike Close the Room, this path leaves the
+                        // kind-30312 meeting space open for other users.
+                        viewModel.leave()
                         onLeave()
                     },
                 ) {

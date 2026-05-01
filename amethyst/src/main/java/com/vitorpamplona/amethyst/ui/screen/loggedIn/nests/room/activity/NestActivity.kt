@@ -83,11 +83,30 @@ class NestActivity : AppCompatActivity() {
                     }
 
                     ACTION_PIP_LEAVE -> {
+                        // Tear down the speaker session + listener BEFORE
+                        // finish() so AudioRecord (and the system mic
+                        // indicator) releases promptly. onCleared() alone
+                        // runs late in the destroy lifecycle.
+                        pipCleanupAction?.invoke()
                         finish()
                     }
                 }
             }
         }
+
+    /**
+     * Wired by [NestActivityBody] via a DisposableEffect. Invokes
+     * `viewModel.leave()` so the broadcast handle + listener close
+     * route through `cleanupScope`/GlobalScope and survive Activity
+     * destruction. Called from PIP close paths (the overlay's Leave
+     * action and a swipe-dismiss while in PIP).
+     */
+    @Volatile
+    private var pipCleanupAction: (() -> Unit)? = null
+
+    fun setPipCleanupAction(action: (() -> Unit)?) {
+        pipCleanupAction = action
+    }
 
     private val _toggleMuteSignal =
         MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -178,6 +197,22 @@ class NestActivity : AppCompatActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         enterPip()
+    }
+
+    /**
+     * Detects a PIP swipe-dismiss. When the user dismisses the floating
+     * window the system finishes the activity, so [isFinishing] is true
+     * by the time onStop runs. Tearing down here (rather than waiting
+     * for onCleared) keeps AudioRecord + the system mic indicator from
+     * lingering through the destruction queue. Non-PIP onStop (Home /
+     * Recents while not in PIP) is a no-op so backgrounding doesn't
+     * teardown.
+     */
+    override fun onStop() {
+        if (isInPipMode.value && isFinishing) {
+            pipCleanupAction?.invoke()
+        }
+        super.onStop()
     }
 
     /**
