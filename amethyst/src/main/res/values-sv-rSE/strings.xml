@@ -490,6 +490,7 @@
     <string name="nest_mic_unmute">Slå på mikrofon</string>
     <string name="nest_broadcast_connecting">Går live…</string>
     <string name="nest_broadcast_failed">Sändning misslyckades: %1$s</string>
+    <string name="nest_mute_failed">Tystning misslyckades: %1$s</string>
     <string name="nest_record_permission_required">Mikrofonåtkomst krävs för att tala i det här rummet.</string>
     <string name="nest_open_settings">Öppna inställningar</string>
     <string name="nest_notification_channel_description">Håller ljudet igång medan rummet är öppet.</string>
@@ -498,6 +499,10 @@
     <string name="nest_notification_stop">Stoppa</string>
     <string name="nest_join">Gå med i nest</string>
     <string name="nest_lobby_host_label">Värd</string>
+    <string name="nest_lobby_open_action">Öppna</string>
+    <string name="nest_lobby_recent_chat">Senaste chatt</string>
+    <string name="nest_lobby_no_listeners">Ingen är i rummet just nu.</string>
+    <string name="nest_lobby_listeners_count">%1$d lyssnar</string>
     <string name="nest_role_host">Värd</string>
     <string name="nest_state_muted">Mikrofon avstängd</string>
     <string name="nest_state_speaking">Talar nu</string>
@@ -1299,6 +1304,10 @@
     <string name="error_unable_to_fetch_invoice">Kunde inte hämta fakturan från mottagarens servrar</string>
     <string name="wallet_connect_pay_invoice_error_error">Din Wallet Connect-leverantör returnerade följande fel: %1$s</string>
     <string name="could_not_connect_to_tor">Kunde inte ansluta till Tor</string>
+    <string name="tor_connection_failed_title">Tor ansluter inte</string>
+    <string name="tor_connection_failed_body">Amethyst kunde inte slutföra uppstart av Tor. Vill du använda en vanlig (icke-Tor) anslutning så att flödet kan laddas? Vi kommer ihåg ditt val under nästa timme och försöker sedan Tor igen.</string>
+    <string name="tor_continue_without_for_session">Använd vanlig anslutning</string>
+    <string name="tor_keep_waiting">Fortsätt vänta</string>
     <string name="unable_to_download_relay_document">Kunde inte ladda ner relädokument</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Kunde inte montera LNUrl från Lightning Address \"%1$s\". Kontrollera användarens konfiguration</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Mottagarens Lightning-tjänst på %1$s är inte tillgänglig. Den beräknades från Lightning Address \"%2$s\". Fel: %3$s. Kontrollera om servern är uppe och om Lightning Addressen är korrekt</string>
@@ -1504,6 +1513,9 @@
     <string name="bottom_bar_settings_description">Dra för att ändra ordning. Växla för att lägga till eller ta bort ett objekt från nedre fältet. Med noll objekt döljs det nedre fältet.</string>
     <string name="bottom_bar_settings_available">Tillgängliga</string>
     <string name="bottom_bar_settings_reorder">Ändra ordning</string>
+    <string name="home_tabs_settings">Hemflikar</string>
+    <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
+    <string name="home_tab_everything">Allt</string>
     <string name="reactions_settings">Reaktionsinställningar</string>
     <string name="reactions_settings_description">Konfigurera vilka reaktionsknappar som visas, deras ordning och om räknare ska visas.</string>
     <string name="reactions_settings_enabled">Aktiverad</string>
@@ -2369,18 +2381,4 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
-
-    <string name="home_tab_everything">Allt</string>
-    <string name="home_tabs_settings">Hemflikar</string>
-    <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
-    <string name="nest_lobby_listeners_count">%1$d lyssnar</string>
-    <string name="nest_lobby_no_listeners">Ingen är i rummet just nu.</string>
-    <string name="nest_lobby_open_action">Öppna</string>
-    <string name="nest_lobby_recent_chat">Senaste chatt</string>
-    <string name="nest_mute_failed">Tystning misslyckades: %1$s</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="tor_connection_failed_body">Amethyst kunde inte slutföra uppstart av Tor. Vill du använda en vanlig (icke-Tor) anslutning så att flödet kan laddas? Vi kommer ihåg ditt val under nästa timme och försöker sedan Tor igen.</string>
-    <string name="tor_connection_failed_title">Tor ansluter inte</string>
-    <string name="tor_continue_without_for_session">Använd vanlig anslutning</string>
-    <string name="tor_keep_waiting">Fortsätt vänta</string>
 </resources>
