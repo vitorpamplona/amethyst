@@ -1,11 +1,37 @@
 # QUIC stream cliff against nostrnests.com — investigation plan
 
-**Status: PARTIALLY FIXED.** Original 99-frame production cliff is
-gone (verified `sweep_frames_200` at `received=200/200 missing=[]`,
-plus baseline / cad / payload sweeps now 100/100). Residual loss
-appears in extreme scenarios (very long broadcasts, high payload
-sizes, mid-stream pauses, very fast bursts) — see "Residual loss
-after the MAX_STREAMS fix" section below.
+**Status: PRODUCTION-FIXED via two-layer fix.**
+
+  1. `:quic` now emits `MAX_STREAMS_UNI` extensions to widen the
+     listener's peer-initiated stream-id cap (commit `d391ae1d`).
+     Closes the original 99-frame cliff for short broadcasts.
+
+  2. `NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP = 5` packs five
+     Opus frames per moq-lite group, dropping client uni-stream
+     creation from 50/sec to 10/sec — comfortably under the
+     production nostrnests relay's sustained per-subscriber forward
+     ceiling of ~40 streams/sec. Closes the long-broadcast residual
+     where the relay's per-subscriber queue would overflow after 6–14
+     seconds of continuous push and silently terminate forwarding to
+     that subscriber.
+
+Listener-side flow-control snapshots in the round-2 sweep confirmed
+the residual was strictly relay-side: every uni stream the relay
+opened to the listener delivered cleanly to the application
+(`peerInitiatedUni == received + 1`, where `+1` is the WT control
+stream); `pendingBytes == 0`; cap headroom unused. The relay simply
+stopped opening new streams to the listener once its per-subscriber
+buffer overflowed. Reducing the stream-creation rate to 10/sec keeps
+the relay's queue from ever filling.
+
+Late-join latency cost: ≤ 100 ms initial audio gap (one group
+boundary) instead of ≤ 20 ms with `framesPerGroup = 1`. Imperceptible
+for live audio.
+
+The remaining open work is **upstream**: file an issue at
+`kixelated/moq` describing the per-subscriber forward queue
+limitation so future relay versions can either lift the ceiling or
+expose it as a config knob.
 
 **Original root cause: FIXED.** Our `:quic` client never emitted
 `MAX_STREAMS_*` frames to extend the peer-initiated stream-id cap.
