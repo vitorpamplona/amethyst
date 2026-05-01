@@ -386,6 +386,59 @@ class QuicConnection(
     /** Snapshot of peer-granted uni cap. */
     fun peerMaxStreamsUniSnapshot(): Long = peerMaxStreamsUni
 
+    /**
+     * Coherent point-in-time snapshot of the connection's flow-control
+     * accounting. Acquires [lock] internally so the fields are read
+     * atomically with respect to the read / send / parse paths.
+     *
+     * Diagnostic-only: meant for tests + dev tooling investigating
+     * the production "stream cliff" symptom where `publisher.send`
+     * keeps returning `true` past frame ~99 but no data reaches the
+     * listener. Surface area is the smallest set that lets a caller
+     * answer:
+     *
+     *   - what did the peer grant at handshake?
+     *   - has the peer extended the cap since? (delta = current - initial)
+     *   - have we hit the cap? (consumed vs credit)
+     *   - is data piling up unsent on any stream? (sum readableBytes
+     *     over local-initiated streams)
+     *
+     * See `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+     */
+    suspend fun flowControlSnapshot(): QuicFlowControlSnapshot =
+        lock.withLock {
+            val tp = peerTransportParameters
+            // Sum bytes the application has enqueued but the writer
+            // hasn't yet handed to a STREAM frame. A non-zero value
+            // after the pump is the smoking gun for "data stuck in
+            // local send buffer due to flow control".
+            var pending = 0L
+            var pendingStreamCount = 0
+            for (stream in streamsList) {
+                val pendingOnStream = stream.send.readableBytes.toLong()
+                if (pendingOnStream > 0) {
+                    pending += pendingOnStream
+                    pendingStreamCount += 1
+                }
+            }
+            QuicFlowControlSnapshot(
+                peerInitialMaxData = tp?.initialMaxData,
+                peerInitialMaxStreamDataUni = tp?.initialMaxStreamDataUni,
+                peerInitialMaxStreamDataBidiRemote = tp?.initialMaxStreamDataBidiRemote,
+                peerInitialMaxStreamsUni = tp?.initialMaxStreamsUni,
+                peerInitialMaxStreamsBidi = tp?.initialMaxStreamsBidi,
+                sendConnectionFlowCredit = sendConnectionFlowCredit,
+                sendConnectionFlowConsumed = sendConnectionFlowConsumed,
+                peerMaxStreamsUniCurrent = peerMaxStreamsUni,
+                peerMaxStreamsBidiCurrent = peerMaxStreamsBidi,
+                nextLocalUniIndex = nextLocalUniIndex,
+                nextLocalBidiIndex = nextLocalBidiIndex,
+                totalEnqueuedNotSentBytes = pending,
+                streamsWithPendingBytes = pendingStreamCount,
+                totalStreamsTracked = streamsList.size,
+            )
+        }
+
     suspend fun pollIncomingPeerStream(): QuicStream? = lock.withLock { newPeerStreams.removeFirstOrNull() }
 
     /**
@@ -595,3 +648,83 @@ class QuicConnectionClosedException(
 class QuicStreamLimitException(
     message: String,
 ) : RuntimeException(message)
+
+/**
+ * Diagnostic snapshot of [QuicConnection]'s flow-control accounting at
+ * a single moment. Returned by [QuicConnection.flowControlSnapshot].
+ *
+ * Reading rules of thumb for the production-cliff investigation
+ * (see `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`):
+ *
+ *   - **`sendConnectionFlowConsumed >= peerInitialMaxData`** with
+ *     `sendConnectionFlowCredit == peerInitialMaxData` ⇒ peer never
+ *     extended `MAX_DATA`; we wedged on connection-level send credit.
+ *   - **`sendConnectionFlowCredit > peerInitialMaxData`** ⇒ peer
+ *     DID extend; suspicion shifts to per-stream credit or downstream.
+ *   - **`totalEnqueuedNotSentBytes > 0` after a quiescent period** ⇒
+ *     application wrote bytes that the writer couldn't put on the
+ *     wire (per-stream or connection budget exhausted, or peer
+ *     stopped reading).
+ *   - **`nextLocalUniIndex >= peerMaxStreamsUniCurrent`** ⇒ at the
+ *     stream-id cap; would block in [openUniStream] (currently
+ *     throws [QuicStreamLimitException]).
+ */
+data class QuicFlowControlSnapshot(
+    /**
+     * Peer's `initial_max_data` transport parameter (RFC 9000 §18.2)
+     * — the connection-level send budget the peer initially granted.
+     * `null` means the peer's TPs hadn't been parsed yet at snapshot
+     * time (i.e. handshake hadn't completed).
+     */
+    val peerInitialMaxData: Long?,
+    /** Peer's `initial_max_stream_data_uni` transport parameter. */
+    val peerInitialMaxStreamDataUni: Long?,
+    /** Peer's `initial_max_stream_data_bidi_remote` transport parameter. */
+    val peerInitialMaxStreamDataBidiRemote: Long?,
+    /** Peer's `initial_max_streams_uni`. */
+    val peerInitialMaxStreamsUni: Long?,
+    /** Peer's `initial_max_streams_bidi`. */
+    val peerInitialMaxStreamsBidi: Long?,
+    /**
+     * Current connection-level send credit. Starts at
+     * [peerInitialMaxData] when the handshake completes; raised by
+     * inbound `MAX_DATA` frames (RFC 9000 §19.9).
+     */
+    val sendConnectionFlowCredit: Long,
+    /**
+     * Total stream-frame bytes we've already pushed past the writer
+     * against [sendConnectionFlowCredit]. When this catches up to
+     * the credit, the writer stops draining stream data until a
+     * fresh `MAX_DATA` arrives.
+     */
+    val sendConnectionFlowConsumed: Long,
+    /**
+     * Current peer-granted unidirectional stream concurrency cap.
+     * Starts at [peerInitialMaxStreamsUni]; raised by inbound
+     * `MAX_STREAMS_UNI` frames.
+     */
+    val peerMaxStreamsUniCurrent: Long,
+    /** Bidi counterpart of [peerMaxStreamsUniCurrent]. */
+    val peerMaxStreamsBidiCurrent: Long,
+    /**
+     * Number of client-initiated uni streams [openUniStream] has
+     * allocated locally. The next allocation would use this value
+     * as the index; if it equals or exceeds
+     * [peerMaxStreamsUniCurrent], the next [openUniStream] throws
+     * [QuicStreamLimitException].
+     */
+    val nextLocalUniIndex: Long,
+    /** Bidi counterpart of [nextLocalUniIndex]. */
+    val nextLocalBidiIndex: Long,
+    /**
+     * Sum of bytes enqueued to any stream's send buffer but NOT yet
+     * encoded into a STREAM frame. A non-trivial value after a
+     * quiescent period indicates flow control (per-stream or
+     * connection-level) is starving the writer.
+     */
+    val totalEnqueuedNotSentBytes: Long,
+    /** Number of streams contributing to [totalEnqueuedNotSentBytes]. */
+    val streamsWithPendingBytes: Int,
+    /** Number of streams currently tracked (alive + closed-but-retained). */
+    val totalStreamsTracked: Int,
+)

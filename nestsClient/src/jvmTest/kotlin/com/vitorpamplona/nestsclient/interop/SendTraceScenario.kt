@@ -177,6 +177,16 @@ data class ScenarioResult(
  *   - Tear down all of those after [run] returns.
  */
 object SendTraceScenario {
+    /**
+     * @param flowControlSnapshot optional supplier that returns the
+     *   speaker-side QUIC connection's flow-control state at the
+     *   moment of the call. When provided, the scenario captures and
+     *   logs three snapshots — before the pump, immediately after the
+     *   pump completes, and after the receive-grace window — so a
+     *   failure mode like "data piled up but conn-level credit ran
+     *   out" can be diagnosed from the test report alone. See
+     *   [com.vitorpamplona.quic.connection.QuicConnection.flowControlSnapshot].
+     */
     suspend fun run(
         scope: String,
         publisher: MoqLitePublisherHandle,
@@ -184,11 +194,25 @@ object SendTraceScenario {
         speakerPubkeyHex: String,
         scenario: Scenario,
         pumpScope: CoroutineScope,
+        flowControlSnapshot: (suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot)? = null,
     ): ScenarioResult {
         require(listeners.size == scenario.parallelSubscriptions) {
             "expected ${scenario.parallelSubscriptions} listener(s), got ${listeners.size}"
         }
         InteropDebug.checkpoint(scope, "scenario=$scenario speaker=${speakerPubkeyHex.take(8)}…")
+        flowControlSnapshot?.invoke()?.let { snap ->
+            InteropDebug.checkpoint(
+                scope,
+                "fc-pre: peerInitMaxData=${snap.peerInitialMaxData} " +
+                    "peerInitMaxStreamDataUni=${snap.peerInitialMaxStreamDataUni} " +
+                    "peerInitMaxStreamsUni=${snap.peerInitialMaxStreamsUni} " +
+                    "sendCredit=${snap.sendConnectionFlowCredit} consumed=${snap.sendConnectionFlowConsumed} " +
+                    "peerMaxStreamsUniNow=${snap.peerMaxStreamsUniCurrent} " +
+                    "nextLocalUniIdx=${snap.nextLocalUniIndex} " +
+                    "pendingBytes=${snap.totalEnqueuedNotSentBytes} " +
+                    "pendingStreams=${snap.streamsWithPendingBytes}/${snap.totalStreamsTracked}",
+            )
+        }
 
         val sendOutcomes = BooleanArray(scenario.frameCount)
         val sendDurationsMicros = LongArray(scenario.frameCount)
@@ -283,6 +307,18 @@ object SendTraceScenario {
                 "(target=${scenario.frameCount * scenario.cadenceMs}ms) " +
                 "sendTrue=${sendOutcomes.count { it }}/${scenario.frameCount}",
         )
+        flowControlSnapshot?.invoke()?.let { snap ->
+            InteropDebug.checkpoint(
+                scope,
+                "fc-post-pump: sendCredit=${snap.sendConnectionFlowCredit} " +
+                    "consumed=${snap.sendConnectionFlowConsumed} " +
+                    "(remaining=${snap.sendConnectionFlowCredit - snap.sendConnectionFlowConsumed}) " +
+                    "peerMaxStreamsUniNow=${snap.peerMaxStreamsUniCurrent} " +
+                    "nextLocalUniIdx=${snap.nextLocalUniIndex} " +
+                    "pendingBytes=${snap.totalEnqueuedNotSentBytes} " +
+                    "pendingStreams=${snap.streamsWithPendingBytes}/${snap.totalStreamsTracked}",
+            )
+        }
 
         // Wait for collectors. If they hit `take(N)` they exit naturally;
         // otherwise the per-collector withTimeoutOrNull cancels them.
@@ -291,6 +327,18 @@ object SendTraceScenario {
                 job.join()
             }
             if (job.isActive) job.cancelAndJoin()
+        }
+        flowControlSnapshot?.invoke()?.let { snap ->
+            InteropDebug.checkpoint(
+                scope,
+                "fc-post-grace: sendCredit=${snap.sendConnectionFlowCredit} " +
+                    "consumed=${snap.sendConnectionFlowConsumed} " +
+                    "(remaining=${snap.sendConnectionFlowCredit - snap.sendConnectionFlowConsumed}) " +
+                    "peerMaxStreamsUniNow=${snap.peerMaxStreamsUniCurrent} " +
+                    "nextLocalUniIdx=${snap.nextLocalUniIndex} " +
+                    "pendingBytes=${snap.totalEnqueuedNotSentBytes} " +
+                    "pendingStreams=${snap.streamsWithPendingBytes}/${snap.totalStreamsTracked}",
+            )
         }
 
         return ScenarioResult(

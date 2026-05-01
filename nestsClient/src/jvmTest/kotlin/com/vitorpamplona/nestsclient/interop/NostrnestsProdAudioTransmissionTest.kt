@@ -944,7 +944,7 @@ class NostrnestsProdAudioTransmissionTest {
         expectAllReceived: Boolean = false,
     ) = runBlocking {
         assumeProd()
-        withProdSpeakerAndListeners(scope, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope ->
+        withProdSpeakerAndListeners(scope, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope, flowControlSnapshot ->
             val result =
                 SendTraceScenario.run(
                     scope = scope,
@@ -953,6 +953,7 @@ class NostrnestsProdAudioTransmissionTest {
                     speakerPubkeyHex = hostPub,
                     scenario = scenario,
                     pumpScope = pumpScope,
+                    flowControlSnapshot = flowControlSnapshot,
                 )
             SendTraceScenario.reportAndAssert(scope, result, expectAllReceived)
         }
@@ -976,6 +977,7 @@ class NostrnestsProdAudioTransmissionTest {
             listeners: List<com.vitorpamplona.nestsclient.NestsListener>,
             speakerPubkeyHex: String,
             pumpScope: CoroutineScope,
+            flowControlSnapshot: suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot,
         ) -> Unit,
     ) {
         val hostSigner = NostrSignerInternal(KeyPair())
@@ -1030,7 +1032,19 @@ class NostrnestsProdAudioTransmissionTest {
                 listeners += listener
             }
 
-            block(publisher, listeners, hostSigner.pubKey, pumpScope)
+            // Diagnostics passthrough: cast the speaker WT to the
+            // concrete QUIC adapter so the scenario can read the
+            // underlying connection's flow-control snapshot. See
+            // `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+            val quicSpeakerWt =
+                speakerWt as com.vitorpamplona.nestsclient.transport.QuicWebTransportSession
+            block(
+                publisher,
+                listeners,
+                hostSigner.pubKey,
+                pumpScope,
+                { quicSpeakerWt.quicFlowControlSnapshot() },
+            )
         } finally {
             for (listener in listeners) {
                 runCatching { listener.close() }

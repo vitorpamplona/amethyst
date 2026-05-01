@@ -386,7 +386,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
     ) = runBlocking {
         NostrNestsHarness.assumeNestsInterop()
         val harness = harnessOrNull ?: return@runBlocking
-        withHarnessSpeakerAndListeners(scope, harness, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope ->
+        withHarnessSpeakerAndListeners(scope, harness, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope, flowControlSnapshot ->
             val result =
                 SendTraceScenario.run(
                     scope = scope,
@@ -395,6 +395,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
                     speakerPubkeyHex = hostPub,
                     scenario = scenario,
                     pumpScope = pumpScope,
+                    flowControlSnapshot = flowControlSnapshot,
                 )
             SendTraceScenario.reportAndAssert(scope, result, expectAllReceived)
         }
@@ -410,6 +411,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
             listeners: List<com.vitorpamplona.nestsclient.NestsListener>,
             speakerPubkeyHex: String,
             pumpScope: CoroutineScope,
+            flowControlSnapshot: suspend () -> com.vitorpamplona.quic.connection.QuicFlowControlSnapshot,
         ) -> Unit,
     ) {
         val hostSigner = NostrSignerInternal(KeyPair())
@@ -468,7 +470,17 @@ class NostrNestsSustainedSendOutcomesInteropTest {
                 InteropDebug.assertListenerReached(scope, "Connected", listener.state.value)
                 listeners += listener
             }
-            block(publisher, listeners, hostSigner.pubKey, pumpScope)
+            // Diagnostics passthrough mirrors withProdSpeakerAndListeners
+            // — see that helper's comment for rationale.
+            val quicSpeakerWt =
+                speakerWt as com.vitorpamplona.nestsclient.transport.QuicWebTransportSession
+            block(
+                publisher,
+                listeners,
+                hostSigner.pubKey,
+                pumpScope,
+                { quicSpeakerWt.quicFlowControlSnapshot() },
+            )
         } finally {
             for (listener in listeners) {
                 runCatching { listener.close() }

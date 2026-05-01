@@ -262,6 +262,17 @@ class QuicWebTransportSession(
 ) : WebTransportSession {
     override val isOpen: Boolean get() = state.isOpen
 
+    /**
+     * Diagnostic-only passthrough to
+     * [com.vitorpamplona.quic.connection.QuicConnection.flowControlSnapshot].
+     * Used by `SendTraceScenario` to dump the connection's
+     * flow-control accounting at known points (pre-pump, mid-pump,
+     * post-pump-grace) when investigating loss patterns. Not part of
+     * the [WebTransportSession] common interface — callers downcast
+     * explicitly when they need it.
+     */
+    suspend fun quicFlowControlSnapshot(): com.vitorpamplona.quic.connection.QuicFlowControlSnapshot = state.connection.flowControlSnapshot()
+
     override suspend fun openBidiStream(): WebTransportBidiStream {
         val s = state.openBidiStream()
         return QuicBidiStreamAdapter(s, state.driver)
