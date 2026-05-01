@@ -164,6 +164,19 @@ private fun NestLobbyContent(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
+    // Auto-stick to the newest message. With reverseLayout=true, item 0
+    // is the bottom of the viewport (newest). When a new message is
+    // prepended, LazyColumn preserves visual position by shifting
+    // firstVisibleItemIndex from 0 → 1, leaving the new message just
+    // below the viewport. If the user was at (or near) the bottom,
+    // scroll back to 0 so the new message becomes visible. If they're
+    // reading older history, leave them where they are.
+    LaunchedEffect(messages.firstOrNull()?.idHex) {
+        if (listState.firstVisibleItemIndex <= 1) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
