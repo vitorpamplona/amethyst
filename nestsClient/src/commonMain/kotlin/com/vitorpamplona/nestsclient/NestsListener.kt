@@ -48,10 +48,24 @@ interface NestsListener {
      * Opus stream under the namespace `["nests", <roomId>]` with the
      * speaker's pubkey hex as the track name.
      *
+     * @param maxLatencyMs subscriber-side group-staleness tolerance (milliseconds)
+     *   sent in the moq-lite SUBSCRIBE message. Per
+     *   `kixelated/moq/doc/concept/layer/moq-lite.md` "Congestion": when the
+     *   relay's per-track group queue can't drain fast enough, groups older
+     *   than `maxLatencyMs` are evicted in favour of newer ones. `0`
+     *   (default) means *unlimited* — the relay falls back to its own
+     *   `MAX_GROUP_AGE = 30 s` default. For low-latency live audio set this
+     *   to e.g. `500L` so the listener prefers fresh frames over stale
+     *   buffered ones during transient relay backpressure. Ignored on the
+     *   IETF MoQ-transport listener path (no equivalent field on that wire).
+     *
      * @throws MoqProtocolException if the publisher rejects the subscription.
      * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
      */
-    suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle
+    suspend fun subscribeSpeaker(
+        speakerPubkeyHex: String,
+        maxLatencyMs: Long = 0L,
+    ): SubscribeHandle
 
     /**
      * Subscribe to a speaker's `catalog.json` track — moq-lite's
@@ -198,10 +212,18 @@ class DefaultNestsListener internal constructor(
 ) : NestsListener {
     override val state: StateFlow<NestsListenerState> = mutableState.asStateFlow()
 
-    override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle {
+    override suspend fun subscribeSpeaker(
+        speakerPubkeyHex: String,
+        maxLatencyMs: Long,
+    ): SubscribeHandle {
         check(state.value is NestsListenerState.Connected) {
             "NestsListener.subscribeSpeaker requires Connected state, was ${state.value}"
         }
+        // IETF MoQ-transport-17 has no per-subscribe staleness tolerance
+        // field on the wire — `maxLatencyMs` is ignored on this path.
+        // Closest analogue would be the SUBSCRIBE filter, which is
+        // already pinned to LatestGroup so a slow listener wakes up at
+        // the freshest group rather than from history.
         return session.subscribe(
             namespace = roomNamespace,
             trackName = speakerPubkeyHex.encodeToByteArray(),

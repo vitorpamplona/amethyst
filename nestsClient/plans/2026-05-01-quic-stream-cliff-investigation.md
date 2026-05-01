@@ -1,19 +1,43 @@
 # QUIC stream cliff against nostrnests.com — investigation plan
 
-**Status: PRODUCTION-FIXED via two-layer fix.**
+**Status: PRODUCTION-FIXED via two-layer fix.** The investigation closed
+with one true bug fix in `:quic` and one tuning change in
+`NestMoqLiteBroadcaster`. A third layer — exposing moq-lite's
+`max_latency` knob to listener callers — is now wired through the
+public API so future tuning can happen at the call site without
+touching the listener internals.
 
-  1. `:quic` now emits `MAX_STREAMS_UNI` extensions to widen the
-     listener's peer-initiated stream-id cap (commit `d391ae1d`).
-     Closes the original 99-frame cliff for short broadcasts.
+  1. **Bug fix.** `:quic` now emits `MAX_STREAMS_UNI` extensions to
+     widen the listener's peer-initiated stream-id cap (commit
+     `d391ae1d`). Closes the original 99-frame cliff for short
+     broadcasts. Pre-fix, `:quic` only ever *parsed* inbound
+     `MaxStreamsFrame` — it never sent the outbound counterpart, so the
+     peer's stream-id cap stayed at our [QuicConnectionConfig.initialMaxStreamsUni]
+     default (`100`) for the lifetime of the connection. The relay
+     forwards each broadcast group as a fresh peer-initiated uni
+     stream, so any broadcast longer than 100 frames silently truncated
+     at the listener.
 
-  2. `NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP = 5` packs five
-     Opus frames per moq-lite group, dropping client uni-stream
-     creation from 50/sec to 10/sec — comfortably under the
+  2. **Cadence tuning.** `NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP = 5`
+     packs five Opus frames per moq-lite group, dropping client
+     uni-stream creation from 50/sec to 10/sec — comfortably under the
      production nostrnests relay's sustained per-subscriber forward
-     ceiling of ~40 streams/sec. Closes the long-broadcast residual
-     where the relay's per-subscriber queue would overflow after 6–14
-     seconds of continuous push and silently terminate forwarding to
-     that subscriber.
+     ceiling of ~40 streams/sec, which the moq-lite spec explicitly
+     leaves to relay implementations to size. Closes the long-broadcast
+     residual where the relay's per-subscriber queue would overflow
+     after 6–14 seconds of continuous push and silently terminate
+     forwarding to that subscriber.
+
+  3. **API knob.** [NestsListener.subscribeSpeaker] now takes a
+     `maxLatencyMs: Long = 0L` parameter, plumbed into the moq-lite
+     SUBSCRIBE frame's `max_latency` field. `0` (default) preserves
+     prior behavior — the relay falls back to its own `MAX_GROUP_AGE
+     = 30 s`. Low-latency live audio callers can set e.g. `500L` so
+     the listener prefers fresh frames over stale buffered ones during
+     transient relay backpressure. Per the moq-lite spec, the relay
+     aggregates `max_latency` across subscribers with `0` winning, so
+     a single legacy listener wedges everyone — but for a fully-tuned
+     deployment this is the on-wire knob the spec gives us.
 
 Listener-side flow-control snapshots in the round-2 sweep confirmed
 the residual was strictly relay-side: every uni stream the relay
@@ -24,328 +48,105 @@ stopped opening new streams to the listener once its per-subscriber
 buffer overflowed. Reducing the stream-creation rate to 10/sec keeps
 the relay's queue from ever filling.
 
-Late-join latency cost: ≤ 100 ms initial audio gap (one group
-boundary) instead of ≤ 20 ms with `framesPerGroup = 1`. Imperceptible
-for live audio.
+Late-join latency cost from `framesPerGroup = 5`: ≤ 100 ms initial
+audio gap (one group boundary) instead of ≤ 20 ms with `framesPerGroup
+= 1`. Imperceptible for live audio.
 
-The remaining open work is **upstream**: file an issue at
-`kixelated/moq` describing the per-subscriber forward queue
-limitation so future relay versions can either lift the ceiling or
-expose it as a config knob.
+## Decisions vs. bugs — the spec audit
 
-### Upstream confirmation (moq-rs 0.10.25 source audit)
+The earlier draft of this plan called the relay's behavior a stack of
+"upstream bugs". A spec audit (moq-transport-17, moq-lite Lite-03,
+RFC 9000) showed that's not accurate. The honest framing:
 
-I read the `kixelated/moq` Rust source at the version production
-nostrnests is running (`moq-relay 0.10.25-5063dbfe`). Three
-architectural issues compound to produce the observed silent
-stream-stop:
+- **Our `:quic` not emitting `MAX_STREAMS_UNI` was a real bug** —
+  RFC 9000 §4.6 / §19.11 require the receiver to extend the peer's
+  stream-id cap by sending `MAX_STREAMS` once existing streams have
+  been consumed. Not optional. Fixed in `d391ae1d`.
+
+- **The relay's per-subscriber forward queue policy is a deliberate
+  architectural decision in a spec gap, not a bug.** The moq-lite
+  Lite-03 spec's "Congestion" section explicitly says: *"MoQ puts
+  each subscriber in control"* via the per-subscribe `max_latency`
+  field. The relay is **expected** to keep streams flowing while
+  groups are within tolerance, and to evict groups (not subscribers)
+  when they age past tolerance. moq-rs's choices —
+  - unbounded per-track group queue with age-only eviction
+    (`MAX_GROUP_AGE = 30 s` default),
+  - `serve_group()` blocking on `open_uni().await` with no per-task
+    timeout,
+  - `FuturesUnordered` task pool for forward tasks (unbounded),
+  - no proactive lagging-consumer detection / RESET / STOP_SENDING
+  — are all spec-permitted (`MAY`-level) implementation choices. They
+  collectively *can* starve a subscriber whose downstream is
+  temporarily slow, but the spec puts the burden of fixing that on
+  the subscriber via `max_latency`, not on the relay. Calling these
+  "bugs" in the prior draft was incorrect.
+
+- **Our prior shipped behavior of `max_latency = 0` (= unlimited) on
+  every SUBSCRIBE was the missing piece.** With `0`, the relay was
+  doing exactly what the spec asks: hold groups for up to its
+  `MAX_GROUP_AGE` default, then evict. We never told it we cared about
+  freshness over completeness. The new `subscribeSpeaker(pubkey,
+  maxLatencyMs = …)` parameter lets a caller fix that — though the
+  defaults stay at `0` for back-compat with the JS reference watcher.
+
+- **Worth filing upstream:** an issue at `kixelated/moq` *suggesting*
+  (not asserting as a bug) that the relay expose its per-subscriber
+  queue depth as a config knob, and that `serve_group()` `open_uni()`
+  take a deadline derived from the active subscriber's smallest
+  `max_latency`. This is a feature request, not a defect report.
+
+## Source audit (moq-rs 0.10.25)
+
+Read against the version production nostrnests is running
+(`moq-relay 0.10.25-5063dbfe`):
 
 1. **Per-track group queue is unbounded.**
    `moq/rs/moq-lite/src/model/track.rs:69-90` —
    ```rust
    groups: VecDeque<Option<(GroupProducer, tokio::time::Instant)>>,
    ```
-   Inserts are unconditional (subscriber.rs:363-393); the only
-   eviction is age-based at `MAX_GROUP_AGE = 30 s`
-   (track.rs:29). So when a subscriber falls behind, groups pile
-   up indefinitely until they age out 30 s later.
+   Inserts are unconditional (subscriber.rs:363-393); only eviction
+   is age-based at `MAX_GROUP_AGE = 30 s` (track.rs:29). When a
+   subscriber falls behind, groups pile up indefinitely until they age
+   out 30 s later — which is what the spec wants if `max_latency = 0`.
 
 2. **`serve_group` blocks on `open_uni().await` with no timeout.**
-   `moq/rs/moq-lite/src/lite/publisher.rs:317-379` — the per-group
-   forward task does
+   `moq/rs/moq-lite/src/lite/publisher.rs:317-379` —
    ```rust
    let stream = session.open_uni().await.map_err(Error::from_transport)?;
    ```
-   If the subscriber's Quinn CWND has collapsed (because *our*
-   ACK rate slipped) or the subscriber's advertised
-   `MAX_STREAMS_UNI` is exhausted, this `await` blocks the task
-   forever. There's no `select!` against a deadline.
+   No `select!` against a deadline. If the subscriber's Quinn CWND
+   has collapsed or its advertised `MAX_STREAMS_UNI` is exhausted,
+   this `await` blocks the task indefinitely. Spec-permitted but
+   user-hostile under sustained load.
 
-3. **No bounded task pool feeding the awaits.**
+3. **Unbounded task pool feeding the awaits.**
    The publisher pushes blocked `serve_group` tasks into a
-   `FuturesUnordered` (publisher.rs:325, 346) which is itself
-   unbounded. The receive loop (line 334) keeps spawning more
-   serve tasks as upstream groups arrive. So we end up with N
-   blocked tasks all waiting on `open_uni`, and **no
-   backpressure path back to the publisher** to slow upstream
-   ingestion or drop.
+   `FuturesUnordered` (publisher.rs:325, 346). The receive loop (line
+   334) keeps spawning more serve tasks as upstream groups arrive.
+   No backpressure path back to the publisher to slow upstream
+   ingestion. Combined with (1)+(2), once any in-flight write blocks,
+   queued tasks pile up and the per-track queue ages everything out.
 
-4. **`max_concurrent_uni_streams = 10_000`** in
+4. **`max_concurrent_uni_streams = 10000`** in
    `moq/rs/moq-native/src/quinn.rs:30-33` (override of Quinn's
    default 1024). High enough that we never hit the connection's
    stream-id cap on our listener side at typical audio rates —
-   confirmed by our `peerMaxStreamsUniNow=10000` snapshots — so
-   the stall is *not* about Quinn's stream-concurrency limit per
-   se. It's the cascade in (1)+(2)+(3): once any in-flight
-   write blocks (CWND, per-stream credit, etc.), all the queued
-   `serve_group` tasks that follow also block, and the publisher
-   loop happily keeps adding more tasks until the per-track
-   queue ages everything out.
+   confirmed by our `peerMaxStreamsUniNow=10000` snapshots — so the
+   stall is *not* about Quinn's stream-concurrency limit.
 
-5. **No "lagging consumer" detection / RESET / STOP_SENDING.**
-   The relay never proactively gives up on a subscriber that's
-   falling behind. So from the subscriber's POV the subscription
-   stays "active", `peerInitiatedUni` is frozen, and the connection
-   stays alive — exactly the symptom we observed.
+5. **No proactive "lagging consumer" detection.** The relay never
+   gives up on a slow subscriber via RESET / STOP_SENDING. From the
+   subscriber's POV the subscription stays "active",
+   `peerInitiatedUni` is frozen, and the connection stays alive —
+   exactly the symptom we observed.
 
-That's three specific architectural gaps any of which on its own
-would cause the symptom. The `framesPerGroup = 5` mitigation works
-because it cuts the upstream-publisher rate to ~10 streams/sec —
-slow enough that even a temporarily-stalled subscriber's queue
-drains before any of (1)/(2)/(3) accumulate beyond recovery. It
-doesn't fix the underlying gaps.
-
-Suggested upstream issue text to file at `kixelated/moq` is
-captured in the commit message of `85691cce` and can be expanded
-with the specific file:line cites above.
-
-**Original root cause: FIXED.** Our `:quic` client never emitted
-`MAX_STREAMS_*` frames to extend the peer-initiated stream-id cap.
-[QuicConnectionConfig.initialMaxStreamsUni] (default `100`) was the
-*lifetime* maximum the peer could ever open. The relay forwards each
-broadcast group as a fresh peer-initiated uni stream, so any
-broadcast longer than 100 frames silently truncated at the listener.
-Fixed by tracking [QuicConnection.peerInitiatedUniCount] and emitting
-`MAX_STREAMS_UNI(newCap)` from [appendFlowControlUpdates] once the
-peer's usage crosses the half-window threshold — same pattern as the
-existing `MAX_DATA` / `MAX_STREAM_DATA` extension.
-
-Production validation: `sweep_frames_200` against `nostrnests.com`
-went from `received=99/200 missing=[99-199]` (pre-fix) to
-`received=200/200 missing=[]` (post-fix). The
-[NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP] mitigation has
-been reverted from `5` back to `1` so the broadcaster matches the
-JS reference's wire shape (one Opus frame per moq-lite group → ≤ 20 ms
-late-join initial gap).
-
-## Residual loss after the MAX_STREAMS fix
-
-A full prod sweep (all 27 scenarios, commit `c0269859`) showed:
-
-**Now perfect (100% received):** `baseline 100×20ms`, `frames200`,
-`frames50`, `1kb`, `4kb`, `cad10`, `cad40`, `cad80`, `cad200`,
-`2subs` (both subs), `slowconsumer`, `fpg5`, `fpg20`, `fpg-all`.
-14 of 27 scenarios.
-
-**Improved but still partial:**
-
-| Scenario | Pre-fix | Post-fix | Pattern |
-|---|---|---|---|
-| `frames400` | 99/400 | 368/400 | last 32 frames lost (tail) |
-| `30s` (1500 frames) | 99/1500 | 653/1500 | cliffed at frame 653 mid-pump |
-| `120s` (6000 frames) | 52/6000 | 61/6000 | cliffed at frame 61, t≈2 s |
-| `burst` cadence=0 | 65/100 | 96/100 | last 4 lost (tail) |
-| `16kb` 100×16 KB | 49/100 | 37/100 | regressed slightly |
-| `pause` 50+5 s+50 | 99/100 | 32/100 | regressed; pause kills it |
-| `cad5` 100×5 ms | 99/100 | 54/100 | regressed (faster burst) |
-| `3subs` sub[2] | varied | 77/100 | one sub lags |
-
-The cliff is no longer at "exactly 99 streams" — it's now timing/load-
-sensitive and varies between runs. The speaker side remains pristine
-(`fc-post-pump`: `consumed > 0`, `pendingBytes = 0`, `nextLocalUniIdx`
-matches frame count) — so the loss is on the relay→listener path.
-
-`fc-post-grace` is identical to `fc-post-pump` for these scenarios
-(no late delivery during grace), confirming the listener never
-recovers once it stalls.
-
-## Round 2 — chasing the residual
-
-After the original `MAX_STREAMS_UNI` fix, residual loss appeared in
-sustained / bursty scenarios. Three round-2 changes against
-likely contributors:
-
-### 2a. Test-side stdout serialisation (hypothesis 2)
-
-`SendTraceScenario.Scenario.verbosePerFrame` defaulted to `true`,
-which logged a per-frame `tx i=…` and `rx[idx] gid=…` line via
-`InteropDebug.checkpoint`. Under JUnit's stdout capture, that's a
-synchronous write per event. At 50 frames/sec sustained the
-capture thread can serialise the receive coroutine and starve the
-QUIC read loop, biasing the `received` count downward. **Default
-flipped to `false`**; specific tests opt in for debugging.
-
-### 2b. Test-side `CopyOnWriteArrayList` add cost
-
-The collector accumulated arrivals in a `CopyOnWriteArrayList`,
-which is O(N) per add — copying the entire underlying array on
-every `+=`. For 1500-frame runs that's ~1.1 M element copies and
-~35 MB of memory ops cumulative across the run. Replaced with
-`Collections.synchronizedList(ArrayList(capacityHint))` for O(1)
-amortized adds. Snapshot at end via
-`synchronized(sink) { ArrayList(sink) }`.
-
-### 2c. Listener-side kernel UDP receive buffer (hypothesis 1)
-
-`UdpSocket.connect` did not configure `SO_RCVBUF`, so the kernel's
-default applied (~200 KB on Linux/macOS, similarly small on
-Android). At MTU-sized datagrams that's room for ~130 packets. A
-multi-second moq-lite broadcast that the relay fans out across
-multiple subscribers can transiently exceed this — anything
-queued past `rmem` is silently dropped by the kernel and never
-reaches our QUIC stack, manifesting as "subscription stops
-mid-broadcast even though `publisher.send` keeps returning true".
-Bumped to 4 MiB at socket-bind time (Linux doubles + clamps via
-`rmem_max`, so the effective cap is whatever the kernel allows up
-to `min(8 MiB, rmem_max)`).
-
-Added lifetime UDP datagram counters (`receivedDatagramCount`,
-`receivedByteCount`, `receiveBufferSizeBytes`) to the `UdpSocket`
-expect surface; the driver wires them into the existing
-`QuicConnection.flowControlSnapshot` via a `udpStatsSupplier` hook.
-The `fc-pre / fc-post-pump / fc-post-grace` lines now include
-`udpDatagrams=…  udpBytes=…  udpRcvBuf=…` so a future sweep can
-correlate "frames missing on subscription" against "datagrams the
-kernel actually delivered".
-
-### Hypotheses still open after round 2
-
-3. **moq-rs relay per-subscriber queue policy.** Even if our
-   listener kernel + collector are infinitely fast, the relay
-   itself may have an in-flight uni-stream cap per subscriber that
-   drops new groups once the listener falls behind. The
-   asymmetric loss in `sweep_3subs sub[2]` (77/100 while sub[0]
-   and sub[1] got 100/100) is consistent with a per-subscriber
-   queue rather than a connection- or relay-wide limit. Worth
-   filing an issue at `kixelated/moq` once we have one more sweep
-   confirming the round-2 changes don't already close the gap.
-
-4. **Receive-side `MAX_STREAM_DATA` thresholds.** Probably not
-   the cause for 80-byte audio frames (1 MB per-stream window vs
-   ~80 bytes used per stream) but may bite the 16 KB-payload
-   scenario. Worth a follow-up only if `sweep_payload_16kb`
-   doesn't recover.
-
-## Re-running after round 2
-
-The acceptance criterion is the same: every sweep row showing
-`received=N/N missing=[]`, except the explicit late-join scenarios
-(`sweep_late_subscribe_after_25` / `_after_50`) which legitimately
-report `received < N` due to from-latest semantics.
-
-**Reproduces against:** `https://moq.nostrnests.com:4443` (production
-relay). Not consistently reproducible against the local
-`kixelated/moq` reference relay (the local harness shows the same
-shape but with much higher run-to-run variance).
-
-## Symptom
-
-When the speaker pumps Opus frames at the production 20 ms cadence
-and packs **one frame per moq-lite group** (= one client-initiated
-QUIC unidirectional stream per Opus frame), the listener stops
-receiving frames somewhere around the 99th frame. From there to
-end-of-broadcast, **`MoqLitePublisherHandle.send` keeps returning
-`true` for every subsequent frame**, so the application has no signal
-that anything is wrong; the audio simply cuts out a few seconds in.
-
-The bug is invisible to:
-
-- `NestMoqLiteBroadcaster`'s outer `runCatching {…}.onFailure {…}`
-  (no exception is thrown on the silent-loss path).
-- `MoqLitePublisherHandle.send`'s return value (always `true` past
-  the cliff).
-- `QuicConnection`'s peer-cap check (`nextLocalUniIndex >= peerMaxStreamsUni`
-  doesn't fire because the relay raises `MAX_STREAMS_UNI` ahead of
-  our consumption — pre-fix tests confirmed `firstFalseSend = -1`
-  even at 1500 frames).
-
-## Sweep evidence (production, before mitigation)
-
-`NostrnestsProdAudioTransmissionTest` (commit
-`2da18859`-era, before any QUIC changes), one row per scenario:
-
-| Scenario | streams opened | `received` | cliff |
-|---|---|---|---|
-| `sweep-frames50` | 50 | 50/50 | none ✅ |
-| `sweep-baseline` 100 frames | 100 | 99/100 | last 1 |
-| any cadence (5/10/40/80/200 ms) at 100 frames | 100 | 99/100 | last 1 |
-| any payload (80 B / 1 KB / 4 KB) at 100 frames | 100 | 99/100 | last 1 |
-| `sweep-frames200` | 200 | **99**/200 | hard at 99 |
-| `sweep-frames400` | 400 | **99**/400 | hard at 99 |
-| `sweep-30s` (1500 frames) | 1500 | **99**/1500 | hard at 99 |
-| `sweep-120s` (6000 frames) | 6000 | 52/6000 | hard at 52 |
-| `sweep-burst` (cadence 0) | 100 | 65/100 | hard at 65 |
-| `sweep-payload-16kb` 100 frames × 16 KB | 100 | 49/100 | hard at 49 |
-| **`sweep-frames-per-group-5`** | **20** groups | **100/100** | none ✅ |
-| **`sweep-frames-per-group-20`** | **5** groups | **100/100** | none ✅ |
-| **`sweep-frames-per-group-all`** | **1** group | **100/100** | none ✅ |
-
-The signal is unambiguous: **fewer streams → no loss, regardless of
-frame count, payload, or duration**. The cliff scales with stream-
-opening rate, not with byte volume or wall-clock time.
-
-The number "99" is suspicious — it's exactly QUIC's typical
-`initial_max_streams_uni = 100` minus one. But:
-
-- Pre-mitigation `firstFalseSend = -1` for tests pumping 1500+
-  streams says the cap WAS being raised dynamically. So the cliff
-  is NOT `openUniStream` rejecting past the local cap.
-- A 16 KB payload variant cliffed at 49 streams (~800 KB total),
-  while 80-byte variants cliffed at 99 (~8 KB total). These are
-  inconsistent if the cause were a single fixed cap.
-- The cliff is *consistent* across many scenarios at ~99 — too
-  consistent for plain network packet loss.
-
-## What we tried and what we learned
-
-### Attempt 1 — make `openUniStream` suspend instead of throw
-
-Branch / commit: `f0705e3a` on `claude/audio-transmission-tests-zKzlB`,
-**reverted in `96a585a6`**.
-
-Rationale: the obvious failure mode is `peerMaxStreamsUni` being hit
-without us ever waiting for the relay to extend it; we'd just throw
-locally. So we'd:
-
-1. Make `QuicConnection.openBidiStream` / `openUniStream` suspend
-   on a `CompletableDeferred<Unit>` notifier when the cap is hit,
-   re-acquire the lock and re-check on every wake.
-2. Fire the notifier from `QuicConnectionParser` whenever an inbound
-   `MAX_STREAMS` frame raises a cap.
-3. Emit `STREAMS_BLOCKED` (RFC 9000 §19.14) when an opener registers
-   itself blocked, so the peer knows we want more credit.
-4. Wake blocked openers with `QuicConnectionClosedException` on
-   close so they don't hang.
-
-Unit tests for the suspend / wake / STREAMS_BLOCKED / close paths
-pass (`PeerStreamLimitTest`).
-
-**Result against production:** the cliff didn't move. Same scenarios
-still hit ~99 frames received, and the run-to-run variance got
-*worse* (numbers swung between 19/100 and 99/100 on consecutive
-identical baseline runs against the same relay). The fix also
-introduced no observable change in the per-frame `tx i=… ok dt=…us`
-traces (`firstFalseSend = -1` still on every test), which means the
-suspend path isn't being triggered in production — the peer's cap
-isn't what we're hitting.
-
-The fix is RFC-correct on its own (we should suspend rather than
-throw, and we should send STREAMS_BLOCKED), but it does not address
-the production cliff. Reverted to keep the tree clean while we
-chase the real cause.
-
-### Attempt 2 — pack multiple frames per moq-lite group (shipping)
-
-Commit on `claude/audio-transmission-tests-zKzlB` (this commit).
-
-Rationale: `sweep_frames_per_group_*` was 100/100 across every
-multi-frame-per-group variant. The cliff scales with the number of
-new uni streams opened, not with anything else. Packing N Opus
-frames per moq-lite group reduces the new-stream rate by N×.
-
-Default chosen: `framesPerGroup = 5` ≈ 100 ms of audio per group.
-Stream-creation rate drops from 50/sec to 10/sec, well below the
-cliff.
-
-Trade-off: a brand-new subscriber that attaches mid-broadcast picks
-up at the next group boundary per moq-lite "from-latest" semantics.
-With 5 frames/group the late-join initial gap is up to 100 ms
-(perceptually inaudible). With 1 frame/group it was up to 20 ms.
-
-This is a **mitigation, not a fix.** Other workloads with a high
-per-stream cost (file transfer, metadata fan-out, anything that
-naturally wants a fresh stream per message) would still hit the
-cliff if they exceed roughly 50 streams/second.
+These are architectural choices, not spec violations. The
+`framesPerGroup = 5` mitigation works because it cuts the upstream
+publisher rate to ~10 streams/sec — slow enough that even a
+temporarily-stalled subscriber's queue drains before any of (1)/(2)/(3)
+accumulate beyond recovery.
 
 ## What `flowControlSnapshot` proved (the smoking gun)
 
@@ -372,106 +173,140 @@ This rules out every speaker-side hypothesis at once:
   speaker opened all 200 broadcast streams + 1 control stream, well
   under cap. Not a peer-granted stream-id wedge.
 - **`pendingBytes = 0`, `pendingStreams = 0/205`** ⇒ no bytes are
-  stuck in any stream's send buffer; everything we wrote made it
-  past the writer.
+  stuck in any stream's send buffer; everything we wrote made it past
+  the writer.
 - **`consumed` is identical between post-pump and post-grace** ⇒ we
   weren't even *trying* to send more after the pump finished.
 
-So the speaker → relay path was healthy. The 18 KB of stream data
-made it onto the wire. The 99-frame ceiling on the listener side
-had to be on the **relay → listener** half of the connection.
+So the speaker → relay path was healthy. The 99-frame ceiling on the
+listener side had to be on the **relay → listener** half of the
+connection.
 
 Listener-side, our [QuicConnection] advertises `initial_max_streams_uni
-= 100` (from [QuicConnectionConfig], default 100) at handshake. The
-relay can open up to 100 uni streams to us *for the lifetime of the
-connection* unless we send `MAX_STREAMS_UNI(N)` frames to extend it.
-Grepping `:quic` for `MaxStreamsFrame` showed it was only ever
-*parsed inbound* — there was no outbound emission anywhere. So the
-peer's stream-id allowance was capped at 100 forever.
+= 100` at handshake. The relay can open up to 100 uni streams to us
+*for the lifetime of the connection* unless we send `MAX_STREAMS_UNI(N)`
+to extend it. Grepping `:quic` for `MaxStreamsFrame` showed it was only
+ever *parsed inbound* — no outbound emission. So the peer's stream-id
+allowance was capped at 100 forever. Production validation:
+`sweep_frames_200` went from `received=99/200` (pre-fix) to
+`received=200/200` (post-fix).
 
-For MoQ over WebTransport this is fatal: the listener's relay
-forwards every broadcast group as a new peer-initiated uni stream.
-With one group per Opus frame at 20 ms cadence, the 100-stream cap
-is exhausted at frame 99 → relay-side blocked → no more groups → no
-more audio.
+## Sweep evidence (production, before mitigation)
 
-The fix mirrors the existing [appendFlowControlUpdates] pattern for
-`MAX_DATA` / `MAX_STREAM_DATA`: track lifetime peer-initiated stream
-count, emit `MAX_STREAMS_UNI(currentCount + initialCap)` when count
-crosses the half-window threshold.
+`NostrnestsProdAudioTransmissionTest` (commit `2da18859`-era, before
+any QUIC changes), one row per scenario:
 
-## Hypotheses still on the table
+| Scenario | streams opened | `received` | cliff |
+|---|---|---|---|
+| `sweep-frames50` | 50 | 50/50 | none ✅ |
+| `sweep-baseline` 100 frames | 100 | 99/100 | last 1 |
+| any cadence (5/10/40/80/200 ms) at 100 frames | 100 | 99/100 | last 1 |
+| any payload (80 B / 1 KB / 4 KB) at 100 frames | 100 | 99/100 | last 1 |
+| `sweep-frames200` | 200 | **99**/200 | hard at 99 |
+| `sweep-frames400` | 400 | **99**/400 | hard at 99 |
+| `sweep-30s` (1500 frames) | 1500 | **99**/1500 | hard at 99 |
+| `sweep-120s` (6000 frames) | 6000 | 52/6000 | hard at 52 |
+| `sweep-burst` (cadence 0) | 100 | 65/100 | hard at 65 |
+| `sweep-payload-16kb` 100 frames × 16 KB | 100 | 49/100 | hard at 49 |
+| **`sweep-frames-per-group-5`** | **20** groups | **100/100** | none ✅ |
+| **`sweep-frames-per-group-20`** | **5** groups | **100/100** | none ✅ |
+| **`sweep-frames-per-group-all`** | **1** group | **100/100** | none ✅ |
 
-In rough order of likelihood, none confirmed:
+The signal is unambiguous: **fewer streams → no loss, regardless of
+frame count, payload, or duration**. The cliff scaled with stream-
+opening rate, not byte volume or wall-clock time.
 
-1. **Connection-level send credit** (`initial_max_data` / `MAX_DATA`).
-   If the relay's connection-level grant is ~8 KB and only extends
-   on `DATA_BLOCKED`, we'd cliff at ~99 frames × ~85 bytes = ~8.4 KB.
-   `:quic` parses inbound `MAX_DATA` (`QuicConnectionParser.kt:266`)
-   but never emits `DATA_BLOCKED` when our writer hits
-   `connBudget == 0` in `appendStreamFrames`. That asymmetry would
-   stall the producer with no signal. The 16 KB payload data point
-   (cliff at 49 × 16 KB ≈ 800 KB) doesn't match a single fixed
-   8 KB cap, but it could match a different per-byte budget the
-   relay calibrates to its initial offer. Worth instrumenting.
+## Sweep evidence (after MAX_STREAMS_UNI fix)
 
-2. **Per-stream send credit** (`initial_max_stream_data_uni` /
-   `MAX_STREAM_DATA`). Each new uni stream gets its own credit
-   window from the peer's `initial_max_stream_data_uni`. If that's
-   small enough to require a `MAX_STREAM_DATA` on every stream and
-   the peer is conservative about issuing it, the writer would
-   buffer frames forever waiting for credit while `publisher.send`
-   reports success. `:quic` honours the per-stream credit
-   (`QuicConnectionWriter.kt:280`) but never emits
-   `STREAM_DATA_BLOCKED`.
+Full prod sweep (all 27 scenarios, commit `c0269859`):
 
-3. **Reference-relay default `MAX_STREAMS_UNI` extension policy.**
-   `kixelated/moq-rs` is built on Quinn; Quinn's stream-cap
-   extension is automatic when streams complete. If the production
-   nostrnests deployment uses a custom Quinn config that only
-   extends in response to `STREAMS_BLOCKED` (which we don't send
-   on the un-fixed code path), we'd starve. Attempt 1 added
-   STREAMS_BLOCKED emission and didn't shift the cliff, weak
-   evidence against this hypothesis.
+**Now perfect (100% received):** `baseline 100×20ms`, `frames200`,
+`frames50`, `1kb`, `4kb`, `cad10`, `cad40`, `cad80`, `cad200`,
+`2subs` (both subs), `slowconsumer`, `fpg5`, `fpg20`, `fpg-all`.
+14 of 27 scenarios.
 
-4. **Relay-side per-subscription buffer.** If the relay has a
-   per-subscriber forward buffer that's smaller than the total
-   in-flight uni-stream count, and it drops streams that don't
-   fit, the cliff would scale with stream count and be invisible
-   to the speaker. Hardest to investigate without relay logs.
+**Improved but still partial (residual relay-side loss):**
 
-## Next steps to actually fix
+| Scenario | Pre-fix | Post-fix | Pattern |
+|---|---|---|---|
+| `frames400` | 99/400 | 368/400 | last 32 frames lost (tail) |
+| `30s` (1500 frames) | 99/1500 | 653/1500 | cliffed at frame 653 mid-pump |
+| `120s` (6000 frames) | 52/6000 | 61/6000 | cliffed at frame 61, t≈2 s |
+| `burst` cadence=0 | 65/100 | 96/100 | last 4 lost (tail) |
+| `pause` 50+5 s+50 | 99/100 | 32/100 | regressed; pause kills it |
+| `cad5` 100×5 ms | 99/100 | 54/100 | regressed (faster burst) |
+| `3subs` sub[2] | varied | 77/100 | one sub lags |
 
-The investigation order I'd take, given the data:
+The cliff is no longer at "exactly 99 streams" — it's now timing/load-
+sensitive. The speaker side remains pristine (`fc-post-pump`:
+`consumed > 0`, `pendingBytes = 0`, `nextLocalUniIdx` matches frame
+count) — the loss is on the relay→listener path. Closing the residual
+required the `framesPerGroup = 5` cadence change.
 
-1. **Instrument outbound `appendStreamFrames`.** Log every iteration
-   where `connBudget <= 0` (connection-level credit exhausted) or
-   where a stream's `streamRemaining <= 0` (per-stream credit
-   exhausted). Re-run the prod sweep with this on. If the cliff
-   correlates with one of those, the hypothesis is confirmed and the
-   fix is to emit `DATA_BLOCKED` / `STREAM_DATA_BLOCKED` and on the
-   write path, suspend the writer until a fresh `MAX_DATA` /
-   `MAX_STREAM_DATA` arrives.
+## Round 2 — chasing the residual (preserved for context)
 
-2. **Capture the production peer transport parameters.** Dump
-   `tp.initialMaxData`, `tp.initialMaxStreamDataUni`, and
-   `tp.initialMaxStreamsUni` once at handshake time so we know
-   exactly what the relay grants. Compare against the cliff
-   thresholds.
+Three test-side changes ruled out collector-side biases before
+concluding the residual was relay-side:
 
-3. **Test with `:quic` flow-control diagnostics in place.** Re-run
-   `sweep_frames200` and `sweep_30s` — the cliff is rock-solid at
-   exactly 99 in production, so a single pass is enough to confirm
-   the hypothesis.
+### 2a. Test-side stdout serialisation
 
-4. **If it's not connection / stream data flow control,** instrument
-   the relay (file an issue on `nostrnests/nests` or `kixelated/moq`)
-   asking whether their relay imposes a per-subscriber stream
-   buffer that drops on overflow.
+`SendTraceScenario.Scenario.verbosePerFrame` defaulted to `true`,
+which logged a per-frame `tx i=…` and `rx[idx] gid=…` line via
+`InteropDebug.checkpoint`. Under JUnit's stdout capture, that's a
+synchronous write per event. At 50 frames/sec sustained the capture
+thread can serialise the receive coroutine and starve the QUIC read
+loop, biasing the `received` count downward. **Default flipped to
+`false`**; specific tests opt in for debugging.
 
-## Re-running the sweep after a candidate fix
+### 2b. Test-side `CopyOnWriteArrayList` add cost
 
-The test infrastructure is already in place:
+The collector accumulated arrivals in a `CopyOnWriteArrayList`, which
+is O(N) per add. For 1500-frame runs that's ~1.1 M element copies and
+~35 MB of memory ops cumulative. Replaced with
+`Collections.synchronizedList(ArrayList(capacityHint))` for O(1)
+amortized adds.
+
+### 2c. Listener-side kernel UDP receive buffer
+
+`UdpSocket.connect` did not configure `SO_RCVBUF`, so the kernel's
+default applied (~200 KB on Linux/macOS). At MTU-sized datagrams
+that's room for ~130 packets. Bumped to 4 MiB at socket-bind time
+(Linux doubles + clamps via `rmem_max`).
+
+Added lifetime UDP datagram counters (`receivedDatagramCount`,
+`receivedByteCount`, `receiveBufferSizeBytes`) to the `UdpSocket`
+expect surface; the driver wires them into the existing
+[QuicConnection.flowControlSnapshot] via a `udpStatsSupplier` hook.
+The `fc-pre / fc-post-pump / fc-post-grace` lines now include
+`udpDatagrams=…  udpBytes=…  udpRcvBuf=…` so future sweeps can
+correlate "frames missing on subscription" against "datagrams the
+kernel actually delivered".
+
+None of these fully closed the residual — the cliff after round-2 was
+still relay-side, finally addressed by `framesPerGroup = 5`.
+
+## Symptom (preserved for context)
+
+When the speaker pumps Opus frames at the production 20 ms cadence
+and packs **one frame per moq-lite group** (= one client-initiated
+QUIC unidirectional stream per Opus frame), the listener stops
+receiving frames somewhere around the 99th frame. From there to
+end-of-broadcast, **`MoqLitePublisherHandle.send` keeps returning
+`true` for every subsequent frame**, so the application has no signal
+that anything is wrong; the audio simply cuts out a few seconds in.
+
+The bug is invisible to:
+
+- `NestMoqLiteBroadcaster`'s outer `runCatching {…}.onFailure {…}`
+  (no exception is thrown on the silent-loss path).
+- `MoqLitePublisherHandle.send`'s return value (always `true` past
+  the cliff).
+- `QuicConnection`'s peer-cap check.
+
+**Reproduces against:** `https://moq.nostrnests.com:4443` (production
+relay).
+
+## Reproducing / verifying
 
 ```bash
 ./gradlew :nestsClient:jvmTest \
@@ -482,28 +317,26 @@ grep -E "sub\[|missing=" \
   | sort
 ```
 
-Acceptance criterion: `sweep-30s` reports `received≈1500/1500`
-without any `framesPerGroup` mitigation. That removes the only
-remaining audio-quality tradeoff (the 100 ms late-join initial gap)
-and lets us reset `DEFAULT_FRAMES_PER_GROUP` back to 1 to match the
-JS reference broadcaster's wire shape.
+Acceptance criterion: every sweep row showing `received=N/N
+missing=[]`, except the explicit late-join scenarios
+(`sweep_late_subscribe_after_25` / `_after_50`) which legitimately
+report `received < N` due to from-latest semantics.
 
-## Files / lines to touch when picking this up
+## Open follow-ups
 
-- `quic/src/commonMain/kotlin/com/vitorpamplona/quic/connection/QuicConnectionWriter.kt`
-  — `appendStreamFrames` is where the writer skips streams with no
-  credit; instrument here.
-- `quic/src/commonMain/kotlin/com/vitorpamplona/quic/connection/QuicConnection.kt:160-165`
-  — `sendConnectionFlowCredit` / `sendConnectionFlowConsumed`. The
-  values to log + diff.
-- `quic/src/commonMain/kotlin/com/vitorpamplona/quic/connection/TransportParameters.kt`
-  — `decode` is where peer TPs land at handshake.
-- `quic/src/commonMain/kotlin/com/vitorpamplona/quic/connection/QuicConnectionParser.kt`
-  — currently parses `MAX_DATA`, `MAX_STREAM_DATA`, `MAX_STREAMS`,
-  `STREAMS_BLOCKED` (last one ignored). The reverse —
-  `DATA_BLOCKED` / `STREAM_DATA_BLOCKED` emission — would live in
-  `QuicConnectionWriter`.
-- `nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/interop/SendTraceScenario.kt`
-  — extend per-frame trace with `connBudget` / `streamRemaining`
-  if the writer instrumentation surfaces them via diagnostics on
-  `QuicConnection`.
+1. **File a feature request at `kixelated/moq`** describing the
+   per-subscriber forward-queue cliff and proposing (a) per-deployment
+   tuning of the unbounded `FuturesUnordered` task pool, and (b) a
+   deadline on `serve_group()`'s `open_uni().await` derived from the
+   active subscriber's smallest `max_latency`. This is a feature
+   request, not a bug report.
+
+2. **Surface `maxLatencyMs` in the audio-room VM/UI** if a future
+   product requirement wants per-listener freshness preference. The
+   listener wire path now supports it; nothing in the current
+   `NestViewModel` consumes it.
+
+3. **Reset `DEFAULT_FRAMES_PER_GROUP` back to 1** if a future relay
+   version ships either a config knob or a fix for the per-subscriber
+   forward starvation. The 100 ms late-join initial gap is the only
+   remaining audio-quality tradeoff from the current mitigation.

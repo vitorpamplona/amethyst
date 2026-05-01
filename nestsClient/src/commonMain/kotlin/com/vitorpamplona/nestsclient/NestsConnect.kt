@@ -142,7 +142,10 @@ private fun failedListener(state: MutableStateFlow<NestsListenerState>): NestsLi
     object : NestsListener {
         override val state = state
 
-        override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = error("listener never connected: ${state.value}")
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle = error("listener never connected: ${state.value}")
 
         override suspend fun close() {
             if (state.value !is NestsListenerState.Closed) {

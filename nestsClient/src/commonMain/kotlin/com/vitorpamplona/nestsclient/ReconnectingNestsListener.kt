@@ -217,7 +217,10 @@ private class ReconnectingHandle(
 ) : NestsListener {
     override val state: StateFlow<NestsListenerState> = mutableState.asStateFlow()
 
-    override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = reissuingSubscribe { listener -> listener.subscribeSpeaker(speakerPubkeyHex) }
+    override suspend fun subscribeSpeaker(
+        speakerPubkeyHex: String,
+        maxLatencyMs: Long,
+    ): SubscribeHandle = reissuingSubscribe { listener -> listener.subscribeSpeaker(speakerPubkeyHex, maxLatencyMs) }
 
     override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = reissuingSubscribe { listener -> listener.subscribeCatalog(speakerPubkeyHex) }
 

@@ -75,20 +75,24 @@ class MoqLiteNestsListener internal constructor(
     internal val transport
         get() = session.transport
 
-    override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = AUDIO_TRACK)
+    override suspend fun subscribeSpeaker(
+        speakerPubkeyHex: String,
+        maxLatencyMs: Long,
+    ): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = AUDIO_TRACK, maxLatencyMs = maxLatencyMs)
 
-    override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = CATALOG_TRACK)
+    override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = CATALOG_TRACK, maxLatencyMs = 0L)
 
     private suspend fun wrapSubscription(
         broadcast: String,
         track: String,
+        maxLatencyMs: Long,
     ): SubscribeHandle {
         check(state.value is NestsListenerState.Connected) {
             "NestsListener.subscribe requires Connected state, was ${state.value}"
         }
         val handle =
             try {
-                session.subscribe(broadcast = broadcast, track = track)
+                session.subscribe(broadcast = broadcast, track = track, maxLatencyMillis = maxLatencyMs)
             } catch (e: MoqLiteSubscribeException) {
                 // Surface protocol-level rejections (audio OR catalog)
                 // through MoqProtocolException, matching the IETF
