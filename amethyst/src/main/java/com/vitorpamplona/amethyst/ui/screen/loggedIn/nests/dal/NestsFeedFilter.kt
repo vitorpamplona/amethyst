@@ -85,11 +85,13 @@ class NestsFeedFilter(
         val expandableAuthors = followsAuthorsForExpansion(topFilter)
         val now = TimeUtils.now()
         val presenceCutoff = now - PRESENCE_FRESHNESS_WINDOW_SECONDS
+        val endedHistoryCutoff = now - ENDED_HISTORY_WINDOW_SECONDS
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event as? MeetingSpaceEvent ?: return@filterTo false
             if (!hasMinimumNestFields(noteEvent)) return@filterTo false
             if (!isWithinPlannedWindow(noteEvent, now)) return@filterTo false
+            if (!isWithinEndedHistoryWindow(noteEvent, endedHistoryCutoff)) return@filterTo false
             if (!hasFreshSpeakers(noteEvent, presenceCutoff)) return@filterTo false
 
             if (filterParams.match(noteEvent, it.relays)) return@filterTo true
@@ -151,6 +153,23 @@ class NestsFeedFilter(
     }
 
     /**
+     * For ENDED rooms only: cap the historical bucket so the feed
+     * doesn't drown in months-old recordings. Anything within
+     * [ENDED_HISTORY_WINDOW_SECONDS] of `now` (compared against the
+     * room's most recent kind-30312 createdAt — the closest signal
+     * we have to "ended at") passes; older entries drop. Other
+     * statuses pass through.
+     */
+    private fun isWithinEndedHistoryWindow(
+        event: MeetingSpaceEvent,
+        endedHistoryCutoff: Long,
+    ): Boolean {
+        val status = event.checkStatus(event.status())
+        if (status != StatusTag.STATUS.ENDED) return true
+        return event.createdAt >= endedHistoryCutoff
+    }
+
+    /**
      * Drop OPEN/PRIVATE rooms whose live speaker slate is empty. A room
      * with no fresh kind-10312 presence carrying `onstage=1` published
      * in the last [PRESENCE_FRESHNESS_WINDOW_SECONDS] has no one left
@@ -204,6 +223,14 @@ class NestsFeedFilter(
             else -> null
         }
 
+    /**
+     * Three-bucket sort: LIVE rooms first (ordered by how many of the
+     * user's follows are participating, then by total participants),
+     * SCHEDULED rooms next (soonest start first), ENDED rooms last
+     * (most-recently-ended first). The screen relies on this strict
+     * ordering to walk the list and inject sticky section headers
+     * without re-sorting.
+     */
     override fun sort(items: Set<Note>): List<Note> {
         val topFilter = account.liveNestsFollowLists.value
         val topFilterAuthors =
@@ -221,30 +248,54 @@ class NestsFeedFilter(
         val followingKeySet = topFilterAuthors ?: account.kind3FollowList.flow.value.authors
 
         val counter = ParticipantListBuilder()
-        val participantCounts = items.associate { it to counter.countFollowsThatParticipateOn(it, followingKeySet) }
-        val allParticipants = items.associate { it to counter.countFollowsThatParticipateOn(it, null) }
+        val live = ArrayList<Note>()
+        val scheduled = ArrayList<Note>()
+        val ended = ArrayList<Note>()
 
-        return items
-            .sortedWith(
-                compareBy(
-                    { convertStatusToOrder(it.event as? MeetingSpaceEvent) },
-                    { participantCounts[it] },
-                    { allParticipants[it] },
-                    { it.createdAt() },
-                    { it.idHex },
-                ),
-            ).reversed()
-    }
-
-    private fun convertStatusToOrder(event: MeetingSpaceEvent?): Int =
-        when (event?.status()) {
-            StatusTag.STATUS.LIVE -> 2
-            StatusTag.STATUS.PRIVATE -> 1
-            StatusTag.STATUS.ENDED -> 0
-            else -> 0
+        items.forEach {
+            when (bucketOf(it.event as? MeetingSpaceEvent)) {
+                NestBucket.LIVE -> live.add(it)
+                NestBucket.SCHEDULED -> scheduled.add(it)
+                NestBucket.ENDED -> ended.add(it)
+            }
         }
 
-    companion object {
+        // LIVE: follows-participating DESC, total participants DESC,
+        // createdAt DESC, idHex (stable tiebreak).
+        val followsParticipating = live.associateWith { counter.countFollowsThatParticipateOn(it, followingKeySet) }
+        val totalParticipating = live.associateWith { counter.countFollowsThatParticipateOn(it, null) }
+        live.sortWith(
+            compareByDescending<Note> { followsParticipating[it] ?: 0 }
+                .thenByDescending { totalParticipating[it] ?: 0 }
+                .thenByDescending { it.createdAt() ?: 0 }
+                .thenBy { it.idHex },
+        )
+
+        // SCHEDULED: starts ASC (soonest first); rooms missing a starts
+        // tag fall to the end.
+        scheduled.sortWith(
+            compareBy<Note> { (it.event as? MeetingSpaceEvent)?.starts() ?: Long.MAX_VALUE }
+                .thenBy { it.idHex },
+        )
+
+        // ENDED: createdAt DESC (most-recently-ended first; the kind
+        // 30312 createdAt advances when the host republishes with
+        // status=ended, so it's our closest "ended at" signal).
+        ended.sortWith(
+            compareByDescending<Note> { it.createdAt() ?: 0 }
+                .thenBy { it.idHex },
+        )
+
+        return live + scheduled + ended
+    }
+
+    enum class NestBucket {
+        LIVE,
+        SCHEDULED,
+        ENDED,
+    }
+
+    companion object Companion {
         /**
          * Window inside which a kind-10312 presence event still counts
          * an OPEN room as live. Same 10-minute cutoff NostrNests uses
@@ -265,5 +316,29 @@ class NestsFeedFilter(
          * future are likely spam or mis-set timestamps.
          */
         private const val PLANNED_MAX_FUTURE_SECONDS = 30L * 24L * 60L * 60L
+
+        /**
+         * ENDED rooms older than 7 d drop out of the historic bucket.
+         * The audience can still reach a recording via direct link;
+         * the feed just stops surfacing it.
+         */
+        private const val ENDED_HISTORY_WINDOW_SECONDS = 7L * 24L * 60L * 60L
+
+        /**
+         * Maps a meeting-space event to its display bucket. PRIVATE
+         * rooms are live (the audience can hear them once they get
+         * a join token); only PLANNED rooms go to SCHEDULED. Any
+         * unknown / stale-promoted status falls through to ENDED.
+         */
+        fun bucketOf(event: MeetingSpaceEvent?): NestBucket =
+            when (event?.checkStatus(event.status())) {
+                StatusTag.STATUS.LIVE,
+                StatusTag.STATUS.PRIVATE,
+                -> NestBucket.LIVE
+
+                StatusTag.STATUS.PLANNED -> NestBucket.SCHEDULED
+
+                else -> NestBucket.ENDED
+            }
     }
 }

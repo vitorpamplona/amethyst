@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,9 +33,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -69,15 +73,19 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.PrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter.NestBucket
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLivenessProbeSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
@@ -89,8 +97,10 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -116,24 +126,122 @@ fun NestsFeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
+    // The DAL emits items pre-sorted in bucket order (LIVE → SCHEDULED
+    // → ENDED). Walk the list once to find bucket boundaries so we
+    // can inject sticky section headers without re-sorting on every
+    // recomposition.
+    val sections =
+        remember(items.list) {
+            val live = ArrayList<Note>()
+            val scheduled = ArrayList<Note>()
+            val ended = ArrayList<Note>()
+            items.list.forEach {
+                when (NestsFeedFilter.bucketOf(it.event as? MeetingSpaceEvent)) {
+                    NestBucket.LIVE -> live.add(it)
+                    NestBucket.SCHEDULED -> scheduled.add(it)
+                    NestBucket.ENDED -> ended.add(it)
+                }
+            }
+            Sections(
+                live = live.toImmutableList(),
+                scheduled = scheduled.toImmutableList(),
+                ended = ended.toImmutableList(),
+            )
+        }
+
+    // Hoist string lookups out of the LazyListScope builder lambda
+    // (which is not @Composable) so they can be passed in as plain
+    // strings.
+    val liveLabel = stringRes(R.string.nests_section_live_now)
+    val scheduledLabel = stringRes(R.string.nests_section_scheduled)
+    val endedLabel = stringRes(R.string.nests_section_recently_ended)
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
-                NestFeedCard(
-                    baseNote = item,
-                    modifier = Modifier.fillMaxWidth(),
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+        if (sections.live.isNotEmpty()) {
+            sectionHeader("live", liveLabel)
+            fullSection(sections.live, accountViewModel, nav)
+        }
+        if (sections.scheduled.isNotEmpty()) {
+            sectionHeader("scheduled", scheduledLabel)
+            fullSection(sections.scheduled, accountViewModel, nav)
+        }
+        if (sections.ended.isNotEmpty()) {
+            sectionHeader("ended", endedLabel)
+            compactSection(sections.ended, accountViewModel, nav)
+        }
+    }
+}
 
-            HorizontalDivider(
-                thickness = DividerThickness,
+@Immutable
+private data class Sections(
+    val live: ImmutableList<Note>,
+    val scheduled: ImmutableList<Note>,
+    val ended: ImmutableList<Note>,
+)
+
+@OptIn(ExperimentalFoundationApi::class)
+private fun LazyListScope.sectionHeader(
+    key: String,
+    title: String,
+) {
+    stickyHeader(key = "header-$key") {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
             )
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+private fun LazyListScope.fullSection(
+    rooms: ImmutableList<Note>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    items(rooms.size, key = { rooms[it].idHex }) { index ->
+        val item = rooms[index]
+        Row(Modifier.fillMaxWidth().animateItem()) {
+            NestFeedCard(
+                baseNote = item,
+                modifier = Modifier.fillMaxWidth(),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+        HorizontalDivider(thickness = DividerThickness)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+private fun LazyListScope.compactSection(
+    rooms: ImmutableList<Note>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    items(rooms.size, key = { rooms[it].idHex }) { index ->
+        val item = rooms[index]
+        Row(Modifier.fillMaxWidth().animateItem()) {
+            NestEndedCompactCard(
+                baseNote = item,
+                modifier = Modifier.fillMaxWidth(),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -147,7 +255,13 @@ fun NestsFeedLoaded(
  * a dead room. Cards that the UI still shows as live, scheduled, or
  * private launch [NestActivity] directly — the lobby's purpose is only
  * to gate stale rooms.
+ *
+ * Long-pressing the card opens the standard [NoteQuickActionMenu] from
+ * [LongPressToQuickAction], so authors can delete (kind:5 against the
+ * room's `a`-tag) and listeners can share/copy the room link without
+ * needing to enter the room first.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NestFeedCard(
     baseNote: Note,
@@ -182,34 +296,158 @@ private fun NestFeedCard(
     val onClick =
         remember(meetingEvent, isUiClosed) {
             {
-                val service = meetingEvent.service()
-                val endpoint = meetingEvent.endpoint()
-                val dTag = meetingEvent.address().dTag
-                if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
-                    if (isUiClosed) {
-                        nav.nav(Route.NestLobby(meetingEvent.address().toValue()))
-                    } else {
-                        NestBridge.set(accountViewModel)
-                        NestActivity.launch(
-                            context = context,
-                            addressValue = meetingEvent.address().toValue(),
-                        )
-                    }
-                } else {
-                    nav.nav { routeFor(baseNote, accountViewModel.account) }
-                }
+                openRoom(meetingEvent, baseNote, isUiClosed, accountViewModel, nav, context)
             }
         }
 
-    Column(modifier.clickable(onClick = onClick)) {
-        Column(StdPadding) {
-            SensitivityWarning(
-                note = baseNote,
-                accountViewModel = accountViewModel,
-            ) {
-                ObserveAndRenderSpace(addressableNote, accountViewModel, nav)
+    LongPressToQuickAction(baseNote, accountViewModel, nav) { showQuickAction ->
+        Column(
+            modifier
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = showQuickAction,
+                ),
+        ) {
+            Column(StdPadding) {
+                SensitivityWarning(
+                    note = baseNote,
+                    accountViewModel = accountViewModel,
+                ) {
+                    ObserveAndRenderSpace(addressableNote, accountViewModel, nav)
+                }
             }
         }
+    }
+}
+
+/**
+ * Compact one-line variant for the "Recently ended" bucket. Skips the
+ * 16:9 hero, participants gallery, and reaction row to keep the
+ * historic list scannable while preserving the entry point — tapping
+ * still routes through [Route.NestLobby] so users can open the
+ * recording (NIP-53 EGG-11) if one is attached.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NestEndedCompactCard(
+    baseNote: Note,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val meetingEvent = baseNote.event as? MeetingSpaceEvent ?: return
+
+    val context = LocalContext.current
+    val onClick =
+        remember(meetingEvent) {
+            {
+                openRoom(meetingEvent, baseNote, isUiClosed = true, accountViewModel, nav, context)
+            }
+        }
+
+    val name = meetingEvent.room()?.ifBlank { null } ?: meetingEvent.dTag()
+    val cover = meetingEvent.image()?.ifBlank { null }
+    val endedAt = baseNote.createdAt()
+    val endedAgo = endedAt?.let { timeAgoNoDot(it, context) }.orEmpty()
+
+    LongPressToQuickAction(baseNote, accountViewModel, nav) { showQuickAction ->
+        Row(
+            modifier =
+                modifier
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = showQuickAction,
+                    ).padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(Size55dp)
+                        .clip(QuoteBorder),
+            ) {
+                if (cover != null) {
+                    AsyncImage(
+                        model = cover,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    val addressable = baseNote as? AddressableNote
+                    if (addressable != null) {
+                        DisplayAuthorBanner(addressable, accountViewModel)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val creator = baseNote.author
+                if (creator != null) {
+                    UsernameDisplay(
+                        baseUser = creator,
+                        fontWeight = FontWeight.Normal,
+                        textColor = MaterialTheme.colorScheme.grayText,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+                Text(
+                    text =
+                        if (endedAgo.isNotEmpty()) {
+                            stringRes(R.string.nests_ended_ago, endedAgo)
+                        } else {
+                            stringRes(R.string.live_stream_ended_tag)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Resolve the destination for tapping a room card and navigate.
+ * Stale-promoted LIVE rooms and ENDED rooms route to the lobby
+ * (read-only) so re-entry doesn't kick off the audio pipeline or
+ * trigger host-side kind-30312 refreshes on a dead room. Live and
+ * private rooms launch [NestActivity] directly. Rooms missing
+ * service/endpoint tags fall back to the standard note route so
+ * the user at least sees what we know about the event.
+ */
+private fun openRoom(
+    meetingEvent: MeetingSpaceEvent,
+    baseNote: Note,
+    isUiClosed: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    context: android.content.Context,
+) {
+    val service = meetingEvent.service()
+    val endpoint = meetingEvent.endpoint()
+    val dTag = meetingEvent.address().dTag
+    if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
+        if (isUiClosed) {
+            nav.nav(Route.NestLobby(meetingEvent.address().toValue()))
+        } else {
+            NestBridge.set(accountViewModel)
+            NestActivity.launch(
+                context = context,
+                addressValue = meetingEvent.address().toValue(),
+            )
+        }
+    } else {
+        nav.nav { routeFor(baseNote, accountViewModel.account) }
     }
 }
 
@@ -231,7 +469,7 @@ fun ObserveAndRenderSpace(
                     content = noteEvent.summary(),
                     participants = noteEvent.participants().toImmutableList(),
                     status = noteEvent.checkStatus(noteEvent.status()),
-                    starts = null,
+                    starts = noteEvent.starts(),
                 )
             }
 
