@@ -400,8 +400,8 @@ class EventStoreProjectionTest {
         runBlocking {
             val time = TimeUtils.now()
             val safe = signer.sign(TextNoteEvent.build("safe", createdAt = time) { expiration(time + 100) })
-            val short = signer.sign(TextNoteEvent.build("short", createdAt = time) { expiration(time + 1) })
             observable.insert(safe)
+            val short = signer.sign(TextNoteEvent.build("short", createdAt = time) { expiration(time + 1) })
             observable.insert(short)
 
             val projection =
