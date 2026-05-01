@@ -1673,7 +1673,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
             if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-                Log.e("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
+                Log.d("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
                 return false
             }
 
