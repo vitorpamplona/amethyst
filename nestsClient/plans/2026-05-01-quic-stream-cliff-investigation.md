@@ -1,7 +1,14 @@
 # QUIC stream cliff against nostrnests.com — investigation plan
 
-**Status: CLOSED.** Our `:quic` client never emitted `MAX_STREAMS_*`
-frames to extend the peer-initiated stream-id cap.
+**Status: PARTIALLY FIXED.** Original 99-frame production cliff is
+gone (verified `sweep_frames_200` at `received=200/200 missing=[]`,
+plus baseline / cad / payload sweeps now 100/100). Residual loss
+appears in extreme scenarios (very long broadcasts, high payload
+sizes, mid-stream pauses, very fast bursts) — see "Residual loss
+after the MAX_STREAMS fix" section below.
+
+**Original root cause: FIXED.** Our `:quic` client never emitted
+`MAX_STREAMS_*` frames to extend the peer-initiated stream-id cap.
 [QuicConnectionConfig.initialMaxStreamsUni] (default `100`) was the
 *lifetime* maximum the peer could ever open. The relay forwards each
 broadcast group as a fresh peer-initiated uni stream, so any
@@ -18,6 +25,84 @@ went from `received=99/200 missing=[99-199]` (pre-fix) to
 been reverted from `5` back to `1` so the broadcaster matches the
 JS reference's wire shape (one Opus frame per moq-lite group → ≤ 20 ms
 late-join initial gap).
+
+## Residual loss after the MAX_STREAMS fix
+
+A full prod sweep (all 27 scenarios, commit `c0269859`) showed:
+
+**Now perfect (100% received):** `baseline 100×20ms`, `frames200`,
+`frames50`, `1kb`, `4kb`, `cad10`, `cad40`, `cad80`, `cad200`,
+`2subs` (both subs), `slowconsumer`, `fpg5`, `fpg20`, `fpg-all`.
+14 of 27 scenarios.
+
+**Improved but still partial:**
+
+| Scenario | Pre-fix | Post-fix | Pattern |
+|---|---|---|---|
+| `frames400` | 99/400 | 368/400 | last 32 frames lost (tail) |
+| `30s` (1500 frames) | 99/1500 | 653/1500 | cliffed at frame 653 mid-pump |
+| `120s` (6000 frames) | 52/6000 | 61/6000 | cliffed at frame 61, t≈2 s |
+| `burst` cadence=0 | 65/100 | 96/100 | last 4 lost (tail) |
+| `16kb` 100×16 KB | 49/100 | 37/100 | regressed slightly |
+| `pause` 50+5 s+50 | 99/100 | 32/100 | regressed; pause kills it |
+| `cad5` 100×5 ms | 99/100 | 54/100 | regressed (faster burst) |
+| `3subs` sub[2] | varied | 77/100 | one sub lags |
+
+The cliff is no longer at "exactly 99 streams" — it's now timing/load-
+sensitive and varies between runs. The speaker side remains pristine
+(`fc-post-pump`: `consumed > 0`, `pendingBytes = 0`, `nextLocalUniIdx`
+matches frame count) — so the loss is on the relay→listener path.
+
+`fc-post-grace` is identical to `fc-post-pump` for these scenarios
+(no late delivery during grace), confirming the listener never
+recovers once it stalls.
+
+## Next investigation: relay-side per-subscription buffer
+
+The post-fix profile suggests a *relay-side* per-subscriber forward
+buffer or rate-limiter that drops new uni streams once the listener
+falls behind. Hypotheses to test:
+
+1. **Listener QUIC RX coalescing.** Our `:quic` reads packets from
+   the UDP socket one at a time. Under high stream-creation rate
+   the kernel's UDP receive buffer might drop datagrams before we
+   pick them up. `recv` overhead per packet (we use a fresh
+   `ByteBuffer` per call in `UdpSocket.kt:60-70`) compounds. Worth
+   profiling with `dropwatch` or just `cat /proc/net/snmp | grep -i
+   udp` (RcvbufErrors counter) during a stuck run.
+
+2. **Receive-side `MAX_STREAM_DATA` extension.** Symmetric to the
+   `MAX_STREAMS` fix: if our writer's threshold for re-crediting
+   per-stream data is too conservative under high stream count,
+   the relay's per-stream send credit to us could starve. Current
+   threshold is "consumed > limit - window/2" with `window =
+   1 MB`. With 80-byte audio frames we'd never hit it on a single
+   stream, but for the 16 KB payload test, 8 KB consumed per
+   stream is well under the 500 KB threshold — so this isn't the
+   primary cause.
+
+3. **Application-thread stalling on the listener side.** Our test
+   `SendTraceScenario` collector logs every `rx[…]` line via
+   `InteropDebug.checkpoint`, which writes to stdout under a JUnit
+   capture. Under 50+ stream/sec rates the stdout flush may
+   serialize the receive coroutine. Worth disabling
+   `verbosePerFrame` and re-running long scenarios — if numbers
+   improve dramatically, the receive side is application-rate
+   limited, not transport-bound.
+
+4. **moq-rs relay's `--cluster-replication` / per-subscriber queue
+   policy.** Some upstream knobs control how many in-flight uni
+   streams the relay queues per subscriber before dropping new
+   ones. Worth checking `moq-relay --help | grep -i buffer` or
+   filing an issue at `kixelated/moq` for the relay's behaviour
+   spec under saturation.
+
+The MAIN production bug (audio cuts out mid-broadcast at frame ~99
+in two-user rooms) is FIXED. The residual is a separate
+investigation that mostly affects extreme scenarios — long
+broadcasts, large payloads, fan-out asymmetry, fast bursts — and
+should be tracked as a separate plan once one of the hypotheses
+above is confirmed.
 
 **Reproduces against:** `https://moq.nostrnests.com:4443` (production
 relay). Not consistently reproducible against the local
