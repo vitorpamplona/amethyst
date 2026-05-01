@@ -229,6 +229,256 @@ class NostrNestsSustainedSendOutcomesInteropTest {
             Unit
         }
 
+    // ====================================================================
+    // Same sweep matrix as [NostrnestsProdAudioTransmissionTest], but
+    // wired to the local Docker harness so we can compare prod vs.
+    // reference-relay behaviour for each scenario in one run. The
+    // [SendTraceScenario] runner is shared.
+    // ====================================================================
+
+    @Test
+    fun harness_sweep_baseline_100x20ms() = runHarnessScenarioOrSkip("h-baseline", Scenario(frameCount = 100, cadenceMs = 20L))
+
+    @Test fun harness_sweep_cadence_5ms() = runHarnessScenarioOrSkip("h-cad5", Scenario(frameCount = 100, cadenceMs = 5L))
+
+    @Test fun harness_sweep_cadence_10ms() = runHarnessScenarioOrSkip("h-cad10", Scenario(frameCount = 100, cadenceMs = 10L))
+
+    @Test fun harness_sweep_cadence_40ms() = runHarnessScenarioOrSkip("h-cad40", Scenario(frameCount = 100, cadenceMs = 40L))
+
+    @Test fun harness_sweep_cadence_80ms() = runHarnessScenarioOrSkip("h-cad80", Scenario(frameCount = 100, cadenceMs = 80L))
+
+    @Test fun harness_sweep_cadence_200ms() = runHarnessScenarioOrSkip("h-cad200", Scenario(frameCount = 100, cadenceMs = 200L))
+
+    @Test
+    fun harness_sweep_burst_no_cadence() =
+        runHarnessScenarioOrSkip(
+            "h-burst",
+            Scenario(frameCount = 100, cadenceMs = 0L, receiveGraceMs = 30_000L),
+        )
+
+    @Test fun harness_sweep_frames_50() = runHarnessScenarioOrSkip("h-frames50", Scenario(frameCount = 50, cadenceMs = 20L))
+
+    @Test
+    fun harness_sweep_frames_200() =
+        runHarnessScenarioOrSkip(
+            "h-frames200",
+            Scenario(frameCount = 200, cadenceMs = 20L, receiveGraceMs = 45_000L),
+        )
+
+    @Test
+    fun harness_sweep_frames_400() =
+        runHarnessScenarioOrSkip(
+            "h-frames400",
+            Scenario(frameCount = 400, cadenceMs = 20L, receiveGraceMs = 60_000L),
+        )
+
+    @Test
+    fun harness_sweep_payload_1kb() =
+        runHarnessScenarioOrSkip(
+            "h-1kb",
+            Scenario(frameCount = 100, cadenceMs = 20L, payloadBytes = 1024),
+        )
+
+    @Test
+    fun harness_sweep_payload_4kb() =
+        runHarnessScenarioOrSkip(
+            "h-4kb",
+            Scenario(frameCount = 100, cadenceMs = 20L, payloadBytes = 4096),
+        )
+
+    @Test
+    fun harness_sweep_payload_16kb() =
+        runHarnessScenarioOrSkip(
+            "h-16kb",
+            Scenario(frameCount = 100, cadenceMs = 20L, payloadBytes = 16384),
+        )
+
+    @Test
+    fun harness_sweep_frames_per_group_5() =
+        runHarnessScenarioOrSkip(
+            "h-fpg5",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 5),
+        )
+
+    @Test
+    fun harness_sweep_frames_per_group_20() =
+        runHarnessScenarioOrSkip(
+            "h-fpg20",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 20),
+        )
+
+    @Test
+    fun harness_sweep_frames_per_group_all() =
+        runHarnessScenarioOrSkip(
+            "h-fpg-all",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 100),
+        )
+
+    @Test
+    fun harness_sweep_late_subscribe_after_25() =
+        runHarnessScenarioOrSkip(
+            "h-late25",
+            Scenario(frameCount = 100, cadenceMs = 20L, subscribeAtFrame = 25),
+        )
+
+    @Test
+    fun harness_sweep_late_subscribe_after_50() =
+        runHarnessScenarioOrSkip(
+            "h-late50",
+            Scenario(frameCount = 100, cadenceMs = 20L, subscribeAtFrame = 50),
+        )
+
+    @Test
+    fun harness_sweep_mid_pause_50_5s() =
+        runHarnessScenarioOrSkip(
+            "h-pause",
+            Scenario(
+                frameCount = 100,
+                cadenceMs = 20L,
+                pauseAfterFrame = 50,
+                pauseDurationMs = 5_000L,
+                receiveGraceMs = 45_000L,
+            ),
+        )
+
+    @Test
+    fun harness_sweep_two_subscribers() =
+        runHarnessScenarioOrSkip(
+            "h-2subs",
+            Scenario(frameCount = 100, cadenceMs = 20L, parallelSubscriptions = 2),
+        )
+
+    @Test
+    fun harness_sweep_three_subscribers() =
+        runHarnessScenarioOrSkip(
+            "h-3subs",
+            Scenario(frameCount = 100, cadenceMs = 20L, parallelSubscriptions = 3),
+        )
+
+    @Test
+    fun harness_sweep_slow_consumer_50ms() =
+        runHarnessScenarioOrSkip(
+            "h-slowconsumer",
+            Scenario(
+                frameCount = 100,
+                cadenceMs = 20L,
+                listenerSlowConsumerMs = 50L,
+                receiveGraceMs = 60_000L,
+            ),
+        )
+
+    @Test
+    fun harness_sweep_long_run_30s() =
+        runHarnessScenarioOrSkip(
+            "h-30s",
+            Scenario(
+                frameCount = 1500,
+                cadenceMs = 20L,
+                receiveGraceMs = 60_000L,
+                verbosePerFrame = false,
+            ),
+        )
+
+    private fun runHarnessScenarioOrSkip(
+        scope: String,
+        scenario: Scenario,
+        expectAllReceived: Boolean = false,
+    ) = runBlocking {
+        NostrNestsHarness.assumeNestsInterop()
+        val harness = harnessOrNull ?: return@runBlocking
+        withHarnessSpeakerAndListeners(scope, harness, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope ->
+            val result =
+                SendTraceScenario.run(
+                    scope = scope,
+                    publisher = publisher,
+                    listeners = listeners,
+                    speakerPubkeyHex = hostPub,
+                    scenario = scenario,
+                    pumpScope = pumpScope,
+                )
+            SendTraceScenario.reportAndAssert(scope, result, expectAllReceived)
+        }
+        Unit
+    }
+
+    private suspend fun withHarnessSpeakerAndListeners(
+        scope: String,
+        harness: NostrNestsHarness,
+        listenerCount: Int,
+        block: suspend (
+            publisher: com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle,
+            listeners: List<com.vitorpamplona.nestsclient.NestsListener>,
+            speakerPubkeyHex: String,
+            pumpScope: CoroutineScope,
+        ) -> Unit,
+    ) {
+        val hostSigner = NostrSignerInternal(KeyPair())
+        val room =
+            com.vitorpamplona.nestsclient
+                .NestsRoomConfig(
+                    authBaseUrl = harness.authBaseUrl,
+                    endpoint = harness.moqEndpoint,
+                    hostPubkey = hostSigner.pubKey,
+                    roomId = "h-sweep-${System.currentTimeMillis()}-${(0..9999).random()}",
+                )
+
+        val httpClient = OkHttpNestsClient { OkHttpClient() }
+        val transport =
+            QuicWebTransportFactory(certificateValidator = PermissiveCertificateValidator())
+
+        val supervisor = SupervisorJob()
+        val pumpScope = CoroutineScope(supervisor + Dispatchers.IO)
+
+        InteropDebug.checkpoint(scope, "auth=${room.authBaseUrl} endpoint=${room.endpoint} ns=${room.moqNamespace()}")
+
+        val publishToken =
+            InteropDebug.stepSuspending(scope, "host: mintToken(publish=true)") {
+                httpClient.mintToken(room = room, publish = true, signer = hostSigner)
+            }
+        val (authority, path) =
+            buildRelayConnectTarget(
+                endpoint = room.endpoint,
+                namespace = room.moqNamespace(),
+                token = publishToken,
+            )
+        val speakerWt =
+            InteropDebug.stepSuspending(scope, "host: WebTransport.connect") {
+                transport.connect(authority = authority, path = path, bearerToken = null)
+            }
+        val speakerSession = MoqLiteSession.client(speakerWt, pumpScope)
+        val publisher =
+            InteropDebug.stepSuspending(scope, "host: session.publish(broadcastSuffix=hostPub)") {
+                speakerSession.publish(broadcastSuffix = hostSigner.pubKey)
+            }
+
+        val listeners = mutableListOf<com.vitorpamplona.nestsclient.NestsListener>()
+        try {
+            for (i in 0 until listenerCount) {
+                val audienceSigner = NostrSignerInternal(KeyPair())
+                val listener =
+                    InteropDebug.stepSuspending(scope, "audience[$i]: connectNestsListener") {
+                        connectNestsListener(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = audienceSigner,
+                        )
+                    }
+                InteropDebug.assertListenerReached(scope, "Connected", listener.state.value)
+                listeners += listener
+            }
+            block(publisher, listeners, hostSigner.pubKey, pumpScope)
+        } finally {
+            for (listener in listeners) {
+                runCatching { listener.close() }
+            }
+            runCatching { publisher.close() }
+            runCatching { speakerWt.close(0, "test done") }
+            supervisor.cancelAndJoin()
+        }
+    }
+
     companion object {
         private const val N_FRAMES = 100
         private const val FRAME_CADENCE_MS = 20L

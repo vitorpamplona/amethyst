@@ -751,6 +751,293 @@ class NostrnestsProdAudioTransmissionTest {
             Unit
         }
 
+    // ====================================================================
+    // Sweep matrix — calls SendTraceScenario with one dimension varied at
+    // a time so a single test run on a real network produces a diagnosis
+    // table covering cadence, frame count, payload, group packing,
+    // late-join, mid-stream pause, fan-out, and slow consumer.
+    //
+    // Every scenario is wrapped by [withProdSpeakerAndListeners], which
+    // mints publish + listen JWTs through the production auth side, opens
+    // the QUIC + WebTransport + moq-lite session the same way
+    // [connectNestsSpeaker] / [connectNestsListener] do, and tears down
+    // in the right order on success / failure.
+    //
+    // None of these scenarios assert "all frames received" by default —
+    // we want the cliff to surface in the report instead of failing fast,
+    // so the diagnostic dump is visible for every scenario in one run.
+    // The few scenarios where we DO expect success (e.g. very slow
+    // cadence) pass `expectAllReceived = true` explicitly.
+    // ====================================================================
+
+    @Test
+    fun sweep_baseline_100x20ms() = runProdScenarioOrSkip("sweep-baseline", Scenario(frameCount = 100, cadenceMs = 20L))
+
+    @Test fun sweep_cadence_5ms() = runProdScenarioOrSkip("sweep-cad5", Scenario(frameCount = 100, cadenceMs = 5L))
+
+    @Test fun sweep_cadence_10ms() = runProdScenarioOrSkip("sweep-cad10", Scenario(frameCount = 100, cadenceMs = 10L))
+
+    @Test fun sweep_cadence_40ms() = runProdScenarioOrSkip("sweep-cad40", Scenario(frameCount = 100, cadenceMs = 40L))
+
+    @Test fun sweep_cadence_80ms() = runProdScenarioOrSkip("sweep-cad80", Scenario(frameCount = 100, cadenceMs = 80L))
+
+    @Test fun sweep_cadence_200ms() = runProdScenarioOrSkip("sweep-cad200", Scenario(frameCount = 100, cadenceMs = 200L))
+
+    @Test
+    fun sweep_burst_no_cadence() =
+        runProdScenarioOrSkip(
+            "sweep-burst",
+            Scenario(frameCount = 100, cadenceMs = 0L, receiveGraceMs = 30_000L),
+        )
+
+    @Test
+    fun sweep_frames_50() =
+        runProdScenarioOrSkip(
+            "sweep-frames50",
+            Scenario(frameCount = 50, cadenceMs = 20L),
+        )
+
+    @Test
+    fun sweep_frames_200() =
+        runProdScenarioOrSkip(
+            "sweep-frames200",
+            Scenario(frameCount = 200, cadenceMs = 20L, receiveGraceMs = 45_000L),
+        )
+
+    @Test
+    fun sweep_frames_400() =
+        runProdScenarioOrSkip(
+            "sweep-frames400",
+            Scenario(frameCount = 400, cadenceMs = 20L, receiveGraceMs = 60_000L),
+        )
+
+    @Test
+    fun sweep_payload_1kb() =
+        runProdScenarioOrSkip(
+            "sweep-1kb",
+            Scenario(frameCount = 100, cadenceMs = 20L, payloadBytes = 1024),
+        )
+
+    @Test
+    fun sweep_payload_4kb() =
+        runProdScenarioOrSkip(
+            "sweep-4kb",
+            Scenario(frameCount = 100, cadenceMs = 20L, payloadBytes = 4096),
+        )
+
+    @Test
+    fun sweep_payload_16kb() =
+        runProdScenarioOrSkip(
+            "sweep-16kb",
+            Scenario(frameCount = 100, cadenceMs = 20L, payloadBytes = 16384),
+        )
+
+    @Test
+    fun sweep_frames_per_group_5() =
+        runProdScenarioOrSkip(
+            "sweep-fpg5",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 5),
+        )
+
+    @Test
+    fun sweep_frames_per_group_20() =
+        runProdScenarioOrSkip(
+            "sweep-fpg20",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 20),
+        )
+
+    @Test
+    fun sweep_frames_per_group_all() =
+        runProdScenarioOrSkip(
+            "sweep-fpg-all",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 100),
+        )
+
+    @Test
+    fun sweep_late_subscribe_after_25() =
+        runProdScenarioOrSkip(
+            "sweep-late25",
+            Scenario(frameCount = 100, cadenceMs = 20L, subscribeAtFrame = 25),
+        )
+
+    @Test
+    fun sweep_late_subscribe_after_50() =
+        runProdScenarioOrSkip(
+            "sweep-late50",
+            Scenario(frameCount = 100, cadenceMs = 20L, subscribeAtFrame = 50),
+        )
+
+    @Test
+    fun sweep_mid_pause_50_5s() =
+        runProdScenarioOrSkip(
+            "sweep-pause",
+            Scenario(
+                frameCount = 100,
+                cadenceMs = 20L,
+                pauseAfterFrame = 50,
+                pauseDurationMs = 5_000L,
+                receiveGraceMs = 45_000L,
+            ),
+        )
+
+    @Test
+    fun sweep_two_subscribers() =
+        runProdScenarioOrSkip(
+            "sweep-2subs",
+            Scenario(frameCount = 100, cadenceMs = 20L, parallelSubscriptions = 2),
+        )
+
+    @Test
+    fun sweep_three_subscribers() =
+        runProdScenarioOrSkip(
+            "sweep-3subs",
+            Scenario(frameCount = 100, cadenceMs = 20L, parallelSubscriptions = 3),
+        )
+
+    @Test
+    fun sweep_slow_consumer_50ms() =
+        runProdScenarioOrSkip(
+            "sweep-slowconsumer",
+            Scenario(
+                frameCount = 100,
+                cadenceMs = 20L,
+                listenerSlowConsumerMs = 50L,
+                receiveGraceMs = 60_000L,
+            ),
+        )
+
+    @Test
+    fun sweep_long_run_30s() =
+        runProdScenarioOrSkip(
+            "sweep-30s",
+            Scenario(
+                frameCount = 1500,
+                cadenceMs = 20L,
+                receiveGraceMs = 60_000L,
+                verbosePerFrame = false,
+            ),
+        )
+
+    @Test
+    fun sweep_extreme_long_run_120s() =
+        runProdScenarioOrSkip(
+            "sweep-120s",
+            Scenario(
+                frameCount = 6000,
+                cadenceMs = 20L,
+                receiveGraceMs = 180_000L,
+                verbosePerFrame = false,
+            ),
+        )
+
+    /**
+     * Wraps one scenario in `runBlocking { assumeProd(); withProd(…); … }`
+     * boilerplate so each `@Test` method is just a single Scenario
+     * literal. Skips cleanly when `-DnestsProd=true` isn't set.
+     */
+    private fun runProdScenarioOrSkip(
+        scope: String,
+        scenario: Scenario,
+        expectAllReceived: Boolean = false,
+    ) = runBlocking {
+        assumeProd()
+        withProdSpeakerAndListeners(scope, scenario.parallelSubscriptions) { publisher, listeners, hostPub, pumpScope ->
+            val result =
+                SendTraceScenario.run(
+                    scope = scope,
+                    publisher = publisher,
+                    listeners = listeners,
+                    speakerPubkeyHex = hostPub,
+                    scenario = scenario,
+                    pumpScope = pumpScope,
+                )
+            SendTraceScenario.reportAndAssert(scope, result, expectAllReceived)
+        }
+        Unit
+    }
+
+    /**
+     * Build a host publisher (manual MoqLiteSession + session.publish so
+     * we bypass [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster]
+     * and can call [com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle.send]
+     * directly) plus N listener-side [com.vitorpamplona.nestsclient.NestsListener]s,
+     * each with their own keypair so the relay sees them as distinct
+     * audience members. Tears everything down (in the right order) on
+     * success or failure.
+     */
+    private suspend fun withProdSpeakerAndListeners(
+        scope: String,
+        listenerCount: Int,
+        block: suspend (
+            publisher: com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle,
+            listeners: List<com.vitorpamplona.nestsclient.NestsListener>,
+            speakerPubkeyHex: String,
+            pumpScope: CoroutineScope,
+        ) -> Unit,
+    ) {
+        val hostSigner = NostrSignerInternal(KeyPair())
+        val room = freshRoom(hostPubkey = hostSigner.pubKey)
+        val httpClient = OkHttpNestsClient { OkHttpClient() }
+        val transport = QuicWebTransportFactory()
+
+        val supervisor = SupervisorJob()
+        val pumpScope = CoroutineScope(supervisor + Dispatchers.IO)
+
+        InteropDebug.checkpoint(scope, "auth=${room.authBaseUrl} endpoint=${room.endpoint} ns=${room.moqNamespace()}")
+
+        val publishToken =
+            InteropDebug.stepSuspending(scope, "host: mintToken(publish=true)") {
+                httpClient.mintToken(room = room, publish = true, signer = hostSigner)
+            }
+        val (authority, path) =
+            com.vitorpamplona.nestsclient
+                .buildRelayConnectTarget(
+                    endpoint = room.endpoint,
+                    namespace = room.moqNamespace(),
+                    token = publishToken,
+                )
+        val speakerWt =
+            InteropDebug.stepSuspending(scope, "host: WebTransport.connect") {
+                transport.connect(authority = authority, path = path, bearerToken = null)
+            }
+        val speakerSession =
+            com.vitorpamplona.nestsclient.moq.lite
+                .MoqLiteSession
+                .client(speakerWt, pumpScope)
+        val publisher =
+            InteropDebug.stepSuspending(scope, "host: session.publish(broadcastSuffix=hostPub)") {
+                speakerSession.publish(broadcastSuffix = hostSigner.pubKey)
+            }
+
+        val listeners = mutableListOf<com.vitorpamplona.nestsclient.NestsListener>()
+        try {
+            for (i in 0 until listenerCount) {
+                val audienceSigner = NostrSignerInternal(KeyPair())
+                val listener =
+                    InteropDebug.stepSuspending(scope, "audience[$i]: connectNestsListener") {
+                        connectNestsListener(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = audienceSigner,
+                        )
+                    }
+                InteropDebug.assertListenerReached(scope, "Connected", listener.state.value)
+                listeners += listener
+            }
+
+            block(publisher, listeners, hostSigner.pubKey, pumpScope)
+        } finally {
+            for (listener in listeners) {
+                runCatching { listener.close() }
+            }
+            runCatching { publisher.close() }
+            runCatching { speakerWt.close(0, "test done") }
+            supervisor.cancelAndJoin()
+        }
+    }
+
     // ----- helpers -----
 
     private fun freshRoom(hostPubkey: String): NestsRoomConfig =
