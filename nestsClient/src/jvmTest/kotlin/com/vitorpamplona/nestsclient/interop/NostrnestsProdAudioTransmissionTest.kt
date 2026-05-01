@@ -33,6 +33,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -425,10 +426,45 @@ class NostrnestsProdAudioTransmissionTest {
 
                 val subscription = listener.subscribeSpeaker(hostSigner.pubKey)
 
-                val received =
+                // Drain into a thread-safe list as frames arrive so we
+                // can dump partial contents on timeout — the previous
+                // .take(N).toList() variant discarded everything on the
+                // way to the deadline.
+                data class Arrival(
+                    val wallMs: Long,
+                    val groupId: Long,
+                    val objectId: Long,
+                    val firstByte: Int,
+                )
+                val received = java.util.concurrent.CopyOnWriteArrayList<Arrival>()
+                val firstArrivalAtomic =
+                    java.util.concurrent.atomic
+                        .AtomicLong(-1L)
+                val collectStart = System.currentTimeMillis()
+                // onEach records each arrival into the external list
+                // BEFORE take() trims the flow — so even if the
+                // surrounding withTimeoutOrNull aborts, the partial
+                // contents are preserved for diagnostic dump.
+                val collected =
                     async(pumpScope.coroutineContext) {
                         withTimeoutOrNull(REAL_TIME_RECEIVE_TIMEOUT_MS) {
-                            subscription.objects.take(REAL_TIME_FRAMES).toList()
+                            subscription.objects
+                                .onEach { obj ->
+                                    val now = System.currentTimeMillis()
+                                    firstArrivalAtomic.compareAndSet(-1L, now)
+                                    received +=
+                                        Arrival(
+                                            wallMs = now - collectStart,
+                                            groupId = obj.groupId,
+                                            objectId = obj.objectId,
+                                            firstByte =
+                                                obj.payload
+                                                    .firstOrNull()
+                                                    ?.toInt()
+                                                    ?.and(0xFF) ?: -1,
+                                        )
+                                }.take(REAL_TIME_FRAMES)
+                                .toList()
                         }
                     }
                 delay(SUBSCRIBE_SETTLE_MS)
@@ -440,34 +476,85 @@ class NostrnestsProdAudioTransmissionTest {
                 }
                 val pumpDurationMs = System.currentTimeMillis() - started
 
-                val frames = received.await()
-                if (frames == null) {
-                    fail(
-                        "[$scope] only got partial audio within " +
-                            "${REAL_TIME_RECEIVE_TIMEOUT_MS}ms — speaker=" +
-                            InteropDebug.describe(speaker.state.value) +
-                            ", listener=" + InteropDebug.describe(listener.state.value) +
-                            ", pumpDuration=${pumpDurationMs}ms. If two_users round-trip " +
-                            "passes but this drops frames, suspect flow control / " +
-                            "datagram drops / per-subscription buffer.",
+                collected.await()
+
+                val frames = received.toList()
+                val firstArrivalMs = firstArrivalAtomic.get().let { if (it < 0) -1 else it - collectStart }
+                val lastArrivalMs = frames.lastOrNull()?.wallMs ?: -1L
+
+                // Identify gaps in groupId. moq-lite is dense per
+                // broadcast — a gap at idx N means the relay dropped
+                // (or never delivered) the uni stream for that group.
+                val seenGroups = frames.map { it.groupId }.toSortedSet()
+                val expectedGroups = (0L until REAL_TIME_FRAMES.toLong()).toList()
+                val missing = expectedGroups - seenGroups
+                val gapRuns =
+                    buildString {
+                        var run: Pair<Long, Long>? = null
+                        for (g in missing) {
+                            run =
+                                when {
+                                    run == null -> {
+                                        g to g
+                                    }
+
+                                    g == run.second + 1 -> {
+                                        run.first to g
+                                    }
+
+                                    else -> {
+                                        if (isNotEmpty()) append(",")
+                                        append(if (run.first == run.second) "${run.first}" else "${run.first}-${run.second}")
+                                        g to g
+                                    }
+                                }
+                        }
+                        if (run != null) {
+                            if (isNotEmpty()) append(",")
+                            append(if (run.first == run.second) "${run.first}" else "${run.first}-${run.second}")
+                        }
+                    }
+
+                InteropDebug.checkpoint(
+                    scope,
+                    "received=${frames.size}/$REAL_TIME_FRAMES " +
+                        "firstArrival=${firstArrivalMs}ms lastArrival=${lastArrivalMs}ms " +
+                        "pumpDuration=${pumpDurationMs}ms missingGroups=[$gapRuns]",
+                )
+                // Print first 20 + last 20 arrivals so the diagnostic
+                // captures both the front and tail of the sequence
+                // without flooding stdout.
+                val sample =
+                    if (frames.size <= 40) frames else frames.take(20) + frames.takeLast(20)
+                sample.forEach { a ->
+                    InteropDebug.checkpoint(
+                        scope,
+                        "  arrival t=${a.wallMs}ms groupId=${a.groupId} objectId=${a.objectId} firstByte=0x${a.firstByte.toString(16)}",
                     )
                 }
-                // Expect every frame: the broadcaster opens one moq-lite
-                // group per frame, so there's no group-level dropping
-                // for late attach inside the 100-frame window.
-                assertEquals(
-                    REAL_TIME_FRAMES,
-                    frames.size,
-                    "expected all $REAL_TIME_FRAMES sustained-cadence frames; received ${frames.size}",
-                )
-                // groupId must be monotonic and dense (no gaps) — gap
-                // detection is the cheapest signal that the relay
-                // dropped a uni stream mid-flight.
-                frames.forEachIndexed { idx, obj ->
+
+                if (frames.size < REAL_TIME_FRAMES) {
+                    fail(
+                        "[$scope] received ${frames.size}/$REAL_TIME_FRAMES frames " +
+                            "within ${REAL_TIME_RECEIVE_TIMEOUT_MS}ms — " +
+                            "speaker=" + InteropDebug.describe(speaker.state.value) +
+                            ", listener=" + InteropDebug.describe(listener.state.value) +
+                            ", pumpDuration=${pumpDurationMs}ms" +
+                            ", firstArrival=${firstArrivalMs}ms" +
+                            ", lastArrival=${lastArrivalMs}ms" +
+                            ", missingGroups=[$gapRuns]. " +
+                            "Pattern hints: firstArrival=-1 → SUBSCRIBE never fanned out; " +
+                            "lastArrival≪pumpDuration with frames<<N → stream stalled mid-flight; " +
+                            "scattered missingGroups → datagram drops or per-subscription buffer overflow.",
+                    )
+                }
+                // Order check on success: groupId must be monotonic and
+                // dense; gaps would mean a uni stream was dropped.
+                frames.forEachIndexed { idx, a ->
                     assertEquals(
                         idx.toLong(),
-                        obj.groupId,
-                        "groupId gap at index $idx — relay dropped a uni stream",
+                        a.groupId,
+                        "groupId gap at index $idx",
                     )
                 }
 
