@@ -167,6 +167,11 @@ private fun failedListener(state: MutableStateFlow<NestsListenerState>): NestsLi
  *   Android passes `{ AudioRecordCapture() }`.
  * @param encoderFactory builds an [OpusEncoder] (one per broadcast).
  *   Android passes `{ MediaCodecOpusEncoder() }`.
+ * @param framesPerGroup how many Opus frames to pack into one moq-lite
+ *   group / QUIC uni stream. See
+ *   [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.framesPerGroup]
+ *   for the production stream-cliff rationale that motivates the
+ *   default of 5.
  */
 suspend fun connectNestsSpeaker(
     httpClient: NestsClient,
@@ -177,6 +182,9 @@ suspend fun connectNestsSpeaker(
     speakerPubkeyHex: String,
     captureFactory: () -> AudioCapture,
     encoderFactory: () -> OpusEncoder,
+    framesPerGroup: Int =
+        com.vitorpamplona.nestsclient.audio
+            .NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP,
 ): NestsSpeaker {
     val state =
         MutableStateFlow<NestsSpeakerState>(
@@ -240,6 +248,7 @@ suspend fun connectNestsSpeaker(
         encoderFactory = encoderFactory,
         scope = scope,
         mutableState = state,
+        framesPerGroup = framesPerGroup,
     )
 }
 

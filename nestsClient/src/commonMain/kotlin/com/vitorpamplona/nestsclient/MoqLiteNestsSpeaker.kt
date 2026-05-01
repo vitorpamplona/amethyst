@@ -52,6 +52,13 @@ class MoqLiteNestsSpeaker internal constructor(
     private val encoderFactory: () -> OpusEncoder,
     private val scope: CoroutineScope,
     private val mutableState: MutableStateFlow<NestsSpeakerState>,
+    /**
+     * How many Opus frames to pack into one moq-lite group / QUIC uni
+     * stream. Forwarded to [NestMoqLiteBroadcaster.framesPerGroup] —
+     * see that field's kdoc for the production stream-cliff rationale.
+     * Defaults to [NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP].
+     */
+    private val framesPerGroup: Int = NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP,
 ) : NestsSpeaker {
     override val state: StateFlow<NestsSpeakerState> = mutableState.asStateFlow()
 
@@ -81,6 +88,7 @@ class MoqLiteNestsSpeaker internal constructor(
                     encoder = encoderFactory(),
                     publisher = publisher,
                     scope = scope,
+                    framesPerGroup = framesPerGroup,
                 )
             broadcaster.start()
             mutableState.value =

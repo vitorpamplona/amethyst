@@ -171,6 +171,7 @@ class NostrnestsProdAudioTransmissionTest {
                             speakerPubkeyHex = signer.pubKey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 InteropDebug.assertSpeakerReached(scope, "Connected", speaker.state.value)
@@ -290,6 +291,7 @@ class NostrnestsProdAudioTransmissionTest {
                             speakerPubkeyHex = hostSigner.pubKey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 InteropDebug.assertSpeakerReached(scope, "Connected", speaker.state.value)
@@ -408,6 +410,7 @@ class NostrnestsProdAudioTransmissionTest {
                             speakerPubkeyHex = hostSigner.pubKey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 InteropDebug.assertSpeakerReached(scope, "Connected", speaker.state.value)

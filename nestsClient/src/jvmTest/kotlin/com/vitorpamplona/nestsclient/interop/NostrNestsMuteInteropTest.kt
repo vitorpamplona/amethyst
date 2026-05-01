@@ -94,6 +94,7 @@ class NostrNestsMuteInteropTest {
                             speakerPubkeyHex = speakerSigner.pubKey,
                             captureFactory = { capture },
                             encoderFactory = { InteropStubEncoder("FRAME-".encodeToByteArray()) },
+                            framesPerGroup = 1,
                         )
                     }
                 val broadcast =
