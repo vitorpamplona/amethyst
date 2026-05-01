@@ -484,7 +484,6 @@
     <string name="nest_audio_failed">Ljudet misslyckades: %1$s</string>
     <string name="nest_audio_unavailable">Ljud är inte tillgängligt för det här rummet</string>
     <string name="nest_talk">Tala</string>
-    <string name="nest_stop_talking">Sluta tala</string>
     <string name="nest_leave_stage">Lämna scenen</string>
     <string name="nest_mic_mute">Stäng av mikrofon</string>
     <string name="nest_mic_unmute">Slå på mikrofon</string>

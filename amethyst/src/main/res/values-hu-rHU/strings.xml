@@ -486,7 +486,6 @@
     <string name="nest_audio_failed">Hanghiba: %1$s</string>
     <string name="nest_audio_unavailable">A hang nem érhető el ebben a szobában</string>
     <string name="nest_talk">Beszéd</string>
-    <string name="nest_stop_talking">Beszéd befejezése</string>
     <string name="nest_leave_stage">Színpad elhagyása</string>
     <string name="nest_mic_mute">Mikrofon némítása</string>
     <string name="nest_mic_unmute">Mikrofon némításának megszüntetése</string>

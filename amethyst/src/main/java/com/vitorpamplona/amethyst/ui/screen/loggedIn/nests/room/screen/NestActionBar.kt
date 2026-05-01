@@ -84,7 +84,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * | Connected, on stage, !canBroadcast          | `[Leave the Stage]`                     |
  * | Connected, on stage, mic idle               | `[Talk] [Leave the Stage]` (+ pill)     |
  * | Connected, on stage, going live             | status chip + `[Leave the Stage]`       |
- * | Connected, on stage, broadcasting           | `[MicMute] [Stop] [Leave the Stage]`    |
+ * | Connected, on stage, broadcasting           | `[MicMute] [Leave the Stage]`           |
  * | Connected, on stage, broadcast failed       | `[Retry] [Leave the Stage]`             |
  *
  * End cluster: hand-raise (audience + connected only), react, leave room.
@@ -242,10 +242,6 @@ private fun OnStageControls(
 
         is BroadcastUiState.Broadcasting -> {
             MicMuteToggle(isMuted = broadcast.isMuted, onToggle = viewModel::setMicMuted)
-            // Stop sending audio without leaving the stage — viewer
-            // can pause the mic and resume later via Talk. Distinct
-            // from [LeaveStageButton], which also vacates the slot.
-            StopBroadcastButton(onClick = viewModel::stopBroadcast)
             LeaveStageButton(onClick = leaveStage)
         }
 
@@ -376,29 +372,6 @@ private fun TalkButton(
         Icon(
             symbol = MaterialSymbols.MicOff,
             contentDescription = contentDescription,
-            modifier = Modifier.size(28.dp),
-        )
-    }
-}
-
-/**
- * Big error-color 56dp mic button shown while broadcasting. Same
- * footprint as [TalkButton] so the on/off swap is impossible to miss.
- */
-@Composable
-private fun StopBroadcastButton(onClick: () -> Unit) {
-    FilledIconButton(
-        onClick = onClick,
-        modifier = Modifier.size(56.dp),
-        colors =
-            IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
-            ),
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Mic,
-            contentDescription = stringRes(R.string.nest_stop_talking),
             modifier = Modifier.size(28.dp),
         )
     }

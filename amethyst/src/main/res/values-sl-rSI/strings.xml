@@ -497,7 +497,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_audio_failed">Napaka pri zvoku: %1$s</string>
     <string name="nest_audio_unavailable">Zvok v tej sobi ni na voljo</string>
     <string name="nest_talk">Govori</string>
-    <string name="nest_stop_talking">Prenehaj govoriti</string>
     <string name="nest_leave_stage">Zapusti oder</string>
     <string name="nest_mic_mute">Izklopi mikrofon</string>
     <string name="nest_mic_unmute">Vklopi mikrofon</string>

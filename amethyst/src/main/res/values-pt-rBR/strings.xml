@@ -484,7 +484,6 @@
     <string name="nest_audio_failed">Áudio falhou: %1$s</string>
     <string name="nest_audio_unavailable">O áudio não está disponível para esta sala</string>
     <string name="nest_talk">Falar</string>
-    <string name="nest_stop_talking">Parar de falar</string>
     <string name="nest_leave_stage">Sair do palco</string>
     <string name="nest_mic_mute">Silenciar microfone</string>
     <string name="nest_mic_unmute">Ativar microfone</string>

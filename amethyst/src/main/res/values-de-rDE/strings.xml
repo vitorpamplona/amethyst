@@ -489,7 +489,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_audio_failed">Audio fehlgeschlagen: %1$s</string>
     <string name="nest_audio_unavailable">Audio ist für diesen Raum nicht verfügbar</string>
     <string name="nest_talk">Sprechen</string>
-    <string name="nest_stop_talking">Aufhören zu sprechen</string>
     <string name="nest_leave_stage">Bühne verlassen</string>
     <string name="nest_mic_mute">Mikrofon stumm</string>
     <string name="nest_mic_unmute">Mikrofon aktivieren</string>

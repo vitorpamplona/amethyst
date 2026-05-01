@@ -484,7 +484,6 @@
     <string name="nest_audio_failed">Zvuk selhal: %1$s</string>
     <string name="nest_audio_unavailable">Zvuk pro tuto místnost není k dispozici</string>
     <string name="nest_talk">Mluvit</string>
-    <string name="nest_stop_talking">Přestat mluvit</string>
     <string name="nest_leave_stage">Opustit pódium</string>
     <string name="nest_mic_mute">Ztlumit mikrofon</string>
     <string name="nest_mic_unmute">Zapnout mikrofon</string>
