@@ -1724,6 +1724,7 @@
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
 
     <string name="reply_description">Reply</string>
+    <string name="jump_to_parent_reply">Jump to the note this reply is replying to</string>
     <string name="boost_or_quote_description">Boost Or Quote</string>
     <string name="like_description">Like</string>
     <string name="zap_description">Zap</string>
