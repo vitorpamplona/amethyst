@@ -132,6 +132,7 @@ class NostrNestsRoundTripInteropTest {
                             speakerPubkeyHex = pubkey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 InteropDebug.assertSpeakerReached(scope, "Connected", speaker.state.value)

@@ -26,6 +26,7 @@ import com.vitorpamplona.quic.frame.DatagramFrame
 import com.vitorpamplona.quic.frame.Frame
 import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
+import com.vitorpamplona.quic.frame.MaxStreamsFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.encodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
@@ -379,6 +380,30 @@ private fun appendFlowControlUpdates(
         if (newLimit > conn.advertisedMaxData) {
             conn.advertisedMaxData = newLimit
             frames += MaxDataFrame(newLimit)
+        }
+    }
+    // Peer-initiated stream-id concurrency (RFC 9000 §19.11). MoQ over
+    // WebTransport opens one uni stream per group per audience-side
+    // subscription, so the lifetime peer-uni-stream count grows
+    // monotonically with the broadcast. Without periodic
+    // MAX_STREAMS_UNI extensions, the peer eventually hits our
+    // initial cap (`config.initialMaxStreamsUni`, default 100) and
+    // any further peer uni-streams are silently rejected on their
+    // side — visible to the application as "audio cuts out at frame
+    // ~99". See
+    // `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+    if (conn.peerInitiatedUniCount + cfg.initialMaxStreamsUni / 2 >= conn.advertisedMaxStreamsUni) {
+        val newCap = conn.peerInitiatedUniCount + cfg.initialMaxStreamsUni
+        if (newCap > conn.advertisedMaxStreamsUni) {
+            conn.advertisedMaxStreamsUni = newCap
+            frames += MaxStreamsFrame(bidi = false, maxStreams = newCap)
+        }
+    }
+    if (conn.peerInitiatedBidiCount + cfg.initialMaxStreamsBidi / 2 >= conn.advertisedMaxStreamsBidi) {
+        val newCap = conn.peerInitiatedBidiCount + cfg.initialMaxStreamsBidi
+        if (newCap > conn.advertisedMaxStreamsBidi) {
+            conn.advertisedMaxStreamsBidi = newCap
+            frames += MaxStreamsFrame(bidi = true, maxStreams = newCap)
         }
     }
 }

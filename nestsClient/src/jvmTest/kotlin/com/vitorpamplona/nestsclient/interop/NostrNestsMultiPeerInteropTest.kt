@@ -354,6 +354,7 @@ class NostrNestsMultiPeerInteropTest {
                     speakerPubkeyHex = signer.pubKey,
                     captureFactory = { capture },
                     encoderFactory = { StubEncoder(encoderPrefix.encodeToByteArray()) },
+                    framesPerGroup = 1,
                 )
             }
         InteropDebug.assertSpeakerReached(debugScope, "Connected", speaker.state.value)

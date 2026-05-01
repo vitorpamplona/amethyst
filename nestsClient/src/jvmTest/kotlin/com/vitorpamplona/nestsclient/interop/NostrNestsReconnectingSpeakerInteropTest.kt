@@ -278,6 +278,7 @@ class NostrNestsReconnectingSpeakerInteropTest {
                                     speakerPubkeyHex = pubkey,
                                     captureFactory = captureFactory,
                                     encoderFactory = { encoder },
+                                    framesPerGroup = 1,
                                 )
                             },
                         )

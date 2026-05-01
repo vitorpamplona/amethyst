@@ -119,6 +119,7 @@ class NostrNestsReconnectingListenerInteropTest {
                             speakerPubkeyHex = pubkey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 InteropDebug.assertSpeakerReached(scope, "Connected", speaker.state.value)
@@ -246,6 +247,7 @@ class NostrNestsReconnectingListenerInteropTest {
                             speakerPubkeyHex = pubkey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 val broadcast = speaker.startBroadcasting()
@@ -496,6 +498,7 @@ class NostrNestsReconnectingListenerInteropTest {
                                     speakerPubkeyHex = pubkey,
                                     captureFactory = captureFactory,
                                     encoderFactory = { encoder },
+                                    framesPerGroup = 1,
                                 )
                             },
                         )
