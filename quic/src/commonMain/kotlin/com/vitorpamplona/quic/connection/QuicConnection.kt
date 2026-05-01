@@ -143,6 +143,36 @@ class QuicConnection(
     internal var advertisedMaxData: Long = config.initialMaxData
 
     /**
+     * Cumulative count of peer-initiated unidirectional streams we've
+     * accepted (incremented in [getOrCreatePeerStreamLocked]). Compared
+     * against [advertisedMaxStreamsUni] by the writer to decide whether
+     * to emit a fresh `MAX_STREAMS_UNI` frame extending the cap. Without
+     * extension the peer can never open more than
+     * [config.initialMaxStreamsUni] uni streams over the lifetime of the
+     * connection — the production stream-cliff investigation
+     * (`nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`)
+     * showed this is exactly what bites the listener side: each Opus
+     * frame is forwarded by the relay as a fresh uni stream, so any
+     * broadcast longer than 100 frames silently truncates at the
+     * audience.
+     */
+    internal var peerInitiatedUniCount: Long = 0L
+
+    /** Bidi counterpart of [peerInitiatedUniCount]. */
+    internal var peerInitiatedBidiCount: Long = 0L
+
+    /**
+     * The peer-initiated uni stream cap we've currently advertised to
+     * the peer. Starts at [config.initialMaxStreamsUni]; the writer
+     * raises it when [peerInitiatedUniCount] crosses the half-window
+     * threshold and emits a `MAX_STREAMS_UNI(newCap)` frame.
+     */
+    internal var advertisedMaxStreamsUni: Long = config.initialMaxStreamsUni
+
+    /** Bidi counterpart of [advertisedMaxStreamsUni]. */
+    internal var advertisedMaxStreamsBidi: Long = config.initialMaxStreamsBidi
+
+    /**
      * Round-robin starting index for the writer's stream-drain iteration.
      * Without rotation, streams created earlier always drain first under MTU
      * pressure, starving later streams indefinitely.
@@ -581,6 +611,15 @@ class QuicConnection(
         streams[id] = stream
         streamsList += stream
         newPeerStreams.addLast(stream)
+        // Track lifetime peer-stream counts so the writer can emit a
+        // refreshed MAX_STREAMS_* once the peer's usage approaches the
+        // currently-advertised cap. Without this, our initial cap of
+        // [config.initialMaxStreams*] is the lifetime maximum the peer
+        // can open and any longer broadcast silently truncates.
+        when (kind) {
+            StreamId.Kind.SERVER_UNI, StreamId.Kind.CLIENT_UNI -> peerInitiatedUniCount += 1
+            StreamId.Kind.SERVER_BIDI, StreamId.Kind.CLIENT_BIDI -> peerInitiatedBidiCount += 1
+        }
         // Wake any awaitIncomingPeerStream caller. trySend on a CONFLATED
         // channel can never fail in steady state.
         peerStreamSignal.trySend(Unit)

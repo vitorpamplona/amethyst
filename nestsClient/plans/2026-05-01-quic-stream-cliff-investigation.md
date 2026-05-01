@@ -1,7 +1,19 @@
 # QUIC stream cliff against nostrnests.com — investigation plan
 
-**Status:** open. Mitigated in production via group-packing
-(`NestMoqLiteBroadcaster.framesPerGroup = 5`). Root cause not isolated.
+**Status: ROOT-CAUSED + FIXED.** Our `:quic` client never emitted
+`MAX_STREAMS_*` frames to extend the peer-initiated stream-id cap.
+[QuicConnectionConfig.initialMaxStreamsUni] (default `100`) was the
+*lifetime* maximum the peer could ever open. The relay forwards each
+broadcast group as a fresh peer-initiated uni stream, so any
+broadcast longer than 100 frames silently truncated at the listener.
+Fixed by tracking [QuicConnection.peerInitiatedUniCount] and emitting
+`MAX_STREAMS_UNI(newCap)` from [appendFlowControlUpdates] once the
+peer's usage crosses the half-window threshold — same pattern as the
+existing `MAX_DATA` / `MAX_STREAM_DATA` extension.
+
+The `framesPerGroup = 5` mitigation in [NestMoqLiteBroadcaster] can
+be reverted to `1` to match the JS reference broadcaster's wire
+shape now that the underlying QUIC bug is gone.
 
 **Reproduces against:** `https://moq.nostrnests.com:4443` (production
 relay). Not consistently reproducible against the local
@@ -126,6 +138,59 @@ This is a **mitigation, not a fix.** Other workloads with a high
 per-stream cost (file transfer, metadata fan-out, anything that
 naturally wants a fresh stream per message) would still hit the
 cliff if they exceed roughly 50 streams/second.
+
+## What `flowControlSnapshot` proved (the smoking gun)
+
+After wiring [QuicConnection.flowControlSnapshot] into [SendTraceScenario],
+running `sweep_frames_200` against production produced:
+
+```
+fc-pre:        peerInitMaxData=4611686018427387903   peerInitMaxStreamDataUni=1250000
+               peerInitMaxStreamsUni=10000           sendCredit=4611686018427387903
+               consumed=786                          peerMaxStreamsUniNow=10000
+               nextLocalUniIdx=1                     pendingBytes=0   pendingStreams=0/4
+fc-post-pump:  sendCredit=4611686018427387903        consumed=18729
+               peerMaxStreamsUniNow=10000            nextLocalUniIdx=201
+               pendingBytes=0                        pendingStreams=0/205
+fc-post-grace: (identical to fc-post-pump)
+sub[0]:        received=99/200                       firstSentButLost=99
+```
+
+This rules out every speaker-side hypothesis at once:
+
+- **`peerInitMaxData = 2⁶²−1`** ⇒ ~5 EB connection-level send credit;
+  we used **18 KB**. Not a connection-level flow-control wedge.
+- **`peerInitMaxStreamsUni = 10000`, `nextLocalUniIdx = 201`** ⇒
+  speaker opened all 200 broadcast streams + 1 control stream, well
+  under cap. Not a peer-granted stream-id wedge.
+- **`pendingBytes = 0`, `pendingStreams = 0/205`** ⇒ no bytes are
+  stuck in any stream's send buffer; everything we wrote made it
+  past the writer.
+- **`consumed` is identical between post-pump and post-grace** ⇒ we
+  weren't even *trying* to send more after the pump finished.
+
+So the speaker → relay path was healthy. The 18 KB of stream data
+made it onto the wire. The 99-frame ceiling on the listener side
+had to be on the **relay → listener** half of the connection.
+
+Listener-side, our [QuicConnection] advertises `initial_max_streams_uni
+= 100` (from [QuicConnectionConfig], default 100) at handshake. The
+relay can open up to 100 uni streams to us *for the lifetime of the
+connection* unless we send `MAX_STREAMS_UNI(N)` frames to extend it.
+Grepping `:quic` for `MaxStreamsFrame` showed it was only ever
+*parsed inbound* — there was no outbound emission anywhere. So the
+peer's stream-id allowance was capped at 100 forever.
+
+For MoQ over WebTransport this is fatal: the listener's relay
+forwards every broadcast group as a new peer-initiated uni stream.
+With one group per Opus frame at 20 ms cadence, the 100-stream cap
+is exhausted at frame 99 → relay-side blocked → no more groups → no
+more audio.
+
+The fix mirrors the existing [appendFlowControlUpdates] pattern for
+`MAX_DATA` / `MAX_STREAM_DATA`: track lifetime peer-initiated stream
+count, emit `MAX_STREAMS_UNI(currentCount + initialCap)` when count
+crosses the half-window threshold.
 
 ## Hypotheses still on the table
 
