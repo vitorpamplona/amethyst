@@ -545,6 +545,24 @@ class NestViewModel(
         teardown(targetState = ConnectionUiState.Idle, finalCleanup = false)
     }
 
+    /**
+     * User-driven leave-the-activity teardown. Mirrors [onCleared]: marks
+     * the VM closed and routes both the speaker handle close (which
+     * releases the AudioRecord and clears the system mic indicator) and
+     * the listener close to [cleanupScope] so the teardown survives
+     * Activity destruction. Call this from the leave-the-room button
+     * BEFORE finishing the activity; relying on [onCleared] alone leaves
+     * a window where the AudioRecord stays held while the activity is
+     * paused / queued for destruction.
+     */
+    fun leave() {
+        if (closed) return
+        closed = true
+        requestedSpeakers = emptySet()
+        teardownBroadcast(BroadcastUiState.Idle, finalCleanup = true)
+        teardown(targetState = ConnectionUiState.Closed, finalCleanup = true)
+    }
+
     override fun onCleared() {
         closed = true
         teardownBroadcast(BroadcastUiState.Idle, finalCleanup = true)

@@ -372,6 +372,17 @@ internal fun NestFullScreen(
                                     R.string.nest_leave_host_close_failed,
                                 )
                             }
+                            // Tear down the speaker session + listener
+                            // BEFORE finishing the activity so the
+                            // AudioRecord (and the system mic indicator)
+                            // releases promptly. onCleared() alone runs
+                            // late in the destroy lifecycle and can
+                            // leave the mic held while the activity is
+                            // queued for destruction. Only the
+                            // "Close the Room" path triggers this — the
+                            // "Just leave" and non-host leave paths
+                            // still rely on onCleared.
+                            viewModel.leave()
                             onLeave()
                         }
                     },
