@@ -242,6 +242,10 @@ private fun OnStageControls(
 
         is BroadcastUiState.Broadcasting -> {
             MicMuteToggle(isMuted = broadcast.isMuted, onToggle = viewModel::setMicMuted)
+            // Stop sending audio without leaving the stage — viewer
+            // can pause the mic and resume later via Talk. Distinct
+            // from [LeaveStageButton], which also vacates the slot.
+            StopBroadcastButton(onClick = viewModel::stopBroadcast)
             LeaveStageButton(onClick = leaveStage)
         }
 

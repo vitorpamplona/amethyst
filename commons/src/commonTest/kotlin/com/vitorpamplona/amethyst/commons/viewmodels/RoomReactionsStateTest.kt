@@ -31,11 +31,14 @@ class RoomReactionsStateTest {
     private val bob = "b".repeat(64)
     private val charlie = "c".repeat(64)
 
+    private var nextEventId = 1
+
     private fun reaction(
         from: String,
         to: String?,
         content: String,
         createdAt: Long,
+        id: String = "%064x".format(nextEventId++),
     ): ReactionEvent {
         val tags =
             buildList<Array<String>> {
@@ -43,7 +46,7 @@ class RoomReactionsStateTest {
                 if (to != null) add(arrayOf("p", to))
             }.toTypedArray()
         return ReactionEvent(
-            id = "0".repeat(64),
+            id = id,
             pubKey = from,
             createdAt = createdAt,
             tags = tags,
@@ -111,5 +114,21 @@ class RoomReactionsStateTest {
         // Same input → same output, by VALUE (data class equality on
         // RoomReaction so the StateFlow doesn't re-emit on no-op ticks).
         assertEquals(a, b)
+    }
+
+    @Test
+    fun aggregatorDedupsRepeatedEventIds() {
+        val agg = RoomReactionsAggregator()
+        // LocalCache.observeEvents re-emits the full matching list on
+        // every cache mutation; the same kind-7 must collapse into one
+        // overlay entry instead of stacking on each replay.
+        val sharedId = "f".repeat(64)
+        val first = reaction(alice, bob, "🔥", 100L, id = sharedId)
+        val replay = reaction(alice, bob, "🔥", 100L, id = sharedId)
+        agg.apply(first, nowSec = 100L, windowSec = 30L)
+        agg.apply(replay, nowSec = 100L, windowSec = 30L)
+        val snap = agg.apply(replay, nowSec = 100L, windowSec = 30L)
+
+        assertEquals(1, snap[bob]!!.size)
     }
 }

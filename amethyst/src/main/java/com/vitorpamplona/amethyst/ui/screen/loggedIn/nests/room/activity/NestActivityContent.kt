@@ -21,6 +21,15 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +37,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
@@ -46,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.PipBri
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.rememberNestViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestFullScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestPipScreen
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -71,45 +86,117 @@ internal fun NestActivityContent(
 ) {
     val parsedAddress = remember(addressValue) { Address.parse(addressValue) }
     if (parsedAddress == null) {
-        // Malformed address — bail. The Activity will receive a Closed
-        // signal through the VM teardown when the user finishes; until
-        // then we just render nothing.
+        // Malformed address — show the unjoinable state so the user
+        // gets a clear path back instead of staring at a black screen
+        // while the Activity sits behind a useless extra.
+        UnjoinableRoomState(onLeave = onLeave)
         return
     }
 
     LoadAddressableNote(parsedAddress, accountViewModel) { addressableNote ->
-        addressableNote ?: return@LoadAddressableNote
+        if (addressableNote == null) {
+            // Note hasn't resolved yet — relay subscription is in
+            // flight. Render a centered spinner so the user sees that
+            // we're working on it (audit Android #6).
+            LoadingRoomState()
+            return@LoadAddressableNote
+        }
         val event by observeNoteEvent<MeetingSpaceEvent>(addressableNote, accountViewModel)
 
-        event?.let {
-            val service = it.service()
-            val endPoint = it.endpoint()
-            if (service != null && endPoint != null) {
-                val viewModel =
-                    rememberNestViewModel(
-                        NestsRoomConfig(
-                            authBaseUrl = service,
-                            endpoint = endPoint,
-                            hostPubkey = it.pubKey,
-                            roomId = it.dTag(),
-                            kind = it.kind,
-                        ),
-                        accountViewModel.account.signer,
-                    )
+        val current = event
+        if (current == null) {
+            LoadingRoomState()
+            return@LoadAddressableNote
+        }
+        val service = current.service()
+        val endPoint = current.endpoint()
+        if (service.isNullOrBlank() || endPoint.isNullOrBlank()) {
+            UnjoinableRoomState(onLeave = onLeave)
+            return@LoadAddressableNote
+        }
+        val viewModel =
+            rememberNestViewModel(
+                NestsRoomConfig(
+                    authBaseUrl = service,
+                    endpoint = endPoint,
+                    hostPubkey = current.pubKey,
+                    roomId = current.dTag(),
+                    kind = current.kind,
+                ),
+                accountViewModel.account.signer,
+            )
 
-                NestActivityBody(
-                    event = it,
-                    roomNote = addressableNote,
-                    viewModel = viewModel,
-                    accountViewModel = accountViewModel,
-                    isInPipMode = isInPipMode,
-                    isPipSupported = isPipSupported,
-                    onMuteState = onMuteState,
-                    onConnectedChange = onConnectedChange,
-                    pipMuteSignal = pipMuteSignal,
-                    onLeave = onLeave,
-                    onMinimize = onMinimize,
-                )
+        NestActivityBody(
+            event = current,
+            roomNote = addressableNote,
+            viewModel = viewModel,
+            accountViewModel = accountViewModel,
+            isInPipMode = isInPipMode,
+            isPipSupported = isPipSupported,
+            onMuteState = onMuteState,
+            onConnectedChange = onConnectedChange,
+            pipMuteSignal = pipMuteSignal,
+            onLeave = onLeave,
+            onMinimize = onMinimize,
+        )
+    }
+}
+
+/**
+ * Centered spinner shown between activity launch and the first
+ * resolved kind-30312 event. Replaces the previous black screen so
+ * the user knows the room is being loaded, not stuck.
+ */
+@Composable
+private fun LoadingRoomState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            CircularProgressIndicator()
+            Text(
+                text = stringRes(R.string.nest_loading_room),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * Terminal state for rooms whose kind-30312 doesn't carry the
+ * service/endpoint pair the audio plane needs (or whose address is
+ * malformed). Renders a clear explanation + a Back button so the
+ * user can leave instead of force-killing the activity.
+ */
+@Composable
+private fun UnjoinableRoomState(onLeave: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.nest_unjoinable_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringRes(R.string.nest_unjoinable_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            OutlinedButton(onClick = onLeave) {
+                Text(stringRes(R.string.nest_unjoinable_back))
             }
         }
     }

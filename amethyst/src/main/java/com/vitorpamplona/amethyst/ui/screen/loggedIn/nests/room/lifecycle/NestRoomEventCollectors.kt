@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.experimental.nests.admin.AdminCommandEvent
@@ -144,7 +146,15 @@ private fun ReactionsCollector(
 
 @Composable
 private fun ReactionsEvictionTicker(viewModel: NestViewModel) {
-    LaunchedEffect(viewModel) {
+    // Only tick while there are reactions to evict. The aggregator's
+    // last eviction empties [NestViewModel.recentReactions], which
+    // flips [hasReactions] to false and cancels the loop until the
+    // next reaction arrives. A perpetually-quiet room costs no
+    // scheduled work.
+    val reactions by viewModel.recentReactions.collectAsState()
+    val hasReactions = reactions.values.any { it.isNotEmpty() }
+    LaunchedEffect(viewModel, hasReactions) {
+        if (!hasReactions) return@LaunchedEffect
         while (isActive) {
             delay(REACTIONS_TICK_MS)
             viewModel.evictReactions(System.currentTimeMillis() / 1000 - REACTION_WINDOW_SEC_LOCAL)
@@ -215,4 +225,4 @@ private const val REACTIONS_TICK_MS = 1_000L
 // — the platform layer doesn't import from commons here, and a
 // duplicate constant is cheaper than another import. If these
 // drift, the 1-s tick still self-heals within one window length.
-private const val REACTION_WINDOW_SEC_LOCAL = 30L
+private const val REACTION_WINDOW_SEC_LOCAL = 10L
