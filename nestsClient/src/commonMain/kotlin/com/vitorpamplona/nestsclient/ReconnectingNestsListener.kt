@@ -114,8 +114,18 @@ suspend fun connectReconnectingNestsListener(
             var attempt = 0
             while (true) {
                 val listener =
-                    runCatching { openOnce() }.getOrElse {
-                        state.value = NestsListenerState.Failed("connect failed: ${it.message}", it)
+                    try {
+                        openOnce()
+                    } catch (ce: kotlinx.coroutines.CancellationException) {
+                        // Orchestrator scope was cancelled mid-connect —
+                        // propagate so the reconnect loop dies promptly.
+                        // `runCatching` would have swallowed this and
+                        // run one more loop iteration (potentially
+                        // re-opening a doomed listener) before the next
+                        // suspending call re-checked the cancel.
+                        throw ce
+                    } catch (t: Throwable) {
+                        state.value = NestsListenerState.Failed("connect failed: ${t.message}", t)
                         null
                     }
                 var refreshTriggered = false
@@ -151,7 +161,13 @@ suspend fun connectReconnectingNestsListener(
                         // listener; don't bump `attempt` (it's not a
                         // backoff event) so the next openOnce() runs
                         // immediately.
-                        runCatching { listener.close() }
+                        try {
+                            listener.close()
+                        } catch (ce: kotlinx.coroutines.CancellationException) {
+                            throw ce
+                        } catch (_: Throwable) {
+                            // Best-effort — the listener will GC either way.
+                        }
                         attempt = 0
                         refreshTriggered = true
                     } else if (terminal is NestsListenerState.Failed && !isUserCancelled(terminal)) {
@@ -325,8 +341,19 @@ private class ReconnectingHandle(
 
                     while (currentCoroutineContext().isActive) {
                         val handle =
-                            runCatching { opener(listener) }
-                                .getOrNull() ?: break
+                            try {
+                                opener(listener)
+                            } catch (ce: kotlinx.coroutines.CancellationException) {
+                                // Don't `break` on cancel — let it propagate
+                                // so the launched pumpJob actually dies on
+                                // unsubscribe / scope cancellation. The old
+                                // `runCatching` shape ate the cancel and ran
+                                // one extra iteration before the next
+                                // suspend re-checked active state.
+                                throw ce
+                            } catch (_: Throwable) {
+                                null
+                            } ?: break
                         liveHandleRef.set(handle)
                         try {
                             handle.objects.collect { frames.emit(it) }

@@ -412,8 +412,15 @@ class MoqLiteSession internal constructor(
      */
     private suspend fun pumpUniStreams() {
         try {
-            transport.incomingUniStreams().collect { stream ->
-                scope.launch { drainOneGroup(stream) }
+            // coroutineScope binds each per-stream drain to this pump's
+            // job — when the pump is cancelled (session close), every
+            // drain is cancelled with it instead of leaking as a
+            // sibling on the outer [scope] until the transport's flow
+            // independently errors out.
+            kotlinx.coroutines.coroutineScope {
+                transport.incomingUniStreams().collect { stream ->
+                    launch { drainOneGroup(stream) }
+                }
             }
         } catch (ce: CancellationException) {
             throw ce
@@ -531,8 +538,13 @@ class MoqLiteSession internal constructor(
      */
     private suspend fun pumpInboundBidis() {
         try {
-            transport.incomingBidiStreams().collect { bidi ->
-                scope.launch { handleInboundBidi(bidi) }
+            // Bind each per-bidi handler to this pump's job (see
+            // [pumpUniStreams]'s identical comment) so they don't outlive
+            // bidiPump.cancelAndJoin() in [close].
+            kotlinx.coroutines.coroutineScope {
+                transport.incomingBidiStreams().collect { bidi ->
+                    launch { handleInboundBidi(bidi) }
+                }
             }
         } catch (ce: CancellationException) {
             throw ce

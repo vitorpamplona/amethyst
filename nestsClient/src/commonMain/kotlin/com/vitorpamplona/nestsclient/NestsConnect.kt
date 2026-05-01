@@ -291,9 +291,49 @@ internal fun buildRelayConnectTarget(
     token: String,
 ): Pair<String, String> {
     val (authority, _) = parseEndpoint(endpoint)
-    val path = "/" + namespace + "?jwt=" + token
+    // Percent-encode any character in [namespace] that would terminate the
+    // URL path (`?`, `#`, ` `) or otherwise break parsing — `roomId` comes
+    // from the kind-30312 `d` tag, which NIP-53 does NOT constrain to a
+    // safe charset, so a `d` tag containing `?` or `#` would otherwise
+    // truncate the path and split the JWT into the wrong slot.
+    val path = "/" + percentEncodePath(namespace) + "?jwt=" + token
     return authority to path
 }
+
+/**
+ * Percent-encode the bytes of [s] that aren't legal in an RFC 3986 URI
+ * `pchar`. We preserve `:` and `/` literally because the namespace uses
+ * them as structural separators (`nests/<kind>:<host_pubkey>:<roomId>`),
+ * and the relay compares the path against its claim root using the same
+ * canonical form. Anything else — including `?`, `#`, `&`, ` `, control
+ * bytes, and any non-ASCII — is encoded.
+ */
+private fun percentEncodePath(s: String): String {
+    val bytes = s.encodeToByteArray()
+    val out = StringBuilder(bytes.size)
+    for (raw in bytes) {
+        val b = raw.toInt() and 0xFF
+        val c = b.toChar()
+        val safe =
+            (c in 'A'..'Z') ||
+                (c in 'a'..'z') ||
+                (c in '0'..'9') ||
+                c == '-' || c == '_' || c == '.' || c == '~' ||
+                c == '!' || c == '$' || c == '\'' || c == '(' || c == ')' ||
+                c == '*' || c == '+' || c == ',' || c == ';' || c == '=' ||
+                c == ':' || c == '@' || c == '/'
+        if (safe) {
+            out.append(c)
+        } else {
+            out.append('%')
+            out.append(HEX[b ushr 4])
+            out.append(HEX[b and 0x0F])
+        }
+    }
+    return out.toString()
+}
+
+private val HEX = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 
 /**
  * Split a typical nests endpoint URL such as `https://relay.example.com/moq`
@@ -322,16 +362,37 @@ internal fun parseEndpoint(endpoint: String): Pair<String, String> {
 
     require(authorityRaw.isNotEmpty()) { "endpoint must include an authority (got '$endpoint')" }
 
-    val portSep = authorityRaw.lastIndexOf(':')
     val hasUserInfo = authorityRaw.contains('@')
     require(!hasUserInfo) { "endpoint must not include userinfo (got '$endpoint')" }
+
+    // IPv6 literal authorities use `[host]:port` form (RFC 3986 §3.2.2);
+    // a naive `lastIndexOf(':')` finds a colon *inside* the address and
+    // breaks parsing. Detect the bracketed form first and split on the
+    // colon after `]`.
+    val (hostPart, portStr) =
+        if (authorityRaw.startsWith('[')) {
+            val closeBracket = authorityRaw.indexOf(']')
+            require(closeBracket > 0) { "malformed IPv6 authority: '$authorityRaw'" }
+            val host = authorityRaw.substring(0, closeBracket + 1)
+            val tail = authorityRaw.substring(closeBracket + 1)
+            when {
+                tail.isEmpty() -> host to null
+                tail.startsWith(':') -> host to tail.substring(1)
+                else -> error("malformed IPv6 authority tail '$tail' in '$endpoint'")
+            }
+        } else {
+            val portSep = authorityRaw.lastIndexOf(':')
+            if (portSep >= 0) {
+                authorityRaw.substring(0, portSep) to authorityRaw.substring(portSep + 1)
+            } else {
+                authorityRaw to null
+            }
+        }
 
     // Strip the port if it's the scheme default so the on-the-wire authority is
     // canonical.
     val authority =
-        if (portSep >= 0) {
-            val host = authorityRaw.substring(0, portSep)
-            val portStr = authorityRaw.substring(portSep + 1)
+        if (portStr != null) {
             val port = portStr.toIntOrNull() ?: error("malformed port '$portStr' in '$endpoint'")
             val defaultPort =
                 when (scheme) {
@@ -339,9 +400,9 @@ internal fun parseEndpoint(endpoint: String): Pair<String, String> {
                     "http", "ws" -> 80
                     else -> -1
                 }
-            if (port == defaultPort) host else "$host:$port"
+            if (port == defaultPort) hostPart else "$hostPart:$port"
         } else {
-            authorityRaw
+            hostPart
         }
 
     return authority to pathRaw

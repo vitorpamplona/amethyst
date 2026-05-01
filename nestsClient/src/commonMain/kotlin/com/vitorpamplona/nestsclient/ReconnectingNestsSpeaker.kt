@@ -142,8 +142,15 @@ suspend fun connectReconnectingNestsSpeaker(
             var attempt = 0
             while (true) {
                 val speaker =
-                    runCatching { openOnce() }.getOrElse {
-                        state.value = NestsSpeakerState.Failed("connect failed: ${it.message}", it)
+                    try {
+                        openOnce()
+                    } catch (ce: kotlinx.coroutines.CancellationException) {
+                        // Propagate so the orchestrator dies promptly on
+                        // scope cancellation; `runCatching` would have
+                        // eaten the cancel and run one more iteration.
+                        throw ce
+                    } catch (t: Throwable) {
+                        state.value = NestsSpeakerState.Failed("connect failed: ${t.message}", t)
                         null
                     }
                 var refreshTriggered = false
@@ -183,7 +190,13 @@ suspend fun connectReconnectingNestsSpeaker(
                         // speaker; don't bump `attempt` (it's not a
                         // backoff event) so the next openOnce() runs
                         // immediately.
-                        runCatching { speaker.close() }
+                        try {
+                            speaker.close()
+                        } catch (ce: kotlinx.coroutines.CancellationException) {
+                            throw ce
+                        } catch (_: Throwable) {
+                            // Best-effort.
+                        }
                         attempt = 0
                         refreshTriggered = true
                     } else if (terminal is NestsSpeakerState.Failed && !isUserCancelledSpeaker(terminal)) {
@@ -348,8 +361,17 @@ private class ReissuingBroadcastHandle(
                     }
                     if (closed) return@collectLatest
                     val handle =
-                        runCatching { sp.startBroadcasting() }
-                            .getOrNull() ?: return@collectLatest
+                        try {
+                            sp.startBroadcasting()
+                        } catch (ce: kotlinx.coroutines.CancellationException) {
+                            // Don't `return@collectLatest` on cancel —
+                            // propagate so the launched pumpJob actually
+                            // dies on close/scope cancellation. The old
+                            // `runCatching` shape ate the cancel.
+                            throw ce
+                        } catch (_: Throwable) {
+                            null
+                        } ?: return@collectLatest
                     if (closed) {
                         runCatching { handle.close() }
                         return@collectLatest

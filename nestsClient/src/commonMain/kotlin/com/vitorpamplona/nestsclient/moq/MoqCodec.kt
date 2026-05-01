@@ -87,7 +87,10 @@ object MoqCodec {
 
         val type =
             MoqMessageType.fromCode(typeDec.value)
-                ?: throw MoqCodecException("unknown MoQ message type: 0x${typeDec.value.toString(16)}")
+                ?: throw MoqUnknownTypeException(
+                    typeCode = typeDec.value,
+                    bytesConsumed = payloadEnd - offset,
+                )
 
         val reader = MoqReader(src, payloadStart, payloadEnd)
         val message =
