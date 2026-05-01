@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -61,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
@@ -134,8 +136,22 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
             text = stringRes(R.string.bottom_bar_settings_description),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
-            modifier = Modifier.padding(bottom = 16.dp, start = Size20dp, end = Size20dp),
+            modifier = Modifier.padding(bottom = 8.dp, start = Size20dp, end = Size20dp),
         )
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp, start = Size20dp, end = Size20dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(
+                onClick = { save(initialRows(DefaultBottomBarItems)) },
+            ) {
+                Text(stringRes(R.string.bottom_bar_settings_restore_default))
+            }
+        }
 
         items.forEachIndexed { index, row ->
             val rowIsDragging = draggedItemIndex == index
