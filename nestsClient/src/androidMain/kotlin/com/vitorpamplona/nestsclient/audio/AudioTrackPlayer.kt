@@ -21,23 +21,36 @@
 package com.vitorpamplona.nestsclient.audio
 
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.AudioTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.media.AudioFormat as AndroidAudioFormat
 
 /**
- * [AudioPlayer] backed by Android's [AudioTrack] in `MODE_STREAM`. Targets the
- * voice-call usage stream so the OS treats audio-room playback like a phone
- * call (volume rocker controls call volume, ducks notifications, etc.).
+ * [AudioPlayer] backed by Android's [AudioTrack] in `MODE_STREAM`.
+ *
+ * Routes through `USAGE_MEDIA` + `CONTENT_TYPE_SPEECH` (= `STREAM_MUSIC`)
+ * so audio-room playback comes out of the loudspeaker by default and the
+ * volume rocker controls media volume — same approach Twitter/X Spaces
+ * and Clubhouse use for hands-free audio rooms.
+ *
+ * Originally this used `USAGE_VOICE_COMMUNICATION` to get call-style
+ * volume / ducking, but that routes through `STREAM_VOICE_CALL`, which
+ * Android only services audibly while the device is in
+ * `MODE_IN_COMMUNICATION`. Nests doesn't drive `AudioManager.mode`
+ * (only the NIP-100 `CallAudioManager` does), so the playback either
+ * dropped to the earpiece at near-zero volume or produced no audio at
+ * all depending on the device — making rooms appear silent on both
+ * phones. Echo cancellation still works on the capture side via
+ * `MediaRecorder.AudioSource.VOICE_COMMUNICATION` regardless of the
+ * playback usage.
  *
  * Buffer sizing: 4× minimum so the producer can fall behind by ~80 ms before
  * dropouts, which roughly matches the jitter the WebTransport datagram path
  * introduces over typical mobile networks.
  */
 class AudioTrackPlayer(
-    private val usage: Int = AudioAttributes.USAGE_VOICE_COMMUNICATION,
+    private val usage: Int = AudioAttributes.USAGE_MEDIA,
     private val contentType: Int = AudioAttributes.CONTENT_TYPE_SPEECH,
 ) : AudioPlayer {
     private var track: AudioTrack? = null
@@ -143,9 +156,6 @@ class AudioTrackPlayer(
         runCatching { t.stop() }
         runCatching { t.release() }
     }
-
-    @Suppress("unused")
-    val voiceCallUsage: Int get() = AudioManager.STREAM_VOICE_CALL // kept for documentation
 
     private fun applyMuteVolume(track: AudioTrack) {
         // setVolume is preferred over pause(): it keeps the streaming pipeline
