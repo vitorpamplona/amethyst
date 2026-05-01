@@ -147,7 +147,11 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(
-                onClick = { save(initialRows(DefaultBottomBarItems)) },
+                onClick = {
+                    draggedItemIndex = -1
+                    dragOffset = 0f
+                    save(initialRows(DefaultBottomBarItems))
+                },
             ) {
                 Text(stringRes(R.string.bottom_bar_settings_restore_default))
             }
