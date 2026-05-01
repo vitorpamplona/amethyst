@@ -103,8 +103,20 @@ class NestMoqLiteBroadcaster(
      * Returns immediately. Calling twice is an error. If
      * [AudioCapture.start] throws, the broadcaster is left stopped and
      * the exception propagates.
+     *
+     * [onTerminalFailure] fires exactly once when the loop bails after
+     * [MAX_CONSECUTIVE_SEND_ERRORS] consecutive `publisher.send`
+     * failures. The broadcaster has stopped capturing by the time this
+     * callback runs; the caller (typically [MoqLiteNestsSpeaker]) is
+     * expected to mark the speaker `Failed` so the reconnect
+     * orchestrator can recycle the session — without this signal the
+     * outward speaker state stays stuck on `Broadcasting` and the
+     * orchestrator never knows to act.
      */
-    fun start(onError: (AudioException) -> Unit = { /* swallow */ }) {
+    fun start(
+        onTerminalFailure: () -> Unit = { /* swallow */ },
+        onError: (AudioException) -> Unit = { /* swallow */ },
+    ) {
         check(!stopped) { "NestMoqLiteBroadcaster already stopped" }
         check(job == null) { "NestMoqLiteBroadcaster.start already called" }
 
@@ -187,9 +199,14 @@ class NestMoqLiteBroadcaster(
                                             t,
                                         ),
                                     )
-                                    // Falls through to the same post-loop flush path
-                                    // capture-EOF takes — caller still owns [stop],
-                                    // but the mic-burn loop is over.
+                                    // Surface the bail so the speaker
+                                    // can flip to Failed and the
+                                    // reconnect orchestrator recycles
+                                    // the session. Caller still owns
+                                    // [stop] — we don't release the mic
+                                    // ourselves to avoid double-stop
+                                    // races with a concurrent caller.
+                                    runCatching { onTerminalFailure() }
                                     return@launch
                                 }
                             }

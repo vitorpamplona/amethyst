@@ -92,7 +92,20 @@ class MoqLiteNestsSpeaker internal constructor(
                         publisher = publisher,
                         scope = scope,
                         framesPerGroup = framesPerGroup,
-                    ).also { it.start() }
+                    ).also {
+                        it.start(
+                            onTerminalFailure = {
+                                // Broadcaster bailed after sustained
+                                // publisher.send failures. Flip to
+                                // Failed so the reconnect orchestrator
+                                // sees a terminal state and recycles
+                                // the session — without this signal the
+                                // outward state stays on Broadcasting
+                                // and the room is silently mute.
+                                onBroadcastTerminalFailure()
+                            },
+                        )
+                    }
                 } catch (t: Throwable) {
                     runCatching { publisher.close() }
                     throw t
@@ -127,6 +140,22 @@ class MoqLiteNestsSpeaker internal constructor(
             mutableState.value =
                 NestsSpeakerState.Connected(current.room, current.negotiatedMoqVersion)
         }
+    }
+
+    /**
+     * Called from the broadcaster's `onTerminalFailure` callback (off
+     * the speaker's coroutine). Transitions the speaker to `Failed` so
+     * the reconnect orchestrator (`ReconnectingNestsSpeaker`) observes
+     * a terminal state and recycles the session. No-op if the speaker
+     * is already in a terminal state.
+     */
+    private fun onBroadcastTerminalFailure() {
+        val current = mutableState.value
+        if (current is NestsSpeakerState.Failed || current is NestsSpeakerState.Closed) return
+        mutableState.value =
+            NestsSpeakerState.Failed(
+                reason = "broadcast pipeline gave up — likely transport loss",
+            )
     }
 
     internal fun reportMuteState(muted: Boolean) {

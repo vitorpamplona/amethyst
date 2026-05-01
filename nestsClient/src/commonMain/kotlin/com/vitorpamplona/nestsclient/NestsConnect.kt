@@ -372,7 +372,10 @@ internal fun parseEndpoint(endpoint: String): Pair<String, String> {
     val (hostPart, portStr) =
         if (authorityRaw.startsWith('[')) {
             val closeBracket = authorityRaw.indexOf(']')
-            require(closeBracket > 0) { "malformed IPv6 authority: '$authorityRaw'" }
+            // closeBracket==1 would mean the literal "[]" — empty IPv6
+            // address. Reject so callers can't accidentally pass an
+            // unconfigured placeholder.
+            require(closeBracket > 1) { "malformed IPv6 authority: '$authorityRaw'" }
             val host = authorityRaw.substring(0, closeBracket + 1)
             val tail = authorityRaw.substring(closeBracket + 1)
             when {

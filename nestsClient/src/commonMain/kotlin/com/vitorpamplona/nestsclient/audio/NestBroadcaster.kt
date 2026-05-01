@@ -65,7 +65,16 @@ class NestBroadcaster(
      * a stopped state and the exception propagates so the caller can
      * surface it to the user.
      */
-    fun start(onError: (AudioException) -> Unit = { /* swallow */ }) {
+    fun start(
+        /**
+         * See [NestMoqLiteBroadcaster.start]'s `onTerminalFailure` kdoc —
+         * fires once when the loop bails after MAX_CONSECUTIVE_SEND_ERRORS
+         * so the speaker can transition to Failed and the orchestrator
+         * can recycle.
+         */
+        onTerminalFailure: () -> Unit = { /* swallow */ },
+        onError: (AudioException) -> Unit = { /* swallow */ },
+    ) {
         check(!stopped) { "NestBroadcaster already stopped" }
         check(job == null) { "NestBroadcaster.start already called" }
 
@@ -132,6 +141,7 @@ class NestBroadcaster(
                                             t,
                                         ),
                                     )
+                                    runCatching { onTerminalFailure() }
                                     return@launch
                                 }
                             }
