@@ -492,6 +492,7 @@
     <string name="nest_mic_unmute">取消麦克风静音</string>
     <string name="nest_broadcast_connecting">上线中…</string>
     <string name="nest_broadcast_failed">广播失败: %1$s</string>
+    <string name="nest_mute_failed">未能降低音量：%1$s</string>
     <string name="nest_record_permission_required">在这个房间进行交谈需要麦克风权限。</string>
     <string name="nest_open_settings">打开设置</string>
     <string name="nest_notification_channel">语音聊天房</string>
@@ -502,6 +503,10 @@
     <string name="nest_notification_stop">停止</string>
     <string name="nest_join">加入语音聊天室</string>
     <string name="nest_lobby_host_label">主持人</string>
+    <string name="nest_lobby_open_action">打开</string>
+    <string name="nest_lobby_recent_chat">最近聊天</string>
+    <string name="nest_lobby_no_listeners">聊天室里目前没人。</string>
+    <string name="nest_lobby_listeners_count">%1$d 人正在听</string>
     <string name="nest_role_host">主持人</string>
     <string name="nest_role_moderator">协管</string>
     <string name="nest_state_muted">麦克风已静音</string>
@@ -1313,6 +1318,10 @@
     <string name="error_unable_to_fetch_invoice">无法从接收方的服务器获取发票</string>
     <string name="wallet_connect_pay_invoice_error_error">你的钱包连接提供者返回了以下错误： %1$s</string>
     <string name="could_not_connect_to_tor">无法连接到 Tor</string>
+    <string name="tor_connection_failed_title">Tor 未连接</string>
+    <string name="tor_connection_failed_body">Amethyst 无法完成引导 Tor。 使用常规(非Tor)连接以便加载源吗？我们会记住该选择一个小时，并在这之后重试Tor连接。</string>
+    <string name="tor_continue_without_for_session">使用常规连接</string>
+    <string name="tor_keep_waiting">继续等待</string>
     <string name="unable_to_download_relay_document">无法下载中继文件</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">无法从闪电地址集合LNURL\"%1$s\"。请检查用户设置</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收者闪电服务不可用。它是根据雷电地址\"%2$s\"计算的。 错误: %3$s。请检查服务器是否已经上线，闪电地址是否正确</string>
@@ -1510,6 +1519,7 @@
     <string name="open_all_reactions_to_this_post">展开对此帖子的所有回应</string>
     <string name="close_all_reactions_to_this_post">收起对此帖子的所有回应</string>
     <string name="reply_description">回复</string>
+    <string name="jump_to_parent_reply">跳转到这条回复正在回复的笔记</string>
     <string name="boost_or_quote_description">提升或引用</string>
     <string name="like_description">点赞</string>
     <string name="zap_description">打闪</string>
@@ -1518,6 +1528,10 @@
     <string name="bottom_bar_settings_description">拖动可重新排序。切换可从底部栏中添加或删除一个项目。无项目则底部栏隐藏。</string>
     <string name="bottom_bar_settings_available">可用</string>
     <string name="bottom_bar_settings_reorder">调整顺序</string>
+    <string name="bottom_bar_settings_restore_default">恢复默认</string>
+    <string name="home_tabs_settings">主页标签</string>
+    <string name="home_tabs_settings_description">选择主屏幕上出现的标签页。当只有一个标签处于活动状态时，标签栏将被隐藏。</string>
+    <string name="home_tab_everything">全部</string>
     <string name="reactions_settings">回应设置</string>
     <string name="reactions_settings_description">配置显示的回应按钮、按钮顺序及是否显示回应计数。</string>
     <string name="reactions_settings_enabled">已启用</string>

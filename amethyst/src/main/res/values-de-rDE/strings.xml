@@ -1508,6 +1508,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
     <string name="close_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag schließen</string>
     <string name="reply_description">Antworten</string>
+    <string name="jump_to_parent_reply">Zur Notiz springen, auf die diese Antwort antwortet</string>
     <string name="boost_or_quote_description">Boosten oder Zitieren</string>
     <string name="like_description">Gefällt mir</string>
     <string name="zap_description">Zap</string>
@@ -1516,6 +1517,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="bottom_bar_settings_description">Zum Umordnen ziehen. Zum Hinzufügen oder Entfernen eines Elements aus der unteren Leiste umschalten. Mit null Elementen wird die untere Leiste ausgeblendet.</string>
     <string name="bottom_bar_settings_available">Verfügbar</string>
     <string name="bottom_bar_settings_reorder">Umordnen</string>
+    <string name="bottom_bar_settings_restore_default">Standard wiederherstellen</string>
     <string name="home_tabs_settings">Startseiten-Tabs</string>
     <string name="home_tabs_settings_description">Wähle, welche Tabs auf der Startseite erscheinen. Wenn nur ein Tab aktiv ist, wird die Tab-Leiste ausgeblendet.</string>
     <string name="home_tab_everything">Alles</string>
@@ -2384,7 +2386,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigung wie öffentliche.</string>
     <string name="gif">Gif</string>
-
-    <string name="bottom_bar_settings_restore_default">Standard wiederherstellen</string>
-    <string name="jump_to_parent_reply">Zur Notiz springen, auf die diese Antwort antwortet</string>
 </resources>

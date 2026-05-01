@@ -1505,6 +1505,7 @@
     <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
     <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
     <string name="reply_description">Svara</string>
+    <string name="jump_to_parent_reply">Hoppa till noten som detta svar svarar på</string>
     <string name="boost_or_quote_description">Boosta eller citera</string>
     <string name="like_description">Gilla</string>
     <string name="zap_description">Zap</string>
@@ -1513,6 +1514,7 @@
     <string name="bottom_bar_settings_description">Dra för att ändra ordning. Växla för att lägga till eller ta bort ett objekt från nedre fältet. Med noll objekt döljs det nedre fältet.</string>
     <string name="bottom_bar_settings_available">Tillgängliga</string>
     <string name="bottom_bar_settings_reorder">Ändra ordning</string>
+    <string name="bottom_bar_settings_restore_default">Återställ standard</string>
     <string name="home_tabs_settings">Hemflikar</string>
     <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
     <string name="home_tab_everything">Allt</string>
@@ -2381,7 +2383,4 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
-
-    <string name="bottom_bar_settings_restore_default">Återställ standard</string>
-    <string name="jump_to_parent_reply">Hoppa till noten som detta svar svarar på</string>
 </resources>

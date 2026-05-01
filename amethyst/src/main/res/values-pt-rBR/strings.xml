@@ -1508,6 +1508,7 @@
     <string name="open_all_reactions_to_this_post">Abrir todas as reações a esta postagem</string>
     <string name="close_all_reactions_to_this_post">Fechar todas as reações a esta postagem</string>
     <string name="reply_description">Responder</string>
+    <string name="jump_to_parent_reply">Ir para a nota à qual esta resposta está respondendo</string>
     <string name="boost_or_quote_description">Impulsionar ou Citar</string>
     <string name="like_description">Gostar</string>
     <string name="zap_description">Zap</string>
@@ -1516,6 +1517,7 @@
     <string name="bottom_bar_settings_description">Arraste para reordenar. Alterne para adicionar ou remover um item da barra inferior. Com zero itens, a barra inferior fica oculta.</string>
     <string name="bottom_bar_settings_available">Disponíveis</string>
     <string name="bottom_bar_settings_reorder">Reordenar</string>
+    <string name="bottom_bar_settings_restore_default">Restaurar padrão</string>
     <string name="home_tabs_settings">Abas da Tela Inicial</string>
     <string name="home_tabs_settings_description">Escolha quais abas aparecem na Tela Inicial. Quando apenas uma aba está ativa, a barra de abas fica oculta.</string>
     <string name="home_tab_everything">Tudo</string>
@@ -2384,7 +2386,4 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
-
-    <string name="bottom_bar_settings_restore_default">Restaurar padrão</string>
-    <string name="jump_to_parent_reply">Ir para a nota à qual esta resposta está respondendo</string>
 </resources>

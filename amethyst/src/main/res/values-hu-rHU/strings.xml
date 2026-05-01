@@ -133,7 +133,7 @@
     <string name="errors">Hibák</string>
     <string name="connection_success_rate_description">Az átjátszóhoz való sikeres kapcsolatok százalékos aránya</string>
     <string name="errors_description">Ebben a munkamenetben lévő kapcsolati hibák száma</string>
-    <string name="home_feed">Fő hírfolyam</string>
+    <string name="home_feed">Kezdőlap hírcsatornája</string>
     <string name="private_message_feed">Privát üzenethírfolyam</string>
     <string name="public_chat_feed">Nyilvános csevegési hírfolyam</string>
     <string name="global_feed">Globális hírfolyam</string>
@@ -461,7 +461,7 @@
     <string name="nests">Hangszobák</string>
     <string name="meeting_room_in_space">ebben: %1$s</string>
     <string name="meeting_room_in_space_unknown">egy hangszoba</string>
-    <string name="nest_stage">Állapot</string>
+    <string name="nest_stage">Színpad</string>
     <string name="nest_stage_empty">Várakozás az előadókra…</string>
     <string name="nest_audience">Közönség</string>
     <string name="nest_raise_hand">Kéz felemelése</string>
@@ -492,8 +492,9 @@
     <string name="nest_mic_unmute">Mikrofon némításának megszüntetése</string>
     <string name="nest_broadcast_connecting">Élő közvetítés elkezdése…</string>
     <string name="nest_broadcast_failed">Nem sikerült a közvetítés: %1$s</string>
+    <string name="nest_mute_failed">Nem sikerült némítani: %1$s</string>
     <string name="nest_record_permission_required">Az Amethystnek hozzáférésre van szüksége a mikrofonhoz a beszélgetéshez ebben a szobában.</string>
-    <string name="nest_open_settings">Beállítások menyitása</string>
+    <string name="nest_open_settings">Nincsenek engedélyek</string>
     <string name="nest_notification_channel">Hangszobák</string>
     <string name="nest_notification_channel_description">Hang lejátszása, amíg a szoba meg van nyitva.</string>
     <string name="nest_notification_listening">Hangszoba kapcsódott</string>
@@ -502,6 +503,10 @@
     <string name="nest_notification_stop">Leállítás</string>
     <string name="nest_join">Csatlakozás a hangszobához</string>
     <string name="nest_lobby_host_label">Kiszolgáló</string>
+    <string name="nest_lobby_open_action">Megnyitás</string>
+    <string name="nest_lobby_recent_chat">Legutóbbi csevegés</string>
+    <string name="nest_lobby_no_listeners">Jelenleg senki sincs a szobában.</string>
+    <string name="nest_lobby_listeners_count">%1$d hallgató</string>
     <string name="nest_role_host">Kiszolgáló</string>
     <string name="nest_role_moderator">Moderátor</string>
     <string name="nest_state_muted">Mikrofon némítva</string>
@@ -579,6 +584,11 @@
     <string name="nests_servers_my_section">Saját kiszolgálók</string>
     <string name="nests_servers_my_explainer">Kind-10112 típusú cserélhető eseményként mentve, így más kliensek is olvashatják az Ön beállítását.</string>
     <string name="nests_servers_add_field">Hangszoba-kiszolgáló hozzáadása</string>
+    <string name="nests_servers_add_relay_field">Átjátszó (WebTransport) webcíme</string>
+    <string name="nests_servers_add_auth_field">Hitelesítési (JWT mint) webcím</string>
+    <string name="nests_servers_add_pair_button">Hozzáadás</string>
+    <string name="nests_servers_relay_label">Átjátszó</string>
+    <string name="nests_servers_auth_label">Hitelesítés</string>
     <string name="nests_servers_recommended_section">Ajánlott kiszolgálók</string>
     <string name="nests_servers_recommended_explainer">Beépített javaslatok, melyeket egy koppintással hozzáadhat a listájához.</string>
     <string name="nests_servers_use_defaults">Az Amethyst alapértelmezésének használata</string>
@@ -1263,7 +1273,7 @@
     <string name="relay_information_document_error_parse_result">Nem sikerült az eredmény elemzése a következőtől: %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">A(z) %1$s sikertelen a következő kóddal %2$s</string>
     <string name="active_for">Aktív: </string>
-    <string name="active_for_home">Főoldal</string>
+    <string name="active_for_home">Kezdőlap</string>
     <string name="active_for_msg">Privát üzenetek</string>
     <string name="active_for_chats">Csevegések</string>
     <string name="active_for_global">Globális</string>
@@ -1309,6 +1319,10 @@
     <string name="error_unable_to_fetch_invoice">Nem sikerült a számlát a kedvezményezett kiszolgálóiról lekérni</string>
     <string name="wallet_connect_pay_invoice_error_error">A Wallet Connect szolgáltatója a következő hibával tért vissza: %1$s</string>
     <string name="could_not_connect_to_tor">Nem sikerült a Tor hálózathoz kapcsolódni</string>
+    <string name="tor_connection_failed_title">Nem sikerült kapcsolódni a Tor hálózathoz</string>
+    <string name="tor_connection_failed_body">Az Amethystnek nem sikerült befejeznie a Tor előkészítését. Legyen normál (nem Tor) kapcsolat használva a hírfolyam betöltéséhez? A választás egy óráig érvényes, utána a rendszer ismételten megkísérli a Tor hálózathoz való kapcsolódást.</string>
+    <string name="tor_continue_without_for_session">Normál kapcsolat használata</string>
+    <string name="tor_keep_waiting">Tovább várok</string>
     <string name="unable_to_download_relay_document">Nem érhető el az átjátszó-dokumentum </string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nem sikerült az LN-webcímet a(z) „%1$s” Lightning-címről összeállítani. Ellenőrizze a felhasználó beállításait</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">A kedvezményezett lightning-szolgáltatása ennél: %1$s nem érhető el. A(z) „%2$s” lightning-cím lett kiszámítva. Hiba: %3$s. Ellenőrizze, hogy a kiszolgáló működik-e, és hogy a lightning-cím helyes-e</string>
@@ -1506,6 +1520,7 @@
     <string name="open_all_reactions_to_this_post">A bejegyzésre adott összes reakció kibontása</string>
     <string name="close_all_reactions_to_this_post">A bejegyzésre adott összes reakció összecsukása</string>
     <string name="reply_description">Válasz</string>
+    <string name="jump_to_parent_reply">Ugrás arra a hozzászólásra, amelyikhez ez a válasz tartozik</string>
     <string name="boost_or_quote_description">Megtolás vagy Idézés</string>
     <string name="like_description">Tetszik</string>
     <string name="zap_description">Zap</string>
@@ -1514,6 +1529,10 @@
     <string name="bottom_bar_settings_description">Húzással rendezheti át az elemek sorrendjét. A kapcsolóval elemeket adhat hozzá az alsó sávhoz, illetve eltávolíthat onnan. Ha nincs elem, az alsó sáv el van rejtve.</string>
     <string name="bottom_bar_settings_available">Elérhető</string>
     <string name="bottom_bar_settings_reorder">Újrarendezés</string>
+    <string name="bottom_bar_settings_restore_default">Alapértelmezés visszaállítása</string>
+    <string name="home_tabs_settings">Kezdőlap lapjai</string>
+    <string name="home_tabs_settings_description">Válassza ki, mely lapok jelenjenek meg a kezdőlapon. Ha csak egy lap aktív, akkor a lapsáv rejtett.</string>
+    <string name="home_tab_everything">Minden</string>
     <string name="reactions_settings">Reakciósor</string>
     <string name="reactions_settings_description">Állítsa be, hogy mely reakciógombok jelenjenek meg, azok sorrendjét, valamint a számlálók megjelenítését.</string>
     <string name="reactions_settings_enabled">Engedélyezve</string>
@@ -1846,7 +1865,7 @@
     <string name="follow_pack_delete">Csomag törlése</string>
     <string name="kinds">Változatok</string>
     <string name="retry_failed">Siikertelen újrapróbálkozás</string>
-    <string name="tap_to_view_details">Koppintson a részletek megtekintéséhez</string>
+    <string name="tap_to_view_details">Koppintson ide a részletek megtekintéséhez</string>
     <string name="event_sent">%1$s elküldve</string>
     <string name="broadcast_results">Közvetítési eredmények</string>
     <string name="broadcasts_number">Közvetítés (%1$d)</string>
