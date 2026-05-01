@@ -495,6 +495,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_mic_unmute">Mikrofon aktivieren</string>
     <string name="nest_broadcast_connecting">Gehe live…</string>
     <string name="nest_broadcast_failed">Übertragung fehlgeschlagen: %1$s</string>
+    <string name="nest_mute_failed">Stummschalten fehlgeschlagen: %1$s</string>
     <string name="nest_record_permission_required">Mikrofonzugriff ist erforderlich, um in diesem Raum zu sprechen.</string>
     <string name="nest_open_settings">Einstellungen öffnen</string>
     <string name="nest_notification_channel_description">Hält Audio aktiv, solange ein Raum geöffnet ist.</string>
@@ -503,6 +504,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_notification_stop">Stoppen</string>
     <string name="nest_join">Nest beitreten</string>
     <string name="nest_lobby_host_label">Gastgeber</string>
+    <string name="nest_lobby_open_action">Öffnen</string>
+    <string name="nest_lobby_recent_chat">Letzter Chat</string>
+    <string name="nest_lobby_no_listeners">Im Raum ist gerade niemand.</string>
+    <string name="nest_lobby_listeners_count">%1$d hört zu</string>
     <string name="nest_role_host">Gastgeber</string>
     <string name="nest_state_muted">Mikrofon stumm</string>
     <string name="nest_state_speaking">Spricht gerade</string>
@@ -1302,6 +1307,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="error_unable_to_fetch_invoice">Konnte Rechnung nicht vom Server des Empfängers abrufen</string>
     <string name="wallet_connect_pay_invoice_error_error">Ihr Wallet-Connect-Anbieter hat folgenden Fehler zurückgegeben: %1$s</string>
     <string name="could_not_connect_to_tor">Konnte keine Verbindung zu Tor herstellen</string>
+    <string name="tor_connection_failed_title">Tor verbindet sich nicht</string>
+    <string name="tor_connection_failed_body">Amethyst konnte den Tor-Start nicht abschließen. Eine reguläre (Nicht-Tor-)Verbindung verwenden, damit der Feed laden kann? Wir merken uns diese Auswahl für die nächste Stunde und versuchen Tor danach erneut.</string>
+    <string name="tor_continue_without_for_session">Verbindung ohne Tor verwenden</string>
+    <string name="tor_keep_waiting">Weiter warten</string>
     <string name="unable_to_download_relay_document">Herunterladen des Relaisdokuments nicht verfügbar</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Konnte keine LNUrl aus der Lightning-Adresse \"%1$s\" zusammenstellen. Überprüfen Sie die Konfiguration des Benutzers</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Der Lightning-Service des Empfängers unter %1$s ist nicht verfügbar. Er wurde aus der Lightning-Adresse \"%2$s\" berechnet. Fehler: %3$s. Überprüfen Sie, ob der Server online ist und ob die Lightning-Adresse korrekt ist</string>
@@ -1507,6 +1516,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="bottom_bar_settings_description">Zum Umordnen ziehen. Zum Hinzufügen oder Entfernen eines Elements aus der unteren Leiste umschalten. Mit null Elementen wird die untere Leiste ausgeblendet.</string>
     <string name="bottom_bar_settings_available">Verfügbar</string>
     <string name="bottom_bar_settings_reorder">Umordnen</string>
+    <string name="home_tabs_settings">Startseiten-Tabs</string>
+    <string name="home_tabs_settings_description">Wähle, welche Tabs auf der Startseite erscheinen. Wenn nur ein Tab aktiv ist, wird die Tab-Leiste ausgeblendet.</string>
+    <string name="home_tab_everything">Alles</string>
     <string name="reactions_settings">Reaktions-Einstellungen</string>
     <string name="reactions_settings_description">Konfigurieren Sie, welche Reaktionsschaltflächen angezeigt werden, ihre Reihenfolge und ob Zähler angezeigt werden sollen.</string>
     <string name="reactions_settings_enabled">Aktiviert</string>
@@ -2372,20 +2384,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigung wie öffentliche.</string>
     <string name="gif">Gif</string>
-
-    <string name="home_tab_everything">Alles</string>
-    <string name="home_tabs_settings">Startseiten-Tabs</string>
-    <string name="home_tabs_settings_description">Wähle, welche Tabs auf der Startseite erscheinen. Wenn nur ein Tab aktiv ist, wird die Tab-Leiste ausgeblendet.</string>
-    <string name="nest_lobby_listeners_count">%1$d hört zu</string>
-    <string name="nest_lobby_no_listeners">Im Raum ist gerade niemand.</string>
-    <string name="nest_lobby_open_action">Öffnen</string>
-    <string name="nest_lobby_recent_chat">Letzter Chat</string>
-    <string name="nest_mute_failed">Stummschalten fehlgeschlagen: %1$s</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_tab_chat">Chat</string>
-    <string name="nests_servers_relay_label">Relay</string>
-    <string name="tor_connection_failed_body">Amethyst konnte den Tor-Start nicht abschließen. Eine reguläre (Nicht-Tor-)Verbindung verwenden, damit der Feed laden kann? Wir merken uns diese Auswahl für die nächste Stunde und versuchen Tor danach erneut.</string>
-    <string name="tor_connection_failed_title">Tor verbindet sich nicht</string>
-    <string name="tor_continue_without_for_session">Verbindung ohne Tor verwenden</string>
-    <string name="tor_keep_waiting">Weiter warten</string>
 </resources>
