@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.kotlinSerialization
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.limits.EventLimits
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -68,15 +69,25 @@ object TagArrayKSerializer : KSerializer<TagArray> {
 
     fun deserializeFromElement(element: JsonElement): TagArray {
         val array = element.jsonArray
+        require(array.size <= EventLimits.MAX_TAG_COUNT) {
+            "Event has ${array.size} tags; max is ${EventLimits.MAX_TAG_COUNT}"
+        }
         val outerList = ArrayList<Array<String>>(array.size)
         for (inner in array) {
             val innerArray = inner.jsonArray
+            require(innerArray.size <= EventLimits.MAX_TAG_ELEMENTS_PER_TAG) {
+                "Tag has ${innerArray.size} elements; max is ${EventLimits.MAX_TAG_ELEMENTS_PER_TAG}"
+            }
             val innerList = ArrayList<String>(innerArray.size.coerceAtLeast(5))
             for (s in innerArray) {
                 if (s is JsonNull) {
                     innerList.add("")
                 } else {
-                    innerList.add(s.jsonPrimitive.content)
+                    val text = s.jsonPrimitive.content
+                    require(text.length <= EventLimits.MAX_TAG_VALUE_LENGTH) {
+                        "Tag value length ${text.length} exceeds max ${EventLimits.MAX_TAG_VALUE_LENGTH}"
+                    }
+                    innerList.add(text)
                 }
             }
             outerList.add(innerList.toTypedArray())

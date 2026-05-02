@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.limits.EventLimits
 import com.vitorpamplona.quartz.utils.EventFactory
 
 class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
@@ -76,6 +77,8 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
         if (pubKey.isEmpty()) {
             throw IllegalArgumentException("Event not found")
         }
+
+        EventLimits.validate(content, tags)
 
         return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
     }

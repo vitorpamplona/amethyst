@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.limits.EventLimits
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -103,6 +104,8 @@ object EventKSerializer : KSerializer<Event> {
         if (pubKey.isEmpty()) {
             throw IllegalArgumentException("Event not found")
         }
+
+        EventLimits.validate(content, tags)
 
         return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
     }
