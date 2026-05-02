@@ -32,16 +32,21 @@ class TagArrayDeserializer : StdDeserializer<TagArray>(TagArray::class.java) {
         p: JsonParser,
         ctxt: DeserializationContext,
     ): TagArray {
-        // doesn't check for weird payloads on purpose.
         val outerList = ArrayList<Array<String>>()
         while (p.nextToken() != JsonToken.END_ARRAY) {
             val innerList = ArrayList<String>(5)
+            var index = 0
             while (p.nextToken() != JsonToken.END_ARRAY) {
                 if (p.currentToken == JsonToken.VALUE_NULL) {
                     innerList.add("")
                 } else {
-                    innerList.add(p.text.intern())
+                    // Intern only the tag key (index 0) — protocol-defined finite set ("p", "e", "a", …).
+                    // Tag values at index >= 1 are attacker-controlled (pubkeys, event ids, URLs, free text)
+                    // and must not be promoted to the JVM StringTable: hostile relays could flood unique
+                    // values to grow it without bound (security review 2026-04-24 §2.3).
+                    innerList.add(if (index == 0) p.text.intern() else p.text)
                 }
+                index++
             }
 
             outerList.add(innerList.toArray(arrayOfNulls<String>(innerList.size)))

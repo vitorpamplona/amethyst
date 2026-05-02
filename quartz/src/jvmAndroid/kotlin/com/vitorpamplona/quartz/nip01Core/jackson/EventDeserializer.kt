@@ -52,13 +52,23 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             p.nextToken()
 
             when (fieldName.hashCode()) {
-                3355 -> id = p.text.intern()
-                -977424830 -> pubKey = p.text.intern()
+                // Do not intern id/pubKey: each event ships a unique 64-char hex id, and a hostile
+                // relay could flood ids/pubkeys to grow the JVM StringTable without bound (security
+                // review 2026-04-24 §2.3).
+                3355 -> id = p.text
+
+                -977424830 -> pubKey = p.text
+
                 1369680106 -> createdAt = p.longValue
+
                 3292052 -> kind = p.intValue
+
                 3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
+
                 951530617 -> content = p.text
+
                 113873 -> sig = p.text
+
                 else -> p.skipChildren()
             }
         }
