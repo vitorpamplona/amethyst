@@ -1173,6 +1173,10 @@ class AccountViewModel(
 
     fun showUser(pubkeyHex: String) = launchSigner { account.showUser(pubkeyHex) }
 
+    fun showUsers(pubkeys: List<HexKey>) = launchSigner { account.showUsers(pubkeys) }
+
+    fun showWords(words: List<String>) = launchSigner { account.showWords(words) }
+
     fun createStatus(newStatus: String) = launchSigner { account.createStatus(newStatus) }
 
     fun updateStatus(
