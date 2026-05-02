@@ -74,10 +74,6 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             }
         }
 
-        if (pubKey.isEmpty()) {
-            throw IllegalArgumentException("Event not found")
-        }
-
         EventLimits.validateFields(id, pubKey, sig, kind)
         EventLimits.validateContent(content)
 

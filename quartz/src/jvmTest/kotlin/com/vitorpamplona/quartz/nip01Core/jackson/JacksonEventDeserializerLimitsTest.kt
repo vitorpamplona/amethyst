@@ -24,14 +24,12 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.limits.EventLimits
 import com.vitorpamplona.quartz.nip01Core.limits.EventLimitsTestSupport.buildEventJson
+import com.vitorpamplona.quartz.nip01Core.limits.assertRejectsBecause
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
-// Jackson-path coverage for security review 2026-04-24 §2.3 / Finding #5.
-// The kotlinx path is exercised by EventLimitsTest in commonTest; this file targets the
-// streaming Jackson deserializers (EventDeserializer + TagArrayDeserializer) which terminate
-// the parse early on cap overflow.
+// Jackson-path mirror of EventLimitsTest (commonTest, kotlinx path). Shared assertion helper
+// from EventLimitsTestSupport keeps the two classes aligned.
 class JacksonEventDeserializerLimitsTest {
     private fun parse(json: String): Event = JacksonMapper.mapper.readValue(json)
 
@@ -42,121 +40,50 @@ class JacksonEventDeserializerLimitsTest {
         assertEquals(100, event.content.length)
     }
 
-    @Test
-    fun rejectsOversizedContent() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(contentLength = EventLimits.MAX_CONTENT_LENGTH + 1))
-            }
-        assertEquals(true, ex.message?.contains("content length"), ex.message)
-    }
+    // --- §2.3: size / count / length caps ---
 
     @Test
-    fun rejectsTooManyTags() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(tagCount = EventLimits.MAX_TAG_COUNT + 1))
-            }
-        assertEquals(true, ex.message?.contains("tags"), ex.message)
-    }
+    fun rejectsOversizedContent() = assertRejectsBecause(::parse, buildEventJson(contentLength = EventLimits.MAX_CONTENT_LENGTH + 1), "content length")
 
     @Test
-    fun rejectsTagWithTooManyElements() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(tagInnerCount = EventLimits.MAX_TAG_ELEMENTS_PER_TAG + 2))
-            }
-        assertEquals(true, ex.message?.contains("elements"), ex.message)
-    }
+    fun rejectsTooManyTags() = assertRejectsBecause(::parse, buildEventJson(tagCount = EventLimits.MAX_TAG_COUNT + 1), "tags")
 
     @Test
-    fun rejectsOversizedTagValue() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(tagValueLength = EventLimits.MAX_TAG_VALUE_LENGTH + 1))
-            }
-        assertEquals(true, ex.message?.contains("Tag value length"), ex.message)
-    }
-
-    // --- §2.4: id / pubKey / sig / kind / createdAt validation ---
+    fun rejectsTagWithTooManyElements() = assertRejectsBecause(::parse, buildEventJson(tagInnerCount = EventLimits.MAX_TAG_ELEMENTS_PER_TAG + 2), "elements")
 
     @Test
-    fun rejectsIdWithWrongLength() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(id = "0".repeat(63)))
-            }
-        assertEquals(true, ex.message?.contains("id must be 64-char hex"), ex.message)
-    }
+    fun rejectsOversizedTagValue() = assertRejectsBecause(::parse, buildEventJson(tagValueLength = EventLimits.MAX_TAG_VALUE_LENGTH + 1), "Tag value length")
+
+    // --- §2.4: id / pubKey / sig / kind validation ---
 
     @Test
-    fun rejectsIdWithNonHex() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(id = "z".repeat(64)))
-            }
-        assertEquals(true, ex.message?.contains("id must be 64-char hex"), ex.message)
-    }
+    fun rejectsIdWithWrongLength() = assertRejectsBecause(::parse, buildEventJson(id = "0".repeat(63)), "id must be 64-char hex")
 
     @Test
-    fun rejectsPubKeyWithWrongLength() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(pubKey = "0".repeat(65)))
-            }
-        assertEquals(true, ex.message?.contains("pubKey must be 64-char hex"), ex.message)
-    }
+    fun rejectsIdWithNonHex() = assertRejectsBecause(::parse, buildEventJson(id = "z".repeat(64)), "id must be 64-char hex")
 
     @Test
-    fun rejectsPubKeyWithNonHex() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(pubKey = "g".repeat(64)))
-            }
-        assertEquals(true, ex.message?.contains("pubKey must be 64-char hex"), ex.message)
-    }
+    fun rejectsPubKeyWithWrongLength() = assertRejectsBecause(::parse, buildEventJson(pubKey = "0".repeat(65)), "pubKey must be 64-char hex")
 
     @Test
-    fun rejectsSigWithWrongNonZeroLength() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(sig = "0".repeat(127)))
-            }
-        assertEquals(true, ex.message?.contains("sig must be empty or 128-char hex"), ex.message)
-    }
+    fun rejectsPubKeyWithNonHex() = assertRejectsBecause(::parse, buildEventJson(pubKey = "g".repeat(64)), "pubKey must be 64-char hex")
 
     @Test
-    fun rejectsSigWithNonHex() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(sig = "z".repeat(128)))
-            }
-        assertEquals(true, ex.message?.contains("sig must be empty or 128-char hex"), ex.message)
-    }
+    fun rejectsSigWithWrongNonZeroLength() = assertRejectsBecause(::parse, buildEventJson(sig = "0".repeat(127)), "sig must be empty or 128-char hex")
+
+    @Test
+    fun rejectsSigWithNonHex() = assertRejectsBecause(::parse, buildEventJson(sig = "z".repeat(128)), "sig must be empty or 128-char hex")
+
+    @Test
+    fun rejectsKindAboveMax() = assertRejectsBecause(::parse, buildEventJson(kind = EventLimits.MAX_KIND + 1), "kind")
+
+    @Test
+    fun rejectsKindBelowZero() = assertRejectsBecause(::parse, buildEventJson(kind = -1), "kind")
 
     @Test
     fun acceptsEmptySig() {
-        // NIP-17 (kind:14 DMs) and NIP-37 drafts are stored as Event with sig="".
         val event = parse(buildEventJson(sig = ""))
         assertEquals("", event.sig)
-    }
-
-    @Test
-    fun rejectsKindAboveMax() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(kind = EventLimits.MAX_KIND + 1))
-            }
-        assertEquals(true, ex.message?.contains("kind"), ex.message)
-    }
-
-    @Test
-    fun rejectsKindBelowZero() {
-        val ex =
-            assertFailsWith<IllegalArgumentException> {
-                parse(buildEventJson(kind = -1))
-            }
-        assertEquals(true, ex.message?.contains("kind"), ex.message)
     }
 
     @Test

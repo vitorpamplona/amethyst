@@ -20,7 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip01Core.limits
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+internal fun assertRejectsBecause(
+    parse: (String) -> Event,
+    json: String,
+    expectedMessageFragment: String,
+) {
+    val ex = assertFailsWith<IllegalArgumentException> { parse(json) }
+    assertEquals(true, ex.message?.contains(expectedMessageFragment), ex.message)
+}
 
 internal object EventLimitsTestSupport {
     const val ID = "0000000000000000000000000000000000000000000000000000000000000001"

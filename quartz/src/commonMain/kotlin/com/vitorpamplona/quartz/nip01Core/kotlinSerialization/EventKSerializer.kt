@@ -101,10 +101,6 @@ object EventKSerializer : KSerializer<Event> {
             }
         }
 
-        if (pubKey.isEmpty()) {
-            throw IllegalArgumentException("Event not found")
-        }
-
         EventLimits.validateFields(id, pubKey, sig, kind)
         EventLimits.validateContent(content)
 
