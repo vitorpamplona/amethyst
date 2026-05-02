@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp
 
+import com.vitorpamplona.quartz.nip01Core.limits.EventLimits
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
@@ -49,6 +50,10 @@ class BasicOkHttpWebSocket(
             CoroutineExceptionHandler { _, throwable ->
                 Log.e("BasicOkHttpWebSocket", "WebsocketListener Caught exception: ${throwable.message}", throwable)
             }
+
+        // RFC 6455 §7.4 close code 1009 — "Message Too Big". Used when a relay sends a frame
+        // exceeding EventLimits.MAX_RELAY_MESSAGE_LENGTH (security review 2026-04-24 §2.3 Layer 1).
+        const val CLOSE_MESSAGE_TOO_LARGE = 1009
     }
 
     private var socket: OkHttpWebSocket? = null
@@ -81,6 +86,7 @@ class BasicOkHttpWebSocket(
                     webSocket: OkHttpWebSocket,
                     text: String,
                 ) {
+                    if (!acceptIncoming(webSocket, text)) return
                     // Asynchronously send the received message to the channel.
                     // `trySendBlocking` is used here for simplicity within the callback,
                     // but it's important to understand potential thread blocking if the buffer is full.
@@ -123,6 +129,25 @@ class BasicOkHttpWebSocket(
     }
 
     override fun send(msg: String): Boolean = socket?.send(msg) ?: false
+
+    // Decides whether an incoming WebSocket text message should be forwarded to `out`.
+    // Drops messages exceeding EventLimits.MAX_RELAY_MESSAGE_LENGTH and closes the socket
+    // (security review 2026-04-24 §2.3 Layer 1: a hostile relay can otherwise OOM the
+    // client with one giant frame before the per-event caps in EventDeserializer fire).
+    // Returns true when the caller should forward the message; false when it should drop.
+    internal fun acceptIncoming(
+        webSocket: OkHttpWebSocket,
+        text: String,
+    ): Boolean {
+        if (text.length > EventLimits.MAX_RELAY_MESSAGE_LENGTH) {
+            Log.w("BasicOkHttpWebSocket") {
+                "Dropping ${text.length}-char message from $url; max is ${EventLimits.MAX_RELAY_MESSAGE_LENGTH}"
+            }
+            webSocket.close(CLOSE_MESSAGE_TOO_LARGE, "message too large")
+            return false
+        }
+        return true
+    }
 
     class Builder(
         val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
