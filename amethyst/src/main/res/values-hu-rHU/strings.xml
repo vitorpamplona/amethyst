@@ -560,7 +560,15 @@
     <string name="nest_minimize">Minimalizálás</string>
     <string name="nest_minimize_description">Minimalizálás a további hallgatáshoz</string>
     <string name="nest_audio_dropped">A hang megszakadt</string>
+    <string name="nest_loading_room">Szoba betöltése…</string>
+    <string name="nest_unjoinable_title">Ez a szoba nem nyitható meg</string>
+    <string name="nest_unjoinable_body">A szobából hiányzik egy hangszolgáltatás vagy végpont. A kiszolgálónak frissítenie kell az adatait, mielőtt a hallgatók kapcsolódhatnának.</string>
+    <string name="nest_unjoinable_back">Vissza</string>
     <string name="nest_create_fab">Tér indítása</string>
+    <string name="nests_section_live_now">Most élőben</string>
+    <string name="nests_section_scheduled">Ütemezett</string>
+    <string name="nests_section_recently_ended">Nemrég ért véget</string>
+    <string name="nests_ended_ago">Véget ért: %1$s ezelőtt</string>
     <string name="nest_no_server_title">Hangszoba kiszolgálójának beállítása</string>
     <string name="nest_no_server_body">Még nem választott hangszoba-kiszolgálót. Hozzáadja a(z) %1$s kiszolgálót a kiszolgálólistájához és folytatja?\n\nEzt később módosíthatja a beállításokban.</string>
     <string name="nest_no_server_use_default">Alapértelmezett használata</string>

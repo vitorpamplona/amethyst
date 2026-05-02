@@ -559,7 +559,15 @@
     <string name="nest_minimize">Zminimalizuj</string>
     <string name="nest_minimize_description">Minimalizuj aby słuchać</string>
     <string name="nest_audio_dropped">Zanik dźwięku</string>
+    <string name="nest_loading_room">Wczytywanie pokoju…</string>
+    <string name="nest_unjoinable_title">Nie można otworzyć pokoju</string>
+    <string name="nest_unjoinable_body">W pokoju brakuje usługi audio lub końcówki. Kreator musi zaktualizować swoje dane, zanim słuchacze będą mogli się połączyć.</string>
+    <string name="nest_unjoinable_back">Wróć</string>
     <string name="nest_create_fab">Strefa startowa</string>
+    <string name="nests_section_live_now">Na żywo</string>
+    <string name="nests_section_scheduled">Zaplanowane</string>
+    <string name="nests_section_recently_ended">Ostatnio zakończone</string>
+    <string name="nests_ended_ago">Zakończono %1$s temu</string>
     <string name="nest_no_server_title">Ustaw serwer Nest</string>
     <string name="nest_no_server_body">Nie wybrałeś jeszcze serwera Nest. Dodać %1$s do listy serwerów i kontynuować?\n\nMożesz to zmienić później w ustawieniach.</string>
     <string name="nest_no_server_use_default">Ustaw domyślny</string>
