@@ -459,6 +459,7 @@
     <string name="follow_packs">अनुचरण पोटलियाँ</string>
     <string name="live_streams">सीधा प्रसारण</string>
     <string name="nests">ध्वनि शाला</string>
+    <string name="meeting_room_in_space">%1$s में</string>
     <string name="nest_stage">मंच</string>
     <string name="nest_audience">श्रोतागण</string>
     <string name="nest_raise_hand">हाथ उठाएँ</string>
