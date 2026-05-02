@@ -111,26 +111,30 @@ object MediaSaverToDisk {
                 withContext(Dispatchers.IO) {
                     check(response.isSuccessful)
 
+                    val trimmedUrl = trimInlineMetaData(url)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        val contentType = response.header("Content-Type") ?: getMimeTypeFromExtension(trimInlineMetaData(url))
-                        check(contentType.isNotBlank()) { "Can't find out the content type" }
+                        val headerType =
+                            response
+                                .header("Content-Type")
+                                ?.substringBefore(";")
+                                ?.trim()
 
                         val realType =
-                            if (contentType == "application/octet-stream") {
-                                mimeType ?: getMimeTypeFromExtension(url)
-                            } else {
-                                contentType
-                            }
+                            headerType?.takeIf(::isMediaMimeType)
+                                ?: mimeType?.takeIf(::isMediaMimeType)
+                                ?: getMimeTypeFromExtension(trimmedUrl).takeIf(::isMediaMimeType)
+                                ?: ""
+                        check(realType.isNotBlank()) { "Can't find out the content type" }
 
                         saveContentQ(
-                            displayName = File(trimInlineMetaData(url)).nameWithoutExtension,
+                            displayName = File(trimmedUrl).nameWithoutExtension,
                             contentType = realType,
                             contentSource = response.body.source(),
                             contentResolver = context.contentResolver,
                         )
                     } else {
                         saveContentDefault(
-                            fileName = File(trimInlineMetaData(url)).name,
+                            fileName = File(trimmedUrl).name,
                             contentSource = response.body.source(),
                             context = context,
                         )
@@ -149,6 +153,14 @@ object MediaSaverToDisk {
         fileName.substringAfterLast('.', "").lowercase().let {
             MimeTypeMap.getSingleton().getMimeTypeFromExtension(it).orEmpty()
         }
+
+    private fun isMediaMimeType(type: String): Boolean =
+        type.isNotBlank() &&
+            (
+                type.startsWith("image/", ignoreCase = true) ||
+                    type.startsWith("video/", ignoreCase = true) ||
+                    type.startsWith("audio/", ignoreCase = true)
+            )
 
     @OptIn(ExperimentalUuidApi::class)
     fun save(
