@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.limits
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.utils.Hex
 
 // Defense-in-depth caps on relay-supplied event payloads.
 // A hostile relay can otherwise OOM the client with one giant event or a flood of large tags
@@ -37,9 +38,47 @@ object EventLimits {
     const val MAX_CONTENT_LENGTH = 64 * 1024
     const val MAX_RELAY_MESSAGE_LENGTH = 256 * 1024
 
+    // NIP-01 declares `kind` as an unsigned 16-bit integer (0..65 535).
+    const val MAX_KIND = 65_535
+
     fun validateContent(content: String) {
         require(content.length <= MAX_CONTENT_LENGTH) {
             "Event content length ${content.length} exceeds max $MAX_CONTENT_LENGTH"
+        }
+    }
+
+    // Validates structural fields of an Event after deserialization (security review
+    // 2026-04-24 §2.4 / Finding #11). Without this, malformed events sit in the cache
+    // permanently and only blow up later inside Hex.decode if signature verification
+    // ever runs.
+    //
+    // - `id`/`pubKey`: required 64-char hex (32-byte hashes / x-only pubkeys).
+    // - `sig`: 128-char hex (64-byte Schnorr signature) when present, OR empty.
+    //   NIP-17 (kind:14 DMs) and NIP-37 drafts are stored as Event with sig="" because
+    //   the inner-event rumor is unsigned per NIP-59; we'd reject ~5 K real DMs from
+    //   any production cache otherwise. Signature verification (security review §2.1)
+    //   handles the "must be signed if non-empty" semantic.
+    // - `kind`: NIP-01 u16 range.
+    //
+    // `createdAt` is intentionally not bounded here: it's a UI / feed-sort concern, and
+    // archive replay legitimately produces events with timestamps from years ago.
+    fun validateFields(
+        id: String,
+        pubKey: String,
+        sig: String,
+        kind: Int,
+    ) {
+        require(id.length == 64 && Hex.isHex64(id)) {
+            "Event id must be 64-char hex; got length=${id.length}"
+        }
+        require(pubKey.length == 64 && Hex.isHex64(pubKey)) {
+            "Event pubKey must be 64-char hex; got length=${pubKey.length}"
+        }
+        require(sig.isEmpty() || (sig.length == 128 && Hex.isHex(sig))) {
+            "Event sig must be empty or 128-char hex; got length=${sig.length}"
+        }
+        require(kind in 0..MAX_KIND) {
+            "Event kind $kind out of range [0, $MAX_KIND]"
         }
     }
 

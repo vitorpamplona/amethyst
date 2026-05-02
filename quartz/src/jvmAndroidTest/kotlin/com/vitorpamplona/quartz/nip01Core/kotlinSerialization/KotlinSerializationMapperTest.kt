@@ -180,12 +180,15 @@ class KotlinSerializationMapperTest {
 
     @Test
     fun deserializeEventWithUnknownFields() {
+        val id = "a".repeat(64)
+        val pubKey = "b".repeat(64)
+        val sig = "c".repeat(128)
         val json =
-            """{"id":"abc123","pubkey":"def456","created_at":12345,"kind":1,"tags":[],"content":"test","sig":"sig123","unknown_field":"ignored"}"""
+            """{"id":"$id","pubkey":"$pubKey","created_at":12345,"kind":1,"tags":[],"content":"test","sig":"$sig","unknown_field":"ignored"}"""
         // Should not throw with unknown fields, should be ignored
         val deserialized = KotlinSerializationMapper.fromJson(json)
-        assertEquals("abc123", deserialized.id)
-        assertEquals("def456", deserialized.pubKey)
+        assertEquals(id, deserialized.id)
+        assertEquals(pubKey, deserialized.pubKey)
         assertEquals("test", deserialized.content)
     }
 
@@ -194,12 +197,12 @@ class KotlinSerializationMapperTest {
         val content = "Hello \"world\" \n\ttab\\backslash"
         val event =
             FollowListEvent(
-                id = "abc",
-                pubKey = "def",
+                id = "a".repeat(64),
+                pubKey = "b".repeat(64),
                 createdAt = 1000,
                 tags = emptyArray(),
                 content = content,
-                sig = "sig",
+                sig = "c".repeat(128),
             )
         val json = KotlinSerializationMapper.toJson(event)
         val deserialized = KotlinSerializationMapper.fromJson(json)
@@ -684,7 +687,7 @@ class KotlinSerializationMapperTest {
                 createdAt = 0,
                 tags = emptyArray(),
                 content = "",
-                sig = "c".repeat(64),
+                sig = "c".repeat(128),
             )
         val json = KotlinSerializationMapper.toJson(event)
         val deserialized = KotlinSerializationMapper.fromJson(json)
@@ -711,7 +714,7 @@ class KotlinSerializationMapperTest {
                 createdAt = 1000,
                 tags = emptyArray(),
                 content = content,
-                sig = "c".repeat(64),
+                sig = "c".repeat(128),
             )
         val json = KotlinSerializationMapper.toJson(event)
         val deserialized = KotlinSerializationMapper.fromJson(json)

@@ -20,12 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip01Core.limits
 
+import com.vitorpamplona.quartz.utils.TimeUtils
+
 internal object EventLimitsTestSupport {
     const val ID = "0000000000000000000000000000000000000000000000000000000000000001"
     const val PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000002"
     val SIG = "0".repeat(128)
 
     fun buildEventJson(
+        id: String = ID,
+        pubKey: String = PUB_KEY,
+        sig: String = SIG,
+        kind: Int = 1,
+        createdAt: Long = TimeUtils.now(),
         contentLength: Int = 10,
         tagCount: Int = 1,
         tagInnerCount: Int = 2,
@@ -37,6 +44,6 @@ internal object EventLimitsTestSupport {
         val inner = "\"t\"" + ",\"$tagValue\"".repeat((tagInnerCount - 1).coerceAtLeast(0))
         val tag = "[$inner]"
         val tags = (1..tagCount).joinToString(",") { tag }
-        return """{"id":"$ID","pubkey":"$PUB_KEY","created_at":1,"kind":1,"tags":[$tags],"content":"$content","sig":"$SIG"}"""
+        return """{"id":"$id","pubkey":"$pubKey","created_at":$createdAt,"kind":$kind,"tags":[$tags],"content":"$content","sig":"$sig"}"""
     }
 }

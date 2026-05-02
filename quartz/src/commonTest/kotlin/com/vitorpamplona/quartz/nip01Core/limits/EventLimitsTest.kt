@@ -77,4 +77,95 @@ class EventLimitsTest {
             }
         assertEquals(true, ex.message?.contains("Tag value length"), ex.message)
     }
+
+    // --- §2.4: id / pubKey / sig / kind / createdAt validation ---
+
+    @Test
+    fun rejectsIdWithWrongLength() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(id = "0".repeat(63)))
+            }
+        assertEquals(true, ex.message?.contains("id must be 64-char hex"), ex.message)
+    }
+
+    @Test
+    fun rejectsIdWithNonHex() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(id = "z".repeat(64)))
+            }
+        assertEquals(true, ex.message?.contains("id must be 64-char hex"), ex.message)
+    }
+
+    @Test
+    fun rejectsPubKeyWithWrongLength() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(pubKey = "0".repeat(65)))
+            }
+        assertEquals(true, ex.message?.contains("pubKey must be 64-char hex"), ex.message)
+    }
+
+    @Test
+    fun rejectsPubKeyWithNonHex() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(pubKey = "g".repeat(64)))
+            }
+        assertEquals(true, ex.message?.contains("pubKey must be 64-char hex"), ex.message)
+    }
+
+    @Test
+    fun rejectsSigWithWrongNonZeroLength() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(sig = "0".repeat(127)))
+            }
+        assertEquals(true, ex.message?.contains("sig must be empty or 128-char hex"), ex.message)
+    }
+
+    @Test
+    fun rejectsSigWithNonHex() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(sig = "z".repeat(128)))
+            }
+        assertEquals(true, ex.message?.contains("sig must be empty or 128-char hex"), ex.message)
+    }
+
+    @Test
+    fun acceptsEmptySig() {
+        // NIP-17 (kind:14 DMs) and NIP-37 drafts are stored as Event with sig="" because
+        // the inner-event rumor is unsigned per NIP-59. Production caches contain ~5 K
+        // such events; the deserializer must accept them.
+        val event = parse(buildEventJson(sig = ""))
+        assertEquals("", event.sig)
+    }
+
+    @Test
+    fun rejectsKindAboveMax() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(kind = EventLimits.MAX_KIND + 1))
+            }
+        assertEquals(true, ex.message?.contains("kind"), ex.message)
+    }
+
+    @Test
+    fun rejectsKindBelowZero() {
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                parse(buildEventJson(kind = -1))
+            }
+        assertEquals(true, ex.message?.contains("kind"), ex.message)
+    }
+
+    @Test
+    fun acceptsAncientCreatedAt() {
+        // Archive replay legitimately produces events with timestamps from years ago.
+        // The deserializer doesn't bound createdAt; UI / feed-sort code can apply policy.
+        val event = parse(buildEventJson(createdAt = 100L))
+        assertEquals(100L, event.createdAt)
+    }
 }

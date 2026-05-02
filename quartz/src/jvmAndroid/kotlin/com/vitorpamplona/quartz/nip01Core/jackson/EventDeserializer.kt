@@ -78,6 +78,7 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             throw IllegalArgumentException("Event not found")
         }
 
+        EventLimits.validateFields(id, pubKey, sig, kind)
         EventLimits.validateContent(content)
 
         return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
