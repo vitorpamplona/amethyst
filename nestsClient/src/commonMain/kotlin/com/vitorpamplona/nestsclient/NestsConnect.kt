@@ -260,7 +260,7 @@ private fun failedSpeaker(state: MutableStateFlow<NestsSpeakerState>): NestsSpea
     object : NestsSpeaker {
         override val state = state
 
-        override suspend fun startBroadcasting(): BroadcastHandle = error("speaker never connected: ${state.value}")
+        override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle = error("speaker never connected: ${state.value}")
 
         override suspend fun close() {
             if (state.value !is NestsSpeakerState.Closed) {

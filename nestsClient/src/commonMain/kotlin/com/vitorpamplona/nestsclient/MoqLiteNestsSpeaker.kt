@@ -65,7 +65,7 @@ class MoqLiteNestsSpeaker internal constructor(
     private val gate = Mutex()
     private var activeHandle: MoqLiteBroadcastHandle? = null
 
-    override suspend fun startBroadcasting(): BroadcastHandle {
+    override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle {
         gate.withLock {
             val current = state.value
             check(current is NestsSpeakerState.Connected) {
@@ -104,6 +104,7 @@ class MoqLiteNestsSpeaker internal constructor(
                                 // and the room is silently mute.
                                 onBroadcastTerminalFailure()
                             },
+                            onLevel = onLevel,
                         )
                     }
                 } catch (t: Throwable) {

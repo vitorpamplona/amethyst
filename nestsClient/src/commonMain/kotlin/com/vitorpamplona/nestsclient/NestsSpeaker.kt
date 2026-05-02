@@ -51,11 +51,20 @@ interface NestsSpeaker {
      * Begin announcing our speaker track and pumping mic frames out as
      * OBJECT_DATAGRAMs.
      *
+     * [onLevel] fires once per Opus frame that successfully reaches
+     * the wire, with the peak amplitude of the underlying PCM frame
+     * normalized to `[0, 1]`. Default no-op so callers that don't
+     * render a local-speaking ring pay zero cost. The callback runs
+     * on the speaker's coroutine scope (typically the caller's
+     * `viewModelScope`) so the consumer must keep its handler
+     * lightweight. See [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.start]
+     * for the ground-truth-vs-UI-state rationale.
+     *
      * @throws IllegalStateException if a broadcast is already running on
      *   this speaker or the session is not [NestsSpeakerState.Connected].
      * @throws MoqProtocolException if the peer rejects the ANNOUNCE.
      */
-    suspend fun startBroadcasting(): BroadcastHandle
+    suspend fun startBroadcasting(onLevel: (Float) -> Unit = { /* no-op */ }): BroadcastHandle
 
     /** Tear down the MoQ session + transport. Idempotent. */
     suspend fun close()
@@ -151,7 +160,7 @@ class DefaultNestsSpeaker internal constructor(
     private val gate = Mutex()
     private var activeHandle: DefaultBroadcastHandle? = null
 
-    override suspend fun startBroadcasting(): BroadcastHandle {
+    override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle {
         gate.withLock {
             val current = state.value
             check(current is NestsSpeakerState.Connected) {
@@ -174,7 +183,7 @@ class DefaultNestsSpeaker internal constructor(
                     publisher = publisher,
                     scope = scope,
                 )
-            broadcaster.start()
+            broadcaster.start(onLevel = onLevel)
             mutableState.value =
                 NestsSpeakerState.Broadcasting(
                     room = current.room,

@@ -74,6 +74,8 @@ class NestBroadcaster(
          */
         onTerminalFailure: () -> Unit = { /* swallow */ },
         onError: (AudioException) -> Unit = { /* swallow */ },
+        /** See [NestMoqLiteBroadcaster.start]'s `onLevel` kdoc. */
+        onLevel: (Float) -> Unit = { /* no-op */ },
     ) {
         check(!stopped) { "NestBroadcaster already stopped" }
         check(job == null) { "NestBroadcaster.start already called" }
@@ -120,6 +122,7 @@ class NestBroadcaster(
                         sendOutcome
                             .onSuccess {
                                 consecutiveSendErrors = 0
+                                onLevel(peakAmplitude(pcm))
                             }.onFailure { t ->
                                 if (t is CancellationException) throw t
                                 consecutiveSendErrors += 1

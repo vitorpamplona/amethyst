@@ -138,7 +138,7 @@ class ReconnectingNestsSpeakerTest {
         val handles: MutableList<ScriptedBroadcastHandle> =
             java.util.concurrent.CopyOnWriteArrayList()
 
-        override suspend fun startBroadcasting(): BroadcastHandle {
+        override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle {
             val handle = ScriptedBroadcastHandle()
             handles += handle
             // Increment AFTER appending to `handles` so the volatile
@@ -176,7 +176,7 @@ class ReconnectingNestsSpeakerTest {
         override val state: StateFlow<NestsSpeakerState> =
             MutableStateFlow(NestsSpeakerState.Failed("scripted-fail")).asStateFlow()
 
-        override suspend fun startBroadcasting(): BroadcastHandle = error("never connected")
+        override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle = error("never connected")
 
         override suspend fun close() {}
     }

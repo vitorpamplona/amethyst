@@ -113,20 +113,6 @@ class NestPlayer(
     }
 
     /**
-     * Peak amplitude of a 16-bit PCM frame, normalized to `[0, 1]`. Peak
-     * (vs RMS) is jittery on its own but responds instantly to onsets,
-     * which suits a visual ring that the UI smooths via animateDpAsState.
-     */
-    private fun peakAmplitude(pcm: ShortArray): Float {
-        var maxAbs = 0
-        for (s in pcm) {
-            val abs = if (s.toInt() < 0) -s.toInt() else s.toInt()
-            if (abs > maxAbs) maxAbs = abs
-        }
-        return (maxAbs / 32768f).coerceIn(0f, 1f)
-    }
-
-    /**
      * Stop playback, cancel the decode loop, release the decoder. Idempotent.
      *
      * Suspending so callers can await the loop's exit before releasing

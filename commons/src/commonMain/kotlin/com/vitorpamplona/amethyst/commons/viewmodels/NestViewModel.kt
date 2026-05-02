@@ -479,7 +479,21 @@ class NestViewModel(
                     }
                     speaker = s
                     observeSpeakerState(s)
-                    val handle = s.startBroadcasting()
+                    // The speaker-side `onLevel` callback is the ground
+                    // truth for the local-speaking ring: it fires only
+                    // after a frame actually reaches the wire (see
+                    // NestMoqLiteBroadcaster.start). Reusing the same
+                    // `onSpeakerActivity` / `onAudioLevel` plumbing the
+                    // remote speakers use means the local avatar gets
+                    // the same ring + glow + 250 ms timeout fade as
+                    // any other speaker — no separate UI branch needed.
+                    val handle =
+                        s.startBroadcasting(
+                            onLevel = { level ->
+                                onSpeakerActivity(speakerPubkeyHex)
+                                onAudioLevel(speakerPubkeyHex, level)
+                            },
+                        )
                     broadcastHandle = handle
                     _uiState.update { it.copy(broadcast = BroadcastUiState.Broadcasting(isMuted = false)) }
                 } catch (ce: CancellationException) {
