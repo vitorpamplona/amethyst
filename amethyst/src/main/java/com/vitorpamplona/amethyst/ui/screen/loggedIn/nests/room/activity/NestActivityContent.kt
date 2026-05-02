@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,7 +41,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -283,7 +283,7 @@ private fun NestActivityBody(
     // system mic indicator) and the listener close run on
     // cleanupScope/GlobalScope before the activity destruction
     // queue eats viewModelScope.
-    val activity = LocalContext.current as? NestActivity
+    val activity = LocalActivity.current as? NestActivity
     DisposableEffect(activity, viewModel) {
         activity?.setPipCleanupAction { viewModel.leave() }
         onDispose { activity?.setPipCleanupAction(null) }
