@@ -44,17 +44,20 @@ class Tlv(
         fun parse(data: ByteArray): Tlv {
             val result = mutableMapOf<Byte, MutableList<ByteArray>>()
             var rest = data
-            while (rest.isNotEmpty()) {
+            // Need at least the 2-byte (type, length) header to read another tuple. A
+            // single trailing byte previously crashed at `rest[1]` (security review
+            // 2026-04-24 §2.5).
+            while (rest.size >= 2) {
                 val t = rest[0]
                 val l = rest[1].toUByte().toInt()
-                val v = rest.sliceArray(IntRange(2, (2 + l) - 1))
-                rest = rest.sliceArray(IntRange(2 + l, rest.size - 1))
+                // Clamp so a declared length exceeding the remaining bytes is treated as
+                // a truncated entry to skip rather than an array-bounds throw.
+                val end = (2 + l).coerceAtMost(rest.size)
+                val v = rest.copyOfRange(2, end)
+                rest = rest.copyOfRange(end, rest.size)
                 if (v.size < l) continue
 
-                if (!result.containsKey(t)) {
-                    result[t] = mutableListOf()
-                }
-                result[t]?.add(v)
+                result.getOrPut(t) { mutableListOf() }.add(v)
             }
             return Tlv(result)
         }
