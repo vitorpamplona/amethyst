@@ -24,7 +24,6 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 // Regression for security review 2026-04-24 §2.5 / Finding #10.
 // Pre-fix `Tlv.parse` threw `IndexOutOfBoundsException` whenever:
@@ -107,12 +106,12 @@ class TlvParseTest {
     fun arbitraryFuzzInputDoesNotThrow() {
         // 200 random byte sequences of varying lengths up to 64 bytes. Pre-fix this
         // would have hit IndexOutOfBoundsException on a meaningful fraction of inputs.
+        // Implicit assertion: parse must not throw on any input.
         val rng = Random(0xC0FFEE)
         repeat(200) {
             val len = rng.nextInt(0, 65)
             val data = ByteArray(len) { rng.nextInt().toByte() }
-            val tlv = Tlv.parse(data)
-            assertTrue(tlv.data.size >= 0)
+            Tlv.parse(data)
         }
     }
 }

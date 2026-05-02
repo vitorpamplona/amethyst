@@ -43,21 +43,17 @@ class Tlv(
     companion object {
         fun parse(data: ByteArray): Tlv {
             val result = mutableMapOf<Byte, MutableList<ByteArray>>()
-            var rest = data
-            // Need at least the 2-byte (type, length) header to read another tuple. A
-            // single trailing byte previously crashed at `rest[1]` (security review
-            // 2026-04-24 §2.5).
-            while (rest.size >= 2) {
-                val t = rest[0]
-                val l = rest[1].toUByte().toInt()
-                // Clamp so a declared length exceeding the remaining bytes is treated as
-                // a truncated entry to skip rather than an array-bounds throw.
-                val end = (2 + l).coerceAtMost(rest.size)
-                val v = rest.copyOfRange(2, end)
-                rest = rest.copyOfRange(end, rest.size)
-                if (v.size < l) continue
-
-                result.getOrPut(t) { mutableListOf() }.add(v)
+            var pos = 0
+            // Each tuple needs a 2-byte (type, length) header plus `length` value bytes.
+            // Stop on a single trailing byte or a declared length that exceeds the
+            // remaining bytes — both cases previously threw IndexOutOfBoundsException
+            // (security review 2026-04-24 §2.5).
+            while (pos + 2 <= data.size) {
+                val t = data[pos]
+                val l = data[pos + 1].toUByte().toInt()
+                if (pos + 2 + l > data.size) break
+                result.getOrPut(t) { mutableListOf() }.add(data.copyOfRange(pos + 2, pos + 2 + l))
+                pos += 2 + l
             }
             return Tlv(result)
         }
