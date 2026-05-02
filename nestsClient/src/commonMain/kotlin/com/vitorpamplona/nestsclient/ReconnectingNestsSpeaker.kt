@@ -273,7 +273,7 @@ private class ReconnectingSpeakerHandle(
 
     @Volatile private var activeBroadcast: ReissuingBroadcastHandle? = null
 
-    override suspend fun startBroadcasting(): BroadcastHandle =
+    override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle =
         gate.withLock {
             check(state.value !is NestsSpeakerState.Closed) {
                 "startBroadcasting on a closed speaker"
@@ -291,7 +291,7 @@ private class ReconnectingSpeakerHandle(
                 ?: error("no live session — wait for state == Connected before startBroadcasting")
 
             val handle =
-                ReissuingBroadcastHandle(activeSpeaker, scope) { closed ->
+                ReissuingBroadcastHandle(activeSpeaker, scope, onLevel) { closed ->
                     if (activeBroadcast === closed) activeBroadcast = null
                 }
             handle.start()
@@ -325,6 +325,13 @@ private class ReconnectingSpeakerHandle(
 private class ReissuingBroadcastHandle(
     private val activeSpeaker: StateFlow<NestsSpeaker?>,
     private val scope: CoroutineScope,
+    /**
+     * Forwarded to every underlying [NestsSpeaker.startBroadcasting]
+     * the pump opens, so the local-speaking ring keeps animating
+     * across session recycles. Mirrors how [desiredMuted] is
+     * replayed — the user-observed signal is monotonic.
+     */
+    private val onLevel: (Float) -> Unit,
     private val onClose: (ReissuingBroadcastHandle) -> Unit,
 ) : BroadcastHandle {
     @Volatile private var desiredMuted: Boolean = false
@@ -362,7 +369,7 @@ private class ReissuingBroadcastHandle(
                     if (closed) return@collectLatest
                     val handle =
                         try {
-                            sp.startBroadcasting()
+                            sp.startBroadcasting(onLevel)
                         } catch (ce: kotlinx.coroutines.CancellationException) {
                             // Don't `return@collectLatest` on cancel —
                             // propagate so the launched pumpJob actually

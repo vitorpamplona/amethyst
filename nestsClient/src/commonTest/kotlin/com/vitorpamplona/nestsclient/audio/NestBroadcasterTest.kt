@@ -103,7 +103,7 @@ class NestBroadcasterTest {
             val broadcaster = NestBroadcaster(capture, encoder, publisher, backgroundScope)
             val errors = mutableListOf<AudioException>()
 
-            broadcaster.start { errors.add(it) }
+            broadcaster.start(onError = { errors.add(it) })
             capture.awaitDrained()
 
             assertEquals(1, errors.size, "exactly one encode error should have been reported")

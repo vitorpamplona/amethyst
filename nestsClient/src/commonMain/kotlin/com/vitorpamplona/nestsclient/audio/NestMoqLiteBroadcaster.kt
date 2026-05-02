@@ -116,6 +116,23 @@ class NestMoqLiteBroadcaster(
     fun start(
         onTerminalFailure: () -> Unit = { /* swallow */ },
         onError: (AudioException) -> Unit = { /* swallow */ },
+        /**
+         * Fires once per Opus frame that successfully reaches
+         * [MoqLitePublisherHandle.send] — i.e. the frame is on the
+         * wire from this client's perspective. The argument is the
+         * peak amplitude of the underlying PCM frame, normalized to
+         * `[0, 1]` (same scale [NestPlayer] reports for remote
+         * speakers).
+         *
+         * This deliberately taps **after** the mute gate and **after**
+         * a successful send, so the local "I'm speaking" ring on the
+         * UI tracks ground truth (frames actually leaving) rather
+         * than any UI-side mute / role state that could lie.
+         *
+         * Default no-op so callers that don't render a local ring
+         * (tests, headless interop) pay zero cost.
+         */
+        onLevel: (Float) -> Unit = { /* no-op */ },
     ) {
         check(!stopped) { "NestMoqLiteBroadcaster already stopped" }
         check(job == null) { "NestMoqLiteBroadcaster.start already called" }
@@ -180,6 +197,12 @@ class NestMoqLiteBroadcaster(
                         sendOutcome
                             .onSuccess {
                                 consecutiveSendErrors = 0
+                                // Fire the speaking-ring tap only on
+                                // a successful send. If the publisher
+                                // throws (transport gone, peer dead),
+                                // the frame didn't actually go out and
+                                // the UI shouldn't claim we're talking.
+                                onLevel(peakAmplitude(pcm))
                             }.onFailure { t ->
                                 if (t is CancellationException) throw t
                                 consecutiveSendErrors += 1
