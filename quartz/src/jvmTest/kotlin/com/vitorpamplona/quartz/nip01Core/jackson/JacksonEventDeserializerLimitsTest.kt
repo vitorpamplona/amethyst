@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.jackson
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.limits.EventLimits
+import com.vitorpamplona.quartz.nip01Core.limits.EventLimitsTestSupport.buildEventJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -32,25 +33,7 @@ import kotlin.test.assertFailsWith
 // streaming Jackson deserializers (EventDeserializer + TagArrayDeserializer) which terminate
 // the parse early on cap overflow.
 class JacksonEventDeserializerLimitsTest {
-    private val id = "0".repeat(63) + "1"
-    private val pubKey = "0".repeat(63) + "2"
-    private val sig = "0".repeat(128)
-
     private fun parse(json: String): Event = JacksonMapper.mapper.readValue(json)
-
-    private fun buildEventJson(
-        contentLength: Int = 10,
-        tagCount: Int = 1,
-        tagInnerCount: Int = 2,
-        tagValueLength: Int = 5,
-    ): String {
-        val content = "x".repeat(contentLength)
-        val tagValue = "v".repeat(tagValueLength)
-        val inner = "\"t\"" + ",\"$tagValue\"".repeat((tagInnerCount - 1).coerceAtLeast(0))
-        val tag = "[$inner]"
-        val tags = (1..tagCount).joinToString(",") { tag }
-        return """{"id":"$id","pubkey":"$pubKey","created_at":1,"kind":1,"tags":[$tags],"content":"$content","sig":"$sig"}"""
-    }
 
     @Test
     fun acceptsEventWithinLimits() {

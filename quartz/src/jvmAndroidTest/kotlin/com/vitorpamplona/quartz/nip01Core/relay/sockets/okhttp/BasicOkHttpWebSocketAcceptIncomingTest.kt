@@ -24,14 +24,10 @@ import com.vitorpamplona.quartz.nip01Core.limits.EventLimits
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okio.ByteString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import okhttp3.WebSocket as OkHttpWebSocket
 
 // Layer 1 of security review 2026-04-24 §2.3: a hostile relay must not be able to deliver
 // frames larger than EventLimits.MAX_RELAY_MESSAGE_LENGTH. Per-event caps in EventDeserializer
@@ -39,30 +35,6 @@ import okhttp3.WebSocket as OkHttpWebSocket
 // already have allocated 10 MB before parsing begins. Layer 1 closes the socket at the WS
 // boundary with RFC 6455 close code 1009 ("Message Too Big").
 class BasicOkHttpWebSocketAcceptIncomingTest {
-    private class RecordingWebSocket : OkHttpWebSocket {
-        var closedCode: Int? = null
-        var closedReason: String? = null
-
-        override fun request(): Request = throw NotImplementedError("not used in test")
-
-        override fun queueSize(): Long = 0
-
-        override fun send(text: String): Boolean = throw NotImplementedError("not used in test")
-
-        override fun send(bytes: ByteString): Boolean = throw NotImplementedError("not used in test")
-
-        override fun close(
-            code: Int,
-            reason: String?,
-        ): Boolean {
-            closedCode = code
-            closedReason = reason
-            return true
-        }
-
-        override fun cancel() = Unit
-    }
-
     private val noopListener =
         object : WebSocketListener {
             override fun onOpen(
@@ -95,31 +67,33 @@ class BasicOkHttpWebSocketAcceptIncomingTest {
     @Test
     fun acceptIncomingForwardsMessagesAtAndBelowTheCap() {
         val sut = newSubject()
-        val ws = RecordingWebSocket()
+        var closeCalls = 0
 
-        assertTrue(sut.acceptIncoming(ws, "x".repeat(EventLimits.MAX_RELAY_MESSAGE_LENGTH)))
-        assertNull(ws.closedCode, "must not close socket on within-limit message")
-
-        assertTrue(sut.acceptIncoming(ws, "x".repeat(1)))
-        assertNull(ws.closedCode)
+        assertTrue(sut.acceptIncoming("x".repeat(EventLimits.MAX_RELAY_MESSAGE_LENGTH)) { closeCalls++ })
+        assertTrue(sut.acceptIncoming("x") { closeCalls++ })
+        assertEquals(0, closeCalls, "closer must not be invoked on within-limit messages")
     }
 
     @Test
-    fun acceptIncomingDropsAndClosesOnOversizedMessage() {
+    fun acceptIncomingDropsAndInvokesCloserOnOversizedMessage() {
         val sut = newSubject()
-        val ws = RecordingWebSocket()
+        var closeCalls = 0
 
-        val accepted = sut.acceptIncoming(ws, "x".repeat(EventLimits.MAX_RELAY_MESSAGE_LENGTH + 1))
+        val accepted = sut.acceptIncoming("x".repeat(EventLimits.MAX_RELAY_MESSAGE_LENGTH + 1)) { closeCalls++ }
 
         assertFalse(accepted, "oversized message must not be forwarded")
-        assertEquals(BasicOkHttpWebSocket.CLOSE_MESSAGE_TOO_LARGE, ws.closedCode)
-        assertEquals("message too large", ws.closedReason)
+        assertEquals(1, closeCalls, "closer must be invoked exactly once on overflow")
     }
 
     @Test
     fun closeCodeIsRfc6455MessageTooBig() {
-        // RFC 6455 §7.4.1 reserves 1009 for "Message Too Big". This guards against the
-        // constant accidentally drifting and silencing the wrong category of error.
+        // RFC 6455 §7.4.1 reserves 1009 for "Message Too Big". The listener wires this code
+        // to webSocket.close(...); pinning the constant guards against silent drift.
         assertEquals(1009, BasicOkHttpWebSocket.CLOSE_MESSAGE_TOO_LARGE)
+    }
+
+    @Test
+    fun closeReasonIsMessageTooLarge() {
+        assertEquals("message too large", BasicOkHttpWebSocket.CLOSE_REASON_MESSAGE_TOO_LARGE)
     }
 }

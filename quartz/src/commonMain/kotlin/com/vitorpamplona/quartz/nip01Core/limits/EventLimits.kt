@@ -37,13 +37,17 @@ object EventLimits {
     const val MAX_CONTENT_LENGTH = 64 * 1024
     const val MAX_RELAY_MESSAGE_LENGTH = 256 * 1024
 
-    fun validate(
-        content: String,
-        tags: TagArray,
-    ) {
+    fun validateContent(content: String) {
         require(content.length <= MAX_CONTENT_LENGTH) {
             "Event content length ${content.length} exceeds max $MAX_CONTENT_LENGTH"
         }
+    }
+
+    // Used by callers that have a TagArray in hand (e.g. constructed without going through
+    // a tag deserializer). The streaming Jackson and kotlinx tag deserializers already
+    // enforce these caps inline during parse, so the deserializer hot path does not call
+    // this helper.
+    fun validateTags(tags: TagArray) {
         require(tags.size <= MAX_TAG_COUNT) {
             "Event has ${tags.size} tags; max is $MAX_TAG_COUNT"
         }

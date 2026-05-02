@@ -54,6 +54,7 @@ class BasicOkHttpWebSocket(
         // RFC 6455 §7.4 close code 1009 — "Message Too Big". Used when a relay sends a frame
         // exceeding EventLimits.MAX_RELAY_MESSAGE_LENGTH (security review 2026-04-24 §2.3 Layer 1).
         const val CLOSE_MESSAGE_TOO_LARGE = 1009
+        const val CLOSE_REASON_MESSAGE_TOO_LARGE = "message too large"
     }
 
     private var socket: OkHttpWebSocket? = null
@@ -86,7 +87,7 @@ class BasicOkHttpWebSocket(
                     webSocket: OkHttpWebSocket,
                     text: String,
                 ) {
-                    if (!acceptIncoming(webSocket, text)) return
+                    if (!acceptIncoming(text) { webSocket.close(CLOSE_MESSAGE_TOO_LARGE, CLOSE_REASON_MESSAGE_TOO_LARGE) }) return
                     // Asynchronously send the received message to the channel.
                     // `trySendBlocking` is used here for simplicity within the callback,
                     // but it's important to understand potential thread blocking if the buffer is full.
@@ -131,19 +132,21 @@ class BasicOkHttpWebSocket(
     override fun send(msg: String): Boolean = socket?.send(msg) ?: false
 
     // Decides whether an incoming WebSocket text message should be forwarded to `out`.
-    // Drops messages exceeding EventLimits.MAX_RELAY_MESSAGE_LENGTH and closes the socket
-    // (security review 2026-04-24 §2.3 Layer 1: a hostile relay can otherwise OOM the
-    // client with one giant frame before the per-event caps in EventDeserializer fire).
-    // Returns true when the caller should forward the message; false when it should drop.
+    // Drops messages exceeding EventLimits.MAX_RELAY_MESSAGE_LENGTH (security review
+    // 2026-04-24 §2.3 Layer 1: a hostile relay can otherwise OOM the client with one
+    // giant frame before the per-event caps in EventDeserializer fire). On overflow,
+    // invokes `closeOversized` (typically `webSocket.close(1009, "message too large")`)
+    // and returns false. The closer is supplied by the caller so this helper stays free
+    // of the `okhttp3.WebSocket` type and can be unit-tested without a fake.
     internal fun acceptIncoming(
-        webSocket: OkHttpWebSocket,
         text: String,
+        closeOversized: () -> Unit,
     ): Boolean {
         if (text.length > EventLimits.MAX_RELAY_MESSAGE_LENGTH) {
             Log.w("BasicOkHttpWebSocket") {
                 "Dropping ${text.length}-char message from $url; max is ${EventLimits.MAX_RELAY_MESSAGE_LENGTH}"
             }
-            webSocket.close(CLOSE_MESSAGE_TOO_LARGE, "message too large")
+            closeOversized()
             return false
         }
         return true

@@ -21,35 +21,17 @@
 package com.vitorpamplona.quartz.nip01Core.limits
 
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
+import com.vitorpamplona.quartz.nip01Core.limits.EventLimitsTestSupport.buildEventJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 // Regression for security review 2026-04-24 §2.3 / Finding #5: the deserializers used to
 // materialize whole events with no upper bound. A hostile relay could OOM the client with
-// one giant event or a flood of large tags. Caps are now enforced via EventLimits.validate()
-// and inside TagArrayKSerializer.
+// one giant event or a flood of large tags. Caps are enforced inline by the tag deserializers
+// and post-parse by EventLimits.validateContent.
 class EventLimitsTest {
-    private val id = "0".repeat(63) + "1"
-    private val pubKey = "0".repeat(63) + "2"
-    private val sig = "0".repeat(128)
-
     private fun parse(json: String) = KotlinSerializationMapper.fromJson(json)
-
-    private fun buildEventJson(
-        contentLength: Int = 10,
-        tagCount: Int = 1,
-        tagInnerCount: Int = 2,
-        tagValueLength: Int = 5,
-    ): String {
-        val content = "x".repeat(contentLength)
-        val tagValue = "v".repeat(tagValueLength)
-        // First element is a short tag key "t"; remaining (tagInnerCount - 1) are values of length tagValueLength.
-        val inner = "\"t\"" + ",\"$tagValue\"".repeat((tagInnerCount - 1).coerceAtLeast(0))
-        val tag = "[$inner]"
-        val tags = (1..tagCount).joinToString(",") { tag }
-        return """{"id":"$id","pubkey":"$pubKey","created_at":1,"kind":1,"tags":[$tags],"content":"$content","sig":"$sig"}"""
-    }
 
     @Test
     fun acceptsEventWithinLimits() {

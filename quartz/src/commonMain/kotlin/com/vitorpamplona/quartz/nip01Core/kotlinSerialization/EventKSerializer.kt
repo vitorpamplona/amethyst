@@ -105,7 +105,7 @@ object EventKSerializer : KSerializer<Event> {
             throw IllegalArgumentException("Event not found")
         }
 
-        EventLimits.validate(content, tags)
+        EventLimits.validateContent(content)
 
         return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
     }
