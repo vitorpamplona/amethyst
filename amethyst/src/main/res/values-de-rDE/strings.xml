@@ -167,6 +167,8 @@ erie gespeichert</string>
     <string name="failed_to_save_the_image">Fehler beim Speichern des Bildes</string>
     <string name="video_saved_to_the_gallery">Video in der Videogalerie des Telefons gespeichert</string>
     <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
+    <string name="pdf_saved_to_the_gallery">PDF in Downloads/Amethyst gespeichert</string>
+    <string name="failed_to_save_the_pdf">PDF konnte nicht gespeichert werden</string>
     <string name="upload_image">Bild hochladen</string>
     <string name="upload_file">Datei hochladen</string>
     <string name="take_a_picture">Ein Foto aufnehmen</string>
@@ -522,6 +524,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_leave_host_close">Raum schließen</string>
     <string name="nest_leave_host_just_leave">Nur verlassen</string>
     <string name="nest_leave_host_close_failed">Raum konnte nicht als geschlossen markiert werden. Verlasse trotzdem — Raum wird automatisch geschlossen.</string>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d Zuhörer</item>
+        <item quantity="other">%1$d Zuhörer</item>
+    </plurals>
     <string name="nest_tab_audience">Publikum</string>
     <string name="nest_tab_hands">Hände</string>
     <string name="nest_audience_empty">Noch niemand im Publikum.</string>
@@ -554,7 +560,15 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_minimize">Minimieren</string>
     <string name="nest_minimize_description">Minimieren, um weiter zuzuhören</string>
     <string name="nest_audio_dropped">Audio unterbrochen</string>
+    <string name="nest_loading_room">Raum wird geladen…</string>
+    <string name="nest_unjoinable_title">Dieser Raum kann nicht geöffnet werden</string>
+    <string name="nest_unjoinable_body">Dem Raum fehlt ein Audiodienst oder Endpunkt. Der Gastgeber muss die Details aktualisieren, bevor Zuhörer sich verbinden können.</string>
+    <string name="nest_unjoinable_back">Zurück</string>
     <string name="nest_create_fab">Space starten</string>
+    <string name="nests_section_live_now">Jetzt live</string>
+    <string name="nests_section_scheduled">Geplant</string>
+    <string name="nests_section_recently_ended">Kürzlich beendet</string>
+    <string name="nests_ended_ago">Vor %1$s beendet</string>
     <string name="nest_no_server_title">Nest-Server einrichten</string>
     <string name="nest_no_server_body">Du hast noch keinen Nest-Server ausgewählt. %1$s zur Serverliste hinzufügen und fortfahren?\n\nDu kannst dies später in den Einstellungen ändern.</string>
     <string name="nest_no_server_use_default">Standard verwenden</string>
@@ -2124,6 +2138,30 @@ anz der Bedingungen ist erforderlich</string>
     <string name="last_seen_on_date">Zuletzt gesehen am %1$s (vor %2$s)</string>
     <string name="last_seen_just_now">Gerade eben gesehen</string>
     <string name="last_seen_never">Nie gesehen</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d Minute</item>
+        <item quantity="other">%1$d Minuten</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d Stunde</item>
+        <item quantity="other">%1$d Stunden</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d Woche</item>
+        <item quantity="other">%1$d Wochen</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d Monat</item>
+        <item quantity="other">%1$d Monate</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d Jahr</item>
+        <item quantity="other">%1$d Jahre</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Verbinden</string>
     <string name="event_sync_status_downloading">Herunterladen</string>
@@ -2385,50 +2423,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigung wie öffentliche.</string>
     <string name="gif">Gif</string>
-    <string name="failed_to_save_the_pdf">PDF konnte nicht gespeichert werden</string>
-    <string name="nest_loading_room">Raum wird geladen…</string>
-    <string name="nest_unjoinable_back">Zurück</string>
-    <string name="nest_unjoinable_body">Dem Raum fehlt ein Audiodienst oder Endpunkt. Der Gastgeber muss die Details aktualisieren, bevor Zuhörer sich verbinden können.</string>
-    <string name="nest_unjoinable_title">Dieser Raum kann nicht geöffnet werden</string>
-    <string name="nests_ended_ago">Vor %1$s beendet</string>
-    <string name="nests_section_live_now">Jetzt live</string>
-    <string name="nests_section_recently_ended">Kürzlich beendet</string>
-    <string name="nests_section_scheduled">Geplant</string>
-    <string name="pdf_saved_to_the_gallery">PDF in Downloads/Amethyst gespeichert</string>
-    <plurals name="duration_minutes">
-        <item quantity="one">%1$d Minute</item>
-        <item quantity="other">%1$d Minuten</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="one">%1$d Stunde</item>
-        <item quantity="other">%1$d Stunden</item>
-    </plurals>
-    <plurals name="duration_days">
-        <item quantity="one">%1$d Tag</item>
-        <item quantity="other">%1$d Tage</item>
-    </plurals>
-    <plurals name="duration_weeks">
-        <item quantity="one">%1$d Woche</item>
-        <item quantity="other">%1$d Wochen</item>
-    </plurals>
-    <plurals name="duration_months">
-        <item quantity="one">%1$d Monat</item>
-        <item quantity="other">%1$d Monate</item>
-    </plurals>
-    <plurals name="duration_years">
-        <item quantity="one">%1$d Jahr</item>
-        <item quantity="other">%1$d Jahre</item>
-    </plurals>
-    <plurals name="nest_listener_count">
-        <item quantity="one">%1$d Zuhörer</item>
-        <item quantity="other">%1$d Zuhörer</item>
-    </plurals>
-    <string name="meeting_room_in_space">In %1$s</string>
-    <string name="nest_live_chip">LIVE</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_role_moderator">Moderator</string>
-    <string name="nest_tab_chat">Chat</string>
-    <string name="nests_servers_auth_label">Auth</string>
-    <string name="nests_servers_relay_label">Relay</string>
 </resources>

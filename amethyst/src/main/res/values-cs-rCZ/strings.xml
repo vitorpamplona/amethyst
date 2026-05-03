@@ -165,6 +165,8 @@
     <string name="failed_to_save_the_image">Chyba při ukládání obrázku</string>
     <string name="video_saved_to_the_gallery">Video uloženo do video galerie telefonu</string>
     <string name="failed_to_save_the_video">Nepodařilo se uložit video</string>
+    <string name="pdf_saved_to_the_gallery">PDF uloženo do Downloads/Amethyst</string>
+    <string name="failed_to_save_the_pdf">Nepodařilo se uložit PDF</string>
     <string name="upload_image">Nahrát obrázek</string>
     <string name="upload_file">Nahrát soubor</string>
     <string name="take_a_picture">Pořiďte fotografii</string>
@@ -520,6 +522,12 @@
     <string name="nest_leave_host_close">Zavřít místnost</string>
     <string name="nest_leave_host_just_leave">Jen odejít</string>
     <string name="nest_leave_host_close_failed">Místnost se nepodařilo označit jako zavřenou. Odcházíte i tak — místnost se zavře automaticky.</string>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d posluchač</item>
+        <item quantity="few">%1$d posluchači</item>
+        <item quantity="many">%1$d posluchačů</item>
+        <item quantity="other">%1$d posluchačů</item>
+    </plurals>
     <string name="nest_live_chip">ŽIVĚ</string>
     <string name="nest_tab_chat">Chat</string>
     <string name="nest_tab_audience">Publikum</string>
@@ -554,7 +562,15 @@
     <string name="nest_minimize">Minimalizovat</string>
     <string name="nest_minimize_description">Minimalizovat a poslouchat dál</string>
     <string name="nest_audio_dropped">Zvuk byl odpojen</string>
+    <string name="nest_loading_room">Načítání místnosti…</string>
+    <string name="nest_unjoinable_title">Tuto místnost nelze otevřít</string>
+    <string name="nest_unjoinable_body">Místnosti chybí audio služba nebo koncový bod. Hostitel musí aktualizovat její údaje, než se posluchači budou moci připojit.</string>
+    <string name="nest_unjoinable_back">Zpět</string>
     <string name="nest_create_fab">Začít prostor</string>
+    <string name="nests_section_live_now">Živě</string>
+    <string name="nests_section_scheduled">Naplánováno</string>
+    <string name="nests_section_recently_ended">Nedávno skončilo</string>
+    <string name="nests_ended_ago">Skončilo před %1$s</string>
     <string name="nest_no_server_title">Nastavit nest server</string>
     <string name="nest_no_server_body">Zatím jste nevybrali server pro nesty. Přidat %1$s do seznamu serverů a pokračovat?\n\nMůžete to později změnit v Nastavení.</string>
     <string name="nest_no_server_use_default">Použít výchozí</string>
@@ -2127,6 +2143,42 @@
     <string name="last_seen_on_date">Naposledy viděn %1$s (před %2$s)</string>
     <string name="last_seen_just_now">Naposledy viděn právě teď</string>
     <string name="last_seen_never">Nikdy neviděn</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minuty</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="many">%1$d hodin</item>
+        <item quantity="other">%1$d hodin</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="many">%1$d dnů</item>
+        <item quantity="other">%1$d dnů</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d týden</item>
+        <item quantity="few">%1$d týdny</item>
+        <item quantity="many">%1$d týdnů</item>
+        <item quantity="other">%1$d týdnů</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d měsíc</item>
+        <item quantity="few">%1$d měsíce</item>
+        <item quantity="many">%1$d měsíců</item>
+        <item quantity="other">%1$d měsíců</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d rok</item>
+        <item quantity="few">%1$d roky</item>
+        <item quantity="many">%1$d let</item>
+        <item quantity="other">%1$d let</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Připojování</string>
     <string name="event_sync_status_downloading">Stahování</string>
@@ -2388,49 +2440,4 @@
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\" stejně jako veřejná.</string>
     <string name="gif">Gif</string>
-    <string name="failed_to_save_the_pdf">Nepodařilo se uložit PDF</string>
-    <string name="nest_loading_room">Načítání místnosti…</string>
-    <string name="nest_unjoinable_back">Zpět</string>
-    <string name="nest_unjoinable_body">Místnosti chybí audio služba nebo koncový bod. Hostitel musí aktualizovat její údaje, než se posluchači budou moci připojit.</string>
-    <string name="nest_unjoinable_title">Tuto místnost nelze otevřít</string>
-    <string name="nests_ended_ago">Skončilo před %1$s</string>
-    <string name="nests_section_live_now">Živě</string>
-    <string name="nests_section_recently_ended">Nedávno skončilo</string>
-    <string name="nests_section_scheduled">Naplánováno</string>
-    <string name="pdf_saved_to_the_gallery">PDF uloženo do Downloads/Amethyst</string>
-    <plurals name="duration_minutes">
-        <item quantity="one">%1$d minuta</item>
-        <item quantity="few">%1$d minuty</item>
-        <item quantity="other">%1$d minut</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="one">%1$d hodina</item>
-        <item quantity="few">%1$d hodiny</item>
-        <item quantity="other">%1$d hodin</item>
-    </plurals>
-    <plurals name="duration_days">
-        <item quantity="one">%1$d den</item>
-        <item quantity="few">%1$d dny</item>
-        <item quantity="other">%1$d dnů</item>
-    </plurals>
-    <plurals name="duration_weeks">
-        <item quantity="one">%1$d týden</item>
-        <item quantity="few">%1$d týdny</item>
-        <item quantity="other">%1$d týdnů</item>
-    </plurals>
-    <plurals name="duration_months">
-        <item quantity="one">%1$d měsíc</item>
-        <item quantity="few">%1$d měsíce</item>
-        <item quantity="other">%1$d měsíců</item>
-    </plurals>
-    <plurals name="duration_years">
-        <item quantity="one">%1$d rok</item>
-        <item quantity="few">%1$d roky</item>
-        <item quantity="other">%1$d let</item>
-    </plurals>
-    <plurals name="nest_listener_count">
-        <item quantity="one">%1$d posluchač</item>
-        <item quantity="few">%1$d posluchači</item>
-        <item quantity="other">%1$d posluchačů</item>
-    </plurals>
 </resources>
