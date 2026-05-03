@@ -105,6 +105,11 @@ val DEFAULT_ELECTRUMX_SERVERS =
         // Also exposed as wss://relay.testls.bit/electrumx (browser-viable, future
         // WS transport — see N1 §"Browser / WebSocket transport" in mstrofnone/nips).
         ElectrumxServer("relay.testls.bit", 50002, useSsl = true, usePinnedTrustStore = true),
+        // Bare IP peer of relay.testls.bit — same operator, same cert, same box.
+        // Listed as a separate entry (mirrors how 46.229.238.187 sits beside
+        // nmc2.bitcoins.sk) so resolvers that have an unhealthy DNS path can
+        // still reach the server. Cert pin works by SHA-256 of DER, no SNI required.
+        ElectrumxServer("23.158.233.10", 50002, useSsl = true, usePinnedTrustStore = true),
     )
 
 /** Tor-preferred server list: onion primary, clearnet fallback. */
@@ -128,4 +133,6 @@ val TOR_ELECTRUMX_SERVERS =
         ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = true),
         ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, usePinnedTrustStore = true),
         ElectrumxServer("relay.testls.bit", 50002, useSsl = true, usePinnedTrustStore = true),
+        // Bare IP peer (same operator/cert/box). See clearnet list above.
+        ElectrumxServer("23.158.233.10", 50002, useSsl = true, usePinnedTrustStore = true),
     )
