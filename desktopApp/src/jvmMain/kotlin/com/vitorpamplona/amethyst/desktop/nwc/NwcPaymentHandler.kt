@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEv
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
@@ -134,27 +135,31 @@ class NwcPaymentHandler(
                 filters = listOf(filter),
                 onEvent = { event, relay ->
                     if (event is LnZapPaymentResponseEvent && event.requestId() == requestId) {
-                        // Unsubscribe
-                        relayManager.closeSubscription(nwcConnection.relayUri, subId)
+                        // Move verify + cache mutation + decrypt off the relay's
+                        // WebSocket reader thread; Schnorr verify is non-trivial
+                        // CPU work and shouldn't block frame parsing.
+                        @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            if (!localCache.justVerify(event)) return@launch
 
-                        // Store response note and link to zapped note
-                        val responseNote = localCache.getOrCreateNote(event.id)
-                        responseNote.loadEvent(event, localCache.getOrCreateUser(event.pubKey), emptyList())
-                        responseNote.addRelay(relay)
-                        zappedNote?.addZapPayment(requestNote, responseNote)
+                            relayManager.closeSubscription(nwcConnection.relayUri, subId)
 
-                        // Decrypt and process response
-                        try {
-                            kotlinx.coroutines.runBlocking {
+                            val responseNote = localCache.getOrCreateNote(event.id)
+                            responseNote.loadEvent(event, localCache.getOrCreateUser(event.pubKey), emptyList())
+                            responseNote.addRelay(relay)
+                            zappedNote?.addZapPayment(requestNote, responseNote)
+
+                            try {
                                 val response = event.decrypt(nwcSigner)
                                 val result = processResponse(response)
                                 if (continuation.isActive) {
                                     continuation.resume(result)
                                 }
-                            }
-                        } catch (e: Exception) {
-                            if (continuation.isActive) {
-                                continuation.resume(PaymentResult.Error("Failed to decrypt response: ${e.message}"))
+                            } catch (e: Exception) {
+                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                if (continuation.isActive) {
+                                    continuation.resume(PaymentResult.Error("Failed to decrypt response: ${e.message}"))
+                                }
                             }
                         }
                     }
