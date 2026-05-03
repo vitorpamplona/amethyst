@@ -63,6 +63,7 @@ class OkHttpClientFactory(
             .Builder()
             .dispatcher(dispatcher)
             .connectionPool(connectionPool)
+            .dns(AmethystDns.shared)
             .eventListenerFactory(MediaCallEventListenerFactory(dispatcher, connectionPool))
             .followRedirects(true)
             .followSslRedirects(true)

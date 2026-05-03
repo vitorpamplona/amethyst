@@ -55,6 +55,7 @@ class OkHttpClientFactoryForRelays(
         OkHttpClient
             .Builder()
             .dispatcher(myDispatcher)
+            .dns(AmethystDns.shared)
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
