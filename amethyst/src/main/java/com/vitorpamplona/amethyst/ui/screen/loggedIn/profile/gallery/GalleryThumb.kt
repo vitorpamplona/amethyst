@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
@@ -87,6 +88,7 @@ fun GalleryThumbnail(
                         uri = null,
                         mimeType = noteEvent.mimeType(),
                         thumbhash = noteEvent.thumbhash(),
+                        artworkUri = noteEvent.image()?.imageUrl ?: noteEvent.thumb()?.imageUrl,
                     )
                 } else {
                     MediaUrlImage(
@@ -128,6 +130,7 @@ fun GalleryThumbnail(
                     uri = null,
                     mimeType = imeta.mimeType,
                     thumbhash = imeta.thumbhash,
+                    artworkUri = imeta.image.firstOrNull(),
                 )
             }
         } else if (noteEvent is LiveActivitiesClipEvent) {
@@ -217,10 +220,19 @@ fun UrlImageView(
             )
         }
 
+    val isVideo = content is MediaUrlVideo
+    val artworkUri = (content as? MediaUrlVideo)?.artworkUri
+    // Coil's VideoFrameDecoder can extract a frame from .mp4/.webm but not from an HLS .m3u8
+    // playlist (it's a text manifest). For an HLS video without a separate artwork URL, sending
+    // the playlist to SubcomposeAsyncImage just produces an Error state and a stand-in icon.
+    // Skip the fetch in that case and render blurhash + play overlay directly.
+    val imageModelUrl = artworkUri ?: content.url
+    val canLoadAsImage = !isVideo || artworkUri != null || !isLiveStreaming(content.url)
+
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
-        if (it) {
+        if (it && canLoadAsImage) {
             SubcomposeAsyncImage(
-                model = content.url,
+                model = imageModelUrl,
                 contentDescription = content.description,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
@@ -245,23 +257,26 @@ fun UrlImageView(
                     }
 
                     is AsyncImagePainter.State.Error -> {
-                        Box(defaultModifier, contentAlignment = Alignment.Center) {
-                            Icon(
-                                symbol = MaterialSymbols.PlayCircleOutline,
-                                contentDescription = stringRes(id = R.string.play),
-                                modifier = Size50Modifier,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
+                        VideoPlaceholder(content, defaultModifier)
                     }
 
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(defaultModifier)
+                        if (isVideo) {
+                            Icon(
+                                symbol = MaterialSymbols.PlayCircleOutline,
+                                contentDescription = stringRes(id = R.string.play),
+                                modifier = Size50Modifier,
+                                tint = Color.White,
+                            )
+                        }
                     }
 
                     else -> {}
                 }
             }
+        } else if (it && isVideo) {
+            VideoPlaceholder(content, defaultModifier)
         } else {
             if (content.blurhash != null || content.thumbhash != null) {
                 DisplayBlurHash(
@@ -286,5 +301,29 @@ fun UrlImageView(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun VideoPlaceholder(
+    content: MediaUrlContent,
+    defaultModifier: Modifier,
+) {
+    if (content.blurhash != null || content.thumbhash != null) {
+        DisplayBlurHash(
+            content.blurhash,
+            content.description,
+            ContentScale.Crop,
+            defaultModifier,
+            thumbhash = content.thumbhash,
+        )
+    }
+    Box(defaultModifier, contentAlignment = Alignment.Center) {
+        Icon(
+            symbol = MaterialSymbols.PlayCircleOutline,
+            contentDescription = stringRes(id = R.string.play),
+            modifier = Size50Modifier,
+            tint = if (content.blurhash != null || content.thumbhash != null) Color.White else MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
