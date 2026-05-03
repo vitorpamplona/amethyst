@@ -72,15 +72,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 class AmethystDns(
     private val delegate: Dns = Dns.SYSTEM,
     private val maxEntries: Int = 2000,
-    positiveTtlMs: Long = TimeUnit.HOURS.toMillis(24),
-    positiveTtlJitterMs: Long = TimeUnit.HOURS.toMillis(24),
-    negativeTtlMs: Long = TimeUnit.SECONDS.toMillis(10),
+    private val positiveTtlMs: Long = TimeUnit.HOURS.toMillis(24),
+    private val positiveTtlJitterMs: Long = TimeUnit.HOURS.toMillis(24),
+    private val negativeTtlMs: Long = TimeUnit.SECONDS.toMillis(10),
     private val refreshExecutor: Executor = DEFAULT_REFRESH_EXECUTOR,
 ) : Dns {
-    private val positiveTtlMillis = positiveTtlMs
-    private val positiveTtlJitterMillis = positiveTtlJitterMs
-    private val negativeTtlMillis = negativeTtlMs
-
     private val cache = ConcurrentHashMap<String, Entry>()
     private val inflight = ConcurrentHashMap<String, CompletableFuture<List<InetAddress>>>()
     private val dirty = AtomicBoolean(false)
@@ -91,8 +87,7 @@ class AmethystDns(
         val key = hostname.lowercase(Locale.ROOT)
 
         cache[key]?.let { entry ->
-            val now = System.currentTimeMillis()
-            if (entry.expiresAtMillis > now) {
+            if (entry.expiresAtMillis > System.currentTimeMillis()) {
                 return entry.unwrap(key)
             }
             // Soft-expired positive entry: serve stale, refresh in background. Negative
@@ -105,103 +100,94 @@ class AmethystDns(
 
         val newFuture = CompletableFuture<List<InetAddress>>()
         val existing = inflight.putIfAbsent(key, newFuture)
-        return if (existing == null) {
-            resolveAsLeader(key, newFuture)
-        } else {
-            awaitFollower(key, existing)
-        }
+        return if (existing == null) resolveAsLeader(key, newFuture) else awaitFollower(key, existing)
     }
 
-    private fun triggerBackgroundRefresh(hostname: String) {
+    private fun triggerBackgroundRefresh(host: String) {
         val refreshFuture = CompletableFuture<List<InetAddress>>()
         // Coalesce: if a sync lookup or a prior refresh is already in flight, skip.
-        if (inflight.putIfAbsent(hostname, refreshFuture) != null) return
+        if (inflight.putIfAbsent(host, refreshFuture) != null) return
         try {
+            // The caller already got the stale answer; refresh failures are recorded on the
+            // future and (for UnknownHostException) demoted in the cache by lookupAndCache.
             refreshExecutor.execute {
-                try {
-                    resolveAsLeader(hostname, refreshFuture)
-                } catch (_: Throwable) {
-                    // Caller already got the stale answer; the failure is recorded on the
-                    // future and (for UnknownHostException) demoted in the cache.
-                }
+                runCatching { resolveAsLeader(host, refreshFuture) }
             }
         } catch (_: RejectedExecutionException) {
-            inflight.remove(hostname, refreshFuture)
+            inflight.remove(host, refreshFuture)
         }
     }
 
     private fun resolveAsLeader(
-        hostname: String,
+        host: String,
         future: CompletableFuture<List<InetAddress>>,
     ): List<InetAddress> {
         try {
             // Re-check after claiming leadership: a peer may have refreshed the cache between
             // our miss and our putIfAbsent. Skips a duplicate getaddrinfo in that race.
-            val cached = cache[hostname]
-            val addresses =
-                if (cached != null && cached.expiresAtMillis > System.currentTimeMillis()) {
-                    cached.unwrap(hostname)
-                } else {
-                    try {
-                        delegate.lookup(hostname).also { putPositive(hostname, it) }
-                    } catch (e: UnknownHostException) {
-                        putNegative(hostname)
-                        throw e
-                    }
-                }
+            val fresh = cache[host]?.takeIf { it.expiresAtMillis > System.currentTimeMillis() }
+            val addresses = fresh?.unwrap(host) ?: lookupAndCache(host)
             future.complete(addresses)
             return addresses
         } catch (e: Throwable) {
             future.completeExceptionally(e)
             throw e
         } finally {
-            inflight.remove(hostname, future)
+            inflight.remove(host, future)
         }
     }
+
+    private fun lookupAndCache(host: String): List<InetAddress> =
+        try {
+            delegate.lookup(host).also { putPositive(host, it) }
+        } catch (e: UnknownHostException) {
+            putNegative(host)
+            throw e
+        }
 
     private fun awaitFollower(
-        hostname: String,
+        host: String,
         future: CompletableFuture<List<InetAddress>>,
-    ): List<InetAddress> {
+    ): List<InetAddress> =
         try {
-            val addresses = future.get()
-            return addresses.ifEmpty { throw UnknownHostException(hostname) }
+            future.get().ifEmpty { throw UnknownHostException(host) }
         } catch (e: ExecutionException) {
-            when (val cause = e.cause) {
-                is UnknownHostException -> throw cause
-                null -> throw UnknownHostException(hostname)
-                else -> throw UnknownHostException(hostname).apply { initCause(cause) }
-            }
+            val cause = e.cause
+            if (cause is UnknownHostException) throw cause
+            throw UnknownHostException(host).apply { if (cause != null) initCause(cause) }
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
-            throw UnknownHostException(hostname).apply { initCause(e) }
+            throw UnknownHostException(host).apply { initCause(e) }
         }
-    }
 
     private fun putPositive(
-        hostname: String,
+        host: String,
         addresses: List<InetAddress>,
     ) {
-        // Jitter the expiry so a burst of co-written entries (e.g. ~700 relay reconnects at app
-        // start) doesn't all expire at the same instant 24h later.
-        val jitter =
-            if (positiveTtlJitterMillis > 0L) {
-                ThreadLocalRandom.current().nextLong(positiveTtlJitterMillis)
-            } else {
-                0L
-            }
-        cache[hostname] = Entry(addresses, System.currentTimeMillis() + positiveTtlMillis + jitter)
+        cache[host] = Entry(addresses, positiveExpiry())
         dirty.set(true)
-        if (cache.size > maxEntries) evictExpired()
+        evictIfOverCap()
     }
 
-    private fun putNegative(hostname: String) {
-        cache[hostname] = Entry(emptyList(), System.currentTimeMillis() + negativeTtlMillis)
+    private fun putNegative(host: String) {
         // Negative entries are never persisted, so they don't dirty the cache.
-        if (cache.size > maxEntries) evictExpired()
+        cache[host] = Entry(emptyList(), negativeExpiry())
+        evictIfOverCap()
     }
 
-    private fun evictExpired() {
+    /**
+     * Jittered expiry so a burst of co-written entries (e.g. ~700 relay reconnects at app start)
+     * doesn't all expire at the same instant 24h later.
+     */
+    private fun positiveExpiry(): Long {
+        val jitter = if (positiveTtlJitterMs > 0L) ThreadLocalRandom.current().nextLong(positiveTtlJitterMs) else 0L
+        return System.currentTimeMillis() + positiveTtlMs + jitter
+    }
+
+    private fun negativeExpiry(): Long = System.currentTimeMillis() + negativeTtlMs
+
+    private fun evictIfOverCap() {
+        if (cache.size <= maxEntries) return
         val now = System.currentTimeMillis()
         val it = cache.entries.iterator()
         while (it.hasNext()) {
@@ -232,6 +218,8 @@ class AmethystDns(
         for ((host, entry) in cache) {
             if (entry.addresses.isEmpty()) continue
             if (entry.expiresAtMillis <= now) continue
+            // hostAddress is platform-typed (String!); mapNotNull narrows to String and stays
+            // defensive against the rare case where it might be null.
             val ips = entry.addresses.mapNotNull { it.hostAddress }
             if (ips.isNotEmpty()) {
                 out += DnsCacheRecord(host, ips, entry.expiresAtMillis)
@@ -273,7 +261,7 @@ class AmethystDns(
         val addresses: List<InetAddress>,
         val expiresAtMillis: Long,
     ) {
-        fun unwrap(hostname: String): List<InetAddress> = addresses.ifEmpty { throw UnknownHostException(hostname) }
+        fun unwrap(host: String): List<InetAddress> = addresses.ifEmpty { throw UnknownHostException(host) }
     }
 
     companion object {
@@ -299,7 +287,4 @@ data class DnsCacheRecord(
     val hostname: String,
     val addresses: List<String>,
     val expiresAtMillis: Long,
-) {
-    // No-arg constructor for Jackson.
-    constructor() : this("", emptyList(), 0L)
-}
+)
