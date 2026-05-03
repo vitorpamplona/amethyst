@@ -856,7 +856,8 @@ class AccountViewModel(
         dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
-    ) = launchSigner { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
+        image: String? = null,
+    ) = launchSigner { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType, image = image) }
 
     fun removeFromMediaGallery(note: Note) = launchSigner { account.removeFromGallery(note) }
 

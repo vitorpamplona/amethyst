@@ -940,7 +940,12 @@ fun ShareMediaAction(
                             if (videoUri != null) {
                                 val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                                 if (n19 != null) {
-                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType)
+                                    // Forward the imeta poster (only MediaUrlVideo carries it) so HLS
+                                    // gallery entries have a still to render — without this, a video
+                                    // event whose imeta only contains a .m3u8 URL renders as a black
+                                    // play-icon tile in the gallery.
+                                    val posterUrl = (content as? MediaUrlVideo)?.artworkUri
+                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType, image = posterUrl)
                                     accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                                 }
                             }
