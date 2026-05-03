@@ -49,6 +49,11 @@ data class HlsVideoPublishInput(
     val contentWarning: String? = null,
     val dTag: String? = null,
     val createdAt: Long? = null,
+    // Poster JPEG URL (e.g. a frame extracted from the source video and uploaded alongside the
+    // HLS segments). Threaded into every imeta's `image` property so HLS-unaware UI surfaces
+    // (gallery thumbnails, previews) have a still to render — the .m3u8 playlist itself is a
+    // text manifest that can't be decoded as an image frame.
+    val posterUrl: String? = null,
 )
 
 sealed class HlsVideoEventTemplate {
@@ -82,6 +87,7 @@ object HlsVideoEventBuilder {
 
         val largest = input.renditions.maxByOrNull { it.width * it.height }
         val masterDimension = largest?.let { DimensionTag(it.width, it.height) }
+        val posterImage = input.posterUrl?.let { listOf(it) } ?: emptyList()
         val masterVideoMeta =
             VideoMeta(
                 url = input.masterUrl,
@@ -89,6 +95,7 @@ object HlsVideoEventBuilder {
                 hash = input.masterSha256,
                 dimension = masterDimension,
                 alt = input.alt,
+                image = posterImage,
             )
 
         val renditionMetas =
@@ -107,6 +114,7 @@ object HlsVideoEventBuilder {
                     hash = combinedMetadata?.sha256,
                     size = combinedMetadata?.size?.toInt(),
                     dimension = DimensionTag(summary.width, summary.height),
+                    image = posterImage,
                 )
             }
 
