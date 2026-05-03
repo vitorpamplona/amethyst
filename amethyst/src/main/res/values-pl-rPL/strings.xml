@@ -165,6 +165,8 @@
     <string name="failed_to_save_the_image">Nie udało się zapisać zdjęcia</string>
     <string name="video_saved_to_the_gallery">Film zapisany w galerii filmów</string>
     <string name="failed_to_save_the_video">Nie udało się zapisać filmu</string>
+    <string name="pdf_saved_to_the_gallery">Plik PDF zapisany w folderze Pobrane/Amethyst</string>
+    <string name="failed_to_save_the_pdf">Nie udało się zapisać pliku PDF</string>
     <string name="upload_image">Dodaj zdjęcie</string>
     <string name="upload_file">Prześlij plik</string>
     <string name="take_a_picture">Zrób zdjęcie</string>

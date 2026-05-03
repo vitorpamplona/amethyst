@@ -165,6 +165,8 @@
     <string name="failed_to_save_the_image">Misslyckades att spara bilden</string>
     <string name="video_saved_to_the_gallery">Videon sparad i telefonens videogalleri</string>
     <string name="failed_to_save_the_video">Det gick inte att spara videon</string>
+    <string name="pdf_saved_to_the_gallery">PDF sparad i Downloads/Amethyst</string>
+    <string name="failed_to_save_the_pdf">Det gick inte att spara PDF:en</string>
     <string name="upload_image">Ladda upp bilden</string>
     <string name="upload_file">Ladda upp fil</string>
     <string name="take_a_picture">Ta en bild</string>
@@ -517,6 +519,10 @@
     <string name="nest_leave_host_close">Stäng rum</string>
     <string name="nest_leave_host_just_leave">Bara lämna</string>
     <string name="nest_leave_host_close_failed">Kunde inte markera rummet som stängt. Lämnar ändå — rummet stängs automatiskt.</string>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d lyssnare</item>
+        <item quantity="other">%1$d lyssnare</item>
+    </plurals>
     <string name="nest_tab_chat">Chatt</string>
     <string name="nest_tab_audience">Publik</string>
     <string name="nest_tab_hands">Händer</string>
@@ -550,7 +556,15 @@
     <string name="nest_minimize">Minimera</string>
     <string name="nest_minimize_description">Minimera för att fortsätta lyssna</string>
     <string name="nest_audio_dropped">Ljudet bröts</string>
+    <string name="nest_loading_room">Läser in rum…</string>
+    <string name="nest_unjoinable_title">Det här rummet kan inte öppnas</string>
+    <string name="nest_unjoinable_body">Rummet saknar en ljudtjänst eller slutpunkt. Värden måste uppdatera detaljerna innan lyssnare kan ansluta.</string>
+    <string name="nest_unjoinable_back">Tillbaka</string>
     <string name="nest_create_fab">Starta utrymme</string>
+    <string name="nests_section_live_now">Direktsänt nu</string>
+    <string name="nests_section_scheduled">Schemalagda</string>
+    <string name="nests_section_recently_ended">Nyligen avslutade</string>
+    <string name="nests_ended_ago">Avslutades för %1$s sedan</string>
     <string name="nest_no_server_title">Konfigurera en nest-server</string>
     <string name="nest_no_server_body">Du har inte valt en nest-server än. Lägga till %1$s i din serverlista och fortsätta?\n\nDu kan ändra detta senare i Inställningar.</string>
     <string name="nest_no_server_use_default">Använd standard</string>
@@ -2121,6 +2135,30 @@
     <string name="last_seen_on_date">Senast sedd %1$s (för %2$s sedan)</string>
     <string name="last_seen_just_now">Senast sedd just nu</string>
     <string name="last_seen_never">Aldrig sedd</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minut</item>
+        <item quantity="other">%1$d minuter</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d timme</item>
+        <item quantity="other">%1$d timmar</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagar</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d vecka</item>
+        <item quantity="other">%1$d veckor</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d månad</item>
+        <item quantity="other">%1$d månader</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d år</item>
+        <item quantity="other">%1$d år</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Ansluter</string>
     <string name="event_sync_status_downloading">Laddar ner</string>
@@ -2382,47 +2420,4 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
-    <string name="failed_to_save_the_pdf">Det gick inte att spara PDF:en</string>
-    <string name="nest_loading_room">Läser in rum…</string>
-    <string name="nest_unjoinable_back">Tillbaka</string>
-    <string name="nest_unjoinable_body">Rummet saknar en ljudtjänst eller slutpunkt. Värden måste uppdatera detaljerna innan lyssnare kan ansluta.</string>
-    <string name="nest_unjoinable_title">Det här rummet kan inte öppnas</string>
-    <string name="nests_ended_ago">Avslutades för %1$s sedan</string>
-    <string name="nests_section_live_now">Direktsänt nu</string>
-    <string name="nests_section_recently_ended">Nyligen avslutade</string>
-    <string name="nests_section_scheduled">Schemalagda</string>
-    <string name="pdf_saved_to_the_gallery">PDF sparad i Downloads/Amethyst</string>
-    <plurals name="duration_minutes">
-        <item quantity="one">%1$d minut</item>
-        <item quantity="other">%1$d minuter</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="one">%1$d timme</item>
-        <item quantity="other">%1$d timmar</item>
-    </plurals>
-    <plurals name="duration_days">
-        <item quantity="one">%1$d dag</item>
-        <item quantity="other">%1$d dagar</item>
-    </plurals>
-    <plurals name="duration_weeks">
-        <item quantity="one">%1$d vecka</item>
-        <item quantity="other">%1$d veckor</item>
-    </plurals>
-    <plurals name="duration_months">
-        <item quantity="one">%1$d månad</item>
-        <item quantity="other">%1$d månader</item>
-    </plurals>
-    <plurals name="duration_years">
-        <item quantity="one">%1$d år</item>
-        <item quantity="other">%1$d år</item>
-    </plurals>
-    <plurals name="nest_listener_count">
-        <item quantity="one">%1$d lyssnare</item>
-        <item quantity="other">%1$d lyssnare</item>
-    </plurals>
-    <string name="nest_live_chip">LIVE</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_role_moderator">Moderator</string>
-    <string name="nests_servers_auth_label">Auth</string>
 </resources>
