@@ -210,10 +210,11 @@ class NamecoinNameResolver(
     private suspend fun performLookup(parsed: ParsedIdentifier): NamecoinNostrResult? {
         val nameResult = electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider()) ?: return null
         val valueJson = tryParseJson(nameResult.value) ?: return null
+        val merged = expandImportsIfPresent(valueJson)
 
         return when (parsed.namespace) {
-            Namespace.DOMAIN -> extractFromDomainValue(valueJson, parsed)
-            Namespace.IDENTITY -> extractFromIdentityValue(valueJson, parsed)
+            Namespace.DOMAIN -> extractFromDomainValue(merged, parsed)
+            Namespace.IDENTITY -> extractFromIdentityValue(merged, parsed)
         }
     }
 
@@ -236,17 +237,43 @@ class NamecoinNameResolver(
         val valueJson =
             tryParseJson(nameResult.value)
                 ?: return NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+        val merged = expandImportsIfPresent(valueJson)
 
         val nostrResult =
             when (parsed.namespace) {
-                Namespace.DOMAIN -> extractFromDomainValue(valueJson, parsed)
-                Namespace.IDENTITY -> extractFromIdentityValue(valueJson, parsed)
+                Namespace.DOMAIN -> extractFromDomainValue(merged, parsed)
+                Namespace.IDENTITY -> extractFromIdentityValue(merged, parsed)
             }
 
         return if (nostrResult != null) {
             NamecoinResolveOutcome.Success(nostrResult)
         } else {
             NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+        }
+    }
+
+    /**
+     * Expand any ifa-0001 `import` items in [root] into a single merged
+     * object, fetching imported names through this resolver's ElectrumX
+     * client. Records without an `import` key are returned unchanged with
+     * zero extra I/O.
+     *
+     * Failures (name not found, malformed JSON, network errors) are
+     * absorbed: the corresponding import contributes nothing and the
+     * importing record's own items still apply. This keeps resolution
+     * best-effort, in line with the rest of the namecoin path.
+     */
+    private suspend fun expandImportsIfPresent(root: JsonObject): JsonObject {
+        if (!root.containsKey("import")) return root
+        return NamecoinImportResolver.expandImports(root) { name ->
+            try {
+                electrumxClient.nameShowWithFallback(name, serverListProvider())?.value
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: NamecoinLookupException) {
+                // Best-effort: missing/expired/unreachable → contribute nothing.
+                null
+            }
         }
     }
 
