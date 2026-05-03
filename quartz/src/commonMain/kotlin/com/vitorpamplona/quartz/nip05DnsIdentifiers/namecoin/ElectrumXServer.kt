@@ -99,6 +99,12 @@ val DEFAULT_ELECTRUMX_SERVERS =
         ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = true),
         ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, usePinnedTrustStore = true),
         ElectrumxServer("46.229.238.187", 57002, useSsl = true, usePinnedTrustStore = true),
+        // relay.testls.bit — second public Namecoin ElectrumX deployment, served
+        // alongside the Namecoin-anchored Nostr relay at wss://relay.testls.bit/.
+        // TLS endpoint pinned to a self-signed cert (see PINNED_ELECTRUMX_CERTS).
+        // Also exposed as wss://relay.testls.bit/electrumx (browser-viable, future
+        // WS transport — see N1 §"Browser / WebSocket transport" in mstrofnone/nips).
+        ElectrumxServer("relay.testls.bit", 50002, useSsl = true, usePinnedTrustStore = true),
     )
 
 /** Tor-preferred server list: onion primary, clearnet fallback. */
@@ -110,6 +116,16 @@ val TOR_ELECTRUMX_SERVERS =
             useSsl = true,
             usePinnedTrustStore = true,
         ),
+        // relay.testls.bit — hidden service shared with the Nostr relay's onion.
+        // Plaintext over Tor (port 50001) since the onion key already authenticates
+        // the endpoint; TLS-on-Tor would only add round-trips with no security gain.
+        ElectrumxServer(
+            "6cbn4rskfdr647otej7gpqlmpqcmj723vg2eoeuu7ljbwu6cpdebozyd.onion",
+            50001,
+            useSsl = false,
+            usePinnedTrustStore = false,
+        ),
         ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = true),
         ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("relay.testls.bit", 50002, useSsl = true, usePinnedTrustStore = true),
     )
