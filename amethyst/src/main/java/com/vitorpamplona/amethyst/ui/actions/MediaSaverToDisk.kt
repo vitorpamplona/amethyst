@@ -31,7 +31,7 @@ import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.core.net.toFile
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.PICTURES_SUBDIRECTORY
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.AMETHYST_SUBDIRECTORY
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +87,7 @@ object MediaSaverToDisk {
     /**
      * Saves the image to the gallery. May require a storage permission.
      *
-     * @see PICTURES_SUBDIRECTORY
+     * @see AMETHYST_SUBDIRECTORY
      */
     suspend fun downloadAndSave(
         url: String,
@@ -120,9 +120,9 @@ object MediaSaverToDisk {
                                 ?.trim()
 
                         val realType =
-                            headerType?.takeIf(::isMediaMimeType)
-                                ?: mimeType?.takeIf(::isMediaMimeType)
-                                ?: getMimeTypeFromExtension(trimmedUrl).takeIf(::isMediaMimeType)
+                            headerType?.takeIf(::isSaveableMimeType)
+                                ?: mimeType?.takeIf(::isSaveableMimeType)
+                                ?: getMimeTypeFromExtension(trimmedUrl).takeIf(::isSaveableMimeType)
                                 ?: ""
                         check(realType.isNotBlank()) { "Can't find out the content type" }
 
@@ -154,12 +154,13 @@ object MediaSaverToDisk {
             MimeTypeMap.getSingleton().getMimeTypeFromExtension(it).orEmpty()
         }
 
-    private fun isMediaMimeType(type: String): Boolean =
+    private fun isSaveableMimeType(type: String): Boolean =
         type.isNotBlank() &&
             (
                 type.startsWith("image/", ignoreCase = true) ||
                     type.startsWith("video/", ignoreCase = true) ||
-                    type.startsWith("audio/", ignoreCase = true)
+                    type.startsWith("audio/", ignoreCase = true) ||
+                    type.equals(PDF_MIME_TYPE, ignoreCase = true)
             )
 
     @OptIn(ExperimentalUuidApi::class)
@@ -205,20 +206,30 @@ object MediaSaverToDisk {
         contentResolver: ContentResolver,
     ) {
         val cleanMimeType = contentType.substringBefore(";").trim()
+
+        val (masterUri, baseDir) =
+            when {
+                cleanMimeType.startsWith("image/", ignoreCase = true) -> {
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_PICTURES
+                }
+
+                cleanMimeType.equals(PDF_MIME_TYPE, ignoreCase = true) -> {
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_DOWNLOADS
+                }
+
+                else -> {
+                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_PICTURES
+                }
+            }
+
         val contentValues =
             ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
                 put(MediaStore.MediaColumns.MIME_TYPE, cleanMimeType)
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
-                    Environment.DIRECTORY_PICTURES + File.separatorChar + PICTURES_SUBDIRECTORY,
+                    baseDir + File.separatorChar + AMETHYST_SUBDIRECTORY,
                 )
-            }
-
-        val masterUri =
-            when {
-                contentType.startsWith("image") -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
             }
 
         val uri = contentResolver.insert(masterUri, contentValues)
@@ -244,7 +255,7 @@ object MediaSaverToDisk {
         val subdirectory =
             File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                PICTURES_SUBDIRECTORY,
+                AMETHYST_SUBDIRECTORY,
             ).apply {
                 if (!exists()) mkdirs()
             }
@@ -260,5 +271,6 @@ object MediaSaverToDisk {
 
     private fun trimInlineMetaData(url: String): String = url.substringBefore("#")
 
-    private const val PICTURES_SUBDIRECTORY = "Amethyst"
+    private const val AMETHYST_SUBDIRECTORY = "Amethyst"
+    private const val PDF_MIME_TYPE = "application/pdf"
 }
