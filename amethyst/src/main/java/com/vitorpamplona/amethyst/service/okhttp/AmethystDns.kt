@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit
  */
 class AmethystDns(
     private val delegate: Dns = Dns.SYSTEM,
-    private val maxEntries: Int = 256,
+    private val maxEntries: Int = 2000,
     positiveTtlMs: Long = TimeUnit.MINUTES.toMillis(5),
     negativeTtlMs: Long = TimeUnit.SECONDS.toMillis(10),
 ) : Dns {
