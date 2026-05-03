@@ -559,7 +559,15 @@
     <string name="nest_minimize">最小化</string>
     <string name="nest_minimize_description">最小化以继续收听</string>
     <string name="nest_audio_dropped">音频已断开</string>
+    <string name="nest_loading_room">正在加载聊天室…</string>
+    <string name="nest_unjoinable_title">无法打开这个聊天室</string>
+    <string name="nest_unjoinable_body">聊天室缺少音频服务或端点。在听众可以连接前支持人需要更新其详情。</string>
+    <string name="nest_unjoinable_back">返回</string>
     <string name="nest_create_fab">启动空间</string>
+    <string name="nests_section_live_now">直播中</string>
+    <string name="nests_section_scheduled">已计划</string>
+    <string name="nests_section_recently_ended">最近结束</string>
+    <string name="nests_ended_ago">结束于 %1$s 前</string>
     <string name="nest_no_server_title">设置语音聊天室服务器</string>
     <string name="nest_no_server_body">您尚未选择语音聊天服务器。添加 %1$s 到您的服务器列表并继续吗？\n\n您可以稍后在设置中更改此设置。</string>
     <string name="nest_no_server_use_default">使用默认</string>
