@@ -2385,4 +2385,45 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
+    <string name="failed_to_save_the_pdf">Falha ao salvar o PDF</string>
+    <string name="nest_loading_room">Carregando sala…</string>
+    <string name="nest_unjoinable_back">Voltar</string>
+    <string name="nest_unjoinable_body">A sala está sem um serviço de áudio ou endpoint. O anfitrião precisa atualizar os detalhes antes que os ouvintes possam se conectar.</string>
+    <string name="nest_unjoinable_title">Esta sala não pode ser aberta</string>
+    <string name="nests_ended_ago">Encerrou há %1$s</string>
+    <string name="nests_section_live_now">Ao vivo agora</string>
+    <string name="nests_section_recently_ended">Encerrados recentemente</string>
+    <string name="nests_section_scheduled">Agendados</string>
+    <string name="pdf_saved_to_the_gallery">PDF salvo em Downloads/Amethyst</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d hora</item>
+        <item quantity="other">%1$d horas</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d dia</item>
+        <item quantity="other">%1$d dias</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d semana</item>
+        <item quantity="other">%1$d semanas</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d mês</item>
+        <item quantity="other">%1$d meses</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d ano</item>
+        <item quantity="other">%1$d anos</item>
+    </plurals>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d ouvinte</item>
+        <item quantity="other">%1$d ouvintes</item>
+    </plurals>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_tab_chat">Bate-papo</string>
+    <string name="nests_servers_relay_label">Relay</string>
 </resources>

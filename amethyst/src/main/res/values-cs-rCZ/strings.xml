@@ -2388,4 +2388,49 @@
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\" stejně jako veřejná.</string>
     <string name="gif">Gif</string>
+    <string name="failed_to_save_the_pdf">Nepodařilo se uložit PDF</string>
+    <string name="nest_loading_room">Načítání místnosti…</string>
+    <string name="nest_unjoinable_back">Zpět</string>
+    <string name="nest_unjoinable_body">Místnosti chybí audio služba nebo koncový bod. Hostitel musí aktualizovat její údaje, než se posluchači budou moci připojit.</string>
+    <string name="nest_unjoinable_title">Tuto místnost nelze otevřít</string>
+    <string name="nests_ended_ago">Skončilo před %1$s</string>
+    <string name="nests_section_live_now">Živě</string>
+    <string name="nests_section_recently_ended">Nedávno skončilo</string>
+    <string name="nests_section_scheduled">Naplánováno</string>
+    <string name="pdf_saved_to_the_gallery">PDF uloženo do Downloads/Amethyst</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minuty</item>
+        <item quantity="other">%1$d minut</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="other">%1$d hodin</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="other">%1$d dnů</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d týden</item>
+        <item quantity="few">%1$d týdny</item>
+        <item quantity="other">%1$d týdnů</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d měsíc</item>
+        <item quantity="few">%1$d měsíce</item>
+        <item quantity="other">%1$d měsíců</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d rok</item>
+        <item quantity="few">%1$d roky</item>
+        <item quantity="other">%1$d let</item>
+    </plurals>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d posluchač</item>
+        <item quantity="few">%1$d posluchači</item>
+        <item quantity="other">%1$d posluchačů</item>
+    </plurals>
 </resources>
