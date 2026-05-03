@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
+import com.vitorpamplona.amethyst.service.okhttp.AmethystDnsStore
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
@@ -200,6 +201,11 @@ class AppModules(
 
     // Key cache service to download and decrypt encrypted files before caching them.
     val keyCache = EncryptionKeyCache()
+
+    // Persists the shared DNS resolver's positive cache across process restarts so cold starts
+    // don't pay ~700 sync getaddrinfo calls. Restored entries fall through to the
+    // stale-while-revalidate path on first lookup.
+    val dnsStore = AmethystDnsStore(appContext)
 
     // manages all the other connections separately from relays.
     val okHttpClients =
@@ -501,6 +507,22 @@ class AppModules(
     fun initiate(appContext: Context) {
         Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
 
+        // Restore the persisted DNS cache before any networking starts. Lookups that fire
+        // before this completes fall through to the sync resolver path (existing behavior);
+        // once restored, every previously-seen host hits the stale-while-revalidate path
+        // instead of blocking on getaddrinfo.
+        applicationIOScope.launch {
+            dnsStore.load()
+        }
+
+        // Periodically flush the DNS cache. Saves are skipped when nothing has changed.
+        applicationIOScope.launch {
+            while (true) {
+                delay(5 * 60 * 1000L)
+                dnsStore.save()
+            }
+        }
+
         applicationIOScope.launch {
             // loads main account quickly.
             LocalPreferences.loadAccountConfigFromEncryptedStorage()
@@ -565,12 +587,17 @@ class AppModules(
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
         PlaybackServiceClient.shutdown()
         alwaysOnNotificationServiceManager.stop()
+        // Best-effort flush before the scope is cancelled. Android rarely calls onTerminate in
+        // production, but when it does we get one last chance to persist the cache.
+        runCatching { dnsStore.save() }
         applicationIOScope.cancel("Application onTerminate $appContext")
         accountsCache.clear()
     }
 
     fun trim() {
         applicationIOScope.launch {
+            // Backgrounding is a natural moment to flush the DNS cache.
+            dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
             trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
         }

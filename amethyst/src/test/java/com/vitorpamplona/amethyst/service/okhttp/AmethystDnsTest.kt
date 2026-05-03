@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.okhttp
 
 import okhttp3.Dns
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -315,5 +316,98 @@ class AmethystDnsTest {
 
         assertEquals(2, upstream.calls("a.example"))
         assertEquals(1, upstream.calls("b.example"))
+    }
+
+    @Test
+    fun `snapshot includes only fresh positive entries`() {
+        val upstream =
+            CountingDns(
+                mapOf(
+                    "live.example" to listOf(ip("1.2.3.4")),
+                    "missing.example" to emptyList(),
+                ),
+            )
+        val dns =
+            AmethystDns(
+                delegate = upstream,
+                positiveTtlMs = 60_000,
+                positiveTtlJitterMs = 0,
+            )
+        dns.lookup("live.example")
+        runCatching { dns.lookup("missing.example") }
+
+        val snapshot = dns.snapshot()
+        assertEquals(1, snapshot.size)
+        assertEquals("live.example", snapshot[0].hostname)
+        assertEquals(listOf("1.2.3.4"), snapshot[0].addresses)
+    }
+
+    @Test
+    fun `restore replays cached entries without hitting upstream`() {
+        val upstream = CountingDns(mapOf("relay.example" to listOf(ip("9.9.9.9"))))
+        val dns = AmethystDns(delegate = upstream)
+
+        val expiresAt = System.currentTimeMillis() + 60_000
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiresAt)))
+
+        assertEquals(listOf(ip("9.9.9.9")), dns.lookup("relay.example"))
+        assertEquals("Restored entry should serve without upstream", 0, upstream.calls("relay.example"))
+    }
+
+    @Test
+    fun `restore drops entries already expired on disk`() {
+        val upstream = CountingDns(mapOf("relay.example" to listOf(ip("9.9.9.9"))))
+        val dns = AmethystDns(delegate = upstream)
+
+        val expiredAt = System.currentTimeMillis() - 1_000
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiredAt)))
+
+        dns.lookup("relay.example")
+        assertEquals(1, upstream.calls("relay.example"))
+    }
+
+    @Test
+    fun `restore does not overwrite a fresh in-memory entry`() {
+        val upstream = CountingDns(mapOf("relay.example" to listOf(ip("1.1.1.1"))))
+        val dns =
+            AmethystDns(
+                delegate = upstream,
+                positiveTtlMs = 60_000,
+                positiveTtlJitterMs = 0,
+            )
+
+        // Live lookup populates with 1.1.1.1.
+        dns.lookup("relay.example")
+        // Then a (stale-on-disk-but-not-yet-expired) restore arrives with a different IP.
+        dns.restore(
+            listOf(
+                DnsCacheRecord(
+                    "relay.example",
+                    listOf("9.9.9.9"),
+                    System.currentTimeMillis() + 60_000,
+                ),
+            ),
+        )
+
+        assertEquals("In-memory entry wins", listOf(ip("1.1.1.1")), dns.lookup("relay.example"))
+    }
+
+    @Test
+    fun `dirty flag tracks positive writes`() {
+        val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
+        val dns =
+            AmethystDns(
+                delegate = upstream,
+                positiveTtlMs = 60_000,
+                positiveTtlJitterMs = 0,
+            )
+
+        assertFalse("Fresh resolver is not dirty", dns.isDirty())
+        dns.lookup("a.example")
+        assertTrue("First positive write dirties cache", dns.isDirty())
+
+        dns.clearDirty()
+        dns.lookup("a.example") // cache hit, no write
+        assertFalse("Cache hit does not dirty", dns.isDirty())
     }
 }
