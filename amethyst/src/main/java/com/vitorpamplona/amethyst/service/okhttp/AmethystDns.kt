@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.service.okhttp
 import okhttp3.Dns
 import java.net.InetAddress
 import java.net.UnknownHostException
-import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
@@ -32,36 +31,42 @@ import java.util.concurrent.TimeUnit
 /**
  * Concurrent, caching DNS resolver for OkHttp.
  *
- * The system resolver call ([InetAddress.getAllByName] used by [Dns.SYSTEM]) is a blocking JNI
- * hop into `getaddrinfo`. On a busy feed we may issue dozens of HTTP calls to a handful of hosts
- * in the same second; the default behaviour pays the resolver tax once per call and serializes
- * the OkHttp dispatcher worker that asked for it.
+ * Tuned for an Amethyst-shaped workload: ~700 relays plus a small set of media/profile/NIP-05
+ * hosts that reappear constantly. Steady state is well under [maxEntries] distinct hosts whose
+ * IPs change on the order of days, so we want to resolve each one once per session and never
+ * touch DNS again.
  *
- * This resolver adds three things on top of the system resolver:
+ * Properties:
  *
- *  1. An LRU + TTL cache, so repeated lookups of the same host short-circuit before touching the
- *     network. Negative results get a short TTL so a typo doesn't keep hammering DNS.
- *  2. Single-flight coalescing: when N OkHttp threads ask for the same host concurrently, only
- *     one of them performs the upstream lookup. The others block on the same future and pick up
- *     the result. Without this, ten parallel image requests to the same CDN make ten DNS calls.
- *  3. No global lock on the slow path: lookups for *different* hosts proceed in parallel because
- *     the upstream resolver is invoked outside any monitor.
+ *  1. **Lock-free reads.** Cache is a [ConcurrentHashMap], so the hot path (cache hit) does no
+ *     locking. The previous incarnation used `synchronizedMap(LinkedHashMap(access-order=true))`,
+ *     which turned every `get` into a monitor-protected write because access-order LRU rewrites
+ *     the linked list on read — at 700 concurrent relay reconnects, the lock dominated.
+ *  2. **Single-flight coalescing.** N concurrent OkHttp threads asking for the same host share
+ *     one upstream `getaddrinfo`. The leader resolves; followers block on the same future. If a
+ *     peer leader refreshed the entry while we were claiming leadership, the leader re-checks
+ *     the cache and skips the system call entirely.
+ *  3. **Generous positive TTL.** Defaults to 24h. Relay and CDN IPs almost never move, and we
+ *     are not a recursive resolver — there is no correctness reason to honor authoritative TTLs.
+ *     Pair with [invalidate] on connection failures or network changes to recover from real
+ *     IP moves.
+ *  4. **Short negative TTL.** Failed lookups are remembered for 10s so a typo or a transiently
+ *     down host doesn't keep paying for `getaddrinfo`, but a real outage recovers quickly.
+ *
+ * Remaining blocking points are unavoidable: the leader's [Dns.lookup] call is a synchronous JNI
+ * hop into the system resolver, and followers must wait on the leader's future. Both are
+ * bypassed entirely on cache hit, which is the steady state.
  */
 class AmethystDns(
     private val delegate: Dns = Dns.SYSTEM,
     private val maxEntries: Int = 2000,
-    positiveTtlMs: Long = TimeUnit.MINUTES.toMillis(5),
+    positiveTtlMs: Long = TimeUnit.HOURS.toMillis(24),
     negativeTtlMs: Long = TimeUnit.SECONDS.toMillis(10),
 ) : Dns {
     private val positiveTtlNanos = TimeUnit.MILLISECONDS.toNanos(positiveTtlMs)
     private val negativeTtlNanos = TimeUnit.MILLISECONDS.toNanos(negativeTtlMs)
 
-    private val cache: MutableMap<String, Entry> =
-        Collections.synchronizedMap(
-            object : LinkedHashMap<String, Entry>(64, 0.75f, true) {
-                override fun removeEldestEntry(eldest: Map.Entry<String, Entry>): Boolean = size > maxEntries
-            },
-        )
+    private val cache = ConcurrentHashMap<String, Entry>()
     private val inflight = ConcurrentHashMap<String, CompletableFuture<List<InetAddress>>>()
 
     override fun lookup(hostname: String): List<InetAddress> {
@@ -85,14 +90,22 @@ class AmethystDns(
         future: CompletableFuture<List<InetAddress>>,
     ): List<InetAddress> {
         try {
-            val addresses = delegate.lookup(hostname)
-            put(hostname, addresses, positiveTtlNanos)
+            // Re-check after claiming leadership: a peer may have refreshed the cache between
+            // our miss and our putIfAbsent. Skips a duplicate getaddrinfo in that race.
+            val cached = cache[hostname]
+            val addresses =
+                if (cached != null && cached.expiresAtNanos > System.nanoTime()) {
+                    cached.unwrap(hostname)
+                } else {
+                    try {
+                        delegate.lookup(hostname).also { put(hostname, it, positiveTtlNanos) }
+                    } catch (e: UnknownHostException) {
+                        put(hostname, emptyList(), negativeTtlNanos)
+                        throw e
+                    }
+                }
             future.complete(addresses)
             return addresses
-        } catch (e: UnknownHostException) {
-            put(hostname, emptyList(), negativeTtlNanos)
-            future.completeExceptionally(e)
-            throw e
         } catch (e: Throwable) {
             future.completeExceptionally(e)
             throw e
@@ -126,6 +139,15 @@ class AmethystDns(
         ttlNanos: Long,
     ) {
         cache[hostname] = Entry(addresses, System.nanoTime() + ttlNanos)
+        if (cache.size > maxEntries) evictExpired()
+    }
+
+    private fun evictExpired() {
+        val now = System.nanoTime()
+        val it = cache.entries.iterator()
+        while (it.hasNext()) {
+            if (it.next().value.expiresAtNanos <= now) it.remove()
+        }
     }
 
     /** Drop all cached entries. Call when the network changes (e.g. WiFi <-> mobile). */
@@ -133,7 +155,7 @@ class AmethystDns(
         cache.clear()
     }
 
-    /** Drop a single host's cached entry. */
+    /** Drop a single host's cached entry. Call when a connection to it fails. */
     fun invalidate(hostname: String) {
         cache.remove(hostname)
     }
