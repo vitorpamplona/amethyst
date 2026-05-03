@@ -41,15 +41,18 @@ open class BaseDMGroupEvent(
     ChatroomKeyable,
     NIP17Group,
     PubKeyHintProvider {
+    private val parsedRecipients: List<PTag> by lazy { tags.mapNotNull(PTag::parse) }
+    private val parsedRecipientPubKeys: List<HexKey> by lazy { tags.mapNotNull(PTag::parseKey) }
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = parsedRecipientPubKeys
 
     /** Recipients intended to receive this conversation */
-    fun recipients() = tags.mapNotNull(PTag::parse)
+    fun recipients(): List<PTag> = parsedRecipients
 
     /** Recipients intended to receive this conversation */
-    fun recipientsPubKey() = tags.mapNotNull(PTag::parseKey)
+    fun recipientsPubKey(): List<HexKey> = parsedRecipientPubKeys
 
     fun talkingWith(oneSideHex: String): Set<HexKey> {
         val listedPubKeys = recipientsPubKey()
@@ -61,7 +64,7 @@ open class BaseDMGroupEvent(
                 listedPubKeys.plus(pubKey).toSet().minus(oneSideHex)
             }
 
-        if (result.isEmpty()) {
+        if (result.isEmpty() && pubKey == oneSideHex) {
             // talking to myself
             return setOf(pubKey)
         }

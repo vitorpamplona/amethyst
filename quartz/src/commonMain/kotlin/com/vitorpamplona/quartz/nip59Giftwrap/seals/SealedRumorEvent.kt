@@ -97,7 +97,7 @@ class SealedRumorEvent(
             encryptTo: HexKey,
             signer: NostrSigner,
             expirationDelta: Long? = null,
-            createdAt: Long = TimeUtils.now(),
+            createdAt: Long = TimeUtils.randomWithTwoDays(),
         ): SealedRumorEvent {
             val rumor = Rumor.create(event)
             return create(rumor, encryptTo, signer, expirationDelta, createdAt)

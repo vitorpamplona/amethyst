@@ -45,7 +45,9 @@ class Rumor(
         val newPubKey = event.pubKey // forces to be the pubkey of the seal to make sure impersonators don't impersonate
         val newCreatedAt = if (createdAt != null && createdAt > 1000) createdAt else event.createdAt
         val newKind = kind ?: -1
-        val newTags = (tags ?: emptyArray()).plus(event.tags)
+        // Per NIP-59, seal tags MUST be empty; the rumor's tags are authoritative.
+        // Ignore event.tags so a non-compliant seal can't pollute the inner event.
+        val newTags = tags ?: emptyArray()
         val newContent = content ?: ""
         val newID = id?.ifBlank { null } ?: EventHasher.hashId(newPubKey, newCreatedAt, newKind, newTags, newContent)
         val sig = ""
