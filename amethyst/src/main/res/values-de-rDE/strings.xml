@@ -465,6 +465,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_packs">Follow-Pakete</string>
     <string name="live_streams">Live-Streams</string>
     <string name="nests">Audioräume</string>
+    <string name="meeting_room_in_space">Im %1$s</string>
     <string name="meeting_room_in_space_unknown">ein Nest</string>
     <string name="nest_stage">Bühne</string>
     <string name="nest_stage_empty">Warten auf Sprecher…</string>
@@ -499,8 +500,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_mute_failed">Stummschalten fehlgeschlagen: %1$s</string>
     <string name="nest_record_permission_required">Mikrofonzugriff ist erforderlich, um in diesem Raum zu sprechen.</string>
     <string name="nest_open_settings">Einstellungen öffnen</string>
+    <string name="nest_notification_channel">Audioräume</string>
     <string name="nest_notification_channel_description">Hält Audio aktiv, solange ein Raum geöffnet ist.</string>
     <string name="nest_notification_listening">Nest verbunden</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
     <string name="nest_notification_text">Tippen zum Zurückkehren.</string>
     <string name="nest_notification_stop">Stoppen</string>
     <string name="nest_join">Nest beitreten</string>
@@ -510,6 +513,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_lobby_no_listeners">Im Raum ist gerade niemand.</string>
     <string name="nest_lobby_listeners_count">%1$d hört zu</string>
     <string name="nest_role_host">Gastgeber</string>
+    <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon stumm</string>
     <string name="nest_state_speaking">Spricht gerade</string>
     <string name="nest_state_mic_open">Mikrofon offen</string>
@@ -528,6 +532,8 @@ anz der Bedingungen ist erforderlich</string>
         <item quantity="one">%1$d Zuhörer</item>
         <item quantity="other">%1$d Zuhörer</item>
     </plurals>
+    <string name="nest_live_chip">LIVE</string>
+    <string name="nest_tab_chat">Chat</string>
     <string name="nest_tab_audience">Publikum</string>
     <string name="nest_tab_hands">Hände</string>
     <string name="nest_audience_empty">Noch niemand im Publikum.</string>
@@ -594,6 +600,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nests_servers_add_relay_field">Relay-URL (WebTransport)</string>
     <string name="nests_servers_add_auth_field">Auth-URL (JWT-Mint)</string>
     <string name="nests_servers_add_pair_button">Hinzufügen</string>
+    <string name="nests_servers_relay_label">Relais</string>
+    <string name="nests_servers_auth_label">Authentifizierung</string>
     <string name="nests_servers_recommended_section">Empfohlene Server</string>
     <string name="nests_servers_recommended_explainer">Eingebaute Vorschläge, die du mit einem Tippen zu deiner Liste hinzufügen kannst.</string>
     <string name="nests_servers_use_defaults">Amethyst-Standards verwenden</string>

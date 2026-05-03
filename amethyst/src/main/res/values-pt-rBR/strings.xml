@@ -494,6 +494,7 @@
     <string name="nest_mute_failed">Falha ao silenciar: %1$s</string>
     <string name="nest_record_permission_required">É necessário acesso ao microfone para falar nesta sala.</string>
     <string name="nest_open_settings">Abrir configurações</string>
+    <string name="nest_notification_channel">Salas de áudio</string>
     <string name="nest_notification_channel_description">Mantém o áudio tocando enquanto a sala está aberta.</string>
     <string name="nest_notification_listening">Nest conectado</string>
     <string name="nest_notification_broadcasting">Nest — Ao vivo</string>
@@ -593,6 +594,7 @@
     <string name="nests_servers_add_relay_field">URL do relay (WebTransport)</string>
     <string name="nests_servers_add_auth_field">URL de autenticação (JWT mint)</string>
     <string name="nests_servers_add_pair_button">Adicionar</string>
+    <string name="nests_servers_relay_label">Relé</string>
     <string name="nests_servers_auth_label">Autenticação</string>
     <string name="nests_servers_recommended_section">Servidores recomendados</string>
     <string name="nests_servers_recommended_explainer">Sugestões integradas que você pode adicionar à sua lista com um toque.</string>
