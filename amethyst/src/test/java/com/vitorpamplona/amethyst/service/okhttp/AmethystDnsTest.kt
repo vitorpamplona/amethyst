@@ -393,6 +393,45 @@ class AmethystDnsTest {
     }
 
     @Test
+    fun `lookup is case-insensitive`() {
+        val upstream = CountingDns(mapOf("example.com" to listOf(ip("1.2.3.4"))))
+        val dns = AmethystDns(delegate = upstream)
+
+        dns.lookup("Example.COM")
+        dns.lookup("example.com")
+        dns.lookup("ExAmPlE.cOm")
+
+        assertEquals("Mixed-case lookups should share one cache entry", 1, upstream.calls("example.com"))
+    }
+
+    @Test
+    fun `invalidate is case-insensitive`() {
+        val upstream = CountingDns(mapOf("example.com" to listOf(ip("1.2.3.4"))))
+        val dns = AmethystDns(delegate = upstream)
+
+        dns.lookup("example.com")
+        dns.invalidate("EXAMPLE.com")
+        dns.lookup("example.com")
+
+        assertEquals(2, upstream.calls("example.com"))
+    }
+
+    @Test
+    fun `restore lowercases hostnames so subsequent lookups hit`() {
+        val upstream = CountingDns(mapOf("example.com" to listOf(ip("9.9.9.9"))))
+        val dns = AmethystDns(delegate = upstream)
+
+        dns.restore(
+            listOf(
+                DnsCacheRecord("Example.COM", listOf("9.9.9.9"), System.currentTimeMillis() + 60_000),
+            ),
+        )
+
+        assertEquals(listOf(ip("9.9.9.9")), dns.lookup("example.com"))
+        assertEquals("Lookup should hit restored entry without upstream", 0, upstream.calls("example.com"))
+    }
+
+    @Test
     fun `dirty flag tracks positive writes`() {
         val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
         val dns =

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.okhttp
 import okhttp3.Dns
 import java.net.InetAddress
 import java.net.UnknownHostException
+import java.util.Locale
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
@@ -85,25 +86,29 @@ class AmethystDns(
     private val dirty = AtomicBoolean(false)
 
     override fun lookup(hostname: String): List<InetAddress> {
-        cache[hostname]?.let { entry ->
+        // DNS hostnames are case-insensitive; canonicalize so "Example.com" and "example.com"
+        // share a cache entry. OkHttp normally hands us lowercase, but custom callers may not.
+        val key = hostname.lowercase(Locale.ROOT)
+
+        cache[key]?.let { entry ->
             val now = System.currentTimeMillis()
             if (entry.expiresAtMillis > now) {
-                return entry.unwrap(hostname)
+                return entry.unwrap(key)
             }
             // Soft-expired positive entry: serve stale, refresh in background. Negative
             // entries fall through to the sync path so transient failures recover quickly.
             if (entry.addresses.isNotEmpty()) {
-                triggerBackgroundRefresh(hostname)
+                triggerBackgroundRefresh(key)
                 return entry.addresses
             }
         }
 
         val newFuture = CompletableFuture<List<InetAddress>>()
-        val existing = inflight.putIfAbsent(hostname, newFuture)
+        val existing = inflight.putIfAbsent(key, newFuture)
         return if (existing == null) {
-            resolveAsLeader(hostname, newFuture)
+            resolveAsLeader(key, newFuture)
         } else {
-            awaitFollower(hostname, existing)
+            awaitFollower(key, existing)
         }
     }
 
@@ -212,7 +217,8 @@ class AmethystDns(
 
     /** Drop a single host's cached entry. Call when a connection to it fails. */
     fun invalidate(hostname: String) {
-        if (cache.remove(hostname) != null) dirty.set(true)
+        val key = hostname.lowercase(Locale.ROOT)
+        if (cache.remove(key) != null) dirty.set(true)
     }
 
     /**
@@ -249,7 +255,8 @@ class AmethystDns(
                     runCatching { InetAddress.getByName(literal) }.getOrNull()
                 }
             if (addresses.isNotEmpty()) {
-                cache.putIfAbsent(record.hostname, Entry(addresses, record.expiresAtMillis))
+                val key = record.hostname.lowercase(Locale.ROOT)
+                cache.putIfAbsent(key, Entry(addresses, record.expiresAtMillis))
             }
         }
     }
