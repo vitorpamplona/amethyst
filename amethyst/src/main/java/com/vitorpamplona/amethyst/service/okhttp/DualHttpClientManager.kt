@@ -38,8 +38,9 @@ class DualHttpClientManager(
     isMobileDataProvider: StateFlow<Boolean?>,
     keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
+    dns: AmethystDns,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache, userAgent)
+    val factory = OkHttpClientFactory(keyCache, userAgent, dns)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->

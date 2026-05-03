@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.utils.Log
  */
 class AmethystDnsStore(
     private val context: Context,
-    private val dns: AmethystDns = AmethystDns.shared,
+    private val dns: AmethystDns,
 ) {
     private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 

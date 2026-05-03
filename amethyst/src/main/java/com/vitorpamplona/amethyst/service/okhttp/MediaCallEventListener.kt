@@ -44,6 +44,7 @@ import java.net.Proxy
 class MediaCallEventListener(
     private val dispatcher: Dispatcher,
     private val connectionPool: ConnectionPool,
+    private val dns: AmethystDns,
 ) : EventListener() {
     private var callStartNanos = 0L
     private var dnsStartNanos = 0L
@@ -129,7 +130,7 @@ class MediaCallEventListener(
         // dead IPs for up to 24h. Per-attempt connectFailed isn't enough — a multi-A-record
         // host can have one bad IP and OkHttp will recover by trying the next one.
         if (error != null) {
-            AmethystDns.shared.invalidate(host)
+            dns.invalidate(host)
         }
 
         val totalMs = (System.nanoTime() - callStartNanos) / 1_000_000
@@ -178,6 +179,7 @@ class MediaCallEventListener(
 class MediaCallEventListenerFactory(
     private val dispatcher: Dispatcher,
     private val connectionPool: ConnectionPool,
+    private val dns: AmethystDns,
 ) : EventListener.Factory {
-    override fun create(call: Call): EventListener = MediaCallEventListener(dispatcher, connectionPool)
+    override fun create(call: Call): EventListener = MediaCallEventListener(dispatcher, connectionPool, dns)
 }

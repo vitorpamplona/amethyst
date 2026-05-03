@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit
 class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
     val userAgent: String,
+    private val dns: AmethystDns,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
@@ -63,8 +64,8 @@ class OkHttpClientFactory(
             .Builder()
             .dispatcher(dispatcher)
             .connectionPool(connectionPool)
-            .dns(AmethystDns.shared)
-            .eventListenerFactory(MediaCallEventListenerFactory(dispatcher, connectionPool))
+            .dns(dns)
+            .eventListenerFactory(MediaCallEventListenerFactory(dispatcher, connectionPool, dns))
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))

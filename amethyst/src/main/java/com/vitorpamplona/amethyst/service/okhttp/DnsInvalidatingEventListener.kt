@@ -34,17 +34,22 @@ import java.io.IOException
  * Used by the relay client. The media path uses [MediaCallEventListener], which folds the same
  * invalidation into its `finish` method alongside its existing timing logging.
  */
-class DnsInvalidatingEventListener private constructor() : EventListener() {
+class DnsInvalidatingEventListener(
+    private val dns: AmethystDns,
+) : EventListener() {
     override fun callFailed(
         call: Call,
         ioe: IOException,
     ) {
-        AmethystDns.shared.invalidate(call.request().url.host)
+        dns.invalidate(call.request().url.host)
     }
 
-    object Factory : EventListener.Factory {
-        private val INSTANCE = DnsInvalidatingEventListener()
+    /** Per-client factory. The listener is stateless, so the same instance serves every call. */
+    class Factory(
+        dns: AmethystDns,
+    ) : EventListener.Factory {
+        private val listener = DnsInvalidatingEventListener(dns)
 
-        override fun create(call: Call): EventListener = INSTANCE
+        override fun create(call: Call): EventListener = listener
     }
 }

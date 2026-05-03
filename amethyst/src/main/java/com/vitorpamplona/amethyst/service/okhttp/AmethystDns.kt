@@ -273,12 +273,6 @@ class AmethystDns(
             Executors.newFixedThreadPool(8) { r ->
                 Thread(r, "amethyst-dns-refresh").apply { isDaemon = true }
             }
-
-        /**
-         * Process-wide instance shared by every OkHttp client built in the app, so a host resolved
-         * for an image fetch is reused when a relay handshake or NIP-05 lookup hits the same host.
-         */
-        val shared: AmethystDns by lazy { AmethystDns() }
     }
 }
 
