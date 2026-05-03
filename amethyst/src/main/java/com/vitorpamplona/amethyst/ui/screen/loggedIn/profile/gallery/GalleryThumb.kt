@@ -146,10 +146,9 @@ fun GalleryThumbnail(
                 if (isAllHls) {
                     val withPoster = imetas.filter { it.image.isNotEmpty() }
                     val pick =
-                        (withPoster.ifEmpty { imetas })
-                            .minByOrNull {
-                                it.dimension?.let { d -> d.width * d.height } ?: Int.MAX_VALUE
-                            } ?: imetas.first()
+                        withPoster.ifEmpty { imetas }.minBy {
+                            it.dimension?.let { d -> d.width * d.height } ?: Int.MAX_VALUE
+                        }
                     listOf(pick)
                 } else {
                     imetas
