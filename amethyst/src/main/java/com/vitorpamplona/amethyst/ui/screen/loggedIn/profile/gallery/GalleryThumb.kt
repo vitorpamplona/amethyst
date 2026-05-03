@@ -66,6 +66,19 @@ import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
+// HLS playlist mime types as published in NIP-71 imeta tags. Mirrors the canonical list used in
+// MediaItemCache.toExoPlayerMimeType. Kept inline to avoid creating a one-off helper module.
+private fun isHlsMimeType(mimeType: String?): Boolean =
+    when (mimeType?.lowercase()) {
+        "application/vnd.apple.mpegurl",
+        "application/x-mpegurl",
+        "audio/x-mpegurl",
+        "audio/mpegurl",
+        -> true
+
+        else -> false
+    }
+
 @Composable
 fun GalleryThumbnail(
     baseNote: Note,
@@ -119,7 +132,28 @@ fun GalleryThumbnail(
                 )
             }
         } else if (noteEvent is VideoEvent) {
-            noteEvent.imetaTags().map { imeta ->
+            // An HLS publish writes one imeta per rendition (master + each variant) on the same
+            // NIP-71 event. Rendering them all expands a single video into a sub-grid of black
+            // tiles inside one gallery card — the .m3u8 playlist is a text manifest Coil can't
+            // decode. Collapse to a single tile when every imeta is an HLS playlist; prefer an
+            // imeta that carries a poster image, breaking ties by smallest dimensions so we
+            // pick the lowest-resolution variant. Non-HLS multi-imeta videos keep the existing
+            // per-imeta layout.
+            val imetas = noteEvent.imetaTags()
+            val isAllHls = imetas.isNotEmpty() && imetas.all { isHlsMimeType(it.mimeType) }
+            val toRender =
+                if (isAllHls) {
+                    val withPoster = imetas.filter { it.image.isNotEmpty() }
+                    val pick =
+                        (withPoster.ifEmpty { imetas })
+                            .minByOrNull {
+                                it.dimension?.let { d -> d.width * d.height } ?: Int.MAX_VALUE
+                            } ?: imetas.first()
+                    listOf(pick)
+                } else {
+                    imetas
+                }
+            toRender.map { imeta ->
                 MediaUrlVideo(
                     url = imeta.url,
                     description = noteEvent.content,
