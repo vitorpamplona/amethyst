@@ -494,8 +494,10 @@
     <string name="nest_mute_failed">Tystning misslyckades: %1$s</string>
     <string name="nest_record_permission_required">Mikrofonåtkomst krävs för att tala i det här rummet.</string>
     <string name="nest_open_settings">Öppna inställningar</string>
+    <string name="nest_notification_channel">Ljudrum</string>
     <string name="nest_notification_channel_description">Håller ljudet igång medan rummet är öppet.</string>
     <string name="nest_notification_listening">Nest anslutet</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
     <string name="nest_notification_text">Tryck för att återgå.</string>
     <string name="nest_notification_stop">Stoppa</string>
     <string name="nest_join">Gå med i nest</string>
@@ -505,6 +507,7 @@
     <string name="nest_lobby_no_listeners">Ingen är i rummet just nu.</string>
     <string name="nest_lobby_listeners_count">%1$d lyssnar</string>
     <string name="nest_role_host">Värd</string>
+    <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon avstängd</string>
     <string name="nest_state_speaking">Talar nu</string>
     <string name="nest_state_mic_open">Mikrofon på</string>
@@ -523,6 +526,7 @@
         <item quantity="one">%1$d lyssnare</item>
         <item quantity="other">%1$d lyssnare</item>
     </plurals>
+    <string name="nest_live_chip">LIVE</string>
     <string name="nest_tab_chat">Chatt</string>
     <string name="nest_tab_audience">Publik</string>
     <string name="nest_tab_hands">Händer</string>
@@ -591,6 +595,7 @@
     <string name="nests_servers_add_auth_field">Auth-URL (JWT mint)</string>
     <string name="nests_servers_add_pair_button">Lägg till</string>
     <string name="nests_servers_relay_label">Relä</string>
+    <string name="nests_servers_auth_label">Autentisering</string>
     <string name="nests_servers_recommended_section">Rekommenderade servrar</string>
     <string name="nests_servers_recommended_explainer">Inbyggda förslag som du kan lägga till i din lista med ett tryck.</string>
     <string name="nests_servers_use_defaults">Använd Amethysts standard</string>
