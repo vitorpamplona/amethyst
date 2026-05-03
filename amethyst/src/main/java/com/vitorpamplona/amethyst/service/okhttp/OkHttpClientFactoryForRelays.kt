@@ -29,6 +29,7 @@ import java.time.Duration
 
 class OkHttpClientFactoryForRelays(
     userAgent: String,
+    private val dns: SurgeDns,
 ) {
     companion object {
         // by picking a random proxy port, the connection will fail as it should.
@@ -55,6 +56,8 @@ class OkHttpClientFactoryForRelays(
         OkHttpClient
             .Builder()
             .dispatcher(myDispatcher)
+            .dns(dns)
+            .eventListenerFactory(DnsInvalidatingEventListener.Factory(dns))
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
