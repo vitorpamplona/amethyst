@@ -557,6 +557,51 @@
     <string name="nest_participant_mute">मौन</string>
     <string name="nest_participant_unmute">मौन हटाएँ</string>
     <string name="nest_share_action">शाला बाँटें</string>
+    <string name="nest_minimize">छोटा करें</string>
+    <string name="nest_minimize_description">सुनते रहने के लिए छोटा करें</string>
+    <string name="nest_audio_dropped">ध्वनि कट गयी</string>
+    <string name="nest_loading_room">शाला आवहन…</string>
+    <string name="nest_unjoinable_title">इस शाला को खोला नहीं जा सकता</string>
+    <string name="nest_unjoinable_body">इस शाला में ध्वनि सेवा अथवा गन्तव्य उपलब्ध नहीं। निमन्त्रक को इसके विवरणों का शोधन करना चाहिए श्रोतागण जुडने से पहले।</string>
+    <string name="nest_unjoinable_back">पीछे</string>
+    <string name="nest_create_fab">स्थान आरम्भण</string>
+    <string name="nests_section_live_now">सीधाप्रसार चालू</string>
+    <string name="nests_section_scheduled">समयनिर्धारित</string>
+    <string name="nests_section_recently_ended">निकटकाल समाप्त</string>
+    <string name="nests_ended_ago">समाप्त %1$s पूर्व</string>
+    <string name="nest_no_server_title">निलय सेवासंगणक स्थापित करें</string>
+    <string name="nest_no_server_body">आपने एक निलय सेवासंगणक अभी चुना नहीं। क्या आपके सूची में %1$s जोडें तथा आगे चलें।\n\nआप इसे परिवर्तित कर सकते है स्थापना विकल्पों में।</string>
+    <string name="nest_no_server_use_default">मूलविकल्प का प्रयोग करें</string>
+    <string name="nest_no_server_cancel">निरस्त करें</string>
+    <string name="nest_no_server_save_failed">आपकी निलय सेवासंगणक सूची का अभिलेखन असफल। पुनःप्रयास करें।</string>
+    <string name="nest_create_title">नया निलय आरम्भ करें</string>
+    <string name="nest_create_field_room">शाला नाम</string>
+    <string name="nest_create_field_summary">इसका विषय क्या है।</string>
+    <string name="nest_create_field_service">एमओक्यू॰ सेवा जालपता</string>
+    <string name="nest_create_field_service_hint">प्रमाणीकरण पार्श्ववाहन। मूलविकल्प nostrnests.com है</string>
+    <string name="nest_create_field_endpoint">एमओक्यू॰ पुनःप्रसारक गन्तव्य</string>
+    <string name="nest_create_field_endpoint_hint">जालपरिवहन जालपता। साधारणतः समान जालावास</string>
+    <string name="nest_create_field_image">बाहरी चित्र जालपता (वैकल्पिक)</string>
+    <string name="nest_create_cancel">निरस्त करें</string>
+    <string name="nest_create_submit">स्थान आरम्भण</string>
+    <string name="nest_create_schedule_toggle">भविष्य समयनिर्धारण</string>
+    <string name="nest_create_when">आरम्भ समय का चयन करें</string>
+    <string name="nests_servers_title">निलय सेवासंगणक</string>
+    <string name="nests_servers_explainer">चयन करें कि किन एमओक्यू॰ जालावास सेवासंगणकों पर अमेथिस्ट आपके निलयों का प्रकाशन करता है। प्रथम विकल्प का प्रयोग होगा मूलविकल्पतः जब आप एक नया स्थान आरम्भ करेंगे।</string>
+    <string name="nests_servers_my_section">आपके सेवासंगणक</string>
+    <string name="nests_servers_my_explainer">प्रकार १०११२ प्रतिस्थापनशील घटना के रूप में अभिलेखित जिससे कि अन्य ग्राहक आपके आद्यताओं को पढ सके।</string>
+    <string name="nests_servers_add_field">निलय सेवासंगणक जोडें</string>
+    <string name="nests_servers_add_relay_field">पुनःप्रसारक (जालपरिवहन) जालपता</string>
+    <string name="nests_servers_add_auth_field">प्रमाणीकरण (जेडबल्यूटी॰ टकसाल) जालपता</string>
+    <string name="nests_servers_add_pair_button">जोडें</string>
+    <string name="nests_servers_relay_label">पुनःप्रसारक</string>
+    <string name="nests_servers_auth_label">प्रमाणीकरण</string>
+    <string name="nests_servers_recommended_section">अनुशम्सित पुनःप्रसारक</string>
+    <string name="nests_servers_recommended_explainer">अन्तःनिर्मित सुझाव जिन्हे आप जोड सकते हैं आपकी सूची में झटपट।</string>
+    <string name="nests_servers_use_defaults">अमेथिस्ट मूलविकल्पों का प्रयोग करें</string>
+    <string name="nests_servers_add_recommended">सेवासंगणक जोडें</string>
+    <string name="nests_servers_remove">सेवासंगणक हटाएँ</string>
+    <string name="nests_servers_empty">कोई निलय सेवासंगणक नहीं अब तक। एक को जोडें नीचे अथवा एक अनुशम्सित सेवासंगणक का चयन करें।</string>
     <string name="longs">चलचित्र</string>
     <string name="articles">लेख</string>
     <string name="private_bookmarks">निजी स्मर्तव्य</string>
@@ -680,6 +725,8 @@
     <string name="use_direct_url">सीधे जालपता का उपयोग करें</string>
     <string name="content_description">विषयवस्तु का विवरण</string>
     <string name="content_description_example">एक नीला नाव श्वेत रेतीला तट पर सूर्यास्त पर</string>
+    <string name="ai_suggested_alt_text_hint">एआई॰ सुझावित। सम्पादन करें</string>
+    <string name="ai_suggested_alt_text_dismiss">एआई॰ सुझाव हटाएँ</string>
     <string name="zap_type">ज्साप प्रकार</string>
     <string name="zap_type_explainer">ज्साप प्रकार सभी विकल्पों के लिए</string>
     <string name="zap_type_public">सार्वजनिक</string>
@@ -1070,11 +1117,14 @@
     <string name="live_stream_offline_tag">जालरहित</string>
     <string name="live_stream_ended_tag">समाप्त</string>
     <string name="live_stream_planned_tag">समय निर्धारित</string>
+    <string name="live_stream_private_tag">निजी</string>
     <string name="live_stream_is_offline">तत्क्षणप्रसार कट गया</string>
     <string name="live_stream_has_ended">तत्क्षणप्रसार समाप्त</string>
     <string name="meeting_space_open_tag">खुला</string>
     <string name="meeting_space_private_tag">निजी</string>
     <string name="meeting_space_closed_tag">निबद्ध</string>
+    <string name="meeting_space_planned_tag">समय निर्धारित</string>
+    <string name="meeting_space_planned_starts_at">आरम्भ %1$s</string>
     <string name="are_you_sure_you_want_to_log_out">निर्गमनांकन करने पर आपकी सारी स्थानीय जानकारी मिट जाएगी। सुनिश्चित करें कि आपके निजी कुंचिकाएँ सुरक्षित रखें हैं अपनी लेखा नहीं खोना चाहते हैं तो। क्या आप आगे बढना चाहते हैं?</string>
     <string name="followed_tags">अनुचरित विषयसूचक</string>
     <string name="relay_setup">पुनःप्रसारक</string>
@@ -1276,6 +1326,10 @@
     <string name="error_unable_to_fetch_invoice">ग्राहक के सेवा संगणक से चालान नहीं लाया जा सका</string>
     <string name="wallet_connect_pay_invoice_error_error">आपका धनकोष संयोजन प्रदाता ने यह अपक्रम लौटाया : %1$s</string>
     <string name="could_not_connect_to_tor">टोर से जुड नहीं पाए</string>
+    <string name="tor_connection_failed_title">टोर॰ संयोजन नहीं हो रहा</string>
+    <string name="tor_connection_failed_body">अमेथिस्ट द्वारा टोर॰ का उत्थापन सम्पन्न नहीं हुआ। क्या एक समान्य संयोजन (टोर॰ अतिरिक्त) का प्रयोग करें जिससे कि सूचनावली का आवहन हो सके। इस चयन का स्मरण रखा जाएगा अगले घण्टे तक तथा टोर॰ का पुनःप्रयास किया जाएगा तत्पश्चात।</string>
+    <string name="tor_continue_without_for_session">सामान्य संयोजन का प्रयोग करें</string>
+    <string name="tor_keep_waiting">प्रतीक्षा करते रहें</string>
     <string name="unable_to_download_relay_document">पुनःप्रसारक पत्र का अवरोहण अनुपलब्ध</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">लै॰जालपता नहीं बना पाए लै॰पता \"%1$s\" से। उपयोगकर्ता की स्थापना की जाँच करें</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">ग्राहक की लैटनिंग सेवा %1$s पर उपलब्ध नहीं। इसका परिकलन किया गया \"%2$s\" लैटनिंग पता से। अपक्रम : %3$s। जाँच करें यदि सेवा संगणक चल रहा है तथा यदि लैटनिंग पता सम्यक है</string>
@@ -1473,6 +1527,7 @@
     <string name="open_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को खोलें</string>
     <string name="close_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को अवरोधित करें</string>
     <string name="reply_description">उत्तर</string>
+    <string name="jump_to_parent_reply">उस टीका तक जाएँ जिसका यह उत्तर है</string>
     <string name="boost_or_quote_description">उद्धृत करें अथवा टीका लिखें</string>
     <string name="like_description">इष्ट</string>
     <string name="zap_description">ज्साप</string>
@@ -1481,6 +1536,10 @@
     <string name="bottom_bar_settings_description">क्रम पुनःव्यवस्थित करने के लिए खींचें। विकल्पान्तरण करें वस्तु को जोडने अथवा हटाने के लिए निचली पट्टी से। शून्य वस्तु हो तो निचली पट्टी अदृश्य रहेगी।</string>
     <string name="bottom_bar_settings_available">उपलब्ध</string>
     <string name="bottom_bar_settings_reorder">क्रम पुनःव्यवस्था</string>
+    <string name="bottom_bar_settings_restore_default">मूलविकल्प पुनःस्थापित करें</string>
+    <string name="home_tabs_settings">मुख्यपटल पृष्ठसूचक</string>
+    <string name="home_tabs_settings_description">चयन करें किन पृष्ठसूचक दिखने चाहिए मुख्यपटल पर। जब एक ही सक्रिय है तब पृष्ठसूचक पट्टी छुपाई जाएगी।</string>
+    <string name="home_tab_everything">सभी</string>
     <string name="reactions_settings">प्रतिक्रिया पंक्ति</string>
     <string name="reactions_settings_description">समाकृति करें कि किन प्रतिक्रिया घुण्डियाँ दिखाए जाएँगे तथा उनके क्रम तथा यदि संकलन सूचक दिखाए जाएँगे।</string>
     <string name="reactions_settings_enabled">सक्षम</string>
@@ -1873,6 +1932,7 @@
     <string name="kind_profile_badges">परिचय पदक</string>
     <string name="kind_blocked_relays">बाधित पुनःप्रसारक</string>
     <string name="kind_blossom_servers">ब्लोस्सम॰ प्रसारसंगणक</string>
+    <string name="kind_nests_servers">निलय सेवासंगणक</string>
     <string name="kind_blossom_auth">ब्लोस्सम॰ प्रमाणीकरण</string>
     <string name="kind_broadcast_relays">प्रसारण पुनःप्रसारक</string>
     <string name="kind_bookmark_list">स्मर्त्तव्य सूची</string>
@@ -2081,6 +2141,33 @@
     <string name="relay_settings_lower2">निर्गतपेटिका सूचियाँ</string>
     <string name="relay_settings_lower">पुनःप्रसारक स्थापना विकल्प</string>
     <string name="last_seen">पूर्व दृष्ट %1$s पहले</string>
+    <string name="last_seen_on_date">पिछली बार दृष्ट %1$s पर (%2$s पूर्व)</string>
+    <string name="last_seen_just_now">पिछली बार दृष्ट अभी</string>
+    <string name="last_seen_never">कभी दृष्ट नहीं</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d मिनुट</item>
+        <item quantity="other">%1$d मिनुट</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d घण्टा</item>
+        <item quantity="other">%1$d घण्टे</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d दिन</item>
+        <item quantity="other">%1$d दिन</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d सप्ताह</item>
+        <item quantity="other">%1$d सप्ताह</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d मास</item>
+        <item quantity="other">%1$d मास</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d वर्ष</item>
+        <item quantity="other">%1$d वर्ष</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">संयोजन किया जा रहा है</string>
     <string name="event_sync_status_downloading">अवरोहण चालू</string>
