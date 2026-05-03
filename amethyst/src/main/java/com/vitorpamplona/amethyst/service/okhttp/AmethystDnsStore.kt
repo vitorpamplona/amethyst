@@ -50,13 +50,13 @@ class AmethystDnsStore(
      * call from a background thread.
      */
     fun load() {
-        val json = prefs.getString(KEY_CACHE, null) ?: return
+        val json = prefs.getString(KEY_SNAPSHOT, null) ?: return
         val records =
             try {
                 MAPPER.readValue<List<DnsCacheRecord>>(json)
             } catch (t: Throwable) {
                 Log.w(TAG) { "Dropping corrupt DNS cache blob: ${t.message}" }
-                prefs.edit().remove(KEY_CACHE).apply()
+                prefs.edit().remove(KEY_SNAPSHOT).apply()
                 return
             }
         // restore() uses putIfAbsent and never marks dirty, so we deliberately do NOT clear the
@@ -78,7 +78,7 @@ class AmethystDnsStore(
         try {
             val records = dns.snapshot()
             val json = MAPPER.writeValueAsString(records)
-            prefs.edit().putString(KEY_CACHE, json).apply()
+            prefs.edit().putString(KEY_SNAPSHOT, json).apply()
             Log.d(TAG) { "Persisted ${records.size} DNS cache entries" }
         } catch (t: Throwable) {
             Log.w(TAG) { "Failed to persist DNS cache: ${t.message}" }
@@ -89,13 +89,13 @@ class AmethystDnsStore(
 
     /** Force-clear the on-disk cache. Useful for diagnostics or when the user wipes data. */
     fun clear() {
-        prefs.edit().remove(KEY_CACHE).apply()
+        prefs.edit().remove(KEY_SNAPSHOT).apply()
     }
 
     companion object {
         private const val TAG = "AmethystDnsStore"
         private const val PREFS_NAME = "amethyst_dns_cache"
-        private const val KEY_CACHE = "dns_cache_v1"
+        private const val KEY_SNAPSHOT = "dns_cache_v1"
         private val MAPPER = jacksonObjectMapper()
     }
 }

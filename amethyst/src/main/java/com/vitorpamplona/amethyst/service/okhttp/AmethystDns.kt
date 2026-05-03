@@ -93,7 +93,7 @@ class AmethystDns(
             // Soft-expired positive entry: serve stale, refresh in background. Negative
             // entries fall through to the sync path so transient failures recover quickly.
             if (entry.addresses.isNotEmpty()) {
-                triggerBackgroundRefresh(key)
+                scheduleBackgroundRefresh(key)
                 return entry.addresses
             }
         }
@@ -103,7 +103,7 @@ class AmethystDns(
         return if (existing == null) resolveAsLeader(key, newFuture) else awaitFollower(key, existing)
     }
 
-    private fun triggerBackgroundRefresh(host: String) {
+    private fun scheduleBackgroundRefresh(host: String) {
         val refreshFuture = CompletableFuture<List<InetAddress>>()
         // Coalesce: if a sync lookup or a prior refresh is already in flight, skip.
         if (inflight.putIfAbsent(host, refreshFuture) != null) return
@@ -125,8 +125,8 @@ class AmethystDns(
         try {
             // Re-check after claiming leadership: a peer may have refreshed the cache between
             // our miss and our putIfAbsent. Skips a duplicate getaddrinfo in that race.
-            val fresh = cache[host]?.takeIf { it.expiresAtMillis > System.currentTimeMillis() }
-            val addresses = fresh?.unwrap(host) ?: lookupAndCache(host)
+            val freshEntry = cache[host]?.takeIf { it.expiresAtMillis > System.currentTimeMillis() }
+            val addresses = freshEntry?.unwrap(host) ?: lookupAndCache(host)
             future.complete(addresses)
             return addresses
         } catch (e: Throwable) {
@@ -168,13 +168,13 @@ class AmethystDns(
     ) {
         cache[host] = Entry(addresses, positiveExpiry())
         dirty.set(true)
-        evictIfOverCap()
+        purgeExpiredIfOverCap()
     }
 
     private fun putNegative(host: String) {
         // Negative entries are never persisted, so they don't dirty the cache.
         cache[host] = Entry(emptyList(), negativeExpiry())
-        evictIfOverCap()
+        purgeExpiredIfOverCap()
     }
 
     /**
@@ -188,7 +188,7 @@ class AmethystDns(
 
     private fun negativeExpiry(): Long = System.currentTimeMillis() + negativeTtlMs
 
-    private fun evictIfOverCap() {
+    private fun purgeExpiredIfOverCap() {
         if (cache.size <= maxEntries) return
         val now = System.currentTimeMillis()
         val it = cache.entries.iterator()
