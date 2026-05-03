@@ -69,7 +69,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * (unavoidable — there's nothing to serve stale yet), and followers waiting on that first
  * lookup block on `future.get()`. Background refreshes never block any caller.
  */
-class AmethystDns(
+class SurgeDns(
     private val delegate: Dns = Dns.SYSTEM,
     private val maxEntries: Int = 2000,
     private val positiveTtlMs: Long = TimeUnit.HOURS.toMillis(24),
@@ -286,7 +286,7 @@ class AmethystDns(
     }
 }
 
-/** Persistable record. Public so [AmethystDnsStore] can serialize it via Jackson. */
+/** Persistable record. Public so [SurgeDnsStore] can serialize it via Jackson. */
 data class DnsCacheRecord(
     val hostname: String,
     val addresses: List<String>,

@@ -38,7 +38,7 @@ class DualHttpClientManager(
     isMobileDataProvider: StateFlow<Boolean?>,
     keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
-    dns: AmethystDns,
+    dns: SurgeDns,
 ) : IHttpClientManager {
     val factory = OkHttpClientFactory(keyCache, userAgent, dns)
 

@@ -26,7 +26,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Persists [AmethystDns]'s positive cache to a small `SharedPreferences` blob so the resolver
+ * Persists [SurgeDns]'s positive cache to a small `SharedPreferences` blob so the resolver
  * starts hot after a process restart.
  *
  * Cold starts are the resolver's worst case — every host is a sync `getaddrinfo`. With a
@@ -38,15 +38,15 @@ import com.vitorpamplona.quartz.utils.Log
  * list, Coil's image cache, and the system resolver's own state. ~700 entries × ~80 bytes ≈
  * ~55 KB of JSON.
  */
-class AmethystDnsStore(
+class SurgeDnsStore(
     private val context: Context,
-    private val dns: AmethystDns,
+    private val dns: SurgeDns,
 ) {
     private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
     /**
      * Read the persisted snapshot and merge it into the resolver. Existing in-memory entries
-     * are preserved (see [AmethystDns.restore]). Safe to call once at app start. Blocking I/O —
+     * are preserved (see [SurgeDns.restore]). Safe to call once at app start. Blocking I/O —
      * call from a background thread.
      */
     fun load() {
@@ -93,7 +93,7 @@ class AmethystDnsStore(
     }
 
     companion object {
-        private const val TAG = "AmethystDnsStore"
+        private const val TAG = "SurgeDnsStore"
         private const val PREFS_NAME = "amethyst_dns_cache"
         private const val KEY_SNAPSHOT = "dns_cache_v1"
         private val MAPPER = jacksonObjectMapper()

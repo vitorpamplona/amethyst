@@ -35,7 +35,7 @@ class DualHttpClientManagerForRelays(
     proxyPortProvider: StateFlow<Int?>,
     isMobileDataProvider: StateFlow<Boolean?>,
     scope: CoroutineScope,
-    dns: AmethystDns,
+    dns: SurgeDns,
 ) : IHttpClientManager {
     val factory = OkHttpClientFactoryForRelays(userAgent, dns)
 

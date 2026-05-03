@@ -29,7 +29,7 @@ import java.time.Duration
 
 class OkHttpClientFactoryForRelays(
     userAgent: String,
-    private val dns: AmethystDns,
+    private val dns: SurgeDns,
 ) {
     companion object {
         // by picking a random proxy port, the connection will fail as it should.

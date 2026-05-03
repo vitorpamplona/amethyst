@@ -53,12 +53,12 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
-import com.vitorpamplona.amethyst.service.okhttp.AmethystDns
-import com.vitorpamplona.amethyst.service.okhttp.AmethystDnsStore
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.okhttp.SurgeDns
+import com.vitorpamplona.amethyst.service.okhttp.SurgeDnsStore
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -206,12 +206,12 @@ class AppModules(
     // Concurrent, caching DNS resolver shared by every OkHttp client built below — a host
     // resolved for an image fetch is reused when a relay handshake or NIP-05 lookup hits the
     // same host.
-    val amethystDns = AmethystDns()
+    val surgeDns = SurgeDns()
 
-    // Persists [amethystDns]'s positive cache across process restarts so cold starts don't pay
+    // Persists [surgeDns]'s positive cache across process restarts so cold starts don't pay
     // ~700 sync getaddrinfo calls. Restored entries fall through to the stale-while-revalidate
     // path on first lookup.
-    val dnsStore = AmethystDnsStore(appContext, amethystDns)
+    val dnsStore = SurgeDnsStore(appContext, surgeDns)
 
     // manages all the other connections separately from relays.
     val okHttpClients =
@@ -221,7 +221,7 @@ class AppModules(
             isMobileDataProvider = connManager.isMobileOrNull,
             keyCache = keyCache,
             scope = applicationIOScope,
-            dns = amethystDns,
+            dns = surgeDns,
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
@@ -303,7 +303,7 @@ class AppModules(
             proxyPortProvider = torManager.activePortOrNull,
             isMobileDataProvider = connManager.isMobileOrNull,
             scope = applicationIOScope,
-            dns = amethystDns,
+            dns = surgeDns,
         )
 
     // Connects the INostrClient class with okHttp

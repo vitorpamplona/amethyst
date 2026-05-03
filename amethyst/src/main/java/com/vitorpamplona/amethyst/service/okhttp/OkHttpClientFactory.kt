@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit
 class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
     val userAgent: String,
-    private val dns: AmethystDns,
+    private val dns: SurgeDns,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)

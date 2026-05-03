@@ -25,7 +25,7 @@ import okhttp3.EventListener
 import java.io.IOException
 
 /**
- * Drops a host's [AmethystDns] entry whenever an OkHttp call to it fails outright. We hook
+ * Drops a host's [SurgeDns] entry whenever an OkHttp call to it fails outright. We hook
  * `callFailed` (final-stage signal after OkHttp has tried every address from the DNS lookup)
  * rather than per-attempt `connectFailed`: a multi-A-record host with one bad IP fires the
  * latter while OkHttp recovers via the next address, and we don't want to invalidate the cache
@@ -35,7 +35,7 @@ import java.io.IOException
  * invalidation into its `finish` method alongside its existing timing logging.
  */
 class DnsInvalidatingEventListener(
-    private val dns: AmethystDns,
+    private val dns: SurgeDns,
 ) : EventListener() {
     override fun callFailed(
         call: Call,
@@ -46,7 +46,7 @@ class DnsInvalidatingEventListener(
 
     /** Per-client factory. The listener is stateless, so the same instance serves every call. */
     class Factory(
-        dns: AmethystDns,
+        dns: SurgeDns,
     ) : EventListener.Factory {
         private val listener = DnsInvalidatingEventListener(dns)
 

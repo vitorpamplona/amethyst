@@ -44,7 +44,7 @@ import java.net.Proxy
 class MediaCallEventListener(
     private val dispatcher: Dispatcher,
     private val connectionPool: ConnectionPool,
-    private val dns: AmethystDns,
+    private val dns: SurgeDns,
 ) : EventListener() {
     private var callStartNanos = 0L
     private var dnsStartNanos = 0L
@@ -179,7 +179,7 @@ class MediaCallEventListener(
 class MediaCallEventListenerFactory(
     private val dispatcher: Dispatcher,
     private val connectionPool: ConnectionPool,
-    private val dns: AmethystDns,
+    private val dns: SurgeDns,
 ) : EventListener.Factory {
     override fun create(call: Call): EventListener = MediaCallEventListener(dispatcher, connectionPool, dns)
 }

@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-class AmethystDnsTest {
+class SurgeDnsTest {
     private fun ip(value: String) = InetAddress.getByName(value)
 
     private class CountingDns(
@@ -71,7 +71,7 @@ class AmethystDnsTest {
     @Test
     fun `cache hit avoids second upstream call`() {
         val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         val first = dns.lookup("a.example")
         val second = dns.lookup("a.example")
@@ -84,7 +84,7 @@ class AmethystDnsTest {
     @Test
     fun `negative cache short-circuits subsequent lookups`() {
         val upstream = CountingDns(emptyMap())
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
         assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
@@ -97,7 +97,7 @@ class AmethystDnsTest {
         val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
         val syncRefresh = Executor { it.run() }
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlMs = 1,
                 positiveTtlJitterMs = 0,
@@ -117,7 +117,7 @@ class AmethystDnsTest {
     fun `expired negative entry does not stale-while-revalidate`() {
         val upstream = CountingDns(emptyMap())
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlJitterMs = 0,
                 negativeTtlMs = 1,
@@ -142,7 +142,7 @@ class AmethystDnsTest {
             }
         val syncRefresh = Executor { it.run() }
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlMs = 1,
                 positiveTtlJitterMs = 0,
@@ -185,7 +185,7 @@ class AmethystDnsTest {
             }
         val pool = Executors.newFixedThreadPool(8)
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = dynamic,
                 positiveTtlMs = 1,
                 positiveTtlJitterMs = 0,
@@ -225,7 +225,7 @@ class AmethystDnsTest {
     @Test
     fun `concurrent lookups for the same host coalesce to one upstream call`() {
         val gated = GatedDns(mapOf("hot.example" to listOf(ip("9.9.9.9"))))
-        val dns = AmethystDns(delegate = gated)
+        val dns = SurgeDns(delegate = gated)
         val pool = Executors.newFixedThreadPool(8)
 
         try {
@@ -263,7 +263,7 @@ class AmethystDnsTest {
                     parallelism.decrementAndGet()
                 }
             }
-        val dns = AmethystDns(delegate = instrumented)
+        val dns = SurgeDns(delegate = instrumented)
         val pool = Executors.newFixedThreadPool(2)
 
         try {
@@ -289,7 +289,7 @@ class AmethystDnsTest {
     @Test
     fun `invalidate clears cache so next lookup hits upstream`() {
         val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         dns.lookup("a.example")
         dns.invalidate()
@@ -307,7 +307,7 @@ class AmethystDnsTest {
                     "b.example" to listOf(ip("5.6.7.8")),
                 ),
             )
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         dns.lookup("a.example")
         dns.lookup("b.example")
@@ -329,7 +329,7 @@ class AmethystDnsTest {
                 ),
             )
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlMs = 60_000,
                 positiveTtlJitterMs = 0,
@@ -346,7 +346,7 @@ class AmethystDnsTest {
     @Test
     fun `restore replays cached entries without hitting upstream`() {
         val upstream = CountingDns(mapOf("relay.example" to listOf(ip("9.9.9.9"))))
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         val expiresAt = System.currentTimeMillis() + 60_000
         dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiresAt)))
@@ -358,7 +358,7 @@ class AmethystDnsTest {
     @Test
     fun `restore drops entries already expired on disk`() {
         val upstream = CountingDns(mapOf("relay.example" to listOf(ip("9.9.9.9"))))
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         val expiredAt = System.currentTimeMillis() - 1_000
         dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiredAt)))
@@ -371,7 +371,7 @@ class AmethystDnsTest {
     fun `restore does not overwrite a fresh in-memory entry`() {
         val upstream = CountingDns(mapOf("relay.example" to listOf(ip("1.1.1.1"))))
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlMs = 60_000,
                 positiveTtlJitterMs = 0,
@@ -396,7 +396,7 @@ class AmethystDnsTest {
     @Test
     fun `lookup is case-insensitive`() {
         val upstream = CountingDns(mapOf("example.com" to listOf(ip("1.2.3.4"))))
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         dns.lookup("Example.COM")
         dns.lookup("example.com")
@@ -408,7 +408,7 @@ class AmethystDnsTest {
     @Test
     fun `invalidate is case-insensitive`() {
         val upstream = CountingDns(mapOf("example.com" to listOf(ip("1.2.3.4"))))
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         dns.lookup("example.com")
         dns.invalidate("EXAMPLE.com")
@@ -420,7 +420,7 @@ class AmethystDnsTest {
     @Test
     fun `restore lowercases hostnames so subsequent lookups hit`() {
         val upstream = CountingDns(mapOf("example.com" to listOf(ip("9.9.9.9"))))
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         dns.restore(
             listOf(
@@ -436,7 +436,7 @@ class AmethystDnsTest {
     fun `dirty flag tracks positive writes`() {
         val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlMs = 60_000,
                 positiveTtlJitterMs = 0,
@@ -455,7 +455,7 @@ class AmethystDnsTest {
     @Test
     fun `failed lookup does not mark cache dirty`() {
         val upstream = CountingDns(emptyMap())
-        val dns = AmethystDns(delegate = upstream)
+        val dns = SurgeDns(delegate = upstream)
 
         assertFalse(dns.isDirty())
         runCatching { dns.lookup("missing.example") }
@@ -471,7 +471,7 @@ class AmethystDnsTest {
             }
         val syncRefresh = Executor { it.run() }
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlMs = 1,
                 positiveTtlJitterMs = 0,
@@ -499,7 +499,7 @@ class AmethystDnsTest {
         val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
         val rejecting = Executor { throw RejectedExecutionException("test") }
         val dns =
-            AmethystDns(
+            SurgeDns(
                 delegate = upstream,
                 positiveTtlMs = 1,
                 positiveTtlJitterMs = 0,
