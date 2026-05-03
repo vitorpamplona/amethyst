@@ -26,44 +26,55 @@ import java.net.UnknownHostException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
 /**
- * Concurrent, caching DNS resolver for OkHttp.
+ * Concurrent, caching, stale-while-revalidate DNS resolver for OkHttp.
  *
  * Tuned for an Amethyst-shaped workload: ~700 relays plus a small set of media/profile/NIP-05
- * hosts that reappear constantly. Steady state is well under [maxEntries] distinct hosts whose
- * IPs change on the order of days, so we want to resolve each one once per session and never
- * touch DNS again.
+ * hosts that reappear constantly, whose IPs change on the order of days.
  *
  * Properties:
  *
- *  1. **Lock-free reads.** Cache is a [ConcurrentHashMap], so the hot path (cache hit) does no
- *     locking. The previous incarnation used `synchronizedMap(LinkedHashMap(access-order=true))`,
- *     which turned every `get` into a monitor-protected write because access-order LRU rewrites
- *     the linked list on read — at 700 concurrent relay reconnects, the lock dominated.
- *  2. **Single-flight coalescing.** N concurrent OkHttp threads asking for the same host share
- *     one upstream `getaddrinfo`. The leader resolves; followers block on the same future. If a
- *     peer leader refreshed the entry while we were claiming leadership, the leader re-checks
- *     the cache and skips the system call entirely.
- *  3. **Generous positive TTL.** Defaults to 24h. Relay and CDN IPs almost never move, and we
- *     are not a recursive resolver — there is no correctness reason to honor authoritative TTLs.
- *     Pair with [invalidate] on connection failures or network changes to recover from real
- *     IP moves.
- *  4. **Short negative TTL.** Failed lookups are remembered for 10s so a typo or a transiently
- *     down host doesn't keep paying for `getaddrinfo`, but a real outage recovers quickly.
+ *  1. **Lock-free reads.** Cache is a [ConcurrentHashMap]. The hot path (cache hit) takes no
+ *     locks, so 700 concurrent relay reconnects fan out across OkHttp dispatcher threads
+ *     instead of serializing through one monitor.
+ *  2. **Single-flight coalescing.** N concurrent threads asking for the same host share one
+ *     upstream `getaddrinfo`. The leader resolves; followers block on the same future.
+ *  3. **Stale-while-revalidate.** Once a host has been resolved, recurring lookups *never*
+ *     block on `getaddrinfo` again. After the soft TTL expires, we return the previous answer
+ *     immediately and kick a background refresh. The refresh is coalesced through the same
+ *     `inflight` map, so a burst of stale reads triggers one refresh per host. If the refresh
+ *     fails (`UnknownHostException`), the cache entry is demoted to negative, so the next
+ *     caller gets a fresh failure rather than forever-wrong stale IPs.
+ *  4. **Negative entries do *not* serve stale.** When an `UnknownHostException` cache entry
+ *     expires, the next call goes through the synchronous path. We want transient failures to
+ *     recover quickly, not keep returning stale failures.
+ *  5. **Generous positive TTL with jitter.** Defaults to 24h plus up to 24h of random jitter,
+ *     so each entry expires somewhere in [base, base + jitter]. This breaks the synchronized
+ *     herd that would otherwise form when ~700 relay reconnects all populate the cache in the
+ *     same second: their expiries spread across a 24h window instead of landing at the same
+ *     instant 24h later. A user who opens the app once a day catches only a small fraction of
+ *     entries stale per session, and refreshes drip through the executor pool naturally.
  *
- * Remaining blocking points are unavoidable: the leader's [Dns.lookup] call is a synchronous JNI
- * hop into the system resolver, and followers must wait on the leader's future. Both are
- * bypassed entirely on cache hit, which is the steady state.
+ * Remaining blocking points: the very first lookup of a host blocks on `getaddrinfo`
+ * (unavoidable — there's nothing to serve stale yet), and followers waiting on that first
+ * lookup block on `future.get()`. Background refreshes never block any caller.
  */
 class AmethystDns(
     private val delegate: Dns = Dns.SYSTEM,
     private val maxEntries: Int = 2000,
     positiveTtlMs: Long = TimeUnit.HOURS.toMillis(24),
+    positiveTtlJitterMs: Long = TimeUnit.HOURS.toMillis(24),
     negativeTtlMs: Long = TimeUnit.SECONDS.toMillis(10),
+    private val refreshExecutor: Executor = DEFAULT_REFRESH_EXECUTOR,
 ) : Dns {
     private val positiveTtlNanos = TimeUnit.MILLISECONDS.toNanos(positiveTtlMs)
+    private val positiveTtlJitterNanos = TimeUnit.MILLISECONDS.toNanos(positiveTtlJitterMs)
     private val negativeTtlNanos = TimeUnit.MILLISECONDS.toNanos(negativeTtlMs)
 
     private val cache = ConcurrentHashMap<String, Entry>()
@@ -71,8 +82,15 @@ class AmethystDns(
 
     override fun lookup(hostname: String): List<InetAddress> {
         cache[hostname]?.let { entry ->
-            if (entry.expiresAtNanos > System.nanoTime()) {
+            val now = System.nanoTime()
+            if (entry.expiresAtNanos > now) {
                 return entry.unwrap(hostname)
+            }
+            // Soft-expired positive entry: serve stale, refresh in background. Negative
+            // entries fall through to the sync path so transient failures recover quickly.
+            if (entry.addresses.isNotEmpty()) {
+                triggerBackgroundRefresh(hostname)
+                return entry.addresses
             }
         }
 
@@ -82,6 +100,24 @@ class AmethystDns(
             resolveAsLeader(hostname, newFuture)
         } else {
             awaitFollower(hostname, existing)
+        }
+    }
+
+    private fun triggerBackgroundRefresh(hostname: String) {
+        val refreshFuture = CompletableFuture<List<InetAddress>>()
+        // Coalesce: if a sync lookup or a prior refresh is already in flight, skip.
+        if (inflight.putIfAbsent(hostname, refreshFuture) != null) return
+        try {
+            refreshExecutor.execute {
+                try {
+                    resolveAsLeader(hostname, refreshFuture)
+                } catch (_: Throwable) {
+                    // Caller already got the stale answer; the failure is recorded on the
+                    // future and (for UnknownHostException) demoted in the cache.
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            inflight.remove(hostname, refreshFuture)
         }
     }
 
@@ -98,9 +134,9 @@ class AmethystDns(
                     cached.unwrap(hostname)
                 } else {
                     try {
-                        delegate.lookup(hostname).also { put(hostname, it, positiveTtlNanos) }
+                        delegate.lookup(hostname).also { putPositive(hostname, it) }
                     } catch (e: UnknownHostException) {
-                        put(hostname, emptyList(), negativeTtlNanos)
+                        putNegative(hostname)
                         throw e
                     }
                 }
@@ -133,12 +169,24 @@ class AmethystDns(
         }
     }
 
-    private fun put(
+    private fun putPositive(
         hostname: String,
         addresses: List<InetAddress>,
-        ttlNanos: Long,
     ) {
-        cache[hostname] = Entry(addresses, System.nanoTime() + ttlNanos)
+        // Jitter the expiry so a burst of co-written entries (e.g. ~700 relay reconnects at app
+        // start) doesn't all expire at the same instant 24h later.
+        val jitter =
+            if (positiveTtlJitterNanos > 0L) {
+                ThreadLocalRandom.current().nextLong(positiveTtlJitterNanos)
+            } else {
+                0L
+            }
+        cache[hostname] = Entry(addresses, System.nanoTime() + positiveTtlNanos + jitter)
+        if (cache.size > maxEntries) evictExpired()
+    }
+
+    private fun putNegative(hostname: String) {
+        cache[hostname] = Entry(emptyList(), System.nanoTime() + negativeTtlNanos)
         if (cache.size > maxEntries) evictExpired()
     }
 
@@ -168,6 +216,15 @@ class AmethystDns(
     }
 
     companion object {
+        // Small fixed pool of daemon threads. Refreshes block on getaddrinfo (~tens of ms),
+        // so a handful of threads is plenty even when many hosts go stale at once — extra
+        // refreshes queue up without blocking any caller, since callers always get the
+        // stale answer instantly.
+        private val DEFAULT_REFRESH_EXECUTOR: Executor =
+            Executors.newFixedThreadPool(8) { r ->
+                Thread(r, "amethyst-dns-refresh").apply { isDaemon = true }
+            }
+
         /**
          * Process-wide instance shared by every OkHttp client built in the app, so a host resolved
          * for an image fetch is reused when a relay handshake or NIP-05 lookup hits the same host.

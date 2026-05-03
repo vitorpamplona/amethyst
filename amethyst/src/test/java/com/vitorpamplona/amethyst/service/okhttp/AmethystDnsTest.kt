@@ -29,9 +29,11 @@ import org.junit.Test
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class AmethystDnsTest {
     private fun ip(value: String) = InetAddress.getByName(value)
@@ -89,20 +91,133 @@ class AmethystDnsTest {
     }
 
     @Test
-    fun `positive entries expire`() {
+    fun `expired positive entry serves stale and refreshes in background`() {
         val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
+        val syncRefresh = Executor { it.run() }
         val dns =
             AmethystDns(
                 delegate = upstream,
                 positiveTtlMs = 1,
+                positiveTtlJitterMs = 0,
                 negativeTtlMs = 1,
+                refreshExecutor = syncRefresh,
             )
 
         dns.lookup("a.example")
         Thread.sleep(20)
-        dns.lookup("a.example")
+        // Returns the stale cached value AND triggers a refresh on the synchronous executor.
+        assertEquals(listOf(ip("1.2.3.4")), dns.lookup("a.example"))
 
         assertEquals(2, upstream.calls("a.example"))
+    }
+
+    @Test
+    fun `expired negative entry does not stale-while-revalidate`() {
+        val upstream = CountingDns(emptyMap())
+        val dns =
+            AmethystDns(
+                delegate = upstream,
+                positiveTtlJitterMs = 0,
+                negativeTtlMs = 1,
+            )
+
+        assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
+        Thread.sleep(20)
+        assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
+
+        // Two synchronous calls — failed lookups must retry quickly, not be served stale.
+        assertEquals(2, upstream.calls("missing.example"))
+    }
+
+    @Test
+    fun `stale read returns previous IP while refresh updates the cache`() {
+        val responses = AtomicReference<List<InetAddress>>(listOf(ip("1.2.3.4")))
+        val calls = AtomicInteger()
+        val upstream =
+            Dns { _ ->
+                calls.incrementAndGet()
+                responses.get()
+            }
+        val syncRefresh = Executor { it.run() }
+        val dns =
+            AmethystDns(
+                delegate = upstream,
+                positiveTtlMs = 1,
+                positiveTtlJitterMs = 0,
+                refreshExecutor = syncRefresh,
+            )
+
+        assertEquals(listOf(ip("1.2.3.4")), dns.lookup("a.example"))
+        Thread.sleep(20)
+
+        // Upstream now returns a new IP. The next lookup should still serve the OLD IP
+        // immediately, while the synchronous executor performs the refresh inline.
+        responses.set(listOf(ip("5.6.7.8")))
+        val stale = dns.lookup("a.example")
+        assertEquals(listOf(ip("1.2.3.4")), stale)
+        assertEquals(2, calls.get())
+
+        // Cache now holds the refreshed IP — no further upstream calls.
+        assertEquals(listOf(ip("5.6.7.8")), dns.lookup("a.example"))
+        assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `stale burst on the same host triggers a single refresh`() {
+        val gated = GatedDns(mapOf("hot.example" to listOf(ip("9.9.9.9"))))
+        // Pre-populate via a separate, non-gated upstream then swap in the gated one for
+        // the refresh — easiest way: bootstrap by writing through a delegate that completes
+        // immediately, then attach the gate to count parallel refresh calls.
+        val bootstrapCalls = AtomicInteger()
+        val dynamic =
+            object : Dns {
+                @Volatile var useGated = false
+
+                override fun lookup(hostname: String): List<InetAddress> =
+                    if (useGated) {
+                        gated.lookup(hostname)
+                    } else {
+                        bootstrapCalls.incrementAndGet()
+                        listOf(ip("9.9.9.9"))
+                    }
+            }
+        val pool = Executors.newFixedThreadPool(8)
+        val dns =
+            AmethystDns(
+                delegate = dynamic,
+                positiveTtlMs = 1,
+                positiveTtlJitterMs = 0,
+                refreshExecutor = pool,
+            )
+        try {
+            dns.lookup("hot.example")
+            assertEquals(1, bootstrapCalls.get())
+            Thread.sleep(20)
+            dynamic.useGated = true
+
+            // Fan out 16 stale reads concurrently. They all return the stale answer
+            // immediately; only one refresh should be queued/executing.
+            val callerPool = Executors.newFixedThreadPool(16)
+            try {
+                val results =
+                    (1..16).map {
+                        callerPool.submit<List<InetAddress>> { dns.lookup("hot.example") }
+                    }
+                results.forEach { assertEquals(listOf(ip("9.9.9.9")), it.get(2, TimeUnit.SECONDS)) }
+                assertTrue(
+                    "Refresh should have started",
+                    gated.started.await(2, TimeUnit.SECONDS),
+                )
+                gated.release.countDown()
+                // Allow refresh to complete.
+                Thread.sleep(100)
+                assertEquals("Only one refresh upstream call", 1, gated.calls.get())
+            } finally {
+                callerPool.shutdownNow()
+            }
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     @Test
