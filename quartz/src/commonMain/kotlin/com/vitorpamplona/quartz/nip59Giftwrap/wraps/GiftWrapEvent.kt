@@ -103,7 +103,7 @@ open class GiftWrapEvent(
             event: Event,
             recipientPubKey: HexKey,
             expirationDelta: Long? = null,
-            createdAt: Long = TimeUtils.randomWithTwoDays(),
+            createdAt: Long = TimeUtils.now(),
         ): GiftWrapEvent {
             val signer = NostrSignerSync(KeyPair()) // GiftWrap is always a random key
 

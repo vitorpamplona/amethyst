@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 
 class NIP17Factory {
@@ -54,6 +55,11 @@ class NIP17Factory {
                 }
             }
 
+        // Per NIP-17, both the seal and gift wrap SHOULD use a random `created_at`
+        // up to two days in the past, drawn independently for each layer to thwart
+        // timestamp-correlation attacks. Randomization is NIP-17's privacy
+        // requirement, not a property of the gift-wrap primitive itself, so we
+        // pass it explicitly here rather than defaulting it on the layer factories.
         return mapNotNullAsync(
             to.toList(),
         ) { next ->
@@ -64,9 +70,11 @@ class NIP17Factory {
                         encryptTo = next,
                         expirationDelta = innerExpDelta,
                         signer = signer,
+                        createdAt = TimeUtils.randomWithTwoDays(),
                     ),
                 recipientPubKey = next,
                 expirationDelta = innerExpDelta,
+                createdAt = TimeUtils.randomWithTwoDays(),
             )
         }
     }
