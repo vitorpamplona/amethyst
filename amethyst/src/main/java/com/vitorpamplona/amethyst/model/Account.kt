@@ -135,6 +135,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.blurhash
 import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
+import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
@@ -2547,6 +2548,7 @@ class Account(
         hash: String?,
         mimeType: String?,
         thumbhash: String? = null,
+        image: String? = null,
     ) {
         val template =
             ProfileGalleryEntryEvent.build(url) {
@@ -2556,6 +2558,7 @@ class Account(
                 dim?.let { dimension(it) }
                 blurhash?.let { blurhash(it) }
                 thumbhash?.let { galleryThumbhash(it) }
+                image?.let { image(it) }
             }
 
         val event = signer.sign(template)

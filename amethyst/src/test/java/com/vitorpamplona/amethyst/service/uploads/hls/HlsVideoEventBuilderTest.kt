@@ -95,6 +95,7 @@ class HlsVideoEventBuilderTest {
         duration: Int? = null,
         contentWarning: String? = null,
         dTag: String? = "fixed-d-tag",
+        posterUrl: String? = null,
     ): HlsVideoPublishInput =
         HlsVideoPublishInput(
             renditions = renditions,
@@ -108,6 +109,7 @@ class HlsVideoEventBuilderTest {
             contentWarning = contentWarning,
             dTag = dTag,
             createdAt = 1_700_000_000L,
+            posterUrl = posterUrl,
         )
 
     private fun Array<Array<String>>.findTag(name: String): Array<String>? = firstOrNull { it.isNotEmpty() && it[0] == name }
@@ -229,5 +231,34 @@ class HlsVideoEventBuilderTest {
         val alt = tags.findTag("alt")
         assertNotNull(alt)
         assertEquals(VideoVerticalEvent.ALT_DESCRIPTION, alt!![1])
+    }
+
+    @Test
+    fun posterUrlIsPropagatedToEveryImetaImage() {
+        val result =
+            HlsVideoEventBuilder.build(
+                input(landscapeRenditions, posterUrl = "https://cdn.test/poster.jpg"),
+            )
+        val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
+
+        val imetas = tags.findAllTags("imeta")
+        // 1 master + 2 renditions, each must carry image <posterUrl>
+        assertEquals(3, imetas.size)
+        imetas.forEach { imeta ->
+            val flat = imeta.joinToString("|")
+            assertTrue("imeta missing poster image: $flat", flat.contains("image https://cdn.test/poster.jpg"))
+        }
+    }
+
+    @Test
+    fun noPosterUrlMeansNoImagePropertyOnImetas() {
+        val result = HlsVideoEventBuilder.build(input(landscapeRenditions))
+        val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
+
+        val imetas = tags.findAllTags("imeta")
+        imetas.forEach { imeta ->
+            val flat = imeta.joinToString("|")
+            assertTrue("imeta unexpectedly carries image: $flat", !flat.contains("image "))
+        }
     }
 }

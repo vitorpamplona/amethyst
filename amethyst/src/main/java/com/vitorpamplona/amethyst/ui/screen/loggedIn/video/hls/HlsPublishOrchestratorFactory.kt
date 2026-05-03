@@ -21,18 +21,28 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsUploadHelper
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.service.uploads.getThumbnail
+import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 
 private const val TAG = "HlsPublishOrchestratorFactory"
+
+private const val POSTER_JPEG_QUALITY = 85
+private const val POSTER_CONTENT_TYPE = "image/jpeg"
 
 /**
  * Production wiring for [HlsPublishOrchestrator]. Binds the upload closure to
@@ -87,4 +97,74 @@ fun createProductionHlsPublishOrchestrator(
             account.sendAutomatic(signed)
             signed.id
         },
+        uploadPoster = { uploader ->
+            val uri = uriProvider()
+            if (uri == null) {
+                null
+            } else {
+                generateAndUploadPoster(context, uri, uploader)
+            }
+        },
     )
+
+/**
+ * Extracts a still frame from the source video at [uri], encodes it as JPEG, and uploads it
+ * via [uploader]. Returns the public URL on success or null if any step fails (unsupported
+ * source, no readable frame, encode/upload error). The orchestrator treats null as "publish
+ * without a poster" — failure here must never abort the publish.
+ */
+private suspend fun generateAndUploadPoster(
+    context: Context,
+    uri: Uri,
+    uploader: HlsBlobUploader,
+): String? {
+    val posterFile = extractPosterToTempFile(context, uri) ?: return null
+    return try {
+        val result = uploader.upload(posterFile, POSTER_CONTENT_TYPE) { _, _ -> }
+        result.url
+    } finally {
+        if (!posterFile.delete()) {
+            Log.w(TAG) { "uploadPoster: failed to delete temp file ${posterFile.absolutePath}" }
+        }
+    }
+}
+
+private suspend fun extractPosterToTempFile(
+    context: Context,
+    uri: Uri,
+): File? =
+    withContext(Dispatchers.IO) {
+        val retriever = MediaMetadataRetriever()
+        var bitmap: Bitmap? = null
+        try {
+            retriever.setDataSource(context, uri)
+            bitmap = retriever.getThumbnail()
+            if (bitmap == null) {
+                Log.w(TAG) { "extractPosterToTempFile: getThumbnail returned null for $uri" }
+                return@withContext null
+            }
+            val outFile = File.createTempFile("hls-poster-", ".jpg", context.cacheDir)
+            try {
+                FileOutputStream(outFile).use { stream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, POSTER_JPEG_QUALITY, stream)
+                }
+                outFile
+            } catch (e: Exception) {
+                if (!outFile.delete()) {
+                    Log.w(TAG) { "extractPosterToTempFile: failed to delete temp file ${outFile.absolutePath}" }
+                }
+                throw e
+            }
+        } catch (e: Exception) {
+            Log.w(TAG) { "extractPosterToTempFile: failed for $uri — ${e.message}" }
+            null
+        } finally {
+            bitmap?.recycle()
+            try {
+                retriever.release()
+            } catch (_: Exception) {
+                // release() can throw RuntimeException on some devices; swallow — the temp
+                // file (if any) is already cleaned up and the bitmap recycled.
+            }
+        }
+    }
