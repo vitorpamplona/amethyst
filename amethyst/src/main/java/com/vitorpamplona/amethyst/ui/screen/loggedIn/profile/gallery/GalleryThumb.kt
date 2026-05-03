@@ -39,6 +39,7 @@ import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -66,11 +67,11 @@ import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
-// HLS playlist mime types as published in NIP-71 imeta tags. Mirrors the canonical list used in
-// MediaItemCache.toExoPlayerMimeType. Kept inline to avoid creating a one-off helper module.
+// Mirrors the canonical HLS-playlist mime list used in MediaItemCache.toExoPlayerMimeType.
+// Kept inline rather than extracting a shared helper for one read-side caller.
 private fun isHlsMimeType(mimeType: String?): Boolean =
     when (mimeType?.lowercase()) {
-        "application/vnd.apple.mpegurl",
+        HlsContentTypes.HLS_PLAYLIST,
         "application/x-mpegurl",
         "audio/x-mpegurl",
         "audio/mpegurl",
