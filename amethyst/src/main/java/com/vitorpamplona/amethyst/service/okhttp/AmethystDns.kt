@@ -139,7 +139,9 @@ class AmethystDns(
 
     private fun lookupAndCache(host: String): List<InetAddress> =
         try {
-            delegate.lookup(host).also { putPositive(host, it) }
+            val addresses = delegate.lookup(host).ifEmpty { throw UnknownHostException(host) }
+            putPositive(host, addresses)
+            addresses
         } catch (e: UnknownHostException) {
             putNegative(host)
             throw e
@@ -249,12 +251,20 @@ class AmethystDns(
         }
     }
 
-    /** True if the cache has changed since the last [clearDirty]. */
+    /** True if the cache has changed since the last [tryClearDirty] / [markDirty] / construction. */
     fun isDirty(): Boolean = dirty.get()
 
-    /** Marks the cache clean. Call after a successful persist. */
-    fun clearDirty() {
-        dirty.set(false)
+    /**
+     * Atomically clears the dirty flag if it was set. Returns `true` if the caller observed the
+     * flag in the dirty state (and is now responsible for persisting). Use this to bracket a save
+     * — clearing **before** taking a snapshot ensures any concurrent [putPositive] re-marks dirty
+     * and is captured by the next save instead of being silently lost.
+     */
+    fun tryClearDirty(): Boolean = dirty.compareAndSet(true, false)
+
+    /** Re-marks the cache dirty. For a store to call when its persist attempt fails. */
+    fun markDirty() {
+        dirty.set(true)
     }
 
     private class Entry(

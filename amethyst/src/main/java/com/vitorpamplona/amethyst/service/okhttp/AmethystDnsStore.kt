@@ -59,10 +59,10 @@ class AmethystDnsStore(
                 prefs.edit().remove(KEY_CACHE).apply()
                 return
             }
+        // restore() uses putIfAbsent and never marks dirty, so we deliberately do NOT clear the
+        // dirty flag here — any concurrent put that happened before load completed must still be
+        // persisted on the next save.
         dns.restore(records)
-        // Restoring entries that already existed in memory is a no-op, but the act of loading
-        // shouldn't mark the cache dirty.
-        dns.clearDirty()
         Log.d(TAG) { "Restored ${records.size} DNS cache entries" }
     }
 
@@ -71,15 +71,19 @@ class AmethystDnsStore(
      * I/O — call from a background thread.
      */
     fun save() {
-        if (!dns.isDirty()) return
-        val records = dns.snapshot()
+        // Clear BEFORE snapshot so any put racing with the snapshot/write re-marks dirty and is
+        // captured by the next save instead of being silently lost. compareAndSet ensures two
+        // concurrent saves don't both proceed.
+        if (!dns.tryClearDirty()) return
         try {
+            val records = dns.snapshot()
             val json = MAPPER.writeValueAsString(records)
             prefs.edit().putString(KEY_CACHE, json).apply()
-            dns.clearDirty()
             Log.d(TAG) { "Persisted ${records.size} DNS cache entries" }
         } catch (t: Throwable) {
             Log.w(TAG) { "Failed to persist DNS cache: ${t.message}" }
+            // Restore the dirty signal so the next save retries.
+            dns.markDirty()
         }
     }
 

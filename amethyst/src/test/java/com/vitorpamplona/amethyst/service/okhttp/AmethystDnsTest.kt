@@ -32,6 +32,7 @@ import java.net.UnknownHostException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -445,8 +446,86 @@ class AmethystDnsTest {
         dns.lookup("a.example")
         assertTrue("First positive write dirties cache", dns.isDirty())
 
-        dns.clearDirty()
+        assertTrue("tryClearDirty reports prior dirty state", dns.tryClearDirty())
         dns.lookup("a.example") // cache hit, no write
         assertFalse("Cache hit does not dirty", dns.isDirty())
+        assertFalse("tryClearDirty on already-clean returns false", dns.tryClearDirty())
+    }
+
+    @Test
+    fun `failed lookup does not mark cache dirty`() {
+        val upstream = CountingDns(emptyMap())
+        val dns = AmethystDns(delegate = upstream)
+
+        assertFalse(dns.isDirty())
+        runCatching { dns.lookup("missing.example") }
+        assertFalse("Negative entry must not dirty the cache (it isn't persisted)", dns.isDirty())
+    }
+
+    @Test
+    fun `failed refresh demotes stale positive entry to negative`() {
+        val responses = AtomicReference<List<InetAddress>?>(listOf(ip("1.2.3.4")))
+        val upstream =
+            Dns { hostname ->
+                responses.get() ?: throw UnknownHostException(hostname)
+            }
+        val syncRefresh = Executor { it.run() }
+        val dns =
+            AmethystDns(
+                delegate = upstream,
+                positiveTtlMs = 1,
+                positiveTtlJitterMs = 0,
+                negativeTtlMs = 60_000,
+                refreshExecutor = syncRefresh,
+            )
+
+        // Populate, then let it go stale.
+        dns.lookup("a.example")
+        Thread.sleep(20)
+
+        // Make upstream fail.
+        responses.set(null)
+
+        // Stale read returns the cached value AND triggers a refresh that fails.
+        assertEquals(listOf(ip("1.2.3.4")), dns.lookup("a.example"))
+
+        // Entry should now be negative — next caller gets a fresh failure rather than
+        // forever-stale wrong IPs.
+        assertThrows(UnknownHostException::class.java) { dns.lookup("a.example") }
+    }
+
+    @Test
+    fun `refresh executor rejection cleans up the inflight slot`() {
+        val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
+        val rejecting = Executor { throw RejectedExecutionException("test") }
+        val dns =
+            AmethystDns(
+                delegate = upstream,
+                positiveTtlMs = 1,
+                positiveTtlJitterMs = 0,
+                refreshExecutor = rejecting,
+            )
+
+        dns.lookup("a.example")
+        Thread.sleep(20)
+
+        // Stale read tries to schedule a refresh; the executor rejects it. The caller still
+        // gets the stale answer.
+        assertEquals(listOf(ip("1.2.3.4")), dns.lookup("a.example"))
+
+        // If the rejected future was leaked into inflight, a subsequent cache-miss lookup for
+        // the same host would block forever in awaitFollower. Force a cache miss via invalidate
+        // and run the lookup with a hard timeout to verify the slot was freed.
+        dns.invalidate("a.example")
+        val pool = Executors.newSingleThreadExecutor()
+        try {
+            val result =
+                pool
+                    .submit<List<InetAddress>> { dns.lookup("a.example") }
+                    .get(2, TimeUnit.SECONDS)
+            assertEquals(listOf(ip("1.2.3.4")), result)
+        } finally {
+            pool.shutdownNow()
+        }
     }
 }
