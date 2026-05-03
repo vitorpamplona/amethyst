@@ -914,6 +914,21 @@ fun ShareMediaAction(
                             onDismiss()
                         }
                     }
+                    if (content is MediaUrlPdf && videoUri != null && !videoUri.startsWith("file")) {
+                        val appContext = LocalContext.current.applicationContext
+                        M3ActionRow(icon = MaterialSymbols.Download, text = stringRes(R.string.download_to_phone)) {
+                            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                saveMediaToGallery(content, appContext, accountViewModel)
+                            }
+                            Toast
+                                .makeText(
+                                    appContext,
+                                    stringRes(appContext, R.string.media_download_has_started_toast),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            onDismiss()
+                        }
+                    }
                     postNostrUri?.let {
                         M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
                             scope.launch {
