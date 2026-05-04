@@ -116,24 +116,31 @@ class MoqLiteSession internal constructor(
     suspend fun announce(prefix: String): MoqLiteAnnouncesHandle {
         ensureOpen()
         val bidi = transport.openBidiStream()
+        Log.d("NestRx") { "announce(prefix='$prefix'): bidi opened, writing AnnouncePlease" }
         bidi.write(Varint.encode(MoqLiteControlType.Announce.code))
         bidi.write(MoqLiteCodec.encodeAnnouncePlease(MoqLiteAnnouncePlease(prefix)))
+        Log.d("NestRx") { "announce(prefix='$prefix'): AnnouncePlease flushed, awaiting Active updates" }
 
         val updates = MutableSharedFlow<MoqLiteAnnounce>(replay = 0, extraBufferCapacity = 64)
         val pump =
             scope.launch {
                 val buffer = MoqLiteFrameBuffer()
+                var chunksSeen = 0
                 try {
                     bidi.incoming().collect { chunk ->
+                        chunksSeen += 1
+                        Log.d("NestRx") { "announce(prefix='$prefix'): bidi chunk #$chunksSeen size=${chunk.size}" }
                         buffer.push(chunk)
                         while (true) {
                             val payload = buffer.readSizePrefixed() ?: break
                             updates.emit(MoqLiteCodec.decodeAnnounce(payload))
                         }
                     }
+                    Log.d("NestRx") { "announce(prefix='$prefix'): bidi.incoming() ended naturally after $chunksSeen chunks" }
                 } catch (ce: CancellationException) {
                     throw ce
-                } catch (_: Throwable) {
+                } catch (t: Throwable) {
+                    Log.w("NestRx") { "announce(prefix='$prefix'): bidi.incoming() threw ${t::class.simpleName}: ${t.message} (chunks=$chunksSeen)" }
                     // Flow terminated (peer FIN or transport close).
                     // The Announce stream's emit-side just stops; consumers
                     // see an end-of-flow.
@@ -201,8 +208,10 @@ class MoqLiteSession internal constructor(
                 endGroup = endGroup,
             )
         val bidi = transport.openBidiStream()
+        Log.d("NestRx") { "subscribe id=$id broadcast='$broadcast' track='$track': bidi opened, writing SUBSCRIBE bytes" }
         bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
         bidi.write(MoqLiteCodec.encodeSubscribe(request))
+        Log.d("NestRx") { "subscribe id=$id: SUBSCRIBE bytes flushed, awaiting response" }
 
         // Single long-running collector for the bidi's whole lifetime.
         // The collector parses the SubscribeResponse inline, signals it
@@ -252,9 +261,14 @@ class MoqLiteSession internal constructor(
         scope.launch {
             val responseBuffer = MoqLiteFrameBuffer()
             var responseParsed = false
+            var chunksSeen = 0
             try {
                 bidi.incoming().collect { chunk ->
+                    chunksSeen += 1
                     if (!responseParsed) {
+                        Log.d("NestRx") {
+                            "subscribe id=$id: bidi chunk #$chunksSeen size=${chunk.size} (response not yet parsed)"
+                        }
                         responseBuffer.push(chunk)
                         val typeCode = responseBuffer.readVarint() ?: return@collect
                         val body = responseBuffer.readSizePrefixed() ?: return@collect
@@ -270,13 +284,16 @@ class MoqLiteSession internal constructor(
                     // moq-lite leaves the bidi idle post-Ok. The signal
                     // we care about is the flow's natural completion.
                 }
+                Log.d("NestRx") { "subscribe id=$id: bidi.incoming() flow ended naturally after $chunksSeen chunks (responseParsed=$responseParsed)" }
             } catch (ce: CancellationException) {
                 if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(ce)
                 throw ce
             } catch (t: Throwable) {
+                Log.w("NestRx") { "subscribe id=$id: bidi.incoming() threw ${t::class.simpleName}: ${t.message} (chunks=$chunksSeen)" }
                 if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(t)
             }
             if (!responseDeferred.isCompleted) {
+                Log.w("NestRx") { "subscribe id=$id: bidi closed BEFORE any response parsed (chunks=$chunksSeen)" }
                 responseDeferred.completeExceptionally(
                     MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id"),
                 )

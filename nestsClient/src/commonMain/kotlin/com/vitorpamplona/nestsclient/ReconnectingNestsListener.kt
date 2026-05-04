@@ -25,6 +25,7 @@ import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.moq.SubscribeOk
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -351,12 +352,16 @@ private class ReconnectingHandle(
                                 // one extra iteration before the next
                                 // suspend re-checked active state.
                                 throw ce
-                            } catch (_: Throwable) {
+                            } catch (t: Throwable) {
+                                Log.w("NestRx") {
+                                    "ReconnectingHandle.opener threw ${t::class.simpleName}: ${t.message} — pump breaks"
+                                }
                                 null
                             } ?: break
                         liveHandleRef.set(handle)
                         try {
                             handle.objects.collect { frames.emit(it) }
+                            Log.d("NestRx") { "ReconnectingHandle.objects flow ended naturally — pump will re-issue after ${RESUBSCRIBE_BACKOFF_MS}ms" }
                         } finally {
                             if (liveHandleRef.get() === handle) liveHandleRef.set(null)
                         }
