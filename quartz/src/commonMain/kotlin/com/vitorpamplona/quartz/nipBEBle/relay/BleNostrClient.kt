@@ -195,7 +195,7 @@ class BleNostrClient(
         if (success) {
             currentChunkIndex++
         } else {
-            Log.e("BleNostrClient", "Failed to write chunk $currentChunkIndex to ${peer.deviceUuid}")
+            Log.e("BleNostrClient") { "Failed to write chunk $currentChunkIndex to ${peer.deviceUuid}" }
         }
     }
 }

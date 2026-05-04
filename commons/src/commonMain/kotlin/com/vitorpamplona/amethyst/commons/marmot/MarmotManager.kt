@@ -142,7 +142,7 @@ class MarmotManager(
 
         if (result is WelcomeResult.Joined) {
             subscriptionManager.subscribeGroup(result.nostrGroupId)
-            Log.d("MarmotManager", "Joined group ${result.nostrGroupId}")
+            Log.d("MarmotManager") { "Joined group ${result.nostrGroupId}" }
         }
 
         return result
@@ -370,17 +370,17 @@ class MarmotManager(
         try {
             groupManager.clearAllState()
         } catch (e: Exception) {
-            Log.w("MarmotManager", "resetAllState(): groupManager.clearAllState failed: ${e.message}")
+            Log.w("MarmotManager", "resetAllState(): groupManager.clearAllState failed", e)
         }
         try {
             keyPackageRotationManager.clearAllState()
         } catch (e: Exception) {
-            Log.w("MarmotManager", "resetAllState(): keyPackageRotationManager.clearAllState failed: ${e.message}")
+            Log.w("MarmotManager", "resetAllState(): keyPackageRotationManager.clearAllState failed", e)
         }
         try {
             subscriptionManager.clear()
         } catch (e: Exception) {
-            Log.w("MarmotManager", "resetAllState(): subscriptionManager.clear failed: ${e.message}")
+            Log.w("MarmotManager", "resetAllState(): subscriptionManager.clear failed", e)
         }
     }
 
@@ -405,7 +405,7 @@ class MarmotManager(
         try {
             messageStore?.delete(nostrGroupId)
         } catch (e: Exception) {
-            Log.w("MarmotManager", "Failed to delete persisted messages for $nostrGroupId: ${e.message}")
+            Log.w("MarmotManager", "Failed to delete persisted messages for $nostrGroupId", e)
         }
         return outboundEvent
     }
@@ -423,7 +423,7 @@ class MarmotManager(
         try {
             messageStore?.appendMessage(nostrGroupId, innerEventJson)
         } catch (e: Exception) {
-            Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId: ${e.message}")
+            Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId", e)
         }
     }
 
@@ -435,7 +435,7 @@ class MarmotManager(
         try {
             messageStore?.loadMessages(nostrGroupId) ?: emptyList()
         } catch (e: Exception) {
-            Log.w("MarmotManager", "Failed to load persisted messages for $nostrGroupId: ${e.message}")
+            Log.w("MarmotManager", "Failed to load persisted messages for $nostrGroupId", e)
             emptyList()
         }
 
