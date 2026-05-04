@@ -386,6 +386,42 @@ private fun appendFlowControlUpdates(
     frames: MutableList<Frame>,
     tokens: MutableList<RecoveryToken>,
 ) {
+    // Step 4: re-emit any retransmittable extension whose carrying
+    // packet was declared lost (the `pending*` fields are populated
+    // by step 6's loss dispatcher; for now they default to null).
+    // Each pending entry is consumed by emitting a fresh frame with
+    // the same value plus a fresh token, so the new packet's loss
+    // can be re-detected if the wire drops this one too. The
+    // supersede-check (`token.value == advertised*`) lives on the
+    // setter side in step 6 — by the time `pending*` is set, the
+    // value is known to still match the current advertised cap.
+    val pendingUni = conn.pendingMaxStreamsUni
+    if (pendingUni != null) {
+        frames += MaxStreamsFrame(bidi = false, maxStreams = pendingUni)
+        tokens += RecoveryToken.MaxStreamsUni(maxStreams = pendingUni)
+        conn.pendingMaxStreamsUni = null
+    }
+    val pendingBidi = conn.pendingMaxStreamsBidi
+    if (pendingBidi != null) {
+        frames += MaxStreamsFrame(bidi = true, maxStreams = pendingBidi)
+        tokens += RecoveryToken.MaxStreamsBidi(maxStreams = pendingBidi)
+        conn.pendingMaxStreamsBidi = null
+    }
+    val pendingData = conn.pendingMaxData
+    if (pendingData != null) {
+        frames += MaxDataFrame(pendingData)
+        tokens += RecoveryToken.MaxData(maxData = pendingData)
+        conn.pendingMaxData = null
+    }
+    if (conn.pendingMaxStreamData.isNotEmpty()) {
+        // Iterate over a snapshot so we can mutate the map safely.
+        val pendingStreamEntries = conn.pendingMaxStreamData.entries.toList()
+        for ((streamId, maxData) in pendingStreamEntries) {
+            frames += MaxStreamDataFrame(streamId, maxData)
+            tokens += RecoveryToken.MaxStreamData(streamId = streamId, maxData = maxData)
+        }
+        conn.pendingMaxStreamData.clear()
+    }
     val cfg = conn.config
     var totalRecvAdvanced = 0L
     // Round-4 perf #9 + round-5 #9: walk the streams via the index-friendly

@@ -173,6 +173,39 @@ class QuicConnection(
     internal var advertisedMaxStreamsBidi: Long = config.initialMaxStreamsBidi
 
     /**
+     * RFC 9002 retransmit pending-state for the receive-side flow-
+     * control extensions. Non-null means "the last MAX_STREAMS_UNI
+     * we sent was lost; the writer should re-emit on its next pass".
+     *
+     * The value held is the limit that was lost — meaningful only
+     * when it equals [advertisedMaxStreamsUni], which is the
+     * supersede-check from neqo's `fc.rs::frame_lost` (if a newer,
+     * higher extension has since gone out, the older lost frame is
+     * irrelevant). Step 6 of
+     * `quic/plans/2026-05-04-control-frame-retransmit.md` populates
+     * this field via the loss dispatcher; step 4 (this commit) wires
+     * the writer to drain it before running the rolling-extension
+     * threshold check.
+     *
+     * Caller of any read/write must hold [lock].
+     */
+    internal var pendingMaxStreamsUni: Long? = null
+
+    /** Bidi counterpart of [pendingMaxStreamsUni]. */
+    internal var pendingMaxStreamsBidi: Long? = null
+
+    /** Connection-level MAX_DATA counterpart of [pendingMaxStreamsUni]. */
+    internal var pendingMaxData: Long? = null
+
+    /**
+     * Per-stream MAX_STREAM_DATA pending-state. Keyed by stream id.
+     * Same semantics as [pendingMaxStreamsUni]: present iff a
+     * MAX_STREAM_DATA for that stream was lost and hasn't been
+     * superseded by a higher emit. Wired by step 6.
+     */
+    internal val pendingMaxStreamData: MutableMap<Long, Long> = HashMap()
+
+    /**
      * Optional supplier of underlying UDP-socket counters. Wired by the
      * platform-specific driver since `UdpSocket`'s counters are
      * JVM-side fields the commonMain side can't see directly.
