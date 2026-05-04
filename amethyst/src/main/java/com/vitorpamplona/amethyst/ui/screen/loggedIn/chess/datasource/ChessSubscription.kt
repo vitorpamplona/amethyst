@@ -25,7 +25,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 
@@ -78,14 +78,14 @@ fun ChessSubscription(
     }
 
     // Register subscription with Amethyst's subscription system
-    KeyDataSourceSubscription(state, chessAssembler)
+    LifecycleAwareKeyDataSourceSubscription(state, chessAssembler)
 
     // Trigger ViewModel refresh when subscription state changes
     // This fetches challenges from LocalCache after events arrive
     DisposableEffect(state) {
         chessViewModel.forceRefresh()
         onDispose {
-            // Subscription cleanup handled by KeyDataSourceSubscription
+            // Subscription cleanup handled by LifecycleAwareKeyDataSourceSubscription
         }
     }
 }

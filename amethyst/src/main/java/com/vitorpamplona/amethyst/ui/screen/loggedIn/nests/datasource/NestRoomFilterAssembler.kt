@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
@@ -156,5 +156,5 @@ fun NestRoomFilterAssemblerSubscription(
         remember(note, account.pubKey) {
             NestRoomQueryState(note, account)
         }
-    KeyDataSourceSubscription(state, filterAssembler)
+    LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)
 }

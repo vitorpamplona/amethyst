@@ -27,7 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -43,7 +43,7 @@ fun ChannelFilterAssemblerSubscription(
             ChannelQueryState(channel, accountViewModel.account)
         }
 
-    KeyDataSourceSubscription(state, dataSource)
+    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 
     // Live streams need the 30311 event to populate `channel.info` before we can read its
     // `goal` tag and add the goal+zap subscriptions. Re-invalidate when metadata changes so

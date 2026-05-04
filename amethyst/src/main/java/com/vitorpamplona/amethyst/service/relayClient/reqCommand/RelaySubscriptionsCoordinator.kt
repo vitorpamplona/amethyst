@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblyGroup
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
@@ -70,8 +71,11 @@ class RelaySubscriptionsCoordinator(
     failureTracker: RelayOfflineTracker,
     scope: CoroutineScope,
 ) {
-    // main one: notifications, dms and account settings
-    val account = AccountFilterAssembler(client, cache, authenticator, failureTracker, scope)
+    // main one: notifications, dms and account settings (always-on while logged in)
+    val account = AccountFilterAssembler(client)
+
+    // foreground-only account loaders (follows-outbox finder, random-relay notifications)
+    val accountForeground = AccountForegroundFilterAssembler(client, cache, authenticator, failureTracker, scope)
 
     // always running, feed assemblers.
     val home = HomeFilterAssembler(client)
@@ -124,6 +128,7 @@ class RelaySubscriptionsCoordinator(
     val all =
         listOf(
             account,
+            accountForeground,
             home,
             chatroomList,
             video,

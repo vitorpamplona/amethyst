@@ -18,32 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun EventFinderFilterAssemblerSubscription(
-    note: Note,
-    accountViewModel: AccountViewModel,
-) = EventFinderFilterAssemblerSubscription(note, accountViewModel.account, accountViewModel.dataSources().eventFinder)
+fun AccountForegroundFilterAssemblerSubscription(accountViewModel: AccountViewModel) =
+    AccountForegroundFilterAssemblerSubscription(
+        accountViewModel,
+        accountViewModel.dataSources().accountForeground,
+    )
 
 @Composable
-fun EventFinderFilterAssemblerSubscription(
-    note: Note,
-    account: Account,
-    dataSource: EventFinderFilterAssembler,
+fun AccountForegroundFilterAssemblerSubscription(
+    accountViewModel: AccountViewModel,
+    dataSource: AccountForegroundFilterAssembler,
 ) {
-    // different screens get different states
-    // even if they are tracking the same tag.
     val state =
-        remember(note, account) {
-            EventFinderQueryState(note, account)
+        remember(accountViewModel) {
+            AccountQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.trustedAccounts.value)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

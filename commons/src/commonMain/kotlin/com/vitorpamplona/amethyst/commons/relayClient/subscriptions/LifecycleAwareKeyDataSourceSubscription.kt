@@ -27,6 +27,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -57,6 +59,73 @@ private const val UNSUBSCRIBE_GRACE_MILLIS = 30_000L
 fun <T> LifecycleAwareKeyDataSourceSubscription(
     state: T,
     dataSource: ComposeSubscriptionManager<T>,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(state, lifecycleOwner) {
+        var isSubscribed = false
+        var pendingUnsubscribe: Job? = null
+
+        fun subscribeNow() {
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (!isSubscribed) {
+                dataSource.subscribe(state)
+                isSubscribed = true
+            }
+        }
+
+        fun scheduleUnsubscribe() {
+            if (!isSubscribed || pendingUnsubscribe != null) return
+            pendingUnsubscribe =
+                scope.launch {
+                    delay(UNSUBSCRIBE_GRACE_MILLIS)
+                    if (isSubscribed) {
+                        dataSource.unsubscribe(state)
+                        isSubscribed = false
+                    }
+                    pendingUnsubscribe = null
+                }
+        }
+
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> {
+                        subscribeNow()
+                    }
+
+                    Lifecycle.Event.ON_STOP -> {
+                        scheduleUnsubscribe()
+                    }
+
+                    else -> {}
+                }
+            }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            subscribeNow()
+        }
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (isSubscribed) {
+                dataSource.unsubscribe(state)
+                isSubscribed = false
+            }
+        }
+    }
+}
+
+@Composable
+fun <T : MutableQueryState> LifecycleAwareKeyDataSourceSubscription(
+    state: T,
+    dataSource: MutableComposeSubscriptionManager<T>,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
