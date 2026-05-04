@@ -27,156 +27,442 @@ package com.vitorpamplona.quic.stream
  * Application code [enqueue]s payload bytes; the connection's send loop
  * [takeChunk]s as much as it can fit in the next packet, given the
  * remaining packet budget and stream-level / connection-level flow control
- * credit.
+ * credit. Bytes are *retained* in the buffer (RFC 9000 §13.3 — STREAM data
+ * is reliable) until [markAcked] removes them, so a [markLost] call can
+ * re-queue the same byte range for retransmit.
  *
- * **Best-effort mode (no STREAM retransmit):** bytes are released from the
- * buffer the moment they're handed off, on the assumption that the
- * underlying network is stable. A real loss event silently truncates the
- * stream. Acceptable for MoQ over QUIC (audio rooms use OBJECT_DATAGRAM,
- * which is loss-tolerant; STREAM is control-plane only). See the deferred
- * items in `quic/plans/2026-04-26-quic-stack-status.md` — adding
- * retain-until-ACK + retransmit is the first thing to add for general
- * STREAM-heavy use.
+ * # Three logical regions of the byte sequence
  *
- * **Concurrency:** [enqueue] / [finish] are invoked by application
- * coroutines (e.g. WebTransport stream writers in [com.vitorpamplona.quic.webtransport.WtPeerStreamDemux]);
- * [takeChunk] runs on the [com.vitorpamplona.quic.connection.QuicConnectionDriver] send loop under the
- * connection mutex. The two paths are NOT serialised by a shared lock,
- * so the buffer's internal state (`chunks`, `pendingBytes`, `headOffset`,
- * FIN flags, offsets) is mutated under `synchronized(this)`. The cheap
- * `readableBytes` / `sentOffset` / `finPending` / `finSent` getters used
- * by the writer's pre-flight checks are also synchronised so they can't
- * read torn state. Without this, an `enqueue` racing a `takeChunk`
- * surfaced as `NoSuchElementException: ArrayDeque is empty` from
- * `chunks.first()` (the writer saw `pendingBytes > 0` after the
- * `addLast` but before the matching deque mutation became visible, so
- * it entered the head-peel branch and tripped on an empty deque).
+ * The buffer covers the offset range `[flushedFloor, nextOffset)`. Within
+ * that range each byte is in exactly one of three states:
+ *
+ *   1. **In-flight** — sent but not yet ACK'd. Tracked in [inFlight] as
+ *      a sorted-by-offset list of [Range]s. ACKs remove from here; loss
+ *      moves into the retransmit queue.
+ *   2. **Needs retransmit** — declared lost; re-sent before any fresh
+ *      bytes. Tracked in [retransmit] as a FIFO of [Range]s.
+ *   3. **Unsent** — `[nextSendOffset, nextOffset)`. New bytes the writer
+ *      hasn't picked up yet. [takeChunk] drains in priority order:
+ *      retransmit first, then fresh.
+ *
+ * # Compaction
+ *
+ * When `[flushedFloor, x)` is contiguously ACK'd we advance [flushedFloor]
+ * and shift the underlying byte storage. The structure never grows
+ * unboundedly under normal traffic — bytes are released as soon as the
+ * peer ACKs them.
+ *
+ * # Concurrency
+ *
+ * [enqueue] / [finish] run on application coroutines (e.g. WebTransport
+ * stream writers in [com.vitorpamplona.quic.webtransport.WtPeerStreamDemux]);
+ * [takeChunk] runs on the [com.vitorpamplona.quic.connection.QuicConnectionDriver]
+ * send loop under the connection mutex; [markAcked] / [markLost] run on
+ * the parser path also under the connection mutex. The two execution
+ * paths are NOT serialised by a shared lock, so all internal state is
+ * mutated under `synchronized(this)`. Even the cheap getters
+ * ([readableBytes], [sentOffset], [finPending], [finSent]) take the
+ * monitor so a writer pre-flight check can't observe torn state.
+ *
+ * # FIN
+ *
+ * The FIN bit is part of the reliable byte sequence per RFC 9000 §3.3.
+ * Treated as a "virtual byte" at offset = `nextOffset`: setting
+ * [finPending] arms the next [takeChunk] to attach FIN to the final
+ * data chunk (or emit an empty FIN-only chunk if the buffer is already
+ * drained). [markAcked] / [markLost] respect FIN — a lost range that
+ * carried FIN is re-sent with FIN set, and the buffer's "FIN delivered"
+ * latch ([finAcked]) only flips when the FIN-carrying range is ACK'd.
  */
 class SendBuffer {
     /**
-     * Pending unsent chunks plus the offset within the head chunk. This avoids
-     * the previous O(N) copyOf-per-enqueue: each enqueue is O(1), each
-     * takeChunk peels at most one head chunk. Memory bounded by the sum of
-     * outstanding writes.
+     * Contiguous byte storage covering `[flushedFloor, nextOffset)`.
+     * Indexing: byte at logical offset `o` lives at `data[(o - flushedFloor).toInt()]`.
+     * Capacity grows on enqueue; the front end shifts on
+     * [advanceFlushedFloorIfPossible] to release ACK'd-from-the-bottom
+     * bytes.
      */
-    private val chunks: ArrayDeque<ByteArray> = ArrayDeque()
-    private var headOffset: Int = 0
-    private var pendingBytes: Int = 0
-    private var sentEnd: Long = 0L
+    private var data: ByteArray = ByteArray(64)
+
+    /** `nextOffset - flushedFloor` — bytes currently held in [data]. */
+    private var dataLen: Int = 0
+
+    /** Logical offset of the byte at `data[0]`. Advances on contiguous ACK. */
+    private var flushedFloor: Long = 0L
+
+    /** Logical offset just past the last byte. Advances on [enqueue]. */
     private var _nextOffset: Long = 0L
+
+    /**
+     * Logical offset of the next FRESH byte the writer would send if
+     * the [retransmit] queue is empty. Bytes `[nextSendOffset, nextOffset)`
+     * are unsent; bytes below that are either in-flight, in retransmit,
+     * or already ACK'd (released).
+     *
+     * Invariant: `flushedFloor <= nextSendOffset <= nextOffset`.
+     */
+    private var nextSendOffset: Long = 0L
+
+    /**
+     * Sent-but-not-yet-ACK'd ranges, sorted by offset ascending. Mutated
+     * by [takeChunk] (append), [markAcked] (remove / split), [markLost]
+     * (remove and move to [retransmit]).
+     *
+     * Range arithmetic is O(N) on the inFlight list; for the moq-rooms
+     * workload (a few thousand ranges max per connection) this is fine.
+     * If profiling later shows it on the hot path, swap in a TreeMap
+     * keyed by offset.
+     */
+    private val inFlight: ArrayDeque<Range> = ArrayDeque()
+
+    /**
+     * FIFO queue of ranges declared lost and awaiting re-emission.
+     * [takeChunk] drains from the front before touching fresh bytes.
+     * Same byte data lives in [data] — only the metadata is duplicated.
+     */
+    private val retransmit: ArrayDeque<Range> = ArrayDeque()
+
     private var _finPending: Boolean = false
     private var _finSent: Boolean = false
+    private var _finAcked: Boolean = false
 
     val nextOffset: Long get() = synchronized(this) { _nextOffset }
     val finPending: Boolean get() = synchronized(this) { _finPending }
     val finSent: Boolean get() = synchronized(this) { _finSent }
+    val finAcked: Boolean get() = synchronized(this) { _finAcked }
 
-    val readableBytes: Int get() = synchronized(this) { pendingBytes }
+    /**
+     * Bytes the writer would emit on the next [takeChunk] before any
+     * flow-control limits. Includes both retransmit-queued bytes (which
+     * have priority) and unsent-fresh bytes. Used by the writer's
+     * pre-flight skip check ("nothing to send → continue").
+     */
+    val readableBytes: Int
+        get() =
+            synchronized(this) {
+                var sum = 0L
+                for (r in retransmit) sum += r.length
+                sum += (_nextOffset - nextSendOffset)
+                sum.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            }
 
-    /** Bytes already handed out via [takeChunk]; equal to the next offset to assign. */
-    val sentOffset: Long get() = synchronized(this) { sentEnd }
+    /**
+     * High-water mark of bytes ever handed to [takeChunk]. Equal to
+     * [_nextOffset] only when all bytes have been at least sent once.
+     * Used by the writer's connection-level flow-control accounting.
+     *
+     * Note: under retain-until-ACK semantics, the same byte may be
+     * "sent" multiple times across retransmits. [sentOffset] reports
+     * the high-water mark of *fresh* sends only, not the cumulative
+     * retransmit volume.
+     */
+    val sentOffset: Long get() = synchronized(this) { nextSendOffset }
 
     fun enqueue(bytes: ByteArray) {
         if (bytes.isEmpty()) return
         synchronized(this) {
-            chunks.addLast(bytes)
-            pendingBytes += bytes.size
+            ensureCapacity(dataLen + bytes.size)
+            bytes.copyInto(data, dataLen)
+            dataLen += bytes.size
             _nextOffset += bytes.size
         }
     }
 
-    /** Mark the write side as closing; the next [takeChunk] will set FIN once empty. */
+    /** Mark the write side as closing; the next [takeChunk] sets FIN once empty. */
     fun finish() {
         synchronized(this) { _finPending = true }
     }
 
-    /** Take up to [maxBytes] bytes off the head of the buffer at the current send offset. */
+    /**
+     * Take up to [maxBytes] bytes off the head of the next available
+     * range. Priority order:
+     *
+     *   1. [retransmit] queue — retain offset semantics; the chunk's
+     *      offset is the original lost range's offset.
+     *   2. Fresh unsent bytes from `[nextSendOffset, nextOffset)`.
+     *   3. FIN-only zero-byte chunk if [finPending] and everything
+     *      else is drained.
+     *
+     * Returns null if there's nothing to send.
+     */
     fun takeChunk(maxBytes: Int): Chunk? =
         synchronized(this) {
-            if (pendingBytes == 0 && !(_finPending && !_finSent)) return@synchronized null
             val cap = maxBytes.coerceAtLeast(0)
-            if (cap == 0 && pendingBytes > 0) return@synchronized null
-            val data: ByteArray
-            if (pendingBytes == 0) {
-                data = ByteArray(0)
-            } else {
-                val head = chunks.first()
-                val available = head.size - headOffset
-                if (available <= cap) {
-                    // Hand out the rest of the head chunk. Always copy: the caller's
-                    // ByteArray (passed to enqueue) MUST stay opaque to the rest of
-                    // the stack, since downstream encoders eventually pass it to
-                    // AEAD.seal which assumes immutability for the duration of the
-                    // encryption call.
-                    data =
-                        if (headOffset == 0 && head.size == available) {
-                            head.copyOf()
-                        } else {
-                            head.copyOfRange(headOffset, head.size)
-                        }
-                    chunks.removeFirst()
-                    headOffset = 0
-                    pendingBytes -= available
-                } else {
-                    data = head.copyOfRange(headOffset, headOffset + cap)
-                    headOffset += cap
-                    pendingBytes -= cap
+
+            // 1. Retransmit queue first.
+            val retransmitHead = retransmit.firstOrNull()
+            if (retransmitHead != null) {
+                if (cap == 0 && retransmitHead.length > 0L) return@synchronized null
+                val take = minOf(retransmitHead.length, cap.toLong())
+                val payload = sliceAt(retransmitHead.offset, take.toInt())
+                retransmit.removeFirst()
+                val fin = retransmitHead.fin && take == retransmitHead.length
+                if (take < retransmitHead.length) {
+                    // Push remainder back at the head, preserving offset.
+                    retransmit.addFirst(
+                        Range(
+                            offset = retransmitHead.offset + take,
+                            length = retransmitHead.length - take,
+                            fin = retransmitHead.fin,
+                        ),
+                    )
                 }
+                addToInFlight(Range(retransmitHead.offset, take, fin))
+                if (fin) _finSent = true
+                return@synchronized Chunk(retransmitHead.offset, payload, fin)
             }
-            val offset = sentEnd
-            sentEnd += data.size
-            val fin = _finPending && pendingBytes == 0
-            if (fin) _finSent = true
-            Chunk(offset, data, fin)
+
+            // 2. Fresh bytes.
+            val freshAvailable = _nextOffset - nextSendOffset
+            if (freshAvailable > 0L) {
+                if (cap == 0) return@synchronized null
+                val take = minOf(freshAvailable, cap.toLong())
+                val offset = nextSendOffset
+                val payload = sliceAt(offset, take.toInt())
+                nextSendOffset += take
+                val finForThis = _finPending && !_finSent && nextSendOffset == _nextOffset
+                addToInFlight(Range(offset, take, finForThis))
+                if (finForThis) _finSent = true
+                return@synchronized Chunk(offset, payload, finForThis)
+            }
+
+            // 3. FIN-only.
+            if (_finPending && !_finSent) {
+                _finSent = true
+                addToInFlight(Range(nextSendOffset, 0L, true))
+                return@synchronized Chunk(nextSendOffset, ByteArray(0), true)
+            }
+            null
         }
 
     /**
-     * Re-queue a previously-sent byte range for retransmission. Called
-     * by [com.vitorpamplona.quic.connection.QuicConnection.onTokensLost]
-     * when the [com.vitorpamplona.quic.connection.recovery.RecoveryToken.Stream]
-     * (or `Crypto`) token's carrying packet is declared lost.
+     * Mark the byte range `[offset, offset + length)` as ACK'd by the
+     * peer. The range may cover one or several entries in [inFlight];
+     * each is split where needed and the covered portion removed. If
+     * the contiguous low end of the buffer becomes fully ACK'd, the
+     * underlying byte storage is shifted forward (releasing memory).
      *
-     * Currently a no-op: the buffer releases bytes on [takeChunk] (the
-     * "best-effort mode" documented at the top of this class), so by
-     * the time loss is detected the original bytes are gone and we
-     * have nothing to resend. The full retain-until-ACK rewrite lands
-     * in step C of the deferred-follow-ups pass started at commit
-     * `9e6fa3d` — once that's in, this method moves the [offset,
-     * offset + length) range from the "sent" set back to the
-     * "needs retransmit" queue, and the next [takeChunk] pulls from
-     * that queue first.
+     * `length == 0` is interpreted as a FIN-only ACK at [offset]. The
+     * matching FIN-bearing in-flight range is removed and [finAcked]
+     * latches true.
+     */
+    fun markAcked(
+        offset: Long,
+        length: Long,
+    ) {
+        synchronized(this) {
+            removeOverlap(inFlight, offset, length, ackedNotLost = true)
+            advanceFlushedFloorIfPossible()
+        }
+    }
+
+    /**
+     * Mark the byte range `[offset, offset + length)` as lost — re-queue
+     * it for retransmit. The range may cover one or several entries in
+     * [inFlight]; each is split where needed and the covered portion
+     * appended to [retransmit]. If [fin] is true, the FIN bit is forced
+     * to re-send (clears [finSent] so [takeChunk] will re-emit the FIN
+     * on the retransmit chunk).
      *
-     * The signature is stable now so the dispatcher doesn't need a
-     * second wiring pass when the implementation lands.
+     * Idempotent: calling with a range already in retransmit (or
+     * already ACK'd) is a no-op. The dispatcher in
+     * [com.vitorpamplona.quic.connection.QuicConnection.onTokensLost] may
+     * call this with stale offsets after compaction; we silently absorb.
      */
     fun markLost(
         offset: Long,
         length: Long,
         fin: Boolean,
     ) {
-        // Step C placeholder. Parameters unused on purpose — the
-        // suppression makes the no-op intent explicit so a future
-        // reader doesn't think it's a bug.
-        @Suppress("UNUSED_PARAMETER")
-        val unusedForStepC = Triple(offset, length, fin)
+        synchronized(this) {
+            // Bytes already released (below flushedFloor) are gone for
+            // good — by definition they were ACK'd, so there's nothing
+            // to retransmit. Clamp the requested range to the retained
+            // window to keep the operation idempotent.
+            if (offset + length <= flushedFloor) {
+                if (fin && !_finAcked) _finSent = false
+                return
+            }
+            val clampedOffset = maxOf(offset, flushedFloor)
+            val clampedLength = (offset + length) - clampedOffset
+            removeOverlap(inFlight, clampedOffset, clampedLength, ackedNotLost = false)
+            if (fin && !_finAcked) _finSent = false
+        }
     }
 
     /**
-     * Release ACK'd bytes from the retain-until-ACK retention buffer.
-     * Same step-C placeholder as [markLost]: today the buffer doesn't
-     * retain anything, so there's nothing to release.
+     * Walk [list] for any range overlapping `[offset, offset + length)`,
+     * remove the overlapping portion, and either drop it (ACK path) or
+     * push it onto [retransmit] (loss path). Splits ranges where the
+     * overlap is partial.
      */
-    fun markAcked(
+    private fun removeOverlap(
+        list: ArrayDeque<Range>,
         offset: Long,
         length: Long,
+        ackedNotLost: Boolean,
     ) {
-        @Suppress("UNUSED_PARAMETER")
-        val unusedForStepC = Pair(offset, length)
+        // length == 0 only meaningful for FIN-only ranges; handle by
+        // matching the exact-offset zero-length range.
+        if (length == 0L) {
+            val it = list.iterator()
+            while (it.hasNext()) {
+                val r = it.next()
+                if (r.offset == offset && r.length == 0L) {
+                    it.remove()
+                    if (ackedNotLost) {
+                        if (r.fin) _finAcked = true
+                    } else {
+                        retransmit.addLast(r)
+                    }
+                    return
+                }
+            }
+            return
+        }
+        val rangeEnd = offset + length
+        val replacements = mutableListOf<Range>()
+        val it = list.iterator()
+        while (it.hasNext()) {
+            val r = it.next()
+            val rEnd = r.offset + r.length
+            if (rEnd <= offset || r.offset >= rangeEnd) continue
+            // Overlap exists. Compute up-to-three pieces:
+            //   leftKept: [r.offset, max(r.offset, offset))
+            //   covered:  [max(r.offset, offset), min(rEnd, rangeEnd))
+            //   rightKept:[min(rEnd, rangeEnd), rEnd)
+            val coveredStart = maxOf(r.offset, offset)
+            val coveredEnd = minOf(rEnd, rangeEnd)
+            val coveredLen = coveredEnd - coveredStart
+            it.remove()
+            if (coveredStart > r.offset) {
+                replacements +=
+                    Range(
+                        offset = r.offset,
+                        length = coveredStart - r.offset,
+                        // FIN belongs to the LAST covered piece; the left
+                        // kept piece never carries FIN.
+                        fin = false,
+                    )
+            }
+            if (coveredEnd < rEnd) {
+                replacements +=
+                    Range(
+                        offset = coveredEnd,
+                        length = rEnd - coveredEnd,
+                        // FIN, if any, lives on the rightmost piece.
+                        fin = r.fin,
+                    )
+            }
+            if (coveredLen > 0L || r.length == 0L) {
+                val coveredFin = r.fin && coveredEnd == rEnd
+                if (ackedNotLost) {
+                    if (coveredFin) _finAcked = true
+                } else {
+                    retransmit.addLast(
+                        Range(
+                            offset = coveredStart,
+                            length = coveredLen,
+                            fin = coveredFin,
+                        ),
+                    )
+                }
+            }
+        }
+        // Re-insert kept pieces in offset order.
+        replacements.sortBy { it.offset }
+        for (r in replacements) addToInFlight(r)
     }
+
+    /** Insert [r] into [inFlight] preserving offset-ascending order. */
+    private fun addToInFlight(r: Range) {
+        // Append is the common case (writer drains in offset order).
+        if (inFlight.isEmpty() || inFlight.last().offset <= r.offset) {
+            inFlight.addLast(r)
+            return
+        }
+        // Otherwise insert in sorted position.
+        var i = 0
+        while (i < inFlight.size && inFlight[i].offset < r.offset) i += 1
+        inFlight.add(i, r)
+    }
+
+    /**
+     * If `[flushedFloor, x)` is contiguously ACK'd (no entry in
+     * [inFlight] or [retransmit] starts at or below `flushedFloor`),
+     * advance [flushedFloor] up to the lowest in-flight or
+     * retransmit-queued offset, and shift [data] forward by the same
+     * amount.
+     */
+    private fun advanceFlushedFloorIfPossible() {
+        val lowestInFlight = inFlight.firstOrNull()?.offset ?: _nextOffset
+        val lowestRetransmit = retransmit.minOfOrNull { it.offset } ?: _nextOffset
+        val lowest = minOf(lowestInFlight, lowestRetransmit, nextSendOffset)
+        val advance = lowest - flushedFloor
+        if (advance <= 0L) return
+        val advanceInt = advance.toInt()
+        // Shift [data] forward.
+        if (advanceInt < dataLen) {
+            data.copyInto(
+                destination = data,
+                destinationOffset = 0,
+                startIndex = advanceInt,
+                endIndex = dataLen,
+            )
+        }
+        dataLen -= advanceInt
+        flushedFloor += advance
+    }
+
+    /**
+     * Slice [length] bytes starting at logical offset [offset].
+     * [offset] must lie in `[flushedFloor, nextOffset)`.
+     */
+    private fun sliceAt(
+        offset: Long,
+        length: Int,
+    ): ByteArray {
+        if (length == 0) return ByteArray(0)
+        val pos = (offset - flushedFloor).toInt()
+        return data.copyOfRange(pos, pos + length)
+    }
+
+    private fun ensureCapacity(needed: Int) {
+        if (data.size < needed) {
+            var newCap = if (data.size == 0) 64 else data.size
+            while (newCap < needed) newCap *= 2
+            data = data.copyOf(newCap)
+        }
+    }
+
+    /**
+     * One contiguous offset range tracked by the buffer's bookkeeping.
+     * [length] is `Long` to match QUIC's offset arithmetic — practical
+     * range sizes fit in Int, but the offset field naturally is.
+     */
+    private data class Range(
+        val offset: Long,
+        val length: Long,
+        val fin: Boolean,
+    )
 
     data class Chunk(
         val offset: Long,
         val data: ByteArray,
         val fin: Boolean,
-    )
+    ) {
+        // ByteArray needs explicit equality.
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Chunk) return false
+            return offset == other.offset && fin == other.fin && data.contentEquals(other.data)
+        }
+
+        override fun hashCode(): Int {
+            var result = offset.hashCode()
+            result = 31 * result + fin.hashCode()
+            result = 31 * result + data.contentHashCode()
+            return result
+        }
+    }
 }
