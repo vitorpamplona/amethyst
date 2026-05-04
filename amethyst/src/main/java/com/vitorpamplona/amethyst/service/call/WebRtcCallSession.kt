@@ -211,7 +211,7 @@ class WebRtcCallSession(
                 }
 
                 override fun onCreateFailure(error: String?) {
-                    Log.e(TAG, "Create offer failed: $error")
+                    Log.e(TAG) { "Create offer failed: $error" }
                     error?.let { onError("Create offer failed: $it") }
                 }
 
@@ -245,7 +245,7 @@ class WebRtcCallSession(
                 }
 
                 override fun onCreateFailure(error: String?) {
-                    Log.e(TAG, "Create answer failed: $error")
+                    Log.e(TAG) { "Create answer failed: $error" }
                     error?.let { onError("Create answer failed: $it") }
                 }
 
@@ -278,7 +278,7 @@ class WebRtcCallSession(
                 }
 
                 override fun onSetFailure(error: String?) {
-                    Log.e(TAG, "setRemoteDescription FAILED: $error (type=${sdp.type})")
+                    Log.e(TAG) { "setRemoteDescription FAILED: $error (type=${sdp.type})" }
                     error?.let { onError("SDP error: $it") }
                 }
             },
@@ -314,7 +314,7 @@ class WebRtcCallSession(
                 }
 
                 override fun onCreateFailure(error: String?) {
-                    Log.e(TAG, "ICE restart offer creation failed: $error")
+                    Log.e(TAG) { "ICE restart offer creation failed: $error" }
                     onError("Connection failed - check network")
                     onDisconnected()
                 }
@@ -364,7 +364,7 @@ class WebRtcCallSession(
                 }
 
                 override fun onSetFailure(error: String?) {
-                    Log.e(TAG, "Rollback FAILED: $error")
+                    Log.e(TAG) { "Rollback FAILED: $error" }
                     error?.let { onError("Rollback failed: $it") }
                 }
             },
@@ -386,7 +386,7 @@ class WebRtcCallSession(
             }
 
             override fun onCreateFailure(error: String?) {
-                Log.e(TAG, "$label onCreateFailure: $error")
+                Log.e(TAG) { "$label onCreateFailure: $error" }
                 error?.let { onError("SDP error: $it") }
             }
 
@@ -395,7 +395,7 @@ class WebRtcCallSession(
             }
 
             override fun onSetFailure(error: String?) {
-                Log.e(TAG, "$label onSetFailure: $error")
+                Log.e(TAG) { "$label onSetFailure: $error" }
                 error?.let { onError("SDP error: $it") }
             }
         }
