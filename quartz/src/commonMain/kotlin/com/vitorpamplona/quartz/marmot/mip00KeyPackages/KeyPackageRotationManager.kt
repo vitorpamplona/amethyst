@@ -103,7 +103,7 @@ class KeyPackageRotationManager(
             try {
                 store.load()
             } catch (e: Exception) {
-                Log.w("KeyPackageRotationManager") { "Failed to load persisted KeyPackages: ${e.message}" }
+                Log.w("KeyPackageRotationManager", "Failed to load persisted KeyPackages", e)
                 null
             } ?: return
         try {
@@ -117,7 +117,7 @@ class KeyPackageRotationManager(
                 try {
                     store.delete()
                 } catch (e: Exception) {
-                    Log.w("KeyPackageRotationManager") { "Failed to delete legacy snapshot: ${e.message}" }
+                    Log.w("KeyPackageRotationManager", "Failed to delete legacy snapshot", e)
                 }
                 return
             }
@@ -133,7 +133,7 @@ class KeyPackageRotationManager(
                 try {
                     store.delete()
                 } catch (e: Exception) {
-                    Log.w("KeyPackageRotationManager") { "Failed to delete stale snapshot: ${e.message}" }
+                    Log.w("KeyPackageRotationManager", "Failed to delete stale snapshot", e)
                 }
                 return
             }
@@ -154,7 +154,7 @@ class KeyPackageRotationManager(
                     "${decoded.namedSlotDTags.size} named slot d-tag(s)"
             }
         } catch (e: Exception) {
-            Log.w("KeyPackageRotationManager") { "Failed to decode persisted KeyPackages: ${e.message}" }
+            Log.w("KeyPackageRotationManager", "Failed to decode persisted KeyPackages", e)
         }
     }
 
@@ -174,7 +174,7 @@ class KeyPackageRotationManager(
             try {
                 store.delete()
             } catch (e: Exception) {
-                Log.w("KeyPackageRotationManager") { "clearAllState(): failed to delete snapshot: ${e.message}" }
+                Log.w("KeyPackageRotationManager", "clearAllState(): failed to delete snapshot", e)
             }
         }
 
@@ -280,7 +280,7 @@ class KeyPackageRotationManager(
         try {
             store.save(snapshotBytesUnlocked())
         } catch (e: Exception) {
-            Log.w("KeyPackageRotationManager") { "Failed to persist KeyPackages: ${e.message}" }
+            Log.w("KeyPackageRotationManager", "Failed to persist KeyPackages", e)
         }
     }
 
