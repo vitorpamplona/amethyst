@@ -20,20 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,6 +51,7 @@ import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +70,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -70,13 +81,26 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ShowUserButton
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
+import com.vitorpamplona.amethyst.ui.screen.UserFeedState
+import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenWordsFeedViewModel
@@ -85,9 +109,12 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -129,7 +156,7 @@ fun SecurityFiltersScreen(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SecurityFiltersScreen(
     hiddenFeedViewModel: HiddenAccountsFeedViewModel,
@@ -155,9 +182,48 @@ fun SecurityFiltersScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val pagerState = rememberPagerState { 3 }
+    val coroutineScope = rememberCoroutineScope()
+
+    var selectedUsers by remember { mutableStateOf(setOf<String>()) }
+    var selectedWords by remember { mutableStateOf(setOf<String>()) }
+
+    LaunchedEffect(pagerState.currentPage) {
+        selectedUsers = emptySet()
+        selectedWords = emptySet()
+    }
+
+    val selectionMode = selectedUsers.isNotEmpty() || selectedWords.isNotEmpty()
+
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.security_filters), nav)
+            if (selectionMode) {
+                SelectionTopBar(
+                    selectedCount = if (pagerState.currentPage == 2) selectedWords.size else selectedUsers.size,
+                    onCancel = {
+                        selectedUsers = emptySet()
+                        selectedWords = emptySet()
+                    },
+                    onRemove = {
+                        if (pagerState.currentPage == 2) {
+                            if (!accountViewModel.isWriteable()) {
+                                accountViewModel.toastManager.toast(
+                                    R.string.read_only_user,
+                                    R.string.login_with_a_private_key_to_be_able_to_show_word,
+                                )
+                            } else {
+                                accountViewModel.showWords(selectedWords.toList())
+                                selectedWords = emptySet()
+                            }
+                        } else {
+                            accountViewModel.showUsers(selectedUsers.toList())
+                            selectedUsers = emptySet()
+                        }
+                    },
+                )
+            } else {
+                TopBarWithBackButton(stringRes(id = R.string.security_filters), nav)
+            }
         },
     ) {
         Column(
@@ -165,9 +231,6 @@ fun SecurityFiltersScreen(
                 .padding(it)
                 .fillMaxHeight(),
         ) {
-            val pagerState = rememberPagerState { 3 }
-            val coroutineScope = rememberCoroutineScope()
-
             HeaderOptions(accountViewModel)
 
             HorizontalDivider(thickness = DividerThickness)
@@ -198,13 +261,76 @@ fun SecurityFiltersScreen(
             }
             HorizontalPager(state = pagerState) { page ->
                 when (page) {
-                    0 -> RefreshingFeedUserFeedView(hiddenFeedViewModel, accountViewModel, nav)
-                    1 -> RefreshingFeedUserFeedView(spammerFeedViewModel, accountViewModel, nav)
-                    2 -> HiddenWordsFeed(hiddenWordsViewModel, accountViewModel)
+                    0 -> {
+                        SelectableHiddenUsersFeed(
+                            viewModel = hiddenFeedViewModel,
+                            selected = selectedUsers,
+                            onToggle = { hex ->
+                                selectedUsers =
+                                    if (hex in selectedUsers) selectedUsers - hex else selectedUsers + hex
+                            },
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+
+                    1 -> {
+                        RefreshingFeedUserFeedView(spammerFeedViewModel, accountViewModel, nav)
+                    }
+
+                    2 -> {
+                        HiddenWordsFeed(
+                            hiddenWordsViewModel = hiddenWordsViewModel,
+                            accountViewModel = accountViewModel,
+                            selected = selectedWords,
+                            onToggle = { word ->
+                                selectedWords =
+                                    if (word in selectedWords) selectedWords - word else selectedWords + word
+                            },
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectionTopBar(
+    selectedCount: Int,
+    onCancel: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    ShorterTopAppBar(
+        title = {
+            Text(
+                text = stringRes(R.string.num_selected, selectedCount),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Start,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+            )
+        },
+        navigationIcon = {
+            CloseButton(
+                modifier = HalfHorzPadding,
+                onPress = onCancel,
+            )
+        },
+        actions = {
+            Button(
+                modifier = HalfHorzPadding,
+                onClick = onRemove,
+            ) {
+                Text(text = stringRes(R.string.unblock))
+            }
+        },
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+    )
 }
 
 @Composable
@@ -302,14 +428,24 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
 private fun HiddenWordsFeed(
     hiddenWordsViewModel: HiddenWordsFeedViewModel,
     accountViewModel: AccountViewModel,
+    selected: Set<String>,
+    onToggle: (String) -> Unit,
 ) {
+    val selectionMode = selected.isNotEmpty()
     RefresheableBox(hiddenWordsViewModel, false) {
         StringFeedView(
             hiddenWordsViewModel,
             accountViewModel,
             post = { AddMuteWordTextField(accountViewModel) },
-        ) {
-            MutedWordHeader(tag = it, account = accountViewModel)
+        ) { word ->
+            MutedWordHeader(
+                tag = word,
+                account = accountViewModel,
+                isSelected = word in selected,
+                selectionMode = selectionMode,
+                onToggle = { onToggle(word) },
+                onLongClick = { onToggle(word) },
+            )
         }
     }
 }
@@ -372,15 +508,32 @@ fun WatchAccountAndBlockList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MutedWordHeader(
     tag: String,
     modifier: Modifier = StdPadding,
     account: AccountViewModel,
+    isSelected: Boolean = false,
+    selectionMode: Boolean = false,
+    onToggle: () -> Unit = {},
+    onLongClick: () -> Unit = {},
 ) {
-    Column(
-        Modifier.fillMaxWidth(),
-    ) {
+    val rowModifier =
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = { if (selectionMode) onToggle() },
+                onLongClick = onLongClick,
+            ).let {
+                if (isSelected) {
+                    it.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                } else {
+                    it
+                }
+            }
+
+    Column(rowModifier) {
         Column(modifier = modifier) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -392,7 +545,11 @@ fun MutedWordHeader(
                     modifier = Modifier.weight(1f),
                 )
 
-                MutedWordActionOptions(tag, account)
+                if (selectionMode) {
+                    Checkbox(checked = isSelected, onCheckedChange = { onToggle() })
+                } else {
+                    MutedWordActionOptions(tag, account)
+                }
             }
         }
     }
@@ -477,5 +634,111 @@ private fun hideIfWritable(
     } else {
         accountViewModel.hide(currentWordToAdd.value)
         currentWordToAdd.value = ""
+    }
+}
+
+@Composable
+private fun SelectableHiddenUsersFeed(
+    viewModel: UserFeedViewModel,
+    selected: Set<String>,
+    onToggle: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val selectionMode = selected.isNotEmpty()
+    RefresheableBox(viewModel, true) {
+        val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+
+        CrossfadeIfEnabled(
+            targetState = feedState,
+            animationSpec = tween(durationMillis = 100),
+            accountViewModel = accountViewModel,
+        ) { state ->
+            when (state) {
+                is UserFeedState.Empty -> {
+                    FeedEmpty { viewModel.invalidateData() }
+                }
+
+                is UserFeedState.FeedError -> {
+                    FeedError(state.errorMessage) { viewModel.invalidateData() }
+                }
+
+                is UserFeedState.Loading -> {
+                    LoadingFeed()
+                }
+
+                is UserFeedState.Loaded -> {
+                    SelectableHiddenUsersList(
+                        state = state,
+                        selected = selected,
+                        selectionMode = selectionMode,
+                        onToggle = onToggle,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SelectableHiddenUsersList(
+    state: UserFeedState.Loaded,
+    selected: Set<String>,
+    selectionMode: Boolean,
+    onToggle: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val items by state.feed.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
+        state = listState,
+    ) {
+        itemsIndexed(items, key = { _, item -> item.pubkeyHex }) { _, user ->
+            val isSelected = user.pubkeyHex in selected
+
+            val rowModifier =
+                Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = {
+                            if (selectionMode) {
+                                onToggle(user.pubkeyHex)
+                            } else {
+                                nav.nav(routeFor(user))
+                            }
+                        },
+                        onLongClick = { onToggle(user.pubkeyHex) },
+                    ).let {
+                        if (isSelected) {
+                            it.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        } else {
+                            it
+                        }
+                    }
+
+            Row(
+                modifier = rowModifier.padding(horizontal = Size15dp, vertical = Size10dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                UserPicture(user, Size55dp, accountViewModel = accountViewModel, nav = nav)
+                Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
+                    UsernameDisplay(user, accountViewModel = accountViewModel)
+                }
+                if (selectionMode) {
+                    Checkbox(checked = isSelected, onCheckedChange = { onToggle(user.pubkeyHex) })
+                } else {
+                    ShowUserButton { accountViewModel.show(user) }
+                }
+            }
+
+            HorizontalDivider(thickness = DividerThickness)
+        }
     }
 }

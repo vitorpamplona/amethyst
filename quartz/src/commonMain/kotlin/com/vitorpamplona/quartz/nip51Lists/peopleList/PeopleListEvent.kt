@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
@@ -190,6 +191,23 @@ class PeopleListEvent(
             return resign(
                 privateTags = privateTags.remove(person.toTagIdOnly()),
                 publicTags = earlierVersion.tags.remove(person.toTagIdOnly()),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
+        suspend fun removeAll(
+            earlierVersion: PeopleListEvent,
+            persons: List<MuteTag>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): PeopleListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            val ids = persons.map { it.toTagIdOnly() }
+
+            return resign(
+                privateTags = privateTags.removeAny(ids),
+                publicTags = earlierVersion.tags.removeAny(ids),
                 signer = signer,
                 createdAt = createdAt,
             )

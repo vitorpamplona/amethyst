@@ -139,6 +139,26 @@ class MuteListState(
         }
     }
 
+    suspend fun showUsers(pubkeys: List<String>): MuteListEvent? {
+        if (pubkeys.isEmpty()) return null
+        val muteList = getMuteList() ?: return null
+        return MuteListEvent.removeAll(
+            earlierVersion = muteList,
+            mutes = pubkeys.map { UserTag(it) },
+            signer = signer,
+        )
+    }
+
+    suspend fun showWords(words: List<String>): MuteListEvent? {
+        if (words.isEmpty()) return null
+        val muteList = getMuteList() ?: return null
+        return MuteListEvent.removeAll(
+            earlierVersion = muteList,
+            mutes = words.map { WordTag(it) },
+            signer = signer,
+        )
+    }
+
     init {
         settings.backupMuteList?.let { event ->
             Log.d("AccountRegisterObservers") { "Loading saved mute list ${event.toJson()}" }

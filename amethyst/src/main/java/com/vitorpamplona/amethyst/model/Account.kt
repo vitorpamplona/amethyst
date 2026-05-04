@@ -2768,6 +2768,19 @@ class Account(
         hiddenUsers.showUser(pubkeyHex)
     }
 
+    suspend fun showUsers(pubkeys: List<HexKey>) {
+        if (pubkeys.isEmpty()) return
+        sendMyPublicAndPrivateOutbox(blockPeopleList.showUsers(pubkeys))
+        sendMyPublicAndPrivateOutbox(muteList.showUsers(pubkeys))
+        pubkeys.forEach { hiddenUsers.showUser(it) }
+    }
+
+    suspend fun showWords(words: List<String>) {
+        if (words.isEmpty()) return
+        sendMyPublicAndPrivateOutbox(blockPeopleList.showWords(words))
+        sendMyPublicAndPrivateOutbox(muteList.showWords(words))
+    }
+
     suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
         onReady: (event: NIP90ContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
