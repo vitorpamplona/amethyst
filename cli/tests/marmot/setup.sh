@@ -1,0 +1,370 @@
+# shellcheck shell=bash
+#
+# setup.sh — preflight + daemon lifecycle + identity bootstrap.
+# Sourced from marmot-interop-headless.sh.
+
+# --- preflight ---------------------------------------------------------------
+preflight() {
+  banner "Preflight"
+  for cmd in jq git curl cargo protoc patch; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      fail_msg "missing required tool: $cmd"
+      case "$cmd" in
+        protoc) info "hint: apt-get install protobuf-compiler   (or brew install protobuf on macOS)" ;;
+        patch)  info "hint: apt-get install patch" ;;
+      esac
+      exit 1
+    fi
+    info "$cmd: $(command -v "$cmd")"
+  done
+
+  # Build `amy` via gradle if missing.
+  #
+  # jitpack.io and dl.google.com both return transient 503s on a non-trivial
+  # fraction of cold-cache fetches, and Gradle disables the entire repository
+  # for the rest of the build the moment a single 503 lands — so one bad
+  # roll aborts the whole harness. Retry a few times; each attempt resumes
+  # from Gradle's cache so only the still-missing artifacts get re-fetched.
+  if [[ ! -x "$AMY_BIN" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      fail_msg "amy not found at $AMY_BIN and --no-build set"; exit 1
+    fi
+    local attempt max_attempts=4
+    for attempt in $(seq 1 $max_attempts); do
+      step "building :cli:installDist (attempt $attempt/$max_attempts)"
+      if ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE" \
+          && [[ -x "$AMY_BIN" ]]; then
+        break
+      fi
+      [[ "$attempt" -lt "$max_attempts" ]] && warn "gradle build failed (likely transient jitpack/Google 503) — retrying"
+    done
+  fi
+  [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
+  info "amy: $AMY_BIN"
+
+  # Clone/build whitenoise-rs if needed (shared between both harnesses).
+  if [[ ! -d "$WN_REPO/.git" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      fail_msg "whitenoise-rs checkout missing at $WN_REPO and --no-build set"; exit 1
+    fi
+    step "cloning whitenoise-rs into $WN_REPO"
+    git clone --depth 1 https://github.com/marmot-protocol/whitenoise-rs.git "$WN_REPO" \
+      2>&1 | tee -a "$LOG_FILE"
+  fi
+
+  # Four harness-only patches to wnd so it runs fully offline / in
+  # sandboxes that block outbound + kernel keyring:
+  #   1. discovery-env: honour $WHITENOISE_DISCOVERY_RELAYS so we can
+  #      point wnd at our loopback relay instead of the baked-in public
+  #      set. Without it wnd exits with NoRelayConnections.
+  #   2. mock-keyring: honour $WHITENOISE_MOCK_KEYRING so wnd uses the
+  #      integration-tests mock keyring store when the kernel keyutils
+  #      syscalls are blocked (common in containers / CI).
+  #   3. defaults-env: reuse the same env var so `Relay::defaults()`
+  #      (what `create-identity` stamps into the new account's NIP-65 /
+  #      inbox / key-package lists) points at the loopback relay too.
+  #      Without it every account wnd creates carries damus.io /
+  #      primal.net / nos.lol, and every later activate / publish burns
+  #      connection budget on unreachable sockets — enough to break the
+  #      account-inbox subscription plane and drop kind:1059 delivery.
+  #   4. skip-unprocessable-retry: when mdk-core returns
+  #      `MlsMessageUnprocessable` (pre-membership commit, too-old epoch)
+  #      the message is provably undecryptable — retrying it ten times
+  #      with exponential backoff (total ~17 min) just blocks later
+  #      decryptable commits behind a queue of doomed retries, which in
+  #      the harness manifests as "A already left" / "name unchanged"
+  #      timeouts. The patch treats that error as terminal.
+  local -a patches=(
+    "whitenoise-discovery-env.patch"
+    "whitenoise-mock-keyring.patch"
+    "whitenoise-defaults-env.patch"
+    "whitenoise-skip-unprocessable-retry.patch"
+  )
+  # Apply each patch with a real exit-code check. The previous version
+  # swallowed patch's exit status via `| tee`, which meant a miscounted
+  # hunk header silently left the marker touched and the binary unpatched
+  # — the resulting wn retried provably-doomed MLS messages for ~17min
+  # and every later test flapped or timed out. Fail fast instead.
+  for name in "${patches[@]}"; do
+    local marker="$WN_REPO/.headless-patched-${name%.patch}"
+    if [[ ! -f "$marker" ]]; then
+      step "patching whitenoise-rs: $name"
+      if ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- \
+             <"$SCRIPT_DIR/patches/$name" >>"$LOG_FILE" 2>&1 ); then
+        touch "$marker"
+        # Invalidate the previous build so the patched source is picked up.
+        rm -f "$WN_BIN" "$WND_BIN"
+      else
+        fail_msg "patch $name failed — see $LOG_FILE"
+        tail -n 30 "$LOG_FILE" | sed 's/^/  /' >&2
+        exit 1
+      fi
+    fi
+  done
+
+  # cargo's transitive deps (rustup, crates.io) both return 503 on cold
+  # caches often enough that a single attempt fails ~30% of the time.
+  # Retry each cargo build until the binary actually exists or we've
+  # exhausted the budget — the build is incremental so retries are cheap.
+  if [[ ! -x "$WN_BIN" || ! -x "$WND_BIN" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      fail_msg "wn/wnd not found and --no-build set"; exit 1
+    fi
+    local attempt max=4
+    for attempt in $(seq 1 $max); do
+      step "building wn + wnd (attempt $attempt/$max, ~5 min first run)"
+      ( cd "$WN_REPO" && \
+          cargo build --release --features cli,integration-tests --bin wn --bin wnd ) \
+        2>&1 | tee -a "$LOG_FILE"
+      [[ -x "$WN_BIN" && -x "$WND_BIN" ]] && break
+      [[ "$attempt" -lt "$max" ]] && warn "wn/wnd build failed (likely transient 503 from rustup or crates.io) — retrying"
+    done
+    [[ -x "$WN_BIN" && -x "$WND_BIN" ]] || {
+      fail_msg "wn/wnd still missing after $max build attempts"; exit 1
+    }
+  fi
+  info "wn:  $WN_BIN"
+  info "wnd: $WND_BIN"
+
+  # Clone/build nostr-rs-relay — the harness's single loopback relay.
+  if [[ ! -x "$RELAY_BIN" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      fail_msg "nostr-rs-relay not found at $RELAY_BIN and --no-build set"; exit 1
+    fi
+    if [[ ! -d "$RELAY_REPO/.git" ]]; then
+      step "cloning nostr-rs-relay into $RELAY_REPO"
+      git clone --depth 1 https://github.com/scsibug/nostr-rs-relay "$RELAY_REPO" \
+        2>&1 | tee -a "$LOG_FILE"
+    fi
+    local attempt max=4
+    for attempt in $(seq 1 $max); do
+      step "building nostr-rs-relay (attempt $attempt/$max, ~3 min first run)"
+      ( cd "$RELAY_REPO" && cargo build --release --bin nostr-rs-relay ) \
+        2>&1 | tee -a "$LOG_FILE"
+      [[ -x "$RELAY_BIN" ]] && break
+      [[ "$attempt" -lt "$max" ]] && warn "nostr-rs-relay build failed (likely transient 503 from crates.io) — retrying"
+    done
+    [[ -x "$RELAY_BIN" ]] || {
+      fail_msg "nostr-rs-relay still missing after $max build attempts"; exit 1
+    }
+  fi
+  info "relay bin: $RELAY_BIN"
+}
+
+# --- local relay -------------------------------------------------------------
+# Start nostr-rs-relay on $RELAY_PORT with a minimal config. Every test
+# runs against this one loopback endpoint — no external network traffic.
+start_local_relay() {
+  banner "Starting local nostr-rs-relay on $RELAY_URL"
+  mkdir -p "$RELAY_DATA" "$RELAY_DATA/logs"
+
+  # Render a minimal config file each run so port/limits come from the
+  # harness rather than whatever was left on disk from a previous session.
+  cat >"$RELAY_DATA/config.toml" <<EOF
+[info]
+relay_url = "$RELAY_URL"
+name = "amethyst-headless-harness"
+description = "Loopback relay for marmot-interop-headless.sh — do not use for anything real."
+
+[database]
+data_directory = "$RELAY_DATA"
+
+[network]
+address = "${RELAY_HOST:-127.0.0.1}"
+port = $RELAY_PORT
+
+[options]
+reject_future_seconds = 3600
+
+[limits]
+# Keep kind:444 / 445 / 1059 / 30443 wide open — the whole point is
+# exercising Marmot traffic the public relays reject.
+max_event_bytes = 524288
+max_ws_message_bytes = 1048576
+max_ws_frame_bytes = 1048576
+EOF
+
+  # Abort early if something else is already bound to the port — failing
+  # with a clear error beats a mysterious-looking daemon stall later.
+  if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$RELAY_PORT\$"; then
+    fail_msg "port $RELAY_PORT already in use — pass --port N or free it"
+    exit 1
+  fi
+
+  nohup "$RELAY_BIN" --db "$RELAY_DATA" --config "$RELAY_DATA/config.toml" \
+    >"$RELAY_DATA/logs/stdout.log" 2>"$RELAY_DATA/logs/stderr.log" &
+  echo "$!" > "$RELAY_DATA/pid"
+  step "relay pid $(cat "$RELAY_DATA/pid"); waiting for $RELAY_URL …"
+
+  local deadline=$(( $(date +%s) + 20 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if curl -sSf -m 1 "http://${RELAY_HOST:-127.0.0.1}:$RELAY_PORT/" >/dev/null 2>&1; then
+      info "relay up"
+      return 0
+    fi
+    sleep 0.5
+  done
+  fail_msg "relay never came up (see $RELAY_DATA/logs/stderr.log)"
+  tail -n 40 "$RELAY_DATA/logs/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
+  exit 1
+}
+
+stop_local_relay() {
+  local pid_file="$RELAY_DATA/pid"
+  [[ -f "$pid_file" ]] || return 0
+  local pid; pid=$(cat "$pid_file" 2>/dev/null || echo "")
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    info "stopping relay pid $pid"
+    kill "$pid" 2>/dev/null || true
+    sleep 1
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+  rm -f "$pid_file"
+}
+
+# --- daemons -----------------------------------------------------------------
+start_daemon() {
+  local name="$1" data_dir="$2" socket="$3"
+  step "starting $name daemon"
+  if [[ -S "$socket" ]] && "$WN_BIN" --socket "$socket" whoami >/dev/null 2>&1; then
+    info "$name daemon already running"; return 0
+  fi
+  rm -f "$socket"
+  # The mock keyring (WHITENOISE_MOCK_KEYRING=1) is in-memory only and
+  # resets to empty on every wnd restart, but the SQLite databases that
+  # wnd writes under $data_dir persist across runs and reference keys that
+  # no longer exist — wnd then bails with KeyringEntryMissingForExistingDatabase
+  # before it can even open a socket. Wipe the keyring-dependent state on
+  # each start so the daemon always comes up cold and consistent. Logs
+  # and the pid file are preserved for post-mortem.
+  if [[ -d "$data_dir" ]]; then
+    find "$data_dir" -mindepth 1 -maxdepth 1 \
+      ! -name 'logs' ! -name 'pid' \
+      -exec rm -rf {} + 2>/dev/null || true
+  fi
+  mkdir -p "$data_dir/logs" "$data_dir/release"
+  # Env vars consumed by the two harness-only wnd patches applied in
+  # preflight:
+  #   WHITENOISE_DISCOVERY_RELAYS — forces the discovery plane at our
+  #     loopback relay (kills the "can't reach nos.lol" exit path).
+  #   WHITENOISE_MOCK_KEYRING     — swaps in the integration-tests mock
+  #     secret store so wnd doesn't fall over when the kernel blocks
+  #     keyutils syscalls.
+  # Both are harmless on a real host with connectivity + a real keyring.
+  WHITENOISE_DISCOVERY_RELAYS="$RELAY_URL" \
+    WHITENOISE_MOCK_KEYRING=1 \
+    nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+      >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
+  local pid=$!
+  echo "$pid" > "$data_dir/pid"
+  info "$name pid $pid; waiting for socket at $socket …"
+  local deadline=$(( $(date +%s) + 30 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if [[ -S "$socket" ]] && "$WN_BIN" --socket "$socket" whoami >/dev/null 2>&1; then
+      info "$name ready"; return 0
+    fi
+    # Exit early if wnd already crashed — no point waiting the full 30s.
+    if ! kill -0 "$pid" 2>/dev/null; then
+      break
+    fi
+    sleep 1
+  done
+  # Dump the actual failure so the operator doesn't have to chase a path.
+  if kill -0 "$pid" 2>/dev/null; then
+    fail_msg "$name daemon still running (pid $pid) but socket $socket never appeared within 30s"
+    kill "$pid" 2>/dev/null || true
+  else
+    fail_msg "$name daemon (pid $pid) exited before creating socket $socket"
+  fi
+  if [[ -s "$data_dir/logs/stderr.log" ]]; then
+    printf '  --- last 40 lines of %s ---\n' "$data_dir/logs/stderr.log" >&2
+    tail -n 40 "$data_dir/logs/stderr.log" | sed 's/^/  /' >&2
+    printf '  --- end stderr ---\n' >&2
+  else
+    info "stderr log is empty at $data_dir/logs/stderr.log"
+  fi
+  if [[ -s "$data_dir/logs/stdout.log" ]]; then
+    printf '  --- last 20 lines of %s ---\n' "$data_dir/logs/stdout.log" >&2
+    tail -n 20 "$data_dir/logs/stdout.log" | sed 's/^/  /' >&2
+    printf '  --- end stdout ---\n' >&2
+  fi
+  exit 1
+}
+
+stop_daemons() {
+  for d in "$B_DIR" "$C_DIR"; do
+    if [[ -f "$d/pid" ]]; then
+      local pid; pid=$(cat "$d/pid" 2>/dev/null || echo "")
+      if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        info "stopping daemon pid $pid"
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+        kill -9 "$pid" 2>/dev/null || true
+      fi
+      rm -f "$d/pid"
+    fi
+  done
+}
+
+# --- identities --------------------------------------------------------------
+ensure_identity_a() {
+  step "initialising Identity A (amy)"
+  local out
+  out=$(amy_a init) || { fail_msg "amy init failed: $out"; exit 1; }
+  A_NPUB=$(printf '%s' "$out" | jq -r '.npub')
+  A_HEX=$(printf '%s' "$out" | jq -r '.hex')
+  info "A npub: $A_NPUB"
+  info "A hex:  $A_HEX"
+}
+
+ensure_identity() {
+  local who="$1" cmd npub=""
+  if [[ "$who" == "B" ]]; then cmd=wn_b; else cmd=wn_c; fi
+  step "ensuring Identity $who (wn)"
+
+  local raw
+  raw=$("$cmd" --json whoami 2>/dev/null || true)
+  npub=$(extract_pubkey "$raw")
+  if [[ -z "${npub:-}" ]]; then
+    # create-identity sometimes exits non-zero (e.g. transient "failed to
+    # connect to any relays") even though the account was created. Probe
+    # --json whoami afterwards before giving up.
+    "$cmd" create-identity 2>&1 | tee -a "$LOG_FILE" || true
+    raw=$("$cmd" --json whoami 2>/dev/null || true)
+    npub=$(extract_pubkey "$raw")
+  fi
+  [[ -n "$npub" ]] || { fail_msg "could not determine $who npub"; exit 1; }
+
+  local hex; hex=$(npub_to_hex "$npub")
+  if [[ "$who" == "B" ]]; then B_NPUB="$npub"; B_HEX="$hex"
+  else                         C_NPUB="$npub"; C_HEX="$hex"; fi
+  info "$who npub: $npub"
+  [[ "$hex" != "$npub" ]] && info "$who hex:  $hex"
+}
+
+# --- relays ------------------------------------------------------------------
+# Point all three identities at the loopback relay. We never publish any
+# test traffic off-box — public relays reject kind:445 anyway and the
+# goal here is tight, deterministic iteration.
+configure_relays() {
+  banner "Configuring relays → $RELAY_URL"
+  amy_a relay add "$RELAY_URL" --type all >/dev/null
+  for t in nip65 inbox key_package; do
+    wn_b relays add --type "$t" "$RELAY_URL" 2>/dev/null || true
+    wn_c relays add --type "$t" "$RELAY_URL" 2>/dev/null || true
+  done
+
+  # A advertises its NIP-65 + DM inbox lists so B/C can discover where to
+  # deliver gift wraps. With a single shared relay the lookup is trivial
+  # but we still publish so we catch regressions in the advertise path.
+  step "publishing A's NIP-65 + kind:10050 lists"
+  amy_a relay publish-lists >>"$LOG_FILE" 2>&1 || warn "amy relay publish-lists failed"
+
+  step "publishing A's KeyPackage"
+  amy_a marmot key-package publish >>"$LOG_FILE" 2>&1 || warn "amy marmot key-package publish failed"
+  # Give nostr-rs-relay a breath to fsync the kind:10002 / 10050 / 30443
+  # writes and push them out on the discovery subscription so that the
+  # first `wn keys check` that follows actually sees them instead of
+  # racing the relay's WAL flush.
+  sleep 2
+}

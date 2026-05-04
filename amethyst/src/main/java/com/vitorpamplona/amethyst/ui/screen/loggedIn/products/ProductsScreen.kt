@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.products
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -34,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -67,29 +65,29 @@ fun ProductsScreen(
             ProductsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Products, accountViewModel) { route ->
+            AppBottomBar(Route.Products, nav, accountViewModel) { route ->
                 if (route == Route.Products) {
                     productsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
         floatingButton = {
-            NewProductButton(accountViewModel, nav)
+            FabBottomBarPadded(nav) {
+                NewProductButton(accountViewModel, nav)
+            }
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            RefresheableBox(productsFeedContentState, true) {
-                SaveableGridFeedContentState(productsFeedContentState, scrollStateKey = ScrollStateKeys.PRODUCTS_SCREEN) { gridState ->
-                    RenderProductsFeed(
-                        feedContentState = productsFeedContentState,
-                        gridState = gridState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+    ) {
+        RefresheableBox(productsFeedContentState, true) {
+            SaveableGridFeedContentState(productsFeedContentState, scrollStateKey = ScrollStateKeys.PRODUCTS_SCREEN) { gridState ->
+                RenderProductsFeed(
+                    feedContentState = productsFeedContentState,
+                    gridState = gridState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
     }

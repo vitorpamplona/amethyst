@@ -27,13 +27,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
@@ -69,11 +68,12 @@ fun ListOfBookmarkGroupsFeedView(
     onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList) -> Unit,
     onItemClone: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,
     onDeleteItem: (bookmarkGroup: LabeledBookmarkList) -> Unit,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val bookmarkGroupFeedState by groupListFeedSource.collectAsStateWithLifecycle()
 
     LazyColumn(
-        state = rememberLazyListState(),
+        state = listState,
         contentPadding = FeedPadding,
     ) {
         item {
@@ -138,7 +138,7 @@ fun DefaultBookmarkList(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.BookmarkBorder,
+                    symbol = MaterialSymbols.BookmarkBorder,
                     contentDescription = stringRes(R.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
@@ -182,7 +182,7 @@ fun PinnedNotesList(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.PushPin,
+                    symbol = MaterialSymbols.PushPin,
                     contentDescription = stringRes(R.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
@@ -226,7 +226,7 @@ fun OldBookmarkList(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.BookmarkBorder,
+                    symbol = MaterialSymbols.BookmarkBorder,
                     contentDescription = stringRes(R.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )

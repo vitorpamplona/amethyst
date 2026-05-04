@@ -68,6 +68,8 @@ fun VideoView(
     onDialog: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
+    thumbhash: String? = null,
+    isLiveStream: Boolean = false,
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -78,7 +80,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream)
 }
 
 @Composable
@@ -98,18 +100,37 @@ fun VideoView(
     onDialog: (() -> Unit)? = null,
     alwaysShowVideo: Boolean = false,
     showControls: Boolean = true,
+    isLiveStream: Boolean = false,
     accountViewModel: AccountViewModel,
+    thumbhash: String? = null,
 ) {
-    val automaticallyStartPlayback =
-        remember {
-            mutableStateOf(
-                if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback(),
-            )
+    val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
+    // Reset the manual-show toggle when the video URI changes so a recycled feed slot
+    // doesn't inherit "tapped to show" state from a prior video.
+    val automaticallyStartPlayback = remember(videoUri) { mutableStateOf(initialAutoStart) }
+
+    // Once the video is being shown, only honor the user's autoplay preference when it was auto-loaded.
+    // If the user manually tapped the download button, they want it to play.
+    val autoplay = alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value)
+
+    // Resolve the aspect ratio once per composition. Prime the URL-keyed cache from the imeta
+    // dim tag so the next time this video appears (PiP, dialog, list re-enter) the cache hits
+    // without waiting for ExoPlayer's onVideoSizeChanged. Keys are primitive width/height so
+    // a freshly parsed DimensionTag instance for the same event doesn't re-run this lambda —
+    // DimensionTag uses reference equality, not structural.
+    val dimW = dimensions?.width
+    val dimH = dimensions?.height
+    val ratio =
+        remember(videoUri, dimW, dimH) {
+            if (dimW != null && dimH != null && dimW > 0 && dimH > 0) {
+                MediaAspectRatioCache.add(videoUri, dimW, dimH)
+                dimW.toFloat() / dimH.toFloat()
+            } else {
+                MediaAspectRatioCache.get(videoUri)
+            }
         }
 
-    if (blurhash == null) {
-        val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
-
+    if (blurhash == null && thumbhash == null) {
         val modifier =
             if (ratio != null && automaticallyStartPlayback.value) {
                 Modifier.aspectRatio(ratio)
@@ -135,7 +156,8 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    automaticallyStartPlayback = autoplay,
+                    isLiveStream = isLiveStream,
                     onZoom = onDialog,
                     hasBlurhash = false,
                     accountViewModel = accountViewModel,
@@ -144,8 +166,6 @@ fun VideoView(
             }
         }
     } else {
-        val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
-
         val modifier =
             if (ratio != null) {
                 Modifier.aspectRatio(ratio)
@@ -154,12 +174,13 @@ fun VideoView(
             }
 
         Box(modifier, contentAlignment = Alignment.Center) {
-            // Always displays Blurharh to avoid size flickering
+            // Always displays a placeholder (thumbhash preferred, blurhash fallback) to avoid size flickering
             DisplayBlurHash(
                 blurhash,
                 null,
                 contentScale,
                 if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier,
+                thumbhash = thumbhash,
             )
 
             if (!automaticallyStartPlayback.value) {
@@ -182,7 +203,8 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    automaticallyStartPlayback = autoplay,
+                    isLiveStream = isLiveStream,
                     onZoom = onDialog,
                     hasBlurhash = true,
                     accountViewModel = accountViewModel,

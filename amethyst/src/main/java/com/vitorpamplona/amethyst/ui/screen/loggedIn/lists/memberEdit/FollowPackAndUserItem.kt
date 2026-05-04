@@ -28,13 +28,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.RemoveCircleOutline
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.DisplayParticipantNumberAndStatus
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
@@ -113,7 +108,7 @@ fun FollowPackAndUserItem(
         leadingContent = {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Outlined.Groups,
+                    symbol = MaterialSymbols.Groups,
                     contentDescription = stringRes(R.string.follow_set_icon_description),
                     modifier = Size50ModifierOffset10,
                 )
@@ -149,13 +144,13 @@ private fun UserStatusInList(
 
         val icon =
             if (isMember) {
-                Icons.Outlined.Public
+                MaterialSymbols.Public
             } else {
-                Icons.Outlined.RemoveCircleOutline
+                MaterialSymbols.RemoveCircleOutline
             }
 
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = text,
             modifier = Size15Modifier,
             tint = MaterialTheme.colorScheme.primary,
@@ -200,13 +195,13 @@ private fun UserAdditionOptions(
         ) {
             if (isUserInList) {
                 Icon(
-                    imageVector = Icons.Filled.PersonRemove,
+                    symbol = MaterialSymbols.PersonRemove,
                     contentDescription = stringRes(R.string.remove_user_from_the_list),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Filled.PersonAdd,
+                    symbol = MaterialSymbols.PersonAdd,
                     contentDescription = stringRes(R.string.add_user_to_the_list),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )

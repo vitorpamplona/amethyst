@@ -85,12 +85,11 @@ fun RenderPrivateMessage(
         }
     }
 
-    val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
+    val withMe = remember(noteEvent) { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
     if (withMe) {
         LoadDecryptedContent(note, accountViewModel) { eventContent ->
-            val modifier = remember(note.event?.id) { Modifier.fillMaxWidth() }
             val isAuthorTheLoggedUser =
-                remember(note.event?.id) { accountViewModel.isLoggedUser(note.author) }
+                remember(note.author) { accountViewModel.isLoggedUser(note.author) }
 
             val tags =
                 remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
@@ -113,7 +112,7 @@ fun RenderPrivateMessage(
                         content = eventContent,
                         canPreview = canPreview && !makeItShort,
                         quotesLeft = quotesLeft,
-                        modifier = modifier,
+                        modifier = Modifier.fillMaxWidth(),
                         tags = tags,
                         backgroundColor = backgroundColor,
                         id = note.idHex,

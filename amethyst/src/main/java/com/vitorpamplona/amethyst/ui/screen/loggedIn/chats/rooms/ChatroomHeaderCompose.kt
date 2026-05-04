@@ -85,7 +85,11 @@ fun ChatroomHeaderCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (baseNote.event != null) {
+    val isEmptyMarmotPlaceholder =
+        baseNote.event == null &&
+            baseNote.inGatherers?.any { it is MarmotGroupChatroom } == true
+
+    if (baseNote.event != null || isEmptyMarmotPlaceholder) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
     } else {
         val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
@@ -205,6 +209,10 @@ private fun ChannelRoomCompose(
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(routeFor(channel)) },
     )
 }
@@ -237,6 +245,10 @@ private fun ChannelRoomCompose(
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(routeFor(channel)) },
     )
 }
@@ -248,24 +260,34 @@ private fun MarmotGroupRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val authorName by observeUserName(lastMessage.author!!, accountViewModel)
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
 
+    val author = lastMessage.author
     val noteEvent = lastMessage.event
-    val description = noteEvent?.content?.take(200)
-
     val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
+
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            stringRes(R.string.marmot_group_no_messages_yet)
+        }
 
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
         channelPicture = null,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
         channelLastTime = lastMessage.createdAt(),
-        channelLastContent = "$authorName: $description",
+        channelLastContent = lastContent,
         hasNewMessages = unread > 0,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
     )
 }
@@ -389,6 +411,7 @@ fun ChannelName(
     hasNewMessages: Boolean,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
+    autoPlayGif: Boolean,
     onClick: () -> Unit,
 ) {
     ChannelName(
@@ -400,6 +423,7 @@ fun ChannelName(
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
+                autoPlayGif = autoPlayGif,
             )
         },
         channelTitle,

@@ -32,20 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.BluetoothAudio
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,7 +44,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+
+private const val LABEL_HANG_UP = "Hang up"
+private const val LABEL_CALLING = "Calling…"
 
 // ---- Shared building blocks for previews ----
 
@@ -67,7 +59,7 @@ private fun PreviewAvatar(
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     Icon(
-        Icons.Default.Person,
+        MaterialSymbols.Person,
         contentDescription = null,
         modifier = modifier.size(120.dp),
         tint = tint,
@@ -91,7 +83,7 @@ private fun PreviewGroupAvatars(
                 }
             if (i < 3 || count <= 4) {
                 Icon(
-                    Icons.Default.Person,
+                    MaterialSymbols.Person,
                     contentDescription = null,
                     modifier = Modifier.size(halfSize).align(alignment),
                     tint = tint,
@@ -133,7 +125,7 @@ private fun PreviewCallControls(
         ) {
             IconButton(onClick = {}, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                    symbol = if (isMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
                     contentDescription = "Mute",
                     tint = if (isMuted) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
@@ -141,7 +133,7 @@ private fun PreviewCallControls(
             }
             IconButton(onClick = {}, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                    symbol = if (isVideoEnabled) MaterialSymbols.Videocam else MaterialSymbols.VideocamOff,
                     contentDescription = "Camera",
                     tint = if (!isVideoEnabled) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
@@ -149,11 +141,11 @@ private fun PreviewCallControls(
             }
             IconButton(onClick = {}, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector =
+                    symbol =
                         when (audioRoute) {
-                            "speaker" -> Icons.AutoMirrored.Filled.VolumeUp
-                            "bluetooth" -> Icons.Default.BluetoothAudio
-                            else -> Icons.AutoMirrored.Filled.VolumeOff
+                            "speaker" -> MaterialSymbols.AutoMirrored.VolumeUp
+                            "bluetooth" -> MaterialSymbols.BluetoothAudio
+                            else -> MaterialSymbols.AutoMirrored.VolumeOff
                         },
                     contentDescription = "Audio route",
                     tint =
@@ -168,7 +160,7 @@ private fun PreviewCallControls(
             if (showAddParticipant) {
                 IconButton(onClick = {}, modifier = Modifier.size(56.dp)) {
                     Icon(
-                        Icons.Default.PersonAdd,
+                        MaterialSymbols.PersonAdd,
                         contentDescription = "Add participant",
                         tint = Color.White,
                         modifier = Modifier.size(28.dp),
@@ -183,7 +175,7 @@ private fun PreviewCallControls(
             shape = CircleShape,
             modifier = Modifier.size(64.dp),
         ) {
-            Icon(Icons.Default.CallEnd, "Hang up", tint = Color.White, modifier = Modifier.size(32.dp))
+            Icon(MaterialSymbols.CallEnd, LABEL_HANG_UP, tint = Color.White, modifier = Modifier.size(32.dp))
         }
     }
 }
@@ -218,7 +210,7 @@ private fun PreviewCallInProgress(
                 shape = CircleShape,
                 modifier = Modifier.size(64.dp),
             ) {
-                Icon(Icons.Default.CallEnd, "Hang up", tint = Color.White, modifier = Modifier.size(32.dp))
+                Icon(MaterialSymbols.CallEnd, LABEL_HANG_UP, tint = Color.White, modifier = Modifier.size(32.dp))
             }
         }
     }
@@ -228,7 +220,7 @@ private fun PreviewCallInProgress(
 @Composable
 fun PreviewCallingScreen() {
     ThemeComparisonColumn {
-        PreviewCallInProgress("Alice", "Calling\u2026")
+        PreviewCallInProgress("Alice", LABEL_CALLING)
     }
 }
 
@@ -253,7 +245,7 @@ fun PreviewCallingGroupScreen() {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Alice, Bob +1", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Calling\u2026", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+                Text(LABEL_CALLING, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(48.dp))
                 FloatingActionButton(
                     onClick = {},
@@ -261,7 +253,7 @@ fun PreviewCallingGroupScreen() {
                     shape = CircleShape,
                     modifier = Modifier.size(64.dp),
                 ) {
-                    Icon(Icons.Default.CallEnd, "Hang up", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Icon(MaterialSymbols.CallEnd, LABEL_HANG_UP, tint = Color.White, modifier = Modifier.size(32.dp))
                 }
             }
         }
@@ -303,10 +295,10 @@ fun PreviewIncomingVoiceCallScreen() {
                 Spacer(modifier = Modifier.height(48.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(48.dp)) {
                     FloatingActionButton(onClick = {}, containerColor = Color.Red, shape = CircleShape, modifier = Modifier.size(64.dp)) {
-                        Icon(Icons.Default.CallEnd, "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(MaterialSymbols.CallEnd, "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                     FloatingActionButton(onClick = {}, containerColor = Color(0xFF4CAF50), shape = CircleShape, modifier = Modifier.size(64.dp)) {
-                        Icon(Icons.Default.Call, "Accept", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(MaterialSymbols.Call, "Accept", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                 }
             }
@@ -339,10 +331,10 @@ fun PreviewIncomingVideoCallScreen() {
                 Spacer(modifier = Modifier.height(48.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(48.dp)) {
                     FloatingActionButton(onClick = {}, containerColor = Color.Red, shape = CircleShape, modifier = Modifier.size(64.dp)) {
-                        Icon(Icons.Default.CallEnd, "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(MaterialSymbols.CallEnd, "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                     FloatingActionButton(onClick = {}, containerColor = Color(0xFF4CAF50), shape = CircleShape, modifier = Modifier.size(64.dp)) {
-                        Icon(Icons.Default.Call, "Accept", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(MaterialSymbols.Call, "Accept", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                 }
             }
@@ -375,10 +367,10 @@ fun PreviewIncomingGroupCallScreen() {
                 Spacer(modifier = Modifier.height(48.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(48.dp)) {
                     FloatingActionButton(onClick = {}, containerColor = Color.Red, shape = CircleShape, modifier = Modifier.size(64.dp)) {
-                        Icon(Icons.Default.CallEnd, "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(MaterialSymbols.CallEnd, "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                     FloatingActionButton(onClick = {}, containerColor = Color(0xFF4CAF50), shape = CircleShape, modifier = Modifier.size(64.dp)) {
-                        Icon(Icons.Default.Call, "Accept", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(MaterialSymbols.Call, "Accept", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                 }
             }
@@ -589,9 +581,9 @@ fun PreviewPipCallUI() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(48.dp))
+            Icon(MaterialSymbols.Person, contentDescription = null, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Calling\u2026", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(LABEL_CALLING, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -612,7 +604,7 @@ fun PreviewPipConnectedCallUI() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.White.copy(alpha = 0.5f))
+            Icon(MaterialSymbols.Person, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.White.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(4.dp))
             Text("02:45", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
         }

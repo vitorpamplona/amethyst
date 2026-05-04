@@ -23,15 +23,19 @@ package com.vitorpamplona.quartz.nip53LiveActivities.streaming
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
@@ -43,6 +47,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StreamingTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.TotalParticipantsTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class LiveActivitiesEvent(
@@ -117,6 +123,12 @@ class LiveActivitiesEvent(
 
     fun pinned() = tags.mapNotNull(PinnedEventTag::parse)
 
+    /**
+     * zap.stream convention: a NIP-75 zap goal (kind 9041) is attached to a live stream
+     * via a flat tag `["goal", "<hex event id>"]` on the 30311 event.
+     */
+    fun goalEventId(): HexKey? = tags.firstOrNull { it.size > 1 && it[0] == GOAL_TAG && it[1].isNotEmpty() }?.get(1)
+
     fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
         if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {
             StatusTag.STATUS.ENDED
@@ -139,6 +151,7 @@ class LiveActivitiesEvent(
     companion object {
         const val KIND = 30311
         const val ALT = "Live activity event"
+        const val GOAL_TAG = "goal"
 
         suspend fun create(
             signer: NostrSigner,
@@ -146,6 +159,17 @@ class LiveActivitiesEvent(
         ): LiveActivitiesEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
             return signer.sign(createdAt, KIND, tags, "")
+        }
+
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            dTag: String = Uuid.random().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<LiveActivitiesEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            dTag(dTag)
+            alt(ALT)
+            initializer()
         }
     }
 }

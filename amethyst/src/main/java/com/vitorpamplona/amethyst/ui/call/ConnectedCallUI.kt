@@ -36,21 +36,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.BluetoothAudio
-import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.CameraFront
-import androidx.compose.material.icons.filled.CameraRear
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -70,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -257,7 +246,7 @@ private fun CallControls(
         ) {
             IconButton(onClick = onToggleMute, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = if (isAudioMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                    symbol = if (isAudioMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
                     contentDescription = stringRes(if (isAudioMuted) R.string.call_unmute else R.string.call_mute),
                     tint = if (isAudioMuted) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
@@ -265,7 +254,7 @@ private fun CallControls(
             }
             IconButton(onClick = onToggleVideo, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                    symbol = if (isVideoEnabled) MaterialSymbols.Videocam else MaterialSymbols.VideocamOff,
                     contentDescription = stringRes(if (isVideoEnabled) R.string.call_camera_off else R.string.call_camera_on),
                     tint = if (!isVideoEnabled) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
@@ -274,11 +263,11 @@ private fun CallControls(
             if (isVideoEnabled) {
                 IconButton(onClick = onSwitchCamera, modifier = Modifier.size(56.dp)) {
                     Icon(
-                        imageVector =
+                        symbol =
                             if (isFrontCamera) {
-                                Icons.Default.CameraRear
+                                MaterialSymbols.CameraRear
                             } else {
-                                Icons.Default.CameraFront
+                                MaterialSymbols.CameraFront
                             },
                         contentDescription = stringRes(R.string.call_switch_camera),
                         tint = Color.White,
@@ -288,11 +277,11 @@ private fun CallControls(
             }
             IconButton(onClick = onCycleAudioRoute, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector =
+                    symbol =
                         when (currentAudioRoute) {
-                            AudioRoute.EARPIECE -> Icons.Outlined.Hearing
-                            AudioRoute.SPEAKER -> Icons.AutoMirrored.Filled.VolumeUp
-                            AudioRoute.BLUETOOTH -> Icons.Default.BluetoothAudio
+                            AudioRoute.EARPIECE -> MaterialSymbols.Hearing
+                            AudioRoute.SPEAKER -> MaterialSymbols.AutoMirrored.VolumeUp
+                            AudioRoute.BLUETOOTH -> MaterialSymbols.BluetoothAudio
                         },
                     contentDescription =
                         stringRes(
@@ -313,7 +302,7 @@ private fun CallControls(
             }
             IconButton(onClick = onAddParticipant, modifier = Modifier.size(56.dp)) {
                 Icon(
-                    imageVector = Icons.Default.PersonAdd,
+                    symbol = MaterialSymbols.PersonAdd,
                     contentDescription = stringRes(R.string.call_add_participant),
                     tint = Color.White,
                     modifier = Modifier.size(28.dp),
@@ -328,7 +317,7 @@ private fun CallControls(
             modifier = Modifier.size(64.dp),
         ) {
             Icon(
-                Icons.Default.CallEnd,
+                MaterialSymbols.CallEnd,
                 contentDescription = stringRes(R.string.call_hangup),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp),

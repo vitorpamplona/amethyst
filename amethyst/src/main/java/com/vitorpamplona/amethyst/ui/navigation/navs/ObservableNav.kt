@@ -51,6 +51,13 @@ class ObservableNav(
         sourceNav.newStack(route)
     }
 
+    override fun navBottomBar(route: Route) {
+        navigationScope.launch {
+            onBeforeNavigate()
+        }
+        sourceNav.navBottomBar(route)
+    }
+
     override fun popBack() {
         navigationScope.launch {
             onBeforeNavigate()

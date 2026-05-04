@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -72,8 +69,6 @@ fun ThreadScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            ThreadFeedView(noteId, feedViewModel, accountViewModel, nav)
-        }
+        ThreadFeedView(noteId, feedViewModel, accountViewModel, nav)
     }
 }

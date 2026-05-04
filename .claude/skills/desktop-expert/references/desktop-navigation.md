@@ -15,7 +15,7 @@ Comparison of mobile vs desktop navigation patterns in AmethystMultiplatform.
 
 ### Current Implementation
 
-**File:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/Main.kt:191-264`
+**File:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/deck/SinglePaneLayout.kt` (NavigationRail begins at L97; `NavigationRailItem`s at L103 and L127+).
 
 ```kotlin
 @Composable
@@ -459,6 +459,6 @@ fun FeedScreen() {
 
 ## References
 
-- **Current Desktop:** Main.kt:191-264
+- **Current Desktop:** `ui/deck/SinglePaneLayout.kt` (NavigationRail L97) and `ui/deck/DeckLayout.kt` (multi-pane)
 - **Material3 NavigationRail:** [Material Design Docs](https://m3.material.io/components/navigation-rail)
 - **Material3 NavigationBar:** [Material Design Docs](https://m3.material.io/components/navigation-bar)

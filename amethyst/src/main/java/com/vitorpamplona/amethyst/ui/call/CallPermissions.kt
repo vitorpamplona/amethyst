@@ -66,7 +66,7 @@ fun rememberCallWithPermission(
     val launcher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
-        ) { results ->
+        ) { _ ->
             // Bluetooth is optional — proceed if core permissions are granted
             if (hasCallPermissions(context, isVideo)) onCall()
         }

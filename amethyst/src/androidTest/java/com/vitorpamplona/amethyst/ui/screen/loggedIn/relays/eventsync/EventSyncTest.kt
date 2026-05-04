@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.model.Constants
+import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.service.okhttp.DefaultContentTypeInterceptor
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient

@@ -43,6 +43,7 @@ class MarmotFileSender(
                     nonce = upload.nonce,
                     dimensions = upload.dimensions,
                     blurhash = upload.blurhash,
+                    thumbhash = upload.thumbhash,
                 )
 
             accountViewModel.sendMarmotGroupMediaMessage(

@@ -67,7 +67,10 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
     private suspend fun receiveIfNew(event: GiftWrapEvent) {
         if (eventCache.get(event.id) == null) {
             eventCache.put(event.id, event.id)
-            EventNotificationConsumer(applicationContext).consume(event)
+            // The push server re-wraps the real GiftWrap and strips the p tag;
+            // unwrap the outer layer, feed the inner into LocalCache, and let
+            // the usual Account → EventProcessor chain take over.
+            PushWrapDecryptor.unwrapAndFeed(event)
         }
     }
 

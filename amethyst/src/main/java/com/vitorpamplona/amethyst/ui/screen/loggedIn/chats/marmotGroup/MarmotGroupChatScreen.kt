@@ -21,15 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,12 +33,18 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +60,8 @@ fun MarmotGroupChatScreen(
         }
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val memberCount by chatroom.memberCount.collectAsStateWithLifecycle()
+    val members by chatroom.members.collectAsStateWithLifecycle()
+    val memberPubkeys = remember(members) { members.map { it.pubkey } }
 
     DisappearingScaffold(
         isInvertedLayout = true,
@@ -66,31 +70,51 @@ fun MarmotGroupChatScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = "Back",
                         )
                     }
                 },
                 title = {
-                    Column(
+                    Row(
                         modifier =
                             Modifier.clickable {
                                 nav.nav(Route.MarmotGroupInfo(nostrGroupId))
                             },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(displayName ?: "Marmot Group")
-                        if (memberCount > 0) {
-                            Text(
-                                text = "$memberCount members",
-                                style = MaterialTheme.typography.bodySmall,
+                        if (memberPubkeys.isNotEmpty()) {
+                            NonClickableUserPictures(
+                                userHexList = memberPubkeys,
+                                size = 36.dp,
+                                accountViewModel = accountViewModel,
                             )
+                        }
+                        Column {
+                            if (!displayName.isNullOrBlank()) {
+                                Text(displayName!!)
+                            } else if (memberPubkeys.isNotEmpty()) {
+                                DisplayUserSetAsSubject(
+                                    userList = memberPubkeys,
+                                    accountViewModel = accountViewModel,
+                                )
+                            } else {
+                                Text("Marmot Group")
+                            }
+                            if (memberCount > 0) {
+                                Text(
+                                    text = "$memberCount members",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { nav.nav(Route.MarmotGroupAddMember(nostrGroupId)) }) {
+                    IconButton(onClick = { nav.nav(Route.MarmotGroupInfo(nostrGroupId)) }) {
                         Icon(
-                            imageVector = Icons.Default.GroupAdd,
+                            symbol = MaterialSymbols.GroupAdd,
                             contentDescription = "Add Member",
                         )
                     }
@@ -98,8 +122,9 @@ fun MarmotGroupChatScreen(
             )
         },
         accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) {
-        Column(Modifier.padding(it).consumeWindowInsets(it).statusBarsPadding()) {
+        Column(Modifier.padding(it)) {
             MarmotGroupChatView(
                 nostrGroupId = nostrGroupId,
                 accountViewModel = accountViewModel,

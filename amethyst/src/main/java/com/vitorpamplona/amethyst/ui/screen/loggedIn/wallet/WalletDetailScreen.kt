@@ -31,16 +31,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -59,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -95,7 +91,7 @@ fun WalletDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = stringRes(R.string.back),
                         )
                     }
@@ -166,7 +162,7 @@ fun WalletDetailScreen(
                         ),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowDownward,
+                        symbol = MaterialSymbols.ArrowDownward,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
                     )
@@ -183,7 +179,7 @@ fun WalletDetailScreen(
                     shape = RoundedCornerShape(16.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowUpward,
+                        symbol = MaterialSymbols.ArrowUpward,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
                     )
@@ -204,7 +200,7 @@ fun WalletDetailScreen(
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.List,
+                    symbol = MaterialSymbols.AutoMirrored.List,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )

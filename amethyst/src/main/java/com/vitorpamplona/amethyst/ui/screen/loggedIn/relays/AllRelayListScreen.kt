@@ -27,12 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,9 +44,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.DefaultDMRelayList
-import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
-import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -591,7 +588,7 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
 
     IconButton(onClick = { expanded = true }) {
         Icon(
-            imageVector = Icons.Default.Share,
+            symbol = MaterialSymbols.Share,
             contentDescription = stringRes(R.string.export_relay_settings),
         )
     }
@@ -603,14 +600,14 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
         ) {
             M3ActionSection {
                 M3ActionRow(
-                    icon = Icons.Outlined.Description,
+                    icon = MaterialSymbols.Description,
                     text = stringRes(R.string.export_as_text),
                 ) {
                     expanded = false
                     RelayExporter(context).export(collection())
                 }
                 M3ActionRow(
-                    icon = Icons.Outlined.FolderZip,
+                    icon = MaterialSymbols.FolderZip,
                     text = stringRes(R.string.export_as_zip),
                 ) {
                     expanded = false

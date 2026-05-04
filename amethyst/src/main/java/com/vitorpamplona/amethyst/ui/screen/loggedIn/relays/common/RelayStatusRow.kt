@@ -24,12 +24,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.SyncProblem
-import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -111,7 +107,7 @@ fun RelayStatusRow(
                 },
         ) {
             Icon(
-                imageVector = Icons.Default.Download,
+                symbol = MaterialSymbols.Download,
                 contentDescription = stringRes(R.string.read_from_relay),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.allGoodColor,
@@ -143,7 +139,7 @@ fun RelayStatusRow(
                 },
         ) {
             Icon(
-                imageVector = Icons.Default.Upload,
+                symbol = MaterialSymbols.Upload,
                 stringRes(R.string.write_to_relay),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.allGoodColor,
@@ -177,7 +173,7 @@ fun RelayStatusRow(
             val successRate = ((item.relayStat.connectionCompleted / item.relayStat.connectionTentatives.toFloat()) * 100).toInt()
 
             Icon(
-                imageVector = Icons.Default.SyncProblem,
+                symbol = MaterialSymbols.SyncProblem,
                 stringRes(R.string.errors),
                 modifier = Size15Modifier,
                 tint =
@@ -217,7 +213,7 @@ fun RelayStatusRow(
             horizontalArrangement = Arrangement.End,
         ) {
             Icon(
-                imageVector = Icons.Default.DeleteSweep,
+                symbol = MaterialSymbols.DeleteSweep,
                 stringRes(R.string.spam),
                 modifier = Size15Modifier,
                 tint =

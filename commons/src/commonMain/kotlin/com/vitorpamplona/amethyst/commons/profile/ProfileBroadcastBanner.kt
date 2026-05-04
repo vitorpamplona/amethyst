@@ -38,11 +38,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -52,9 +47,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 /**
  * Shared banner showing profile metadata broadcast progress.
@@ -91,7 +88,7 @@ fun ProfileBroadcastBanner(
                         .animateContentSize(),
             ) {
                 Icon(
-                    imageVector = getStatusIcon(status),
+                    symbol = getStatusIcon(status),
                     contentDescription = null,
                     tint = getStatusIconColor(status),
                     modifier = Modifier.size(18.dp),
@@ -152,12 +149,12 @@ private fun getStatusBackgroundColor(status: ProfileBroadcastStatus): Color =
         else -> MaterialTheme.colorScheme.surfaceContainer
     }
 
-private fun getStatusIcon(status: ProfileBroadcastStatus): ImageVector =
+private fun getStatusIcon(status: ProfileBroadcastStatus): MaterialSymbol =
     when (status) {
-        is ProfileBroadcastStatus.Broadcasting -> Icons.Default.Sync
-        is ProfileBroadcastStatus.Success -> Icons.Default.CheckCircle
-        is ProfileBroadcastStatus.Failed -> Icons.Default.Error
-        is ProfileBroadcastStatus.Idle -> Icons.Default.CheckCircle
+        is ProfileBroadcastStatus.Broadcasting -> MaterialSymbols.Sync
+        is ProfileBroadcastStatus.Success -> MaterialSymbols.CheckCircle
+        is ProfileBroadcastStatus.Failed -> MaterialSymbols.Error
+        is ProfileBroadcastStatus.Idle -> MaterialSymbols.CheckCircle
     }
 
 @Composable

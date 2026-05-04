@@ -29,8 +29,11 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
@@ -49,6 +52,8 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -176,13 +181,33 @@ class DesktopLocalCache : ICacheProvider {
         }
     }
 
+    fun justVerify(event: Event): Boolean =
+        if (!event.verify()) {
+            try {
+                event.checkSignature()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("Event Verification Failed") {
+                    "Kind: ${event.kind} createdAt=${event.createdAt} id=${event.id} pubkey=${event.pubKey} reason=${e.message}"
+                }
+            }
+            false
+        } else {
+            true
+        }
+
     // ----- Event consumption -----
 
-    /**
-     * Routes an event to the appropriate consume method.
-     * Returns true if the event was consumed (new), false if already seen.
-     */
     fun consume(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean = false,
+    ): Boolean {
+        if (!wasVerified && !justVerify(event)) return false
+        return route(event, relay)
+    }
+
+    private fun route(
         event: Event,
         relay: NormalizedRelayUrl?,
     ): Boolean =
@@ -476,7 +501,9 @@ class DesktopLocalCache : ICacheProvider {
         zappedNote: Note?,
         relay: NormalizedRelayUrl?,
         onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
+        wasVerified: Boolean = false,
     ): Boolean {
+        if (!wasVerified && !justVerify(event)) return false
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 
@@ -504,7 +531,9 @@ class DesktopLocalCache : ICacheProvider {
     fun consume(
         event: LnZapPaymentResponseEvent,
         relay: NormalizedRelayUrl?,
+        wasVerified: Boolean = false,
     ): Boolean {
+        if (!wasVerified && !justVerify(event)) return false
         val requestId = event.requestId()
         val pending = paymentTracker.onResponseReceived(requestId) ?: return false
 
@@ -569,7 +598,18 @@ class DesktopLocalCache : ICacheProvider {
     // ----- Own event consumption -----
 
     override fun justConsumeMyOwnEvent(event: Event): Boolean {
-        // Desktop doesn't track own events separately
+        if (!justVerify(event)) return false
+        // For addressable/replaceable events, store in the addressable note cache
+        // so state holders (Nip65RelayListState, etc.) pick it up via their flows
+        if (event is AddressableEvent) {
+            val address = event.address()
+            val note = getOrCreateAddressableNote(address)
+            val author = getOrCreateUser(event.pubKey) ?: return false
+            if (note.event == null || (note.event?.createdAt ?: 0) <= event.createdAt) {
+                note.loadEvent(event, author, emptyList())
+                return true
+            }
+        }
         return false
     }
 

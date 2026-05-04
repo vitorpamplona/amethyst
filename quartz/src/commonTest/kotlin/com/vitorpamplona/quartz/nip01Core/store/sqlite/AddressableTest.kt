@@ -90,6 +90,72 @@ class AddressableTest : BaseDBTest() {
         }
 
     @Test
+    fun testReplacingSameCreatedAtLowerIdWins() =
+        forEachDB { db ->
+            val time = TimeUtils.now()
+            // Two events with the same (kind, pubkey, d_tag, created_at) but
+            // different content -> different ids. NIP-01 says the lower-id wins.
+            val a =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "version A",
+                        "title",
+                        dTag = "tie",
+                        createdAt = time,
+                    ),
+                )
+            val b =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "version B",
+                        "title",
+                        dTag = "tie",
+                        createdAt = time,
+                    ),
+                )
+            val (winner, loser) = if (a.id < b.id) a to b else b to a
+
+            db.insert(loser)
+            db.assertQuery(loser, Filter(ids = listOf(loser.id)))
+
+            db.insert(winner)
+            db.assertQuery(null, Filter(ids = listOf(loser.id)))
+            db.assertQuery(winner, Filter(ids = listOf(winner.id)))
+        }
+
+    @Test
+    fun testReplacingSameCreatedAtHigherIdRejected() =
+        forEachDB { db ->
+            val time = TimeUtils.now()
+            val a =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "version A",
+                        "title",
+                        dTag = "tie",
+                        createdAt = time,
+                    ),
+                )
+            val b =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "version B",
+                        "title",
+                        dTag = "tie",
+                        createdAt = time,
+                    ),
+                )
+            val (winner, loser) = if (a.id < b.id) a to b else b to a
+
+            db.insert(winner)
+            assertFailsWith<SQLiteException> {
+                db.insert(loser)
+            }
+            db.assertQuery(winner, Filter(ids = listOf(winner.id)))
+            db.assertQuery(null, Filter(ids = listOf(loser.id)))
+        }
+
+    @Test
     fun testTriggersIndexUsage() =
         forEachDB { db ->
             val explainer =

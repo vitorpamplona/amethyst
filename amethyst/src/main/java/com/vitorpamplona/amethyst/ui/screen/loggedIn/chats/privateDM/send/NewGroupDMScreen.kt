@@ -39,13 +39,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -74,12 +69,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -289,7 +287,7 @@ fun GroupDMScreenContent(
                             selectedFiles,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = uploading.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, _, _ ->
+                            onAdd = { _, server, _, _, _, _, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
                                     context,
@@ -424,7 +422,7 @@ private fun BottomRowActions(
                 onClick = { accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer) },
             ) {
                 Icon(
-                    imageVector = Icons.Default.AddPhotoAlternate,
+                    symbol = MaterialSymbols.AddPhotoAlternate,
                     contentDescription = stringRes(id = R.string.upload_image),
                     modifier = Modifier.height(25.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -443,7 +441,7 @@ private fun BottomRowActions(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.CameraAlt,
+                    symbol = MaterialSymbols.CameraAlt,
                     contentDescription = stringRes(id = R.string.take_a_picture),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -462,7 +460,7 @@ private fun BottomRowActions(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Default.Videocam,
+                    symbol = MaterialSymbols.Videocam,
                     contentDescription = stringRes(id = R.string.record_a_video),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -533,6 +531,7 @@ fun SendDirectMessageTo(
             ThinPaddingTextField(
                 state = postViewModel.toUsers,
                 onTextChanged = postViewModel::onToUsersChanged,
+                inputTransformation = MentionPreservingInputTransformation,
                 modifier =
                     Modifier
                         .weight(1f)
@@ -575,6 +574,7 @@ fun SendDirectMessageTo(
             ThinPaddingTextField(
                 state = postViewModel.subject,
                 onTextChanged = { postViewModel.onSubjectChanged() },
+                inputTransformation = MentionPreservingInputTransformation,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
@@ -626,6 +626,9 @@ fun ShowImageUploadGallery(
                         encryptionAlgo = data.cipher.name(),
                         encryptionKey = data.cipher.keyBytes,
                         encryptionNonce = data.cipher.nonce,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 } else {
                     EncryptedMediaUrlVideo(
@@ -641,6 +644,9 @@ fun ShowImageUploadGallery(
                         encryptionAlgo = data.cipher.name(),
                         encryptionKey = data.cipher.keyBytes,
                         encryptionNonce = data.cipher.nonce,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 }
             } else {
@@ -655,6 +661,9 @@ fun ShowImageUploadGallery(
                         dim = data.result.fileHeader.dim,
                         uri = null,
                         mimeType = data.result.mimeTypeBeforeEncryption,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 } else {
                     MediaUrlVideo(
@@ -667,6 +676,9 @@ fun ShowImageUploadGallery(
                         dim = data.result.fileHeader.dim,
                         uri = null,
                         mimeType = data.result.mimeTypeBeforeEncryption,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 }
             },

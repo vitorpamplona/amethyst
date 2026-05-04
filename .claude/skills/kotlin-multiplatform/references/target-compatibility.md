@@ -14,7 +14,7 @@ Current targets (Android, JVM/Desktop, iOS) and future targets (web, wasm) with 
 - Android framework (Activity, Context, Intent, etc.)
 - AndroidX libraries (ViewModel, Navigation, etc.)
 - JVM libraries via jvmAndroid (Jackson, OkHttp)
-- Platform-specific crypto: secp256k1-kmp-jni-android
+- Platform-specific crypto: `secp256k1-kmp-jni-android` (0.23.0 in `libs.versions.toml`)
 
 **Constraints:**
 - Mobile UX paradigms (bottom navigation, vertical scroll)
@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
 - Pure JVM libraries
 - JVM libraries via jvmAndroid (Jackson, OkHttp)
 - Compose Desktop (Window, MenuBar, etc.)
-- Platform-specific crypto: secp256k1-kmp-jni-jvm
+- Platform-specific crypto: `secp256k1-kmp-jni-jvm` (same 0.23.0 line)
 
 **Constraints:**
 - Desktop UX paradigms (sidebar, menus, keyboard shortcuts)
@@ -70,7 +70,7 @@ fun main() = application {
 
 ### iOS (iosMain + architecture targets)
 
-**Status:** ⚠️ In development, framework configured
+**Status:** ✅ Mature — actively built and tested
 
 **Runtime:** Native iOS
 
@@ -78,6 +78,8 @@ fun main() = application {
 - iosMain (common iOS code)
 - iosArm64Main (device - iPhone/iPad)
 - iosSimulatorArm64Main (Apple Silicon simulator)
+- iosX64Main (Intel simulator)
+- macosArm64Main (host tooling / XCFramework build)
 
 **Available:**
 - iOS platform APIs (platform.posix, Foundation, etc.)

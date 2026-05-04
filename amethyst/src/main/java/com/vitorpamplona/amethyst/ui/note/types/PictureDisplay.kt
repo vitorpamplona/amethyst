@@ -30,8 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -71,29 +69,29 @@ fun PictureDisplay(
     val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
     val reasons = remember(note) { collectContentWarningReasons(event) }
 
-    val images by
+    val images =
         remember(note) {
-            mutableStateOf(
-                event
-                    .imetaTags()
-                    .map {
-                        MediaUrlImage(
-                            url = it.url,
-                            description = it.alt,
-                            hash = it.hash,
-                            blurhash = it.blurhash,
-                            dim = it.dimension,
-                            uri = uri,
-                            mimeType = it.mimeType,
-                        )
-                    }.toImmutableList(),
-            )
+            event
+                .imetaTags()
+                .map {
+                    MediaUrlImage(
+                        url = it.url,
+                        description = it.alt,
+                        hash = it.hash,
+                        blurhash = it.blurhash,
+                        dim = it.dimension,
+                        uri = uri,
+                        mimeType = it.mimeType,
+                        thumbhash = it.thumbhash,
+                    )
+                }.toImmutableList()
         }
 
     val first = images.firstOrNull()
 
     if (first != null) {
-        val title = event.title()
+        val title = remember(event) { event.title() }
+        val preloadUrls = remember(images) { images.map { it.url } }
 
         Column {
             if (title != null) {
@@ -113,10 +111,10 @@ fun PictureDisplay(
                 ContentWarningGate(
                     isSensitive = isSensitive,
                     reasons = reasons,
-                    preloadUrls = listOf(first.url),
+                    preloadUrls = preloadUrls,
                     accountViewModel = accountViewModel,
                     modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
-                    backdrop = first.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, first.description) } },
+                    backdrop = (first.thumbhash ?: first.blurhash)?.let { { BlurhashBackdrop(first.blurhash, first.description, first.thumbhash) } },
                 ) {
                     ZoomableContentView(
                         content = first,
@@ -130,7 +128,7 @@ fun PictureDisplay(
                 ContentWarningGate(
                     isSensitive = isSensitive,
                     reasons = reasons,
-                    preloadUrls = images.map { it.url },
+                    preloadUrls = preloadUrls,
                     accountViewModel = accountViewModel,
                     modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                     backdrop = { BlurhashGridBackdrop(images) },

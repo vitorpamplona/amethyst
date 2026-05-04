@@ -59,19 +59,19 @@ fun HorizontalLinearProgressIndicatorPreview() {
             HorizontalLinearProgressIndicator(
                 currentPositionProgress = { 0.00f },
                 bufferedPositionProgress = { 0.10f },
-                onLayoutWidthChanged = { widthPx -> },
+                onLayoutWidthChanged = { _ -> },
                 onSeek = {},
             )
             HorizontalLinearProgressIndicator(
                 currentPositionProgress = { 0.10f },
                 bufferedPositionProgress = { 0.20f },
-                onLayoutWidthChanged = { widthPx -> },
+                onLayoutWidthChanged = { _ -> },
                 onSeek = {},
             )
             HorizontalLinearProgressIndicator(
                 currentPositionProgress = { 1.00f },
                 bufferedPositionProgress = { 1.00f },
-                onLayoutWidthChanged = { widthPx -> },
+                onLayoutWidthChanged = { _ -> },
                 onSeek = {},
             )
         }

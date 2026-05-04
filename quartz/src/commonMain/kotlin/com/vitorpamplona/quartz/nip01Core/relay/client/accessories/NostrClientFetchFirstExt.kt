@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 
 suspend fun INostrClient.fetchFirst(
@@ -66,8 +67,11 @@ suspend fun INostrClient.fetchFirst(
 suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
+    timeoutMs: Long = 30_000L,
 ): Event? {
-    val resultChannel = Channel<Event?>(UNLIMITED)
+    val eventChannel = Channel<Event>(UNLIMITED)
+    val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
+    val remaining = filters.keys.toMutableSet()
 
     val listener =
         object : SubscriptionListener {
@@ -77,7 +81,7 @@ suspend fun INostrClient.fetchFirst(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(event)
+                eventChannel.trySend(event)
             }
 
             override fun onCannotConnect(
@@ -85,7 +89,7 @@ suspend fun INostrClient.fetchFirst(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(null)
+                doneChannel.trySend(relay)
             }
 
             override fun onClosed(
@@ -93,29 +97,39 @@ suspend fun INostrClient.fetchFirst(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(null)
+                doneChannel.trySend(relay)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(null)
+                doneChannel.trySend(relay)
             }
         }
 
-    val result =
-        try {
-            subscribe(subscriptionId, filters, listener)
+    var result: Event? = null
+    try {
+        subscribe(subscriptionId, filters, listener)
 
-            withTimeoutOrNull(30000) {
-                resultChannel.receive()
+        withTimeoutOrNull(timeoutMs) {
+            while (remaining.isNotEmpty()) {
+                select {
+                    eventChannel.onReceive { event ->
+                        result = event
+                        remaining.clear()
+                    }
+                    doneChannel.onReceive { relay ->
+                        remaining.remove(relay)
+                    }
+                }
             }
-        } finally {
-            unsubscribe(subscriptionId)
         }
-
-    resultChannel.close()
+    } finally {
+        unsubscribe(subscriptionId)
+        eventChannel.close()
+        doneChannel.close()
+    }
 
     return result
 }

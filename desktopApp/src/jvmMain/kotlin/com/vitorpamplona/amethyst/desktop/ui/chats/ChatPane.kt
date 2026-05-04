@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,18 +39,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -69,6 +61,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -83,21 +76,18 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.chat.ChatMessageCompose
-import com.vitorpamplona.amethyst.commons.ui.chat.ChatroomHeader
-import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastBanner
-import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
-import com.vitorpamplona.amethyst.commons.ui.chat.GroupChatroomHeader
+import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
-import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -230,7 +220,7 @@ fun ChatPane(
                         modifier = Modifier.size(40.dp),
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = "Back to conversations",
                         )
                     }
@@ -517,7 +507,7 @@ private fun MessageWithReactions(
                         when (event) {
                             is PrivateDmEvent -> {
                                 Icon(
-                                    Icons.Default.LockOpen,
+                                    MaterialSymbols.LockOpen,
                                     contentDescription = "NIP-04 (legacy)",
                                     modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
@@ -528,7 +518,7 @@ private fun MessageWithReactions(
                             is ChatMessageEncryptedFileHeaderEvent,
                             -> {
                                 Icon(
-                                    Icons.Default.Lock,
+                                    MaterialSymbols.Lock,
                                     contentDescription = "NIP-17 (encrypted)",
                                     modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
@@ -564,35 +554,36 @@ private fun MessageWithReactions(
                             }
                         }
 
-                        // AddReaction icon on hover
-                        if (showIcon) {
-                            Box {
-                                IconButton(
-                                    onClick = { showPicker = !showPicker },
-                                    modifier = Modifier.size(20.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.AddReaction,
-                                        contentDescription = "React",
-                                        modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                        // AddReaction icon: always laid out to reserve space (so hover
+                        // doesn't reflow the detail row and shift the whole list);
+                        // alpha fades in/out based on hover.
+                        Box(modifier = Modifier.alpha(if (showIcon) 1f else 0f)) {
+                            IconButton(
+                                onClick = { showPicker = !showPicker },
+                                enabled = showIcon,
+                                modifier = Modifier.size(20.dp),
+                            ) {
+                                Icon(
+                                    symbol = MaterialSymbols.AddReaction,
+                                    contentDescription = "React",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
 
-                                if (showPicker) {
-                                    Popup(
-                                        alignment = Alignment.TopCenter,
-                                        offset = IntOffset(0, -44),
-                                        onDismissRequest = { showPicker = false },
-                                        properties = PopupProperties(focusable = true),
-                                    ) {
-                                        ReactionBar(
-                                            onReaction = { emoji ->
-                                                onReaction(emoji)
-                                                showPicker = false
-                                            },
-                                        )
-                                    }
+                            if (showPicker) {
+                                Popup(
+                                    alignment = Alignment.TopCenter,
+                                    offset = IntOffset(0, -44),
+                                    onDismissRequest = { showPicker = false },
+                                    properties = PopupProperties(focusable = true),
+                                ) {
+                                    ReactionBar(
+                                        onReaction = { emoji ->
+                                            onReaction(emoji)
+                                            showPicker = false
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -709,7 +700,7 @@ private fun MessageInput(
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
-                    Icons.Default.AttachFile,
+                    MaterialSymbols.AttachFile,
                     contentDescription = "Attach file",
                     tint =
                         if (isUploading) {
@@ -720,12 +711,22 @@ private fun MessageInput(
                 )
             }
 
-            OutlinedTextField(
+            // BasicTextField + DecorationBox with custom contentPadding lets the
+            // field sit at a compact ~40dp minimum on desktop (M3's default
+            // OutlinedTextField has ~32dp vertical contentPadding baked in, which
+            // would clip the bodyMedium placeholder at any height below ~52dp).
+            val messageInteraction =
+                remember {
+                    androidx.compose.foundation.interaction
+                        .MutableInteractionSource()
+                }
+            androidx.compose.foundation.text.BasicTextField(
                 value = messageText,
                 onValueChange = onMessageChange,
                 modifier =
                     Modifier
                         .weight(1f)
+                        .heightIn(min = 40.dp)
                         .onPreviewKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                             // Cmd+Enter (Mac) or Ctrl+Enter to send
@@ -737,10 +738,43 @@ private fun MessageInput(
                                 false
                             }
                         },
-                placeholder = { Text("Message... (${if (isMacOS) "\u2318" else "Ctrl"}+Enter to send)") },
-                singleLine = false,
+                textStyle =
+                    MaterialTheme.typography.bodyMedium
+                        .copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush =
+                    androidx.compose.ui.graphics
+                        .SolidColor(MaterialTheme.colorScheme.primary),
                 maxLines = 4,
-                shape = RoundedCornerShape(12.dp),
+                interactionSource = messageInteraction,
+                decorationBox = { innerTextField ->
+                    androidx.compose.material3.OutlinedTextFieldDefaults.DecorationBox(
+                        value = messageText,
+                        innerTextField = innerTextField,
+                        enabled = true,
+                        singleLine = false,
+                        visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+                        interactionSource = messageInteraction,
+                        placeholder = {
+                            Text(
+                                "Message\u2026 (${if (isMacOS) "\u2318" else "Ctrl"}+Enter to send)",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        contentPadding =
+                            androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = 12.dp,
+                                vertical = 8.dp,
+                            ),
+                        container = {
+                            androidx.compose.material3.OutlinedTextFieldDefaults.Container(
+                                enabled = true,
+                                isError = false,
+                                interactionSource = messageInteraction,
+                                shape = RoundedCornerShape(10.dp),
+                            )
+                        },
+                    )
+                },
             )
 
             IconButton(
@@ -749,7 +783,7 @@ private fun MessageInput(
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
-                    Icons.AutoMirrored.Filled.Send,
+                    MaterialSymbols.AutoMirrored.Send,
                     contentDescription = "Send",
                     tint =
                         if (canSend && !isUploading) {
@@ -768,7 +802,7 @@ private fun MessageInput(
             modifier = Modifier.padding(start = 4.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Lock,
+                symbol = MaterialSymbols.Lock,
                 contentDescription = "NIP-17 (encrypted)",
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -801,7 +835,7 @@ private suspend fun sendEncryptedFiles(
     account: IAccount,
     cacheProvider: ICacheProvider,
 ) {
-    val orchestrator = DesktopUploadOrchestrator()
+    val orchestrator = UploadOrchestrator()
     val server = DesktopPreferences.preferredBlossomServer
     val recipients = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) }.map { it.toPTag() }
 
@@ -819,12 +853,11 @@ private suspend fun sendEncryptedFiles(
                 hash = result.encryptedHash,
                 size = result.encryptedSize,
                 dimension =
-                    if (result.metadata.width != null && result.metadata.height != null) {
-                        DimensionTag(result.metadata.width, result.metadata.height)
-                    } else {
-                        null
+                    result.metadata.width?.let { w ->
+                        result.metadata.height?.let { h -> DimensionTag(w, h) }
                     },
                 blurhash = result.metadata.blurhash,
+                thumbhash = result.metadata.thumbhash,
                 originalHash = result.metadata.sha256,
             )
         account.sendNip17EncryptedFile(template)

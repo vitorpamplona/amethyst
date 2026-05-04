@@ -42,26 +42,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -89,7 +74,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -100,6 +84,9 @@ import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.LayoutMode
 import kotlinx.coroutines.delay
 
@@ -107,13 +94,14 @@ import kotlinx.coroutines.delay
 
 enum class ScreenCategory(
     val title: String,
-    val icon: ImageVector,
+    val icon: MaterialSymbol,
 ) {
-    SOCIAL("Social", Icons.Default.Groups),
-    LONG_FORM("Long-Form", Icons.AutoMirrored.Filled.Article),
-    DISCOVERY("Discovery", Icons.Default.Explore),
-    IDENTITY("Identity", Icons.Default.Person),
-    PLAY("Play", Icons.Default.SportsEsports),
+    SOCIAL("Social", MaterialSymbols.Groups),
+    LONG_FORM("Long-Form", MaterialSymbols.AutoMirrored.Article),
+    DISCOVERY("Discovery", MaterialSymbols.Explore),
+    IDENTITY("Identity", MaterialSymbols.Person),
+    PLAY("Play", MaterialSymbols.SportsEsports),
+    NETWORK("Network", MaterialSymbols.Dns),
 }
 
 // -- Extensions on DeckColumnType --
@@ -142,6 +130,8 @@ fun DeckColumnType.category(): ScreenCategory =
         -> ScreenCategory.IDENTITY
 
         DeckColumnType.Chess -> ScreenCategory.PLAY
+
+        DeckColumnType.Relays -> ScreenCategory.NETWORK
 
         // Deep-link types — not in LAUNCHABLE_SCREENS but need a category for exhaustiveness
         is DeckColumnType.Profile,
@@ -181,6 +171,7 @@ val LAUNCHABLE_SCREENS: List<DeckColumnType> =
         DeckColumnType.Bookmarks,
         DeckColumnType.MyProfile,
         DeckColumnType.Settings,
+        DeckColumnType.Relays,
         DeckColumnType.Chess,
     )
 
@@ -407,7 +398,7 @@ fun AppDrawer(
                             .focusRequester(searchFocusRequester),
                     placeholder = { Text("Search screens and workspaces...") },
                     singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Search, "Search") },
+                    leadingIcon = { Icon(MaterialSymbols.Search, "Search") },
                 )
 
                 if (state.awaitingHashtag) {
@@ -618,7 +609,7 @@ private fun DrawerScreenCard(
                     },
                     leadingIcon = {
                         Icon(
-                            Icons.Default.PushPin,
+                            MaterialSymbols.PushPin,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                         )
@@ -819,17 +810,17 @@ private fun WorkspaceCard(
             if (isActive) {
                 Spacer(Modifier.width(8.dp))
                 Icon(
-                    Icons.Default.Check,
+                    MaterialSymbols.Check,
                     "Active",
                     Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, "Edit", Modifier.size(18.dp))
+                Icon(MaterialSymbols.Edit, "Edit", Modifier.size(18.dp))
             }
             IconButton(onClick = onDelete, enabled = canDelete) {
-                Icon(Icons.Default.Delete, "Delete", Modifier.size(18.dp))
+                Icon(MaterialSymbols.Delete, "Delete", Modifier.size(18.dp))
             }
         }
     }
@@ -854,7 +845,7 @@ private fun AddWorkspaceCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Default.Add, "Add workspace", Modifier.size(24.dp))
+            Icon(MaterialSymbols.Add, "Add workspace", Modifier.size(24.dp))
             Spacer(Modifier.width(8.dp))
             Text(
                 "New Workspace",
@@ -1020,7 +1011,7 @@ private fun DeckColumnEditor(
                     },
                     enabled = columns.size > 1,
                 ) {
-                    Icon(Icons.Default.Close, "Remove")
+                    Icon(MaterialSymbols.Close, "Remove")
                 }
             }
         }
@@ -1059,7 +1050,7 @@ private fun SinglePaneScreensEditor(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (idx == 0) {
                     Icon(
-                        Icons.Default.Star,
+                        MaterialSymbols.Star,
                         "Default",
                         Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary,
@@ -1069,7 +1060,7 @@ private fun SinglePaneScreensEditor(
                 Text(displayName, Modifier.weight(1f))
                 IconButton(onClick = {
                     onScreensChange(screens.toMutableList().apply { removeAt(idx) })
-                }) { Icon(Icons.Default.Close, "Remove", Modifier.size(16.dp)) }
+                }) { Icon(MaterialSymbols.Close, "Remove", Modifier.size(16.dp)) }
             }
         }
         // Add screen dropdown

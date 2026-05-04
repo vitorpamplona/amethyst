@@ -247,6 +247,7 @@ dependencies {
     implementation project(path: ':quartz')
     implementation project(path: ':commons')
     implementation project(path: ':ammolite')
+    implementation project(path: ':nestsClient')
     implementation libs.androidx.core.ktx
     implementation libs.androidx.activity.compose
 
@@ -262,7 +263,6 @@ dependencies {
 
     // Material 3 Design
     implementation libs.androidx.material3
-    implementation libs.androidx.material.icons
 
     // Adaptive Layout / Two Pane
     implementation libs.androidx.material3.windowSize
@@ -278,6 +278,9 @@ dependencies {
 
     // Biometrics
     implementation libs.androidx.biometric.ktx
+
+    // Background Work
+    implementation libs.androidx.work.runtime.ktx
 
     // Websockets API
     implementation libs.okhttp
@@ -342,6 +345,10 @@ dependencies {
     playImplementation libs.google.mlkit.genai.proofreading
     playImplementation libs.google.mlkit.genai.prompt
     playImplementation libs.google.mlkit.genai.rewriting
+
+    // On-device alt-text suggestions: genai image description (preferred, descriptive sentences)
+    // with image-labeling as a keyword-join fallback for devices without AICore.
+    playImplementation libs.google.mlkit.genai.image.description
 
     // PushNotifications
     playImplementation platform(libs.firebase.bom)

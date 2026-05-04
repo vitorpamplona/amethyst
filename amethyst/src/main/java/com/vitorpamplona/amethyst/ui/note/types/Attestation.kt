@@ -33,16 +33,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.Recommend
-import androidx.compose.material.icons.filled.RemoveDone
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,12 +44,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -182,7 +174,7 @@ fun RenderAttestation(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = statusIcon,
+                symbol = statusIcon,
                 contentDescription = stringRes(R.string.attestation),
                 tint = statusColor,
                 modifier = Modifier.size(24.dp),
@@ -308,7 +300,7 @@ fun RenderAttestationRequest(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
+                symbol = MaterialSymbols.AutoMirrored.Send,
                 contentDescription = stringRes(R.string.attestation_request),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp),
@@ -435,7 +427,7 @@ fun RenderAttestorRecommendation(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Recommend,
+                symbol = MaterialSymbols.Recommend,
                 contentDescription = stringRes(R.string.attestor_recommendation),
                 tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(24.dp),
@@ -527,7 +519,7 @@ fun RenderAttestorProficiency(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Star,
+                symbol = MaterialSymbols.Star,
                 contentDescription = stringRes(R.string.attestor_proficiency),
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(24.dp),
@@ -585,13 +577,13 @@ private fun attestationColor(status: AttestationStatus?): Color =
         else -> Color(0xFF757575)
     }
 
-private fun attestationIcon(status: AttestationStatus?): ImageVector =
+private fun attestationIcon(status: AttestationStatus?): MaterialSymbol =
     when {
-        status == AttestationStatus.INVALID -> Icons.Default.Close
-        status == AttestationStatus.VALID -> Icons.Default.CheckCircle
-        status == AttestationStatus.REVOKED -> Icons.Default.RemoveDone
-        status == AttestationStatus.VERIFYING -> Icons.Default.HourglassTop
-        else -> Icons.Default.ErrorOutline
+        status == AttestationStatus.INVALID -> MaterialSymbols.Close
+        status == AttestationStatus.VALID -> MaterialSymbols.CheckCircle
+        status == AttestationStatus.REVOKED -> MaterialSymbols.RemoveDone
+        status == AttestationStatus.VERIFYING -> MaterialSymbols.HourglassTop
+        else -> MaterialSymbols.ErrorOutline
     }
 
 @Composable

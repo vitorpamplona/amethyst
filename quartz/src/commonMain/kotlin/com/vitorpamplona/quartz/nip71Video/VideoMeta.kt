@@ -35,6 +35,7 @@ data class VideoMeta(
     val service: String? = null,
     val fallback: List<String> = emptyList(),
     val image: List<String> = emptyList(),
+    val thumbhash: String? = null,
 ) {
     fun toIMetaArray(): Array<String> =
         IMetaTagBuilder(url)
@@ -45,6 +46,7 @@ data class VideoMeta(
                 size?.let { size(it) }
                 dimension?.let { dims(it) }
                 blurhash?.let { blurhash(it) }
+                thumbhash?.let { thumbhash(it) }
                 service?.let { service(it) }
                 fallback.forEach { fallback(it) }
                 image.forEach { image(it) }
@@ -54,16 +56,17 @@ data class VideoMeta(
     companion object {
         fun parse(iMeta: IMetaTag): VideoMeta =
             VideoMeta(
-                iMeta.url,
-                iMeta.mimeType()?.firstOrNull(),
-                iMeta.blurhash()?.firstOrNull(),
-                iMeta.dims()?.firstOrNull()?.let { DimensionTag.parse(it) },
-                iMeta.alt()?.firstOrNull(),
-                iMeta.hash()?.firstOrNull(),
-                iMeta.size()?.firstOrNull()?.toIntOrNull(),
-                iMeta.service()?.firstOrNull(),
-                iMeta.fallback() ?: emptyList(),
-                iMeta.image() ?: emptyList(),
+                url = iMeta.url,
+                mimeType = iMeta.mimeType()?.firstOrNull(),
+                blurhash = iMeta.blurhash()?.firstOrNull(),
+                dimension = iMeta.dims()?.firstOrNull()?.let { DimensionTag.parse(it) },
+                alt = iMeta.alt()?.firstOrNull(),
+                hash = iMeta.hash()?.firstOrNull(),
+                size = iMeta.size()?.firstOrNull()?.toIntOrNull(),
+                service = iMeta.service()?.firstOrNull(),
+                fallback = iMeta.fallback() ?: emptyList(),
+                image = iMeta.image() ?: emptyList(),
+                thumbhash = iMeta.thumbhash()?.firstOrNull(),
             )
     }
 }

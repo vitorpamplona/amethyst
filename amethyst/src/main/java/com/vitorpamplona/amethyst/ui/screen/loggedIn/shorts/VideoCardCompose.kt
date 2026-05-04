@@ -57,7 +57,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
-import kotlin.text.ifEmpty
 
 @Composable
 fun VideoCardCompose(
@@ -121,6 +120,7 @@ private fun VideoCardImage(
                         dim = imeta.dimension,
                         uri = note.toNostrUri(),
                         mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 } else {
                     MediaUrlVideo(
@@ -132,6 +132,7 @@ private fun VideoCardImage(
                         uri = note.toNostrUri(),
                         authorName = note.author?.toBestDisplayName(),
                         mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 },
             )
@@ -145,7 +146,7 @@ private fun VideoCardImage(
         preloadUrls = if (isImage) listOf(imeta.url) else emptyList(),
         accountViewModel = accountViewModel,
         modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
-        backdrop = imeta.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+        backdrop = (imeta.thumbhash ?: imeta.blurhash)?.let { { BlurhashBackdrop(imeta.blurhash, content.description, imeta.thumbhash) } },
     ) {
         ZoomableContentView(
             content = content,

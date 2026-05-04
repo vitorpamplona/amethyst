@@ -64,7 +64,7 @@ fun NamecoinSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.namecoin_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.namecoin_settings), nav)
         },
     ) {
         Column(

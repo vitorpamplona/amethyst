@@ -1,5 +1,5 @@
+import de.undercouch.gradle.tasks.download.Download
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import java.io.File
 import java.nio.file.Files
 
 plugins {
@@ -31,7 +31,6 @@ kotlin {
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.jetbrains.compose.material3)
-    implementation(libs.jetbrains.compose.material.icons.extended)
     implementation(libs.jetbrains.compose.components.resources)
 
     // Quartz Nostr library (will use JVM target)
@@ -92,6 +91,13 @@ compose.desktop {
 
         jvmArgs += "-Xmx2g"
 
+        // Forward platform-preview overrides from the gradle invocation to the
+        // launched app's JVM so `./gradlew :desktopApp:run -Damethyst.platform=GNOME`
+        // works in addition to the env-var form (`AMETHYST_PLATFORM=GNOME`).
+        listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent").forEach { key ->
+            System.getProperty(key)?.let { jvmArgs += "-D$key=$it" }
+        }
+
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
@@ -137,6 +143,25 @@ vlcSetup {
 
 tasks.named("spotlessKotlin") {
     mustRunAfter("vlcSetup")
+}
+
+// `ir.mahozad.vlc-setup` registers `vlcDownload` / `upxDownload` tasks that
+// extend `de.undercouch.gradle.tasks.download.Download`. Defaults are 0 retries
+// and a short read timeout, so a transient blip on get.videolan.org fails the
+// whole desktop build on CI (Windows MSI, macOS DMG, Linux DEB). Configure all
+// Download tasks in this project to retry with generous timeouts so flaky
+// network conditions do not break packaging jobs.
+tasks.withType<Download>().configureEach {
+    // 5 attempts total (initial + 4 retries) before failing the task.
+    retries(4)
+    // 30s to establish a TCP / TLS connection.
+    connectTimeout(30_000)
+    // 5 minutes per attempt for the body — VLC archives are 40-90 MB and
+    // get.videolan.org can be slow under load.
+    readTimeout(5 * 60_000)
+    // Stage to a temp file and rename only on full success, so a partial
+    // download from one attempt cannot poison the next.
+    tempAndMove(true)
 }
 
 // --- AppImage packaging (Linux) ---

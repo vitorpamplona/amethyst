@@ -65,7 +65,7 @@ fun RenderPinListEvent(
 ) {
     val noteEvent = baseNote.event as? PinListEvent ?: return
 
-    val pins by remember { mutableStateOf(noteEvent.pinnedEvents()) }
+    val pins = remember(noteEvent) { noteEvent.pinnedEvents() }
 
     var expanded by remember { mutableStateOf(false) }
 

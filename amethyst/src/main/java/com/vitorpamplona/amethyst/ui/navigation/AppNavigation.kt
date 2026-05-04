@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
-import com.vitorpamplona.amethyst.ui.navigation.composableFromEnd
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -74,13 +73,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.AddMemberScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.RemoveMemberScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
@@ -93,13 +90,23 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.CommunitiesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata.EmojiPackMetadataScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.EmojiPackSelectionScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.MyEmojiListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
@@ -108,6 +115,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.nip75Goals.NewGoalScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.display.InterestSetScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.list.ListOfInterestSetsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.list.metadata.InterestSetMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
@@ -115,7 +125,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.FollowPackMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.PeopleListMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
@@ -127,6 +140,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
@@ -139,7 +153,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.RequestToVani
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.OtsSettingsScreen
@@ -148,6 +164,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
@@ -218,12 +235,20 @@ fun BuildNavigation(
         composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Communities> { CommunitiesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.NewCommunity> { NewCommunityScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
+        composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.NestLobby> { NestLobbyScreen(it.addressValue, accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
@@ -247,8 +272,19 @@ fun BuildNavigation(
         composableFromEnd<Route.BookmarkGroups> { ListOfBookmarkGroupsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.BookmarkGroupView> { BookmarkGroupScreen(it.dTag, it.bookmarkType, accountViewModel, nav) }
         composableFromBottomArgs<Route.BookmarkGroupMetadataEdit> { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
+
+        composableFromEnd<Route.InterestSets> { ListOfInterestSetsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.InterestSetView> { InterestSetScreen(it.dTag, accountViewModel, nav) }
+        composableFromBottomArgs<Route.InterestSetMetadataEdit> { InterestSetMetadataScreen(it.dTag, accountViewModel, nav) }
         composableFromBottomArgs<Route.PostBookmarkManagement> { PostBookmarkListManagementScreen(it.postId, accountViewModel, nav) }
         composableFromBottomArgs<Route.ArticleBookmarkManagement> { ArticleBookmarkListManagementScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+
+        composableFromEnd<Route.EmojiPacks> { ListOfEmojiPacksScreen(accountViewModel, nav) }
+        composableFromEnd<Route.MyEmojiList> { MyEmojiListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BrowseEmojiSets> { BrowseEmojiSetsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.EmojiPackView> { EmojiPackScreen(it.dTag, accountViewModel, nav) }
+        composableFromBottomArgs<Route.EmojiPackMetadataEdit> { EmojiPackMetadataScreen(it.dTag, accountViewModel, nav) }
+        composableFromBottomArgs<Route.EmojiPackSelection> { EmojiPackSelectionScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 
         composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav) }
 
@@ -271,6 +307,9 @@ fun BuildNavigation(
         composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ImportFollowsPickFollows> {
@@ -284,6 +323,10 @@ fun BuildNavigation(
         composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
         composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.EditNestsServers> {
+            com.vitorpamplona.amethyst.ui.actions.nestsServers
+                .NestsServersScreen(accountViewModel, nav)
+        }
         composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
@@ -309,8 +352,6 @@ fun BuildNavigation(
         composableFromEndArgs<Route.MarmotGroupInfo> { MarmotGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
 
         composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }
-        composableFromBottomArgs<Route.MarmotGroupAddMember> { AddMemberScreen(it.nostrGroupId, accountViewModel, nav) }
-        composableFromBottomArgs<Route.MarmotGroupRemoveMember> { RemoveMemberScreen(it.nostrGroupId, accountViewModel, nav) }
         composableFromBottomArgs<Route.MarmotGroupEditInfo> { EditGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
 
         composableFromEndArgs<Route.PublicChatChannel> {

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -68,6 +69,42 @@ class AccountCacheState(
         }
     }
 
+    /**
+     * Loads every saved account that can sign (has a private key or an external signer)
+     * into the cache. Safe to call repeatedly — [loadAccount] is idempotent, so already
+     * loaded accounts are returned as-is. Used by the always-on notification service so
+     * GiftWraps addressed to non-active accounts still get unwrapped and notified.
+     */
+    suspend fun loadAllWritableAccounts(localPreferences: LocalPreferences) {
+        localPreferences.allSavedAccounts().forEach { savedAccount ->
+            if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
+            try {
+                val accountSettings = localPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
+                loadAccount(accountSettings)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.w("AccountCacheState", "Failed to preload account ${savedAccount.npub}: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Cancels and removes every cached account whose pubkey is not in [keepPubkeys].
+     * Used to release accounts that were preloaded for background notification handling
+     * when the always-on service is turned off, while preserving the active account.
+     */
+    fun retainOnly(keepPubkeys: Set<HexKey>) {
+        accounts.update { existingAccounts ->
+            val toRemove = existingAccounts.filterKeys { it !in keepPubkeys }
+            if (toRemove.isEmpty()) {
+                existingAccounts
+            } else {
+                toRemove.values.forEach { it.scope.cancel() }
+                existingAccounts.minus(toRemove.keys)
+            }
+        }
+    }
+
     fun loadAccount(accountSettings: AccountSettings): Account =
         loadAccount(
             signer =
@@ -100,13 +137,14 @@ class AccountCacheState(
 
         val signerWithClientTag = NostrSignerWithClientTag(signer, CLIENT_TAG_NAME)
 
+        val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}").apply { mkdirs() }
+
         val mlsStore =
             try {
-                val dir = rootFilesDir()
                 Log.d("AccountCacheState") {
-                    "Initializing AndroidMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${dir.absolutePath}"
+                    "Initializing AndroidMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${accountDir.absolutePath}"
                 }
-                AndroidMlsGroupStateStore(dir)
+                AndroidMlsGroupStateStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
@@ -121,7 +159,7 @@ class AccountCacheState(
 
         val marmotMessageStore =
             try {
-                AndroidMarmotMessageStore(rootFilesDir())
+                AndroidMarmotMessageStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
@@ -133,7 +171,7 @@ class AccountCacheState(
 
         val marmotKeyPackageStore =
             try {
-                AndroidKeyPackageBundleStore(rootFilesDir())
+                AndroidKeyPackageBundleStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",

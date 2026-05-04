@@ -22,7 +22,10 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.SQLiteConnection
 import com.vitorpamplona.quartz.utils.RandomInstance
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
+@OptIn(ExperimentalAtomicApi::class)
 class SeedModule : IModule {
     override fun create(db: SQLiteConnection) {
         db.execSQL("CREATE TABLE seeds (seed_value INTEGER)")
@@ -78,7 +81,16 @@ class SeedModule : IModule {
 
     override fun deleteAll(db: SQLiteConnection) {}
 
-    private var hasherCache: TagNameValueHasher? = null
+    // The hasher is keyed off a stable per-DB seed, so two concurrent
+    // computations would produce identical hashers — the race is benign.
+    // We still publish via AtomicReference so the field write is visible
+    // across threads (commonMain has no @Volatile equivalent).
+    private val hasherCache = AtomicReference<TagNameValueHasher?>(null)
 
-    fun hasher(db: SQLiteConnection): TagNameValueHasher = hasherCache ?: TagNameValueHasher(getSeed(db)).also { hasherCache = it }
+    fun hasher(db: SQLiteConnection): TagNameValueHasher {
+        hasherCache.load()?.let { return it }
+        val fresh = TagNameValueHasher(getSeed(db))
+        hasherCache.compareAndSet(null, fresh)
+        return hasherCache.load() ?: fresh
+    }
 }

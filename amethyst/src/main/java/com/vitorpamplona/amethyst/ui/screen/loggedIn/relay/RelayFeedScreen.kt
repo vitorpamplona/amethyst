@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relay
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +30,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingRelay
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -101,18 +100,18 @@ fun RelayFeedScreen(
             )
         },
         floatingButton = {
-            NewRelayNoteButton(accountViewModel, nav)
+            FabBottomBarPadded(nav) {
+                NewRelayNoteButton(accountViewModel, nav)
+            }
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            feedViewModel,
+            null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 

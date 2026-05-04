@@ -36,10 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -61,6 +58,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -172,7 +171,7 @@ private fun RenderProfileBadgeStrip(
                     modifier = Modifier.size(32.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Settings,
+                        symbol = MaterialSymbols.Settings,
                         contentDescription = stringRes(R.string.profile_badges_title),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -416,6 +415,10 @@ private fun RenderBadgeImage(
             modifier = modifier,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif =
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value,
         )
     }
 }

@@ -7,7 +7,7 @@ accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
 composeMultiplatform = "1.10.3"
 activityCompose = "1.13.0"
-agp = "9.1.1"
+agp = "9.2.0"
 android-compileSdk = "37"
 android-minSdk = "26"
 android-targetSdk = "37"
@@ -17,8 +17,8 @@ audiowaveform = "1.1.2"
 benchmark = "1.5.0-alpha05"
 biometricKtx = "1.2.0-alpha05"
 coil = "3.4.0"
-composeBom = "2026.03.01"
-composeRuntimeAnnotation = "1.10.6"
+composeBom = "2026.04.01"
+composeRuntimeAnnotation = "1.11.0"
 coreKtx = "1.18.0"
 datastore = "1.2.1"
 devWhyolegCryptography = "0.6.0"
@@ -33,13 +33,14 @@ kmpTorRuntime = "2.6.0"
 kmpTorResource = "409.5.0"
 junit = "4.13.2"
 kchesslib = "1.0.5"
-kotlin = "2.3.20"
+kotlin = "2.3.21"
 kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
-kotlinxSerialization = "1.10.0"
+kotlinxSerialization = "1.11.0"
 genaiProofreading = "1.0.0-beta1"
 genaiPrompt = "1.0.0-beta2"
 genaiRewriting = "1.0.0-beta1"
+genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
 lifecycleRuntimeKtx = "2.10.0"
 lightcompressor-enhanced = "2.2.1"
@@ -51,10 +52,11 @@ mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
 negentropyKmp = "v1.0.2"
 netUrlencoderLibVersion = "1.6.0"
-navigationCompose = "2.9.7"
+navigationCompose = "2.9.8"
 okhttp = "5.3.2"
 runner = "1.7.0"
 secp256k1KmpJniAndroid = "0.23.0"
+schnorr256k1Kmp = "1.0.3"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.17"
 spotless = "8.4.0"
@@ -71,6 +73,7 @@ commonsImaging = "1.0.0-alpha6"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
+workRuntime = "2.11.2"
 androidxCamera = "1.6.0"
 androidxCollection = "1.6.0"
 androidxExifinterface = "1.4.2"
@@ -147,6 +150,7 @@ jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-t
 google-mlkit-genai-proofreading = { group = "com.google.mlkit", name = "genai-proofreading", version.ref = "genaiProofreading" }
 google-mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "genaiPrompt" }
 google-mlkit-genai-rewriting = { group = "com.google.mlkit", name = "genai-rewriting", version.ref = "genaiRewriting" }
+google-mlkit-genai-image-description = { group = "com.google.mlkit", name = "genai-image-description", version.ref = "genaiImageDescription" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
@@ -174,6 +178,7 @@ okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines",
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
+schnorr256k1-kmp = { group = "com.vitorpamplona.schnorr256k1", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
 stream-webrtc-android = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "streamWebrtcAndroid" }
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
@@ -190,6 +195,7 @@ androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }
 androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "sqlite" }
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

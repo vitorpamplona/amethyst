@@ -34,12 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -60,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsSettings
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 
@@ -119,7 +116,7 @@ fun OtsSettingsSection(
             ) {
                 TextButton(onClick = onReset) {
                     Icon(
-                        Icons.Default.Refresh,
+                        MaterialSymbols.Refresh,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
@@ -148,7 +145,7 @@ private fun SectionHeaderOts() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            Icons.Outlined.Search,
+            MaterialSymbols.Search,
             contentDescription = null,
             tint = Color(0xFFF7931A), // Bitcoin orange
             modifier = Modifier.size(22.dp),
@@ -288,7 +285,7 @@ private fun CustomExplorerInput(
                                 validationError = null
                             }) {
                                 Icon(
-                                    Icons.Default.Clear,
+                                    MaterialSymbols.Clear,
                                     contentDescription = "Clear",
                                     modifier = Modifier.size(18.dp),
                                 )

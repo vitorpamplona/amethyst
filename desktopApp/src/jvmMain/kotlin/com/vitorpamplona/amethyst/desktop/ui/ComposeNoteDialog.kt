@@ -51,16 +51,19 @@ import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
-import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
-import com.vitorpamplona.amethyst.desktop.service.upload.UploadResult
+import com.vitorpamplona.amethyst.desktop.ui.compose.ComposeRelayPicker
+import com.vitorpamplona.amethyst.desktop.ui.compose.RelayPickerState
 import com.vitorpamplona.amethyst.desktop.ui.media.ClipboardPasteHandler
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -100,9 +103,18 @@ fun ComposeNoteDialog(
     val attachedFiles = remember { mutableStateListOf<File>() }
     val uploadTracker = remember { DesktopUploadTracker() }
     val uploadState by uploadTracker.state.collectAsState()
-    val orchestrator = remember { DesktopUploadOrchestrator() }
+    val orchestrator = remember { UploadOrchestrator() }
     var selectedServer by remember { mutableStateOf(DesktopPreferences.preferredBlossomServer) }
     var postAsPicture by remember { mutableStateOf(false) }
+
+    // Relay picker state
+    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val allRelays by relayManager.availableRelays.collectAsState()
+    val pickerState =
+        remember(allRelays, connectedRelays) {
+            RelayPickerState(allRelays = allRelays, connectedRelays = connectedRelays)
+        }
+    var selectedRelays by remember(connectedRelays) { mutableStateOf(connectedRelays) }
 
     // Drag-and-drop state
     var isDragOver by remember { mutableStateOf(false) }
@@ -255,7 +267,22 @@ fun ComposeNoteDialog(
                     )
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
+
+                ComposeRelayPicker(
+                    pickerState = pickerState,
+                    selectedRelays = selectedRelays,
+                    onToggleRelay = { url ->
+                        selectedRelays =
+                            if (url in selectedRelays) {
+                                selectedRelays - url
+                            } else {
+                                selectedRelays + url
+                            }
+                    },
+                )
+
+                Spacer(Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -316,6 +343,7 @@ fun ComposeNoteDialog(
                                             images = pictureMetas,
                                             account = account,
                                             relayManager = relayManager,
+                                            relays = selectedRelays,
                                         )
                                     } else {
                                         val imetaTags = buildIMetaTags(uploadResults)
@@ -325,6 +353,7 @@ fun ComposeNoteDialog(
                                             relayManager = relayManager,
                                             replyTo = replyTo,
                                             imetaTags = imetaTags,
+                                            relays = selectedRelays,
                                         )
                                     }
                                     onDismiss()
@@ -358,6 +387,7 @@ private fun buildIMetaTags(results: List<UploadResult>): List<IMetaTag> =
             props["dim"] = listOf("${meta.width}x${meta.height}")
         }
         meta.blurhash?.let { props["blurhash"] = listOf(it) }
+        meta.thumbhash?.let { props["thumbhash"] = listOf(it) }
         IMetaTag(url = url, properties = props)
     }
 
@@ -452,14 +482,15 @@ private fun buildPictureMetas(results: List<UploadResult>): List<com.vitorpamplo
             mimeType = meta.mimeType,
             blurhash = meta.blurhash,
             dimension =
-                if (meta.width != null && meta.height != null) {
-                    com.vitorpamplona.quartz.nip94FileMetadata.tags
-                        .DimensionTag(meta.width, meta.height)
-                } else {
-                    null
+                meta.width?.let { w ->
+                    meta.height?.let { h ->
+                        com.vitorpamplona.quartz.nip94FileMetadata.tags
+                            .DimensionTag(w, h)
+                    }
                 },
             hash = meta.sha256,
             size = meta.size.toInt(),
+            thumbhash = meta.thumbhash,
         )
     }
 
@@ -468,6 +499,7 @@ private suspend fun publishPicture(
     images: List<com.vitorpamplona.quartz.nip68Picture.PictureMeta>,
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
+    relays: Set<NormalizedRelayUrl>,
 ) {
     withContext(Dispatchers.IO) {
         if (account.isReadOnly) {
@@ -483,7 +515,7 @@ private suspend fun publishPicture(
             }
 
         val signedEvent = account.signer.sign(template)
-        relayManager.broadcastToAll(signedEvent)
+        relayManager.publish(signedEvent, relays)
     }
 }
 
@@ -493,6 +525,7 @@ private suspend fun publishNote(
     relayManager: DesktopRelayConnectionManager,
     replyTo: Event?,
     imetaTags: List<IMetaTag> = emptyList(),
+    relays: Set<NormalizedRelayUrl>,
 ) {
     withContext(Dispatchers.IO) {
         if (account.isReadOnly) {
@@ -516,6 +549,6 @@ private suspend fun publishNote(
             }
 
         val signedEvent = account.signer.sign(template)
-        relayManager.broadcastToAll(signedEvent)
+        relayManager.publish(signedEvent, relays)
     }
 }

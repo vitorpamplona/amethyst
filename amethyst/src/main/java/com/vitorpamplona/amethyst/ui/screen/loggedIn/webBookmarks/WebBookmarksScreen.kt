@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -34,17 +33,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -71,6 +64,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
@@ -81,7 +76,11 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
@@ -134,39 +133,50 @@ private fun RenderWebBookmarksScreen(
                     Text(text = stringRes(id = R.string.web_bookmarks))
                 },
                 navigationIcon = {
-                    IconButton(onClick = nav::popBack) {
-                        ArrowBackIcon()
+                    if (nav.canPop()) {
+                        IconButton(onClick = nav::popBack) {
+                            ArrowBackIcon()
+                        }
                     }
                 },
             )
         },
+        bottomBar = {
+            AppBottomBar(Route.WebBookmarks, nav, accountViewModel) { route ->
+                if (route == Route.WebBookmarks) {
+                    feedState.sendToTop()
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
+        },
         floatingButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                modifier = Size55Modifier,
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.web_bookmark_add_title),
-                )
+            FabBottomBarPadded(nav) {
+                FloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Add,
+                        contentDescription = stringResource(R.string.web_bookmark_add_title),
+                    )
+                }
             }
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            RefresheableBox(feedState) {
-                SaveableFeedState(feedState, ScrollStateKeys.WEB_BOOKMARKS) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = feedState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = null,
-                        onLoaded = { WebBookmarksFeedLoaded(it, listState, accountViewModel, nav) },
-                    )
-                }
+        RefresheableBox(feedState) {
+            SaveableFeedState(feedState, ScrollStateKeys.WEB_BOOKMARKS) { listState ->
+                RenderFeedContentState(
+                    feedContentState = feedState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = null,
+                    onLoaded = { WebBookmarksFeedLoaded(it, listState, accountViewModel, nav) },
+                )
             }
         }
     }
@@ -182,7 +192,7 @@ private fun WebBookmarksFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
@@ -306,19 +316,19 @@ private fun WebBookmarkCard(
             Row {
                 IconButton(onClick = { uriHandler.openUri(event.url()) }) {
                     Icon(
-                        imageVector = Icons.Default.OpenInBrowser,
+                        symbol = MaterialSymbols.OpenInBrowser,
                         contentDescription = stringResource(R.string.web_bookmark_open_url),
                     )
                 }
                 IconButton(onClick = { showEditDialog = true }) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        symbol = MaterialSymbols.Edit,
                         contentDescription = stringResource(R.string.web_bookmark_edit_title),
                     )
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        symbol = MaterialSymbols.Delete,
                         contentDescription = stringResource(R.string.web_bookmark_delete),
                         tint = MaterialTheme.colorScheme.error,
                     )

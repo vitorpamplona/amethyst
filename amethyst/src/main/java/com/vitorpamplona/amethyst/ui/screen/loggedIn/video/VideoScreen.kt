@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -43,7 +40,9 @@ import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -84,29 +83,27 @@ fun VideoScreen(
             StoriesTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Video, accountViewModel) { route ->
+            AppBottomBar(Route.Video, nav, accountViewModel) { route ->
                 if (route == Route.Video) {
                     videoFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
         floatingButton = {
-            NewImageButton(accountViewModel, nav, videoFeedContentState::sendToTop)
+            FabBottomBarPadded(nav) {
+                NewImageButton(accountViewModel, nav, videoFeedContentState::sendToTop)
+            }
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(
-            modifier = Modifier.padding(it).consumeWindowInsets(it),
-        ) {
-            RenderFeed(
-                videoFeedContentState = videoFeedContentState,
-                scrollKey = ScrollStateKeys.VIDEO_SCREEN,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RenderFeed(
+            videoFeedContentState = videoFeedContentState,
+            scrollKey = ScrollStateKeys.VIDEO_SCREEN,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
@@ -163,7 +160,7 @@ fun VideoFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(

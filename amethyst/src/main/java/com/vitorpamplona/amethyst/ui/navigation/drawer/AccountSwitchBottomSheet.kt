@@ -31,12 +31,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,6 +53,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -205,7 +203,7 @@ private fun ActiveMarker(
 
     if (isCurrentUser) {
         Icon(
-            imageVector = Icons.Default.RadioButtonChecked,
+            symbol = MaterialSymbols.RadioButtonChecked,
             contentDescription = stringRes(R.string.account_switch_active_account),
             tint = MaterialTheme.colorScheme.secondary,
         )
@@ -226,6 +224,10 @@ private fun AccountPicture(
         modifier = AccountPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
     )
 }
 
@@ -288,7 +290,7 @@ private fun LogoutButton(
         onClick = { logoutDialog = true },
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Logout,
+            symbol = MaterialSymbols.AutoMirrored.Logout,
             contentDescription = stringRes(R.string.log_out),
             tint = MaterialTheme.colorScheme.onSurface,
         )

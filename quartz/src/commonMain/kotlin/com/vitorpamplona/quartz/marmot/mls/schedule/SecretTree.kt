@@ -47,22 +47,23 @@ class SecretTree(
     private val encryptionSecret: ByteArray,
     private val leafCount: Int,
 ) {
-    /** Cached tree node secrets, computed lazily */
-    private val treeSecrets = mutableMapOf<Int, ByteArray>()
-
     /** Per-sender ratchet state: (handshake generation, handshake secret, app generation, app secret) */
     private val senderState = mutableMapOf<Int, SenderRatchetState>()
 
-    /** Consumed (sender, generation) pairs for replay detection (RFC 9420 Section 9.1) */
+    /** Consumed (sender, generation) pairs for replay detection on the APPLICATION ratchet. */
     private val consumedGenerations = mutableMapOf<Int, MutableSet<Int>>()
 
+    /** Same replay tracker, but for the HANDSHAKE ratchet (commits / proposals). */
+    private val consumedHandshakeGenerations = mutableMapOf<Int, MutableSet<Int>>()
+
     /**
-     * Cache of key/nonce pairs for skipped generations.
+     * Cache of key/nonce pairs for skipped APPLICATION generations.
      * Key: (leafIndex, generation) -> derived KeyNonceGeneration.
-     * When fast-forwarding a ratchet, intermediate generations are saved here
-     * so that out-of-order messages arriving later can still be decrypted.
      */
     private val skippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
+
+    /** Same cache for the HANDSHAKE ratchet. */
+    private val handshakeSkippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
 
     private companion object {
         /** Maximum number of skipped key entries to retain (prevents unbounded memory growth). */
@@ -70,11 +71,23 @@ class SecretTree(
 
         /** Maximum consumed generation entries to track per sender before pruning. */
         const val MAX_CONSUMED_GENERATIONS_PER_SENDER = 1000
-    }
 
-    init {
-        // Seed the root
-        treeSecrets[BinaryTree.root(leafCount)] = encryptionSecret
+        /**
+         * Hard cap on how many ratchet steps a single decrypt request may
+         * fast-forward through. Without this an attacker who can deliver a
+         * single PrivateMessage with a forged `generation` field can force
+         * the receiver into ~`generation` HKDF-Expand steps — trivially
+         * many seconds of CPU per packet. The skipped-key cache itself
+         * stops at [MAX_SKIPPED_KEYS] entries, but the ratchet keeps
+         * advancing past that point, so the cache cap doesn't bound
+         * compute cost.
+         *
+         * 4096 leaves room for a realistic application/handshake gap
+         * (e.g. mobile catching up after a long sleep) while making the
+         * attack worst-case ~4096 SHA-256 invocations — bounded enough
+         * that the receiver stays responsive.
+         */
+        const val MAX_RATCHET_STEPS_PER_CALL = 4096
     }
 
     /**
@@ -153,6 +166,15 @@ class SecretTree(
         require(generation >= state.applicationGeneration) {
             "Generation $generation already consumed (current: ${state.applicationGeneration})"
         }
+        // DoS guard: a malicious sender can put any uint32 in the
+        // PrivateMessage generation field, and without this cap a single
+        // packet would force unbounded HKDF-Expand work. See
+        // MAX_RATCHET_STEPS_PER_CALL.
+        require(generation - state.applicationGeneration <= MAX_RATCHET_STEPS_PER_CALL) {
+            "Application generation jump too large: " +
+                "${generation - state.applicationGeneration} steps (cap $MAX_RATCHET_STEPS_PER_CALL); " +
+                "sender $leafIndex from ${state.applicationGeneration} to $generation"
+        }
 
         // Replay detection: reject if this (sender, generation) was already used
         val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
@@ -189,6 +211,75 @@ class SecretTree(
             state.copy(
                 applicationSecret = nextSecret,
                 applicationGeneration = generation + 1,
+            )
+
+        return result
+    }
+
+    /**
+     * Handshake-ratchet counterpart to [applicationKeyNonceForGeneration].
+     *
+     * PrivateMessage commits / proposals (RFC 9420 §6.3.2) are encrypted
+     * with a separate handshake ratchet per sender leaf — NOT the
+     * application ratchet. openmls / mdk use this path by default
+     * (`MIXED_CIPHERTEXT_WIRE_FORMAT_POLICY`), so quartz must also
+     * ratchet-forward the handshake chain when decrypting an inbound
+     * PrivateMessage commit.
+     */
+    fun handshakeKeyNonceForGeneration(
+        leafIndex: Int,
+        generation: Int,
+    ): KeyNonceGeneration {
+        val cachedKey = handshakeSkippedKeys.remove(Pair(leafIndex, generation))
+        if (cachedKey != null) {
+            val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }
+            require(generation !in senderConsumed) {
+                "Replay detected: handshake generation $generation from sender $leafIndex already consumed"
+            }
+            senderConsumed.add(generation)
+            return cachedKey
+        }
+
+        val state = getOrInitSender(leafIndex)
+
+        require(generation >= state.handshakeGeneration) {
+            "Handshake generation $generation already consumed (current: ${state.handshakeGeneration})"
+        }
+        require(generation - state.handshakeGeneration <= MAX_RATCHET_STEPS_PER_CALL) {
+            "Handshake generation jump too large: " +
+                "${generation - state.handshakeGeneration} steps (cap $MAX_RATCHET_STEPS_PER_CALL); " +
+                "sender $leafIndex from ${state.handshakeGeneration} to $generation"
+        }
+
+        val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }
+        require(generation !in senderConsumed) {
+            "Replay detected: handshake generation $generation from sender $leafIndex already consumed"
+        }
+        senderConsumed.add(generation)
+
+        if (senderConsumed.size > MAX_CONSUMED_GENERATIONS_PER_SENDER) {
+            val minGeneration = state.handshakeGeneration
+            senderConsumed.removeAll { it < minGeneration }
+        }
+
+        var secret = state.handshakeSecret
+        var gen = state.handshakeGeneration
+        while (gen < generation) {
+            val intermediateKng = deriveKeyNonce(secret, gen)
+            val cacheKey = Pair(leafIndex, gen)
+            if (handshakeSkippedKeys.size < MAX_SKIPPED_KEYS) {
+                handshakeSkippedKeys[cacheKey] = intermediateKng
+            }
+            secret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(gen), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            gen++
+        }
+
+        val result = deriveKeyNonce(secret, generation)
+        val nextSecret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(generation), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        senderState[leafIndex] =
+            state.copy(
+                handshakeSecret = nextSecret,
+                handshakeGeneration = generation + 1,
             )
 
         return result
@@ -252,36 +343,51 @@ class SecretTree(
         }
 
     /**
-     * Derive the leaf secret from the encryption secret using the tree structure.
+     * Derive the leaf secret from the encryption secret by walking DOWN the
+     * binary tree from the root to the target leaf (RFC 9420 §9).
+     *
+     * At each step we pick left or right based on which subtree contains the
+     * target. In an MLS left-balanced tree the left-subtree node indices are
+     * always strictly less than the current node, and the right-subtree
+     * indices strictly greater — so the direction is simply
+     * `targetNode < currentNode`.
+     *
+     * This also correctly handles non-power-of-2 leaf counts (3, 5, 6, 7, 9
+     * …) where the rightmost leaves live beneath "virtual" intermediate
+     * nodes that are beyond `nodeCount`. Walking down still succeeds because
+     * [BinaryTree.left] / [BinaryTree.right] give the correct descendants
+     * even for virtual nodes, and the target leaf is reachable via a chain
+     * of left/right steps that mixes real and virtual intermediates.
+     *
+     * The previous implementation derived the target's secret from
+     * `BinaryTree.parent(target)` which, for leaves on the right edge of a
+     * non-full tree, returned a high ancestor (often the root) that is NOT
+     * the target's direct parent. Its `left()` and `right()` then pointed
+     * at different nodes entirely, the target stayed un-cached, and the
+     * follow-up `return treeSecrets[nodeIndex]!!` either threw NPE (on
+     * JVM) or — when repeatedly re-entered — recursed into
+     * [getNodeSecret] until the stack was exhausted (on ART).
      */
     private fun getLeafSecret(leafIndex: Int): ByteArray {
-        val nodeIndex = BinaryTree.leafToNode(leafIndex)
-        return getNodeSecret(nodeIndex)
-    }
+        val targetNode = BinaryTree.leafToNode(leafIndex)
+        val rootIdx = BinaryTree.root(leafCount)
+        var currentSecret = encryptionSecret
+        var currentNode = rootIdx
 
-    /**
-     * Recursively derive a node's secret from its parent in the secret tree.
-     */
-    private fun getNodeSecret(nodeIndex: Int): ByteArray {
-        treeSecrets[nodeIndex]?.let { return it }
+        while (currentNode != targetNode) {
+            val goLeft = targetNode < currentNode
+            val label = if (goLeft) "left" else "right"
+            currentSecret =
+                MlsCryptoProvider.expandWithLabel(
+                    currentSecret,
+                    "tree",
+                    label.encodeToByteArray(),
+                    MlsCryptoProvider.HASH_OUTPUT_LENGTH,
+                )
+            currentNode = if (goLeft) BinaryTree.left(currentNode) else BinaryTree.right(currentNode)
+        }
 
-        val parentIdx = BinaryTree.parent(nodeIndex, BinaryTree.nodeCount(leafCount))
-        val parentSecret = getNodeSecret(parentIdx)
-
-        // Derive left and right children secrets
-        val leftIdx = BinaryTree.left(parentIdx)
-        val rightIdx = BinaryTree.right(parentIdx)
-
-        val leftSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "left".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-        val rightSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "right".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-
-        treeSecrets[leftIdx] = leftSecret
-        treeSecrets[rightIdx] = rightSecret
-
-        // Clear parent secret for forward secrecy
-        treeSecrets.remove(parentIdx)
-
-        return treeSecrets[nodeIndex]!!
+        return currentSecret
     }
 }
 

@@ -115,6 +115,7 @@ private fun PictureCardImage(
                             dim = it.dimension,
                             uri = uri,
                             mimeType = it.mimeType,
+                            thumbhash = it.thumbhash,
                         )
                     }.toImmutableList(),
             )
@@ -131,7 +132,7 @@ private fun PictureCardImage(
             preloadUrls = listOf(single.url),
             accountViewModel = accountViewModel,
             modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
-            backdrop = single.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, single.description) } },
+            backdrop = (single.thumbhash ?: single.blurhash)?.let { { BlurhashBackdrop(single.blurhash, single.description, single.thumbhash) } },
         ) {
             ZoomableContentView(
                 content = single,

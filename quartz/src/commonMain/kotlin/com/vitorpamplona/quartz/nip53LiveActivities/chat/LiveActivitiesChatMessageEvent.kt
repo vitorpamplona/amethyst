@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip37Drafts.ExposeInDraft
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -150,6 +151,16 @@ class LiveActivitiesChatMessageEvent(
             initializer: TagArrayBuilder<LiveActivitiesChatMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, post, createdAt) {
             activity(activity)
+            initializer()
+        }
+
+        fun roomMessage(
+            post: String,
+            room: EventHintBundle<MeetingSpaceEvent>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<LiveActivitiesChatMessageEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, post, createdAt) {
+            room(room)
             initializer()
         }
 

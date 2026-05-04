@@ -35,16 +35,24 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dataso
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource.CommunitiesListFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource.FollowPacksFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLivenessAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssembler
@@ -91,16 +99,24 @@ class RelaySubscriptionsCoordinator(
     val relayFeed = RelayFeedFilterAssembler(client)
     val relayInfoNip66 = RelayInfoNip66FilterAssembler(client)
     val followPacks = FollowPackFeedFilterAssembler(client)
+    val followPacksList = FollowPacksFilterAssembler(client)
     val chess = ChessFilterAssembler(client)
 
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
     val products = ProductsFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
+    val publicChats = PublicChatsFilterAssembler(client)
+    val liveStreams = LiveStreamsFilterAssembler(client)
+    val nests = NestsFilterAssembler(client)
+    val nestRoom = NestRoomFilterAssembler(client)
+    val nestRoomLiveness = NestRoomLivenessAssembler(client)
     val longs = LongsFilterAssembler(client)
     val articles = ArticlesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
+    val browseEmojiSets = BrowseEmojiSetsFilterAssembler(client)
+    val communitiesList = CommunitiesListFilterAssembler(client)
 
     // active when sending zaps via NWC
     val nwc = NWCPaymentFilterAssembler(client)
@@ -116,10 +132,18 @@ class RelaySubscriptionsCoordinator(
             pictures,
             products,
             shorts,
+            publicChats,
+            followPacksList,
+            liveStreams,
+            nests,
+            nestRoom,
+            nestRoomLiveness,
             longs,
             articles,
             badges,
             profileBadges,
+            browseEmojiSets,
+            communitiesList,
             channelFinder,
             eventFinder,
             userFinder,

@@ -40,11 +40,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -55,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +63,8 @@ import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -107,7 +107,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -124,6 +123,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -144,6 +144,7 @@ fun ShortNotePostScreen(
 
     val context = LocalContext.current
     val activity = context.getActivity()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.initWritingAssistant(context)
@@ -177,9 +178,12 @@ fun ShortNotePostScreen(
                         postViewModel.addToMessage(it)
                     }
 
-                    IntentCompat.getParcelableExtra(activity.intent, Intent.EXTRA_STREAM, Uri::class.java)?.let {
-                        val mediaType = context.contentResolver.getType(it)
-                        postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
+                    // Use the `intent` parameter (the new intent), not activity.intent (the launch intent).
+                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let { uri ->
+                        scope.launch(Dispatchers.IO) {
+                            val mediaType = context.contentResolver.getType(uri)
+                            postViewModel.selectImage(persistentListOf(SelectedMedia(uri, mediaType)))
+                        }
                     }
                 }
             }
@@ -307,7 +311,7 @@ private fun NewPostScreenBody(
                                 onClick = { postViewModel.wantsAnonymousPost = false },
                             ) {
                                 Icon(
-                                    painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                    symbol = MaterialSymbols.NoAccounts,
                                     contentDescription = stringRes(R.string.post_anonymously),
                                     modifier = Size30Modifier,
                                     tint = MaterialTheme.colorScheme.onBackground,
@@ -689,14 +693,14 @@ private fun AddPollButton(
     ) {
         if (!isPollActive) {
             Icon(
-                imageVector = Icons.Outlined.Poll,
+                symbol = MaterialSymbols.Poll,
                 contentDescription = stringRes(id = R.string.poll),
                 modifier = Modifier.height(22.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
-                imageVector = Icons.Outlined.Poll,
+                symbol = MaterialSymbols.Poll,
                 contentDescription = stringRes(id = R.string.disable_poll),
                 modifier = Modifier.height(22.dp),
                 tint = MaterialTheme.colorScheme.primary,

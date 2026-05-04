@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,38 +29,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material.icons.outlined.MilitaryTech
-import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material.icons.outlined.ThumbUp
-import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -69,6 +67,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -87,13 +87,27 @@ fun AllSettingsScreen(
     nav: INav,
 ) {
     val tint = MaterialTheme.colorScheme.onBackground
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var showResetMarmotDialog by remember { mutableStateOf(false) }
+    var isResettingMarmot by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.settings), nav)
+        },
+        bottomBar = {
+            AppBottomBar(Route.AllSettings, nav, accountViewModel) { route ->
+                if (route == Route.AllSettings) {
+                    scope.launch { scrollState.animateScrollTo(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.padding(padding).verticalScroll(scrollState)) {
             SettingsSectionHeader(R.string.account_settings)
             SettingsNavigationRow(
                 title = R.string.relay_setup,
@@ -105,70 +119,91 @@ fun AllSettingsScreen(
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.event_sync_title,
-                icon = Icons.Outlined.Sync,
+                icon = MaterialSymbols.Sync,
                 tint = tint,
                 onClick = { nav.nav(Route.EventSync) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.route_import_follows,
-                icon = Icons.Outlined.GroupAdd,
+                icon = MaterialSymbols.GroupAdd,
                 tint = tint,
                 onClick = { nav.nav(Route.ImportFollowsSelectUser) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.media_servers,
-                icon = Icons.Outlined.CloudUpload,
+                icon = MaterialSymbols.CloudUpload,
                 tint = tint,
                 onClick = { nav.nav(Route.EditMediaServers) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.nests_servers_title,
+                icon = MaterialSymbols.CloudUpload,
+                tint = tint,
+                onClick = { nav.nav(Route.EditNestsServers) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.profile_badges_title,
-                icon = Icons.Outlined.MilitaryTech,
+                icon = MaterialSymbols.MilitaryTech,
                 tint = tint,
                 onClick = { nav.nav(Route.ProfileBadges) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.favorite_dvms_title,
-                icon = Icons.Outlined.AutoAwesome,
+                icon = MaterialSymbols.AutoAwesome,
                 tint = tint,
                 onClick = { nav.nav(Route.EditFavoriteAlgoFeeds) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.reactions,
-                icon = Icons.Outlined.FavoriteBorder,
+                icon = MaterialSymbols.FavoriteBorder,
                 tint = tint,
                 onClick = { nav.nav(Route.UpdateReactionType) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.video_player_settings,
+                icon = MaterialSymbols.VideoSettings,
+                tint = tint,
+                onClick = { nav.nav(Route.VideoPlayerSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.zaps,
-                icon = Icons.Outlined.Bolt,
+                icon = MaterialSymbols.Bolt,
                 tint = tint,
                 onClick = { nav.nav(Route.UpdateZapAmount()) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.payment_targets,
+                icon = MaterialSymbols.Payment,
+                tint = tint,
+                onClick = { nav.nav(Route.EditPaymentTargets) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.security_filters,
-                icon = Icons.Outlined.Security,
+                icon = MaterialSymbols.Security,
                 tint = tint,
                 onClick = { nav.nav(Route.SecurityFilters) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.call_settings,
-                icon = Icons.Outlined.Phone,
+                icon = MaterialSymbols.Phone,
                 tint = tint,
                 onClick = { nav.nav(Route.CallSettings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.translations,
-                icon = Icons.Outlined.Translate,
+                icon = MaterialSymbols.Translate,
                 tint = tint,
                 onClick = { nav.nav(Route.UserSettings) },
             )
@@ -184,44 +219,58 @@ fun AllSettingsScreen(
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.ots_explorer_settings,
-                icon = Icons.Outlined.Search,
+                icon = MaterialSymbols.Search,
                 tint = tint,
                 onClick = { nav.nav(Route.OtsSettings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.namecoin_settings,
-                icon = Icons.Outlined.Security,
+                icon = MaterialSymbols.Security,
                 tint = tint,
                 onClick = { nav.nav(Route.NamecoinSettings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.ui_preferences,
-                icon = Icons.Outlined.Settings,
+                icon = MaterialSymbols.Settings,
                 tint = tint,
                 onClick = { nav.nav(Route.Settings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.reactions_settings,
-                icon = Icons.Outlined.ThumbUp,
+                icon = MaterialSymbols.ThumbUp,
                 tint = tint,
                 onClick = { nav.nav(Route.ReactionsSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.bottom_bar_settings,
+                icon = MaterialSymbols.Dashboard,
+                tint = tint,
+                onClick = { nav.nav(Route.BottomBarSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.home_tabs_settings,
+                icon = MaterialSymbols.Home,
+                tint = tint,
+                onClick = { nav.nav(Route.HomeTabsSettings) },
             )
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.danger_zone)
             accountViewModel.account.settings.keyPair.privKey?.let {
                 SettingsNavigationRow(
                     title = R.string.backup_keys,
-                    icon = Icons.Outlined.Key,
+                    icon = MaterialSymbols.Key,
                     tint = tint,
                     onClick = { nav.nav(Route.AccountBackup) },
                 )
                 HorizontalDivider()
                 SettingsNavigationRow(
                     title = R.string.request_to_vanish,
-                    icon = Icons.Outlined.DeleteForever,
+                    icon = MaterialSymbols.DeleteForever,
                     tint = tint,
                     onClick = { nav.nav(Route.RequestToVanish) },
                 )
@@ -229,12 +278,89 @@ fun AllSettingsScreen(
             }
             SettingsNavigationRow(
                 title = R.string.vanish_history,
-                icon = Icons.Outlined.History,
+                icon = MaterialSymbols.History,
                 tint = tint,
                 onClick = { nav.nav(Route.VanishEvents) },
             )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.reset_marmot_state,
+                icon = MaterialSymbols.DeleteSweep,
+                tint = tint,
+                onClick = { if (!isResettingMarmot) showResetMarmotDialog = true },
+            )
         }
     }
+
+    if (showResetMarmotDialog) {
+        ResetMarmotStateDialog(
+            onConfirm = {
+                showResetMarmotDialog = false
+                isResettingMarmot = true
+                scope.launch(Dispatchers.IO) {
+                    val successMessage = stringRes(context, R.string.reset_marmot_success)
+                    try {
+                        accountViewModel.resetMarmotState()
+                        launch(Dispatchers.Main) {
+                            Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        val failureMessage =
+                            stringRes(context, R.string.reset_marmot_failure, e.message ?: "")
+                        launch(Dispatchers.Main) {
+                            Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
+                        }
+                    } finally {
+                        isResettingMarmot = false
+                    }
+                }
+            },
+            onDismiss = { showResetMarmotDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun ResetMarmotStateDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                symbol = MaterialSymbols.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(32.dp),
+            )
+        },
+        title = {
+            Text(
+                text = stringRes(R.string.reset_marmot_confirm_title),
+                textAlign = TextAlign.Center,
+            )
+        },
+        text = {
+            Text(text = stringRes(R.string.reset_marmot_confirm_body))
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
+            ) {
+                Text(stringRes(R.string.reset_marmot_confirm_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -251,7 +377,7 @@ private fun SettingsSectionHeader(title: Int) {
 @Composable
 private fun SettingsNavigationRow(
     title: Int,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     tint: Color,
     onClick: () -> Unit,
 ) {
@@ -264,7 +390,7 @@ private fun SettingsNavigationRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = stringRes(title),
             modifier = Modifier.size(24.dp),
             tint = tint,

@@ -29,12 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag.Companion.parse
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parse
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -64,10 +61,31 @@ class WakeUpEvent(
 
     fun kinds() = tags.kinds()
 
+    /**
+     * A WakeUpEvent's `p` tags point to the authors of the referenced subject
+     * events (see [authorKeys]), **not** to the account the wake-up should be
+     * delivered to. Example: Bob reacts to Alice's note, a WakeUpEvent about
+     * Bob's reaction p-tags Bob — but it's Alice's device that needs to wake
+     * up to process the reaction.
+     *
+     * WakeUpEvents reach this device through transport-level routing (push,
+     * relay subscription). By the time one lands in [LocalCache], it is
+     * already "for us" — so every logged-in signing account is a valid
+     * recipient to kick the relay wakeup on behalf of. Returning true here
+     * means the dispatcher invokes [com.vitorpamplona.quartz.experimental.
+     * notifications.wake.WakeUpEvent]-handling for each logged-in account,
+     * which is fine because keeping relay connections alive is idempotent.
+     */
+    override fun notifies(userHex: HexKey): Boolean = true
+
     companion object {
         const val KIND = 23903
         const val ALT_DESCRIPTION = "WakeUp"
 
+        // p-tags on a WakeUp identify the AUTHORS of the referenced events —
+        // the people whose events are the subject of the wake-up and who should
+        // come online to handle new activity on them. Callers can add extra
+        // e/p tags via [initializer] when waking up about multiple events.
         fun build(
             about: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),

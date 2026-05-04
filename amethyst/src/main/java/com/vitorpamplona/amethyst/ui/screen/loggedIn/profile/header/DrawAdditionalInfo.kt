@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
@@ -67,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
-import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.lastSeenSentence
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
@@ -165,7 +164,7 @@ fun DrawAdditionalInfo(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Default.ContentCopy,
+                    symbol = MaterialSymbols.ContentCopy,
                     contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -189,7 +188,7 @@ fun DrawAdditionalInfo(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Default.ContentCopy,
+                    symbol = MaterialSymbols.ContentCopy,
                     contentDescription = stringRes(id = R.string.copy_nprofile_to_clipboard),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -227,7 +226,7 @@ fun DrawAdditionalInfo(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
-                    imageVector = Icons.Default.Link,
+                    symbol = MaterialSymbols.Link,
                     contentDescription = stringRes(R.string.website),
                     modifier = Modifier.size(18.dp),
                 )
@@ -313,7 +312,7 @@ fun DisplayLastSeen(
     lastSeen?.let { timestamp ->
         val context = LocalContext.current
         Text(
-            text = stringRes(R.string.last_seen, timeAgo(timestamp, context, prefix = "", seconds = R.string.seconds)),
+            text = lastSeenSentence(timestamp, context),
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

@@ -176,9 +176,20 @@ class NotificationFeedFilter(
     ): Boolean {
         val loggedInUserHex = account.userProfile().pubkeyHex
 
-        // Marmot group messages are always acceptable (user is a group member)
-        val isMarmotGroupMessage = it.inGatherers?.any { g -> g is MarmotGroupChatroom } == true
-        if (isMarmotGroupMessage) {
+        // Marmot group messages are only acceptable if the gathering chatroom is
+        // actually in the current account's group list. Notes are stored in the
+        // global LocalCache and accumulate a gatherer reference from every
+        // account's chatroom that has ever touched them, so seeing any
+        // MarmotGroupChatroom is not enough — it could belong to a prior account
+        // or a group the user has since left. Verify the chatroom is the same
+        // instance held by this account's list.
+        val marmotGatherers = it.inGatherers?.filterIsInstance<MarmotGroupChatroom>()
+        if (!marmotGatherers.isNullOrEmpty()) {
+            val inCurrentAccount =
+                marmotGatherers.any { room ->
+                    account.marmotGroupList.rooms.get(room.nostrGroupId) === room
+                }
+            if (!inCurrentAccount) return false
             return it.author?.pubkeyHex != loggedInUserHex
         }
 

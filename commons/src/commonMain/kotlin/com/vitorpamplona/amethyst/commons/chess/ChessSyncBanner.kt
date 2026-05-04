@@ -40,16 +40,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -62,9 +53,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 /**
  * Shared banner showing chess sync/subscription status with expandable relay details.
@@ -109,7 +102,7 @@ fun ChessSyncBanner(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                 ) {
                     Icon(
-                        imageVector = getSyncStatusIcon(status),
+                        symbol = getSyncStatusIcon(status),
                         contentDescription = null,
                         tint = getSyncStatusIconColor(status),
                         modifier = Modifier.size(18.dp),
@@ -160,7 +153,7 @@ fun ChessSyncBanner(
                     // Expand/collapse icon
                     if (status !is ChessSyncStatus.Idle && getRelayStates(status).isNotEmpty()) {
                         Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            symbol = if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
                             contentDescription = if (isExpanded) "Collapse" else "Expand",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
@@ -213,7 +206,7 @@ private fun RelayStatusRow(relay: RelaySyncState) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
-            imageVector = getRelayStatusIcon(relay.status),
+            symbol = getRelayStatusIcon(relay.status),
             contentDescription = null,
             tint = getRelayStatusColor(relay.status),
             modifier = Modifier.size(14.dp),
@@ -244,13 +237,13 @@ private fun getRelayStates(status: ChessSyncStatus): List<RelaySyncState> =
         is ChessSyncStatus.Idle -> emptyList()
     }
 
-private fun getRelayStatusIcon(status: RelaySyncStatus): ImageVector =
+private fun getRelayStatusIcon(status: RelaySyncStatus): MaterialSymbol =
     when (status) {
-        RelaySyncStatus.CONNECTING -> Icons.Default.HourglassEmpty
-        RelaySyncStatus.WAITING -> Icons.Default.HourglassEmpty
-        RelaySyncStatus.RECEIVING -> Icons.Default.CloudDownload
-        RelaySyncStatus.EOSE_RECEIVED -> Icons.Default.CheckCircle
-        RelaySyncStatus.FAILED -> Icons.Default.Error
+        RelaySyncStatus.CONNECTING -> MaterialSymbols.HourglassEmpty
+        RelaySyncStatus.WAITING -> MaterialSymbols.HourglassEmpty
+        RelaySyncStatus.RECEIVING -> MaterialSymbols.CloudDownload
+        RelaySyncStatus.EOSE_RECEIVED -> MaterialSymbols.CheckCircle
+        RelaySyncStatus.FAILED -> MaterialSymbols.Error
     }
 
 @Composable
@@ -271,12 +264,12 @@ private fun getSyncStatusBackgroundColor(status: ChessSyncStatus): Color =
         else -> MaterialTheme.colorScheme.surfaceContainer
     }
 
-private fun getSyncStatusIcon(status: ChessSyncStatus): ImageVector =
+private fun getSyncStatusIcon(status: ChessSyncStatus): MaterialSymbol =
     when (status) {
-        is ChessSyncStatus.Syncing -> Icons.Default.CloudDownload
-        is ChessSyncStatus.Synced -> Icons.Default.CheckCircle
-        is ChessSyncStatus.PartialSync -> Icons.Default.Warning
-        is ChessSyncStatus.Idle -> Icons.Default.CheckCircle
+        is ChessSyncStatus.Syncing -> MaterialSymbols.CloudDownload
+        is ChessSyncStatus.Synced -> MaterialSymbols.CheckCircle
+        is ChessSyncStatus.PartialSync -> MaterialSymbols.Warning
+        is ChessSyncStatus.Idle -> MaterialSymbols.CheckCircle
     }
 
 @Composable

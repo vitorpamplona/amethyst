@@ -1055,6 +1055,7 @@ fun testPermissionRequest() {
 - `references/android-navigation.md` - Complete navigation patterns and examples
 - `references/android-permissions.md` - Permission handling patterns
 - `references/proguard-rules.md` - Proguard configuration
+- `references/image-loading.md` - Coil 3.x setup, custom fetchers (Blossom/Base64/BlurHash/ThumbHash), `MyAsyncImage`, `RobohashAsyncImage`
 - `scripts/analyze-apk-size.sh` - APK size optimization script
 
 ## When NOT to Use

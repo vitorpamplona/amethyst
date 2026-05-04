@@ -54,7 +54,7 @@ class PdfParserTest {
 
         val pdfMedia = state.mediaForPager[url]
         assertTrue(pdfMedia is MediaUrlPdf, "Expected MediaUrlPdf from imeta MIME tag")
-        assertEquals("application/pdf", (pdfMedia as MediaUrlPdf).mimeType)
+        assertEquals("application/pdf", pdfMedia.mimeType)
 
         val segment = state.paragraphs[0].words[0]
         assertTrue(segment is PdfSegment, "Expected PdfSegment from imeta MIME tag, got ${segment::class.simpleName}")

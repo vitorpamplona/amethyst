@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -45,5 +45,5 @@ fun ChatroomListFilterAssemblerSubscription(
             ChatroomListState(accountViewModel.account)
         }
 
-    KeyDataSourceSubscription(state, dataSource)
+    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }

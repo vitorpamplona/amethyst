@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.upload
 
+import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 

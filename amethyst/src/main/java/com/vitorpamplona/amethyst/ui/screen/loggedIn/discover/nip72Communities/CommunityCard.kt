@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByPr
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
@@ -91,16 +91,26 @@ fun RenderCommunitiesThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(baseNote, accountViewModel)
-    val noteEvent = noteState.note.event as? CommunityDefinitionEvent ?: return
+    // Narrow observation: we only care about the CommunityDefinitionEvent itself,
+    // not every reaction/zap/boost that would otherwise recompose the whole card.
+    val definition by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
+    val event = definition ?: return
+
+    // Memoize card + moderator list identity so LaunchedEffect(moderators) in
+    // LoadModerators doesn't retrigger the ParticipantListBuilder traversal on
+    // every recomposition.
+    val card =
+        remember(event.id) {
+            CommunityCard(
+                name = event.name()?.ifBlank { null } ?: event.dTag(),
+                description = event.description(),
+                cover = event.image()?.imageUrl,
+                moderators = event.moderatorKeys().toImmutableList(),
+            )
+        }
 
     RenderCommunitiesThumb(
-        CommunityCard(
-            name = noteEvent.dTag(),
-            description = noteEvent.description(),
-            cover = noteEvent.image()?.imageUrl,
-            moderators = noteEvent.moderatorKeys().toImmutableList(),
-        ),
+        card,
         baseNote,
         accountViewModel,
         nav,
@@ -193,16 +203,21 @@ fun LoadModerators(
         )
     }
 
-    LaunchedEffect(key1 = moderators) {
+    // Keying by the note id + moderator identity keeps this effect from
+    // restarting on every recomposition (reaction/zap updates would otherwise
+    // reallocate `moderators` and rerun the expensive traversal below).
+    LaunchedEffect(key1 = baseNote.idHex, key2 = moderators) {
         launch(Dispatchers.IO) {
+            val authorHex = baseNote.author?.pubkeyHex
             val hosts =
                 moderators.mapNotNull { part ->
-                    if (part != baseNote.author?.pubkeyHex) {
+                    if (part != authorHex) {
                         LocalCache.checkGetOrCreateUser(part)
                     } else {
                         null
                     }
                 }
+            val hostSet = hosts.toSet()
 
             val topFilter = accountViewModel.account.liveDiscoveryFollowLists.value
             val discoveryTopFilterAuthors =
@@ -217,15 +232,15 @@ fun LoadModerators(
                     else -> null
                 }
 
-            val followingKeySet = discoveryTopFilterAuthors
+            val builder = ParticipantListBuilder()
             val allParticipants =
-                ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hosts)
+                builder.followsThatParticipateOn(baseNote, discoveryTopFilterAuthors) - hostSet
 
             val newParticipantUsers =
-                if (followingKeySet == null) {
+                if (discoveryTopFilterAuthors == null) {
                     val allFollows = accountViewModel.account.kind3FollowList.flow.value.authors
                     val followingParticipants =
-                        ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hosts)
+                        builder.followsThatParticipateOn(baseNote, allFollows) - hostSet
 
                     (hosts + followingParticipants + (allParticipants - followingParticipants))
                         .toImmutableList()

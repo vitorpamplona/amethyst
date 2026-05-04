@@ -21,10 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.creators.expiration
 
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material.icons.outlined.TimerOff
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -32,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -44,14 +42,14 @@ fun ExpirationDateButton(
     ) {
         if (!isActive) {
             Icon(
-                imageVector = Icons.Outlined.Timer,
+                symbol = MaterialSymbols.Timer,
                 contentDescription = stringRes(R.string.add_expiration_date),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
-                imageVector = Icons.Outlined.TimerOff,
+                symbol = MaterialSymbols.TimerOff,
                 contentDescription = stringRes(R.string.remove_expiration_date),
                 modifier = Modifier.size(20.dp),
                 tint = Color(0xFFFF6600),

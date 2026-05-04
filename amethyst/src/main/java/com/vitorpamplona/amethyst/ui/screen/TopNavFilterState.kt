@@ -27,13 +27,16 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
@@ -89,12 +92,6 @@ class TopNavFilterState(
         FeedDefinition(
             code = TopFilter.MuteList(account.muteList.getMuteListAddress()),
             name = ResourceName(R.string.follow_list_mute_list),
-        )
-
-    val chessFollow =
-        FeedDefinition(
-            code = TopFilter.Chess,
-            name = ResourceName(R.string.follow_list_chess),
         )
 
     val mineFollow =
@@ -154,6 +151,7 @@ class TopNavFilterState(
         communityList: List<AddressableNote>,
         relayList: Set<NormalizedRelayUrl>,
         favoriteAlgoFeedsList: List<AddressableNote>,
+        interestSetList: List<InterestSet>,
     ): List<FeedDefinition> {
         val hashtags =
             hashtagList.map {
@@ -206,7 +204,15 @@ class TopNavFilterState(
         val allFavorites =
             if (favoriteAlgoFeeds.isNotEmpty()) listOf(allFavoriteAlgoFeedsFollow) else emptyList()
 
-        return (communities + hashtags + geotags + relays + allFavorites + favoriteAlgoFeeds).sortedBy { it.name.name() }
+        val interestSets =
+            interestSetList.map { set ->
+                FeedDefinition(
+                    TopFilter.InterestSet(InterestSetEvent.createAddress(account.signer.pubKey, set.identifier)),
+                    InterestSetName(set),
+                )
+            }
+
+        return (communities + hashtags + geotags + relays + allFavorites + favoriteAlgoFeeds + interestSets).sortedBy { it.name.name() }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -216,9 +222,14 @@ class TopNavFilterState(
             account.geohashList.flow,
             account.communityList.flowNotes,
             account.relayFeedsList.flow,
-            account.favoriteAlgoFeedsList.flowNotes,
-            ::mergeInterests,
-        ).onStart {
+            combine(
+                account.favoriteAlgoFeedsList.flowNotes,
+                account.interestSets.listFeedFlow,
+                ::Pair,
+            ),
+        ) { hashtagList, geotagList, communityList, relayList, favAndInterest ->
+            mergeInterests(hashtagList, geotagList, communityList, relayList, favAndInterest.first, favAndInterest.second)
+        }.onStart {
             emit(
                 mergeInterests(
                     account.hashtagList.flow.value,
@@ -226,6 +237,7 @@ class TopNavFilterState(
                     account.communityList.flowNotes.value,
                     account.relayFeedsList.flow.value,
                     account.favoriteAlgoFeedsList.flowNotes.value,
+                    account.interestSets.listFeedFlow.value,
                 ),
             )
         }
@@ -247,6 +259,18 @@ class TopNavFilterState(
         }
 
     private val _badgeRoutes =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
+    private val _communityRoutes =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
             emit(
@@ -282,6 +306,11 @@ class TopNavFilterState(
 
     val badgeRoutes =
         _badgeRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+
+    val communityRoutes =
+        _communityRoutes
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
 
@@ -347,7 +376,11 @@ class PeopleListName(
 class CommunityName(
     val note: AddressableNote,
 ) : Name() {
-    override fun name() = "/n/${(note.dTag())}"
+    override fun name(): String {
+        val definition = note.event as? CommunityDefinitionEvent
+        val label = definition?.name()?.ifBlank { null } ?: note.dTag()
+        return "/n/$label"
+    }
 }
 
 @Stable
@@ -357,6 +390,13 @@ class FavoriteAlgoFeedName(
     override fun name(): String =
         (note.event as? AppDefinitionEvent)?.appMetaData()?.name?.takeIf { it.isNotBlank() }
             ?: note.dTag()
+}
+
+@Stable
+class InterestSetName(
+    val set: InterestSet,
+) : Name() {
+    override fun name() = "⁂ ${set.title}"
 }
 
 @Immutable

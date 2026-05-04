@@ -34,12 +34,22 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 
+// Per-entry hint stamped by Nav.navBottomBar marking that the entry was
+// reached via a bottom-nav tab. Used in two places:
+//   - composableFromEnd skips the horizontal slide on tab entries so
+//     bottom-bar taps fall back to the NavHost-level fade.
+//   - Nav.canPop hides the back arrow on tab roots even though Home
+//     sits below them in the stack.
+const val BOTTOM_NAV_ROOT_KEY = "bottomNavRoot"
+
+fun NavBackStackEntry.isBottomNavRoot(): Boolean = savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) == true
+
 inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
     composable<T>(
-        enterTransition = { slideInHorizontallyFromEnd },
-        exitTransition = { scaleOut },
-        popEnterTransition = { scaleIn },
-        popExitTransition = { slideOutHorizontallyToEnd },
+        enterTransition = { if (targetState.isBottomNavRoot()) null else slideInHorizontallyFromEnd },
+        exitTransition = { if (targetState.isBottomNavRoot()) null else scaleOut },
+        popEnterTransition = { if (initialState.isBottomNavRoot()) null else scaleIn },
+        popExitTransition = { if (initialState.isBottomNavRoot()) null else slideOutHorizontallyToEnd },
         content = content,
     )
 }

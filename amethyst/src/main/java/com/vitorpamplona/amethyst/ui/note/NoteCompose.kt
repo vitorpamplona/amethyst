@@ -34,10 +34,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -59,15 +55,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
@@ -172,6 +173,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -210,6 +212,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -250,6 +253,7 @@ import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -938,6 +942,10 @@ private fun RenderNoteRow(
             RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
         }
 
+        is LiveActivitiesClipEvent -> {
+            RenderChatClip(baseNote, accountViewModel, nav)
+        }
+
         is FhirResourceEvent -> {
             RenderFhirResource(baseNote, accountViewModel, nav)
         }
@@ -1032,6 +1040,11 @@ private fun RenderNoteRow(
 
         is MeetingRoomEvent -> {
             RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
+        }
+
+        is com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent -> {
+            com.vitorpamplona.amethyst.ui.note.types
+                .RenderMeetingRoomPresence(baseNote, accountViewModel, nav)
         }
 
         is GitRepositoryEvent -> {
@@ -1508,7 +1521,7 @@ fun SecondUserInfoRow(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        Column(modifier = remember { Modifier.weight(1f) }) {
+        Column(modifier = Modifier.weight(1f)) {
             if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
                 ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
             } else {
@@ -1544,7 +1557,7 @@ fun DisplayExpiration(expirationDate: Long) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Timer,
+            symbol = MaterialSymbols.Timer,
             contentDescription = stringRes(R.string.expiration_date_label),
             modifier = Modifier.padding(start = 5.dp).size(15.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
@@ -1662,6 +1675,8 @@ fun FirstUserInfoRow(
 
         Expiration(baseNote)
 
+        JumpToParentReplyButton(baseNote, accountViewModel, nav)
+
         TimeAgo(baseNote)
 
         if (moreOptions == null) {
@@ -1675,11 +1690,47 @@ fun FirstUserInfoRow(
 @Composable
 fun PinnedMark() {
     Icon(
-        imageVector = Icons.Default.PushPin,
+        symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(R.string.pinned_notes),
         modifier = Modifier.padding(start = 5.dp).size(16.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
     )
+}
+
+@Composable
+fun JumpToParentReplyButton(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (!accountViewModel.settings.isCompleteUIMode()) return
+    if (baseNote.event !is BaseThreadedEvent) return
+
+    val parentNote =
+        remember(baseNote) {
+            val noteEvent = baseNote.event as? BaseThreadedEvent ?: return@remember null
+            val direct =
+                noteEvent
+                    .replyingToAddressOrEvent()
+                    ?.let { accountViewModel.getNoteIfExists(it) }
+                    ?.takeIf { it.event !is CommunityDefinitionEvent && LocalCache.getAnyChannel(it) == null }
+            val resolved = direct ?: baseNote.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }
+            resolved?.takeIf { LocalCache.getAnyChannel(it) == null }
+        } ?: return
+
+    ClickableBox(
+        modifier = Modifier.padding(start = 5.dp).size(20.dp),
+        onClick = {
+            nav.nav { routeFor(parentNote, accountViewModel.account) }
+        },
+    ) {
+        Icon(
+            symbol = MaterialSymbols.KeyboardArrowUp,
+            contentDescription = stringRes(R.string.jump_to_parent_reply),
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
 }
 
 @Composable
@@ -1813,6 +1864,10 @@ private fun ChannelNotePicture(
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
     )
 }
 

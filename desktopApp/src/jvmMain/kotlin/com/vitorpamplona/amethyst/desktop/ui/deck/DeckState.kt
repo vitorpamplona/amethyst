@@ -298,6 +298,7 @@ class DeckState(
                 "my_profile" -> DeckColumnType.MyProfile
                 "chess" -> DeckColumnType.Chess
                 "settings" -> DeckColumnType.Settings
+                "relays" -> DeckColumnType.Relays
                 "drafts" -> DeckColumnType.Drafts
                 "highlights" -> DeckColumnType.MyHighlights
                 "editor" -> DeckColumnType.Editor(param)

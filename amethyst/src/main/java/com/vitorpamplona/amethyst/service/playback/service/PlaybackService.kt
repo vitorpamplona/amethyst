@@ -105,7 +105,15 @@ class PlaybackService : MediaSessionService() {
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
             // creates new
-            return newPool(videoCache, okHttpClient, blossomServerResolver).also { poolNoProxy = it }
+            return newPool(videoCache, okHttpClient, blossomServerResolver)
+                .also {
+                    poolNoProxy = it
+                    // Kick off the player pool warmup as soon as we know this pool is being used.
+                    // It runs async on the main looper, yielding between builds, so the very first
+                    // session still acquires synchronously while subsequent ones can grab a warm
+                    // ExoPlayer instead of paying the build cost on the main thread.
+                    it.exoPlayerPool.create(applicationContext)
+                }
         } else {
             poolWithProxy?.let { return it }
 
@@ -116,7 +124,11 @@ class PlaybackService : MediaSessionService() {
             val videoCache = Amethyst.instance.videoCache
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
-            return newPool(videoCache, okHttpClient, blossomServerResolver).also { poolWithProxy = it }
+            return newPool(videoCache, okHttpClient, blossomServerResolver)
+                .also {
+                    poolWithProxy = it
+                    it.exoPlayerPool.create(applicationContext)
+                }
         }
     }
 
@@ -161,23 +173,27 @@ class PlaybackService : MediaSessionService() {
             return
         }
 
-        playing.forEachIndexed { idx, it ->
+        playing.forEach {
             if (it.session.player.isPlaying && it.session.player.volume > 0 && it.session.id == BackgroundMedia.bgInstance?.id) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
                 return
             }
         }
 
-        playing.forEachIndexed { idx, it ->
+        playing.forEach {
             if (it.session.player.isPlaying && it.session.player.volume > 0) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
                 return
             }
         }
 
-        playing.forEachIndexed { idx, it ->
+        // Falls through to the first muted-but-playing session. Earlier this loop missed
+        // its return and called super.onUpdateNotification once per playing session,
+        // hammering the notification system whenever multiple feed videos were preloading.
+        playing.forEach {
             if (it.session.player.isPlaying) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
+                return
             }
         }
     }
@@ -188,7 +204,17 @@ class PlaybackService : MediaSessionService() {
         val id = controllerInfo.connectionHints.getString("id") ?: return null
         val proxyPort = controllerInfo.connectionHints.getInt("proxyPort")
         val keepPlaying = controllerInfo.connectionHints.getBoolean("keepPlaying", true)
+        // Optional warm-pool affinity hint: when the pool still has a paused ExoPlayer
+        // holding this exact URI, the new session reuses it so the buffer survives.
+        val preferredMediaId = controllerInfo.connectionHints.getString(HINT_VIDEO_URI)
         val manager = lazyPool(proxyPort)
-        return manager.getSession(id, keepPlaying, applicationContext)
+        return manager.getSession(id, keepPlaying, applicationContext, preferredMediaId)
+    }
+
+    companion object {
+        const val HINT_ID = "id"
+        const val HINT_PROXY_PORT = "proxyPort"
+        const val HINT_KEEP_PLAYING = "keepPlaying"
+        const val HINT_VIDEO_URI = "videoUri"
     }
 }

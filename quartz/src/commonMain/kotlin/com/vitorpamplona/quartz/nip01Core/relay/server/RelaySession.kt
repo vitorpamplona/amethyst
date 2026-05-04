@@ -111,6 +111,36 @@ class RelaySession(
         }
     }
 
+    private suspend fun handleEvent(cmd: EventCmd) {
+        val result = policy.accept(cmd)
+        if (result is PolicyResult.Rejected) {
+            send(OkMessage(cmd.event.id, false, result.reason))
+            return
+        }
+
+        try {
+            store.insert(cmd.event)
+            send(OkMessage(cmd.event.id, true, ""))
+        } catch (e: Exception) {
+            send(OkMessage(cmd.event.id, false, e.message ?: e::class.simpleName ?: "unkown error"))
+        }
+    }
+
+    private suspend fun handleCount(cmd: CountCmd) {
+        val result = policy.accept(cmd)
+        if (result is PolicyResult.Rejected) {
+            send(ClosedMessage(cmd.queryId, result.reason))
+            return
+        }
+
+        // Policy may rewrite filters to match the user's access level.
+        val filters = (result as PolicyResult.Accepted).cmd.filters
+
+        val total = store.count(filters)
+
+        send(CountMessage(cmd.queryId, CountResult(total)))
+    }
+
     // -- NIP-42: AUTH ---------------------------------------------------------
     private fun handleAuth(cmd: AuthCmd) {
         val result = policy.accept(cmd)
@@ -162,38 +192,6 @@ class RelaySession(
         if (!cancelled) {
             send(ClosedMessage(cmd.subId, "error: no such subscription"))
         }
-    }
-
-    // -- NIP-01: EVENT --------------------------------------------------------
-    private fun handleEvent(cmd: EventCmd) {
-        val result = policy.accept(cmd)
-        if (result is PolicyResult.Rejected) {
-            send(OkMessage(cmd.event.id, false, result.reason))
-            return
-        }
-
-        try {
-            store.insert(cmd.event)
-            send(OkMessage(cmd.event.id, true, ""))
-        } catch (e: Exception) {
-            send(OkMessage(cmd.event.id, false, e.message ?: e::class.simpleName ?: "unkown error"))
-        }
-    }
-
-    // -- NIP-45: COUNT --------------------------------------------------------
-    private fun handleCount(cmd: CountCmd) {
-        val result = policy.accept(cmd)
-        if (result is PolicyResult.Rejected) {
-            send(ClosedMessage(cmd.queryId, result.reason))
-            return
-        }
-
-        // Policy may rewrite filters to match the user's access level.
-        val filters = (result as PolicyResult.Accepted).cmd.filters
-
-        val total = store.count(filters)
-
-        send(CountMessage(cmd.queryId, CountResult(total)))
     }
 
     init {

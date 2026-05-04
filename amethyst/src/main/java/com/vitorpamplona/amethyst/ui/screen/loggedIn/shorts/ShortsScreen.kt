@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -35,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -68,38 +66,38 @@ fun ShortsScreen(
             ShortsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Shorts, accountViewModel) { route ->
+            AppBottomBar(Route.Shorts, nav, accountViewModel) { route ->
                 if (route == Route.Shorts) {
                     shortsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
         floatingButton = {
-            NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop)
+            FabBottomBarPadded(nav) {
+                NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop)
+            }
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            RefresheableBox(shortsFeedContentState, true) {
-                SaveableFeedContentState(shortsFeedContentState, scrollStateKey = ScrollStateKeys.SHORTS_SCREEN) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = shortsFeedContentState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = "ShortsFeed",
-                        onLoaded = { loaded ->
-                            ShortsFeedLoaded(
-                                loaded = loaded,
-                                listState = listState,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
-                        },
-                    )
-                }
+    ) {
+        RefresheableBox(shortsFeedContentState, true) {
+            SaveableFeedContentState(shortsFeedContentState, scrollStateKey = ScrollStateKeys.SHORTS_SCREEN) { listState ->
+                RenderFeedContentState(
+                    feedContentState = shortsFeedContentState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = "ShortsFeed",
+                    onLoaded = { loaded ->
+                        ShortsFeedLoaded(
+                            loaded = loaded,
+                            listState = listState,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    },
+                )
             }
         }
     }

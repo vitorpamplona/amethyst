@@ -22,39 +22,48 @@ package com.vitorpamplona.quartz.nip01Core.store
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 interface IEventStore : AutoCloseable {
-    fun insert(event: Event)
+    /**
+     * Relay URL this store is acting on behalf of, or `null` for an
+     * unscoped store. Used by NIP-62 right-to-vanish handling: only
+     * vanish requests whose `relays` list contains this URL (or
+     * `ALL_RELAYS`) cascade.
+     */
+    val relay: NormalizedRelayUrl?
+
+    suspend fun insert(event: Event)
 
     interface ITransaction {
         fun insert(event: Event)
     }
 
-    fun transaction(body: ITransaction.() -> Unit)
+    suspend fun transaction(body: ITransaction.() -> Unit)
 
-    fun <T : Event> query(filter: Filter): List<T>
+    suspend fun <T : Event> query(filter: Filter): List<T>
 
-    fun <T : Event> query(filters: List<Filter>): List<T>
+    suspend fun <T : Event> query(filters: List<Filter>): List<T>
 
-    fun <T : Event> query(
+    suspend fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
     )
 
-    fun <T : Event> query(
+    suspend fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
     )
 
-    fun count(filter: Filter): Int
+    suspend fun count(filter: Filter): Int
 
-    fun count(filters: List<Filter>): Int
+    suspend fun count(filters: List<Filter>): Int
 
-    fun delete(filter: Filter)
+    suspend fun delete(filter: Filter)
 
-    fun delete(filters: List<Filter>)
+    suspend fun delete(filters: List<Filter>)
 
-    fun deleteExpiredEvents()
+    suspend fun deleteExpiredEvents()
 
     override fun close()
 }

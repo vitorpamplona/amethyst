@@ -23,13 +23,28 @@ package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * Room display name on a NIP-53 / nests `kind:30312` event. Matches
+ * the deployed nostrnests reference, which writes `["title", name]`
+ * AND filters its lobby on the `title` tag's presence — kind-30312
+ * events without a `title` are dropped from "Live Now". The early
+ * EGG-01 draft called this `room`; we accept that name on read for
+ * older events but always emit `title`.
+ */
 class RoomNameTag {
     companion object Companion {
-        const val TAG_NAME = "room"
+        const val TAG_NAME = "title"
+
+        /**
+         * Earlier EGG-01 draft name for the room display name.
+         * Accepted on read for back-compat; we always emit the
+         * canonical [TAG_NAME].
+         */
+        const val LEGACY_TAG_NAME = "room"
 
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[0] == TAG_NAME || tag[0] == LEGACY_TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }

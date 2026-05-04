@@ -48,23 +48,40 @@ object NotificationUtils {
     private var zapChannel: NotificationChannel? = null
     private var reactionChannel: NotificationChannel? = null
     private var chessChannel: NotificationChannel? = null
+    private var replyChannel: NotificationChannel? = null
+    private var mentionChannel: NotificationChannel? = null
 
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
     private const val REACTION_GROUP_KEY = "com.vitorpamplona.amethyst.REACTION_NOTIFICATION"
     private const val CHESS_GROUP_KEY = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION"
+    const val REPLY_GROUP_KEY_PREFIX = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
+    private const val MENTION_GROUP_KEY = "com.vitorpamplona.amethyst.MENTION_NOTIFICATION"
 
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
+    const val PUBLIC_REPLY_ACTION = "com.vitorpamplona.amethyst.PUBLIC_REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
     const val KEY_REPLY_TEXT = "key_reply_text"
     const val KEY_NOTIFICATION_ID = "key_notification_id"
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
+    const val KEY_TARGET_EVENT_ID = "key_target_event_id"
 
     private const val DM_SUMMARY_ID = 0x10000
     private const val ZAP_SUMMARY_ID = 0x20000
     private const val REACTION_SUMMARY_ID = 0x40000
     private const val CHESS_SUMMARY_ID = 0x30000
+    private const val REPLY_SUMMARY_ID_BASE = 0x50000
+    private const val MENTION_SUMMARY_ID = 0x60000
+
+    /**
+     * Derives a stable summary notification id for a per-thread reply group.
+     * Uses the thread root id hash mixed with the base id so different threads
+     * don't collide with each other or with the other channel summaries.
+     */
+    fun replySummaryIdFor(threadRootId: String): Int = REPLY_SUMMARY_ID_BASE xor threadRootId.hashCode()
+
+    fun replyGroupKeyFor(threadRootId: String): String = "$REPLY_GROUP_KEY_PREFIX:$threadRootId"
 
     fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
@@ -150,6 +167,48 @@ object NotificationUtils {
         return chessChannel!!
     }
 
+    fun getOrCreateReplyChannel(applicationContext: Context): NotificationChannel {
+        if (replyChannel != null) return replyChannel!!
+
+        replyChannel =
+            NotificationChannel(
+                stringRes(applicationContext, R.string.app_notification_replies_channel_id),
+                stringRes(applicationContext, R.string.app_notification_replies_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description =
+                    stringRes(applicationContext, R.string.app_notification_replies_channel_description)
+            }
+
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(replyChannel!!)
+
+        return replyChannel!!
+    }
+
+    fun getOrCreateMentionChannel(applicationContext: Context): NotificationChannel {
+        if (mentionChannel != null) return mentionChannel!!
+
+        mentionChannel =
+            NotificationChannel(
+                stringRes(applicationContext, R.string.app_notification_mentions_channel_id),
+                stringRes(applicationContext, R.string.app_notification_mentions_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description =
+                    stringRes(applicationContext, R.string.app_notification_mentions_channel_description)
+            }
+
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(mentionChannel!!)
+
+        return mentionChannel!!
+    }
+
     suspend fun NotificationManager.sendReactionNotification(
         id: String,
         messageBody: String,
@@ -205,6 +264,76 @@ object NotificationUtils {
             applicationContext = applicationContext,
         )
     }
+
+    suspend fun NotificationManager.sendReplyNotification(
+        id: String,
+        messageBody: String,
+        messageTitle: String,
+        time: Long,
+        pictureUrl: String?,
+        uri: String,
+        applicationContext: Context,
+        threadRootId: String,
+        inlineReply: InlineReplyTarget? = null,
+    ) {
+        getOrCreateReplyChannel(applicationContext)
+        val channelId = stringRes(applicationContext, R.string.app_notification_replies_channel_id)
+
+        sendNotification(
+            id = id,
+            messageBody = messageBody,
+            messageTitle = messageTitle,
+            time = time,
+            pictureUrl = pictureUrl,
+            uri = uri,
+            channelId = channelId,
+            notificationGroupKey = replyGroupKeyFor(threadRootId),
+            category = NotificationCompat.CATEGORY_SOCIAL,
+            summaryId = replySummaryIdFor(threadRootId),
+            summaryText = stringRes(applicationContext, R.string.app_notification_replies_summary),
+            applicationContext = applicationContext,
+            inlineReply = inlineReply,
+        )
+    }
+
+    suspend fun NotificationManager.sendMentionNotification(
+        id: String,
+        messageBody: String,
+        messageTitle: String,
+        time: Long,
+        pictureUrl: String?,
+        uri: String,
+        applicationContext: Context,
+    ) {
+        getOrCreateMentionChannel(applicationContext)
+        val channelId = stringRes(applicationContext, R.string.app_notification_mentions_channel_id)
+
+        sendNotification(
+            id = id,
+            messageBody = messageBody,
+            messageTitle = messageTitle,
+            time = time,
+            pictureUrl = pictureUrl,
+            uri = uri,
+            channelId = channelId,
+            notificationGroupKey = MENTION_GROUP_KEY,
+            category = NotificationCompat.CATEGORY_SOCIAL,
+            summaryId = MENTION_SUMMARY_ID,
+            summaryText = stringRes(applicationContext, R.string.app_notification_mentions_summary),
+            applicationContext = applicationContext,
+        )
+    }
+
+    /**
+     * Payload for wiring a RemoteInput-powered inline reply action onto a public
+     * note notification. The receiver resolves the target event from LocalCache
+     * via [targetEventId] and signs the appropriate kind (1 for NIP-10, 1111
+     * for NIP-22) under the account identified by [accountNpub].
+     */
+    data class InlineReplyTarget(
+        val accountNpub: String,
+        val targetEventId: String,
+    )
 
     suspend fun NotificationManager.sendZapNotification(
         id: String,
@@ -438,6 +567,7 @@ object NotificationUtils {
         summaryId: Int,
         summaryText: String,
         applicationContext: Context,
+        inlineReply: InlineReplyTarget? = null,
     ) {
         val notId = id.hashCode()
 
@@ -483,6 +613,40 @@ object NotificationUtils {
                 .setGroup(notificationGroupKey)
                 .setAutoCancel(true)
                 .setWhen(time * 1000)
+
+        if (inlineReply != null) {
+            val remoteInput =
+                RemoteInput
+                    .Builder(KEY_REPLY_TEXT)
+                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+                    .build()
+
+            val replyIntent =
+                Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                    action = PUBLIC_REPLY_ACTION
+                    putExtra(KEY_NOTIFICATION_ID, notId)
+                    putExtra(KEY_ACCOUNT_NPUB, inlineReply.accountNpub)
+                    putExtra(KEY_TARGET_EVENT_ID, inlineReply.targetEventId)
+                }
+
+            val replyPendingIntent =
+                PendingIntent.getBroadcast(
+                    applicationContext,
+                    notId,
+                    replyIntent,
+                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            val replyAction =
+                NotificationCompat.Action
+                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+                    .addRemoteInput(remoteInput)
+                    .setAllowGeneratedReplies(true)
+                    .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+                    .build()
+
+            builder.addAction(replyAction)
+        }
 
         notify(notId, builder.build())
 

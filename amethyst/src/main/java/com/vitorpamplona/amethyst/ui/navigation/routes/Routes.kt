@@ -45,6 +45,22 @@ sealed class Route {
 
     @Serializable object Polls : Route()
 
+    @Serializable object Communities : Route()
+
+    @Serializable object NewCommunity : Route()
+
+    @Serializable data class EditCommunity(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object Badges : Route()
 
     @Serializable object ProfileBadges : Route()
@@ -66,6 +82,18 @@ sealed class Route {
     @Serializable object Products : Route()
 
     @Serializable object Shorts : Route()
+
+    @Serializable object PublicChats : Route()
+
+    @Serializable object FollowPacks : Route()
+
+    @Serializable object LiveStreams : Route()
+
+    @Serializable object Nests : Route()
+
+    @Serializable data class NestLobby(
+        val addressValue: String,
+    ) : Route()
 
     @Serializable object Longs : Route()
 
@@ -106,6 +134,16 @@ sealed class Route {
 
     @Serializable object BookmarkGroups : Route()
 
+    @Serializable object InterestSets : Route()
+
+    @Serializable data class InterestSetView(
+        val dTag: String,
+    ) : Route()
+
+    @Serializable data class InterestSetMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
     @Serializable object ImportFollowsSelectUser : Route()
 
     @Serializable data class ImportFollowsPickFollows(
@@ -137,6 +175,32 @@ sealed class Route {
         )
     }
 
+    @Serializable object EmojiPacks : Route()
+
+    @Serializable object MyEmojiList : Route()
+
+    @Serializable object BrowseEmojiSets : Route()
+
+    @Serializable data class EmojiPackView(
+        val dTag: String,
+    ) : Route()
+
+    @Serializable data class EmojiPackMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable data class EmojiPackSelection(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object WebBookmarks : Route()
 
     @Serializable object Drafts : Route()
@@ -150,6 +214,12 @@ sealed class Route {
     @Serializable object UserSettings : Route()
 
     @Serializable object ReactionsSettings : Route()
+
+    @Serializable object BottomBarSettings : Route()
+
+    @Serializable object HomeTabsSettings : Route()
+
+    @Serializable object VideoPlayerSettings : Route()
 
     @Serializable object CallSettings : Route()
 
@@ -186,6 +256,8 @@ sealed class Route {
     @Serializable object VanishEvents : Route()
 
     @Serializable object EditMediaServers : Route()
+
+    @Serializable object EditNestsServers : Route()
 
     @Serializable object EditFavoriteAlgoFeeds : Route()
 
@@ -307,14 +379,6 @@ sealed class Route {
     ) : Route()
 
     @Serializable object CreateMarmotGroup : Route()
-
-    @Serializable data class MarmotGroupAddMember(
-        val nostrGroupId: String,
-    ) : Route()
-
-    @Serializable data class MarmotGroupRemoveMember(
-        val nostrGroupId: String,
-    ) : Route()
 
     @Serializable data class MarmotGroupEditInfo(
         val nostrGroupId: String,

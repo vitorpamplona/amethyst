@@ -27,10 +27,6 @@ import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -48,6 +44,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -129,7 +127,7 @@ fun PictureButton(onClick: () -> Unit) {
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.Default.CameraAlt,
+            symbol = MaterialSymbols.CameraAlt,
             contentDescription = stringRes(id = R.string.take_a_picture),
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,
@@ -216,7 +214,7 @@ fun VideoButton(onClick: () -> Unit) {
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.Default.Videocam,
+            symbol = MaterialSymbols.Videocam,
             contentDescription = stringRes(id = R.string.record_a_video),
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,

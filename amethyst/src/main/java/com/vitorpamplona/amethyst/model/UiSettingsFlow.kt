@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -31,6 +33,7 @@ class UiSettingsFlow(
     val preferredLanguage: MutableStateFlow<String?> = MutableStateFlow(null),
     val automaticallyShowImages: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
     val automaticallyStartPlayback: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
+    val automaticallyPlayVideos: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyShowUrlPreview: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
     val automaticallyHideNavigationBars: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyShowProfilePictures: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
@@ -39,6 +42,11 @@ class UiSettingsFlow(
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
+    val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val showHomeEverythingTab: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -46,6 +54,7 @@ class UiSettingsFlow(
             preferredLanguage,
             automaticallyShowImages,
             automaticallyStartPlayback,
+            automaticallyPlayVideos,
             automaticallyShowUrlPreview,
             automaticallyHideNavigationBars,
             automaticallyShowProfilePictures,
@@ -54,9 +63,15 @@ class UiSettingsFlow(
             featureSet,
             gallerySet,
             automaticallyProposeAiImprovements,
+            useTrackedBroadcasts,
+            bottomBarItems,
+            showHomeNewThreadsTab,
+            showHomeConversationsTab,
+            showHomeEverythingTab,
         )
 
     // emits at every change in any of the propertyes.
+    @Suppress("UNCHECKED_CAST")
     val propertyWatchFlow: Flow<UiSettings> =
         combine<Any?, UiSettings>(listOfFlows) { flows: Array<Any?> ->
             UiSettings(
@@ -64,14 +79,20 @@ class UiSettingsFlow(
                 flows[1] as String?,
                 flows[2] as ConnectivityType,
                 flows[3] as ConnectivityType,
-                flows[4] as ConnectivityType,
-                flows[5] as BooleanType,
-                flows[6] as ConnectivityType,
-                flows[7] as Boolean,
+                flows[4] as BooleanType,
+                flows[5] as ConnectivityType,
+                flows[6] as BooleanType,
+                flows[7] as ConnectivityType,
                 flows[8] as Boolean,
-                flows[9] as FeatureSetType,
-                flows[10] as ProfileGalleryType,
-                flows[11] as BooleanType,
+                flows[9] as Boolean,
+                flows[10] as FeatureSetType,
+                flows[11] as ProfileGalleryType,
+                flows[12] as BooleanType,
+                flows[13] as BooleanType,
+                flows[14] as List<NavBarItem>,
+                flows[15] as Boolean,
+                flows[16] as Boolean,
+                flows[17] as Boolean,
             )
         }
 
@@ -81,6 +102,7 @@ class UiSettingsFlow(
             preferredLanguage.value,
             automaticallyShowImages.value,
             automaticallyStartPlayback.value,
+            automaticallyPlayVideos.value,
             automaticallyShowUrlPreview.value,
             automaticallyHideNavigationBars.value,
             automaticallyShowProfilePictures.value,
@@ -89,6 +111,11 @@ class UiSettingsFlow(
             featureSet.value,
             gallerySet.value,
             automaticallyProposeAiImprovements.value,
+            useTrackedBroadcasts.value,
+            bottomBarItems.value,
+            showHomeNewThreadsTab.value,
+            showHomeConversationsTab.value,
+            showHomeEverythingTab.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -108,6 +135,10 @@ class UiSettingsFlow(
         }
         if (automaticallyStartPlayback.value != torSettings.automaticallyStartPlayback) {
             automaticallyStartPlayback.tryEmit(torSettings.automaticallyStartPlayback)
+            any = true
+        }
+        if (automaticallyPlayVideos.value != torSettings.automaticallyPlayVideos) {
+            automaticallyPlayVideos.tryEmit(torSettings.automaticallyPlayVideos)
             any = true
         }
         if (automaticallyShowUrlPreview.value != torSettings.automaticallyShowUrlPreview) {
@@ -142,6 +173,26 @@ class UiSettingsFlow(
             automaticallyProposeAiImprovements.tryEmit(torSettings.automaticallyProposeAiImprovements)
             any = true
         }
+        if (useTrackedBroadcasts.value != torSettings.useTrackedBroadcasts) {
+            useTrackedBroadcasts.tryEmit(torSettings.useTrackedBroadcasts)
+            any = true
+        }
+        if (bottomBarItems.value != torSettings.bottomBarItems) {
+            bottomBarItems.tryEmit(torSettings.bottomBarItems)
+            any = true
+        }
+        if (showHomeNewThreadsTab.value != torSettings.showHomeNewThreadsTab) {
+            showHomeNewThreadsTab.tryEmit(torSettings.showHomeNewThreadsTab)
+            any = true
+        }
+        if (showHomeConversationsTab.value != torSettings.showHomeConversationsTab) {
+            showHomeConversationsTab.tryEmit(torSettings.showHomeConversationsTab)
+            any = true
+        }
+        if (showHomeEverythingTab.value != torSettings.showHomeEverythingTab) {
+            showHomeEverythingTab.tryEmit(torSettings.showHomeEverythingTab)
+            any = true
+        }
 
         return any
     }
@@ -165,6 +216,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.preferredLanguage),
                 MutableStateFlow(uiSettings.automaticallyShowImages),
                 MutableStateFlow(uiSettings.automaticallyStartPlayback),
+                MutableStateFlow(uiSettings.automaticallyPlayVideos),
                 MutableStateFlow(uiSettings.automaticallyShowUrlPreview),
                 MutableStateFlow(uiSettings.automaticallyHideNavigationBars),
                 MutableStateFlow(uiSettings.automaticallyShowProfilePictures),
@@ -173,6 +225,11 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.featureSet),
                 MutableStateFlow(uiSettings.gallerySet),
                 MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
+                MutableStateFlow(uiSettings.useTrackedBroadcasts),
+                MutableStateFlow(uiSettings.bottomBarItems),
+                MutableStateFlow(uiSettings.showHomeNewThreadsTab),
+                MutableStateFlow(uiSettings.showHomeConversationsTab),
+                MutableStateFlow(uiSettings.showHomeEverythingTab),
             )
     }
 }

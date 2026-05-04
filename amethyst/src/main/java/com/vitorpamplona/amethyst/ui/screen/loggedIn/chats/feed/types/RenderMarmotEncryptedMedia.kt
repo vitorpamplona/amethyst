@@ -139,6 +139,7 @@ private fun RenderMip04Content(
                     encryptionAlgo = meta.version,
                     encryptionKey = exporterSecret,
                     encryptionNonce = meta.nonceBytes,
+                    thumbhash = meta.thumbhash,
                 )
             } else {
                 EncryptedMediaUrlVideo(
@@ -153,6 +154,7 @@ private fun RenderMip04Content(
                     encryptionAlgo = meta.version,
                     encryptionKey = exporterSecret,
                     encryptionNonce = meta.nonceBytes,
+                    thumbhash = meta.thumbhash,
                 )
             },
         )

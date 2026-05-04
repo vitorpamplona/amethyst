@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import kotlinx.serialization.Serializable
 
 @Stable
@@ -31,6 +33,7 @@ data class UiSettings(
     val preferredLanguage: String? = null,
     val automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
     val automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
+    val automaticallyPlayVideos: BooleanType = BooleanType.ALWAYS,
     val automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
     val automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS,
     val automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS,
@@ -39,6 +42,11 @@ data class UiSettings(
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
     val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
+    val useTrackedBroadcasts: BooleanType = BooleanType.ALWAYS,
+    val bottomBarItems: List<NavBarItem> = DefaultBottomBarItems,
+    val showHomeNewThreadsTab: Boolean = true,
+    val showHomeConversationsTab: Boolean = true,
+    val showHomeEverythingTab: Boolean = false,
 )
 
 enum class ThemeType(

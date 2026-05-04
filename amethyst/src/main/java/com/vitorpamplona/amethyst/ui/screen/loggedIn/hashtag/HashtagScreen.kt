@@ -23,10 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +36,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -103,18 +102,18 @@ fun HashtagScreen(
             )
         },
         floatingButton = {
-            NewHashtagPostButton(tag.hashtag, accountViewModel, nav)
+            FabBottomBarPadded(nav) {
+                NewHashtagPostButton(tag.hashtag, accountViewModel, nav)
+            }
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            feedViewModel,
+            null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 

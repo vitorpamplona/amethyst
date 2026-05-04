@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.drawer
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,24 +49,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.CollectionsBookmark
-import androidx.compose.material.icons.outlined.Drafts
-import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.MilitaryTech
-import androidx.compose.material.icons.outlined.Photo
-import androidx.compose.material.icons.outlined.PlayCircle
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SettingsInputAntenna
-import androidx.compose.material.icons.outlined.SmartDisplay
-import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -86,7 +69,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -97,12 +79,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
@@ -113,23 +99,35 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerNavigateItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerYouItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.DrawerSectionHeaderModifier
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Font18SP
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22ModifierWith4Padding
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.TextStyleBottomNavBar
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.Width16Space
 import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
@@ -262,6 +260,10 @@ fun ProfileContentTemplate(
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif =
+                    accountViewModel.settings.autoPlayVideosFlow
+                        .collectAsStateWithLifecycle()
+                        .value,
             )
 
             if (bestDisplayName != null) {
@@ -460,9 +462,9 @@ fun SendButton(
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Send,
+            symbol = MaterialSymbols.AutoMirrored.Send,
             null,
-            modifier = Size20Modifier,
+            modifier = Size25Modifier,
             tint = tint,
         )
     }
@@ -475,7 +477,7 @@ fun UserStatusDeleteButton(onClick: () -> Unit) {
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.Default.Delete,
+            symbol = MaterialSymbols.Delete,
             null,
             modifier = Size20Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
@@ -535,156 +537,126 @@ fun ListContent(
     nav: INav,
 ) {
     Column(modifier) {
-        NavigationRow(
-            title = R.string.profile,
-            icon = Icons.Default.AccountCircle,
-            tint = MaterialTheme.colorScheme.primary,
-            nav = nav,
-            computeRoute = {
-                Route.Profile(accountViewModel.userProfile().pubkeyHex)
-            },
-        )
+        CatalogSection(R.string.drawer_section_you, DrawerYouItems, accountViewModel, nav)
+        CatalogSection(R.string.drawer_section_navigate, DrawerNavigateItems, accountViewModel, nav)
+        CatalogSection(R.string.drawer_section_feeds, DrawerFeedsItems, accountViewModel, nav)
 
-        NavigationRow(
-            title = R.string.my_lists,
-            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Lists,
-        )
-
-        NavigationRow(
-            title = R.string.bookmarks,
-            icon = Icons.Outlined.CollectionsBookmark,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.BookmarkGroups,
-        )
-
-        NavigationRow(
-            title = R.string.web_bookmarks,
-            icon = Icons.Outlined.Language,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.WebBookmarks,
-        )
-
-        NavigationRow(
-            title = R.string.drafts,
-            icon = Icons.Outlined.Drafts,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Drafts,
-        )
-
-        NavigationRow(
-            title = R.string.discover_reads,
-            icon = Icons.AutoMirrored.Outlined.Article,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Articles,
-        )
-
-        NavigationRow(
-            title = R.string.pictures,
-            icon = Icons.Outlined.Photo,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Pictures,
-        )
-
-        NavigationRow(
-            title = R.string.polls,
-            icon = R.drawable.ic_poll,
-            iconReference = 1,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Polls,
-        )
-
-        NavigationRow(
-            title = R.string.badges,
-            icon = Icons.Outlined.MilitaryTech,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Badges,
-        )
-
-        NavigationRow(
-            title = R.string.discover_marketplace,
-            icon = Icons.Outlined.Storefront,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Products,
-        )
-
-        NavigationRow(
-            title = R.string.shorts,
-            icon = Icons.Outlined.PlayCircle,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Shorts,
-        )
-
-        NavigationRow(
-            title = R.string.longs,
-            icon = Icons.Outlined.SmartDisplay,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Longs,
-        )
-
-        NavigationRow(
-            title = R.string.wallet,
-            icon = Icons.Outlined.AccountBalanceWallet,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Wallet,
-        )
-
-        NavigationRow(
-            title = R.string.share_hls_video,
-            icon = Icons.Outlined.SettingsInputAntenna,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.NewHlsVideo,
-        )
-
-        if (isDebug) {
+        CollapsibleSection(title = R.string.drawer_section_create) {
             NavigationRow(
-                title = R.string.route_chess,
-                icon = R.drawable.ic_chess,
-                iconReference = 1,
+                title = R.string.share_hls_video,
+                icon = MaterialSymbols.SettingsInputAntenna,
                 tint = MaterialTheme.colorScheme.onBackground,
                 nav = nav,
-                route = Route.Chess,
+                route = Route.NewHlsVideo,
             )
+
+            if (isDebug) {
+                NavigationRow(
+                    title = R.string.route_chess,
+                    icon = MaterialSymbols.ChessKnight,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    nav = nav,
+                    route = Route.Chess,
+                )
+            }
         }
 
-        IconRowRelays(
-            accountViewModel = accountViewModel,
-            onClick = {
-                nav.closeDrawer()
-                nav.nav(Route.EditRelays)
-            },
-        )
+        CollapsibleSection(title = R.string.drawer_section_system) {
+            IconRowRelays(
+                accountViewModel = accountViewModel,
+                onClick = {
+                    nav.closeDrawer()
+                    nav.nav(Route.EditRelays)
+                },
+            )
 
-        NavigationRow(
-            title = R.string.settings,
-            icon = Icons.Outlined.Settings,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.AllSettings,
-        )
+            NavBarCatalog[NavBarItem.SETTINGS]?.let {
+                CatalogNavigationRow(it, MaterialTheme.colorScheme.onBackground, accountViewModel, nav)
+            }
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
             title = R.string.drawer_accounts,
-            icon = Icons.Outlined.GroupAdd,
+            icon = MaterialSymbols.GroupAdd,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
         )
+    }
+}
+
+/**
+ * Renders a drawer section by iterating [ids] and looking each one up in [NavBarCatalog].
+ * Profile gets the primary-colored tint; every other item uses onBackground.
+ */
+@Composable
+fun CatalogSection(
+    titleRes: Int,
+    ids: List<NavBarItem>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val onBackground = MaterialTheme.colorScheme.onBackground
+
+    CollapsibleSection(title = titleRes) {
+        ids.forEach { id ->
+            NavBarCatalog[id]?.let { def ->
+                val tint = if (def.id == NavBarItem.PROFILE) primary else onBackground
+                CatalogNavigationRow(def, tint, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun CatalogNavigationRow(
+    def: NavBarItemDef,
+    tint: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    NavigationRow(
+        title = def.labelRes,
+        icon = def.icon,
+        tint = tint,
+        nav = nav,
+        computeRoute = { def.resolveRoute(accountViewModel) },
+    )
+}
+
+@Composable
+fun CollapsibleSection(
+    title: Int,
+    content: @Composable () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(true) }
+    val sectionTitle = stringRes(title)
+
+    Column(modifier = Modifier.animateContentSize()) {
+        Row(
+            modifier = DrawerSectionHeaderModifier.clickable { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                modifier = Modifier.weight(1f),
+                text = sectionTitle,
+                fontSize = Font14SP,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Icon(
+                symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+                contentDescription = sectionTitle,
+                modifier = Size22Modifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (expanded) {
+            content()
+        }
     }
 }
 
@@ -712,7 +684,28 @@ fun NavigationRow(
 @Composable
 fun NavigationRow(
     title: Int,
-    icon: ImageVector,
+    icon: Int,
+    iconReference: Int,
+    tint: Color,
+    nav: INav,
+    computeRoute: () -> Route,
+) {
+    IconRow(
+        title,
+        icon,
+        iconReference,
+        tint,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(computeRoute)
+        },
+    )
+}
+
+@Composable
+fun NavigationRow(
+    title: Int,
+    icon: MaterialSymbol,
     tint: Color,
     nav: INav,
     route: Route,
@@ -731,7 +724,7 @@ fun NavigationRow(
 @Composable
 fun NavigationRow(
     title: Int,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     tint: Color,
     nav: INav,
     computeRoute: () -> Route,
@@ -784,7 +777,7 @@ fun IconRow(
 @Composable
 fun IconRow(
     title: Int,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     tint: Color,
     onClick: () -> Unit,
 ) {
@@ -801,7 +794,7 @@ fun IconRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = title,
             modifier = Size22ModifierWith4Padding,
             tint = tint,
@@ -933,5 +926,61 @@ fun BottomContent(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun CollapsibleSectionPreview() {
+    ThemeComparisonColumn {
+        Column {
+            CollapsibleSection(title = R.string.drawer_section_you) {
+                IconRow(
+                    title = R.string.profile,
+                    icon = MaterialSymbols.AccountCircle,
+                    tint = MaterialTheme.colorScheme.primary,
+                    onClick = {},
+                )
+                IconRow(
+                    title = R.string.bookmarks,
+                    icon = MaterialSymbols.CollectionsBookmark,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+                IconRow(
+                    title = R.string.drafts,
+                    icon = MaterialSymbols.Drafts,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+            }
+            CollapsibleSection(title = R.string.drawer_section_feeds) {
+                IconRow(
+                    title = R.string.pictures,
+                    icon = MaterialSymbols.Photo,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+                IconRow(
+                    title = R.string.longs,
+                    icon = MaterialSymbols.SmartDisplay,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+            }
+        }
+    }
+}
+
+@Preview(widthDp = 320, heightDp = 1400)
+@Composable
+private fun ListContentPreview() {
+    ThemeComparisonColumn {
+        ListContent(
+            modifier = Modifier.fillMaxWidth(),
+            openSheet = {},
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav(),
+        )
     }
 }

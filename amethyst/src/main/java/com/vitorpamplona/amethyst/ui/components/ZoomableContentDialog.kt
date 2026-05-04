@@ -48,12 +48,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -84,12 +79,15 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
@@ -277,15 +275,22 @@ private fun DialogContent(
                     .graphicsLayer {
                         val src = sourceBounds
                         val img = imageBounds
-                        if (src != null && img != null && img.width > 0f && img.height > 0f) {
+                        if (src != null && img != null &&
+                            src.width > 0f && src.height > 0f &&
+                            img.width > 0f && img.height > 0f
+                        ) {
                             transformOrigin = TransformOrigin(0f, 0f)
-                            val startScaleX = src.width / img.width
-                            val startScaleY = src.height / img.height
+                            // Uniform scale so non-square images keep their aspect ratio during
+                            // the grow animation. max() so the image covers the source rect in
+                            // at least one dimension; the other overflows centered on the tap.
+                            val startScale = maxOf(src.width / img.width, src.height / img.height)
+                            val srcCenter = src.center
+                            val imgCenter = img.center
                             val p = progress()
-                            scaleX = lerp(startScaleX, 1f, p)
-                            scaleY = lerp(startScaleY, 1f, p)
-                            translationX = lerp(src.left - img.left * startScaleX, 0f, p)
-                            translationY = lerp(src.top - img.top * startScaleY, 0f, p)
+                            scaleX = lerp(startScale, 1f, p)
+                            scaleY = lerp(startScale, 1f, p)
+                            translationX = lerp(srcCenter.x - startScale * imgCenter.x, 0f, p)
+                            translationY = lerp(srcCenter.y - startScale * imgCenter.y, 0f, p)
                         } else {
                             // No source bounds: fall back to a plain fade.
                             alpha = progress()
@@ -330,8 +335,8 @@ private fun DialogContent(
 
         AnimatedVisibility(
             visible = controllerVisible.value,
-            enter = remember { fadeIn() },
-            exit = remember { fadeOut() },
+            enter = fadeIn(),
+            exit = fadeOut(),
             // Also fade with the grow animation so controls appear/disappear alongside it.
             modifier = Modifier.graphicsLayer { alpha = progress().coerceIn(0f, 1f) },
         ) {
@@ -351,7 +356,7 @@ private fun DialogContent(
                     colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = stringRes(R.string.back),
                     )
                 }
@@ -366,14 +371,16 @@ private fun DialogContent(
                             colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Share,
+                                symbol = MaterialSymbols.Share,
                                 modifier = Size20Modifier,
                                 contentDescription = stringRes(R.string.quick_action_share),
                             )
 
                             ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = sharePopupExpanded, myContent, onDismiss = { sharePopupExpanded.value = false })
                         }
+                    }
 
+                    if (myContent is MediaUrlImage || myContent is MediaLocalImage || myContent is MediaUrlPdf) {
                         if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {
                             val localContext = LocalContext.current
 
@@ -421,7 +428,7 @@ private fun DialogContent(
                                 colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Download,
+                                    symbol = MaterialSymbols.Download,
                                     modifier = Size20Modifier,
                                     contentDescription = stringRes(R.string.download_to_phone),
                                 )
@@ -443,22 +450,33 @@ private fun showToastOnMain(
     }
 }
 
-private suspend fun saveMediaToGallery(
+internal suspend fun saveMediaToGallery(
     content: BaseMediaContent,
     localContext: Context,
     accountViewModel: AccountViewModel,
 ) {
     val isImage = content is MediaUrlImage || content is MediaLocalImage
+    val isPdf = content is MediaUrlPdf
 
-    val success = if (isImage) R.string.image_saved_to_the_gallery else R.string.video_saved_to_the_gallery
-    val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
+    val success =
+        when {
+            isImage -> R.string.image_saved_to_the_gallery
+            isPdf -> R.string.pdf_saved_to_the_gallery
+            else -> R.string.video_saved_to_the_gallery
+        }
+    val failure =
+        when {
+            isImage -> R.string.failed_to_save_the_image
+            isPdf -> R.string.failed_to_save_the_pdf
+            else -> R.string.failed_to_save_the_video
+        }
 
     if (content is MediaUrlContent) {
         MediaSaverToDisk.downloadAndSave(
             content.url,
             mimeType = content.mimeType,
             okHttpClient = {
-                if (isImage) {
+                if (isImage || isPdf) {
                     accountViewModel.httpClientBuilder.okHttpClientForImage(it)
                 } else {
                     accountViewModel.httpClientBuilder.okHttpClientForVideo(it)
@@ -570,6 +588,7 @@ private fun RenderImageOrVideo(
                         automaticallyStartPlayback = true,
                         controllerVisible = controllerVisible,
                         hasBlurhash = content.blurhash != null,
+                        isFullscreen = true,
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -630,6 +649,7 @@ private fun RenderImageOrVideo(
                             automaticallyStartPlayback = true,
                             controllerVisible = controllerVisible,
                             hasBlurhash = content.blurhash != null,
+                            isFullscreen = true,
                             accountViewModel = accountViewModel,
                         )
                     }

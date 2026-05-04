@@ -64,7 +64,7 @@ private fun BadgesTopNavFilterBar(
         placeholderCode = listName,
         explainer = stringRes(R.string.select_list_to_filter),
         options = allLists,
-        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.allFollows) },
+        onSelect = onChange,
         accountViewModel = accountViewModel,
     )
 }

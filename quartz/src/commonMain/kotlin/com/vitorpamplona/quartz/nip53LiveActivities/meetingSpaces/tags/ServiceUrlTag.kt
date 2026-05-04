@@ -23,13 +23,26 @@ package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * URL of the moq-auth sidecar (the JWT mint) for a NIP-53 / nests
+ * audio room. Matches the deployed nostrnests reference, which writes
+ * `["auth", "<https URL>"]` on `kind:30312`. The early EGG-01 draft
+ * called this `service`; we accept that name on read for older events
+ * but always emit `auth`.
+ */
 class ServiceUrlTag {
     companion object Companion {
-        const val TAG_NAME = "service"
+        const val TAG_NAME = "auth"
+
+        /**
+         * Earlier EGG-01 draft name for the moq-auth URL. Accepted on
+         * read for back-compat; we always emit the canonical [TAG_NAME].
+         */
+        const val LEGACY_TAG_NAME = "service"
 
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[0] == TAG_NAME || tag[0] == LEGACY_TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }

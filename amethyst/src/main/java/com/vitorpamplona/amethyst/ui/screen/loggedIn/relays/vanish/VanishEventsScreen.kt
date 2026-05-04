@@ -33,19 +33,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material.icons.outlined.PublicOff
-import androidx.compose.material.icons.outlined.Science
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -59,6 +52,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip62Vanish.ComplianceStatus
 import com.vitorpamplona.amethyst.model.nip62Vanish.VanishEventItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -82,7 +77,7 @@ fun VanishEventsScreen(
         topBar = {
             TopBarWithBackButton(
                 stringRes(id = R.string.vanish_events_title),
-                nav::popBack,
+                nav,
             )
         },
     ) { padding ->
@@ -113,7 +108,7 @@ fun VanishEventsBody(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                Icons.Outlined.PublicOff,
+                MaterialSymbols.PublicOff,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -202,7 +197,7 @@ private fun VanishEventCard(
             if (item.isAllRelays) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Outlined.Warning,
+                        MaterialSymbols.Warning,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(16.dp),
@@ -297,7 +292,7 @@ private fun RelayComplianceRow(
                     contentPadding = ButtonDefaults.TextButtonContentPadding,
                 ) {
                     Icon(
-                        Icons.Outlined.Science,
+                        MaterialSymbols.Science,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
@@ -315,7 +310,7 @@ private fun RelayComplianceRow(
 
             ComplianceStatus.COMPLIANT -> {
                 Icon(
-                    Icons.Outlined.CheckCircle,
+                    MaterialSymbols.CheckCircle,
                     contentDescription = stringRes(R.string.vanish_compliant),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
@@ -330,7 +325,7 @@ private fun RelayComplianceRow(
 
             ComplianceStatus.NON_COMPLIANT -> {
                 Icon(
-                    Icons.Outlined.Error,
+                    MaterialSymbols.Error,
                     contentDescription = stringRes(R.string.vanish_non_compliant),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp),
@@ -345,7 +340,7 @@ private fun RelayComplianceRow(
 
             ComplianceStatus.ERROR -> {
                 Icon(
-                    Icons.Outlined.Error,
+                    MaterialSymbols.Error,
                     contentDescription = stringRes(R.string.vanish_test_error),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),

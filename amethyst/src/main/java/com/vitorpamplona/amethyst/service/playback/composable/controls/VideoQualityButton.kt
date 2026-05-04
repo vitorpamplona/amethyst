@@ -30,10 +30,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -51,12 +48,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -109,7 +107,7 @@ fun VideoQualityButton(
                 modifier = Size50Modifier,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Settings,
+                    symbol = MaterialSymbols.Settings,
                     contentDescription = stringRes(id = R.string.call_settings_video_quality),
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Size20Modifier,
@@ -119,25 +117,53 @@ fun VideoQualityButton(
     }
 
     if (openDialog) {
-        Popup(
-            alignment = Alignment.BottomCenter,
-            onDismissRequest = { openDialog = false },
-            properties = PopupProperties(focusable = true),
-        ) {
-            VideoQualityChoices(
-                videoGroup = videoGroup,
-                currentShortSide = getCurrentPlayingShortSide(tracks),
-                isAuto = !hasVideoOverride(player),
-                onSelectAuto = {
-                    clearVideoOverride(player)
-                    openDialog = false
-                },
-                onSelectTrack = { trackIndex ->
-                    selectVideoTrack(player, videoGroup, trackIndex)
-                    openDialog = false
-                },
-            )
-        }
+        VideoQualityPopup(
+            player = player,
+            videoGroup = videoGroup,
+            onDismiss = { openDialog = false },
+        )
+    }
+}
+
+@Composable
+fun VideoQualityPopup(
+    player: Player,
+    videoGroup: Tracks.Group,
+    onDismiss: () -> Unit,
+) {
+    // Scope videoSize tracking to the open popup: HLS ABR fires onVideoSizeChanged on every
+    // rung switch, and we don't want to pay recomposition cost on cards whose menu isn't open.
+    var videoSize by remember(player) { mutableStateOf(player.videoSize) }
+    DisposableEffect(player) {
+        val listener =
+            object : Player.Listener {
+                override fun onVideoSizeChanged(newSize: VideoSize) {
+                    videoSize = newSize
+                }
+            }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    val currentShortSide = minOf(videoSize.width, videoSize.height).takeIf { it > 0 }
+
+    Popup(
+        alignment = Alignment.BottomCenter,
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
+        VideoQualityChoices(
+            videoGroup = videoGroup,
+            currentShortSide = currentShortSide,
+            isAuto = !hasVideoOverride(player),
+            onSelectAuto = {
+                if (hasVideoOverride(player)) clearVideoOverride(player)
+                onDismiss()
+            },
+            onSelectTrack = { trackIndex ->
+                selectVideoTrack(player, videoGroup, trackIndex)
+                onDismiss()
+            },
+        )
     }
 }
 
@@ -195,6 +221,7 @@ private data class QualityChoice(
 private fun buildQualityChoices(group: Tracks.Group): ImmutableList<QualityChoice> {
     val choices = mutableListOf<QualityChoice>()
     for (i in 0 until group.length) {
+        if (!group.isTrackSupported(i)) continue
         val format = group.getTrackFormat(i)
         val shortSide = minOf(format.width, format.height)
         if (shortSide > 0) {
@@ -210,26 +237,3 @@ private fun formatBitrate(bitrate: Int): String =
         bitrate >= 1_000_000 -> String.format(Locale.US, "%.1f Mbps", bitrate / 1_000_000.0)
         else -> String.format(Locale.US, "%.0f kbps", bitrate / 1_000.0)
     }
-
-@OptIn(UnstableApi::class)
-private fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
-
-private fun clearVideoOverride(player: Player) {
-    player.trackSelectionParameters =
-        player.trackSelectionParameters
-            .buildUpon()
-            .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-            .build()
-}
-
-private fun selectVideoTrack(
-    player: Player,
-    group: Tracks.Group,
-    trackIndex: Int,
-) {
-    player.trackSelectionParameters =
-        player.trackSelectionParameters
-            .buildUpon()
-            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
-            .build()
-}

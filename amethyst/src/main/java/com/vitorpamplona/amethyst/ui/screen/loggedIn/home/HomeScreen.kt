@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,9 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -78,7 +75,9 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -109,6 +108,7 @@ fun HomeScreen(
         liveFeedState = accountViewModel.feedStates.homeLive,
         newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
         repliesFeedState = accountViewModel.feedStates.homeReplies,
+        everythingFeedState = accountViewModel.feedStates.homeEverything,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -120,18 +120,20 @@ fun HomeScreen(
     liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
+    everythingFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchAccountForHomeScreen(liveFeedState, newThreadsFeedState, repliesFeedState, accountViewModel)
+    WatchAccountForHomeScreen(liveFeedState, newThreadsFeedState, repliesFeedState, everythingFeedState, accountViewModel)
 
     WatchLifecycleAndUpdateModel(liveFeedState)
     WatchLifecycleAndUpdateModel(newThreadsFeedState)
     WatchLifecycleAndUpdateModel(repliesFeedState)
+    WatchLifecycleAndUpdateModel(everythingFeedState)
 
     HomeFilterAssemblerSubscription(accountViewModel)
 
-    AssembleHomeTabs(newThreadsFeedState, repliesFeedState, liveFeedState) { pagerState, tabItems ->
+    AssembleHomeTabs(newThreadsFeedState, repliesFeedState, everythingFeedState, liveFeedState, accountViewModel) { pagerState, tabItems ->
         HomePages(pagerState, tabItems, accountViewModel, nav)
     }
 }
@@ -141,32 +143,73 @@ fun HomeScreen(
 private fun AssembleHomeTabs(
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
+    everythingFeedState: FeedContentState,
     liveFeedState: ChannelFeedContentState,
+    accountViewModel: AccountViewModel,
     inner: @Composable (PagerState, ImmutableList<TabItem>) -> Unit,
 ) {
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { 2 }
+    val showNewThreads by accountViewModel.settings.uiSettingsFlow.showHomeNewThreadsTab
+        .collectAsStateWithLifecycle()
+    val showConversations by accountViewModel.settings.uiSettingsFlow.showHomeConversationsTab
+        .collectAsStateWithLifecycle()
+    val showEverything by accountViewModel.settings.uiSettingsFlow.showHomeEverythingTab
+        .collectAsStateWithLifecycle()
 
     val tabs by
-        remember(newThreadsFeedState, repliesFeedState) {
+        remember(newThreadsFeedState, repliesFeedState, everythingFeedState, showNewThreads, showConversations, showEverything) {
             mutableStateOf(
-                listOf(
-                    TabItem(
-                        resource = R.string.new_threads,
-                        feedState = newThreadsFeedState,
-                        routeForLastRead = "HomeFollows",
-                        scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
-                        liveSection = liveFeedState,
-                    ),
-                    TabItem(
-                        resource = R.string.conversations,
-                        feedState = repliesFeedState,
-                        routeForLastRead = "HomeFollowsReplies",
-                        scrollStateKey = ScrollStateKeys.HOME_REPLIES,
-                        liveSection = liveFeedState,
-                    ),
-                ).toImmutableList(),
+                buildList {
+                    if (showNewThreads) {
+                        add(
+                            TabItem(
+                                resource = R.string.new_threads,
+                                feedState = newThreadsFeedState,
+                                routeForLastRead = "HomeFollows",
+                                scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                    if (showConversations) {
+                        add(
+                            TabItem(
+                                resource = R.string.conversations,
+                                feedState = repliesFeedState,
+                                routeForLastRead = "HomeFollowsReplies",
+                                scrollStateKey = ScrollStateKeys.HOME_REPLIES,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                    if (showEverything) {
+                        add(
+                            TabItem(
+                                resource = R.string.home_tab_everything,
+                                feedState = everythingFeedState,
+                                routeForLastRead = "HomeFollowsEverything",
+                                scrollStateKey = ScrollStateKeys.HOME_EVERYTHING,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                    // Always render at least one tab so the screen doesn't go blank
+                    // if the user disables every option.
+                    if (isEmpty()) {
+                        add(
+                            TabItem(
+                                resource = R.string.new_threads,
+                                feedState = newThreadsFeedState,
+                                routeForLastRead = "HomeFollows",
+                                scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
+                                liveSection = liveFeedState,
+                            ),
+                        )
+                    }
+                }.toImmutableList(),
             )
         }
+
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { tabs.size }
 
     inner(pagerState, tabs)
 }
@@ -183,45 +226,49 @@ private fun HomePages(
         topBar = {
             Column {
                 HomeTopBar(accountViewModel, nav)
-                SecondaryTabRow(
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    modifier = TabRowHeight,
-                    selectedTabIndex = pagerState.currentPage,
-                ) {
-                    val coroutineScope = rememberCoroutineScope()
-                    tabs.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            text = { Text(text = stringRes(tab.resource)) },
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                        )
+                if (tabs.size > 1) {
+                    SecondaryTabRow(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.onBackground,
+                        modifier = TabRowHeight,
+                        selectedTabIndex = pagerState.currentPage,
+                    ) {
+                        val coroutineScope = rememberCoroutineScope()
+                        tabs.forEachIndexed { index, tab ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                text = { Text(text = stringRes(tab.resource)) },
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                            )
+                        }
                     }
                 }
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Home, accountViewModel) { route ->
+            AppBottomBar(Route.Home, nav, accountViewModel) { route ->
                 if (route == Route.Home) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
         floatingButton = {
-            HomeScreenFloatingButton(accountViewModel, nav)
+            FabBottomBarPadded(nav) {
+                HomeScreenFloatingButton(accountViewModel, nav)
+            }
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
         // Wrap pager + banner in a Box so the banner can float over the feed
         // (anchored top-center) instead of living in the topBar Column where
         // it would push the tabs down every time it appears or disappears.
-        Box(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-        ) {
+        // The Box itself fills the full screen; inner LazyColumns pick up the
+        // scaffold padding from LocalDisappearingScaffoldPadding via
+        // rememberFeedContentPadding, so feed items still scroll behind the bars.
+        Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
-                contentPadding = PaddingValues(0.dp),
                 state = pagerState,
                 userScrollEnabled = true,
                 modifier =
@@ -243,7 +290,10 @@ private fun HomePages(
             HomeAlgoFeedStatusBanner(
                 accountViewModel = accountViewModel,
                 nav = nav,
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = paddingValues.calculateTopPadding()),
             )
         }
     }
@@ -280,6 +330,10 @@ fun HomeScreenFloatingButton(
 
         is TopFilter.Hashtag -> {
             NewHashtagPostButton(filter.tag, accountViewModel, nav)
+        }
+
+        is TopFilter.InterestSet -> {
+            NewNoteButton(nav)
         }
 
         else -> {
@@ -358,7 +412,7 @@ fun FeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         if (liveSection != null) {
@@ -498,6 +552,7 @@ fun WatchAccountForHomeScreen(
     liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
+    everythingFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     val homeFollowList by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
@@ -505,6 +560,7 @@ fun WatchAccountForHomeScreen(
     LaunchedEffect(accountViewModel, homeFollowList) {
         newThreadsFeedState.checkKeysInvalidateDataAndSendToTop()
         repliesFeedState.checkKeysInvalidateDataAndSendToTop()
+        everythingFeedState.checkKeysInvalidateDataAndSendToTop()
         liveFeedState.checkKeysInvalidateDataAndSendToTop()
     }
 }

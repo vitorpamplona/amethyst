@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.utils
 
 import java.net.URI
 import java.net.URLDecoder
-import kotlin.getValue
 
 actual class UriParser actual constructor(
     uri: String,

@@ -60,7 +60,7 @@ class ChatroomListKnownFeedFilter(
                     LocalCache
                         .getOrCreatePublicChatChannel(it.eventId)
                         .notes
-                        .filter { key, it -> account.isAcceptable(it) && it.event != null }
+                        .filter { _, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
                         .firstOrNull()
                 }
@@ -72,14 +72,18 @@ class ChatroomListKnownFeedFilter(
                     LocalCache
                         .getOrCreateEphemeralChannel(it)
                         .notes
-                        .filter { key, it -> account.isAcceptable(it) && it.event != null }
+                        .filter { _, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
                         .firstOrNull()
                 }
 
         val marmotGroups =
             account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
-                chatroom.newestMessage
+                if (chatroom.isKnown(followingKeySet)) {
+                    chatroom.newestMessage ?: chatroom.placeholderNote()
+                } else {
+                    null
+                }
             }
 
         return (privateMessages + publicChannels + ephemeralChats + marmotGroups).sortedWith(DefaultFeedOrder)

@@ -107,7 +107,7 @@ class Nip65RelayListViewModel : ViewModel() {
                     onInfo = {
                         toggleHomePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
-                    onError = { url, errorCode, exceptionMessage -> },
+                    onError = { _, _, _ -> },
                 )
             }
 
@@ -117,7 +117,7 @@ class Nip65RelayListViewModel : ViewModel() {
                     onInfo = {
                         toggleNotifPaidRelay(item, it.limitation?.payment_required ?: false)
                     },
-                    onError = { url, errorCode, exceptionMessage -> },
+                    onError = { _, _, _ -> },
                 )
             }
         }
@@ -200,7 +200,7 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun deleteHomeAll() {
-        _homeRelays.update { relays -> emptyList() }
+        _homeRelays.update { _ -> emptyList() }
         hasModified = true
     }
 
@@ -236,7 +236,7 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun deleteNotifAll() {
-        _notificationRelays.update { relays -> emptyList() }
+        _notificationRelays.update { _ -> emptyList() }
         hasModified = true
     }
 

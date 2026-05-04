@@ -21,59 +21,90 @@
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.BottomAppBarDefaults.windowInsets
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size27dp
+
+/** Content height of the [AppBottomBar] (the 50.dp Column inside [RenderBottomMenu]),
+ * exclusive of the system navigation-bar inset. Used by FAB callers that want to
+ * reserve the same vertical space when the bar hides itself on canPop entries. */
+val AppBottomBarHeight = 50.dp
 
 @Composable
 fun AppBottomBar(
     selectedRoute: Route?,
+    nav: INav,
     accountViewModel: AccountViewModel,
-    nav: (Route) -> Unit,
+    onClick: (Route) -> Unit,
 ) {
+    // Hide the bar on entries that aren't a tab root (drawer or in-app
+    // pushes). Mirrors the back-arrow rule in canPop().
+    if (nav.canPop()) return
+
+    val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+        .collectAsStateWithLifecycle()
+    if (items.isEmpty()) {
+        Spacer(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(windowInsets)
+                    .consumeWindowInsets(windowInsets),
+        )
+        return
+    }
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
-        RenderBottomMenu(selectedRoute, accountViewModel, nav)
+        RenderBottomMenu(items, selectedRoute, accountViewModel, onClick)
     }
 }
 
 @Composable
 private fun RenderBottomMenu(
+    items: List<NavBarItem>,
     selectedRoute: Route?,
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
 ) {
+    val defs = remember(items) { items.mapNotNull(NavBarCatalog::get) }
+
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
                 .windowInsetsPadding(windowInsets)
                 .consumeWindowInsets(windowInsets)
-                .height(50.dp),
+                .height(AppBottomBarHeight),
     ) {
         HorizontalDivider(
             thickness = DividerThickness,
@@ -82,8 +113,9 @@ private fun RenderBottomMenu(
             containerColor = MaterialTheme.colorScheme.background,
             tonalElevation = Size0dp,
         ) {
-            bottomNavigationItems.forEach { item ->
-                HasNewItemsIcon(item.route == selectedRoute, item, accountViewModel, nav)
+            defs.forEach { def ->
+                val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
+                HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
             }
         }
     }
@@ -92,7 +124,8 @@ private fun RenderBottomMenu(
 @Composable
 private fun RowScope.HasNewItemsIcon(
     selected: Boolean,
-    bottomNav: BottomBarRoute,
+    def: NavBarItemDef,
+    destination: Route,
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
 ) {
@@ -101,30 +134,33 @@ private fun RowScope.HasNewItemsIcon(
         icon = {
             NotifiableIcon(
                 selected,
-                bottomNav,
+                def,
+                destination,
                 accountViewModel,
             )
         },
         selected = selected,
-        onClick = { nav(bottomNav.route) },
+        onClick = { nav(destination) },
     )
 }
 
 @Composable
 private fun NotifiableIcon(
     selected: Boolean,
-    route: BottomBarRoute,
+    def: NavBarItemDef,
+    destination: Route,
     accountViewModel: AccountViewModel,
 ) {
-    Box(route.notifSize) {
+    Box(Modifier.size(Size27dp)) {
+        val iconSizeModifier = Modifier.size(Size24dp)
+        val description = stringRes(def.labelRes)
         Icon(
-            painter = painterRes(resourceId = route.icon, 0),
-            contentDescription = stringRes(route.contentDescriptor),
-            modifier = route.iconSize,
-            tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+            symbol = def.icon,
+            contentDescription = description,
+            modifier = iconSizeModifier,
         )
 
-        AddNotifIconIfNeeded(route.route, accountViewModel, Modifier.align(Alignment.TopEnd))
+        AddNotifIconIfNeeded(destination, accountViewModel, Modifier.align(Alignment.TopEnd))
     }
 }
 

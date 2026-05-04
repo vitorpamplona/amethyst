@@ -36,12 +36,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.outlined.Collections
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +76,8 @@ import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -91,7 +87,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -162,16 +157,30 @@ fun ZoomableContentView(
                 preloadUrls = listOf(content.url),
                 accountViewModel = accountViewModel,
                 modifier = mediaSizingModifier(ratio, contentScale),
-                backdrop = content.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+                backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
-                TwoSecondController(content) { controllerVisible ->
-                    val mainImageModifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .then(boundsTrackingModifier)
-                            .clickable { dialogOpen = true }
-                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
-                    UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                if (content.isGif()) {
+                    GifVideoView(
+                        videoUri = content.url,
+                        contentDescription = content.description,
+                        dimensions = content.dim,
+                        blurhash = content.blurhash,
+                        roundedCorner = roundedCorner,
+                        contentScale = contentScale,
+                        onDialog = { dialogOpen = true },
+                        accountViewModel = accountViewModel,
+                        thumbhash = content.thumbhash,
+                    )
+                } else {
+                    TwoSecondController(content) { controllerVisible ->
+                        val mainImageModifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .then(boundsTrackingModifier)
+                                .clickable { dialogOpen = true }
+                        val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+                        UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                    }
                 }
             }
         }
@@ -184,7 +193,7 @@ fun ZoomableContentView(
                 preloadUrls = emptyList(),
                 accountViewModel = accountViewModel,
                 modifier = mediaSizingModifier(ratio, contentScale),
-                backdrop = content.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+                backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 Box(
                     modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
@@ -203,21 +212,39 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
+                        thumbhash = content.thumbhash,
+                        isLiveStream = content.isLiveStream,
                     )
                 }
             }
         }
 
         is MediaLocalImage -> {
-            TwoSecondController(content) { controllerVisible ->
-                val mainImageModifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(boundsTrackingModifier)
-                        .clickable { dialogOpen = true }
-                val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+            if (content.isGif()) {
+                content.localFile?.let {
+                    GifVideoView(
+                        videoUri = it.toUri().toString(),
+                        contentDescription = content.description,
+                        dimensions = content.dim,
+                        blurhash = content.blurhash,
+                        roundedCorner = roundedCorner,
+                        contentScale = contentScale,
+                        onDialog = { dialogOpen = true },
+                        accountViewModel = accountViewModel,
+                        thumbhash = content.thumbhash,
+                    )
+                }
+            } else {
+                TwoSecondController(content) { controllerVisible ->
+                    val mainImageModifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(boundsTrackingModifier)
+                            .clickable { dialogOpen = true }
+                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
-                LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                    LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                }
             }
         }
 
@@ -330,13 +357,14 @@ fun LocalImageView(
                     when (state) {
                         is AsyncImagePainter.State.Loading,
                         -> {
-                            if (content.blurhash != null) {
+                            if (content.blurhash != null || content.thumbhash != null) {
                                 if (ratio != null) {
                                     DisplayBlurHash(
                                         content.blurhash,
                                         content.description,
                                         contentScale,
                                         loadedImageModifier.aspectRatio(ratio),
+                                        thumbhash = content.thumbhash,
                                     )
                                 } else {
                                     DisplayBlurHash(
@@ -344,6 +372,7 @@ fun LocalImageView(
                                         content.description,
                                         contentScale,
                                         loadedImageModifier,
+                                        thumbhash = content.thumbhash,
                                     )
                                 }
                             } else {
@@ -375,8 +404,8 @@ fun LocalImageView(
                                 AnimatedVisibility(
                                     visible = controllerVisible.value,
                                     modifier = Modifier.align(Alignment.TopEnd),
-                                    enter = remember { fadeIn() },
-                                    exit = remember { fadeOut() },
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
                                 ) {
                                     Box(Modifier.align(Alignment.TopEnd), contentAlignment = Alignment.TopEnd) {
                                         HashVerificationSymbol(it)
@@ -389,7 +418,7 @@ fun LocalImageView(
                     }
                 }
             } else {
-                if (content.blurhash != null && ratio != null) {
+                if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                     DisplayBlurHash(
                         content.blurhash,
                         content.description,
@@ -397,6 +426,7 @@ fun LocalImageView(
                         loadedImageModifier
                             .aspectRatio(ratio)
                             .clickable { showImage.value = true },
+                        thumbhash = content.thumbhash,
                     )
                     IconButton(
                         modifier = Modifier.size(Size75dp),
@@ -460,7 +490,7 @@ fun UrlImageView(
                 when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
-                        if (content.blurhash != null) {
+                        if (content.blurhash != null || content.thumbhash != null) {
                             if (ratio != null) {
                                 val modifier =
                                     if (contentScale == ContentScale.Crop) {
@@ -474,6 +504,7 @@ fun UrlImageView(
                                     content.description,
                                     ContentScale.Crop,
                                     modifier,
+                                    thumbhash = content.thumbhash,
                                 )
                             } else {
                                 DisplayBlurHash(
@@ -481,6 +512,7 @@ fun UrlImageView(
                                     content.description,
                                     ContentScale.Crop,
                                     loadedImageModifier,
+                                    thumbhash = content.thumbhash,
                                 )
                             }
                         } else {
@@ -515,7 +547,7 @@ fun UrlImageView(
                 }
             }
         } else {
-            if (content.blurhash != null && ratio != null) {
+            if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                 val modifier =
                     if (contentScale == ContentScale.Crop) {
                         loadedImageModifier.clickable { showImage.value = true }
@@ -528,6 +560,7 @@ fun UrlImageView(
                     content.description,
                     contentScale,
                     modifier,
+                    thumbhash = content.thumbhash,
                 )
                 IconButton(
                     modifier = Modifier.size(Size75dp),
@@ -616,8 +649,8 @@ fun ShowHashAnimated(
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = modifier,
-        enter = remember { fadeIn() },
-        exit = remember { fadeOut() },
+        enter = fadeIn(),
+        exit = fadeOut(),
     ) {
         Box(modifier, contentAlignment = Alignment.TopEnd) {
             ShowHash(content)
@@ -643,6 +676,15 @@ fun ShowHash(content: MediaUrlContent) {
 
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
+
+fun BaseMediaContent.isGif(): Boolean =
+    if (this is MediaUrlContent) {
+        mimeType == "image/gif" || url.endsWith(".gif", ignoreCase = true) || url.contains(".gif?", ignoreCase = true) || url.contains(".gif#", ignoreCase = true)
+    } else if (this is MediaPreloadedContent) {
+        mimeType == "image/gif" || localFile?.name?.endsWith(".gif", ignoreCase = true) == true
+    } else {
+        false
+    }
 
 @Composable
 fun WaitAndDisplay(content: @Composable (AnimatedVisibilityScope.() -> Unit)) {
@@ -786,11 +828,14 @@ fun DisplayBlurHash(
     description: String?,
     contentScale: ContentScale,
     modifier: Modifier,
+    thumbhash: String? = null,
 ) {
-    if (blurhash == null) return
+    val model =
+        com.vitorpamplona.amethyst.service.images
+            .placeholderModel(thumbhash, blurhash) ?: return
 
     AsyncImage(
-        model = BlurhashWrapper(blurhash),
+        model = model,
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,
@@ -862,25 +907,44 @@ fun ShareMediaAction(
             if ((videoUri != null && !videoUri.startsWith("file")) || postNostrUri != null) {
                 M3ActionSection {
                     if (videoUri != null && !videoUri.startsWith("file")) {
-                        M3ActionRow(icon = Icons.Outlined.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
+                        M3ActionRow(icon = MaterialSymbols.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(videoUri)
                             }
                             onDismiss()
                         }
                     }
+                    if (content is MediaUrlPdf && videoUri != null && !videoUri.startsWith("file")) {
+                        val appContext = LocalContext.current.applicationContext
+                        M3ActionRow(icon = MaterialSymbols.Download, text = stringRes(R.string.download_to_phone)) {
+                            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                saveMediaToGallery(content, appContext, accountViewModel)
+                            }
+                            Toast
+                                .makeText(
+                                    appContext,
+                                    stringRes(appContext, R.string.media_download_has_started_toast),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            onDismiss()
+                        }
+                    }
                     postNostrUri?.let {
-                        M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
+                        M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(it)
                             }
                             onDismiss()
                         }
-                        M3ActionRow(icon = Icons.Outlined.Collections, text = stringRes(R.string.add_media_to_gallery)) {
+                        M3ActionRow(icon = MaterialSymbols.Collections, text = stringRes(R.string.add_media_to_gallery)) {
                             if (videoUri != null) {
                                 val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                                 if (n19 != null) {
-                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType)
+                                    // Forward the imeta poster so HLS gallery entries have a decodable
+                                    // still — the .m3u8 URL itself is a text manifest. Only
+                                    // MediaUrlVideo carries an artworkUri.
+                                    val posterUrl = (content as? MediaUrlVideo)?.artworkUri
+                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType, image = posterUrl)
                                     accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                                 }
                             }
@@ -899,7 +963,7 @@ fun ShareMediaAction(
                         is MediaUrlImage -> {
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
-                                    M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_image)) {
+                                    M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.share_image)) {
                                         accountViewModel.viewModelScope.launch { shareImageFile(context, videoUri, mimeType) }
                                         onDismiss()
                                     }
@@ -911,7 +975,7 @@ fun ShareMediaAction(
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
                                     M3ActionRow(
-                                        icon = Icons.Outlined.Share,
+                                        icon = MaterialSymbols.Share,
                                         text = stringRes(R.string.share_video),
                                         enabled = !isDownloadingVideo.value,
                                     ) {
@@ -941,7 +1005,7 @@ fun ShareMediaAction(
 
                         is MediaLocalVideo -> {
                             content.localFile?.let { localFile ->
-                                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
+                                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.share_video)) {
                                     accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()
                                 }
@@ -1163,7 +1227,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
             },
         ) {
             Icon(
-                imageVector = Icons.Default.Report,
+                symbol = MaterialSymbols.Report,
                 contentDescription = stringRes(id = R.string.hash_verification_failed),
                 modifier = Size30Modifier,
                 tint = Color.Red,

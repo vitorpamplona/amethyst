@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecry
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
@@ -133,9 +135,9 @@ import com.vitorpamplona.quartz.experimental.profileGallery.blurhash
 import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
+import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -194,6 +196,9 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -223,6 +228,8 @@ import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -237,6 +244,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.magnet
 import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -261,6 +269,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
+import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
+import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -360,16 +370,22 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
+    val interestSets = InterestSetsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
+    val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
     val blossomServers = BlossomServerListState(signer, cache, scope, settings)
+
+    val nestsServers =
+        com.vitorpamplona.amethyst.model.nip53NestsServers
+            .NestsServerListState(signer, cache, scope)
 
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
@@ -440,6 +456,7 @@ class Account(
             scope = scope,
             favoriteAlgoFeedsOrchestrator = favoriteAlgoFeedsOrchestrator,
             favoriteAlgoFeedAddresses = favoriteAlgoFeedsList.flow,
+            interestSetHashtags = interestSets.hashtagsByIdentifier,
         ).flow
 
     // App-ready Feeds
@@ -467,6 +484,15 @@ class Account(
     val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
     val liveShortsFollowListsPerRelay = OutboxLoaderState(liveShortsFollowLists, cache, scope).flow
 
+    val livePublicChatsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPublicChatsFollowList)
+    val livePublicChatsFollowListsPerRelay = OutboxLoaderState(livePublicChatsFollowLists, cache, scope).flow
+
+    val liveLiveStreamsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLiveStreamsFollowList)
+    val liveLiveStreamsFollowListsPerRelay = OutboxLoaderState(liveLiveStreamsFollowLists, cache, scope).flow
+
+    val liveNestsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNestsFollowList)
+    val liveNestsFollowListsPerRelay = OutboxLoaderState(liveNestsFollowLists, cache, scope).flow
+
     val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
     val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
 
@@ -475,6 +501,15 @@ class Account(
 
     val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBadgesFollowList)
     val liveBadgesFollowListsPerRelay = OutboxLoaderState(liveBadgesFollowLists, cache, scope).flow
+
+    val liveBrowseEmojiSetsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBrowseEmojiSetsFollowList)
+    val liveBrowseEmojiSetsFollowListsPerRelay = OutboxLoaderState(liveBrowseEmojiSetsFollowLists, cache, scope).flow
+
+    val liveCommunitiesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCommunitiesFollowList)
+    val liveCommunitiesFollowListsPerRelay = OutboxLoaderState(liveCommunitiesFollowLists, cache, scope).flow
+
+    val liveFollowPacksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultFollowPacksFollowList)
+    val liveFollowPacksFollowListsPerRelay = OutboxLoaderState(liveFollowPacksFollowLists, cache, scope).flow
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 
@@ -526,6 +561,12 @@ class Account(
 
     suspend fun changeReactionRowItems(items: List<ReactionRowItem>) {
         if (settings.changeReactionRowItems(items)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun changeVideoPlayerButtonItems(items: List<VideoPlayerButtonItem>) {
+        if (settings.changeVideoPlayerButtonItems(items)) {
             sendNewAppSpecificData()
         }
     }
@@ -941,7 +982,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -962,7 +1003,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -970,6 +1011,18 @@ class Account(
 
         if (event is PollEvent) {
             relayList.addAll(event.relays())
+        }
+
+        if (event is MeetingSpaceEvent) {
+            relayList.addAll(event.allRelayUrls())
+        }
+
+        if (event is MeetingRoomEvent) {
+            relayList.addAll(event.allRelayUrls())
+        }
+
+        if (event is LiveActivitiesEvent) {
+            relayList.addAll(event.allRelayUrls())
         }
 
         relayList.addAll(computeRelaysForChannels(event))
@@ -994,7 +1047,7 @@ class Account(
                     client
                         .fetchFirst(
                             filters =
-                                note.relays.associateWith { relay ->
+                                note.relays.associateWith { _ ->
                                     listOf(
                                         Filter(
                                             kinds = listOf(host.kind),
@@ -1156,6 +1209,34 @@ class Account(
         client.publish(signedEvent, relays)
     }
 
+    suspend fun sendCommunityDefinition(
+        name: String,
+        description: String,
+        moderators: List<ModeratorTag>,
+        image: String? = null,
+        rules: String? = null,
+        relays: List<RelayTag>? = null,
+        dTag: String,
+    ): CommunityDefinitionEvent? {
+        if (!isWriteable()) return null
+
+        val template =
+            CommunityDefinitionEvent.build(
+                name = name,
+                description = description,
+                moderators = moderators,
+                image = image,
+                rules = rules,
+                relays = relays,
+                dTag = dTag,
+            )
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+        return signedEvent
+    }
+
     private fun loadCurrentAcceptedBadges(): List<AcceptedBadge> {
         val newNote = cache.getAddressableNoteIfExists(ProfileBadgesEvent.createAddress(signer.pubKey))
         val newEvent = newNote?.event as? ProfileBadgesEvent
@@ -1280,6 +1361,7 @@ class Account(
                 headerInfo.mimeType?.let { mimeType(it) }
                 headerInfo.dim?.let { dimension(it) }
                 headerInfo.blurHash?.let { blurhash(it.blurhash) }
+                headerInfo.thumbHash?.let { nip95thumbhash(it.thumbhash) }
 
                 contentWarningReason?.let { contentWarning(contentWarningReason) }
             }
@@ -1364,16 +1446,17 @@ class Account(
         val iMetas =
             urlHeaderInfo.map {
                 PictureMeta(
-                    it.key,
-                    it.value.mimeType,
-                    it.value.blurHash?.blurhash,
-                    it.value.dim,
-                    caption,
-                    it.value.hash,
-                    it.value.size,
-                    null,
-                    emptyList(),
-                    emptyList(),
+                    url = it.key,
+                    mimeType = it.value.mimeType,
+                    blurhash = it.value.blurHash?.blurhash,
+                    dimension = it.value.dim,
+                    alt = caption,
+                    hash = it.value.hash,
+                    size = it.value.size,
+                    service = null,
+                    fallback = emptyList(),
+                    annotations = emptyList(),
+                    thumbhash = it.value.thumbHash?.thumbhash,
                 )
             }
 
@@ -1416,13 +1499,14 @@ class Account(
                         quotes(findNostrUris(it))
                     }
                     pictureIMeta(
-                        url,
-                        headerInfo.mimeType,
-                        headerInfo.blurHash?.blurhash,
-                        headerInfo.dim,
-                        headerInfo.hash,
-                        headerInfo.size,
-                        alt,
+                        url = url,
+                        mimeType = headerInfo.mimeType,
+                        blurhash = headerInfo.blurHash?.blurhash,
+                        dimension = headerInfo.dim,
+                        hash = headerInfo.hash,
+                        size = headerInfo.size,
+                        alt = alt,
+                        thumbhash = headerInfo.thumbHash?.thumbhash,
                     )
                     // add zap splits
                     // add zap raiser
@@ -1440,6 +1524,7 @@ class Account(
                         dimension = headerInfo.dim,
                         blurhash = headerInfo.blurHash?.blurhash,
                         alt = alt,
+                        thumbhash = headerInfo.thumbHash?.thumbhash,
                     )
 
                 if (headerInfo.dim.height > headerInfo.dim.width) {
@@ -1459,6 +1544,7 @@ class Account(
                     headerInfo.mimeType?.let { mimeType(it) }
                     headerInfo.dim?.let { dimension(it) }
                     headerInfo.blurHash?.let { blurhash(it.blurhash) }
+                    headerInfo.thumbHash?.let { thumbhash(it.thumbhash) }
 
                     originalHash?.let { originalHash(it) }
                     magnetUri?.let { magnet(it) }
@@ -1947,9 +2033,6 @@ class Account(
         val manager = marmotManager ?: return "Error: Marmot not initialized"
         if (!isWriteable()) return "Error: Account is read-only"
 
-        // Build filter for the member's KeyPackages
-        val filter = manager.subscriptionManager.keyPackageFilter(memberPubKey)
-
         // Per MIP-00, invitees advertise the relays that host their
         // KeyPackages in a kind:10051 KeyPackageRelayListEvent. Look
         // there first, then fall back to the invitee's NIP-65 outbox
@@ -1971,20 +2054,18 @@ class Account(
                 .outboxRelays()
                 ?.toSet()
                 .orEmpty()
-        val fetchRelays = memberKeyPackageRelays + memberOutbox + myOutbox
+        val fetchRelays =
+            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                .fetchRelaysFor(memberKeyPackageRelays, memberOutbox, myOutbox)
 
         Log.d("MarmotDbg") {
             "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
                 "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
         }
 
-        // Query across the combined relay set
-        val filterMap = fetchRelays.associateWith { listOf(filter) }
-
         val event =
-            client.fetchFirst(
-                filters = filterMap,
-            )
+            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                .fetchKeyPackage(client, memberPubKey, fetchRelays)
 
         if (event == null) {
             Log.w("MarmotDbg") {
@@ -1997,21 +2078,12 @@ class Account(
             "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
         }
 
-        if (event !is com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent) {
-            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: unexpected kind ${event.kind}" }
-            return "Error: Unexpected event type received"
-        }
-
         val keyPackageBase64 = event.keyPackageBase64()
         if (keyPackageBase64.isBlank()) {
             Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: KeyPackage event has empty content" }
             return "Error: KeyPackage event has empty content"
         }
 
-        val keyPackageBytes =
-            kotlin.io.encoding.Base64
-                .decode(keyPackageBase64)
-        val keyPackageEventId = event.id
         // The relays embedded in the WelcomeEvent tell the new member
         // where to subscribe for subsequent GroupEvents. Use our own
         // outbox — that's where we will publish them.
@@ -2023,9 +2095,7 @@ class Account(
 
         addMarmotGroupMember(
             nostrGroupId = nostrGroupId,
-            memberPubKey = memberPubKey,
-            keyPackageBytes = keyPackageBytes,
-            keyPackageEventId = keyPackageEventId,
+            keyPackageEvent = event,
             groupRelays = groupRelays,
         )
 
@@ -2038,14 +2108,13 @@ class Account(
      */
     suspend fun addMarmotGroupMember(
         nostrGroupId: HexKey,
-        memberPubKey: HexKey,
-        keyPackageBytes: ByteArray,
-        keyPackageEventId: HexKey,
+        keyPackageEvent: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent,
         groupRelays: List<NormalizedRelayUrl>,
     ) {
+        val memberPubKey = keyPackageEvent.pubKey
         Log.d("MarmotDbg") {
             "addMarmotGroupMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}… " +
-                "keyPackageBytes=${keyPackageBytes.size}B groupRelays=${groupRelays.size}"
+                "groupRelays=${groupRelays.size}"
         }
         val manager = marmotManager ?: return
         if (!isWriteable()) return
@@ -2053,11 +2122,16 @@ class Account(
         val (commitEvent, welcomeDelivery) =
             manager.addMember(
                 nostrGroupId = nostrGroupId,
-                memberPubKey = memberPubKey,
-                keyPackageBytes = keyPackageBytes,
-                keyPackageEventId = keyPackageEventId,
+                keyPackageEvent = keyPackageEvent,
                 relays = groupRelays,
             )
+
+        // The MLS commit has already been applied to the local group state —
+        // surface the new member list in the chatroom now so observers (e.g.
+        // MarmotGroupInfoScreen) update without waiting for our own commit to
+        // loop back through the relay.
+        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
 
         Log.d("MarmotDbg") {
             "addMarmotGroupMember: built commit kind=${commitEvent.signedEvent.kind} id=${commitEvent.signedEvent.id.take(8)}… " +
@@ -2112,31 +2186,43 @@ class Account(
 
     /**
      * Relays where this account publishes kind:30443 KeyPackage events.
-     *
-     * Per MIP-00, these should match the relays advertised in the user's
-     * kind:10051 KeyPackage Relay List so that other clients can discover
-     * and fetch them. Falls back to the standard outbox set when no list
-     * has been configured yet, since that's also where the user's other
-     * write-oriented events land.
+     * Per MIP-00: prefer kind:10051 KeyPackage Relay List; fall back to NIP-65 outbox.
      */
-    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> {
-        val list = keyPackageRelayList.flow.value
-        return if (list.isNotEmpty()) list else outboxRelays.flow.value
-    }
+    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> =
+        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+            .publishRelaysFor(keyPackageRelayList.flow.value, outboxRelays.flow.value)
 
     /**
      * Publish or rotate KeyPackage events.
      */
     suspend fun publishMarmotKeyPackages() {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
+        val manager =
+            marmotManager ?: run {
+                Log.w("MarmotDbg") { "publishMarmotKeyPackages: marmotManager is NULL — no-op" }
+                return
+            }
+        if (!isWriteable()) {
+            Log.w("MarmotDbg") { "publishMarmotKeyPackages: account is not writeable — no-op" }
+            return
+        }
 
         val relays = keyPackagePublishRelays()
+        val needsRotation = manager.needsKeyPackageRotation()
+        Log.d("MarmotDbg") {
+            "publishMarmotKeyPackages: needsRotation=$needsRotation relays=${relays.size}"
+        }
 
-        if (manager.needsKeyPackageRotation()) {
+        if (needsRotation) {
             val rotatedEvents = manager.rotateConsumedKeyPackages(relays.toList())
+            Log.d("MarmotDbg") {
+                "publishMarmotKeyPackages: rotateConsumedKeyPackages produced ${rotatedEvents.size} event(s)"
+            }
             rotatedEvents.forEach { event ->
                 cache.justConsumeMyOwnEvent(event)
+                Log.d("MarmotDbg") {
+                    "publishMarmotKeyPackages: publishing rotated kind:${event.kind} id=${event.id.take(8)}… " +
+                        "→ ${relays.size} relay(s): ${relays.map { it.url }}"
+                }
                 client.publish(event, relays)
             }
         }
@@ -2200,23 +2286,13 @@ class Account(
     }
 
     /**
-     * Check if a KeyPackage has been published, either locally generated
-     * in this session or found in the local cache from a previous session.
+     * Check if a KeyPackage has been published in this session.
+     * The d-tag is a randomly-generated value stored in the KeyPackageRotationManager's
+     * persisted snapshot, so there is no fixed address to query in the cache.
      */
     suspend fun hasPublishedKeyPackage(): Boolean {
-        // Check in-memory bundles first (current session)
-        val manager = marmotManager
-        if (manager != null && manager.hasActiveKeyPackages()) return true
-
-        // Check local cache for our own kind:30443 events (from previous sessions / relay downloads)
-        val address =
-            com.vitorpamplona.quartz.nip01Core.core.Address(
-                KeyPackageEvent.KIND,
-                signer.pubKey,
-                KeyPackageUtils.PRIMARY_SLOT,
-            )
-        val note = cache.getAddressableNoteIfExists(address)
-        return note?.event != null
+        val manager = marmotManager ?: return false
+        return manager.hasActiveKeyPackages()
     }
 
     /**
@@ -2234,6 +2310,14 @@ class Account(
     /**
      * Leave a Marmot MLS group.
      * Publishes the SelfRemove proposal and removes local state.
+     *
+     * MIP-01/MIP-03: admins MUST first publish a GroupContextExtensions
+     * commit dropping themselves from `admin_pubkeys` before issuing a
+     * SelfRemove proposal. Without that, [MlsGroup.selfRemove] throws
+     * `IllegalStateException("Admin must self-demote via GroupContextExtensions
+     * before SelfRemove (MIP-01)")` and the leave aborts. Demote commit and
+     * SelfRemove proposal both go to the same group relays, demote first so
+     * peers apply it before they see the SelfRemove.
      */
     suspend fun leaveMarmotGroup(
         nostrGroupId: HexKey,
@@ -2242,8 +2326,58 @@ class Account(
         val manager = marmotManager ?: return
         if (!isWriteable()) return
 
+        val metadata = manager.groupMetadata(nostrGroupId)
+        if (metadata != null && metadata.adminPubkeys.contains(signer.pubKey)) {
+            val remaining = metadata.adminPubkeys.filter { it != signer.pubKey }.toMutableList()
+            // MIP-03 also rejects any GCE commit that leaves the group with zero
+            // admins. If we're the only one, promote an arbitrary non-self
+            // member to admin before stepping down.
+            if (remaining.isEmpty()) {
+                val heir =
+                    manager
+                        .memberPubkeys(nostrGroupId)
+                        .map { it.pubkey }
+                        .firstOrNull { it != signer.pubKey }
+                if (heir != null) remaining.add(heir)
+            }
+            if (remaining.isNotEmpty()) {
+                val demoted = metadata.copy(adminPubkeys = remaining)
+                val demoteCommit = manager.updateGroupMetadata(nostrGroupId, demoted)
+                client.publish(demoteCommit.signedEvent, groupRelays)
+            }
+        }
+
         val outbound = manager.leaveGroup(nostrGroupId)
+        // manager.leaveGroup already wiped MLS state, relay subscriptions and
+        // the persisted message log. Drop the in-memory chatroom too — that
+        // releases the strong refs to the decrypted inner notes so LocalCache
+        // (which holds them weakly) can GC them, and the Notification feed
+        // (which iterates marmotGroupList.rooms) stops surfacing the group.
+        marmotGroupList.removeGroup(nostrGroupId)
         client.publish(outbound.signedEvent, groupRelays)
+    }
+
+    /**
+     * User-initiated "nuclear" reset for the Marmot subsystem.
+     *
+     * Wipes every MLS group, every retained epoch secret, every persisted
+     * KeyPackage bundle, every relay subscription and every in-memory
+     * chatroom associated with this account. Does NOT broadcast any
+     * SelfRemove/leave commits to peers — if the user is in this flow at
+     * all, local state may already be unusable and a graceful leave is
+     * probably not possible. Peers will see the user as unresponsive until
+     * their next commit evicts the stale leaf.
+     *
+     * A fresh KeyPackage will be republished lazily on the next
+     * `ensureMarmotKeyPackagePublished` cycle, so the account remains
+     * reachable for future group invites.
+     */
+    suspend fun resetMarmotState() {
+        Log.w("MarmotDbg") { "resetMarmotState(): wiping all Marmot state for ${signer.pubKey.take(8)}…" }
+        marmotManager?.resetAllState()
+        for (groupId in marmotGroupList.allGroupIds()) {
+            marmotGroupList.removeGroup(groupId)
+        }
     }
 
     /**
@@ -2255,10 +2389,30 @@ class Account(
         targetLeafIndex: Int,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… targetLeafIndex=$targetLeafIndex " +
+                "groupRelays=${groupRelays.size}"
+        }
+        val manager =
+            marmotManager ?: run {
+                Log.w("MarmotDbg") { "removeMarmotGroupMember: marmotManager is NULL — no-op" }
+                return
+            }
+        if (!isWriteable()) {
+            Log.w("MarmotDbg") { "removeMarmotGroupMember: account is not writeable — no-op" }
+            return
+        }
 
         val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
+        }
+        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: publishing commit id=${outbound.signedEvent.id.take(8)}… " +
+                "to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+        }
         client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -2283,6 +2437,63 @@ class Account(
         client.publish(outbound.signedEvent, groupRelays)
     }
 
+    /**
+     * Grant admin privileges to [targetPubKey] in a Marmot MLS group by
+     * appending them to `admin_pubkeys` via a GroupContextExtensions commit.
+     *
+     * No-op if the group has no prior metadata (shouldn't happen outside the
+     * first bootstrap commit) or the target is already an admin. Callers
+     * must be an admin themselves — the MLS engine enforces this via the
+     * MIP-03 authorization gate in `enforceAuthorizedProposalSet`.
+     */
+    suspend fun grantMarmotGroupAdmin(
+        nostrGroupId: HexKey,
+        targetPubKey: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val metadata = manager.groupMetadata(nostrGroupId) ?: return
+        if (metadata.adminPubkeys.contains(targetPubKey)) return
+
+        val outboxRelayStrings = outboxRelays.flow.value.map { it.url }
+        val updated =
+            metadata
+                .copy(adminPubkeys = metadata.adminPubkeys + targetPubKey)
+                .withMergedRelays(outboxRelayStrings)
+        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+    }
+
+    /**
+     * Revoke admin privileges from [targetPubKey]. Rejects any change that
+     * would leave the group with zero admins — MIP-03's admin-depletion guard
+     * in [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup] would otherwise
+     * throw at commit time.
+     */
+    suspend fun revokeMarmotGroupAdmin(
+        nostrGroupId: HexKey,
+        targetPubKey: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val metadata = manager.groupMetadata(nostrGroupId) ?: return
+        if (!metadata.adminPubkeys.contains(targetPubKey)) return
+        val remaining = metadata.adminPubkeys.filter { it != targetPubKey }
+        check(remaining.isNotEmpty()) {
+            "Cannot revoke the last admin from a Marmot group (MIP-03)"
+        }
+
+        val outboxRelayStrings = outboxRelays.flow.value.map { it.url }
+        val updated =
+            metadata
+                .copy(adminPubkeys = remaining)
+                .withMergedRelays(outboxRelayStrings)
+        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+    }
+
     suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
     suspend fun publishCallSignaling(wrap: EphemeralGiftWrapEvent) {
@@ -2301,6 +2512,33 @@ class Account(
 
     suspend fun addEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.addEmojiPack(emojiPack))
 
+    suspend fun createOwnedEmojiPack(
+        title: String,
+        description: String? = null,
+        image: String? = null,
+    ) = ownedEmojiPacks.createPack(title, description, image, this)
+
+    suspend fun updateOwnedEmojiPackMetadata(
+        dTag: String,
+        newTitle: String,
+        newDescription: String?,
+        newImage: String?,
+    ) = ownedEmojiPacks.updateMetadata(dTag, newTitle, newDescription, newImage, this)
+
+    suspend fun addEmojiToOwnedPack(
+        dTag: String,
+        emoji: com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag,
+        isPrivate: Boolean,
+    ) = ownedEmojiPacks.addEmoji(dTag, emoji, isPrivate, this)
+
+    suspend fun removeEmojiFromOwnedPack(
+        dTag: String,
+        shortcode: String,
+        isPrivate: Boolean,
+    ) = ownedEmojiPacks.removeEmoji(dTag, shortcode, isPrivate, this)
+
+    suspend fun deleteOwnedEmojiPack(dTag: String) = ownedEmojiPacks.deletePack(dTag, this)
+
     suspend fun addToGallery(
         idHex: HexKey,
         url: String,
@@ -2309,6 +2547,8 @@ class Account(
         dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
+        thumbhash: String? = null,
+        image: String? = null,
     ) {
         val template =
             ProfileGalleryEntryEvent.build(url) {
@@ -2317,6 +2557,8 @@ class Account(
                 mimeType?.let { mimeType(it) }
                 dim?.let { dimension(it) }
                 blurhash?.let { blurhash(it) }
+                thumbhash?.let { galleryThumbhash(it) }
+                image?.let { image(it) }
             }
 
         val event = signer.sign(template)
@@ -2684,15 +2926,68 @@ class Account(
 
     suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
 
-    suspend fun saveKeyPackageRelayList(keyPackageRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(keyPackageRelayList.saveRelayList(keyPackageRelays))
+    suspend fun saveKeyPackageRelayList(keyPackageRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = keyPackageRelayList.flow.value
+        val newRelays = keyPackageRelays.toSet()
+        sendLiterallyEverywhere(keyPackageRelayList.saveRelayList(keyPackageRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(myKeyPackageEvents(), newRelays)
+        }
+    }
 
-    suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
+    suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) {
+        val oldRelays = privateStorageRelayList.flow.value
+        val newRelays = relays.toSet()
+        sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(accountSettingsEvents(), newRelays)
+        }
+    }
 
-    suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
+    suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = searchRelayList.flowNoDefaults.value
+        val newRelays = searchRelays.toSet()
+        sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(
+                listOfNotNull(userMetadata.getUserMetadataEvent()),
+                newRelays,
+            )
+        }
+    }
 
-    suspend fun saveIndexerRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
+    suspend fun saveIndexerRelayList(trustedRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = indexerRelayList.flowNoDefaults.value
+        val newRelays = trustedRelays.toSet()
+        sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(
+                listOfNotNull(
+                    userMetadata.getUserMetadataEvent(),
+                    kind3FollowList.getFollowListEvent(),
+                ),
+                newRelays,
+            )
+        }
+    }
 
-    suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
+    suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = broadcastRelayList.flow.value
+        val newRelays = trustedRelays.toSet()
+        sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(accountSettingsEvents(), newRelays)
+        }
+    }
+
+    suspend fun saveLocalRelayList(relays: List<NormalizedRelayUrl>) {
+        val oldRelays = localRelayList.flow.value
+        val newRelays = relays.toSet()
+        localRelayList.saveRelayList(relays) {}
+        if (oldRelays != newRelays) {
+            republishEventsTo(accountSettingsEvents(), newRelays)
+        }
+    }
 
     suspend fun saveProxyRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(proxyRelayList.saveRelayList(trustedRelays))
 
@@ -2705,6 +3000,54 @@ class Account(
     suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
+
+    /**
+     * Returns all known signed replaceable events that configure this account
+     * (profile, contact list, relay lists, mute list, bookmarks, etc.). Events
+     * that have never been created or downloaded are omitted.
+     */
+    fun accountSettingsEvents(): List<Event> =
+        listOfNotNull(
+            userMetadata.getUserMetadataEvent(),
+            userMetadata.getExternalIdentitiesEvent(),
+            kind3FollowList.getFollowListEvent(),
+            nip65RelayList.getNIP65RelayList(),
+            dmRelayList.getDMRelayList(),
+            keyPackageRelayList.getKeyPackageRelayList(),
+            privateStorageRelayList.getPrivateOutboxRelayList(),
+            searchRelayList.getSearchRelayList(),
+            trustedRelayList.getTrustedRelayList(),
+            proxyRelayList.getProxyRelayList(),
+            broadcastRelayList.getBroadcastRelayList(),
+            indexerRelayList.getIndexerRelayList(),
+            relayFeedsList.getRelayFeedsList(),
+            blockedRelayList.getBlockedRelayList(),
+            muteList.getMuteList(),
+            bookmarkState.getBookmarkList(),
+            pinState.getPinList(),
+            blossomServers.getBlossomServersList(),
+            nestsServers.getNestsServersList(),
+            paymentTargetsState.getPaymentTargetsEvent(),
+            trustProviderList.getTrustProviderList(),
+            cache.getAddressableNoteIfExists(appSpecific.getAppSpecificDataAddress())?.event,
+        )
+
+    /**
+     * Returns all currently-known signed KeyPackage events authored by this account.
+     */
+    fun myKeyPackageEvents(): List<Event> =
+        cache.addressables
+            .filter(KeyPackageEvent.KIND, signer.pubKey)
+            .mapNotNull { it.event }
+
+    /** Publishes the given events to each of the given relays. No-op if either list is empty. */
+    fun republishEventsTo(
+        events: List<Event>,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        if (relays.isEmpty() || events.isEmpty()) return
+        events.forEach { client.publish(it, relays) }
+    }
 
     suspend fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
@@ -2731,9 +3074,28 @@ class Account(
         client.publish(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
     }
 
-    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
+    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) {
+        val oldOutbox = nip65RelayList.outboxFlowNoDefaults.value
+        val oldInbox = nip65RelayList.inboxFlowNoDefaults.value
+        val newOutbox =
+            relays
+                .filter { it.type.isWrite() }
+                .map { it.relayUrl }
+                .toSet()
+        val newInbox =
+            relays
+                .filter { it.type.isRead() }
+                .map { it.relayUrl }
+                .toSet()
+        sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
+        if (oldOutbox != newOutbox || oldInbox != newInbox) {
+            republishEventsTo(accountSettingsEvents(), newOutbox)
+        }
+    }
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
+
+    suspend fun sendNestsServersList(servers: List<com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 
     suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
 
@@ -2812,7 +3174,15 @@ class Account(
                                 val innerEvent =
                                     com.vitorpamplona.quartz.nip01Core.core.Event
                                         .fromJson(json)
-                                val isNew = cache.justConsume(innerEvent, null, false)
+                                // wasVerified=true: MIP-03 inner events are
+                                // unsigned rumors (empty sig), authenticated
+                                // via the MLS credential-identity check in
+                                // GroupEventHandler when first decrypted.
+                                // Running Nostr sig verify here (justVerify
+                                // via wasVerified=false) would silently drop
+                                // kind:7 reactions / kind:5 deletions since
+                                // they never carry a Schnorr signature.
+                                val isNew = cache.justConsume(innerEvent, null, true)
                                 val innerNote = cache.getOrCreateNote(innerEvent.id)
                                 if (isNew) {
                                     innerNote.event = innerEvent
@@ -2850,6 +3220,8 @@ class Account(
                     peopleLists.newNotes(newNotes)
                     followLists.newNotes(newNotes)
                     labeledBookmarkLists.newNotes(newNotes)
+                    interestSets.newNotes(newNotes)
+                    ownedEmojiPacks.newNotes(newNotes)
                 }
             }
         }
@@ -2861,6 +3233,8 @@ class Account(
                     peopleLists.deletedNotes(deletedNotes)
                     followLists.deletedNotes(deletedNotes)
                     labeledBookmarkLists.deletedNotes(deletedNotes)
+                    interestSets.deletedNotes(deletedNotes)
+                    ownedEmojiPacks.deletedNotes(deletedNotes)
                 }
             }
         }

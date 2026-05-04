@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,9 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +46,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -61,12 +59,12 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import kotlinx.collections.immutable.toImmutableList
 
 private const val WORDS_PER_MINUTE = 225
 private val COVER_ASPECT_RATIO = 16f / 9f
@@ -95,7 +93,14 @@ fun LongFormHeader(
         remember(noteEvent) {
             noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
         }
-    val topics = remember(noteEvent) { noteEvent.topics().distinct().take(3) }
+    val topics =
+        remember(noteEvent) {
+            noteEvent
+                .topics()
+                .distinct()
+                .take(3)
+                .toImmutableList()
+        }
     val readingMinutes = remember(noteEvent) { estimateReadingMinutes(noteEvent.content) }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
@@ -107,16 +112,6 @@ fun LongFormHeader(
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            if (topics.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
-                    verticalArrangement = Arrangement.spacedBy(Size5dp),
-                    modifier = Modifier.padding(bottom = 8.dp),
-                ) {
-                    topics.forEach { TopicChip(it) }
-                }
-            }
-
             title?.let {
                 Text(
                     text = it,
@@ -142,6 +137,16 @@ fun LongFormHeader(
 
             Spacer(Modifier.padding(top = 12.dp))
             AuthorMetaRow(note, readingMinutes, accountViewModel)
+
+            if (topics.isNotEmpty()) {
+                Spacer(Modifier.padding(top = 8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                    verticalArrangement = Arrangement.spacedBy(Size5dp),
+                ) {
+                    topics.forEach { TopicChip(it) }
+                }
+            }
         }
     }
 }
@@ -182,17 +187,16 @@ private fun TopicChip(topic: String) {
     Text(
         text = "#$topic",
         style = MaterialTheme.typography.labelSmall,
-        fontSize = Font12SP,
-        fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.primary,
+        fontSize = Font10SP,
+        fontWeight = FontWeight.Normal,
+        color = MaterialTheme.colorScheme.grayText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
             Modifier
                 .clip(CircleShape)
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
     )
 }
 
@@ -240,7 +244,7 @@ private fun MetaSeparator() {
 private fun ReadingTimeBadge(minutes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            imageVector = Icons.Outlined.Schedule,
+            symbol = MaterialSymbols.Schedule,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.grayText,
             modifier = Modifier.size(14.dp),

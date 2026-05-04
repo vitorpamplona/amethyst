@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -57,6 +55,8 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
@@ -159,7 +159,7 @@ fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.Check,
+                                                symbol = MaterialSymbols.Check,
                                                 contentDescription = null,
                                             )
                                             Spacer(Modifier.width(8.dp))

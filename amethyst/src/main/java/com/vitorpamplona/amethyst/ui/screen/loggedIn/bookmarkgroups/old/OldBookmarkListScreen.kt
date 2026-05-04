@@ -23,15 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old
 import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
@@ -44,16 +43,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
@@ -136,9 +138,9 @@ private fun RenderOldBookmarkScreen(
         isInvertedLayout = false,
         topBar = {
             Column {
-                TopBarWithBackButton(stringRes(id = R.string.old_bookmarks_title), nav::popBack)
+                TopBarWithBackButton(stringRes(id = R.string.old_bookmarks_title), nav)
                 SecondaryTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
                     modifier = TabRowHeight,
@@ -157,47 +159,36 @@ private fun RenderOldBookmarkScreen(
             }
         },
         floatingButton = {
-            ExtendedFloatingActionButton(
-                text = { Text(stringRes(R.string.migrate_bookmarks_button)) },
-                icon = {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
-                        contentDescription = stringRes(R.string.migrate_bookmarks_button),
-                    )
-                },
-                onClick = {
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.migrateOldBookmarksToNew()
-                        coroutineScope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.migrate_bookmarks_success),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                        }
-                    }
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-            )
-        },
-        accountViewModel = accountViewModel,
-    ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            if (!bannerDismissed) {
-                DeletedItemsBanner(
-                    count = deletedCount,
-                    onRemove = {
-                        accountViewModel.removeDeletedOldBookmarks(
-                            deletedEventIds.toSet(),
-                            deletedAddresses.toSet(),
+            FabBottomBarPadded(nav) {
+                ExtendedFloatingActionButton(
+                    text = { Text(stringRes(R.string.migrate_bookmarks_button)) },
+                    icon = {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.DriveFileMove,
+                            contentDescription = stringRes(R.string.migrate_bookmarks_button),
                         )
-                        bannerDismissed = true
                     },
-                    onDismiss = { bannerDismissed = true },
+                    onClick = {
+                        accountViewModel.launchSigner {
+                            accountViewModel.account.migrateOldBookmarksToNew()
+                            coroutineScope.launch {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(R.string.migrate_bookmarks_success),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            }
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
                 )
             }
-            HorizontalPager(state = pagerState) { page ->
+        },
+        accountViewModel = accountViewModel,
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxHeight()) { page ->
                 when (page) {
                     0 -> {
                         RefresheableFeedView(
@@ -217,6 +208,24 @@ private fun RenderOldBookmarkScreen(
                         )
                     }
                 }
+            }
+
+            if (!bannerDismissed && deletedCount > 0) {
+                DeletedItemsBanner(
+                    count = deletedCount,
+                    onRemove = {
+                        accountViewModel.removeDeletedOldBookmarks(
+                            deletedEventIds.toSet(),
+                            deletedAddresses.toSet(),
+                        )
+                        bannerDismissed = true
+                    },
+                    onDismiss = { bannerDismissed = true },
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
+                )
             }
         }
     }

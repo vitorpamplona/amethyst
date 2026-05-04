@@ -74,7 +74,9 @@ class WebRtcCallSession(
                         candidate?.let { this@WebRtcCallSession.onIceCandidate(it) }
                     }
 
-                    override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
+                    override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {
+                        // no-op: removed candidates are diagnostic only; ICE state transitions handle reconnects.
+                    }
 
                     override fun onSignalingChange(state: PeerConnection.SignalingState?) {
                         Log.d(TAG) { "Signaling state changed: $state" }
@@ -137,9 +139,13 @@ class WebRtcCallSession(
                         stream?.videoTracks?.firstOrNull()?.let { onRemoteVideoTrack(it) }
                     }
 
-                    override fun onRemoveStream(stream: MediaStream?) {}
+                    override fun onRemoveStream(stream: MediaStream?) {
+                        // no-op: Plan-B legacy callback. UNIFIED_PLAN delivers track-level events via onAddTrack instead.
+                    }
 
-                    override fun onDataChannel(channel: DataChannel?) {}
+                    override fun onDataChannel(channel: DataChannel?) {
+                        // no-op: this session uses audio/video tracks only; data channels are not negotiated.
+                    }
 
                     override fun onRenegotiationNeeded() {
                         Log.d(TAG) { "Renegotiation needed" }
@@ -209,9 +215,13 @@ class WebRtcCallSession(
                     error?.let { onError("Create offer failed: $it") }
                 }
 
-                override fun onSetSuccess() {}
+                override fun onSetSuccess() {
+                    // no-op: createOffer fires only onCreate*; setLocalDescription uses loggingSdpObserver.
+                }
 
-                override fun onSetFailure(error: String?) {}
+                override fun onSetFailure(error: String?) {
+                    // no-op: createOffer fires only onCreate*; setLocalDescription uses loggingSdpObserver.
+                }
             },
             constraints,
         )
@@ -239,9 +249,13 @@ class WebRtcCallSession(
                     error?.let { onError("Create answer failed: $it") }
                 }
 
-                override fun onSetSuccess() {}
+                override fun onSetSuccess() {
+                    // no-op: createAnswer fires only onCreate*; setLocalDescription uses loggingSdpObserver.
+                }
 
-                override fun onSetFailure(error: String?) {}
+                override fun onSetFailure(error: String?) {
+                    // no-op: createAnswer fires only onCreate*; setLocalDescription uses loggingSdpObserver.
+                }
             },
             constraints,
         )
@@ -251,9 +265,13 @@ class WebRtcCallSession(
         Log.d(TAG) { "setRemoteDescription type=${sdp.type} sdpLength=${sdp.description.length}" }
         peerConnection?.setRemoteDescription(
             object : SdpObserver {
-                override fun onCreateSuccess(sdp: SessionDescription?) {}
+                override fun onCreateSuccess(sdp: SessionDescription?) {
+                    // no-op: setRemoteDescription fires only onSet*.
+                }
 
-                override fun onCreateFailure(error: String?) {}
+                override fun onCreateFailure(error: String?) {
+                    // no-op: setRemoteDescription fires only onSet*.
+                }
 
                 override fun onSetSuccess() {
                     Log.d(TAG) { "setRemoteDescription SUCCESS (type=${sdp.type})" }
@@ -301,9 +319,13 @@ class WebRtcCallSession(
                     onDisconnected()
                 }
 
-                override fun onSetSuccess() {}
+                override fun onSetSuccess() {
+                    // no-op: createOffer fires only onCreate*; setLocalDescription uses loggingSdpObserver.
+                }
 
-                override fun onSetFailure(error: String?) {}
+                override fun onSetFailure(error: String?) {
+                    // no-op: createOffer fires only onCreate*; setLocalDescription uses loggingSdpObserver.
+                }
             },
             constraints,
         )
@@ -328,9 +350,13 @@ class WebRtcCallSession(
         val rollbackSdp = SessionDescription(SessionDescription.Type.ROLLBACK, "")
         peerConnection?.setLocalDescription(
             object : SdpObserver {
-                override fun onCreateSuccess(sdp: SessionDescription?) {}
+                override fun onCreateSuccess(sdp: SessionDescription?) {
+                    // no-op: setLocalDescription fires only onSet*.
+                }
 
-                override fun onCreateFailure(error: String?) {}
+                override fun onCreateFailure(error: String?) {
+                    // no-op: setLocalDescription fires only onSet*.
+                }
 
                 override fun onSetSuccess() {
                     Log.d(TAG) { "Rollback SUCCESS" }

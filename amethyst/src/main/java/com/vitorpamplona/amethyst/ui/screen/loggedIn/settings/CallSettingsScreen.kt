@@ -30,13 +30,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -57,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.CallTurnServer
 import com.vitorpamplona.amethyst.model.CallVideoResolution
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -71,7 +69,7 @@ fun CallSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav)
         },
     ) { padding ->
         Column(
@@ -334,7 +332,7 @@ private fun CustomTurnServersSection(
                 onClick = { showAddForm = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(Icons.Outlined.Add, contentDescription = null)
+                Icon(MaterialSymbols.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringRes(R.string.call_settings_add_turn))
             }
@@ -362,7 +360,7 @@ private fun TurnServerRow(
         }
         IconButton(onClick = onDelete) {
             Icon(
-                Icons.Outlined.Delete,
+                MaterialSymbols.Delete,
                 contentDescription = stringRes(R.string.call_settings_remove_turn),
                 tint = MaterialTheme.colorScheme.error,
             )

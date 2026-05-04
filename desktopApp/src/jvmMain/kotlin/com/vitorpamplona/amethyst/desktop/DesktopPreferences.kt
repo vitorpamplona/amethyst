@@ -37,6 +37,7 @@ object DesktopPreferences {
     private const val KEY_LAST_SCREEN = "last_screen"
     private const val KEY_DECK_COLUMNS = "deck_columns"
     private const val KEY_LAYOUT_MODE = "layout_mode"
+    private const val KEY_MESSAGES_LIST_WIDTH = "messages_list_width_dp"
 
     var feedMode: FeedMode
         get() {
@@ -67,6 +68,13 @@ object DesktopPreferences {
         get() = prefs.get(KEY_LAYOUT_MODE, "SINGLE_PANE")
         set(value) {
             prefs.put(KEY_LAYOUT_MODE, value)
+        }
+
+    /** Width (dp) of the conversation list pane in the Messages screen. */
+    var messagesListWidthDp: Float
+        get() = prefs.getFloat(KEY_MESSAGES_LIST_WIDTH, 280f)
+        set(value) {
+            prefs.putFloat(KEY_MESSAGES_LIST_WIDTH, value)
         }
 
     private const val KEY_WORKSPACES = "workspaces"

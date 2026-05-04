@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
@@ -73,6 +74,10 @@ fun ChannelFileUploadDialog(
                                 modifier = HeaderPictureModifier,
                                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                                autoPlayGif =
+                                    accountViewModel.settings.autoPlayVideosFlow
+                                        .collectAsStateWithLifecycle()
+                                        .value,
                             )
                         }
 

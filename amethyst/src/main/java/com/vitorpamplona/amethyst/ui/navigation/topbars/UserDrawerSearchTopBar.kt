@@ -31,11 +31,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -61,7 +63,16 @@ fun UserDrawerSearchTopBar(
             }
         },
         navigationIcon = {
-            LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
+            // When this screen sits on top of a back stack (entered via the drawer
+            // or any deep link), show a back arrow. When it's the root (entered via
+            // the bottom nav, which clears the stack), show the drawer opener.
+            if (nav.canPop()) {
+                IconButton(onClick = nav::popBack) {
+                    ArrowBackIcon()
+                }
+            } else {
+                LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
+            }
         },
         actions = {
             IconButton(onClick = { nav.nav(Route.Search) }) {
@@ -87,6 +98,10 @@ private fun LoggedInUserPictureDrawer(
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif =
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value,
         )
     }
 }

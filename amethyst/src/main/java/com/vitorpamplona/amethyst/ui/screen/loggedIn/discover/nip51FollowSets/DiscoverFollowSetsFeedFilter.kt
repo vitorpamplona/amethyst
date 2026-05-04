@@ -59,7 +59,7 @@ open class DiscoverFollowSetsFeedFilter(
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
-    fun buildFilterParams(account: Account): FilterByListParams =
+    open fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
             account.liveDiscoveryFollowLists.value,
             account.hiddenUsers.flow.value,

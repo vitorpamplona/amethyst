@@ -22,15 +22,14 @@ package com.vitorpamplona.amethyst.ui.components.toasts.multiline
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -95,7 +94,7 @@ fun MultiUserErrorMessageDialog(
                 contentPadding = PaddingValues(horizontal = Size16dp),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Done,
+                    symbol = MaterialSymbols.Done,
                     contentDescription = null,
                 )
                 Spacer(StdHorzSpacer)

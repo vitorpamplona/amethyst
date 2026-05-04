@@ -23,25 +23,19 @@ package com.vitorpamplona.amethyst.desktop.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -101,10 +97,8 @@ fun LongFormCard(
     val publishedAt = event.publishedAt() ?: event.createdAt
 
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -189,7 +183,7 @@ fun ReadsScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
+    val connectedRelays = relayStatuses.keys
     val scope = rememberCoroutineScope()
 
     val eventState =
@@ -290,66 +284,45 @@ fun ReadsScreen(
         }
     }
 
-    @OptIn(ExperimentalLayoutApi::class)
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header — wraps on narrow columns
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+    ReadingColumn {
+        val sidePadding = readingHorizontalPadding()
+        // Header — Messages-style: tabs left, refresh right. The selected tab
+        // (Following / Global) acts as the screen title, so no separate label.
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
-                FlowRow(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        "Reads",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (account != null) {
+                    FilterChip(
+                        selected = feedMode == FeedMode.FOLLOWING,
+                        onClick = { feedMode = FeedMode.FOLLOWING },
+                        label = { Text("Following") },
                     )
-
-                    // Feed mode selector
-                    if (account != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            FilterChip(
-                                selected = feedMode == FeedMode.GLOBAL,
-                                onClick = { feedMode = FeedMode.GLOBAL },
-                                label = { Text("Global") },
-                            )
-                            FilterChip(
-                                selected = feedMode == FeedMode.FOLLOWING,
-                                onClick = { feedMode = FeedMode.FOLLOWING },
-                                label = { Text("Following") },
-                            )
-                        }
-                    }
                 }
+                FilterChip(
+                    selected = feedMode == FeedMode.GLOBAL,
+                    onClick = { feedMode = FeedMode.GLOBAL },
+                    label = { Text("Global") },
+                )
+            }
 
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "${connectedRelays.size} relays connected",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(
-                        onClick = { relayManager.connect() },
-                        modifier = Modifier.size(24.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
+            IconButton(
+                onClick = { relayManager.connect() },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    MaterialSymbols.Refresh,
+                    contentDescription = "Refresh (${connectedRelays.size} relays connected)",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
-
-        Spacer(Modifier.height(8.dp))
 
         when {
             connectedRelays.isEmpty() -> {
@@ -384,6 +357,7 @@ fun ReadsScreen(
 
             else -> {
                 LazyColumn(
+                    contentPadding = PaddingValues(horizontal = sidePadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(events, key = { it.id }) { event ->

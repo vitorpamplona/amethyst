@@ -80,10 +80,10 @@ fun AudioTrackHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val media = remember { noteEvent.media() }
-    val cover = remember { noteEvent.cover() }
-    val subject = remember { noteEvent.subject() }
-    val participants = remember { noteEvent.participants() }
+    val media = remember(noteEvent) { noteEvent.media() }
+    val cover = remember(noteEvent) { noteEvent.cover() }
+    val subject = remember(noteEvent) { noteEvent.subject() }
+    val participants = remember(noteEvent) { noteEvent.participants() }
 
     var participantUsers by remember { mutableStateOf<List<Pair<ParticipantTag, User>>>(emptyList()) }
 
@@ -183,9 +183,9 @@ fun AudioHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val media = remember { noteEvent.stream() ?: noteEvent.download() }
-    val waveform = remember { noteEvent.wavefrom()?.let { WaveformData(it.wave) } }
-    val content = remember { noteEvent.content.ifBlank { null } }
+    val media = remember(noteEvent) { noteEvent.stream() ?: noteEvent.download() }
+    val waveform = remember(noteEvent) { noteEvent.wavefrom()?.let { WaveformData(it.wave) } }
+    val content = remember(noteEvent) { noteEvent.content.ifBlank { null } }
 
     val defaultBackground = MaterialTheme.colorScheme.background
     val background = remember { mutableStateOf(defaultBackground) }

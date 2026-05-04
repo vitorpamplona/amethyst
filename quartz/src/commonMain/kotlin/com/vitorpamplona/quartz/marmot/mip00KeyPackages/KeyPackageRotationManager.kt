@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager.Companion.SNAPSHOT_VERSION
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
@@ -29,6 +30,7 @@ import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.marmot.mls.tree.Capabilities
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
+import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
@@ -61,6 +63,13 @@ class KeyPackageRotationManager(
     private val mutex = Mutex()
     private val activeBundles = mutableMapOf<String, KeyPackageBundle>()
     private val pendingRotations = mutableSetOf<String>()
+
+    /**
+     * Maps logical slot names (e.g., "primary") to their persisted random d-tag values.
+     * Per MIP-00, each slot gets a cryptographically random 64-char hex d-tag on first
+     * use, which is then reused for all rotations of that slot.
+     */
+    private val namedSlotDTags = mutableMapOf<String, String>()
 
     /**
      * Maps the Nostr event id (kind:30443) of a published KeyPackage to the
@@ -136,20 +145,44 @@ class KeyPackageRotationManager(
                 pendingRotations.addAll(decoded.pending)
                 eventIdToSlot.clear()
                 eventIdToSlot.putAll(decoded.eventIdToSlot)
+                namedSlotDTags.clear()
+                namedSlotDTags.putAll(decoded.namedSlotDTags)
             }
             Log.d("KeyPackageRotationManager") {
                 "Restored ${decoded.bundles.size} active KeyPackage bundle(s), " +
-                    "${decoded.pending.size} pending rotation, ${decoded.eventIdToSlot.size} eventId mapping(s)"
+                    "${decoded.pending.size} pending rotation, ${decoded.eventIdToSlot.size} eventId mapping(s), " +
+                    "${decoded.namedSlotDTags.size} named slot d-tag(s)"
             }
         } catch (e: Exception) {
             Log.w("KeyPackageRotationManager", "Failed to decode persisted KeyPackages: ${e.message}")
         }
     }
 
+    /**
+     * Wipe all in-memory KeyPackage bundles plus the persisted snapshot.
+     * Intended for user-initiated Marmot resets — the caller is responsible
+     * for re-publishing KeyPackages afterwards (e.g. via
+     * `Account.ensureMarmotKeyPackagePublished`).
+     */
+    suspend fun clearAllState() =
+        mutex.withLock {
+            activeBundles.clear()
+            pendingRotations.clear()
+            eventIdToSlot.clear()
+            namedSlotDTags.clear()
+            val store = store ?: return@withLock
+            try {
+                store.delete()
+            } catch (e: Exception) {
+                Log.w("KeyPackageRotationManager", "clearAllState(): failed to delete snapshot: ${e.message}")
+            }
+        }
+
     private data class Snapshot(
         val bundles: Map<String, KeyPackageBundle>,
         val pending: Set<String>,
         val eventIdToSlot: Map<String, String>,
+        val namedSlotDTags: Map<String, String>,
     )
 
     /**
@@ -179,6 +212,12 @@ class KeyPackageRotationManager(
         for ((eventId, slot) in eventIdToSlot) {
             writer.putOpaque2(eventId.encodeToByteArray())
             writer.putOpaque2(slot.encodeToByteArray())
+        }
+        // named slot → actual random d-tag (added in v3)
+        writer.putUint32(namedSlotDTags.size.toLong())
+        for ((name, dTag) in namedSlotDTags) {
+            writer.putOpaque2(name.encodeToByteArray())
+            writer.putOpaque2(dTag.encodeToByteArray())
         }
         return writer.toByteArray()
     }
@@ -213,15 +252,22 @@ class KeyPackageRotationManager(
             pending.add(reader.readOpaque2().decodeToString())
         }
         val eventIdMap = mutableMapOf<String, String>()
+        val numEventIds = reader.readUint32().toInt()
+        repeat(numEventIds) {
+            val eventId = reader.readOpaque2().decodeToString()
+            val slot = reader.readOpaque2().decodeToString()
+            eventIdMap[eventId] = slot
+        }
+        val namedSlots = mutableMapOf<String, String>()
         if (reader.hasRemaining) {
-            val numEventIds = reader.readUint32().toInt()
-            repeat(numEventIds) {
-                val eventId = reader.readOpaque2().decodeToString()
-                val slot = reader.readOpaque2().decodeToString()
-                eventIdMap[eventId] = slot
+            val numNamed = reader.readUint32().toInt()
+            repeat(numNamed) {
+                val name = reader.readOpaque2().decodeToString()
+                val dTag = reader.readOpaque2().decodeToString()
+                namedSlots[name] = dTag
             }
         }
-        return Snapshot(bundles, pending, eventIdMap)
+        return Snapshot(bundles, pending, eventIdMap, namedSlots)
     }
 
     /**
@@ -239,10 +285,24 @@ class KeyPackageRotationManager(
     }
 
     /**
+     * Returns the actual d-tag (64-char random hex) for a logical slot name, generating
+     * and persisting a fresh random value on first call for that name.
+     *
+     * Per MIP-00: "Clients SHOULD generate a cryptographically random 32-byte hex string
+     * as the d tag value when first publishing a KeyPackage."
+     */
+    suspend fun getOrCreateSlotDTag(logicalSlotName: String): String =
+        mutex.withLock {
+            namedSlotDTags.getOrPut(logicalSlotName) {
+                KeyPackageUtils.generateRandomDTag().also { persistUnlocked() }
+            }
+        }
+
+    /**
      * Generate a new KeyPackage and its associated private bundle.
      *
      * @param identity the user's identity bytes (typically 32-byte Nostr pubkey)
-     * @param dTagSlot the d-tag slot for addressable replacement
+     * @param dTagSlot the actual d-tag value (64-char hex) for addressable replacement
      * @return a [KeyPackageBundle] containing the KeyPackage and all private keys
      */
     suspend fun generateKeyPackage(
@@ -265,6 +325,9 @@ class KeyPackageRotationManager(
             MlsKeyPackage(
                 initKey = initKp.publicKey,
                 leafNode = leafNode,
+                // LastResort (0x000A) marks this as a last-resort KeyPackage per MLS Extensions draft.
+                // MDK always marks KeyPackages as last-resort via .mark_as_last_resort().
+                extensions = listOf(Extension(extensionType = 0x000A, extensionData = ByteArray(0))),
                 signature = ByteArray(0),
             )
         val keyPackage =
@@ -457,7 +520,18 @@ class KeyPackageRotationManager(
                 encryptionKey = encryptionKey,
                 signatureKey = signatureKey,
                 credential = Credential.Basic(identity),
-                capabilities = Capabilities(),
+                capabilities =
+                    Capabilities(
+                        extensions =
+                            listOf(
+                                0x000A, // LastResort (required by OpenMLS validation)
+                                0xF2EE, // NostrGroupData (required by group's RequiredCapabilities)
+                            ),
+                        proposals =
+                            listOf(
+                                0x000A, // SelfRemove (required by group's RequiredCapabilities)
+                            ),
+                    ),
                 leafNodeSource = LeafNodeSource.KEY_PACKAGE,
                 lifetime = Lifetime(notBefore = now, notAfter = now + KEY_PACKAGE_LIFETIME_SECONDS),
                 extensions = emptyList(),
@@ -480,7 +554,9 @@ class KeyPackageRotationManager(
          * On-disk snapshot format version for [KeyPackageBundleStore].
          * v1: bundles + pendingRotations
          * v2: + eventIdToSlot map (so welcome lookup by Nostr event id works)
+         * v3: + namedSlotDTags map (per MIP-00, d-tags are random 64-char hex, persisted here)
+         * v4: capabilities fixed (0xF2EE, 0x000A extensions + 0x000A proposals; LastResort extension on KP)
          */
-        private const val SNAPSHOT_VERSION = 2
+        private const val SNAPSHOT_VERSION = 4
     }
 }

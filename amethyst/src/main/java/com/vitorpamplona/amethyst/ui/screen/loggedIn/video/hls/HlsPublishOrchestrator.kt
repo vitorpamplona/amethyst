@@ -35,11 +35,14 @@ import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoPublishInput
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import java.io.File
+
+private const val TAG = "HlsPublishOrchestrator"
 
 data class HlsPublishRequest(
     val title: String,
@@ -74,6 +77,11 @@ class HlsPublishOrchestrator(
     private val buildUploader: (ServerName) -> HlsBlobUploader,
     private val uploadMaster: suspend (HlsBlobUploader, String) -> MediaUploadResult,
     private val signAndPublish: suspend (HlsVideoEventTemplate) -> String,
+    // Generates a poster JPEG from the picked source video and uploads it via the supplied
+    // uploader, returning the public URL. Returns null if poster generation isn't possible
+    // (unsupported source, decode failure, no readable frame). Failures here must NOT fail
+    // the whole publish — the orchestrator catches and continues without a poster.
+    private val uploadPoster: suspend (HlsBlobUploader) -> String? = { _ -> null },
 ) {
     val state: StateFlow<HlsPublishState> = _state
 
@@ -196,6 +204,20 @@ class HlsPublishOrchestrator(
             val masterUrl =
                 masterUpload.url ?: error("Uploader returned null URL for master playlist")
 
+            // Generate + upload a poster JPEG so HLS-unaware UI surfaces (gallery thumbnails,
+            // previews) have a still to render. Tolerate failure: skip the poster rather than
+            // failing the entire publish, since the user has already paid the cost of the long
+            // segment uploads.
+            val posterUrl =
+                try {
+                    uploadPoster(uploader)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    Log.w(TAG) { "Poster generation/upload failed: ${e.message}" }
+                    null
+                }
+
             _state.value = HlsPublishState.Publishing
             val template =
                 HlsVideoEventBuilder.build(
@@ -208,6 +230,7 @@ class HlsPublishOrchestrator(
                         description = request.description,
                         durationSeconds = request.durationSeconds,
                         contentWarning = contentWarningOrNull(request),
+                        posterUrl = posterUrl,
                     ),
                 )
             val eventId = signAndPublish(template)

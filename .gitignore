@@ -158,6 +158,7 @@ TASKS.md
 
 # Claude Code local settings
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Downloaded VLC binaries (vlc-setup plugin)
 desktopApp/src/jvmMain/appResources/linux/

@@ -139,6 +139,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -832,7 +833,7 @@ open class ShortNotePostViewModel :
 
         if (anonymous) {
             accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
-        } else if (accountViewModel.settings.isCompleteUIMode()) {
+        } else if (accountViewModel.settings.useTrackedBroadcasts()) {
             // Tracked broadcasting with progress feedback (non-blocking)
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
 
@@ -1124,6 +1125,8 @@ open class ShortNotePostViewModel :
                                             ?.let { dims(it) }
                                         state.result.fileHeader.blurHash
                                             ?.let { blurhash(it.blurhash) }
+                                        state.result.fileHeader.thumbHash
+                                            ?.let { thumbhash(it.thumbhash) }
                                         state.result.magnet?.let { magnet(it) }
                                         state.result.uploadedHash?.let { originalHash(it) }
 

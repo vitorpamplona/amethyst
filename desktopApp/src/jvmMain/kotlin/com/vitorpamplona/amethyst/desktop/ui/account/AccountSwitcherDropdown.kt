@@ -28,16 +28,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,6 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -106,7 +102,7 @@ fun AccountSwitcherDropdown(
             modifier = Modifier.size(48.dp),
         ) {
             Icon(
-                Icons.Default.Person,
+                MaterialSymbols.Person,
                 contentDescription = "Switch account",
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -166,7 +162,7 @@ fun AccountSwitcherDropdown(
                             }
                             if (isActive) {
                                 Icon(
-                                    Icons.Default.Check,
+                                    MaterialSymbols.Check,
                                     contentDescription = "Active",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
@@ -181,7 +177,7 @@ fun AccountSwitcherDropdown(
                                 modifier = Modifier.size(28.dp),
                             ) {
                                 Icon(
-                                    Icons.Default.Close,
+                                    MaterialSymbols.Close,
                                     contentDescription = "Remove account",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp),
@@ -198,7 +194,7 @@ fun AccountSwitcherDropdown(
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text("Add Account") },
-                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                leadingIcon = { Icon(MaterialSymbols.Add, contentDescription = null) },
                 onClick = {
                     expanded = false
                     onAddAccount()

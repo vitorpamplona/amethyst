@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -92,12 +93,22 @@ private fun RenderPinnedNotesScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.pinned_notes), nav::popBack)
+            TopBarWithBackButton(stringRes(id = R.string.pinned_notes), nav)
         },
         accountViewModel = accountViewModel,
-    ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            if (!bannerDismissed) {
+    ) { paddingValues ->
+        // Feed fills the screen so items scroll behind the top bar (via
+        // rememberFeedContentPadding); banner overlays at the top, offset down
+        // by the scaffold's top padding so it sits below the bar.
+        Box(modifier = Modifier.fillMaxSize()) {
+            RefresheableFeedView(
+                pinnedNotesFeedViewModel,
+                null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+
+            if (!bannerDismissed && deletedPins.isNotEmpty()) {
                 DeletedItemsBanner(
                     count = deletedPins.size,
                     onRemove = {
@@ -105,14 +116,12 @@ private fun RenderPinnedNotesScreen(
                         bannerDismissed = true
                     },
                     onDismiss = { bannerDismissed = true },
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
                 )
             }
-            RefresheableFeedView(
-                pinnedNotesFeedViewModel,
-                null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
         }
     }
 }

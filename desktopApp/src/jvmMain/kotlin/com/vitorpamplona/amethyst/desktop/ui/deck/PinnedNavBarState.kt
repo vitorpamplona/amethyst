@@ -102,6 +102,7 @@ class PinnedNavBarState(
                 DeckColumnType.Notifications,
                 DeckColumnType.MyProfile,
                 DeckColumnType.Chess,
+                DeckColumnType.Relays,
                 DeckColumnType.Settings,
             )
 

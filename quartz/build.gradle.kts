@@ -1,8 +1,6 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.DEBUG
-import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.RELEASE
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
 
@@ -16,14 +14,6 @@ plugins {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
-        // Remove Kotlin null-check assertions on parameters, return values, and receivers.
-        // These generate invokestatic Intrinsics.checkNotNullParameter at the entry of every
-        // function that takes non-null reference types (~4,000+ calls per Schnorr verify).
-        // Safe for this module: all internal secp256k1 code uses non-null LongArray params
-        // that are never null. Each check costs ~2-3ns on ART, totaling ~8-12μs per verify.
-        freeCompilerArgs.add("-Xno-param-assertions")
-        freeCompilerArgs.add("-Xno-call-assertions")
-        freeCompilerArgs.add("-Xno-receiver-assertions")
     }
     jvm {
         compilerOptions {
@@ -104,12 +94,13 @@ kotlin {
     }
 
     // Enable LLVM optimizations for native test binaries (benchmark accuracy).
-    // Without -opt, K/N test binaries compile in debug mode (~20× slower).
+    // Without opt, K/N test binaries compile in debug mode (~20× slower).
+    // Use the binary-level API instead of -opt freeCompilerArg to avoid the
+    // "Unsupported combination of flags: -opt and -g" conflict in Kotlin/Native 2.1+.
     targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
-        compilations["test"].compileTaskProvider.configure {
-            compilerOptions {
-                freeCompilerArgs.add("-opt")
-            }
+        binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable>().configureEach {
+            optimized = true
+            debuggable = false
         }
     }
 
@@ -206,6 +197,9 @@ kotlin {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
 
+                // Custom C secp256k1 (libschnorr256k1) for cross-validation + 3-way benchmark
+                implementation(libs.schnorr256k1.kmp)
+
                 // SQLite bundled driver for JVM tests
                 implementation(libs.androidx.sqlite.bundled.jvm)
             }
@@ -246,6 +240,9 @@ kotlin {
 
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)
+
+                // Custom C secp256k1 (libschnorr256k1) for cross-validation + 3-way benchmark
+                implementation(libs.schnorr256k1.kmp)
             }
         }
 

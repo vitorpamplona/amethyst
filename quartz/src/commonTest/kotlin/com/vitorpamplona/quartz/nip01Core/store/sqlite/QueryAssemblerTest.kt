@@ -37,9 +37,9 @@ class QueryAssemblerTest : BaseDBTest() {
     val key2 = "f3ac434d61bc0f491a814782ccfdf9c439dae1f0bde9097ad4a245f4c495cd14"
     val key3 = "12ae0fd81c85e1e7d9ed096397dc3129849425fe6f8afce7213ebf38ddfc6ca9"
 
-    fun EventStore.explain(f: Filter) = store.queryBuilder.planQuery(f, hasher, store.connection)
+    suspend fun EventStore.explain(f: Filter) = store.pool.useReader { store.queryBuilder.planQuery(f, hasher, it) }
 
-    fun EventStore.explain(f: List<Filter>) = store.queryBuilder.planQuery(f, hasher, store.connection)
+    suspend fun EventStore.explain(f: List<Filter>) = store.pool.useReader { store.queryBuilder.planQuery(f, hasher, it) }
 
     @Test
     fun testEmpty() =

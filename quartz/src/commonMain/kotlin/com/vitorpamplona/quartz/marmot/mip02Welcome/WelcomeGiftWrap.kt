@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.quartz.marmot.mip02Welcome
 
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeGiftWrap.wrapForRecipient
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -60,7 +62,9 @@ object WelcomeGiftWrap {
         nostrGroupId: HexKey? = null,
         createdAt: Long = TimeUtils.now(),
     ): GiftWrapEvent {
-        // Step 1: Build the WelcomeEvent template and sign it
+        // Step 1: Build the WelcomeEvent template directly as an unsigned rumor.
+        // Per NIP-59 rumors MUST have an empty sig field, so we skip the outer
+        // signature entirely and let the SealedRumorEvent carry authorship.
         val welcomeTemplate =
             WelcomeEvent.build(
                 welcomeBase64 = welcomeBase64,
@@ -69,10 +73,14 @@ object WelcomeGiftWrap {
                 nostrGroupId = nostrGroupId,
                 createdAt = createdAt,
             )
-        val welcomeEvent: WelcomeEvent = signer.sign(welcomeTemplate)
+        val welcomeRumor: WelcomeEvent =
+            RumorAssembler.assembleRumor(
+                pubKey = signer.pubKey,
+                ev = welcomeTemplate,
+            )
 
-        // Step 2: Create a Rumor from the signed event and seal it (kind:13)
-        val rumor = Rumor.create(welcomeEvent)
+        // Step 2: Create a Rumor from the unsigned event and seal it (kind:13)
+        val rumor = Rumor.create(welcomeRumor)
         val sealedRumor =
             SealedRumorEvent.create(
                 rumor = rumor,

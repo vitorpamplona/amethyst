@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.navigation.navs
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
@@ -38,16 +39,33 @@ class EmptyNav : INav {
     override fun openDrawer() = runBlocking { drawerState.open() }
 
     // All navigation methods are intentionally no-op; this is a stub for previews and tests
-    override fun nav(route: Route) {}
+    override fun nav(route: Route) {
+        // no-op: EmptyNav is a preview/test stub with no navigation host.
+    }
 
-    override fun nav(computeRoute: suspend () -> Route?) {}
+    override fun nav(computeRoute: suspend () -> Route?) {
+        // no-op: EmptyNav is a preview/test stub with no navigation host.
+    }
 
-    override fun newStack(route: Route) {}
+    override fun newStack(route: Route) {
+        // no-op: EmptyNav is a preview/test stub with no back stack to reset.
+    }
 
-    override fun popBack() {}
+    override fun navBottomBar(route: Route) {
+        // no-op: EmptyNav is a preview/test stub with no bottom-bar host.
+    }
+
+    @Composable
+    override fun canPop(): Boolean = false
+
+    override fun popBack() {
+        // no-op: EmptyNav is a preview/test stub with no back stack to pop.
+    }
 
     override fun <T : Route> popUpTo(
         route: Route,
         klass: KClass<T>,
-    ) {}
+    ) {
+        // no-op: EmptyNav is a preview/test stub with no back stack.
+    }
 }

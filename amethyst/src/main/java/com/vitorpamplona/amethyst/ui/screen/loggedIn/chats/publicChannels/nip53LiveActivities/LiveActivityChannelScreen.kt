@@ -61,6 +61,7 @@ fun LiveActivityChannelScreen(
             }
         },
         accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) {
         Column(Modifier.padding(it)) {
             LiveActivityChannelView(channelId, draft, replyTo, accountViewModel, nav)

@@ -35,11 +35,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
@@ -55,6 +52,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -69,7 +68,9 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -220,7 +221,7 @@ private fun DiscoverPages(
             Column {
                 DiscoveryTopBar(accountViewModel, nav)
                 SecondaryScrollableTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
                     modifier = TabRowHeight,
@@ -239,32 +240,34 @@ private fun DiscoverPages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Discover, accountViewModel) { route ->
+            AppBottomBar(Route.Discover, nav, accountViewModel) { route ->
                 if (route == Route.Discover) {
                     val currentPage = pagerState.currentPage
                     if (currentPage >= 0 && currentPage < feedTabs.size) {
                         feedTabs[currentPage].feedState.sendToTop()
                     }
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
         floatingButton = {
             val currentPage = pagerState.currentPage
             if (currentPage >= 0 && currentPage < feedTabs.size) {
-                if (feedTabs[currentPage].resource == R.string.discover_marketplace) {
-                    NewProductButton(accountViewModel, nav)
-                }
+                FabBottomBarPadded(nav) {
+                    if (feedTabs[currentPage].resource == R.string.discover_marketplace) {
+                        NewProductButton(accountViewModel, nav)
+                    }
 
-                if (feedTabs[currentPage].resource == R.string.discover_reads) {
-                    NewLongFormMarkdownButton(accountViewModel, nav)
+                    if (feedTabs[currentPage].resource == R.string.discover_reads) {
+                        NewLongFormMarkdownButton(accountViewModel, nav)
+                    }
                 }
             }
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(state = pagerState, contentPadding = it) { page ->
+        HorizontalPager(state = pagerState) { page ->
             if (page >= 0 && page < feedTabs.size) {
                 val tab = feedTabs[page]
                 RefresheableBox(tab.feedState, true) {
@@ -355,7 +358,7 @@ fun NewProductButton(
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Add,
+            symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_product),
             modifier = Size26Modifier,
             tint = Color.White,
@@ -377,7 +380,7 @@ fun NewLongFormMarkdownButton(
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Add,
+            symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_long_form_post),
             modifier = Size26Modifier,
             tint = Color.White,
@@ -466,7 +469,7 @@ private fun DiscoverFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
@@ -502,7 +505,7 @@ private fun DiscoverFeedColumnsLoaded(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->

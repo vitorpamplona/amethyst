@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -95,6 +97,7 @@ class UiSharedPreferences(
         val UI_LANGUAGE = stringPreferencesKey("ui.language")
         val UI_SHOW_IMAGES = stringPreferencesKey("ui.show_images")
         val UI_START_PLAYBACK = stringPreferencesKey("ui.start_playback")
+        val UI_PLAY_VIDEOS = stringPreferencesKey("ui.play_videos")
         val UI_SHOW_URL_PREVIEW = stringPreferencesKey("ui.show_url_preview")
         val UI_HIDE_NAVIGATION_BARS = stringPreferencesKey("ui.hide_navigation_bars")
         val UI_SHOW_PROFILE_PICTURES = stringPreferencesKey("ui.show_profile_pictures")
@@ -103,25 +106,34 @@ class UiSharedPreferences(
         val UI_FEATURE_SET = stringPreferencesKey("ui.feature_set")
         val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
+        val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
+        val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
                 // Get the preference flow and take the first value.
                 val preferences = context.sharedPreferencesDataStore.data.first()
 
+                val featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED
+
                 UiSettings(
                     theme = preferences[UI_THEME]?.let { ThemeType.valueOf(it) } ?: ThemeType.SYSTEM,
                     preferredLanguage = preferences[UI_LANGUAGE]?.ifBlank { null },
                     automaticallyShowImages = preferences[UI_SHOW_IMAGES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyStartPlayback = preferences[UI_START_PLAYBACK]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
+                    automaticallyPlayVideos = preferences[UI_PLAY_VIDEOS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     automaticallyShowUrlPreview = preferences[UI_SHOW_URL_PREVIEW]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyHideNavigationBars = preferences[UI_HIDE_NAVIGATION_BARS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     automaticallyShowProfilePictures = preferences[UI_SHOW_PROFILE_PICTURES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     dontShowPushNotificationSelector = preferences[UI_DONT_SHOW_PUSH_NOTIFICATION_SELECTOR] ?: false,
                     dontAskForNotificationPermissions = preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] ?: false,
-                    featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED,
+                    featureSet = featureSet,
                     gallerySet = preferences[UI_GALLERY_SET]?.let { ProfileGalleryType.valueOf(it) } ?: ProfileGalleryType.CLASSIC,
                     automaticallyProposeAiImprovements = preferences[UI_PROPOSE_AI_IMPROVEMENTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                    useTrackedBroadcasts =
+                        preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
+                            ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
+                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -150,6 +162,7 @@ class UiSharedPreferences(
                     preferences[UI_LANGUAGE] = sharedSettings.preferredLanguage ?: ""
                     preferences[UI_SHOW_IMAGES] = sharedSettings.automaticallyShowImages.name
                     preferences[UI_START_PLAYBACK] = sharedSettings.automaticallyStartPlayback.name
+                    preferences[UI_PLAY_VIDEOS] = sharedSettings.automaticallyPlayVideos.name
                     preferences[UI_SHOW_URL_PREVIEW] = sharedSettings.automaticallyShowUrlPreview.name
                     preferences[UI_HIDE_NAVIGATION_BARS] = sharedSettings.automaticallyHideNavigationBars.name
                     preferences[UI_SHOW_PROFILE_PICTURES] = sharedSettings.automaticallyShowProfilePictures.name
@@ -158,12 +171,27 @@ class UiSharedPreferences(
                     preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
                     preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
+                    preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
+                    preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Log any errors that occur while reading the DataStore.
                 Log.e("SharedPreferences") { "Error saving DataStore preferences: ${e.message}" }
             }
+        }
+
+        private fun decodeBottomBarItems(raw: String): List<NavBarItem> {
+            if (raw.isEmpty()) return emptyList()
+            return raw
+                .split(",")
+                .mapNotNull { name ->
+                    try {
+                        NavBarItem.valueOf(name)
+                    } catch (_: IllegalArgumentException) {
+                        null
+                    }
+                }
         }
     }
 }

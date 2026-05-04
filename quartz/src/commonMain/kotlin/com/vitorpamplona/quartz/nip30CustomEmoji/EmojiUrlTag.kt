@@ -21,20 +21,32 @@
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 
 @Immutable
 data class EmojiUrlTag(
     val code: String,
     val url: String,
+    val emojiSet: Address? = null,
 ) {
     fun encode(): String = ":$code:$url"
 
     fun toContentEncode(): String = contentEncode(code)
 
-    fun toTagArray() = arrayOf("emoji", code, url)
+    fun toTagArray() =
+        if (emojiSet != null) {
+            arrayOf(TAG_NAME, code, url, emojiSet.toValue())
+        } else {
+            arrayOf(TAG_NAME, code, url)
+        }
 
     companion object {
         const val TAG_NAME = "emoji"
+
+        // NIP-30: shortcode MUST be comprised of only alphanumeric characters, hyphens, and underscores.
+        private val SHORTCODE_PATTERN = Regex("^[A-Za-z0-9_\\-]+$")
+
+        fun isValidShortcode(shortcode: String): Boolean = SHORTCODE_PATTERN.matches(shortcode)
 
         fun contentEncode(code: String): String = ":$code:"
 
@@ -49,7 +61,7 @@ data class EmojiUrlTag(
 
         fun parse(tag: Array<String>): EmojiUrlTag? =
             if (tag.size > 2 && tag[0] == TAG_NAME) {
-                EmojiUrlTag(tag[1], tag[2])
+                EmojiUrlTag(tag[1], tag[2], tag.getOrNull(3)?.let(Address::parse))
             } else {
                 null
             }

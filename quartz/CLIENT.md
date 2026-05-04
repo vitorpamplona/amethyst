@@ -357,6 +357,8 @@ results.forEach { (relay, success) ->
 6. On disconnection, exponential backoff retries the connection
 7. On reconnection, filters are re-sent and events re-delivered
 
+`NostrClient` starts active by default and connects on demand — there's no need to call `client.connect()` at startup. That method only matters for resuming after a prior `disconnect()` (e.g., a user-toggled offline mode). Conversely, `client.disconnect()` is what you want when the app is going to background or being shut down: it tears down every socket and stops the auto-reconnect loop.
+
 ### Subscription Flow
 
 ```

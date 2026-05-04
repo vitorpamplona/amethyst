@@ -27,40 +27,49 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 
+/**
+ * SQLite-backed [IEventStore] with default DB-file name and relay
+ * scoping. Wrap in `ObservableEventStore` if you want to feed
+ * `EventStoreProjection`.
+ */
 class EventStore(
     dbName: String? = "events.db",
-    relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
+    override val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
 
-    override fun insert(event: Event) = store.insertEvent(event)
+    override suspend fun insert(event: Event) = store.insertEvent(event)
 
-    override fun transaction(body: IEventStore.ITransaction.() -> Unit) = store.transaction(body)
+    override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = store.transaction(body)
 
-    override fun <T : Event> query(filter: Filter) = store.query<T>(filter)
+    override suspend fun <T : Event> query(filter: Filter) = store.query<T>(filter)
 
-    override fun <T : Event> query(filters: List<Filter>) = store.query<T>(filters)
+    override suspend fun <T : Event> query(filters: List<Filter>) = store.query<T>(filters)
 
-    override fun <T : Event> query(
+    override suspend fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
     ) = store.query(filter, onEach)
 
-    override fun <T : Event> query(
+    override suspend fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
     ) = store.query(filters, onEach)
 
-    override fun count(filter: Filter) = store.count(filter)
+    override suspend fun count(filter: Filter) = store.count(filter)
 
-    override fun count(filters: List<Filter>) = store.count(filters)
+    override suspend fun count(filters: List<Filter>) = store.count(filters)
 
-    override fun delete(filter: Filter) = store.delete(filter)
+    override suspend fun delete(filter: Filter) {
+        store.delete(filter)
+    }
 
-    override fun delete(filters: List<Filter>) = store.delete(filters)
+    override suspend fun delete(filters: List<Filter>) {
+        store.delete(filters)
+    }
 
-    override fun deleteExpiredEvents() = store.deleteExpiredEvents()
+    override suspend fun deleteExpiredEvents() = store.deleteExpiredEvents()
 
-    override fun close() = store.connection.close()
+    override fun close() = store.close()
 }

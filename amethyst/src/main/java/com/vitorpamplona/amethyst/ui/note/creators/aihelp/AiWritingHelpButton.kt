@@ -21,15 +21,14 @@
 package com.vitorpamplona.amethyst.ui.note.creators.aihelp
 
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -41,7 +40,7 @@ fun AiWritingHelpButton(
         onClick = { onClick() },
     ) {
         Icon(
-            imageVector = Icons.Outlined.AutoAwesome,
+            symbol = MaterialSymbols.AutoAwesome,
             contentDescription = stringRes(R.string.ai_writing_help),
             modifier = Modifier.height(22.dp),
             tint =

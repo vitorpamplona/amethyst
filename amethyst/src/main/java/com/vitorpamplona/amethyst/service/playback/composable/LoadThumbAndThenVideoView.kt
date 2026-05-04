@@ -29,7 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import coil3.asDrawable
+import coil3.imageLoader
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun LoadThumbAndThenVideoView(
@@ -41,57 +48,51 @@ fun LoadThumbAndThenVideoView(
     roundedCorner: Boolean,
     contentScale: ContentScale,
     nostrUriCallback: String? = null,
+    isLiveStream: Boolean = false,
     accountViewModel: AccountViewModel,
     onDialog: (() -> Unit)? = null,
 ) {
-    var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
+    var loadingFinished by remember(thumbUri) { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        accountViewModel.loadThumb(
-            context,
-            thumbUri,
-            onReady = {
-                loadingFinished =
-                    if (it != null) {
-                        Pair(true, it)
-                    } else {
-                        Pair(true, null)
+    // Run the Coil fetch in this LaunchedEffect's scope (was previously launched into the
+    // AccountViewModel's viewModelScope, which meant a scroll-away wouldn't cancel the in-flight
+    // image request — wasted bandwidth, plus the late callback wrote into a state that no
+    // longer mattered). Keying on thumbUri also makes the effect re-fire when a recycled slot
+    // gets a new audio track with a new cover instead of stalling on the stale Pair(true, ...).
+    LaunchedEffect(thumbUri) {
+        loadingFinished =
+            try {
+                val request = ImageRequest.Builder(context).data(thumbUri).build()
+                val drawable =
+                    withContext(Dispatchers.IO) {
+                        context.imageLoader
+                            .execute(request)
+                            .image
+                            ?.asDrawable(context.resources)
                     }
-            },
-            onError = { loadingFinished = Pair(true, null) },
-        )
+                Pair(true, drawable)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("VideoView", "Fail to load cover $thumbUri", e)
+                Pair(true, null)
+            }
     }
 
     if (loadingFinished.first) {
-        if (loadingFinished.second != null) {
-            VideoView(
-                videoUri = videoUri,
-                mimeType = mimeType,
-                title = title,
-                thumb = VideoThumb(loadingFinished.second),
-                roundedCorner = roundedCorner,
-                contentScale = contentScale,
-                artworkUri = thumbUri,
-                authorName = authorName,
-                nostrUriCallback = nostrUriCallback,
-                accountViewModel = accountViewModel,
-                onDialog = onDialog,
-            )
-        } else {
-            VideoView(
-                videoUri = videoUri,
-                mimeType = mimeType,
-                title = title,
-                thumb = null,
-                roundedCorner = roundedCorner,
-                contentScale = contentScale,
-                artworkUri = thumbUri,
-                authorName = authorName,
-                nostrUriCallback = nostrUriCallback,
-                accountViewModel = accountViewModel,
-                onDialog = onDialog,
-            )
-        }
+        VideoView(
+            videoUri = videoUri,
+            mimeType = mimeType,
+            title = title,
+            thumb = loadingFinished.second?.let { VideoThumb(it) },
+            roundedCorner = roundedCorner,
+            contentScale = contentScale,
+            artworkUri = thumbUri,
+            authorName = authorName,
+            nostrUriCallback = nostrUriCallback,
+            isLiveStream = isLiveStream,
+            accountViewModel = accountViewModel,
+            onDialog = onDialog,
+        )
     }
 }

@@ -56,7 +56,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
-import kotlin.text.ifEmpty
 
 @Composable
 fun FileHeaderCardCompose(
@@ -104,6 +103,7 @@ private fun FileHeaderCardImage(
     val reasons = remember(note) { collectContentWarningReasons(event) }
     val isImage = remember(note) { event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl) }
     val blurHash = remember(note) { event.blurhash() }
+    val thumbHash = remember(note) { event.thumbhash() }
     val dimensions = remember(note) { event.dimensions() }
 
     val content by remember(note) {
@@ -122,6 +122,7 @@ private fun FileHeaderCardImage(
                     dim = dimensions,
                     uri = uri,
                     mimeType = mimeType,
+                    thumbhash = thumbHash,
                 )
             } else {
                 MediaUrlVideo(
@@ -133,6 +134,7 @@ private fun FileHeaderCardImage(
                     uri = uri,
                     authorName = note.author?.toBestDisplayName(),
                     mimeType = mimeType,
+                    thumbhash = thumbHash,
                 )
             },
         )
@@ -146,7 +148,7 @@ private fun FileHeaderCardImage(
         preloadUrls = if (isImage) listOf(fullUrl) else emptyList(),
         accountViewModel = accountViewModel,
         modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
-        backdrop = blurHash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+        backdrop = (thumbHash ?: blurHash)?.let { { BlurhashBackdrop(blurHash, content.description, thumbHash) } },
     ) {
         ZoomableContentView(
             content = content,

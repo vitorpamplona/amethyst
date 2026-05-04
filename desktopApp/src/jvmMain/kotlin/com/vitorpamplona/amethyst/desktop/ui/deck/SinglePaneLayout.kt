@@ -26,12 +26,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
@@ -49,12 +47,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
@@ -80,6 +82,7 @@ fun SinglePaneLayout(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     highlightStore: DesktopHighlightStore,
     draftStore: com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore,
+    nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
     singlePaneState: SinglePaneState,
     pinnedNavBarState: PinnedNavBarState,
@@ -103,7 +106,9 @@ fun SinglePaneLayout(
         if (!isImmersive) {
             NavigationRail(
                 modifier = Modifier.width(80.dp).fillMaxHeight(),
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                // macOS: push rail items below the traffic lights.
+                header = { Spacer(Modifier.height(titleBarInsetTop)) },
             ) {
                 val pinnedScreens by pinnedNavBarState.pinnedScreens.collectAsState()
                 pinnedScreens.forEach { screenType ->
@@ -136,7 +141,7 @@ fun SinglePaneLayout(
                     onClick = onOpenAppDrawer,
                     icon = {
                         Icon(
-                            Icons.Default.Apps,
+                            MaterialSymbols.Apps,
                             contentDescription = "App Drawer",
                             modifier = Modifier.size(22.dp),
                         )
@@ -218,9 +223,10 @@ fun SinglePaneLayout(
         }
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(if (isImmersive) 0.dp else 12.dp),
-            ) {
+            // Content extends to the window edges; individual screens add their
+            // own internal padding where appropriate (Messages uses full-bleed
+            // panes to match native two-column chat apps).
+            Box(modifier = Modifier.fillMaxSize()) {
                 // Always keep RootContent composed so state (e.g. search results) survives navigation
                 RootContent(
                     columnType = currentColumnType,
@@ -233,6 +239,7 @@ fun SinglePaneLayout(
                     subscriptionsCoordinator = subscriptionsCoordinator,
                     highlightStore = highlightStore,
                     draftStore = draftStore,
+                    nip11Fetcher = nip11Fetcher,
                     appScope = appScope,
                     onShowComposeDialog = onShowComposeDialog,
                     onShowReplyDialog = onShowReplyDialog,
@@ -241,6 +248,7 @@ fun SinglePaneLayout(
                     onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
                     onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                     onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
+                    onNavigateToRelays = { singlePaneState.navigate(DeckColumnType.Relays) },
                 )
                 if (currentOverlay != null) {
                     Surface(

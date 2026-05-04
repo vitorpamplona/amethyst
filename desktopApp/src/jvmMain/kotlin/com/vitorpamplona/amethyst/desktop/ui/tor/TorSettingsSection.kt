@@ -70,7 +70,7 @@ fun TorSettingsSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "Tor",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Spacer(Modifier.width(12.dp))

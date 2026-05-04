@@ -41,12 +41,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -75,6 +70,8 @@ import com.vitorpamplona.amethyst.commons.compose.article.ArticleHeader
 import com.vitorpamplona.amethyst.commons.compose.article.TableOfContents
 import com.vitorpamplona.amethyst.commons.compose.article.extractTableOfContents
 import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip23LongContent.ReadingTimeCalculator
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -406,24 +403,25 @@ fun ArticleReaderScreen(
                     }
                 },
     ) {
-        // Top bar: back + bookmark placeholder
+        // Header — Messages-style: compact row, titleMedium title
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
+                        MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = "Back",
-                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "Article",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 if (zoomLevel != 1.0f) {
@@ -531,9 +529,9 @@ fun ArticleReaderScreen(
                                     ) {
                                         Icon(
                                             if (showHighlightsPanel) {
-                                                Icons.Default.KeyboardArrowDown
+                                                MaterialSymbols.KeyboardArrowDown
                                             } else {
-                                                Icons.AutoMirrored.Filled.KeyboardArrowRight
+                                                MaterialSymbols.AutoMirrored.KeyboardArrowRight
                                             },
                                             contentDescription = "Toggle highlights",
                                             modifier = Modifier.size(20.dp),

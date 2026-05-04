@@ -146,12 +146,12 @@ class MlsConformanceTest {
         assertEquals(0, decoded.signer, "Signer should be leaf 0 (group creator)")
         assertTrue(decoded.signature.isNotEmpty(), "GroupInfo must be signed")
 
-        // Must contain ratchet_tree extension (type 0x0001)
-        val ratchetTreeExt = decoded.extensions.find { it.extensionType == 0x0001 }
+        // Must contain ratchet_tree extension (RFC 9420 §13.3: type 0x0002)
+        val ratchetTreeExt = decoded.extensions.find { it.extensionType == 0x0002 }
         assertTrue(ratchetTreeExt != null, "GroupInfo must contain ratchet_tree extension")
 
-        // Must contain external_pub extension (type 0x0003)
-        val externalPubExt = decoded.extensions.find { it.extensionType == 0x0003 }
+        // Must contain external_pub extension (RFC 9420 §13.3: type 0x0004)
+        val externalPubExt = decoded.extensions.find { it.extensionType == 0x0004 }
         assertTrue(externalPubExt != null, "GroupInfo must contain external_pub extension")
         assertEquals(32, externalPubExt.extensionData.size, "external_pub must be 32 bytes (X25519)")
     }
@@ -394,7 +394,8 @@ class MlsConformanceTest {
         // Verify it's derived from external_secret via DeriveKeyPair
         // (This is an internal consistency check)
         val groupInfo = group.groupInfo()
-        val extPubFromGI = groupInfo.extensions.find { it.extensionType == 0x0003 }
+        // RFC 9420 §13.3: external_pub is extension type 0x0004.
+        val extPubFromGI = groupInfo.extensions.find { it.extensionType == 0x0004 }
         assertContentEquals(externalPub, extPubFromGI!!.extensionData)
     }
 

@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import kotlin.collections.plus
 
 class LongsFeedFilter(
     val account: Account,

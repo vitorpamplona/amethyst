@@ -29,13 +29,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -46,6 +42,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -96,7 +94,7 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
                         },
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            symbol = MaterialSymbols.Delete,
                             contentDescription = stringRes(R.string.clear),
                         )
                     }
@@ -124,7 +122,7 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
         ) {
-            Icon(Icons.Default.Add, contentDescription = stringRes(R.string.add_poll_option_button))
+            Icon(MaterialSymbols.Add, contentDescription = stringRes(R.string.add_poll_option_button))
         }
     }
 }

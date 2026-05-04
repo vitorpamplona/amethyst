@@ -21,20 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -48,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
@@ -56,7 +52,10 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -132,34 +131,43 @@ private fun RenderDraftListScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = nav::popBack) {
-                        ArrowBackIcon()
+                    if (nav.canPop()) {
+                        IconButton(onClick = nav::popBack) {
+                            ArrowBackIcon()
+                        }
                     }
                 },
                 actions = {
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            symbol = MaterialSymbols.Delete,
                             contentDescription = stringResource(R.string.delete_all),
                         )
                     }
                 },
             )
         },
+        bottomBar = {
+            AppBottomBar(Route.Drafts, nav, accountViewModel) { route ->
+                if (route == Route.Drafts) {
+                    feedState.sendToTop()
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
+        },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            RefresheableBox(feedState) {
-                SaveableFeedState(feedState, DRAFTS) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = feedState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = null,
-                        onLoaded = { DraftFeedLoaded(it, listState, accountViewModel, nav) },
-                    )
-                }
+        RefresheableBox(feedState) {
+            SaveableFeedState(feedState, DRAFTS) { listState ->
+                RenderFeedContentState(
+                    feedContentState = feedState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = null,
+                    onLoaded = { DraftFeedLoaded(it, listState, accountViewModel, nav) },
+                )
             }
         }
     }
@@ -175,7 +183,7 @@ private fun DraftFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
