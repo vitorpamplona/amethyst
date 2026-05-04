@@ -42,6 +42,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -156,6 +157,27 @@ class NostrClient(
                 SharingStarted.Eagerly,
                 false,
             )
+
+    /**
+     * Periodically wakes up disconnected relays. Without this, a relay
+     * that hit a long backoff (5 min, e.g. host unreachable or a server
+     * error code) would stay disconnected forever in the absence of any
+     * subscription change. The per-relay [BasicRelayClient] backoff still
+     * gates the actual reconnect attempt, so dead relays are not hammered.
+     */
+    private val keepAliveJob =
+        scope.launch {
+            while (true) {
+                delay(KEEP_ALIVE_INTERVAL_MS)
+                if (this@NostrClient.isActive) {
+                    relayPool.reconnectIfNeedsTo(ignoreRetryDelays = false)
+                }
+            }
+        }
+
+    companion object {
+        private const val KEEP_ALIVE_INTERVAL_MS = 60_000L
+    }
 
     override fun reconnect(
         onlyIfChanged: Boolean,
@@ -295,6 +317,18 @@ class NostrClient(
     override fun onDisconnected(relay: IRelayClient) {
         activeRequests.onDisconnected(relay.url)
         listeners.forEach { it.onDisconnected(relay) }
+
+        // If the client is still active and the relay is still in the
+        // desired set (i.e. there are subscriptions, counts or pending
+        // outbox events that want it), reconnect it. Without this, a
+        // server-initiated close leaves the relay disconnected until a
+        // subscription change or an explicit reconnect() arrives.
+        // The reconnect path is debounced and goes through
+        // reconnectIfNeedsTo, which respects each relay's exponential
+        // backoff so we don't hammer dead relays.
+        if (isActive && relay.url in allRelays.value) {
+            reconnect(onlyIfChanged = true)
+        }
     }
 
     override fun onCannotConnect(
