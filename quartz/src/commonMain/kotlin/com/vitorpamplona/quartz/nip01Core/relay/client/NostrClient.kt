@@ -295,6 +295,18 @@ class NostrClient(
     override fun onDisconnected(relay: IRelayClient) {
         activeRequests.onDisconnected(relay.url)
         listeners.forEach { it.onDisconnected(relay) }
+
+        // If the client is still active and the relay is still in the
+        // desired set (i.e. there are subscriptions, counts or pending
+        // outbox events that want it), reconnect it. Without this, a
+        // server-initiated close leaves the relay disconnected until a
+        // subscription change or an explicit reconnect() arrives.
+        // The reconnect path is debounced and goes through
+        // reconnectIfNeedsTo, which respects each relay's exponential
+        // backoff so we don't hammer dead relays.
+        if (isActive && relay.url in allRelays.value) {
+            reconnect(onlyIfChanged = true)
+        }
     }
 
     override fun onCannotConnect(
