@@ -58,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -92,6 +93,16 @@ private val MAX_RING_WIDTH = 7.dp
 // avatar via drawBehind so it doesn't change layout bounds; alpha
 // fades to 0 when not speaking.
 private val MAX_GLOW_RADIUS = 12.dp
+
+// Detached green ring drawn around a speaking avatar with a clear
+// gap to the profile picture, so the "is talking" signal reads from
+// across the room without overpowering the face. Only rendered while
+// `isSpeaking` is true; pulses with the live audio level. Drawn via
+// drawBehind to avoid affecting layout bounds — the gap + ring fit
+// inside the GRID_SPACING between cells.
+private val OUTER_RING_GAP = 5.dp
+private val OUTER_RING_WIDTH = 2.5.dp
+private val OUTER_RING_MAX_WIDTH = 4.dp
 
 // Cap badge sizes so they stay legible without dominating the avatar
 // at 100.dp. The 0.42 ratio was tuned for ~48.dp avatars (giving
@@ -392,16 +403,44 @@ private fun MemberCell(
         targetValue = if (isSpeaking) (clampedLevel * 0.45f) else 0f,
         label = "speaker-ring-glow-alpha",
     )
+    // Detached outer ring: stays at full opacity while speaking so the
+    // signal is unmistakable, fades out when speech stops. Stroke width
+    // tracks audio level for an extra liveness cue on top of the inner
+    // border ring.
+    val animatedOuterRingAlpha by animateFloatAsState(
+        targetValue = if (isSpeaking) 1f else 0f,
+        label = "speaker-outer-ring-alpha",
+    )
+    val animatedOuterRingWidth by animateDpAsState(
+        targetValue =
+            if (isSpeaking) {
+                OUTER_RING_WIDTH + (clampedLevel * (OUTER_RING_MAX_WIDTH - OUTER_RING_WIDTH).value).dp
+            } else {
+                0.dp
+            },
+        label = "speaker-outer-ring-width",
+    )
     val avatarModifier =
         Modifier
             .drawBehind {
-                if (animatedGlowAlpha <= 0.001f) return@drawBehind
-                val baseRadius = size.minDimension / 2f
-                val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
-                drawCircle(
-                    color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
-                    radius = baseRadius + extra,
-                )
+                if (animatedGlowAlpha > 0.001f) {
+                    val baseRadius = size.minDimension / 2f
+                    val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
+                    drawCircle(
+                        color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
+                        radius = baseRadius + extra,
+                    )
+                }
+                if (animatedOuterRingAlpha > 0.001f && animatedOuterRingWidth > 0.dp) {
+                    val baseRadius = size.minDimension / 2f
+                    val strokePx = animatedOuterRingWidth.toPx()
+                    val ringRadius = baseRadius + OUTER_RING_GAP.toPx() + strokePx / 2f
+                    drawCircle(
+                        color = NEST_SPEAKING_COLOR.copy(alpha = animatedOuterRingAlpha),
+                        radius = ringRadius,
+                        style = Stroke(width = strokePx),
+                    )
+                }
             }.border(animatedRingWidth, animatedRingColor, CircleShape)
             .let { if (member.absent) it.alpha(0.5f) else it }
     val user =

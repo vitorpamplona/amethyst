@@ -22,40 +22,34 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.AccountFollowsLoaderSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-
-// This allows multiple screen to be listening to logged-in accounts.
-@Stable
-class AccountQueryState(
-    val account: Account,
-    val feedContentStates: AccountFeedContentStates,
-    val otherAccounts: Set<HexKey>,
-)
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
+import kotlinx.coroutines.CoroutineScope
 
 /**
- * Always-on account loaders: metadata, gift wraps, drafts, inbox-relay
- * notifications, marmot group events. Foreground-only loaders live in
- * [AccountForegroundFilterAssembler].
+ * Account-scoped loaders that only need to run while the app has a screen
+ * in the foreground. Mounted by a lifecycle-aware subscription so they pause
+ * on ON_STOP and resume on ON_START.
+ *
+ * Lightweight always-on account work (metadata, gift wraps, drafts, inbox
+ * notifications, marmot groups) stays in [AccountFilterAssembler].
  */
 @Stable
-class AccountFilterAssembler(
+class AccountForegroundFilterAssembler(
     client: INostrClient,
+    cache: LocalCache,
+    authenticator: IAuthStatus,
+    failureTracker: RelayOfflineTracker,
+    scope: CoroutineScope,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
     val group =
         listOf(
-            AccountMetadataEoseManager(client, ::allKeys),
-            AccountGiftWrapsEoseManager(client, ::allKeys),
-            AccountDraftsEoseManager(client, ::allKeys),
-            AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
-            MarmotGroupEventsEoseManager(client, ::allKeys),
+            AccountFollowsLoaderSubAssembler(client, cache, scope, authenticator, failureTracker, ::allKeys),
+            AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

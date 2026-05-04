@@ -22,23 +22,35 @@ package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private const val UNSUBSCRIBE_GRACE_MILLIS = 30_000L
 
 /**
  * A lifecycle-aware version of [KeyDataSourceSubscription] that subscribes
- * when the lifecycle reaches STARTED and unsubscribes when it reaches STOPPED.
+ * when the lifecycle reaches STARTED and unsubscribes 30 seconds after it
+ * reaches STOPPED. If the lifecycle returns to STARTED before the grace
+ * period elapses, the pending unsubscribe is cancelled and the subscription
+ * keeps running uninterrupted.
+ *
+ * The grace window absorbs short app switches (copy a snippet from another
+ * app, dismiss a notification, glance at recents) without tearing down and
+ * rebuilding the relay REQ — which would otherwise lose EOSE state and
+ * trigger a refetch on return.
  *
  * Use this for heavy feed subscriptions (home, video, discovery, chatroom list)
- * that should NOT run when the app is in the background. When an always-on
- * notification service keeps the relay client connected, these subscriptions
- * would otherwise leak bandwidth on feeds nobody is viewing.
+ * that should NOT run when the app is truly in the background. When an
+ * always-on notification service keeps the relay client connected, these
+ * subscriptions would otherwise leak bandwidth on feeds nobody is viewing.
  *
  * Lightweight subscriptions that should always run (account metadata, notifications,
  * gift wraps) should continue using the regular [KeyDataSourceSubscription].
@@ -49,24 +61,43 @@ fun <T> LifecycleAwareKeyDataSourceSubscription(
     dataSource: ComposeSubscriptionManager<T>,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    var isStarted by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     DisposableEffect(state, lifecycleOwner) {
+        var isSubscribed = false
+        var pendingUnsubscribe: Job? = null
+
+        fun subscribeNow() {
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (!isSubscribed) {
+                dataSource.subscribe(state)
+                isSubscribed = true
+            }
+        }
+
+        fun scheduleUnsubscribe() {
+            if (!isSubscribed || pendingUnsubscribe != null) return
+            pendingUnsubscribe =
+                scope.launch {
+                    delay(UNSUBSCRIBE_GRACE_MILLIS)
+                    if (isSubscribed) {
+                        dataSource.unsubscribe(state)
+                        isSubscribed = false
+                    }
+                    pendingUnsubscribe = null
+                }
+        }
+
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_START -> {
-                        if (!isStarted) {
-                            dataSource.subscribe(state)
-                            isStarted = true
-                        }
+                        subscribeNow()
                     }
 
                     Lifecycle.Event.ON_STOP -> {
-                        if (isStarted) {
-                            dataSource.unsubscribe(state)
-                            isStarted = false
-                        }
+                        scheduleUnsubscribe()
                     }
 
                     else -> {}
@@ -75,17 +106,84 @@ fun <T> LifecycleAwareKeyDataSourceSubscription(
 
         lifecycleOwner.lifecycle.addObserver(observer)
 
-        // If already started (e.g., recomposition while visible), subscribe immediately
         if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            dataSource.subscribe(state)
-            isStarted = true
+            subscribeNow()
         }
 
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            if (isStarted) {
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (isSubscribed) {
                 dataSource.unsubscribe(state)
-                isStarted = false
+                isSubscribed = false
+            }
+        }
+    }
+}
+
+@Composable
+fun <T : MutableQueryState> LifecycleAwareKeyDataSourceSubscription(
+    state: T,
+    dataSource: MutableComposeSubscriptionManager<T>,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(state, lifecycleOwner) {
+        var isSubscribed = false
+        var pendingUnsubscribe: Job? = null
+
+        fun subscribeNow() {
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (!isSubscribed) {
+                dataSource.subscribe(state)
+                isSubscribed = true
+            }
+        }
+
+        fun scheduleUnsubscribe() {
+            if (!isSubscribed || pendingUnsubscribe != null) return
+            pendingUnsubscribe =
+                scope.launch {
+                    delay(UNSUBSCRIBE_GRACE_MILLIS)
+                    if (isSubscribed) {
+                        dataSource.unsubscribe(state)
+                        isSubscribed = false
+                    }
+                    pendingUnsubscribe = null
+                }
+        }
+
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> {
+                        subscribeNow()
+                    }
+
+                    Lifecycle.Event.ON_STOP -> {
+                        scheduleUnsubscribe()
+                    }
+
+                    else -> {}
+                }
+            }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            subscribeNow()
+        }
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (isSubscribed) {
+                dataSource.unsubscribe(state)
+                isSubscribed = false
             }
         }
     }
