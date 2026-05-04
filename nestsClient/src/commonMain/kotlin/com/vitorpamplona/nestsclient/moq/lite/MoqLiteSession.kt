@@ -444,13 +444,17 @@ class MoqLiteSession internal constructor(
             // sibling on the outer [scope] until the transport's flow
             // independently errors out.
             kotlinx.coroutines.coroutineScope {
+                var seen = 0L
                 transport.incomingUniStreams().collect { stream ->
+                    val n = ++seen
+                    Log.d("NestRx") { "transport delivered uni stream #$n (QUIC→moq seam)" }
                     launch { drainOneGroup(stream) }
                 }
             }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "pumpUniStreams ended with ${t::class.simpleName}: ${t.message}" }
             // Transport closed — subscriptions will surface end-of-flow
             // via their own bidi pumps as well.
         }
@@ -574,13 +578,17 @@ class MoqLiteSession internal constructor(
             // [pumpUniStreams]'s identical comment) so they don't outlive
             // bidiPump.cancelAndJoin() in [close].
             kotlinx.coroutines.coroutineScope {
+                var seen = 0L
                 transport.incomingBidiStreams().collect { bidi ->
+                    val n = ++seen
+                    Log.d("NestTx") { "transport delivered inbound bidi #$n (QUIC→moq seam)" }
                     launch { handleInboundBidi(bidi) }
                 }
             }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestTx") { "pumpInboundBidis ended with ${t::class.simpleName}: ${t.message}" }
             // Transport closed.
         }
     }
