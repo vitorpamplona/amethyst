@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quic.connection
 
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
@@ -635,8 +636,20 @@ class QuicConnection(
         // [config.initialMaxStreams*] is the lifetime maximum the peer
         // can open and any longer broadcast silently truncates.
         when (kind) {
-            StreamId.Kind.SERVER_UNI, StreamId.Kind.CLIENT_UNI -> peerInitiatedUniCount += 1
-            StreamId.Kind.SERVER_BIDI, StreamId.Kind.CLIENT_BIDI -> peerInitiatedBidiCount += 1
+            StreamId.Kind.SERVER_UNI, StreamId.Kind.CLIENT_UNI -> {
+                peerInitiatedUniCount += 1
+                if (peerInitiatedUniCount % 25L == 0L) {
+                    Log.d("NestQuic") {
+                        "peerInitiatedUniCount=$peerInitiatedUniCount " +
+                            "advertisedMaxStreamsUni=$advertisedMaxStreamsUni " +
+                            "(headroom=${advertisedMaxStreamsUni - peerInitiatedUniCount})"
+                    }
+                }
+            }
+
+            StreamId.Kind.SERVER_BIDI, StreamId.Kind.CLIENT_BIDI -> {
+                peerInitiatedBidiCount += 1
+            }
         }
         // Wake any awaitIncomingPeerStream caller. trySend on a CONFLATED
         // channel can never fail in steady state.

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quic.connection
 
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
 import com.vitorpamplona.quic.frame.DatagramFrame
@@ -395,15 +396,25 @@ private fun appendFlowControlUpdates(
     if (conn.peerInitiatedUniCount + cfg.initialMaxStreamsUni / 2 >= conn.advertisedMaxStreamsUni) {
         val newCap = conn.peerInitiatedUniCount + cfg.initialMaxStreamsUni
         if (newCap > conn.advertisedMaxStreamsUni) {
+            val oldCap = conn.advertisedMaxStreamsUni
             conn.advertisedMaxStreamsUni = newCap
             frames += MaxStreamsFrame(bidi = false, maxStreams = newCap)
+            Log.d("NestQuic") {
+                "MAX_STREAMS_UNI emit oldCap=$oldCap → newCap=$newCap " +
+                    "peerInitiatedUniCount=${conn.peerInitiatedUniCount}"
+            }
         }
     }
     if (conn.peerInitiatedBidiCount + cfg.initialMaxStreamsBidi / 2 >= conn.advertisedMaxStreamsBidi) {
         val newCap = conn.peerInitiatedBidiCount + cfg.initialMaxStreamsBidi
         if (newCap > conn.advertisedMaxStreamsBidi) {
+            val oldCap = conn.advertisedMaxStreamsBidi
             conn.advertisedMaxStreamsBidi = newCap
             frames += MaxStreamsFrame(bidi = true, maxStreams = newCap)
+            Log.d("NestQuic") {
+                "MAX_STREAMS_BIDI emit oldCap=$oldCap → newCap=$newCap " +
+                    "peerInitiatedBidiCount=${conn.peerInitiatedBidiCount}"
+            }
         }
     }
 }
