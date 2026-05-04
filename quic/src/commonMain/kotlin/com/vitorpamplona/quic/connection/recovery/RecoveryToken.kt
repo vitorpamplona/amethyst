@@ -95,4 +95,97 @@ sealed class RecoveryToken {
         val streamId: Long,
         val maxData: Long,
     ) : RecoveryToken()
+
+    /**
+     * STREAM data range we sent. On loss, the dispatcher informs the
+     * stream's [com.vitorpamplona.quic.stream.SendBuffer] that bytes
+     * `[offset, offset + length)` need retransmission — the buffer
+     * moves them from "sent" back to "needs retransmit", and the
+     * next [com.vitorpamplona.quic.connection.QuicConnectionWriter]
+     * drain re-emits them with the same offset (idempotent retransmit
+     * per RFC 9000 §13.3).
+     *
+     * [fin] tracks whether this STREAM frame carried the FIN bit;
+     * lost FIN frames must also be retransmitted (the FIN is part of
+     * the stream's reliable byte sequence).
+     */
+    data class Stream(
+        val streamId: Long,
+        val offset: Long,
+        val length: Long,
+        val fin: Boolean,
+    ) : RecoveryToken()
+
+    /**
+     * CRYPTO data range we sent at a specific encryption level.
+     * RFC 9000 §17.2.5: handshake bytes are reliable per RFC 9000
+     * §13.3; a lost CRYPTO frame must be retransmitted at the same
+     * encryption level it was originally sent at. The dispatcher
+     * consults [level] to route to the correct
+     * [com.vitorpamplona.quic.connection.LevelState.cryptoSend].
+     */
+    data class Crypto(
+        val level: com.vitorpamplona.quic.connection.EncryptionLevel,
+        val offset: Long,
+        val length: Long,
+    ) : RecoveryToken()
+
+    /**
+     * `RESET_STREAM` frame we sent (RFC 9000 §19.4). Carries the
+     * stream id, the application error code, and the final size.
+     * On loss, retransmit verbatim — RESET_STREAM is reliable per
+     * §13.3.
+     *
+     * `:quic` doesn't currently emit RESET_STREAM (no application
+     * code triggers stream reset), so this variant is scaffolding for
+     * future work. Listed in the enum so the dispatcher's `when`
+     * stays exhaustive at compile time.
+     */
+    data class ResetStream(
+        val streamId: Long,
+        val errorCode: Long,
+        val finalSize: Long,
+    ) : RecoveryToken()
+
+    /**
+     * `STOP_SENDING` frame we sent (RFC 9000 §19.5). Reliable per
+     * §13.3; retransmit verbatim on loss. Same scaffolding-only
+     * status as [ResetStream] — `:quic` doesn't emit it today.
+     */
+    data class StopSending(
+        val streamId: Long,
+        val errorCode: Long,
+    ) : RecoveryToken()
+
+    /**
+     * `NEW_CONNECTION_ID` frame we sent (RFC 9000 §19.15). Reliable
+     * per §13.3. Same scaffolding-only status — connection-ID
+     * rotation isn't wired today.
+     */
+    data class NewConnectionId(
+        val sequenceNumber: Long,
+        val retirePriorTo: Long,
+        val connectionId: ByteArray,
+        val statelessResetToken: ByteArray,
+    ) : RecoveryToken() {
+        // ByteArray fields require explicit equals/hashCode for data-class
+        // contract correctness — Kotlin's data-class auto-equals does
+        // identity compare on arrays.
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is NewConnectionId) return false
+            return sequenceNumber == other.sequenceNumber &&
+                retirePriorTo == other.retirePriorTo &&
+                connectionId.contentEquals(other.connectionId) &&
+                statelessResetToken.contentEquals(other.statelessResetToken)
+        }
+
+        override fun hashCode(): Int {
+            var result = sequenceNumber.hashCode()
+            result = 31 * result + retirePriorTo.hashCode()
+            result = 31 * result + connectionId.contentHashCode()
+            result = 31 * result + statelessResetToken.contentHashCode()
+            return result
+        }
+    }
 }

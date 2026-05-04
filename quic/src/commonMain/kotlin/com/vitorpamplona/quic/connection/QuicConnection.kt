@@ -206,6 +206,31 @@ class QuicConnection(
     internal val pendingMaxStreamData: MutableMap<Long, Long> = HashMap()
 
     /**
+     * Pending retransmits for `RESET_STREAM` frames (RFC 9000 §19.4).
+     * Keyed by stream id; the dispatcher records lost RESET_STREAM
+     * tokens here. `:quic` has no emit path for RESET_STREAM today,
+     * so the writer never drains this map — scaffolding for future
+     * stream-reset support. Caller must hold [lock].
+     */
+    internal val pendingResetStream:
+        MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream> = HashMap()
+
+    /**
+     * Pending retransmits for `STOP_SENDING` frames (RFC 9000 §19.5).
+     * Same scaffolding-only status as [pendingResetStream].
+     */
+    internal val pendingStopSending:
+        MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending> = HashMap()
+
+    /**
+     * Pending retransmits for `NEW_CONNECTION_ID` frames (RFC 9000
+     * §19.15). Keyed by sequenceNumber. Same scaffolding-only status
+     * as [pendingResetStream].
+     */
+    internal val pendingNewConnectionId:
+        MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId> = HashMap()
+
+    /**
      * RFC 9002 RTT estimator + loss-detection algorithm. Single
      * shared instance per connection (RTT is per-path; we model a
      * single path). Per-space `largestAcked*` lives on
@@ -786,6 +811,45 @@ class QuicConnection(
                     if (token.maxData == stream.receiveLimit) {
                         pendingMaxStreamData[token.streamId] = token.maxData
                     }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Stream -> {
+                    // Re-queue the lost byte range on the stream's send
+                    // buffer. The next writer drain pulls from the
+                    // retransmit queue first (FIFO ahead of new sends).
+                    // See [com.vitorpamplona.quic.stream.SendBuffer.markLost].
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.send.markLost(
+                        offset = token.offset,
+                        length = token.length,
+                        fin = token.fin,
+                    )
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Crypto -> {
+                    // Same shape, applied to the per-level CRYPTO buffer.
+                    levelState(token.level).cryptoSend.markLost(
+                        offset = token.offset,
+                        length = token.length,
+                        fin = false,
+                    )
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream -> {
+                    // Reliable per RFC 9000 §13.3 — re-emit verbatim
+                    // on loss. `:quic` doesn't currently have an emit
+                    // path for RESET_STREAM, so the pending-list is
+                    // populated but never drained today; the field is
+                    // scaffolding for future emit support.
+                    pendingResetStream[token.streamId] = token
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending -> {
+                    pendingStopSending[token.streamId] = token
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId -> {
+                    pendingNewConnectionId[token.sequenceNumber] = token
                 }
             }
         }

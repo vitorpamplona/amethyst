@@ -130,6 +130,50 @@ class SendBuffer {
             Chunk(offset, data, fin)
         }
 
+    /**
+     * Re-queue a previously-sent byte range for retransmission. Called
+     * by [com.vitorpamplona.quic.connection.QuicConnection.onTokensLost]
+     * when the [com.vitorpamplona.quic.connection.recovery.RecoveryToken.Stream]
+     * (or `Crypto`) token's carrying packet is declared lost.
+     *
+     * Currently a no-op: the buffer releases bytes on [takeChunk] (the
+     * "best-effort mode" documented at the top of this class), so by
+     * the time loss is detected the original bytes are gone and we
+     * have nothing to resend. The full retain-until-ACK rewrite lands
+     * in step C of the deferred-follow-ups pass started at commit
+     * `9e6fa3d` — once that's in, this method moves the [offset,
+     * offset + length) range from the "sent" set back to the
+     * "needs retransmit" queue, and the next [takeChunk] pulls from
+     * that queue first.
+     *
+     * The signature is stable now so the dispatcher doesn't need a
+     * second wiring pass when the implementation lands.
+     */
+    fun markLost(
+        offset: Long,
+        length: Long,
+        fin: Boolean,
+    ) {
+        // Step C placeholder. Parameters unused on purpose — the
+        // suppression makes the no-op intent explicit so a future
+        // reader doesn't think it's a bug.
+        @Suppress("UNUSED_PARAMETER")
+        val unusedForStepC = Triple(offset, length, fin)
+    }
+
+    /**
+     * Release ACK'd bytes from the retain-until-ACK retention buffer.
+     * Same step-C placeholder as [markLost]: today the buffer doesn't
+     * retain anything, so there's nothing to release.
+     */
+    fun markAcked(
+        offset: Long,
+        length: Long,
+    ) {
+        @Suppress("UNUSED_PARAMETER")
+        val unusedForStepC = Pair(offset, length)
+    }
+
     data class Chunk(
         val offset: Long,
         val data: ByteArray,

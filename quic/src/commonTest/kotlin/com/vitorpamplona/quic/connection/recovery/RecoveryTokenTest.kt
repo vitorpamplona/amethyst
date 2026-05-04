@@ -98,6 +98,20 @@ class RecoveryTokenTest {
                 RecoveryToken.MaxStreamsBidi(150L),
                 RecoveryToken.MaxData(1_000_000L),
                 RecoveryToken.MaxStreamData(streamId = 0L, maxData = 1024L),
+                RecoveryToken.Stream(streamId = 4L, offset = 0L, length = 100L, fin = false),
+                RecoveryToken.Crypto(
+                    level = com.vitorpamplona.quic.connection.EncryptionLevel.HANDSHAKE,
+                    offset = 0L,
+                    length = 64L,
+                ),
+                RecoveryToken.ResetStream(streamId = 4L, errorCode = 0L, finalSize = 100L),
+                RecoveryToken.StopSending(streamId = 4L, errorCode = 0L),
+                RecoveryToken.NewConnectionId(
+                    sequenceNumber = 1L,
+                    retirePriorTo = 0L,
+                    connectionId = byteArrayOf(1, 2, 3, 4),
+                    statelessResetToken = ByteArray(16) { it.toByte() },
+                ),
             )
         val labels =
             tokens.map {
@@ -107,6 +121,11 @@ class RecoveryTokenTest {
                     is RecoveryToken.MaxStreamsBidi -> "msb:${it.maxStreams}"
                     is RecoveryToken.MaxData -> "md:${it.maxData}"
                     is RecoveryToken.MaxStreamData -> "msd:${it.streamId}:${it.maxData}"
+                    is RecoveryToken.Stream -> "s:${it.streamId}:${it.offset}:${it.length}:${it.fin}"
+                    is RecoveryToken.Crypto -> "c:${it.level}:${it.offset}:${it.length}"
+                    is RecoveryToken.ResetStream -> "rs:${it.streamId}:${it.errorCode}:${it.finalSize}"
+                    is RecoveryToken.StopSending -> "ss:${it.streamId}:${it.errorCode}"
+                    is RecoveryToken.NewConnectionId -> "ncid:${it.sequenceNumber}"
                 }
             }
         assertEquals(
@@ -116,8 +135,67 @@ class RecoveryTokenTest {
                 "msb:150",
                 "md:1000000",
                 "msd:0:1024",
+                "s:4:0:100:false",
+                "c:HANDSHAKE:0:64",
+                "rs:4:0:100",
+                "ss:4:0",
+                "ncid:1",
             ),
             labels,
         )
+    }
+
+    @Test
+    fun newConnectionId_arrayEqualityIsByContent() {
+        // ByteArray fields must equal by content, not identity, so
+        // the sent-packet map's equality semantics work correctly.
+        val a =
+            RecoveryToken.NewConnectionId(
+                sequenceNumber = 1L,
+                retirePriorTo = 0L,
+                connectionId = byteArrayOf(1, 2, 3),
+                statelessResetToken = ByteArray(16) { 0 },
+            )
+        val b =
+            RecoveryToken.NewConnectionId(
+                sequenceNumber = 1L,
+                retirePriorTo = 0L,
+                connectionId = byteArrayOf(1, 2, 3),
+                statelessResetToken = ByteArray(16) { 0 },
+            )
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+        assertNotEquals(a, b.copy(connectionId = byteArrayOf(9, 9, 9)))
+        assertNotEquals(a, b.copy(statelessResetToken = ByteArray(16) { 7 }))
+    }
+
+    @Test
+    fun stream_equalityByValue() {
+        val t1 = RecoveryToken.Stream(streamId = 4L, offset = 0L, length = 100L, fin = false)
+        val t2 = RecoveryToken.Stream(streamId = 4L, offset = 0L, length = 100L, fin = false)
+        val tFin = RecoveryToken.Stream(streamId = 4L, offset = 0L, length = 100L, fin = true)
+        val tDifferentOffset = RecoveryToken.Stream(streamId = 4L, offset = 100L, length = 100L, fin = false)
+        assertEquals(t1, t2)
+        assertNotEquals(t1, tFin)
+        assertNotEquals(t1, tDifferentOffset)
+    }
+
+    @Test
+    fun crypto_equalityByValue() {
+        val a =
+            RecoveryToken.Crypto(
+                level = com.vitorpamplona.quic.connection.EncryptionLevel.INITIAL,
+                offset = 0L,
+                length = 64L,
+            )
+        val b =
+            RecoveryToken.Crypto(
+                level = com.vitorpamplona.quic.connection.EncryptionLevel.INITIAL,
+                offset = 0L,
+                length = 64L,
+            )
+        val differentLevel = a.copy(level = com.vitorpamplona.quic.connection.EncryptionLevel.HANDSHAKE)
+        assertEquals(a, b)
+        assertNotEquals(a, differentLevel)
     }
 }
