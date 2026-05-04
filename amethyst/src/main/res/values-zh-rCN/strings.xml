@@ -165,6 +165,8 @@
     <string name="failed_to_save_the_image">保存图片失败</string>
     <string name="video_saved_to_the_gallery">视频已保存到媒体库</string>
     <string name="failed_to_save_the_video">保存视频失败</string>
+    <string name="pdf_saved_to_the_gallery">已保存 PDF 到 Downloads/Amethyst</string>
+    <string name="failed_to_save_the_pdf">保存 PDF 失败</string>
     <string name="upload_image">上传图片</string>
     <string name="upload_file">上传文件</string>
     <string name="take_a_picture">拍照</string>
