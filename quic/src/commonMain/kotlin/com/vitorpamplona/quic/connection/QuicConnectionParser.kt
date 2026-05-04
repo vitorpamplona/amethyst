@@ -170,12 +170,43 @@ private fun dispatchFrames(
                 // without this the range list grows unboundedly on long
                 // connections.
                 state.ackTracker.purgeBelow(frame.largestAcknowledged - frame.firstAckRange)
-                // Step 3 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
-                // remove SentPacket entries for the PNs the peer acknowledged.
-                // Returned list is intentionally discarded for now —
-                // step 5 will use it to feed loss detection / RTT
-                // estimation; for step 3 we just drain.
-                drainAckedSentPackets(state.sentPackets, frame)
+                // Step 5 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
+                // (a) snapshot the send time of the largest-acked PN
+                // BEFORE drain so we can update RTT, (b) drain ACK'd
+                // packets, (c) if the ACK advanced largestAckedPn AND
+                // any drained packet was ack-eliciting, update RTT,
+                // (d) detect-and-remove lost packets. The lost-token
+                // dispatch (step 6) is a TODO — for step 5 we drop the
+                // returned list on the floor.
+                val largestSentTime = state.sentPackets[frame.largestAcknowledged]?.sentAtMillis
+                val drained = drainAckedSentPackets(state.sentPackets, frame)
+                val advancedLargest =
+                    state.largestAckedPn?.let { it < frame.largestAcknowledged } ?: true
+                if (advancedLargest) {
+                    state.largestAckedPn = frame.largestAcknowledged
+                    state.largestAckedSentTimeMs = largestSentTime
+                }
+                if (advancedLargest && largestSentTime != null && drained.any { it.ackEliciting }) {
+                    val ackDelayUs = frame.ackDelay shl conn.config.ackDelayExponent.toInt()
+                    val ackDelayMs = ackDelayUs / 1_000L
+                    conn.lossDetection.onRttSample(
+                        largestAckedSentTimeMs = largestSentTime,
+                        ackDelayMs = ackDelayMs,
+                        nowMs = nowMillis,
+                    )
+                }
+                state.largestAckedPn?.let { largestAckedPn ->
+                    val lost =
+                        conn.lossDetection.detectAndRemoveLost(
+                            sentPackets = state.sentPackets,
+                            largestAckedPn = largestAckedPn,
+                            nowMs = nowMillis,
+                        )
+
+                    // Step 6 will dispatch tokens here. Drop for now.
+                    @Suppress("UNUSED_VARIABLE")
+                    val unusedForStep6 = lost
+                }
             }
 
             is CryptoFrame -> {

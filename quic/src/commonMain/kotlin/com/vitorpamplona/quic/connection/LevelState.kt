@@ -50,4 +50,20 @@ class LevelState {
      * [QuicConnection.lock].
      */
     val sentPackets: MutableMap<Long, SentPacket> = HashMap()
+
+    /**
+     * RFC 9002 §6.1 largest acknowledged packet number observed
+     * by an inbound ACK in this space. Updated only when the ACK
+     * advances it — duplicate ACKs do not move the value.
+     * Used as the high-water mark for packet-threshold loss detection.
+     */
+    var largestAckedPn: Long? = null
+
+    /**
+     * Send time (epoch ms, from the writer's `nowMillis` source) of
+     * the SentPacket whose PN is [largestAckedPn]. Used to compute
+     * the RTT sample on a newly-advancing ACK (RFC 9002 §5.2).
+     * Null until an ACK arrives.
+     */
+    var largestAckedSentTimeMs: Long? = null
 }

@@ -206,6 +206,16 @@ class QuicConnection(
     internal val pendingMaxStreamData: MutableMap<Long, Long> = HashMap()
 
     /**
+     * RFC 9002 RTT estimator + loss-detection algorithm. Single
+     * shared instance per connection (RTT is per-path; we model a
+     * single path). Per-space `largestAcked*` lives on
+     * [LevelState]. Step 6 wires the loss-detection callback.
+     */
+    internal val lossDetection: com.vitorpamplona.quic.connection.recovery.QuicLossDetection =
+        com.vitorpamplona.quic.connection.recovery
+            .QuicLossDetection()
+
+    /**
      * Optional supplier of underlying UDP-socket counters. Wired by the
      * platform-specific driver since `UdpSocket`'s counters are
      * JVM-side fields the commonMain side can't see directly.
