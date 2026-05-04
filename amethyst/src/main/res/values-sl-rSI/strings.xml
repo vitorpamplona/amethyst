@@ -176,6 +176,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="failed_to_save_the_image">Neuspešno shranjevanje slike</string>
     <string name="video_saved_to_the_gallery">Video shranjen v video galerijo telefona</string>
     <string name="failed_to_save_the_video">Neuspešno shranjevanje videa</string>
+    <string name="pdf_saved_to_the_gallery">PDF shranjen v Prenosi/Amethyst</string>
+    <string name="failed_to_save_the_pdf">PDF ni bil shranjen</string>
     <string name="upload_image">Naloži sliko</string>
     <string name="upload_file">Naloži datoteko</string>
     <string name="take_a_picture">Zajemi sliko</string>
@@ -502,6 +504,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_mic_unmute">Vklopi mikrofon</string>
     <string name="nest_broadcast_connecting">Grem v živo…</string>
     <string name="nest_broadcast_failed">Oddajanje neuspešno: %1$s</string>
+    <string name="nest_mute_failed">Utišanje neuspešno: %1$s</string>
     <string name="nest_record_permission_required">Za govor v tej sobi je potreben dostop do mikrofona.</string>
     <string name="nest_open_settings">Odpri nastavitve</string>
     <string name="nest_notification_channel">Gnezda</string>
@@ -512,6 +515,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_notification_stop">Stop</string>
     <string name="nest_join">Pridruži se gnezdu</string>
     <string name="nest_lobby_host_label">Gostitelj</string>
+    <string name="nest_lobby_open_action">Odpri</string>
+    <string name="nest_lobby_recent_chat">Nedavni klepeti</string>
+    <string name="nest_lobby_no_listeners">Trenutno v sobi ni nikogar</string>
+    <string name="nest_lobby_listeners_count">%1$d jih posluša</string>
     <string name="nest_role_host">Gostitelj</string>
     <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon je utišan</string>
@@ -522,11 +529,18 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_presence_speaking">govori</string>
     <string name="nest_presence_listening">pridružen kot občinstvo</string>
     <string name="nest_presence_left">zapusti gnezdo</string>
+    <string name="nest_leave">Zapusti</string>
     <string name="nest_leave_host_title">Prekini to gnezdo</string>
     <string name="nest_leave_host_body">Ste gostitelj. Če zaprete sobo, boste prekinili povezavo vsem. Izberite »Zapusti«, če se želite vrniti pozneje – soba se samodejno zapre po 8 urah neaktivnosti.</string>
     <string name="nest_leave_host_close">Zapri sobo</string>
     <string name="nest_leave_host_just_leave">Zapusti</string>
     <string name="nest_leave_host_close_failed">Sobe ni bilo mogoče zapreti. Vseeno zapuščam – soba se bo zaprla samodejno.</string>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d poslušalec</item>
+        <item quantity="two">%1$d poslušalcev</item>
+        <item quantity="few">%1$d poslušalcev</item>
+        <item quantity="other">%1$d poslušalci</item>
+    </plurals>
     <string name="nest_live_chip">V ŽIVO</string>
     <string name="nest_tab_chat">Pogovor</string>
     <string name="nest_tab_audience">Občinstvo</string>
@@ -561,7 +575,15 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_minimize">Pomanjšaj</string>
     <string name="nest_minimize_description">Pomanjšaj za nadaljnje poslušanje</string>
     <string name="nest_audio_dropped">Izpad zvoka</string>
+    <string name="nest_loading_room">Nalagam sobo…</string>
+    <string name="nest_unjoinable_title">Te sobe ne morem odpreti</string>
+    <string name="nest_unjoinable_body">V prostoru manjka avdio storitev ali končna točka. Gostitelj mora posodobiti podatke, preden se poslušalci lahko povežejo.</string>
+    <string name="nest_unjoinable_back">Nazaj</string>
     <string name="nest_create_fab">Začni sobo za klepet</string>
+    <string name="nests_section_live_now">V živo zdaj</string>
+    <string name="nests_section_scheduled">Na urniku</string>
+    <string name="nests_section_recently_ended">Nedavno dodano</string>
+    <string name="nests_ended_ago">Končano %1$s nazaj</string>
     <string name="nest_no_server_title">Vzpostavi strežnik gnezda</string>
     <string name="nest_no_server_body">Niste še izbrali strežnika gnezda. Želite dodati %1$s na seznam strežnikov in nadaljevati?\n\nTo lahko kasneje spremenite v nastavitvah.</string>
     <string name="nest_no_server_use_default">Uporabi privzeto</string>
@@ -571,6 +593,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_create_field_room">Ime sobe</string>
     <string name="nest_create_field_summary">O čem teče beseda?</string>
     <string name="nest_create_field_service">URL naslov storitve MoQ</string>
+    <string name="nest_create_field_service_hint">Stranska storitev za avtentikacijo — privzeto nostrnests.com</string>
     <string name="nest_create_field_endpoint">Končna točka releja MoQ</string>
     <string name="nest_create_field_endpoint_hint">URL za WebTransport – običajno isti gostitelj</string>
     <string name="nest_create_field_image">URL naslovne slike (neobvezno)</string>
@@ -583,6 +606,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nests_servers_my_section">Vaši strežniki</string>
     <string name="nests_servers_my_explainer">Shranjeno kot zamenljiv dogodek kind-10112, da lahko vaše nastavitve berejo tudi drugi odjemalci.</string>
     <string name="nests_servers_add_field">Dodaj strežnik gnezda</string>
+    <string name="nests_servers_add_relay_field">Rele (WebTransport) URL</string>
+    <string name="nests_servers_add_auth_field">URL za avtentikacijo (JWT mint)</string>
+    <string name="nests_servers_add_pair_button">Dodaj</string>
+    <string name="nests_servers_relay_label">Rele</string>
+    <string name="nests_servers_auth_label">Avtentikacija</string>
     <string name="nests_servers_recommended_section">Priporočeni strežniki</string>
     <string name="nests_servers_recommended_explainer">Vgrajeni predlogi, ki jih lahko na seznam dodate z enim dotikom.</string>
     <string name="nests_servers_use_defaults">uporabi Amethyst-ove privzete nastavitve</string>
@@ -1313,6 +1341,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="error_unable_to_fetch_invoice">Ni mogoče pridobiti fakture s strežnikov prejemnika</string>
     <string name="wallet_connect_pay_invoice_error_error">Vaš \"Wallet Connect\" ponudnik je vrnil naslednjo napako: %1$s</string>
     <string name="could_not_connect_to_tor">Ni bilo mogoče povezati s Tor</string>
+    <string name="tor_connection_failed_title">Tor se ne povezuje</string>
+    <string name="tor_connection_failed_body">Amethystu ni uspelo zagnati povezave Tor. Želite uporabiti običajno povezavo za nalaganje vsebine? To izbiro bomo ohranili eno uro, nato bomo ponovno poskusili s Torom.</string>
+    <string name="tor_continue_without_for_session">Uporabi običajno povezavo</string>
+    <string name="tor_keep_waiting">Nadaljuj s čakanjem</string>
     <string name="unable_to_download_relay_document">Prenos rele dokumentacije ni na voljo</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Ni bilo mogoče sestaviti LNUrl iz \"lightning\" naslova \'%1$s\'. Preverite uporabnikove nastavitve</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Prejemnikova \"lightning\" storitev na %1$s ni na voljo. Izračunana je bila iz \"lightning\" naslova \'%2$s\'. Napaka: %3$s. Preverite, ali strežnik deluje in ali je \"lightning\" naslov pravilen</string>
@@ -1510,6 +1542,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="open_all_reactions_to_this_post">Odpri vse reakcije na to objavo</string>
     <string name="close_all_reactions_to_this_post">Zapri vse reakcije na to objavo</string>
     <string name="reply_description">Odgovori</string>
+    <string name="jump_to_parent_reply">Skoči na izvorno sporočilo</string>
     <string name="boost_or_quote_description">Posreduj ali citiraj</string>
     <string name="like_description">Všečkaj</string>
     <string name="zap_description">Zap</string>
@@ -1518,6 +1551,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="bottom_bar_settings_description">Povlecite za spremembo vrstnega reda. Preklopite za dodajanje ali odstranjevanje elementov s spodnje vrstice. Če ni izbran noben element, je spodnja vrstica skrita.</string>
     <string name="bottom_bar_settings_available">Dostopno</string>
     <string name="bottom_bar_settings_reorder">Razporedi</string>
+    <string name="bottom_bar_settings_restore_default">Obnovi prevzete</string>
+    <string name="home_tabs_settings">Domači zavihki</string>
+    <string name="home_tabs_settings_description">Izberite zavihke, ki se prikažejo na začetnem zaslonu. Če je aktiven le en zavihek, je vrstica z zavihki skrita.</string>
+    <string name="home_tab_everything">Vse</string>
     <string name="reactions_settings">Vrstica odzivnih ikon</string>
     <string name="reactions_settings_description">Nastavite prikaza gumbov za odzive, njihov vrstni red in prikaz števcev.</string>
     <string name="reactions_settings_enabled">Omogočeno</string>
@@ -2123,6 +2160,42 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="last_seen_on_date">Nazadje viden na %1$s (%2$s nazaj)</string>
     <string name="last_seen_just_now">Nazadnje viden prav zdaj</string>
     <string name="last_seen_never">Nikoli viden</string>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="two">%1$dminuti</item>
+        <item quantity="few">%1$d minut</item>
+        <item quantity="other">%1$d minute</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d Ura</item>
+        <item quantity="two">%1$d uri</item>
+        <item quantity="few">%1$d ure</item>
+        <item quantity="other">%1$d ur</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d dan</item>
+        <item quantity="two">%1$d dni</item>
+        <item quantity="few">%1$d dni</item>
+        <item quantity="other">%1$d dni</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d teden</item>
+        <item quantity="two">%1$d tedna</item>
+        <item quantity="few">%1$d tedni</item>
+        <item quantity="other">%1$d tednov</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d mesec</item>
+        <item quantity="two">%1$d meseca</item>
+        <item quantity="few">%1$d meseci</item>
+        <item quantity="other">%1$d mesecev</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d leto</item>
+        <item quantity="two">%1$d leti</item>
+        <item quantity="few">%1$d let</item>
+        <item quantity="other">%1$d let</item>
+    </plurals>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Povezujem</string>
     <string name="event_sync_status_downloading">Prenašam</string>
