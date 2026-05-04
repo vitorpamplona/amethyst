@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quic.connection
 
+import com.vitorpamplona.quic.connection.recovery.SentPacket
 import com.vitorpamplona.quic.stream.ReceiveBuffer
 import com.vitorpamplona.quic.stream.SendBuffer
 
@@ -33,4 +34,20 @@ class LevelState {
     val cryptoReceive = ReceiveBuffer()
     var sendProtection: PacketProtection? = null
     var receiveProtection: PacketProtection? = null
+
+    /**
+     * Per-packet retention for RFC 9002 loss detection + retransmit.
+     * Populated by [QuicConnectionWriter] when a packet is built;
+     * drained by the ACK handler in [QuicConnectionParser] (step 3 of
+     * `quic/plans/2026-05-04-control-frame-retransmit.md`) and by
+     * loss detection (step 5).
+     *
+     * Keyed by packet number. Step 2 only populates this map for
+     * Application-level packets — Initial / Handshake-level
+     * retransmit (CRYPTO) is out of scope, see plan.
+     *
+     * Caller of any read/write to this map must hold
+     * [QuicConnection.lock].
+     */
+    val sentPackets: MutableMap<Long, SentPacket> = HashMap()
 }

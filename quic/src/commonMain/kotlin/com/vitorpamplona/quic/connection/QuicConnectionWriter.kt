@@ -21,6 +21,9 @@
 package com.vitorpamplona.quic.connection
 
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quic.connection.recovery.RecoveryToken
+import com.vitorpamplona.quic.connection.recovery.SentPacket
+import com.vitorpamplona.quic.frame.AckFrame
 import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
 import com.vitorpamplona.quic.frame.DatagramFrame
@@ -244,13 +247,25 @@ private fun buildApplicationPacket(
     val state = conn.application
     val proto = state.sendProtection ?: return null
     val frames = mutableListOf<Frame>()
+    // Tokens collected in lock-step with [frames]: each retransmittable
+    // frame contributes a [RecoveryToken] so the [SentPacket] recorded
+    // at the bottom of this function can drive RFC 9002 loss
+    // detection + retransmit (steps 3–6 of
+    // `quic/plans/2026-05-04-control-frame-retransmit.md`). Frames that
+    // are not retransmittable (DatagramFrame, StreamFrame for now) do
+    // not contribute a token; the packet is still ack-eliciting and
+    // tracked for loss-detection timing.
+    val tokens = mutableListOf<RecoveryToken>()
 
-    state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { frames += it }
+    state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let {
+        frames += it
+        tokens += RecoveryToken.Ack
+    }
 
     // Re-credit the peer's send window when our receive offset has advanced
     // beyond half the previously-advertised limit. Emits MAX_STREAM_DATA per
     // stream and MAX_DATA at the connection level.
-    appendFlowControlUpdates(conn, frames)
+    appendFlowControlUpdates(conn, frames, tokens)
 
     // Pending datagrams
     while (conn.pendingDatagramsLocked().isNotEmpty()) {
@@ -308,26 +323,68 @@ private fun buildApplicationPacket(
     if (frames.isEmpty()) return null
     val payload = encodeFrames(frames)
     val pn = state.pnSpace.allocateOutbound()
-    return ShortHeaderPacket.build(
-        ShortHeaderPlaintextPacket(conn.destinationConnectionId, pn, payload),
-        proto.aead,
-        proto.key,
-        proto.iv,
-        proto.hp,
-        proto.hpKey,
-        largestAckedInSpace = -1L,
-    )
+    // Retain the packet for RFC 9002 loss detection BEFORE the encrypt
+    // step so the bookkeeping survives a build/encrypt throw (the PN
+    // was already consumed at allocateOutbound; if we don't track it,
+    // the gap is silent). Step 2 only populates the map; step 3 drains
+    // on ACK; step 5 declares loss. Until step 5 lands, the map can
+    // only grow — but step 2 ships dormant, no reads, no behavior
+    // change visible to the peer.
+    val sizeBytes =
+        runCatching {
+            ShortHeaderPacket.build(
+                ShortHeaderPlaintextPacket(conn.destinationConnectionId, pn, payload),
+                proto.aead,
+                proto.key,
+                proto.iv,
+                proto.hp,
+                proto.hpKey,
+                largestAckedInSpace = -1L,
+            )
+        }
+    state.sentPackets[pn] =
+        SentPacket(
+            packetNumber = pn,
+            sentAtMillis = nowMillis,
+            ackEliciting = isAckEliciting(frames),
+            sizeBytes = sizeBytes.getOrNull()?.size ?: 0,
+            tokens = tokens.toList(),
+        )
+    // Re-throw on encrypt failure so callers (driver loop) see the
+    // same exception they did before this change. The bookkeeping
+    // entry is still in place; if the throw was transient, retransmit
+    // logic in step 6 picks up the slack on the next outbound.
+    return sizeBytes.getOrThrow()
 }
+
+/**
+ * RFC 9000 §13.2.1: a packet is ack-eliciting if it contains any frame
+ * other than ACK, PADDING, or CONNECTION_CLOSE. Loss detection (step 5)
+ * only fires for ack-eliciting packets — non-eliciting ones are tracked
+ * for timing but never retransmitted.
+ *
+ * `:quic` doesn't currently emit PADDING-only or CONNECTION_CLOSE-only
+ * frames mid-connection through this path, so the ack-eliciting set
+ * is "anything that isn't a pure ACK". Listed explicitly anyway so the
+ * RFC reference stays close to the implementation.
+ */
+private fun isAckEliciting(frames: List<Frame>): Boolean = frames.any { it !is AckFrame && it !is ConnectionCloseFrame }
 
 /**
  * Append MAX_STREAM_DATA / MAX_DATA frames re-crediting the peer when our
  * receive cursor has advanced past half the previously-advertised window.
+ *
+ * Each emitted frame contributes a matching [RecoveryToken] to [tokens]
+ * so the [SentPacket] recorded by the caller can drive RFC 9002
+ * retransmit on loss (step 6 of
+ * `quic/plans/2026-05-04-control-frame-retransmit.md`).
  *
  * Caller must hold [QuicConnection.lock].
  */
 private fun appendFlowControlUpdates(
     conn: QuicConnection,
     frames: MutableList<Frame>,
+    tokens: MutableList<RecoveryToken>,
 ) {
     val cfg = conn.config
     var totalRecvAdvanced = 0L
@@ -365,6 +422,7 @@ private fun appendFlowControlUpdates(
             if (newLimit > stream.receiveLimit) {
                 stream.receiveLimit = newLimit
                 frames += MaxStreamDataFrame(id, newLimit)
+                tokens += RecoveryToken.MaxStreamData(streamId = id, maxData = newLimit)
             }
         }
         // Clear the dirty flag once we've considered this stream — even if we
@@ -381,6 +439,7 @@ private fun appendFlowControlUpdates(
         if (newLimit > conn.advertisedMaxData) {
             conn.advertisedMaxData = newLimit
             frames += MaxDataFrame(newLimit)
+            tokens += RecoveryToken.MaxData(maxData = newLimit)
         }
     }
     // Peer-initiated stream-id concurrency (RFC 9000 §19.11). MoQ over
@@ -399,6 +458,7 @@ private fun appendFlowControlUpdates(
             val oldCap = conn.advertisedMaxStreamsUni
             conn.advertisedMaxStreamsUni = newCap
             frames += MaxStreamsFrame(bidi = false, maxStreams = newCap)
+            tokens += RecoveryToken.MaxStreamsUni(maxStreams = newCap)
             Log.d("NestQuic") {
                 "MAX_STREAMS_UNI emit oldCap=$oldCap → newCap=$newCap " +
                     "peerInitiatedUniCount=${conn.peerInitiatedUniCount}"
@@ -411,6 +471,7 @@ private fun appendFlowControlUpdates(
             val oldCap = conn.advertisedMaxStreamsBidi
             conn.advertisedMaxStreamsBidi = newCap
             frames += MaxStreamsFrame(bidi = true, maxStreams = newCap)
+            tokens += RecoveryToken.MaxStreamsBidi(maxStreams = newCap)
             Log.d("NestQuic") {
                 "MAX_STREAMS_BIDI emit oldCap=$oldCap → newCap=$newCap " +
                     "peerInitiatedBidiCount=${conn.peerInitiatedBidiCount}"
