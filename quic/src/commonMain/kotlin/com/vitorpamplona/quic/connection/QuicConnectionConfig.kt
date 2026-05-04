@@ -37,39 +37,29 @@ data class QuicConnectionConfig(
     val initialMaxStreamDataUni: Long = 1L * 1024 * 1024,
     val initialMaxStreamsBidi: Long = 100L,
     /**
-     * Initial peer-initiated unidirectional stream limit. Sized to never
-     * trip the rolling [QuicConnectionWriter.appendFlowControlUpdates]
-     * extension path during a realistic audio-rooms broadcast — see
-     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+     * Initial peer-initiated unidirectional stream limit. moq-rs's
+     * Quinn stack advertises `max_concurrent_uni_streams = 10000`
+     * for the same audio-rooms workload — every Opus group is a
+     * fresh peer-initiated uni stream — so we match.
      *
-     * Why a fixed-and-large initial value instead of relying on rolling
-     * extension: production tracing against `moq.nostrnests.com` showed
-     * that emitting `MAX_STREAMS_UNI` mid-connection silently breaks the
-     * relay's send path. The listener receives one more uni stream after
-     * the bump, then UDP goes dead at the kernel level
-     * (`udpRecvDatagrams` frozen) while our QUIC state still believes
-     * the connection is alive. The relay propagates the listener's
-     * disconnect to the publisher (`inbound SUBSCRIBE FIN'd` on the
-     * publisher side), but our stack never observes it — split-brain.
-     * Reproducible across runs. We don't yet know whether our frame is
-     * malformed, mis-sequenced relative to other frames in the packet,
-     * or hitting a moq-rs / Quinn bug — but we do know that not emitting
-     * the extension keeps the connection healthy.
+     * Earlier the value was set to 1 000 000 as a workaround for a
+     * production cliff against moq.nostrnests.com:  emitting
+     * `MAX_STREAMS_UNI` mid-connection caused the relay to silently
+     * stop forwarding uni streams (see
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`).
+     * That workaround dodged the bug at the cost of unbounded
+     * lifetime stream-id allocation per connection.
      *
-     * Capacity math, with [NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP]
-     * = 5 and Opus 20 ms: each group is one peer-initiated uni stream,
-     * so the relay opens ~10 streams/sec. The half-window threshold
-     * (`count + initialMaxStreamsUni/2 >= advertisedMaxStreamsUni`)
-     * trips at count = 500 000 streams, i.e. ~13.9 hours of continuous
-     * audio. Well past any realistic Nest duration.
-     *
-     * Memory cost: the [QuicConnection.streams] map currently grows for
-     * the connection's lifetime. At 10 streams/sec a 2-hour Nest leaves
-     * ~72k entries; per-stream overhead is small but unbounded growth
-     * over many hours is a known follow-up. For now this is a tolerable
-     * trade in exchange for not tripping the relay-side bug.
+     * The true fix landed in
+     * `quic/plans/2026-05-04-control-frame-retransmit.md`:
+     * RFC 9002 §6 loss detection + retransmit. With control-frame
+     * retransmit working, a single dropped MAX_STREAMS_UNI is
+     * recovered automatically — no need for the high-cap
+     * workaround. Lowered back to a moq-rs-matching default so the
+     * rolling-extension path (and its retransmit) actually
+     * exercises in production, validating the new code path.
      */
-    val initialMaxStreamsUni: Long = 1_000_000L,
+    val initialMaxStreamsUni: Long = 10_000L,
     val maxIdleTimeoutMillis: Long = 30_000L,
     val maxUdpPayloadSize: Long = 1452L,
     val activeConnectionIdLimit: Long = 4L,

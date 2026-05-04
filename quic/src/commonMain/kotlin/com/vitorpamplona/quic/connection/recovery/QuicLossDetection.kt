@@ -160,6 +160,25 @@ class QuicLossDetection {
         return lost
     }
 
+    /**
+     * RFC 9002 §6.2.1 Probe Timeout duration:
+     *
+     *     PTO = smoothed_rtt + max(4 * rttvar, kGranularity) + max_ack_delay
+     *
+     * For Application packets only; Initial / Handshake spaces use
+     * `max_ack_delay = 0` per §6.2.1. The connection passes the
+     * peer's [maxAckDelayMs] (from its transport parameters) — pass
+     * 0 if the peer hasn't advertised it yet.
+     *
+     * The result is doubled by the caller for each consecutive PTO
+     * expiration (§6.2.2 exponential backoff), capped so a long-
+     * silent connection doesn't wait forever between probes.
+     */
+    fun ptoBaseMs(maxAckDelayMs: Long): Long {
+        val variancePart = (4L * rttVarMs).coerceAtLeast(GRANULARITY_MS)
+        return smoothedRttMs + variancePart + maxAckDelayMs
+    }
+
     companion object {
         /** RFC 9002 §6.2.2 default initial RTT before a sample arrives. */
         const val INITIAL_RTT_MS: Long = 333L

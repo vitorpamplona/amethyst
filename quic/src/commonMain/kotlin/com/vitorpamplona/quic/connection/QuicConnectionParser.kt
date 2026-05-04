@@ -194,6 +194,10 @@ private fun dispatchFrames(
                         ackDelayMs = ackDelayMs,
                         nowMs = nowMillis,
                     )
+                    // Step 7: reset PTO count on any new ack-eliciting
+                    // ACK (RFC 9002 §6.2.1). The peer responded, so the
+                    // exponential backoff resets.
+                    conn.consecutivePtoCount = 0
                 }
                 state.largestAckedPn?.let { largestAckedPn ->
                     val lost =

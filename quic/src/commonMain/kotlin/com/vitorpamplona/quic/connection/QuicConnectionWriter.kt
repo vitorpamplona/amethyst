@@ -31,6 +31,7 @@ import com.vitorpamplona.quic.frame.Frame
 import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
+import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.encodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
@@ -260,6 +261,18 @@ private fun buildApplicationPacket(
     state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let {
         frames += it
         tokens += RecoveryToken.Ack
+    }
+
+    // Step 7: PTO probe. The driver sets `pendingPing` when its
+    // PTO timer fires without intervening ACKs. A PING is the
+    // smallest ack-eliciting frame (RFC 9000 §19.2) — its only
+    // purpose is to provoke an ACK from the peer, which then runs
+    // through loss detection (steps 5–6) and surfaces any
+    // outstanding losses for retransmit. The PING itself is not
+    // retransmitted on loss (RFC 9002 §A.9 PROBE_TIMEOUT skipped).
+    if (conn.pendingPing) {
+        frames += PingFrame
+        conn.pendingPing = false
     }
 
     // Re-credit the peer's send window when our receive offset has advanced

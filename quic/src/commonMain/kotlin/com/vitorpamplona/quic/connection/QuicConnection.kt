@@ -216,6 +216,24 @@ class QuicConnection(
             .QuicLossDetection()
 
     /**
+     * RFC 9002 §6.2 Probe Timeout signalling. When the driver loop's
+     * PTO timer fires (no ack-eliciting packet has been ACK'd in
+     * the PTO window), it sets [pendingPing] = true so the writer
+     * emits a PING frame on the next drain. The PING elicits an
+     * ACK from the peer; that ACK runs through loss detection and
+     * declares any in-flight packets lost, triggering retransmit.
+     */
+    internal var pendingPing: Boolean = false
+
+    /**
+     * RFC 9002 §6.2.2 consecutive PTO count. Incremented on each
+     * PTO expiration without an intervening ACK; reset to 0 when an
+     * inbound ACK acknowledges any ack-eliciting packet. The driver
+     * doubles its sleep between probes by `1 shl consecutivePtoCount`.
+     */
+    internal var consecutivePtoCount: Int = 0
+
+    /**
      * Optional supplier of underlying UDP-socket counters. Wired by the
      * platform-specific driver since `UdpSocket`'s counters are
      * JVM-side fields the commonMain side can't see directly.
