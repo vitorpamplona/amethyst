@@ -21,6 +21,7 @@
 package com.vitorpamplona.quic.connection
 
 import com.vitorpamplona.quic.QuicCodecException
+import com.vitorpamplona.quic.connection.recovery.drainAckedSentPackets
 import com.vitorpamplona.quic.frame.AckFrame
 import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
@@ -163,12 +164,18 @@ private fun dispatchFrames(
     for (frame in frames) {
         when (frame) {
             is AckFrame -> {
-                // We don't currently retransmit, so we just absorb ACKs. But
-                // we DO purge our own ACK tracker below the peer's largest
-                // acknowledged: the peer has confirmed receipt of those ACKs,
-                // so we don't need to keep advertising them — without this
-                // the range list grows unboundedly on long connections.
+                // Purge our own ACK tracker below the peer's largest
+                // acknowledged: the peer has confirmed receipt of those
+                // ACKs, so we don't need to keep advertising them —
+                // without this the range list grows unboundedly on long
+                // connections.
                 state.ackTracker.purgeBelow(frame.largestAcknowledged - frame.firstAckRange)
+                // Step 3 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
+                // remove SentPacket entries for the PNs the peer acknowledged.
+                // Returned list is intentionally discarded for now —
+                // step 5 will use it to feed loss detection / RTT
+                // estimation; for step 3 we just drain.
+                drainAckedSentPackets(state.sentPackets, frame)
             }
 
             is CryptoFrame -> {
