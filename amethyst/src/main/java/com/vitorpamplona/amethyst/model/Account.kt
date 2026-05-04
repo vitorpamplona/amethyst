@@ -886,12 +886,19 @@ class Account(
                 existingRelays + replyAuthorRelays
             } ?: emptySet()
 
-        return reactionOutBoxRelays +
-            inboxRelaysOfTheAuthorOfTheOriginalNote +
-            taggedUserInboxRelays +
-            channelRelays +
-            replyRelays +
-            relaysItCameFrom
+        val combined =
+            reactionOutBoxRelays +
+                inboxRelaysOfTheAuthorOfTheOriginalNote +
+                taggedUserInboxRelays +
+                channelRelays +
+                replyRelays +
+                relaysItCameFrom
+
+        // Relays declared in kind 10050 are DM-inbox and reject reactions.
+        // Subtract the full DM list so a relay declared as DM inbox is excluded
+        // even if it also appears in the user's outbox composition.
+        val dmRelays = dmRelayList.flow.value
+        return if (dmRelays.isNotEmpty()) combined - dmRelays else combined
     }
 
     private fun computeRelayListForLinkedUser(user: User): Set<NormalizedRelayUrl> =
@@ -1026,6 +1033,15 @@ class Account(
         }
 
         relayList.addAll(computeRelaysForChannels(event))
+
+        // Relays declared in kind 10050 are DM-inbox and reject non-DM kinds.
+        // Subtract the full DM list so a relay declared as DM inbox is excluded
+        // even if it also appears in the user's outbox composition. GiftWrap /
+        // WrappedEvent paths return earlier and never reach this filter.
+        val dmRelays = dmRelayList.flow.value
+        if (dmRelays.isNotEmpty()) {
+            relayList.removeAll(dmRelays)
+        }
 
         return relayList
     }
