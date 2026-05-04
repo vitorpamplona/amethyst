@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -36,5 +36,5 @@ fun RelayInfoNip66FilterAssemblerSubscription(
             RelayInfoNip66QueryState(relayUrl, accountViewModel.account.followOutboxesOrProxy.flow.value)
         }
 
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().relayInfoNip66)
+    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().relayInfoNip66)
 }

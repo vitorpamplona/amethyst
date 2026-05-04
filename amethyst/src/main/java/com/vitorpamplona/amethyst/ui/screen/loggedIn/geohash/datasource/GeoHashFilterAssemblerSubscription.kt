@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -40,5 +40,5 @@ fun GeoHashFilterAssemblerSubscription(
             GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value)
         }
 
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)
+    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)
 }

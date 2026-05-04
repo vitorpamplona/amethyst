@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.User
 
 @Composable
@@ -37,5 +37,5 @@ fun UserProfileFilterAssemblerSubscription(
             UserProfileQueryState(user)
         }
 
-    KeyDataSourceSubscription(state, assembler)
+    LifecycleAwareKeyDataSourceSubscription(state, assembler)
 }

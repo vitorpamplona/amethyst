@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -44,5 +44,5 @@ fun ChannelFinderFilterAssemblerSubscription(
             ChannelFinderQueryState(channel)
         }
 
-    KeyDataSourceSubscription(state, dataSource)
+    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }
