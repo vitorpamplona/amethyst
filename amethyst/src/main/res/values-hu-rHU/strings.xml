@@ -165,6 +165,8 @@
     <string name="failed_to_save_the_image">Nem sikerült menteni a képet</string>
     <string name="video_saved_to_the_gallery">Videó mentve a videógalériába</string>
     <string name="failed_to_save_the_video">Nem sikerült menteni a videót</string>
+    <string name="pdf_saved_to_the_gallery">A PDF fájl a Letöltések/Amethyst mappába lett mentve</string>
+    <string name="failed_to_save_the_pdf">Nem sikerült menteni a PDF-fájlt</string>
     <string name="upload_image">Kép feltöltése</string>
     <string name="upload_file">Fájl feltöltése</string>
     <string name="take_a_picture">Kép készítése</string>
