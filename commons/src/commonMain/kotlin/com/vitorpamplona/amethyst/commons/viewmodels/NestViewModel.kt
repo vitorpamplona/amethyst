@@ -44,6 +44,7 @@ import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
@@ -842,7 +843,9 @@ class NestViewModel(
     ) {
         if (closed || activeSubscriptions[pubkey] !== slot) return
         try {
+            Log.d("NestRx") { "VM.openSubscription -> subscribeSpeaker pubkey=$pubkey" }
             val handle = l.subscribeSpeaker(pubkey)
+            Log.d("NestRx") { "VM.openSubscription <- subscribeSpeaker returned for pubkey=$pubkey" }
             // Re-check after the suspending subscribeSpeaker — the user
             // may have removed this speaker via updateSpeakers / disconnected
             // while the SUBSCRIBE was in flight. If so, abandon the handle
@@ -1004,6 +1007,7 @@ class NestViewModel(
         // First frame for this subscription — clear the buffering
         // overlay. Subsequent frames are no-ops here.
         if (_uiState.value.connectingSpeakers.contains(pubkey)) {
+            Log.d("NestRx") { "VM.onSpeakerActivity FIRST frame for pubkey=$pubkey — clearing spinner" }
             _uiState.update { it.copy(connectingSpeakers = (it.connectingSpeakers - pubkey).toPersistentSet()) }
         }
         if (!_uiState.value.speakingNow.contains(pubkey)) {

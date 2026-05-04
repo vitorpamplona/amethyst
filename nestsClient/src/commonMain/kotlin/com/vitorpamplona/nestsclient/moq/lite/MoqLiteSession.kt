@@ -23,6 +23,7 @@ package com.vitorpamplona.nestsclient.moq.lite
 import com.vitorpamplona.nestsclient.moq.MoqCodecException
 import com.vitorpamplona.nestsclient.moq.MoqWriter
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -298,6 +299,10 @@ class MoqLiteSession internal constructor(
             }
         when (resp) {
             is MoqLiteCodec.SubscribeResponse.Dropped -> {
+                Log.w("NestRx") {
+                    "SUBSCRIBE_DROP id=$id broadcast='$broadcast' track='$track' " +
+                        "errCode=${resp.drop.errorCode} reason='${resp.drop.reasonPhrase}'"
+                }
                 state.withLock { subscriptionsBySubscribeId.remove(id) }
                 frames.close()
                 runCatching { bidi.finish() }
@@ -308,6 +313,7 @@ class MoqLiteSession internal constructor(
             }
 
             is MoqLiteCodec.SubscribeResponse.Ok -> {
+                Log.d("NestRx") { "SUBSCRIBE_OK id=$id broadcast='$broadcast' track='$track'" }
                 return MoqLiteSubscribeHandle(
                     id = id,
                     ok = resp.ok,
@@ -383,6 +389,9 @@ class MoqLiteSession internal constructor(
     private suspend fun pumpAnnounceWatch(handle: MoqLiteAnnouncesHandle) {
         try {
             handle.updates.collect { update ->
+                Log.d("NestRx") {
+                    "announce update status=${update.status} suffix='${update.suffix}' hops=${update.hops}"
+                }
                 if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
                 val targets =
                     state.withLock {
@@ -391,6 +400,9 @@ class MoqLiteSession internal constructor(
                             .toList()
                     }
                 for (sub in targets) {
+                    Log.w("NestRx") {
+                        "announce ENDED closes sub id=${sub.id} broadcast='${sub.request.broadcast}'"
+                    }
                     // Just close the frames channel — the
                     // wrapper-level collect of `frames.consumeAsFlow()`
                     // ends naturally and the wrapper pump re-issues.
@@ -466,6 +478,7 @@ class MoqLiteSession internal constructor(
                     subscribeId = hdr.subscribeId
                     groupSequence = hdr.sequence
                     headerRead = true
+                    Log.d("NestRx") { "uni grpHdr id=$subscribeId seq=$groupSequence" }
                 }
                 while (true) {
                     val frame = buffer.readSizePrefixed() ?: break
@@ -477,6 +490,10 @@ class MoqLiteSession internal constructor(
                                 payload = frame,
                             ),
                         )
+                    } else {
+                        Log.w("NestRx") {
+                            "uni frame drop: no live sub for id=$subscribeId seq=$groupSequence size=${frame.size}"
+                        }
                     }
                     // If the subscription has been closed already we
                     // silently drop the frame — the publisher hasn't
@@ -527,6 +544,7 @@ class MoqLiteSession internal constructor(
     suspend fun publish(broadcastSuffix: String): MoqLitePublisherHandle {
         ensureOpen()
         val normalised = MoqLitePath.normalize(broadcastSuffix)
+        Log.d("NestTx") { "publish suffix='$normalised'" }
         val publisher: PublisherStateImpl
         state.withLock {
             check(!closed) { "session is closed" }
@@ -611,6 +629,9 @@ class MoqLiteSession internal constructor(
                             val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload)
                             val emittedSuffix =
                                 MoqLitePath.stripPrefix(please.prefix, publisher.suffix) ?: publisher.suffix
+                            Log.d("NestTx") {
+                                "inbound AnnouncePlease prefix='${please.prefix}' → reply Active suffix='$emittedSuffix'"
+                            }
                             bidi.write(
                                 MoqLiteCodec.encodeAnnounce(
                                     MoqLiteAnnounce(
@@ -627,6 +648,10 @@ class MoqLiteSession internal constructor(
                         MoqLiteControlType.Subscribe -> {
                             val subPayload = buffer.readSizePrefixed() ?: return@collect
                             val sub = MoqLiteCodec.decodeSubscribe(subPayload)
+                            Log.d("NestTx") {
+                                "inbound SUBSCRIBE id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' " +
+                                    "priority=${sub.priority} maxLatencyMs=${sub.maxLatencyMillis}"
+                            }
                             // Register the subscription BEFORE sending Ok so the
                             // peer's observation of Ok is a happens-after of
                             // `inboundSubs += sub`. Otherwise on dispatchers that
@@ -675,7 +700,12 @@ class MoqLiteSession internal constructor(
         // groups off this dead subscriber. Announce bidis are
         // owned by the publisher state for sending Ended on
         // publisher-close — we don't remove them here.
-        inboundSub?.let { publisher.removeInboundSubscription(it) }
+        inboundSub?.let {
+            Log.d("NestTx") {
+                "inbound SUBSCRIBE FIN'd: removing id=${it.id} broadcast='${it.broadcast}' track='${it.track}'"
+            }
+            publisher.removeInboundSubscription(it)
+        }
     }
 
     /**
@@ -760,7 +790,13 @@ class MoqLiteSession internal constructor(
         suspend fun registerInboundSubscription(sub: MoqLiteSubscribe) {
             gate.withLock {
                 if (publisherClosed) return
+                val wasEmpty = inboundSubs.isEmpty()
                 inboundSubs += sub
+                if (wasEmpty) {
+                    Log.d("NestTx") {
+                        "first inbound subscriber attached id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}'"
+                    }
+                }
             }
         }
 
@@ -877,6 +913,10 @@ class MoqLiteSession internal constructor(
             val sub = inboundSubs.first()
             val sequence = nextSequence++
             val uni = openGroupStream(subscribeId = sub.id, sequence = sequence)
+            Log.d("NestTx") {
+                "openGroup seq=$sequence keyedOnSubId=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' " +
+                    "inboundSubsCount=${inboundSubs.size}"
+            }
             return GroupOutbound(sequence = sequence, uni = uni)
         }
     }
