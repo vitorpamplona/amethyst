@@ -37,31 +37,39 @@ data class QuicConnectionConfig(
     val initialMaxStreamDataUni: Long = 1L * 1024 * 1024,
     val initialMaxStreamsBidi: Long = 100L,
     /**
-     * Initial peer-initiated unidirectional stream limit. moq-rs's Quinn
-     * stack advertises `max_concurrent_uni_streams = 10000` for the same
-     * reason we now do: every Opus group is a fresh peer-initiated uni
-     * stream, so a long broadcast accumulates many lifetime stream IDs.
+     * Initial peer-initiated unidirectional stream limit. Sized to never
+     * trip the rolling [QuicConnectionWriter.appendFlowControlUpdates]
+     * extension path during a realistic audio-rooms broadcast — see
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
      *
-     * Production tracing on a listener phone (Phone B receiving a Phone-A
-     * broadcast against `moq.nostrnests.com`) showed the cliff lands at
-     * exactly the moment our writer emits its first `MAX_STREAMS_UNI`
-     * extension at the half-window threshold (count=50 with cap=100):
-     * the listener receives one more stream after the bump, then UDP
-     * goes silent at the kernel level (`udpRecvDatagrams` frozen) while
-     * our QUIC state still believes the connection is alive. The relay
-     * propagates the listener's disconnect to the publisher (publisher
-     * sees `inbound SUBSCRIBE FIN'd`), but our QUIC stack never observes
-     * it — split-brain. The trace is reproducible across runs.
+     * Why a fixed-and-large initial value instead of relying on rolling
+     * extension: production tracing against `moq.nostrnests.com` showed
+     * that emitting `MAX_STREAMS_UNI` mid-connection silently breaks the
+     * relay's send path. The listener receives one more uni stream after
+     * the bump, then UDP goes dead at the kernel level
+     * (`udpRecvDatagrams` frozen) while our QUIC state still believes
+     * the connection is alive. The relay propagates the listener's
+     * disconnect to the publisher (`inbound SUBSCRIBE FIN'd` on the
+     * publisher side), but our stack never observes it — split-brain.
+     * Reproducible across runs. We don't yet know whether our frame is
+     * malformed, mis-sequenced relative to other frames in the packet,
+     * or hitting a moq-rs / Quinn bug — but we do know that not emitting
+     * the extension keeps the connection healthy.
      *
-     * The rolling-extension code path remains in place for correctness on
-     * other peers (and so 100×fpg=5 broadcasts of audio-rooms longer than
-     * ~50 s × 5 ≈ 250 s still extend cleanly), but with this cap raised
-     * to 10 000 the listener won't actually need to extend until 5 000+
-     * groups have flowed — well past any realistic Nest duration. That
-     * sidesteps the malformed-or-mis-sequenced extension that's tripping
-     * the relay today.
+     * Capacity math, with [NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP]
+     * = 5 and Opus 20 ms: each group is one peer-initiated uni stream,
+     * so the relay opens ~10 streams/sec. The half-window threshold
+     * (`count + initialMaxStreamsUni/2 >= advertisedMaxStreamsUni`)
+     * trips at count = 500 000 streams, i.e. ~13.9 hours of continuous
+     * audio. Well past any realistic Nest duration.
+     *
+     * Memory cost: the [QuicConnection.streams] map currently grows for
+     * the connection's lifetime. At 10 streams/sec a 2-hour Nest leaves
+     * ~72k entries; per-stream overhead is small but unbounded growth
+     * over many hours is a known follow-up. For now this is a tolerable
+     * trade in exchange for not tripping the relay-side bug.
      */
-    val initialMaxStreamsUni: Long = 10_000L,
+    val initialMaxStreamsUni: Long = 1_000_000L,
     val maxIdleTimeoutMillis: Long = 30_000L,
     val maxUdpPayloadSize: Long = 1452L,
     val activeConnectionIdLimit: Long = 4L,

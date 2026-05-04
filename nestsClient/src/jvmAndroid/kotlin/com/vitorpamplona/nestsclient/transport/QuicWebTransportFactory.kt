@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.nestsclient.transport
 
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
@@ -38,12 +37,9 @@ import com.vitorpamplona.quic.webtransport.buildExtendedConnectHeaders
 import com.vitorpamplona.quic.webtransport.encodeHeadersFrame
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 
 /**
  * Pure-Kotlin WebTransport over QUIC v1, sitting on top of every layer in
@@ -185,7 +181,7 @@ class QuicWebTransportFactory(
             }
 
             val state = QuicWebTransportSessionState(conn, driver, requestStream.streamId)
-            return QuicWebTransportSession(state, parentScope)
+            return QuicWebTransportSession(state)
         } catch (we: WebTransportException) {
             throw we
         } catch (ce: kotlinx.coroutines.CancellationException) {
@@ -263,42 +259,8 @@ class QuicWebTransportFactory(
 /** Adapter that wraps the :quic [QuicWebTransportSessionState] in the nestsClient interface. */
 class QuicWebTransportSession(
     private val state: QuicWebTransportSessionState,
-    parentScope: CoroutineScope? = null,
 ) : WebTransportSession {
     override val isOpen: Boolean get() = state.isOpen
-
-    /**
-     * Periodic flow-control snapshot logger. Wakes every
-     * [SNAPSHOT_INTERVAL_MS] and dumps the QUIC layer's view of cap +
-     * count + send credit so we can correlate "audio cliff at uni
-     * stream #N" against "what did flow control look like at that
-     * moment". Cancelled when [close] tears down the session.
-     *
-     * Lazy-launched (via [parentScope]) only when the caller has
-     * provided a scope to host it — tests construct the session
-     * without one and don't need the logger.
-     */
-    private val snapshotJob: Job? =
-        parentScope?.launch {
-            while (true) {
-                delay(SNAPSHOT_INTERVAL_MS)
-                if (!state.isOpen) break
-                runCatching {
-                    val snap = state.connection.flowControlSnapshot()
-                    Log.d("NestQuic") {
-                        "snapshot peerInitiatedUni=${snap.peerInitiatedUniCount} " +
-                            "advertisedMaxStreamsUni=${snap.advertisedMaxStreamsUni} " +
-                            "peerInitMaxStreamsUni=${snap.peerInitialMaxStreamsUni} " +
-                            "sendCredit=${snap.sendConnectionFlowCredit} " +
-                            "consumed=${snap.sendConnectionFlowConsumed} " +
-                            "pendingBytes=${snap.totalEnqueuedNotSentBytes} " +
-                            "pendingStreams=${snap.streamsWithPendingBytes}/${snap.totalStreamsTracked} " +
-                            "udpRecvDatagrams=${snap.udp?.receivedDatagrams ?: -1L} " +
-                            "udpRecvBytes=${snap.udp?.receivedBytes ?: -1L}"
-                    }
-                }
-            }
-        }
 
     /**
      * Diagnostic-only passthrough to
@@ -364,18 +326,7 @@ class QuicWebTransportSession(
         code: Int,
         reason: String,
     ) {
-        snapshotJob?.cancel()
         state.close(code, reason)
-    }
-
-    private companion object {
-        /**
-         * Cadence for the periodic flow-control snapshot. 5 s is short
-         * enough to catch the audio-cliff transition (which lands within
-         * 5–15 s of subscribe) and long enough that the snapshot itself
-         * isn't a meaningful CPU cost.
-         */
-        const val SNAPSHOT_INTERVAL_MS = 5_000L
     }
 }
 

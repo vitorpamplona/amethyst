@@ -379,7 +379,6 @@ private class ReconnectingHandle(
                         liveHandleRef.set(handle)
                         try {
                             handle.objects.collect { frames.emit(it) }
-                            Log.d("NestRx") { "ReconnectingHandle.objects flow ended naturally — pump will re-issue after ${RESUBSCRIBE_BACKOFF_MS}ms" }
                         } finally {
                             if (liveHandleRef.get() === handle) liveHandleRef.set(null)
                         }

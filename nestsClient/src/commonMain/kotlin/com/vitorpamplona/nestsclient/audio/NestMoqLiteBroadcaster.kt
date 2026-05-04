@@ -21,7 +21,6 @@
 package com.vitorpamplona.nestsclient.audio
 
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -162,8 +161,6 @@ class NestMoqLiteBroadcaster(
                 // we bail. publisher.send returning `false` (no inbound
                 // subscriber) is NOT counted — empty rooms are normal.
                 var consecutiveSendErrors = 0
-                var sendNoSubLogged = false
-                var lastSendHadSub = false
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
@@ -190,21 +187,7 @@ class NestMoqLiteBroadcaster(
                         // for the production cliff this works around.
                         val sendOutcome =
                             runCatching {
-                                val accepted = publisher.send(opus)
-                                if (accepted) {
-                                    if (!lastSendHadSub) {
-                                        Log.d("NestTx") { "broadcaster: send accepted (subscriber attached)" }
-                                        lastSendHadSub = true
-                                    }
-                                } else {
-                                    if (!sendNoSubLogged) {
-                                        Log.w("NestTx") {
-                                            "broadcaster: publisher.send returned false (no inbound subscriber on relay)"
-                                        }
-                                        sendNoSubLogged = true
-                                    }
-                                    lastSendHadSub = false
-                                }
+                                publisher.send(opus)
                                 framesInCurrentGroup += 1
                                 if (framesInCurrentGroup >= framesPerGroup) {
                                     publisher.endGroup()
@@ -223,9 +206,6 @@ class NestMoqLiteBroadcaster(
                             }.onFailure { t ->
                                 if (t is CancellationException) throw t
                                 consecutiveSendErrors += 1
-                                Log.w("NestTx") {
-                                    "broadcaster: publisher.send threw (#$consecutiveSendErrors): ${t::class.simpleName}: ${t.message}"
-                                }
                                 onError(
                                     AudioException(
                                         AudioException.Kind.PlaybackFailed,

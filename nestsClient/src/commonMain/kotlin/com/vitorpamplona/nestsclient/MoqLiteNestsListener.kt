@@ -26,7 +26,6 @@ import com.vitorpamplona.nestsclient.moq.SubscribeOk
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteAnnounceStatus
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSubscribeException
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -79,15 +78,9 @@ class MoqLiteNestsListener internal constructor(
     override suspend fun subscribeSpeaker(
         speakerPubkeyHex: String,
         maxLatencyMs: Long,
-    ): SubscribeHandle {
-        Log.d("NestRx") { "subscribeSpeaker pubkey=$speakerPubkeyHex maxLatencyMs=$maxLatencyMs" }
-        return wrapSubscription(broadcast = speakerPubkeyHex, track = AUDIO_TRACK, maxLatencyMs = maxLatencyMs)
-    }
+    ): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = AUDIO_TRACK, maxLatencyMs = maxLatencyMs)
 
-    override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle {
-        Log.d("NestRx") { "subscribeCatalog pubkey=$speakerPubkeyHex" }
-        return wrapSubscription(broadcast = speakerPubkeyHex, track = CATALOG_TRACK, maxLatencyMs = 0L)
-    }
+    override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = CATALOG_TRACK, maxLatencyMs = 0L)
 
     private suspend fun wrapSubscription(
         broadcast: String,
@@ -145,14 +138,10 @@ class MoqLiteNestsListener internal constructor(
             val handle = session.announce(prefix = "")
             try {
                 handle.updates.collect { announce ->
-                    val active = announce.status == MoqLiteAnnounceStatus.Active
-                    Log.d("NestRx") {
-                        "RoomAnnouncement pubkey=${announce.suffix} active=$active status=${announce.status} hops=${announce.hops}"
-                    }
                     emit(
                         RoomAnnouncement(
                             pubkey = announce.suffix,
-                            active = active,
+                            active = announce.status == MoqLiteAnnounceStatus.Active,
                         ),
                     )
                 }
