@@ -202,10 +202,12 @@ private fun dispatchFrames(
                             largestAckedPn = largestAckedPn,
                             nowMs = nowMillis,
                         )
-
-                    // Step 6 will dispatch tokens here. Drop for now.
-                    @Suppress("UNUSED_VARIABLE")
-                    val unusedForStep6 = lost
+                    // Step 6: dispatch each lost packet's tokens to the
+                    // matching pending* field. The supersede check (lost
+                    // value still == advertised) lives inside onTokensLost.
+                    for (lostPacket in lost) {
+                        conn.onTokensLost(lostPacket.tokens)
+                    }
                 }
             }
 

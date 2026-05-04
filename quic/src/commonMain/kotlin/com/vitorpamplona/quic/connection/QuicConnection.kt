@@ -723,6 +723,56 @@ class QuicConnection(
     /** Caller must hold [lock]. */
     internal fun streamByIdLocked(id: Long): QuicStream? = streams[id]
 
+    /**
+     * Step 6 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
+     * dispatch the tokens of declared-lost packets to the matching
+     * `pending*` field, applying the supersede check from neqo's
+     * `fc.rs::frame_lost`. The supersede invariant: only re-flag for
+     * retransmit if the lost value still equals the connection's
+     * current advertised cap. If a higher extension has since gone
+     * out, the older lost frame is irrelevant — the newer value
+     * supersedes it.
+     *
+     * Called by the parser's AckFrame handler after
+     * [com.vitorpamplona.quic.connection.recovery.QuicLossDetection.detectAndRemoveLost]
+     * returns the lost set. Caller must hold [lock].
+     */
+    internal fun onTokensLost(tokens: List<com.vitorpamplona.quic.connection.recovery.RecoveryToken>) {
+        for (token in tokens) {
+            when (token) {
+                com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
+                    // ACK frames are not retransmittable per RFC 9000
+                    // §13.2.1; the peer's own ACKs cover newer ranges.
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsUni -> {
+                    if (token.maxStreams == advertisedMaxStreamsUni) {
+                        pendingMaxStreamsUni = token.maxStreams
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsBidi -> {
+                    if (token.maxStreams == advertisedMaxStreamsBidi) {
+                        pendingMaxStreamsBidi = token.maxStreams
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxData -> {
+                    if (token.maxData == advertisedMaxData) {
+                        pendingMaxData = token.maxData
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamData -> {
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    if (token.maxData == stream.receiveLimit) {
+                        pendingMaxStreamData[token.streamId] = token.maxData
+                    }
+                }
+            }
+        }
+    }
+
     companion object {
         /**
          * Bound on the inbound datagram queue depth. RFC 9221 datagrams are
