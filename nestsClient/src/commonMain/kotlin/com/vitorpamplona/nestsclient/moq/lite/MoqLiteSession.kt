@@ -562,17 +562,20 @@ class MoqLiteSession internal constructor(
      * Only one [publish] is supported per session for now. Calling
      * [publish] twice on the same session is rejected with [IllegalStateException].
      */
-    suspend fun publish(broadcastSuffix: String): MoqLitePublisherHandle {
+    suspend fun publish(
+        broadcastSuffix: String,
+        track: String,
+    ): MoqLitePublisherHandle {
         ensureOpen()
         val normalised = MoqLitePath.normalize(broadcastSuffix)
-        Log.d("NestTx") { "publish suffix='$normalised'" }
+        Log.d("NestTx") { "publish suffix='$normalised' track='$track'" }
         val publisher: PublisherStateImpl
         state.withLock {
             check(!closed) { "session is closed" }
             check(activePublisher == null) {
                 "MoqLiteSession.publish called twice — only one broadcast per session is supported"
             }
-            publisher = PublisherStateImpl(suffix = normalised)
+            publisher = PublisherStateImpl(suffix = normalised, track = track)
             activePublisher = publisher
             // Lazy launch — the inbound-bidi pump needs to keep running
             // for the lifetime of any active publisher.
@@ -783,13 +786,33 @@ class MoqLiteSession internal constructor(
     /**
      * Publisher state. Tracks the announce bidis the relay opened to us
      * + the inbound subscriptions a relay (or peer) opened against our
-     * broadcast, and owns the current group's uni stream.
+     * broadcast for [track], and owns the current group's uni stream.
+     *
+     * Per moq-lite Lite-03 a publisher is responsible for one
+     * `(broadcast, track)` tuple — the relay multiplexes multiple
+     * tracks per broadcast by routing each inbound SUBSCRIBE to the
+     * publisher whose track field matches. Subs whose `sub.track`
+     * doesn't match this publisher's [track] are intentionally
+     * ignored so a listener subscribing to e.g. `catalog.json` while
+     * we're only publishing `audio/data` doesn't accidentally hijack
+     * the audio routing — see [registerInboundSubscription] for the
+     * filter and the bug history below.
+     *
+     * Bug history (`nestsClient/plans/2026-05-04-publisher-track-routing.md`):
+     * before this filter, [openNextGroupLocked] keyed each group
+     * stream off `inboundSubs.first()`. When a listener opened both a
+     * `catalog.json` subscribe and an `audio/data` subscribe, whichever
+     * arrived first won the routing race — and because the catalog
+     * SUBSCRIBE typically races ahead of the audio one by a few ms,
+     * every Opus frame ended up on the catalog stream. Listeners saw
+     * a perpetually-spinning speaker avatar with no audio.
      *
      * `gate` serialises access to per-group state so concurrent
      * `send` / `startGroup` / `endGroup` / `close` can't race.
      */
     private inner class PublisherStateImpl(
         override val suffix: String,
+        private val track: String,
     ) : MoqLitePublisherHandle {
         private val gate = Mutex()
         private val announceBidis = mutableListOf<AnnounceBidiEntry>()
@@ -815,6 +838,13 @@ class MoqLiteSession internal constructor(
         suspend fun registerInboundSubscription(sub: MoqLiteSubscribe) {
             gate.withLock {
                 if (publisherClosed) return
+                if (sub.track != track) {
+                    Log.d("NestTx") {
+                        "ignoring inbound SUBSCRIBE id=${sub.id} track='${sub.track}' " +
+                            "(publisher serves track='$track' only)"
+                    }
+                    return
+                }
                 val wasEmpty = inboundSubs.isEmpty()
                 inboundSubs += sub
                 if (wasEmpty) {
