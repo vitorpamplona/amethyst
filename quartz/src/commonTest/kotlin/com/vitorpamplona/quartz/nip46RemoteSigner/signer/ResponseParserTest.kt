@@ -204,10 +204,19 @@ class ResponseParserTest {
     }
 
     @Test
-    fun nip04EncryptParseUnexpected() {
-        val response = BunkerResponsePong("req-4")
+    fun nip04EncryptParseUnexpectedNullResult() {
+        val response = BunkerResponse("req-4", null, null)
         val result = Nip04EncryptResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.ReceivedButCouldNotPerform<EncryptionResult>>(result)
+    }
+
+    @Test
+    fun nip04EncryptParseGenericBunkerResponse() {
+        // Production case: deserializer produces generic BunkerResponse with ciphertext
+        val response = BunkerResponse("req-4", "encrypted-ciphertext-data", null)
+        val result = Nip04EncryptResponse.parse(response)
+        assertIs<SignerResult.RequestAddressed.Successful<EncryptionResult>>(result)
+        assertEquals("encrypted-ciphertext-data", result.result.ciphertext)
     }
 
     // --- Nip04DecryptResponse ---
@@ -228,10 +237,19 @@ class ResponseParserTest {
     }
 
     @Test
-    fun nip04DecryptParseUnexpected() {
-        val response = BunkerResponsePong("req-5")
+    fun nip04DecryptParseUnexpectedNullResult() {
+        val response = BunkerResponse("req-5", null, null)
         val result = Nip04DecryptResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.ReceivedButCouldNotPerform<DecryptionResult>>(result)
+    }
+
+    @Test
+    fun nip04DecryptParseGenericBunkerResponse() {
+        // Production case: deserializer produces generic BunkerResponse with plaintext
+        val response = BunkerResponse("req-5", "Hello, this is the decrypted message!", null)
+        val result = Nip04DecryptResponse.parse(response)
+        assertIs<SignerResult.RequestAddressed.Successful<DecryptionResult>>(result)
+        assertEquals("Hello, this is the decrypted message!", result.result.plaintext)
     }
 
     // --- Nip44EncryptResponse ---
@@ -252,10 +270,19 @@ class ResponseParserTest {
     }
 
     @Test
-    fun nip44EncryptParseUnexpected() {
-        val response = BunkerResponseAck("req-6")
+    fun nip44EncryptParseUnexpectedNullResult() {
+        val response = BunkerResponse("req-6", null, null)
         val result = Nip44EncryptResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.ReceivedButCouldNotPerform<EncryptionResult>>(result)
+    }
+
+    @Test
+    fun nip44EncryptParseGenericBunkerResponse() {
+        // Production case: deserializer produces generic BunkerResponse with ciphertext
+        val response = BunkerResponse("req-6", "nip44-encrypted-payload", null)
+        val result = Nip44EncryptResponse.parse(response)
+        assertIs<SignerResult.RequestAddressed.Successful<EncryptionResult>>(result)
+        assertEquals("nip44-encrypted-payload", result.result.ciphertext)
     }
 
     // --- Nip44DecryptResponse ---
@@ -276,9 +303,18 @@ class ResponseParserTest {
     }
 
     @Test
-    fun nip44DecryptParseUnexpected() {
-        val response = BunkerResponseAck("req-7")
+    fun nip44DecryptParseUnexpectedNullResult() {
+        val response = BunkerResponse("req-7", null, null)
         val result = Nip44DecryptResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.ReceivedButCouldNotPerform<DecryptionResult>>(result)
+    }
+
+    @Test
+    fun nip44DecryptParseGenericBunkerResponse() {
+        // Production case: deserializer produces generic BunkerResponse with plaintext
+        val response = BunkerResponse("req-7", "Decrypted NIP-44 content here", null)
+        val result = Nip44DecryptResponse.parse(response)
+        assertIs<SignerResult.RequestAddressed.Successful<DecryptionResult>>(result)
+        assertEquals("Decrypted NIP-44 content here", result.result.plaintext)
     }
 }

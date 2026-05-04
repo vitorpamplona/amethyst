@@ -29,15 +29,17 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import com.vitorpamplona.quartz.utils.tryAndWait
+import kotlinx.coroutines.delay
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 
 class RemoteSignerManager(
-    val timeout: Long = 30000,
+    val timeout: Long = 65_000,
     val client: INostrClient,
     val signer: NostrSignerInternal,
     val remoteKey: String,
     val relayList: Set<NormalizedRelayUrl>,
+    val maxRetries: Int = 1,
 ) {
     private val awaitingRequests = LargeCache<String, Continuation<BunkerResponse>>()
 
@@ -48,15 +50,14 @@ class RemoteSignerManager(
     }
 
     /**
-     * Launches the signer, waits and parses the result
+     * Launches the signer, waits and parses the result.
+     *
+     * Builds the request once and republishes the same event on retry to ensure
+     * the bunker's response (keyed by request ID) can always be matched.
      *
      * @param bunkerRequestBuilder The BunkerRequest to be sent.
      * @param parser A function that parses the BunkerResponse into a [SignerResult.RequestAddressed<T>].
      * @return The result after parsing the BunkerResponse using the provided parser.
-     *
-     * This function uses the [tryAndWait] utility to implement a timeout on the Bunker Request approval.
-     * It assigns a unique ID to the request and keeps a continuation to resume once the result is received.
-     * If the timeout occurs or the continuation is cancelled, the request ID is cleaned up from [awaitingRequests].
      */
     suspend fun <T : IResult> launchWaitAndParse(
         bunkerRequestBuilder: () -> BunkerRequest,
@@ -69,20 +70,34 @@ class RemoteSignerManager(
                 remoteKey = remoteKey,
                 signer = signer,
             )
-        val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
+
+        var attempt = 0
+        while (true) {
+            val result =
+                tryAndWait(timeout) { continuation ->
+                    continuation.invokeOnCancellation {
+                        awaitingRequests.remove(request.id)
+                    }
+
+                    awaitingRequests.put(request.id, continuation)
+
+                    client.publish(event, relayList = relayList)
                 }
 
-                awaitingRequests.put(request.id, continuation)
+            when {
+                result != null -> {
+                    return parser(result)
+                }
 
-                client.publish(event, relayList = relayList)
+                attempt >= maxRetries -> {
+                    return SignerResult.RequestAddressed.TimedOut()
+                }
+
+                else -> {
+                    attempt++
+                    delay(2_000L)
+                }
             }
-
-        return when (result) {
-            null -> SignerResult.RequestAddressed.TimedOut()
-            else -> parser(result)
         }
     }
 }

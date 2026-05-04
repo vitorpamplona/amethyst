@@ -37,7 +37,9 @@ class Nip04EncryptResponse {
                 }
 
                 else -> {
-                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    response.result?.let {
+                        SignerResult.RequestAddressed.Successful(EncryptionResult(it))
+                    } ?: SignerResult.RequestAddressed.ReceivedButCouldNotPerform("No result in response")
                 }
             }
     }
