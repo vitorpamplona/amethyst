@@ -251,6 +251,14 @@ class DesktopRelaySubscriptionsCoordinator(
         feedMetadata.loadMetadataForPubkeys(pubkeys)
     }
 
+    /**
+     * Fast-path: batched metadata for visible-viewport authors.
+     * Bypasses rate limiter. Single subscription. Closes after EOSE.
+     */
+    fun loadMetadataBatched(pubkeys: List<HexKey>) {
+        feedMetadata.loadMetadataBatched(pubkeys)
+    }
+
     // -- DM Subscription Support --
 
     /** Active DM subscription IDs for cleanup */

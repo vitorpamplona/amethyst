@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.account
 
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -84,7 +85,7 @@ class AccountManagerLoadAccountTest {
         }
 
     @Test
-    fun loadSavedAccountInternalNoPrivkeyReturnsFailure() =
+    fun loadSavedAccountInternalNoPrivkeyFallsBackToReadOnly() =
         runTest {
             val keyPair = KeyPair()
             val npub = keyPair.pubKey.toNpub()
@@ -93,7 +94,9 @@ class AccountManagerLoadAccountTest {
             coEvery { storage.getPrivateKey(npub) } returns null
 
             val result = manager.loadSavedAccount()
-            assertTrue(result.isFailure)
+            assertTrue(result.isSuccess)
+            val state = result.getOrThrow()
+            assertTrue(state.isReadOnly)
         }
 
     @Test
@@ -108,7 +111,7 @@ class AccountManagerLoadAccountTest {
                 "bunker://$validHex?relay=wss://r.com",
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns null
 
             val result = manager.loadSavedAccount()
@@ -129,7 +132,7 @@ class AccountManagerLoadAccountTest {
                 "bunker://$validHex?relay=wss://r.com",
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralPrivKeyHex
 
             val result = manager.loadSavedAccount()

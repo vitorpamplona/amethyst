@@ -83,10 +83,24 @@ class DesktopLocalCache : ICacheProvider {
     private val _followedUsers = MutableStateFlow<Set<HexKey>>(emptySet())
     val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
 
+    /** Increments on each metadata update — observe to recompose when user names change. */
+    private val _metadataVersion = MutableStateFlow(0L)
+    val metadataVersion: StateFlow<Long> = _metadataVersion.asStateFlow()
+
     companion object {
     }
 
+    /** Index of notes by author pubkey — for fast metadata invalidation */
+    private val notesByAuthor = ConcurrentHashMap<HexKey, MutableSet<Note>>()
+
     val paymentTracker = NwcPaymentTracker()
+
+    private fun trackNoteAuthor(
+        note: Note,
+        authorPubkey: HexKey,
+    ) {
+        notesByAuthor.getOrPut(authorPubkey) { ConcurrentHashMap.newKeySet() }.add(note)
+    }
 
     // ----- User operations -----
 
@@ -156,10 +170,10 @@ class DesktopLocalCache : ICacheProvider {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null) {
                 user.updateUserInfo(newUserMetadata, event)
-                // Invalidate metadata flows on notes by this author that have observers
-                // so QuotedNoteEmbed/FeedNoteCard recompose with updated avatar/name
-                notes.forEach { _, note ->
-                    if (note.author?.pubkeyHex == event.pubKey && note.flowSet?.metadata?.hasObservers() == true) {
+                _metadataVersion.value++
+                // Invalidate metadata flows on notes by this author (O(K) via index)
+                notesByAuthor[event.pubKey]?.forEach { note ->
+                    if (note.flowSet?.metadata?.hasObservers() == true) {
                         note.flowSet?.metadata?.invalidateData()
                     }
                 }
@@ -265,6 +279,7 @@ class DesktopLocalCache : ICacheProvider {
         val author = getOrCreateUser(event.pubKey)
         val repliesTo = event.tagsWithoutCitations().map { getOrCreateNote(it) }
         note.loadEvent(event, author, repliesTo)
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
         return true
@@ -283,6 +298,7 @@ class DesktopLocalCache : ICacheProvider {
         val author = getOrCreateUser(event.pubKey)
         val repliesTo = event.tagsWithoutCitations().map { getOrCreateNote(it) }
         note.loadEvent(event, author, repliesTo)
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
         return true
@@ -303,6 +319,7 @@ class DesktopLocalCache : ICacheProvider {
             event.originalPost().mapNotNull { getNoteIfExists(it) } +
                 event.taggedAddresses().mapNotNull { addressableNotes.get(it.toValue()) }
         note.loadEvent(event, author, reactedTo)
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         reactedTo.forEach { it.addReaction(note) }
         return true
@@ -320,6 +337,7 @@ class DesktopLocalCache : ICacheProvider {
         if (note.event != null) return false
         val author = getOrCreateUser(event.pubKey)
         note.loadEvent(event, author, emptyList())
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         return true
     }
@@ -351,6 +369,7 @@ class DesktopLocalCache : ICacheProvider {
                 event.taggedAddresses().mapNotNull { addressableNotes.get(it.toValue()) }
 
         note.loadEvent(event, author, zappedNotes)
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
 
         // Link zap to target notes
@@ -378,6 +397,7 @@ class DesktopLocalCache : ICacheProvider {
         val boostedNote = boostedId?.let { getOrCreateNote(it) }
         val repliesTo = listOfNotNull(boostedNote)
         note.loadEvent(event, author, repliesTo)
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         boostedNote?.addBoost(note)
         return true
@@ -397,6 +417,7 @@ class DesktopLocalCache : ICacheProvider {
         val boostedNote = event.boostedEventId()?.let { getOrCreateNote(it) }
         val repliesTo = listOfNotNull(boostedNote)
         note.loadEvent(event, author, repliesTo)
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         boostedNote?.addBoost(note)
         return true
@@ -428,6 +449,7 @@ class DesktopLocalCache : ICacheProvider {
         if (note.event != null) return false
         val author = getOrCreateUser(event.pubKey)
         note.loadEvent(event, author, emptyList())
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         return true
     }
@@ -489,6 +511,7 @@ class DesktopLocalCache : ICacheProvider {
         if (note.event != null) return false
 
         note.loadEvent(event, author, emptyList())
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
 
         zappedNote?.addZapPayment(note, null)
@@ -522,6 +545,7 @@ class DesktopLocalCache : ICacheProvider {
         if (note.event != null) return false
 
         note.loadEvent(event, author, emptyList())
+        trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
 
         // Link response to zapped note via request
@@ -652,6 +676,8 @@ class DesktopLocalCache : ICacheProvider {
         _followedUsers.value = emptySet()
         followerCounts.clear()
         followingCounts.clear()
+        notesByAuthor.clear()
+        lastContactListCreatedAt = 0L
     }
 }
 

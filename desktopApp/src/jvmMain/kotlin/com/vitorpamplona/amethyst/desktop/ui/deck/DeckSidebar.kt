@@ -30,23 +30,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
+import com.vitorpamplona.amethyst.desktop.ui.account.AccountSwitcherDropdown
 import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
+import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun DeckSidebar(
+    activeNpub: String?,
+    allAccounts: ImmutableList<AccountInfo>,
+    localCache: DesktopLocalCache?,
+    onSwitchAccount: (String) -> Unit,
+    onAddAccount: () -> Unit,
+    onRemoveAccount: (String) -> Unit,
     onAddColumn: () -> Unit,
     onOpenSettings: () -> Unit,
     signerConnectionState: SignerConnectionState,
@@ -64,12 +71,13 @@ fun DeckSidebar(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text(
-            "A",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 20.sp,
+        AccountSwitcherDropdown(
+            activeNpub = activeNpub,
+            allAccounts = allAccounts,
+            localCache = localCache,
+            onSwitchAccount = onSwitchAccount,
+            onAddAccount = onAddAccount,
+            onRemoveAccount = onRemoveAccount,
         )
 
         Spacer(Modifier.size(16.dp))

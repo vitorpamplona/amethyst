@@ -50,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -90,7 +91,10 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 data class LightboxState(
@@ -181,8 +185,9 @@ fun FeedNoteCard(
             }
 
             // Original note content
+            val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
             NoteCard(
-                note = originalEvent.toNoteDisplayData(localCache),
+                note = displayData,
                 localCache = localCache,
                 onClick = { onNavigateToThread(originalEvent.id) },
                 onAuthorClick = onNavigateToProfile,
@@ -212,8 +217,9 @@ fun FeedNoteCard(
             }
         }
     } else {
-        // Regular note rendering (unchanged)
+        // Regular note rendering
         val flowSet = remember(note) { note.flow() }
+        val metadataState by flowSet.metadata.stateFlow.collectAsState()
         val reactionsState by flowSet.reactions.stateFlow.collectAsState()
         val repliesState by flowSet.replies.stateFlow.collectAsState()
         val zapsState by flowSet.zaps.stateFlow.collectAsState()
@@ -228,8 +234,9 @@ fun FeedNoteCard(
         }
 
         Column {
+            val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
             NoteCard(
-                note = event.toNoteDisplayData(localCache),
+                note = displayData,
                 localCache = localCache,
                 onClick = { onNavigateToThread(event.id) },
                 onAuthorClick = onNavigateToProfile,
@@ -260,6 +267,7 @@ fun FeedNoteCard(
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 fun FeedScreen(
     relayManager: DesktopRelayConnectionManager,
@@ -362,25 +370,18 @@ fun FeedScreen(
 
     val feedState by viewModel.feedState.feedContent.collectAsState()
 
-    // Load metadata for visible notes + repost/quoted note authors via Coordinator
+    // Viewport-aware metadata loading: only fetch for visible notes + buffer
+    // Uses snapshotFlow to avoid per-frame recomposition from scroll observation
     LaunchedEffect(feedState, subscriptionsCoordinator) {
-        if (subscriptionsCoordinator != null && feedState is FeedState.Loaded) {
-            val notes = viewModel.feedState.visibleNotes()
-            if (notes.isNotEmpty()) {
-                subscriptionsCoordinator.loadMetadataForNotes(notes)
+        if (subscriptionsCoordinator == null || feedState !is FeedState.Loaded) return@LaunchedEffect
+        val loadedFeed = feedState as FeedState.Loaded
 
-                // Also load metadata for repost original + quoted note authors
-                val referencedAuthors =
-                    notes
-                        .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
-                        .mapNotNull {
-                            it.replyTo
-                                ?.lastOrNull()
-                                ?.author
-                                ?.pubkeyHex
-                        }
-                subscriptionsCoordinator.loadMetadataForPubkeys(referencedAuthors)
-            }
+        // Initial load: batch metadata for first visible notes immediately
+        val initialNotes = viewModel.feedState.visibleNotes().take(30)
+        if (initialNotes.isNotEmpty()) {
+            val authors = initialNotes.mapNotNull { it.author?.pubkeyHex }.distinct()
+            subscriptionsCoordinator.loadMetadataBatched(authors)
+            subscriptionsCoordinator.loadMetadataForNotes(initialNotes)
         }
     }
 
@@ -544,8 +545,37 @@ fun FeedScreen(
 
                 is FeedState.Loaded -> {
                     val loadedState by state.feed.collectAsState()
+                    val lazyListState =
+                        androidx.compose.foundation.lazy
+                            .rememberLazyListState()
+
+                    // Viewport-aware scroll observation: fetch metadata for newly visible notes
+                    LaunchedEffect(lazyListState, loadedState) {
+                        if (subscriptionsCoordinator == null) return@LaunchedEffect
+                        val feedList = loadedState.list
+                        if (feedList.isEmpty()) return@LaunchedEffect
+
+                        snapshotFlow {
+                            val info = lazyListState.layoutInfo
+                            if (info.visibleItemsInfo.isEmpty()) return@snapshotFlow -1 to -1
+                            info.visibleItemsInfo.first().index to info.visibleItemsInfo.last().index
+                        }.distinctUntilChanged()
+                            .debounce(500)
+                            .collect { (first, last) ->
+                                if (first < 0) return@collect
+                                val from = (first - 10).coerceAtLeast(0)
+                                val to = (last + 10).coerceAtMost(feedList.lastIndex)
+                                val viewportNotes = feedList.subList(from, to + 1)
+                                val authors = viewportNotes.mapNotNull { it.author?.pubkeyHex }.distinct()
+                                if (authors.isNotEmpty()) {
+                                    subscriptionsCoordinator.loadMetadataBatched(authors)
+                                }
+                            }
+                    }
+
                     val sidePadding = LocalReadingSidePadding.current
                     LazyColumn(
+                        state = lazyListState,
                         contentPadding = PaddingValues(horizontal = sidePadding + 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {

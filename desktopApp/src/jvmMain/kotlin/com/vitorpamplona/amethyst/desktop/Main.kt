@@ -762,11 +762,63 @@ fun App(
             ).also { it.startCleanupLoop() }
         }
 
-    // Clear cache and subscriptions on logout
+    // Clear cache and subscriptions on logout or account switch
+    var previousAccountPubKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(accountState) {
-        if (accountState is AccountState.LoggedOut) {
-            subscriptionsCoordinator.clear()
-            localCache.clear()
+        when (val state = accountState) {
+            is AccountState.LoggedOut -> {
+                subscriptionsCoordinator.clear()
+                localCache.clear()
+                previousAccountPubKey = null
+            }
+
+            is AccountState.LoggedIn -> {
+                val currentPubKey = state.pubKeyHex
+                if (previousAccountPubKey != null && previousAccountPubKey != currentPubKey) {
+                    // Account switched — clear old data so new feed loads fresh
+                    subscriptionsCoordinator.clear()
+                    localCache.clear()
+                    subscriptionsCoordinator.start()
+                }
+                previousAccountPubKey = currentPubKey
+            }
+
+            is AccountState.ConnectingRelays -> {}
+        }
+    }
+
+    // Fetch metadata for all accounts in the switcher + persist display names
+    val allAccountsForMetadata by accountManager.allAccounts.collectAsState()
+    LaunchedEffect(allAccountsForMetadata, accountState) {
+        if (accountState !is AccountState.LoggedIn) return@LaunchedEffect
+        // Wait for relay connections before requesting metadata
+        relayManager.connectedRelays.first { it.isNotEmpty() }
+        // Request metadata for all account pubkeys
+        val pubkeys =
+            allAccountsForMetadata.mapNotNull { info ->
+                com.vitorpamplona.quartz.nip19Bech32
+                    .decodePublicKeyAsHexOrNull(info.npub)
+            }
+        if (pubkeys.isNotEmpty()) {
+            subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys)
+        }
+    }
+
+    // Persist display names when metadata arrives (debounced)
+    LaunchedEffect(Unit) {
+        localCache.metadataVersion.collect {
+            kotlinx.coroutines.delay(3000)
+            val accounts = accountManager.allAccounts.value
+            for (info in accounts) {
+                val hex =
+                    com.vitorpamplona.quartz.nip19Bech32
+                        .decodePublicKeyAsHexOrNull(info.npub) ?: continue
+                val user = localCache.getUserIfExists(hex) ?: continue
+                val name = user.toBestDisplayName()
+                if (name != user.pubkeyDisplayHex() && name != info.displayName) {
+                    accountManager.updateDisplayName(info.npub, name)
+                }
+            }
         }
     }
 
@@ -777,14 +829,21 @@ fun App(
         subscriptionsCoordinator.start()
 
         scope.launch(Dispatchers.IO) {
+            // Load account list from encrypted storage
+            accountManager.refreshAccountListOnStartup()
+
             if (accountManager.hasBunkerAccount()) {
                 // Show connecting UI while dedicated NIP-46 client connects
                 accountManager.setConnectingRelays()
             }
             val result = accountManager.loadSavedAccount()
             if (result.isSuccess) {
+                // Ensure loaded account is in multi-account storage
+                accountManager.ensureCurrentAccountInStorage()
+                accountManager.refreshAccountList()
+
                 val current = accountManager.currentAccount()
-                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                     accountManager.startHeartbeat(scope)
                 }
             } else if (accountManager.hasBunkerAccount()) {
@@ -820,8 +879,13 @@ fun App(
                             onLoginSuccess = {
                                 // Start heartbeat if bunker account
                                 val current = accountManager.currentAccount()
-                                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                                if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                                     accountManager.startHeartbeat(scope)
+                                }
+                                // Ensure account is in multi-account storage + refresh list
+                                scope.launch(Dispatchers.IO) {
+                                    accountManager.ensureCurrentAccountInStorage()
+                                    accountManager.refreshAccountList()
                                 }
                             },
                         )
@@ -1200,7 +1264,24 @@ fun MainContent(
 
                         LayoutMode.DECK -> {
                             if (!isImmersive) {
+                                val allAccountsState by accountManager.allAccounts.collectAsState()
+                                var showAddAccountDialog by remember { mutableStateOf(false) }
+
                                 DeckSidebar(
+                                    activeNpub = accountManager.currentAccount()?.npub,
+                                    allAccounts = allAccountsState,
+                                    localCache = localCache,
+                                    onSwitchAccount = { npub ->
+                                        scope.launch(Dispatchers.IO) {
+                                            accountManager.switchAccount(npub)
+                                        }
+                                    },
+                                    onAddAccount = { showAddAccountDialog = true },
+                                    onRemoveAccount = { npub ->
+                                        scope.launch(Dispatchers.IO) {
+                                            accountManager.removeAccountFromStorage(npub)
+                                        }
+                                    },
                                     onAddColumn = onShowAppDrawer,
                                     onOpenSettings = {
                                         if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
@@ -1215,6 +1296,19 @@ fun MainContent(
                                 )
 
                                 VerticalDivider()
+
+                                if (showAddAccountDialog) {
+                                    com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog(
+                                        accountManager = accountManager,
+                                        onDismiss = { showAddAccountDialog = false },
+                                        onAccountAdded = {
+                                            showAddAccountDialog = false
+                                            scope.launch(Dispatchers.IO) {
+                                                accountManager.refreshAccountList()
+                                            }
+                                        },
+                                    )
+                                }
                             }
 
                             DeckLayout(
