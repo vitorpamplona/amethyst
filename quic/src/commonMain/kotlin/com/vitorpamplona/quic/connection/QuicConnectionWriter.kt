@@ -325,6 +325,18 @@ private fun buildApplicationPacket(
                         fin = chunk.fin,
                         explicitLength = true,
                     )
+                // Step C of the deferred-follow-ups pass: track this
+                // STREAM emission so RFC 9002 retransmit can re-queue
+                // the byte range on loss. SendBuffer.markLost (commit B)
+                // moves the range from in-flight back to the retransmit
+                // queue, and the next takeChunk replays it.
+                tokens +=
+                    RecoveryToken.Stream(
+                        streamId = stream.streamId,
+                        offset = chunk.offset,
+                        length = chunk.data.size.toLong(),
+                        fin = chunk.fin,
+                    )
                 packetBudget -= chunk.data.size + 32
                 connBudget -= chunk.data.size
                 conn.sendConnectionFlowConsumed += chunk.data.size

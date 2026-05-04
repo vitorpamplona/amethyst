@@ -767,6 +767,58 @@ class QuicConnection(
     internal fun streamByIdLocked(id: Long): QuicStream? = streams[id]
 
     /**
+     * ACK-path counterpart to [onTokensLost]. Called by the parser
+     * after [com.vitorpamplona.quic.connection.recovery.drainAckedSentPackets]
+     * removes the carrying packet from the sent map. Tokens whose
+     * underlying byte ranges live in a [com.vitorpamplona.quic.stream.SendBuffer]
+     * (Stream / Crypto) trigger a [com.vitorpamplona.quic.stream.SendBuffer.markAcked]
+     * call so the buffer can advance its flushedFloor and release
+     * memory. Other token types are ACK-no-ops (the peer's
+     * acknowledgment of a control frame doesn't require any local
+     * action — the frame already did its job by reaching the peer).
+     *
+     * Caller must hold [lock].
+     */
+    internal fun onTokensAcked(tokens: List<com.vitorpamplona.quic.connection.recovery.RecoveryToken>) {
+        for (token in tokens) {
+            when (token) {
+                com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
+                    // ACK-of-ACK is a no-op.
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsUni,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsBidi,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxData,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamData,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId,
+                -> {
+                    // Control frames have no per-buffer state to release on
+                    // ACK. (Pending* maps are populated only on loss; an ACK
+                    // for a frame that never lost is naturally absent.)
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Stream -> {
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.send.markAcked(offset = token.offset, length = token.length)
+                    if (token.length == 0L && token.fin) {
+                        // FIN-only ACK: treat as zero-length ACK at offset.
+                        // markAcked already handles length==0 ⇒ FIN match.
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Crypto -> {
+                    levelState(token.level).cryptoSend.markAcked(
+                        offset = token.offset,
+                        length = token.length,
+                    )
+                }
+            }
+        }
+    }
+
+    /**
      * Step 6 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
      * dispatch the tokens of declared-lost packets to the matching
      * `pending*` field, applying the supersede check from neqo's

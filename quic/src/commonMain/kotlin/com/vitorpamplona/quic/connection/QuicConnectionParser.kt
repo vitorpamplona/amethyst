@@ -180,6 +180,13 @@ private fun dispatchFrames(
                 // returned list on the floor.
                 val largestSentTime = state.sentPackets[frame.largestAcknowledged]?.sentAtMillis
                 val drained = drainAckedSentPackets(state.sentPackets, frame)
+                // Step C of the deferred-follow-ups pass: dispatch ACK
+                // to per-buffer markAcked for Stream / Crypto tokens.
+                // Releases SendBuffer memory and advances its
+                // flushedFloor as low-end ACKs accumulate.
+                for (drainedPacket in drained) {
+                    conn.onTokensAcked(drainedPacket.tokens)
+                }
                 val advancedLargest =
                     state.largestAckedPn?.let { it < frame.largestAcknowledged } ?: true
                 if (advancedLargest) {
