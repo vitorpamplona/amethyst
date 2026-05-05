@@ -883,11 +883,34 @@ class NestViewModel(
                             // wait for a manual reconnect tap.
                         }
 
-                        // Server-initiated Closed: tear down stale
-                        // local state so any later user-driven reconnect
-                        // starts fresh.
                         NestsListenerState.Closed -> {
-                            teardown(targetState = ConnectionUiState.Closed)
+                            // Closed from the wrapper is *almost always*
+                            // transient — the orchestrator emits Closed
+                            // → Reconnecting → Connecting → Connected
+                            // around every cliff-detector recycle and
+                            // every JWT refresh. We must NOT teardown
+                            // here: teardown cancels `cliffDetectorJob`,
+                            // `announcesJob`, etc., AND calls
+                            // `wrapper.close()`, which cancels the
+                            // wrapper's orchestrator before it can
+                            // reopen the inner listener. End result
+                            // pre-fix: the very first cliff-detector
+                            // recycle permanently kills the room
+                            // instead of recovering it (visible in the
+                            // 15:56:25 receiver log: cliff fires →
+                            // teardown fires 521 ms later → wrapper
+                            // never reopens → `cliff-detector EXITED
+                            // closed=false`).
+                            //
+                            // User-initiated close goes through
+                            // `disconnect()` / `onCleared()` which call
+                            // `teardown` directly; the wrapper's
+                            // subsequent Closed emission here is a
+                            // redundant signal — no-op'ing it doesn't
+                            // change anything for those paths. The UI
+                            // still picks up the Closed via
+                            // `state.toUiState(ui.connection)` above
+                            // for visual feedback.
                         }
 
                         else -> { /* no extra side effect */ }
