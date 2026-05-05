@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -231,7 +232,7 @@ class NotificationDispatcher(
      * once the MLS-decrypted inner event has been parsed and indexed.
      */
     suspend fun notifyGroupMessage(
-        innerEvent: Event,
+        innerEvent: ChatEvent,
         nostrGroupId: String,
         account: Account,
     ) {

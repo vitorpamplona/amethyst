@@ -505,18 +505,17 @@ class EventNotificationConsumer(
      * decrypted the outer ChaCha20-Poly1305 layer and verified the inner
      * MLS-signed payload.
      *
-     * Only kind:9 chat messages produce a notification — reactions, control
-     * messages, and deletions stay silent, mirroring how NIP-17 (kind:14)
-     * is the only DM kind we notify.
+     * Typed to [ChatEvent] so the caller has to narrow first — reactions,
+     * control messages, and deletions stay silent at the type level,
+     * mirroring how NIP-17 (kind:14) is the only DM kind we notify.
      */
     suspend fun notifyGroupMessage(
-        innerEvent: Event,
+        innerEvent: ChatEvent,
         nostrGroupId: String,
         account: Account,
     ) = withWakeLock {
         Log.d(TAG, "New Marmot Group Message to Notify")
 
-        if (innerEvent.kind != ChatEvent.KIND) return@withWakeLock
         if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
         if (MainActivity.isResumed) return@withWakeLock
 
@@ -530,8 +529,9 @@ class EventNotificationConsumer(
         val sender = LocalCache.getOrCreateUser(innerEvent.pubKey)
         val senderName = sender.toBestDisplayName()
         val senderPicture = sender.profilePicture()
-        // Show the message body when present; reactions/empty payloads fall
-        // back to a generic prompt so the popup is still actionable.
+        // Defensive fallback for the rare empty-content ChatEvent so the
+        // popup is still actionable. Non-chat inner kinds were filtered
+        // out at the call site by the ChatEvent type narrowing.
         val body = innerEvent.content.takeIf { it.isNotBlank() } ?: "New message"
 
         val accountNpub =

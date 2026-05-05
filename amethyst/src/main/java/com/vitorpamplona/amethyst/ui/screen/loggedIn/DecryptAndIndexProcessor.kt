@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -665,13 +666,16 @@ class GroupEventHandler(
                         // notification path can't route them. Fire the popup
                         // directly here — only on first-time decryption, so
                         // a relay re-broadcast or persist-replay doesn't
-                        // double-notify. The notifier itself filters by
-                        // inner kind (chat only) and freshness.
-                        Amethyst.instance.notificationDispatcher.notifyGroupMessage(
-                            innerEvent,
-                            result.groupId,
-                            account,
-                        )
+                        // double-notify. Restrict to ChatEvent (kind:9) so
+                        // reactions, deletions, and control messages stay
+                        // silent.
+                        if (innerEvent is ChatEvent) {
+                            Amethyst.instance.notificationDispatcher.notifyGroupMessage(
+                                innerEvent,
+                                result.groupId,
+                                account,
+                            )
+                        }
                     }
                 }
 
