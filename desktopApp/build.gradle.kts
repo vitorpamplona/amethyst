@@ -176,8 +176,17 @@ val skipVlcSetup =
         System.getenv("AMETHYST_SKIP_VLC") == "true"
 
 if (skipVlcSetup) {
-    logger.lifecycle("desktopApp: skipVlcSetup=true — disabling vlcDownload/upxDownload/vlcSetup. Built artifacts will NOT bundle VLC.")
-    tasks.matching { it.name in setOf("vlcDownload", "upxDownload", "vlcSetup") }.configureEach {
+    logger.lifecycle("desktopApp: skipVlcSetup=true — disabling vlc-setup plugin tasks. Built artifacts will NOT bundle VLC.")
+    val vlcPluginTasks = setOf(
+        "vlcDownload",
+        "vlcExtract",
+        "vlcFilterPlugins",
+        "vlcCompressPlugins",
+        "upxDownload",
+        "upxExtract",
+        "vlcSetup",
+    )
+    tasks.matching { it.name in vlcPluginTasks }.configureEach {
         enabled = false
     }
 }
