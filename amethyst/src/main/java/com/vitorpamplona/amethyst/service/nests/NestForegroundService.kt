@@ -138,8 +138,19 @@ class NestForegroundService : Service() {
      * default network just changed under us" (publish). Volatile because
      * the callback fires on a binder thread; the publish path is
      * lock-free via [NestNetworkChangeBus].
+     *
+     * `seenInitialNetwork` is the registration-time suppression flag —
+     * set true on the first onAvailable and never cleared. The earlier
+     * shape used `previous != null` as the suppression check, which
+     * also suppressed the WiFi-loss-then-cellular-available case
+     * (`onLost` clears [currentDefaultNetwork] back to null, then the
+     * follow-up `onAvailable` looks identical to the registration
+     * callback). That broke the most important scenario this whole
+     * code path exists for — a clean Wi-Fi ↔ cellular handover.
      */
     @Volatile private var currentDefaultNetwork: Network? = null
+
+    @Volatile private var seenInitialNetwork: Boolean = false
 
     /**
      * Listens for the device's default-network changing (Wi-Fi ↔
@@ -159,7 +170,14 @@ class NestForegroundService : Service() {
             override fun onAvailable(network: Network) {
                 val previous = currentDefaultNetwork
                 currentDefaultNetwork = network
-                if (previous != null && previous != network) {
+                if (!seenInitialNetwork) {
+                    // Registration-time callback — fires once with the
+                    // currently-active default network. Suppress so the
+                    // VM doesn't recycle on every service start.
+                    seenInitialNetwork = true
+                    return
+                }
+                if (previous != network) {
                     Log.i("NestNet") {
                         "default network changed ($previous → $network), recycling QUIC sessions"
                     }
@@ -193,6 +211,7 @@ class NestForegroundService : Service() {
             mgr.unregisterNetworkCallback(networkCallback)
         }
         currentDefaultNetwork = null
+        seenInitialNetwork = false
     }
 
     /**
@@ -232,19 +251,20 @@ class NestForegroundService : Service() {
                 .setOnAudioFocusChangeListener { focusChange ->
                     NestAudioFocusBus.publish(translateFocusChange(focusChange))
                 }.build()
-        // Best-effort: a refused request just means the OS will
-        // duck/pause us based on its own policy. Don't fail the
-        // service start over a focus denial.
-        val granted = runCatching { mgr.requestAudioFocus(request) }.getOrNull()
-        // If the OS refused outright (rare — typically only when an
-        // active call is already in progress at the moment we start),
-        // publish TransientLoss immediately so the VM mutes from t=0
-        // rather than playing for ~50 ms before the listener fires.
-        // [AudioManager.AUDIOFOCUS_REQUEST_FAILED] = 0; granted = 1.
-        if (granted == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {
-            NestAudioFocusBus.publish(NestAudioFocusState.TransientLoss)
-        } else {
+        // Strict GRANTED check: anything else — FAILED (active call
+        // blocking us), DELAYED (we set [setAcceptsDelayedFocusGain]
+        // false so this shouldn't happen but treat it as not-granted
+        // defensively), or a swallowed exception from runCatching —
+        // means we don't actually own playback yet, so the VM must
+        // start muted. The earlier shape used `!= FAILED` which fell
+        // through to Granted on `null` (exception path) and on
+        // DELAYED (= 2), playing audio over a call that the OS hadn't
+        // released to us.
+        val result = runCatching { mgr.requestAudioFocus(request) }.getOrNull()
+        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             NestAudioFocusBus.publish(NestAudioFocusState.Granted)
+        } else {
+            NestAudioFocusBus.publish(NestAudioFocusState.TransientLoss)
         }
         audioFocusRequest = request
     }

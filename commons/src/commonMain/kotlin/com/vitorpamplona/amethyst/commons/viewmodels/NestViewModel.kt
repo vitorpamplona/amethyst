@@ -34,6 +34,7 @@ import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.NestsSpeaker
 import com.vitorpamplona.nestsclient.NestsSpeakerState
 import com.vitorpamplona.nestsclient.audio.AudioCapture
+import com.vitorpamplona.nestsclient.audio.AudioException
 import com.vitorpamplona.nestsclient.audio.AudioPlayer
 import com.vitorpamplona.nestsclient.audio.NestPlayer
 import com.vitorpamplona.nestsclient.audio.OpusDecoder
@@ -1015,7 +1016,32 @@ class NestViewModel(
                 val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
                 roomPlayer.play(
                     instrumented,
-                    onError = { /* swallow per-packet decoder errors */ },
+                    onError = { err ->
+                        // Per-packet decoder errors are noise — Opus PLC
+                        // papers over a single bad frame. Swallow those.
+                        // PlaybackFailed (or DeviceUnavailable from a
+                        // deferred [AudioPlayer.beginPlayback], or the
+                        // audio-priority dispatcher dying mid-stream) is
+                        // terminal: the device is wedged for THIS
+                        // subscription. Roll the slot back so a future
+                        // reconcile can retry rather than leave a
+                        // perma-spinning speaker tile.
+                        when (err.kind) {
+                            AudioException.Kind.DecoderError,
+                            AudioException.Kind.EncoderError,
+                            -> {
+                                Unit
+                            }
+
+                            AudioException.Kind.PlaybackFailed,
+                            AudioException.Kind.DeviceUnavailable,
+                            -> {
+                                if (activeSubscriptions[pubkey] === slot) {
+                                    activeSubscriptions.remove(pubkey)?.let { closeSubscription(it) }
+                                }
+                            }
+                        }
+                    },
                     onLevel = { onAudioLevel(pubkey, it) },
                 )
                 slot.attach(handle, roomPlayer, player)

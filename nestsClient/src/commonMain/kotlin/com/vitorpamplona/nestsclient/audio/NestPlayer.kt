@@ -126,11 +126,22 @@ class NestPlayer(
                 suspend fun beginAndFlushIfNeeded() {
                     if (playbackBegun) return
                     if (preroll.isEmpty()) return
-                    player.beginPlayback()
-                    playbackBegun = true
+                    // Flush BEFORE [beginPlayback] so the device starts
+                    // playing against an already-populated buffer rather
+                    // than emitting silence for the microseconds it
+                    // takes the flush loop to fill. AudioTrack
+                    // MODE_STREAM explicitly supports write() before
+                    // play() per the Android docs — that's the
+                    // textbook pre-roll pattern. Order matters
+                    // because [beginPlayback] is the moment the
+                    // hardware starts pulling samples; getting
+                    // [enqueue] in first means the very first sample
+                    // pulled is from our pre-rolled audio, not silence.
                     while (preroll.isNotEmpty()) {
                         player.enqueue(preroll.removeFirst())
                     }
+                    player.beginPlayback()
+                    playbackBegun = true
                 }
                 try {
                     objects.collect { obj ->
