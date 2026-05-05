@@ -68,18 +68,42 @@ fun drainOutbound(
     }
 
     // Drain destructive frame sources into local lists, ONCE.
-    val initialFrames = collectHandshakeLevelFrames(conn, EncryptionLevel.INITIAL, nowMillis)
-    val handshakeFrames = collectHandshakeLevelFrames(conn, EncryptionLevel.HANDSHAKE, nowMillis)
+    val initialContents = collectHandshakeLevelFrames(conn, EncryptionLevel.INITIAL, nowMillis)
+    val handshakeContents = collectHandshakeLevelFrames(conn, EncryptionLevel.HANDSHAKE, nowMillis)
     val applicationPkt = buildApplicationPacket(conn, nowMillis)
 
     val initialState = conn.initial
     val handshakeState = conn.handshake
-    val initialHasContent = initialFrames != null && initialState.sendProtection != null
-    val handshakeHasContent = handshakeFrames != null && handshakeState.sendProtection != null
+    val initialHasContent = initialContents != null && initialState.sendProtection != null
+    val handshakeHasContent = handshakeContents != null && handshakeState.sendProtection != null
 
     // Build natural-size first.
-    val initialNatural = if (initialHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.INITIAL, initialFrames, padBytes = 0) else null
-    val handshakeNatural = if (handshakeHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.HANDSHAKE, handshakeFrames, padBytes = 0) else null
+    val initialNatural =
+        if (initialContents != null && initialState.sendProtection != null) {
+            buildLongHeaderFromFrames(
+                conn = conn,
+                level = EncryptionLevel.INITIAL,
+                frames = initialContents.frames,
+                tokens = initialContents.tokens,
+                nowMillis = nowMillis,
+                padBytes = 0,
+            )
+        } else {
+            null
+        }
+    val handshakeNatural =
+        if (handshakeContents != null && handshakeState.sendProtection != null) {
+            buildLongHeaderFromFrames(
+                conn = conn,
+                level = EncryptionLevel.HANDSHAKE,
+                frames = handshakeContents.frames,
+                tokens = handshakeContents.tokens,
+                nowMillis = nowMillis,
+                padBytes = 0,
+            )
+        } else {
+            null
+        }
 
     val firstPass = listOfNotNull(initialNatural, handshakeNatural, applicationPkt)
     if (firstPass.isEmpty()) return null
@@ -92,9 +116,19 @@ fun drainOutbound(
         if (natural < 1200) {
             val deficit = 1200 - natural
             // Rewind the Initial PN — we'll reissue with the same PN and the
-            // same captured frames plus padding.
+            // same captured frames plus padding. The SentPacket entry recorded
+            // by the natural-size build will be overwritten by the rebuild
+            // below since both use the same PN.
             initialState.pnSpace.rewindOutboundForRebuild()
-            val paddedInitial = buildLongHeaderFromFrames(conn, EncryptionLevel.INITIAL, initialFrames!!, padBytes = deficit)
+            val paddedInitial =
+                buildLongHeaderFromFrames(
+                    conn = conn,
+                    level = EncryptionLevel.INITIAL,
+                    frames = initialContents!!.frames, // null-safe: gated by `initialNatural != null` above
+                    tokens = initialContents.tokens,
+                    nowMillis = nowMillis,
+                    padBytes = deficit,
+                )
             return concat(listOfNotNull(paddedInitial, handshakeNatural, applicationPkt))
         }
     }
@@ -177,26 +211,58 @@ private fun buildLongHeaderPacket(
 }
 
 /**
+ * Frames + the matching retransmit-tokens collected for a single
+ * encryption-level packet build. Carried out of
+ * [collectHandshakeLevelFrames] so the caller can pass the tokens
+ * to the SentPacket retention recorded in
+ * [buildLongHeaderFromFrames].
+ */
+private data class HandshakeLevelContents(
+    val frames: List<Frame>,
+    val tokens: List<RecoveryToken>,
+)
+
+/**
  * Drain ACK + CRYPTO frames for [level] into a fresh list. Destructive on
- * the CRYPTO send buffer, but caller-controlled — call exactly once per
- * outbound datagram. Returns null if there are no frames to send and the
- * level has no protection installed.
+ * the CRYPTO send buffer (which now retains bytes until ACK per
+ * [com.vitorpamplona.quic.stream.SendBuffer]'s retain-until-ACK
+ * semantics — see commit B). Returns null if there are no frames to
+ * send and the level has no protection installed.
+ *
+ * Each emitted frame contributes a matching [RecoveryToken] so the
+ * caller can record a [com.vitorpamplona.quic.connection.recovery.SentPacket]
+ * keyed by packet number, enabling RFC 9002 retransmit at this
+ * encryption level (CRYPTO bytes are reliable per RFC 9000 §13.3).
  */
 private fun collectHandshakeLevelFrames(
     conn: QuicConnection,
     level: EncryptionLevel,
     nowMillis: Long,
-): List<Frame>? {
+): HandshakeLevelContents? {
     val state = conn.levelState(level)
     if (state.sendProtection == null) return null
     val frames = mutableListOf<Frame>()
-    state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { frames += it }
+    val tokens = mutableListOf<RecoveryToken>()
+    state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let {
+        frames += it
+        tokens += RecoveryToken.Ack
+    }
     val cryptoChunk = state.cryptoSend.takeChunk(maxBytes = 1100)
     if (cryptoChunk != null && cryptoChunk.data.isNotEmpty()) {
         frames += CryptoFrame(cryptoChunk.offset, cryptoChunk.data)
+        // Step E: record a Crypto retransmit token at the matching
+        // encryption level so a lost handshake packet's CRYPTO bytes
+        // get re-emitted at the same offset on next drain (RFC 9000
+        // §13.3 — handshake bytes are reliable).
+        tokens +=
+            RecoveryToken.Crypto(
+                level = level,
+                offset = cryptoChunk.offset,
+                length = cryptoChunk.data.size.toLong(),
+            )
     }
     if (frames.isEmpty()) return null
-    return frames
+    return HandshakeLevelContents(frames = frames, tokens = tokens)
 }
 
 /**
@@ -210,6 +276,8 @@ private fun buildLongHeaderFromFrames(
     conn: QuicConnection,
     level: EncryptionLevel,
     frames: List<Frame>,
+    tokens: List<RecoveryToken>,
+    nowMillis: Long,
     padBytes: Int,
 ): ByteArray {
     val state = conn.levelState(level)
@@ -223,22 +291,42 @@ private fun buildLongHeaderFromFrames(
         }
     val pn = state.pnSpace.allocateOutbound()
     val type = if (level == EncryptionLevel.INITIAL) LongHeaderType.INITIAL else LongHeaderType.HANDSHAKE
-    return LongHeaderPacket.build(
-        LongHeaderPlaintextPacket(
-            type = type,
-            version = QuicVersion.V1,
-            dcid = conn.destinationConnectionId,
-            scid = conn.sourceConnectionId,
+    val packet =
+        LongHeaderPacket.build(
+            LongHeaderPlaintextPacket(
+                type = type,
+                version = QuicVersion.V1,
+                dcid = conn.destinationConnectionId,
+                scid = conn.sourceConnectionId,
+                packetNumber = pn,
+                payload = payload,
+            ),
+            proto.aead,
+            proto.key,
+            proto.iv,
+            proto.hp,
+            proto.hpKey,
+            largestAckedInSpace = -1L,
+        )
+    // Step E: retain the packet for RFC 9002 retransmit. Initial /
+    // Handshake packets carry CRYPTO frames; loss detection runs at
+    // each level and routes lost Crypto tokens back to the level's
+    // cryptoSend buffer via QuicConnection.onTokensLost (commit A).
+    //
+    // Initial-level rebuilds with padding (RFC 9000 §14.1) call
+    // pnSpace.rewindOutboundForRebuild() to reuse the same PN. The
+    // map insert below overwrites the prior entry, so the recorded
+    // SentPacket reflects the final padded packet's size — correct
+    // for retransmit purposes.
+    state.sentPackets[pn] =
+        SentPacket(
             packetNumber = pn,
-            payload = payload,
-        ),
-        proto.aead,
-        proto.key,
-        proto.iv,
-        proto.hp,
-        proto.hpKey,
-        largestAckedInSpace = -1L,
-    )
+            sentAtMillis = nowMillis,
+            ackEliciting = isAckEliciting(frames),
+            sizeBytes = packet.size,
+            tokens = tokens,
+        )
+    return packet
 }
 
 private fun buildApplicationPacket(
