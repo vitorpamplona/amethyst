@@ -113,29 +113,45 @@ fun drainOutbound(
 
     // RFC 9000 §14.1: client datagrams containing Initial MUST pad to ≥ 1200,
     // via PADDING frames inside the Initial's encryption envelope.
-    if (initialNatural != null) {
-        var natural = 0
-        for (p in firstPass) natural += p.size
-        if (natural < 1200) {
-            val deficit = 1200 - natural
-            // Rewind the Initial PN — we'll reissue with the same PN and the
-            // same captured frames plus padding. The SentPacket entry recorded
-            // by the natural-size build will be overwritten by the rebuild
-            // below since both use the same PN.
-            initialState.pnSpace.rewindOutboundForRebuild()
-            val paddedInitial =
-                buildLongHeaderFromFrames(
-                    conn = conn,
-                    level = EncryptionLevel.INITIAL,
-                    frames = initialContents!!.frames, // null-safe: gated by `initialNatural != null` above
-                    tokens = initialContents.tokens,
-                    nowMillis = nowMillis,
-                    padBytes = deficit,
-                )
-            return concat(listOfNotNull(paddedInitial, handshakeNatural, applicationPkt))
+    val datagram =
+        if (initialNatural != null) {
+            var natural = 0
+            for (p in firstPass) natural += p.size
+            if (natural < 1200) {
+                val deficit = 1200 - natural
+                // Rewind the Initial PN — we'll reissue with the same PN and the
+                // same captured frames plus padding. The SentPacket entry recorded
+                // by the natural-size build will be overwritten by the rebuild
+                // below since both use the same PN.
+                initialState.pnSpace.rewindOutboundForRebuild()
+                val paddedInitial =
+                    buildLongHeaderFromFrames(
+                        conn = conn,
+                        level = EncryptionLevel.INITIAL,
+                        frames = initialContents!!.frames, // null-safe: gated by `initialNatural != null` above
+                        tokens = initialContents.tokens,
+                        nowMillis = nowMillis,
+                        padBytes = deficit,
+                    )
+                concat(listOfNotNull(paddedInitial, handshakeNatural, applicationPkt))
+            } else {
+                concat(firstPass)
+            }
+        } else {
+            concat(firstPass)
         }
+
+    // RFC 9001 §4.9.1: a client MUST discard Initial keys when it first
+    // sends a Handshake packet. We just built one (handshakeNatural !=
+    // null), so the next drainOutbound MUST NOT touch the Initial level.
+    // After this point any retransmitted Initial from the peer is silently
+    // dropped (initial.receiveProtection == null), which is correct per
+    // the same RFC: by the time the client sends a Handshake packet, the
+    // server has already moved up encryption levels too.
+    if (handshakeNatural != null && !conn.initial.keysDiscarded) {
+        conn.initial.discardKeys()
     }
-    return concat(firstPass)
+    return datagram
 }
 
 private fun concat(parts: List<ByteArray>): ByteArray {

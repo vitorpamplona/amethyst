@@ -188,16 +188,21 @@ rooms don't exercise heavily:
    and RESET_STREAM / STOP_SENDING / NEW_CONNECTION_ID retransmit.
    See [`2026-05-04-control-frame-retransmit.md`](2026-05-04-control-frame-retransmit.md).
 2. ~~**`SendBuffer` doesn't retain bytes until ACK.**~~ Resolved with #1.
-3. **No Initial / Handshake key discard.** RFC 9000 §17.2.2 / RFC 9001 §4.9
-   require dropping these after handshake completes; we hold them
-   indefinitely. Memory leak per long session.
+3. ~~**No Initial / Handshake key discard.**~~ **Resolved 2026-05-05** —
+   `LevelState.discardKeys()` nulls the AEAD protection, replaces the
+   per-level CRYPTO buffers and ack-tracker with empty instances, and
+   clears the sent-packet map. Initial keys discarded by the writer
+   after the first Handshake packet is built (RFC 9001 §4.9.1);
+   Handshake keys discarded by the parser on receipt of HANDSHAKE_DONE
+   (RFC 9001 §4.9.2 + §4.1.2 client-side handshake confirmation).
 4. **No path validation for `NEW_CONNECTION_ID`.** We don't migrate.
 5. **Stateless reset detection.** Stateless-reset packets look like
    corruption to us.
-6. **`AckTracker.purgeBelow` threshold semantics.** Pre-existing bug:
-   purges based on peer's largestAcknowledged of OUR outbound PNs, but
-   purges OUR inbound PN tracker. Causes range-list bloat, not correctness
-   failure.
+6. ~~**`AckTracker.purgeBelow` threshold semantics.**~~ **Resolved
+   2026-05-05** — `RecoveryToken.Ack` now carries `(level, largestAcked)`;
+   the writer captures these from the AckFrame at emit time, and
+   `QuicConnection.onTokensAcked` purges the matching per-level inbound
+   tracker on ACK-of-ACK. The wrong purge in the parser is gone.
 7. **Driver direct unit tests** require turning `UdpSocket` from `expect
    class` into an interface so the test side can stub. The driver is
    covered indirectly by every pipe-based test plus the live interop

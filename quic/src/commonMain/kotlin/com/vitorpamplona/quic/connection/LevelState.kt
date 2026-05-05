@@ -27,11 +27,18 @@ import com.vitorpamplona.quic.stream.SendBuffer
 /** Per-encryption-level state owned by [QuicConnection]. */
 class LevelState {
     val pnSpace = PacketNumberSpaceState()
-    val ackTracker =
+
+    var ackTracker =
         com.vitorpamplona.quic.recovery
             .AckTracker()
-    val cryptoSend = SendBuffer()
-    val cryptoReceive = ReceiveBuffer()
+        private set
+
+    var cryptoSend = SendBuffer()
+        private set
+
+    var cryptoReceive = ReceiveBuffer()
+        private set
+
     var sendProtection: PacketProtection? = null
     var receiveProtection: PacketProtection? = null
 
@@ -66,4 +73,53 @@ class LevelState {
      * Null until an ACK arrives.
      */
     var largestAckedSentTimeMs: Long? = null
+
+    /**
+     * RFC 9001 §4.9: latches true once [discardKeys] runs. Used by
+     * the writer / parser to short-circuit operations on a discarded
+     * level (parser already drops packets via the
+     * [receiveProtection] null check; this flag is for the symmetry
+     * tests + future code that wants to assert "level is dead").
+     */
+    var keysDiscarded: Boolean = false
+        private set
+
+    /**
+     * RFC 9001 §4.9: drop all key material + buffered state for this
+     * encryption level once the level is no longer needed. Idempotent.
+     *
+     *   - §4.9.1: a client MUST discard Initial keys when it first
+     *     sends a Handshake packet. Trigger lives in
+     *     [com.vitorpamplona.quic.connection.QuicConnectionWriter] —
+     *     after we build a Handshake-level packet, we discard Initial.
+     *   - §4.9.2: an endpoint MUST discard Handshake keys when the
+     *     handshake is confirmed. Per §4.1.2 a client confirms the
+     *     handshake on receipt of a HANDSHAKE_DONE frame; the trigger
+     *     lives in [com.vitorpamplona.quic.connection.QuicConnectionParser].
+     *
+     * Frees the AEAD cipher state, drops any unsent / unacked CRYPTO
+     * bytes (no longer reachable since they were handshake-only), and
+     * resets the loss-detection accounting. Future inbound packets at
+     * this encryption level are dropped silently because
+     * [receiveProtection] is null. Future outbound builds skip the
+     * level for the same reason on [sendProtection].
+     *
+     * The class-level docstring on [LevelState] still describes the
+     * fields as if they're permanent; after [discardKeys] those
+     * descriptions only apply while [keysDiscarded] is false.
+     */
+    fun discardKeys() {
+        if (keysDiscarded) return
+        sendProtection = null
+        receiveProtection = null
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = true
+    }
 }

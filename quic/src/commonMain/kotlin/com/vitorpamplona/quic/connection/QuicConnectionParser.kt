@@ -419,6 +419,12 @@ private fun dispatchFrames(
                 if (conn.status == QuicConnection.Status.HANDSHAKING) {
                     conn.status = QuicConnection.Status.CONNECTED
                 }
+                // RFC 9001 §4.9.2 + §4.1.2: a client confirms the handshake
+                // on receipt of HANDSHAKE_DONE; once confirmed, MUST discard
+                // Handshake keys. Frees the AEAD cipher state and any
+                // residual handshake CRYPTO bookkeeping that's no longer
+                // needed for the lifetime of the connection.
+                conn.handshake.discardKeys()
             }
 
             is PingFrame -> {
