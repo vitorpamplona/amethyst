@@ -37,6 +37,11 @@
     <!-- To know receive notifications when the app connects/disconnects from the web -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
+    <!-- For ConnectivityManager.registerDefaultNetworkCallback used by NestForegroundService
+         to detect Wi-Fi ↔ cellular handover and recycle the active QUIC session promptly
+         (otherwise the wrapper waits ~30s for QUIC PTO before reconnecting). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- Audio/Video Playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />

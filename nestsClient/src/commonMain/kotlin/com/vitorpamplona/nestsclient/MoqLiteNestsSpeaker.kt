@@ -59,7 +59,8 @@ class MoqLiteNestsSpeaker internal constructor(
      * Defaults to [NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP].
      */
     private val framesPerGroup: Int = NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP,
-) : NestsSpeaker {
+) : NestsSpeaker,
+    HotSwappablePublisherSource {
     override val state: StateFlow<NestsSpeakerState> = mutableState.asStateFlow()
 
     private val gate = Mutex()
@@ -100,7 +101,7 @@ class MoqLiteNestsSpeaker internal constructor(
                     NestMoqLiteBroadcaster(
                         capture = captureFactory(),
                         encoder = encoderFactory(),
-                        publisher = publisher,
+                        initialPublisher = publisher,
                         scope = scope,
                         framesPerGroup = framesPerGroup,
                     ).also {
@@ -113,7 +114,7 @@ class MoqLiteNestsSpeaker internal constructor(
                                 // the session — without this signal the
                                 // outward state stays on Broadcasting
                                 // and the room is silently mute.
-                                onBroadcastTerminalFailure()
+                                reportBroadcastTerminalFailure()
                             },
                             onLevel = onLevel,
                         )
@@ -140,6 +141,15 @@ class MoqLiteNestsSpeaker internal constructor(
     }
 
     /**
+     * [HotSwappablePublisherSource] implementation. See the interface
+     * kdoc — this method mints a fresh publisher on the session
+     * WITHOUT spinning up a broadcaster on top of it. Used by the
+     * reconnect wrapper's hot-swap path; not called from the
+     * non-reconnecting path which goes through [startBroadcasting].
+     */
+    override suspend fun openPublisherForHotSwap(track: String): MoqLitePublisherHandle = session.publish(broadcastSuffix = speakerPubkeyHex, track = track)
+
+    /**
      * Compare-and-clear that runs from inside [close] (already holds
      * [gate]) and from [MoqLiteBroadcastHandle.close] (doesn't).
      * Mirrors [DefaultNestsSpeaker.broadcastClosed].
@@ -160,8 +170,13 @@ class MoqLiteNestsSpeaker internal constructor(
      * the reconnect orchestrator (`ReconnectingNestsSpeaker`) observes
      * a terminal state and recycles the session. No-op if the speaker
      * is already in a terminal state.
+     *
+     * Also exposed via [HotSwappablePublisherSource.reportBroadcastTerminalFailure]
+     * so the hot-swap pump (which owns its own long-lived broadcaster)
+     * can drive the same orchestrator-reconnect path the legacy
+     * `startBroadcasting` flow does.
      */
-    private fun onBroadcastTerminalFailure() {
+    override fun reportBroadcastTerminalFailure() {
         val current = mutableState.value
         if (current is NestsSpeakerState.Failed || current is NestsSpeakerState.Closed) return
         mutableState.value =
@@ -256,4 +271,41 @@ internal class MoqLiteBroadcastHandle(
         }
         parent.broadcastClosed(this)
     }
+}
+
+/**
+ * Internal hot-swap seam: speakers that expose this interface let the
+ * reconnect wrapper retarget a long-lived
+ * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster] onto a
+ * freshly-opened moq-lite session's publisher without restarting the
+ * AudioRecord / Opus encoder pipeline. Implemented by
+ * [MoqLiteNestsSpeaker]; not implemented by the IETF reference
+ * [DefaultNestsSpeaker], which falls back to the close-then-restart path
+ * inside [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker].
+ *
+ * The wrapper uses an `as?` cast to detect support so this interface
+ * can stay package-internal — protocol consumers never see it.
+ */
+internal interface HotSwappablePublisherSource {
+    /**
+     * Open a fresh [MoqLitePublisherHandle] on the underlying moq-lite
+     * session. Caller owns the returned handle's lifetime (typically
+     * via [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.swapPublisher]'s
+     * close-the-old contract).
+     */
+    suspend fun openPublisherForHotSwap(track: String): MoqLitePublisherHandle
+
+    /**
+     * Surface a broadcast-pipeline terminal failure (e.g. sustained
+     * `publisher.send` errors past
+     * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS])
+     * by flipping the speaker's state to [NestsSpeakerState.Failed].
+     * Called by the hot-swap pump when the long-lived broadcaster's
+     * `onTerminalFailure` fires; lets the reconnect orchestrator
+     * observe the terminal state and recycle the session, matching
+     * the legacy
+     * [MoqLiteNestsSpeaker.startBroadcasting] path's failure
+     * propagation.
+     */
+    fun reportBroadcastTerminalFailure()
 }

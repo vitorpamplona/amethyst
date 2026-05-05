@@ -28,13 +28,23 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusBus
+import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusState
+import com.vitorpamplona.amethyst.commons.viewmodels.NestNetworkChangeBus
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Process-anchor for an active audio-room session. Holds a partial wake-lock
@@ -57,7 +67,42 @@ import com.vitorpamplona.amethyst.ui.MainActivity
 class NestForegroundService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var promoted = false
-    private var audioFocusRequest: android.media.AudioFocusRequest? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
+
+    /**
+     * Logs route changes (Bluetooth headset attach/detach, wired
+     * headset, USB audio, speakerphone) so field reports of
+     * "audio cut out when I plugged in headphones" can be correlated
+     * with a concrete device-add / device-remove event.
+     *
+     * Doesn't drive playback decisions — Android's AudioTrack +
+     * AudioRecord auto-route to whichever device the OS treats as
+     * active, so the brief silence on a route swap is unavoidable
+     * without going through the (intrusive) `MODE_IN_COMMUNICATION` +
+     * `setCommunicationDevice` flow that this service deliberately
+     * avoids. v1 ships observability only; future work could pause
+     * playback briefly across a route change to mask the swap.
+     */
+    private val deviceCallback =
+        object : AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
+                addedDevices?.forEach { dev ->
+                    Log.i("NestAudio") {
+                        "audio device added: type=${dev.type} name='${dev.productName}' " +
+                            "isSink=${dev.isSink} isSource=${dev.isSource}"
+                    }
+                }
+            }
+
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+                removedDevices?.forEach { dev ->
+                    Log.i("NestAudio") {
+                        "audio device removed: type=${dev.type} name='${dev.productName}' " +
+                            "isSink=${dev.isSink} isSource=${dev.isSource}"
+                    }
+                }
+            }
+        }
 
     override fun onCreate() {
         super.onCreate()
@@ -67,13 +112,122 @@ class NestForegroundService : Service() {
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "amethyst:audio-room")
                 .apply { setReferenceCounted(false) }
         requestAudioFocus()
+        registerAudioDeviceCallback()
+        registerNetworkCallback()
+    }
+
+    private fun registerAudioDeviceCallback() {
+        runCatching {
+            val mgr = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            // null Handler → callback runs on the main looper, which is
+            // the cheapest path for "log a line" handlers like this.
+            mgr.registerAudioDeviceCallback(deviceCallback, null)
+        }
+    }
+
+    private fun unregisterAudioDeviceCallback() {
+        runCatching {
+            val mgr = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            mgr.unregisterAudioDeviceCallback(deviceCallback)
+        }
     }
 
     /**
-     * Request transient-may-duck audio focus so an inbound phone
-     * call lowers the room volume cleanly instead of mixing two
-     * voices on top of each other. Acquired once per service
-     * lifetime; released in [onDestroy].
+     * Track the current default network so the NetworkCallback can
+     * distinguish "first onAvailable after register" (no-op) from "the
+     * default network just changed under us" (publish). Volatile because
+     * the callback fires on a binder thread; the publish path is
+     * lock-free via [NestNetworkChangeBus].
+     *
+     * `seenInitialNetwork` is the registration-time suppression flag —
+     * set true on the first onAvailable and never cleared. The earlier
+     * shape used `previous != null` as the suppression check, which
+     * also suppressed the WiFi-loss-then-cellular-available case
+     * (`onLost` clears [currentDefaultNetwork] back to null, then the
+     * follow-up `onAvailable` looks identical to the registration
+     * callback). That broke the most important scenario this whole
+     * code path exists for — a clean Wi-Fi ↔ cellular handover.
+     */
+    @Volatile private var currentDefaultNetwork: Network? = null
+
+    @Volatile private var seenInitialNetwork: Boolean = false
+
+    /**
+     * Listens for the device's default-network changing (Wi-Fi ↔
+     * cellular handover, plane mode toggle, hotspot swap) and signals
+     * every active [com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel]
+     * to recycle its QUIC session. Without this nudge the QUIC
+     * connection sitting on the now-dead socket would have to wait
+     * for its PTO (~30 s) before the wrapper notices — a long
+     * audible silence on every handover.
+     *
+     * The callback also fires once right after registration with the
+     * current default network — we suppress that emission so the VM
+     * doesn't recycle on every service start.
+     */
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                val previous = currentDefaultNetwork
+                currentDefaultNetwork = network
+                if (!seenInitialNetwork) {
+                    // Registration-time callback — fires once with the
+                    // currently-active default network. Suppress so the
+                    // VM doesn't recycle on every service start.
+                    seenInitialNetwork = true
+                    return
+                }
+                if (previous != network) {
+                    Log.i("NestNet") {
+                        "default network changed ($previous → $network), recycling QUIC sessions"
+                    }
+                    NestNetworkChangeBus.publish()
+                }
+            }
+
+            override fun onLost(network: Network) {
+                if (currentDefaultNetwork == network) {
+                    // We've lost the current default. Don't publish here —
+                    // the next onAvailable (with the replacement network)
+                    // will, and recycling NOW means the wrapper would try
+                    // to handshake on no network at all and fail-then-
+                    // backoff. Just clear so the next onAvailable is
+                    // recognised as a change.
+                    currentDefaultNetwork = null
+                }
+            }
+        }
+
+    private fun registerNetworkCallback() {
+        runCatching {
+            val mgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            mgr.registerDefaultNetworkCallback(networkCallback)
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+        runCatching {
+            val mgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            mgr.unregisterNetworkCallback(networkCallback)
+        }
+        currentDefaultNetwork = null
+        seenInitialNetwork = false
+    }
+
+    /**
+     * Request audio focus for the duration of the audio-room session
+     * and route the system's focus-change events into [NestAudioFocusBus]
+     * so every active [com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel]
+     * can react.
+     *
+     * Why we actually handle the focus change (vs the previous no-op
+     * listener): the platform only auto-ducks streams that opted into
+     * auto-ducking (CONTENT_TYPE_MUSIC, etc.) — a `CONTENT_TYPE_SPEECH`
+     * stream is left alone, so without a real listener an inbound phone
+     * call would mix on top of the room audio and a Maps voice prompt
+     * would be inaudible against an active speaker. The bus carries
+     * the translated state to the VM, which silences the listener
+     * playback and the broadcast mic for the duration of the loss.
      *
      * Matches the playback `AudioAttributes` we set on `AudioTrack`
      * in `AudioTrackPlayer` (USAGE_MEDIA + CONTENT_TYPE_SPEECH) so
@@ -82,7 +236,7 @@ class NestForegroundService : Service() {
      */
     private fun requestAudioFocus() {
         if (audioFocusRequest != null) return
-        val mgr = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val mgr = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val attrs =
             android.media.AudioAttributes
                 .Builder()
@@ -90,25 +244,61 @@ class NestForegroundService : Service() {
                 .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
                 .build()
         val request =
-            android.media.AudioFocusRequest
-                .Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+            AudioFocusRequest
+                .Builder(AudioManager.AUDIOFOCUS_GAIN)
                 .setAudioAttributes(attrs)
                 .setAcceptsDelayedFocusGain(false)
-                .setOnAudioFocusChangeListener({ /* no-op — duck-on-loss handled by the OS */ })
-                .build()
-        // Best-effort: a refused request just means the OS will
-        // duck/pause us based on its own policy. Don't fail the
-        // service start over a focus denial.
-        runCatching { mgr.requestAudioFocus(request) }
+                .setOnAudioFocusChangeListener { focusChange ->
+                    NestAudioFocusBus.publish(translateFocusChange(focusChange))
+                }.build()
+        // Strict GRANTED check: anything else — FAILED (active call
+        // blocking us), DELAYED (we set [setAcceptsDelayedFocusGain]
+        // false so this shouldn't happen but treat it as not-granted
+        // defensively), or a swallowed exception from runCatching —
+        // means we don't actually own playback yet, so the VM must
+        // start muted. The earlier shape used `!= FAILED` which fell
+        // through to Granted on `null` (exception path) and on
+        // DELAYED (= 2), playing audio over a call that the OS hadn't
+        // released to us.
+        val result = runCatching { mgr.requestAudioFocus(request) }.getOrNull()
+        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            NestAudioFocusBus.publish(NestAudioFocusState.Granted)
+        } else {
+            NestAudioFocusBus.publish(NestAudioFocusState.TransientLoss)
+        }
         audioFocusRequest = request
     }
 
     private fun abandonAudioFocus() {
         val request = audioFocusRequest ?: return
-        val mgr = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val mgr = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         runCatching { mgr.abandonAudioFocusRequest(request) }
         audioFocusRequest = null
+        // Reset to Granted so a future foreground-service start that
+        // happens before the next focus request lands doesn't inherit
+        // a stale "muted because we lost focus" state.
+        NestAudioFocusBus.publish(NestAudioFocusState.Granted)
     }
+
+    private fun translateFocusChange(focusChange: Int): NestAudioFocusState =
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE,
+            -> NestAudioFocusState.Granted
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
+            -> NestAudioFocusState.TransientLoss
+
+            AudioManager.AUDIOFOCUS_LOSS -> NestAudioFocusState.Loss
+
+            // Unknown future codes: be defensive and treat as Granted
+            // so a vendor-specific extension can't silently mute the
+            // room forever.
+            else -> NestAudioFocusState.Granted
+        }
 
     override fun onStartCommand(
         intent: Intent?,
@@ -217,6 +407,8 @@ class NestForegroundService : Service() {
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
         abandonAudioFocus()
+        unregisterAudioDeviceCallback()
+        unregisterNetworkCallback()
         super.onDestroy()
     }
 

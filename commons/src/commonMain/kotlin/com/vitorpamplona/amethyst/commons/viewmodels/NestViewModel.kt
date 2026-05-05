@@ -34,6 +34,7 @@ import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.NestsSpeaker
 import com.vitorpamplona.nestsclient.NestsSpeakerState
 import com.vitorpamplona.nestsclient.audio.AudioCapture
+import com.vitorpamplona.nestsclient.audio.AudioException
 import com.vitorpamplona.nestsclient.audio.AudioPlayer
 import com.vitorpamplona.nestsclient.audio.NestPlayer
 import com.vitorpamplona.nestsclient.audio.OpusDecoder
@@ -283,6 +284,34 @@ class NestViewModel(
     private var speakerConnectJob: Job? = null
 
     /**
+     * Mirror of [NestAudioFocusBus.state] flipped to a boolean: `true`
+     * while another app holds audio focus (inbound phone call, Maps
+     * voice prompt, system alarm). Composed with the user-visible
+     * mute states (`NestUiState.isMuted` for listeners,
+     * `BroadcastUiState.Broadcasting.isMuted` for the speaker mic) via
+     * [effectiveListenMuted] / [effectiveMicMuted] so the user-chosen
+     * state is preserved across a focus loss + regain cycle.
+     *
+     * Maintained by [audioFocusObserverJob], started in [launchConnect]
+     * (so a never-connected VM doesn't subscribe needlessly).
+     */
+    @Volatile private var focusMuted: Boolean = false
+    private var audioFocusObserverJob: Job? = null
+
+    /**
+     * Subscribed in [ensureNetworkChangeObserverStarted]; calls
+     * [com.vitorpamplona.nestsclient.NestsListener.recycleSession]
+     * (and the speaker counterpart) when the platform reports a
+     * default-network change. Without this, a Wi-Fi → cellular
+     * handover leaves the QUIC connection sitting on the now-dead
+     * socket until its PTO fires (~30 s) — the wrapper's reconnect
+     * loop only learns about the failure at PTO. With the bus
+     * nudge, recycle happens immediately and the audible gap
+     * shrinks to a single re-handshake.
+     */
+    private var networkChangeObserverJob: Job? = null
+
+    /**
      * Push the latest known speaker set from the room event. The user's
      * own pubkey (when broadcasting) is filtered out so we don't subscribe
      * to our own forwarded audio — that would echo through the local
@@ -317,13 +346,97 @@ class NestViewModel(
             teardown(targetState = ConnectionUiState.Idle, finalCleanup = false)
         }
 
+        ensureAudioFocusObserverStarted()
+        ensureNetworkChangeObserverStarted()
         launchConnect()
+    }
+
+    /**
+     * Subscribe to [NestAudioFocusBus] for the lifetime of this VM (or
+     * until [teardown] cancels). On loss, mute every active listener
+     * + the broadcast mic without touching the user-visible mute
+     * states; on regain, restore the user's choice. Idempotent —
+     * a second call while the job is alive is a no-op.
+     */
+    private fun ensureAudioFocusObserverStarted() {
+        if (audioFocusObserverJob?.isActive == true) return
+        audioFocusObserverJob =
+            viewModelScope.launch {
+                NestAudioFocusBus.state.collect { focusState ->
+                    if (closed) return@collect
+                    val newFocusMuted = focusState != NestAudioFocusState.Granted
+                    if (newFocusMuted == focusMuted) return@collect
+                    focusMuted = newFocusMuted
+                    // Re-apply both directions. effectiveListenMuted()
+                    // and the per-broadcast effective rebuild below
+                    // both consume the just-updated [focusMuted] field.
+                    applyEffectiveListenMute()
+                    applyEffectiveMicMute()
+                }
+            }
+    }
+
+    /**
+     * Subscribe to [NestNetworkChangeBus] for the lifetime of this VM
+     * (or until [teardown]). On a default-network change, ask both
+     * the listener and the speaker wrappers to recycle their
+     * underlying sessions — much faster than waiting for the QUIC
+     * PTO on a dead socket. Idempotent.
+     */
+    private fun ensureNetworkChangeObserverStarted() {
+        if (networkChangeObserverJob?.isActive == true) return
+        networkChangeObserverJob =
+            viewModelScope.launch {
+                NestNetworkChangeBus.events.collect {
+                    if (closed) return@collect
+                    // Best-effort. The wrapper-level recycleSession is a
+                    // no-op on raw / non-reconnecting implementations
+                    // (test fakes, IETF reference) so a network change
+                    // there is silently ignored — the production paths
+                    // wrap with [connectReconnectingNestsListener] /
+                    // [connectReconnectingNestsSpeaker] which both
+                    // override the hook to close the inner session.
+                    listener?.runCatching { recycleSession() }
+                    speaker?.runCatching { recycleSession() }
+                }
+            }
+    }
+
+    /**
+     * Push the effective mic mute (`user choice OR focus-loss`) onto
+     * the live broadcast handle, if any. The user-visible
+     * [BroadcastUiState.Broadcasting.isMuted] stays the user's choice
+     * — UI only reflects that, never the focus-driven temporary
+     * silencing — so a focus regain is invisible to the user.
+     */
+    private fun applyEffectiveMicMute() {
+        val handle = broadcastHandle ?: return
+        val ui = _uiState.value.broadcast
+        val userMuted = (ui as? BroadcastUiState.Broadcasting)?.isMuted ?: false
+        val effective = userMuted || focusMuted
+        viewModelScope.launch {
+            runCatching { handle.setMuted(effective) }
+        }
     }
 
     fun setMuted(muted: Boolean) {
         if (closed) return
         _uiState.update { it.copy(isMuted = muted) }
-        activeSubscriptions.values.forEach { it.player?.setMutedSafe(muted) }
+        applyEffectiveListenMute()
+    }
+
+    /**
+     * Effective listener mute = user-chosen mute (from the talk-bar)
+     * OR audio-focus loss (phone call / nav prompt). Applied to every
+     * active player. The user-visible state (`NestUiState.isMuted`)
+     * stays the user's choice, so a focus regain restores it
+     * automatically.
+     */
+    private fun effectiveListenMuted(): Boolean = _uiState.value.isMuted || focusMuted
+
+    private fun applyEffectiveListenMute() {
+        val effective = effectiveListenMuted()
+        activeSubscriptions.values.forEach { it.player?.setMutedSafe(effective) }
     }
 
     /**
@@ -523,7 +636,13 @@ class NestViewModel(
         if (closed) return
         val handle = broadcastHandle ?: return
         viewModelScope.launch {
-            val result = handle.runCatching { setMuted(muted) }
+            // Apply (user-mute OR audio-focus-loss) to the wire so the
+            // mic stays silent through a phone call without us losing
+            // the user's intent. UI then reflects the user choice (not
+            // the focus-effective state) so a focus-driven mute doesn't
+            // visually flip the talk button.
+            val effective = muted || focusMuted
+            val result = handle.runCatching { setMuted(effective) }
             if (closed) return@launch
             _uiState.update {
                 val current = it.broadcast
@@ -866,9 +985,26 @@ class NestViewModel(
                     throw t
                 }
             try {
-                val isMuted = _uiState.value.isMuted
+                // Apply (user-mute OR audio-focus-loss) so a speaker
+                // that comes on stage during a phone call attaches
+                // already silenced. The focus observer re-runs
+                // applyEffectiveListenMute() on regain, restoring the
+                // user's intent.
+                val isMuted = effectiveListenMuted()
                 val isHushed = pubkey in _uiState.value.locallyHushed
-                val roomPlayer = NestPlayer(decoder, player, viewModelScope)
+                val roomPlayer =
+                    NestPlayer(
+                        decoder = decoder,
+                        player = player,
+                        scope = viewModelScope,
+                        // ~100 ms of audio buffered before the AudioTrack
+                        // starts consuming. Long enough to hide a typical
+                        // Main-thread hiccup (Compose recomposition / GC)
+                        // without making the join feel laggy. Empirically
+                        // tuned in the audio-rooms audit; see NestPlayer
+                        // kdoc for details.
+                        prerollFrames = ROOM_PLAYER_PREROLL_FRAMES,
+                    )
                 // Apply current mute + per-speaker hush state before play()
                 // opens the device so the first frame respects them.
                 player.setMutedSafe(isMuted)
@@ -880,7 +1016,32 @@ class NestViewModel(
                 val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
                 roomPlayer.play(
                     instrumented,
-                    onError = { /* swallow per-packet decoder errors */ },
+                    onError = { err ->
+                        // Per-packet decoder errors are noise — Opus PLC
+                        // papers over a single bad frame. Swallow those.
+                        // PlaybackFailed (or DeviceUnavailable from a
+                        // deferred [AudioPlayer.beginPlayback], or the
+                        // audio-priority dispatcher dying mid-stream) is
+                        // terminal: the device is wedged for THIS
+                        // subscription. Roll the slot back so a future
+                        // reconcile can retry rather than leave a
+                        // perma-spinning speaker tile.
+                        when (err.kind) {
+                            AudioException.Kind.DecoderError,
+                            AudioException.Kind.EncoderError,
+                            -> {
+                                Unit
+                            }
+
+                            AudioException.Kind.PlaybackFailed,
+                            AudioException.Kind.DeviceUnavailable,
+                            -> {
+                                if (activeSubscriptions[pubkey] === slot) {
+                                    activeSubscriptions.remove(pubkey)?.let { closeSubscription(it) }
+                                }
+                            }
+                        }
+                    },
                     onLevel = { onAudioLevel(pubkey, it) },
                 )
                 slot.attach(handle, roomPlayer, player)
@@ -928,6 +1089,20 @@ class NestViewModel(
         announcesJob = null
         levelEmitterJob?.cancel()
         levelEmitterJob = null
+        // Audio-focus observation only ends on the final teardown —
+        // a transient disconnect+reconnect (user retry, room swap)
+        // keeps the bus subscription alive so a focus loss that
+        // happens during the gap is still picked up. The observer
+        // is idempotent under [ensureAudioFocusObserverStarted], so
+        // the next [connect] call is safe whether or not we
+        // cancelled here.
+        if (finalCleanup) {
+            audioFocusObserverJob?.cancel()
+            audioFocusObserverJob = null
+            focusMuted = false
+            networkChangeObserverJob?.cancel()
+            networkChangeObserverJob = null
+        }
         rawAudioLevels.clear()
         if (_audioLevels.value.isNotEmpty()) {
             _audioLevels.value = emptyMap()
@@ -1245,6 +1420,17 @@ sealed class BroadcastUiState {
  * indicator flicker.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/**
+ * Per-speaker pre-roll: number of decoded PCM frames buffered before the
+ * underlying [com.vitorpamplona.nestsclient.audio.AudioPlayer] starts
+ * consuming. 5 × 20 ms ≈ 100 ms of audio — long enough to mask a typical
+ * Main-thread stall (Compose recomposition / GC) without adding perceptible
+ * join latency. Combines with [com.vitorpamplona.nestsclient.audio.AudioTrackPlayer]'s
+ * ~250 ms AudioTrack buffer for ~350 ms of total slack between the
+ * arrival-of-frame and the underrun horizon.
+ */
+const val ROOM_PLAYER_PREROLL_FRAMES: Int = 5
 
 /**
  * Coalescing interval for [NestViewModel.audioLevels]. The decode loop

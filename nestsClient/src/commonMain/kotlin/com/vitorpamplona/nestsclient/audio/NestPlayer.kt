@@ -45,7 +45,27 @@ class NestPlayer(
     private val decoder: OpusDecoder,
     private val player: AudioPlayer,
     private val scope: CoroutineScope,
+    /**
+     * Number of decoded PCM frames to buffer before starting the underlying
+     * [AudioPlayer]. Without pre-roll, the device begins consuming audio the
+     * instant the first frame arrives and underruns at the first decode that
+     * misses its 20 ms cadence — the most common cause of perceptible
+     * dropouts on devices where Compose recomposition or GC briefly stalls
+     * the decode loop.
+     *
+     * Production callers typically pass `5` (≈ 100 ms) — long enough to mask
+     * a typical Main-thread hiccup, short enough that listeners don't notice
+     * the join latency. Tests pass `0` to preserve the synchronous test
+     * scheduler behaviour the existing assertions rely on.
+     *
+     * Default is `0` so existing tests stand without modification.
+     */
+    private val prerollFrames: Int = 0,
 ) {
+    init {
+        require(prerollFrames >= 0) { "prerollFrames must be >= 0, got $prerollFrames" }
+    }
+
     private var job: Job? = null
     private var stopped = false
 
@@ -73,9 +93,56 @@ class NestPlayer(
         check(!stopped) { "NestPlayer already stopped" }
         check(job == null) { "NestPlayer.play already called" }
 
+        // Allocate the device synchronously so a [AudioException.DeviceUnavailable]
+        // (audio policy denial, AudioTrack rejected, etc.) propagates to
+        // the caller — typically `NestViewModel.openSubscription`, which
+        // catches and rolls back the freshly-reserved subscription slot.
+        // Routing this failure through `onError` instead would attach the
+        // slot first and leave a permanent "Connecting…" spinner on the
+        // speaker tile when the device fails to allocate.
+        //
+        // Two-phase startup: [AudioPlayer.start] allocates without
+        // beginning playback; [AudioPlayer.beginPlayback] flips the
+        // device into the playing state. We delay [beginPlayback] until
+        // the pre-roll buffer is full so the first frames already
+        // populate the device's internal buffer when the hardware
+        // starts pulling samples.
         player.start()
+
+        // Pre-roll buffer holds decoded PCM until either [prerollFrames]
+        // frames have arrived or the upstream flow ends. Once the
+        // threshold is met (or the flow ends with anything queued), we
+        // call [AudioPlayer.beginPlayback] and flush the buffer in a
+        // tight loop so the device starts playback with a populated
+        // buffer. A flow that never produces PCM (decoder always empty,
+        // no audio in the room) never calls [beginPlayback] — the
+        // allocated device sits in the "ready, not playing" state until
+        // [stop] tears it down.
         job =
             scope.launch {
+                val preroll = ArrayDeque<ShortArray>(prerollFrames.coerceAtLeast(1))
+                var playbackBegun = false
+
+                suspend fun beginAndFlushIfNeeded() {
+                    if (playbackBegun) return
+                    if (preroll.isEmpty()) return
+                    // Flush BEFORE [beginPlayback] so the device starts
+                    // playing against an already-populated buffer rather
+                    // than emitting silence for the microseconds it
+                    // takes the flush loop to fill. AudioTrack
+                    // MODE_STREAM explicitly supports write() before
+                    // play() per the Android docs — that's the
+                    // textbook pre-roll pattern. Order matters
+                    // because [beginPlayback] is the moment the
+                    // hardware starts pulling samples; getting
+                    // [enqueue] in first means the very first sample
+                    // pulled is from our pre-rolled audio, not silence.
+                    while (preroll.isNotEmpty()) {
+                        player.enqueue(preroll.removeFirst())
+                    }
+                    player.beginPlayback()
+                    playbackBegun = true
+                }
                 try {
                     objects.collect { obj ->
                         val pcm =
@@ -95,9 +162,21 @@ class NestPlayer(
                             }
                         if (pcm.isNotEmpty()) {
                             onLevel(peakAmplitude(pcm))
-                            player.enqueue(pcm)
+                            if (playbackBegun) {
+                                player.enqueue(pcm)
+                            } else {
+                                preroll.addLast(pcm)
+                                if (preroll.size >= prerollFrames) {
+                                    beginAndFlushIfNeeded()
+                                }
+                            }
                         }
                     }
+                    // Flow ended without enough frames to fill the pre-roll
+                    // (e.g. the publisher cycled before pre-roll was full,
+                    // or the room ended). Flush whatever's queued so any
+                    // already-decoded audio still reaches the device.
+                    beginAndFlushIfNeeded()
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {

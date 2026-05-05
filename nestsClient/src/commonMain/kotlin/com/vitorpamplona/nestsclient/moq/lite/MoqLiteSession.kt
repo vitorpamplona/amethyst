@@ -202,8 +202,6 @@ class MoqLiteSession internal constructor(
                 endGroup = endGroup,
             )
         val bidi = transport.openBidiStream()
-        bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
-        bidi.write(MoqLiteCodec.encodeSubscribe(request))
 
         // Single long-running collector for the bidi's whole lifetime.
         // The collector parses the SubscribeResponse inline, signals it
@@ -228,16 +226,31 @@ class MoqLiteSession internal constructor(
         val frames = Channel<MoqLiteFrame>(capacity = DEFAULT_FRAME_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
         val responseDeferred = CompletableDeferred<MoqLiteCodec.SubscribeResponse>()
 
-        // Pre-register the subscription BEFORE launching the collector.
-        // Otherwise: if the publisher FINs the bidi immediately after
-        // sending Ok, the collector's exit-cleanup races subscribe()'s
-        // post-await registration — collector exits, runs `remove(id)`
-        // against an empty map, no-ops; subscribe() then inserts; the
-        // frames channel is now in the map with no live collector to
-        // close it on transport tear-down. Consumer hangs forever.
-        // Pre-registering means the collector's idempotent
-        // remove+close cleanup always finds and closes the frames
-        // channel, regardless of timing.
+        // Pre-register the subscription BEFORE launching the collector
+        // AND before the SUBSCRIBE goes on the wire. The order matters
+        // for two reasons:
+        //
+        //   1. Collector race (original reason): if the publisher FINs
+        //      the bidi immediately after sending Ok, the collector's
+        //      exit-cleanup races subscribe()'s post-await registration
+        //      — collector exits, runs `remove(id)` against an empty
+        //      map, no-ops; subscribe() then inserts; the frames
+        //      channel is now in the map with no live collector to
+        //      close it on transport tear-down. Consumer hangs
+        //      forever. Pre-registering means the collector's
+        //      idempotent remove+close cleanup always finds and
+        //      closes the frames channel, regardless of timing.
+        //
+        //   2. First-group race (audit fix #3): the relay can open
+        //      the first group's uni stream BEFORE our subscribe()
+        //      continuation re-enters [state] to register `id`. If
+        //      the SUBSCRIBE bytes hit the wire before the map entry
+        //      lands, [drainOneGroup] looks the id up against an
+        //      empty map and silently drops the frame. Registering
+        //      the id before writing the SUBSCRIBE closes the
+        //      window — by the time the relay can have parsed the
+        //      message and opened a uni stream in response, the map
+        //      already has our entry.
         val sub =
             ListenerSubscription(
                 id = id,
@@ -249,18 +262,44 @@ class MoqLiteSession internal constructor(
             subscriptionsBySubscribeId[id] = sub
             if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
         }
+        // Now that the subscription is registered, push the SUBSCRIBE
+        // bytes. If `bidi.write` throws (transport torn down, peer
+        // reset) we'd otherwise leave an orphaned map entry whose
+        // frames channel never closes — the response collector hasn't
+        // been launched yet so its idempotent cleanup wouldn't run.
+        // Roll back explicitly on throw.
+        try {
+            bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            bidi.write(MoqLiteCodec.encodeSubscribe(request))
+        } catch (t: Throwable) {
+            state.withLock { subscriptionsBySubscribeId.remove(id) }
+            frames.close()
+            runCatching { bidi.finish() }
+            throw t
+        }
 
         scope.launch {
             val responseBuffer = MoqLiteFrameBuffer()
             var responseParsed = false
+            // typeCode hoisted outside the collect lambda — `readVarint`
+            // advances `pos` permanently while `readSizePrefixed` rolls
+            // its own length-varint back on incomplete-body but does NOT
+            // roll back the type-code that's already been consumed. If
+            // the response chunks split between type and body (possible
+            // under MTU pressure / fragmentation), a per-tick `val
+            // typeCode = readVarint()` would read the body's size
+            // prefix as the type code on the next chunk and misframe
+            // the response. Mirrors the same fix in [handleInboundBidi].
+            var typeCode: Long? = null
             try {
                 bidi.incoming().collect { chunk ->
                     if (!responseParsed) {
                         responseBuffer.push(chunk)
-                        val typeCode = responseBuffer.readVarint() ?: return@collect
+                        if (typeCode == null) typeCode = responseBuffer.readVarint()
+                        val tc = typeCode ?: return@collect
                         val body = responseBuffer.readSizePrefixed() ?: return@collect
                         val out = MoqWriter()
-                        out.writeVarint(typeCode)
+                        out.writeVarint(tc)
                         out.writeVarint(body.size.toLong())
                         out.writeBytes(body)
                         val resp = MoqLiteCodec.decodeSubscribeResponse(out.toByteArray())

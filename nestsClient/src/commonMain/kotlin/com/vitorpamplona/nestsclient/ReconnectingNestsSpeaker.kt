@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.audio.AudioCapture
+import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -68,15 +69,23 @@ import java.util.concurrent.atomic.AtomicReference
  * `close` cancels the re-issue pump and best-effort closes the
  * latest live handle.
  *
- * **Audio gap during refresh** — the wrapper closes the current
- * underlying speaker (which stops the mic capture + Opus encoder +
- * publisher) before opening the next, so the listener side will
- * hear ~50–150 ms of silence at each recycle boundary. That's the
- * trade-off we pay for a clean session swap; the alternative
- * (carrying the mic capture across sessions) would require deeper
- * plumbing into the audio pipeline. Acceptable for v1 —
- * 9-min-spaced 150 ms gaps are well below the noise floor of a
- * voice call.
+ * **Audio gap during refresh — eliminated for moq-lite** — when the
+ * underlying speaker implements [HotSwappablePublisherSource]
+ * (which [MoqLiteNestsSpeaker] does), the wrapper keeps a single
+ * long-lived [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster]
+ * alive across session recycles and only swaps the
+ * [com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle]
+ * underneath it. The mic + encoder run continuously through the
+ * boundary and the listener hears no silence. The old session
+ * close runs in parallel with the new openOnce so the WebTransport
+ * teardown doesn't block the swap.
+ *
+ * **Audio gap during refresh — legacy path** — for speakers that
+ * don't implement [HotSwappablePublisherSource] (the IETF reference
+ * `DefaultNestsSpeaker` and test fakes), the wrapper falls back to
+ * close-then-restart: the listener hears ~50–150 ms of silence per
+ * recycle. Acceptable because the IETF path is reference-only —
+ * production runs the moq-lite hot-swap path.
  *
  * Cancellation: cancelling [scope] (typically the room screen's VM
  * scope) cancels the reconnect loop and closes both the active
@@ -186,16 +195,41 @@ suspend fun connectReconnectingNestsSpeaker(
                         }
                     if (terminal == null) {
                         // Refresh deadline hit before any terminal state —
-                        // planned recycle, not a failure. Close the old
-                        // speaker; don't bump `attempt` (it's not a
-                        // backoff event) so the next openOnce() runs
-                        // immediately.
-                        try {
-                            speaker.close()
-                        } catch (ce: kotlinx.coroutines.CancellationException) {
-                            throw ce
-                        } catch (_: Throwable) {
-                            // Best-effort.
+                        // planned recycle, not a failure. Don't bump
+                        // `attempt` (it's not a backoff event) so the next
+                        // openOnce() runs immediately.
+                        //
+                        // Hand the old speaker's close to a separate
+                        // launch so it runs IN PARALLEL with the next
+                        // iteration's openOnce(). Sequence on the wire:
+                        //
+                        //   1. (concurrent) old speaker close — closes
+                        //      old session's publisher + WebTransport.
+                        //   2. (concurrent) new openOnce() → sets
+                        //      activeSpeaker = newSpeaker.
+                        //   3. Wrapper's hot-swap pump observes the
+                        //      activeSpeaker change, opens a publisher
+                        //      on the new session, swaps it into the
+                        //      long-lived broadcaster, closes the old
+                        //      publisher.
+                        //
+                        // The previous shape closed the old speaker
+                        // synchronously BEFORE openOnce, which forced the
+                        // mic + encoder to stop and re-open across the
+                        // boundary (50–150 ms audible silence at the
+                        // listener). With the close hoisted onto a
+                        // sibling job, the broadcaster keeps capturing
+                        // through the recycle and the listener hears
+                        // continuous audio.
+                        val toClose = speaker
+                        scope.launch {
+                            try {
+                                toClose.close()
+                            } catch (ce: kotlinx.coroutines.CancellationException) {
+                                throw ce
+                            } catch (_: Throwable) {
+                                // Best-effort.
+                            }
                         }
                         attempt = 0
                         refreshTriggered = true
@@ -249,7 +283,14 @@ suspend fun connectReconnectingNestsSpeaker(
         throw NestsException(firstReady.reason, firstReady.cause)
     }
 
-    return ReconnectingSpeakerHandle(state, activeSpeaker, orchestrator, scope)
+    return ReconnectingSpeakerHandle(
+        mutableState = state,
+        activeSpeaker = activeSpeaker,
+        orchestrator = orchestrator,
+        scope = scope,
+        captureFactory = captureFactory,
+        encoderFactory = encoderFactory,
+    )
 }
 
 private fun isUserCancelledSpeaker(state: NestsSpeakerState.Failed): Boolean {
@@ -266,6 +307,17 @@ private class ReconnectingSpeakerHandle(
     private val activeSpeaker: MutableStateFlow<NestsSpeaker?>,
     private val orchestrator: Job,
     private val scope: CoroutineScope,
+    /**
+     * Audio-pipeline factories propagated from
+     * [connectReconnectingNestsSpeaker]. Used by the hot-swap
+     * [ReissuingBroadcastHandle] to construct ONE long-lived
+     * [NestMoqLiteBroadcaster] that survives session recycles —
+     * without these the broadcaster would have to be re-built
+     * (which restarts the mic + encoder + adds a 50–150 ms
+     * audible gap) on every JWT refresh.
+     */
+    private val captureFactory: () -> AudioCapture,
+    private val encoderFactory: () -> OpusEncoder,
 ) : NestsSpeaker {
     override val state: StateFlow<NestsSpeakerState> = mutableState.asStateFlow()
 
@@ -291,13 +343,31 @@ private class ReconnectingSpeakerHandle(
                 ?: error("no live session — wait for state == Connected before startBroadcasting")
 
             val handle =
-                ReissuingBroadcastHandle(activeSpeaker, scope, onLevel) { closed ->
-                    if (activeBroadcast === closed) activeBroadcast = null
-                }
+                ReissuingBroadcastHandle(
+                    activeSpeaker = activeSpeaker,
+                    scope = scope,
+                    captureFactory = captureFactory,
+                    encoderFactory = encoderFactory,
+                    onLevel = onLevel,
+                    onClose = { closed ->
+                        if (activeBroadcast === closed) activeBroadcast = null
+                    },
+                )
             handle.start()
             activeBroadcast = handle
             handle
         }
+
+    /**
+     * Force-close the active inner speaker so the orchestrator opens
+     * a fresh session against the (presumably new) network. Used by
+     * the platform layer on a network change. Mirror of the listener
+     * wrapper's [com.vitorpamplona.nestsclient.NestsListener.recycleSession].
+     */
+    override suspend fun recycleSession() {
+        val current = activeSpeaker.value ?: return
+        runCatching { current.close() }
+    }
 
     override suspend fun close() {
         orchestrator.cancel()
@@ -310,26 +380,42 @@ private class ReconnectingSpeakerHandle(
 }
 
 /**
- * Stable [BroadcastHandle] backed by a re-issuing pump. Each time
- * the wrapper opens a fresh session the pump cancels its prior
- * iteration, calls [NestsSpeaker.startBroadcasting] on the new
- * session, replays the cached mute intent on the resulting
- * underlying handle, and parks until the next session swap.
+ * Stable [BroadcastHandle] backed by a re-issuing pump. Two paths,
+ * picked per-iteration based on whether the active speaker exposes
+ * the [HotSwappablePublisherSource] hook:
  *
- * `setMuted` updates the cached intent unconditionally and forwards
- * to whichever live underlying handle exists at the time. If no
- * underlying handle is up (e.g. a brief gap during recycle), the
- * intent is replayed on the next handle the pump opens, so the
- * user-observed mute state is monotonic across recycles.
+ *  - **Hot-swap path** (moq-lite): the pump constructs ONE
+ *    long-lived [NestMoqLiteBroadcaster] on the first session
+ *    and, on every subsequent session swap, opens a fresh
+ *    [com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle]
+ *    on the new session and atomically swaps it into the
+ *    broadcaster via
+ *    [NestMoqLiteBroadcaster.swapPublisher]. The mic +
+ *    encoder + capture loop keep running through the swap, so
+ *    listeners hear ZERO gap at the JWT-refresh boundary
+ *    (vs the legacy ~50–150 ms close-then-restart silence).
+ *
+ *  - **Legacy path** (IETF reference / test fakes): each session
+ *    swap closes the prior `BroadcastHandle` from
+ *    [NestsSpeaker.startBroadcasting] and opens a fresh one. Same
+ *    behaviour as before this hot-swap was introduced.
+ *
+ * `setMuted` updates the cached intent unconditionally; the pump
+ * applies the latest intent to whichever underlying broadcaster /
+ * handle is currently live, so user-observed mute is monotonic
+ * across recycles.
  */
 private class ReissuingBroadcastHandle(
     private val activeSpeaker: StateFlow<NestsSpeaker?>,
     private val scope: CoroutineScope,
+    private val captureFactory: () -> AudioCapture,
+    private val encoderFactory: () -> OpusEncoder,
     /**
-     * Forwarded to every underlying [NestsSpeaker.startBroadcasting]
-     * the pump opens, so the local-speaking ring keeps animating
-     * across session recycles. Mirrors how [desiredMuted] is
-     * replayed — the user-observed signal is monotonic.
+     * Forwarded to the underlying broadcaster (hot-swap path) or
+     * `sp.startBroadcasting` (legacy path) so the local-speaking ring
+     * keeps animating across session recycles. Mirrors how
+     * [desiredMuted] is replayed — the user-observed signal is
+     * monotonic.
      */
     private val onLevel: (Float) -> Unit,
     private val onClose: (ReissuingBroadcastHandle) -> Unit,
@@ -337,17 +423,22 @@ private class ReissuingBroadcastHandle(
     @Volatile private var desiredMuted: Boolean = false
 
     @Volatile private var closed: Boolean = false
+
+    /** Hot-swap path's long-lived broadcaster. Null until the first session arrives. */
+    @Volatile private var hotSwapBroadcaster: NestMoqLiteBroadcaster? = null
+
+    /** Legacy path's per-session handle. Cleared when the session swaps. */
     private val liveHandle = AtomicReference<BroadcastHandle?>(null)
     private var pumpJob: Job? = null
 
     override val isMuted: Boolean get() = desiredMuted
 
     fun start() {
-        // Re-broadcast pump: every time activeSpeaker changes, drop
-        // the prior broadcast (collectLatest cancels the inner
-        // body via awaitCancellation) and open a new one against
-        // the fresh session. The pattern mirrors the listener's
-        // SubscribeHandle re-issuance pump.
+        // Per-iteration pump: every time activeSpeaker changes, decide
+        // whether the new speaker supports hot swap. If yes, retarget
+        // the long-lived broadcaster onto its publisher; if no, fall
+        // back to the close-then-restart path the previous version
+        // used uniformly.
         pumpJob =
             scope.launch {
                 activeSpeaker.collectLatest { sp ->
@@ -367,60 +458,151 @@ private class ReissuingBroadcastHandle(
                         return@collectLatest
                     }
                     if (closed) return@collectLatest
-                    val handle =
-                        try {
-                            sp.startBroadcasting(onLevel)
-                        } catch (ce: kotlinx.coroutines.CancellationException) {
-                            // Don't `return@collectLatest` on cancel —
-                            // propagate so the launched pumpJob actually
-                            // dies on close/scope cancellation. The old
-                            // `runCatching` shape ate the cancel.
-                            throw ce
-                        } catch (_: Throwable) {
-                            null
-                        } ?: return@collectLatest
-                    if (closed) {
-                        runCatching { handle.close() }
-                        return@collectLatest
-                    }
-                    // Apply current mute intent BEFORE storing the
-                    // handle so a setMuted that races us applies
-                    // exactly once: either (a) we set intent →
-                    // apply intent → store, and the racing setMuted
-                    // sees the live handle and applies again (no-op
-                    // on the broadcaster); or (b) the racing
-                    // setMuted updates intent → we read intent →
-                    // apply. Order doesn't matter; idempotent.
-                    if (desiredMuted) {
-                        runCatching { handle.setMuted(true) }
-                    }
-                    liveHandle.set(handle)
-                    try {
-                        // Park until activeSpeaker emits a new value
-                        // (collectLatest cancels us) or close() runs
-                        // (pumpJob.cancel).
-                        awaitCancellation()
-                    } finally {
-                        // Clear our slot only if we still own it —
-                        // close() may have already swapped in null.
-                        if (liveHandle.get() === handle) liveHandle.set(null)
-                        // Best-effort close on the way out: the user
-                        // may have called wrapper.close (closed=true,
-                        // pump cancelling), or activeSpeaker swapped
-                        // (the prior speaker is about to be closed
-                        // by the orchestrator anyway, but defensively
-                        // closing here releases the broadcaster +
-                        // publisher promptly rather than waiting for
-                        // the speaker.close()).
-                        runCatching { handle.close() }
+
+                    val hotSwap = sp as? HotSwappablePublisherSource
+                    if (hotSwap != null) {
+                        runHotSwapIteration(hotSwap)
+                    } else {
+                        runLegacyIteration(sp)
                     }
                 }
             }
     }
 
+    /**
+     * Hot-swap iteration body. On the first session: open a publisher,
+     * construct the long-lived broadcaster, start it. On subsequent
+     * sessions: open a publisher on the new session, swap into the
+     * existing broadcaster, close the OLD publisher (FINs its
+     * announce + group streams on the about-to-die session).
+     *
+     * Parks via [awaitCancellation] so [collectLatest] can cancel us
+     * cleanly when the next session arrives. The broadcaster is NOT
+     * stopped here — it lives across iterations and is only stopped
+     * when the wrapper itself closes.
+     */
+    private suspend fun runHotSwapIteration(hotSwap: HotSwappablePublisherSource) {
+        val newPublisher =
+            try {
+                hotSwap.openPublisherForHotSwap(MoqLiteNestsListener.AUDIO_TRACK)
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                // Couldn't mint a publisher on this session (rare —
+                // the session is already past Connected). Bail; the
+                // next session swap will retry.
+                return
+            }
+        if (closed) {
+            runCatching { newPublisher.close() }
+            return
+        }
+
+        val existing = hotSwapBroadcaster
+        if (existing == null) {
+            // First-ever iteration: build the broadcaster and start it.
+            val broadcaster =
+                NestMoqLiteBroadcaster(
+                    capture = captureFactory(),
+                    encoder = encoderFactory(),
+                    initialPublisher = newPublisher,
+                    scope = scope,
+                    framesPerGroup = NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP,
+                )
+            try {
+                broadcaster.start(
+                    onTerminalFailure = {
+                        // Bubble up via the speaker's state machine so
+                        // the orchestrator's normal Failed-handling
+                        // path recycles the session. Same shape the
+                        // legacy `startBroadcasting`-internal path uses.
+                        runCatching { hotSwap.reportBroadcastTerminalFailure() }
+                    },
+                    onLevel = onLevel,
+                )
+            } catch (t: Throwable) {
+                runCatching { newPublisher.close() }
+                throw t
+            }
+            // Apply current mute intent (a setMuted that arrived before
+            // the broadcaster existed has already updated desiredMuted).
+            if (desiredMuted) broadcaster.setMuted(true)
+            hotSwapBroadcaster = broadcaster
+        } else {
+            // Subsequent iteration: hot swap. The capture / encoder
+            // pipeline is already running and feeding [existing.publisher]
+            // (the soon-to-be-old one). Install the new publisher,
+            // grab the old, close it. The capture loop's next snapshot
+            // picks up the new publisher and resets its group counter.
+            val old = existing.swapPublisher(newPublisher)
+            // Re-apply mute on the broadcaster — it survives swap, but
+            // a setMuted that arrived during the gap between the last
+            // session's terminal state and this swap may have flipped
+            // [desiredMuted] without finding a live broadcaster (no, it
+            // would have seen [hotSwapBroadcaster] since that's
+            // long-lived; but the no-op on equality keeps this safe).
+            existing.setMuted(desiredMuted)
+            // Close the old publisher AFTER the broadcaster has the
+            // new one. This is the order that matters: if we closed
+            // first, the capture loop's next send would race the swap
+            // and might see the closed publisher.
+            if (old != null) runCatching { old.close() }
+        }
+
+        try {
+            // Park until [collectLatest] cancels us on the next session
+            // swap, OR [close] cancels [pumpJob]. The broadcaster keeps
+            // running through the cancellation; only close() stops it.
+            awaitCancellation()
+        } finally {
+            // Intentionally do NOT close the broadcaster here.
+            // collectLatest cancels this iteration on every session
+            // swap; closing the broadcaster would create the exact
+            // 50–150 ms gap this whole path exists to avoid.
+        }
+    }
+
+    /**
+     * Legacy iteration body — used for IETF reference speakers and any
+     * future [NestsSpeaker] that doesn't implement
+     * [HotSwappablePublisherSource]. Identical to the pre-hot-swap
+     * behaviour: open a fresh handle on each session, close it on
+     * cancellation.
+     */
+    private suspend fun runLegacyIteration(sp: NestsSpeaker) {
+        val handle =
+            try {
+                sp.startBroadcasting(onLevel)
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                null
+            } ?: return
+        if (closed) {
+            runCatching { handle.close() }
+            return
+        }
+        if (desiredMuted) {
+            runCatching { handle.setMuted(true) }
+        }
+        liveHandle.set(handle)
+        try {
+            awaitCancellation()
+        } finally {
+            if (liveHandle.get() === handle) liveHandle.set(null)
+            runCatching { handle.close() }
+        }
+    }
+
     override suspend fun setMuted(muted: Boolean) {
         if (closed) return
         desiredMuted = muted
+        // Apply to whichever live underlying exists. Hot-swap and
+        // legacy paths are mutually exclusive in steady state — a
+        // moq-lite session's wrapper never has a live legacy handle,
+        // and vice versa — but both reads are cheap and harmless if
+        // the unused one is null.
+        hotSwapBroadcaster?.setMuted(muted)
         liveHandle.get()?.let { runCatching { it.setMuted(muted) } }
     }
 
@@ -428,6 +610,13 @@ private class ReissuingBroadcastHandle(
         if (closed) return
         closed = true
         pumpJob?.cancel()
+        // Tear down whichever path was active. For hot-swap, stopping
+        // the broadcaster releases the mic + encoder AND closes the
+        // current publisher (broadcaster.stop calls publisher.close
+        // internally). For legacy, the per-session handle's close
+        // releases its own broadcaster.
+        hotSwapBroadcaster?.let { runCatching { it.stop() } }
+        hotSwapBroadcaster = null
         liveHandle.getAndSet(null)?.let { runCatching { it.close() } }
         onClose(this)
     }

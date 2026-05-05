@@ -340,6 +340,14 @@ private class ReconnectingHandle(
                         }
                     if (terminalOrConnected !is NestsListenerState.Connected) return@collectLatest
 
+                    // Backoff for the "opener threw" retry path — exponential
+                    // 250 → 500 → 1 000 ms with reset on success. The previous
+                    // shape used a flat 1 000 ms which, combined with the
+                    // 64-frame (~1.3 s) wrapper buffer, just barely hid the
+                    // first-retry gap; a quick retry usually succeeds because
+                    // moq-rs propagates announces in < 200 ms.
+                    var subscribeRetryDelayMs = SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS
+
                     while (currentCoroutineContext().isActive) {
                         val handle =
                             try {
@@ -368,14 +376,21 @@ private class ReconnectingHandle(
                                 // backoff used between publisher cycles.
                                 Log.w("NestRx") {
                                     "ReconnectingHandle.opener threw ${t::class.simpleName}: ${t.message} " +
-                                        "— retrying after ${SUBSCRIBE_RETRY_BACKOFF_MS}ms"
+                                        "— retrying after ${subscribeRetryDelayMs}ms"
                                 }
                                 null
                             }
                         if (handle == null) {
-                            delay(SUBSCRIBE_RETRY_BACKOFF_MS)
+                            delay(subscribeRetryDelayMs)
+                            subscribeRetryDelayMs =
+                                (subscribeRetryDelayMs * 2)
+                                    .coerceAtMost(SUBSCRIBE_RETRY_BACKOFF_MAX_MS)
                             continue
                         }
+                        // Success: reset the backoff so the next publisher-
+                        // cycle gap starts at the floor again (rather than
+                        // inheriting the last failure window's saturation).
+                        subscribeRetryDelayMs = SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS
                         liveHandleRef.set(handle)
                         try {
                             handle.objects.collect { frames.emit(it) }
@@ -405,6 +420,29 @@ private class ReconnectingHandle(
         )
     }
 
+    /**
+     * Force-close the active inner listener so the orchestrator's
+     * `terminalAwait` returns Closed and the next loop iteration opens
+     * a fresh session. Used by the platform layer on a network change
+     * (Wi-Fi ↔ cellular) — without this, the wrapper would have to
+     * wait for the QUIC PTO to fire on the now-dead old socket
+     * (~30 s of silence) before noticing.
+     *
+     * The SubscribeHandle re-issuance pump cuts existing subs over to
+     * the new session as soon as it's Connected — same path the
+     * JWT-refresh recycle uses — so the consumer-facing
+     * [SubscribeHandle.objects] flow keeps emitting once the new
+     * session lands.
+     */
+    override suspend fun recycleSession() {
+        val current = activeListener.value ?: return
+        // Best-effort. If the close races a concurrent reconnect path
+        // (extremely rare — we only call this on deliberate user /
+        // platform signals), the orchestrator absorbs both via its
+        // existing terminal-state handling.
+        runCatching { current.close() }
+    }
+
     override suspend fun close() {
         orchestrator.cancel()
         runCatching { activeListener.value?.close() }
@@ -427,14 +465,24 @@ private class ReconnectingHandle(
         // gone publisher doesn't spin the relay with re-subscribes.
         private const val RESUBSCRIBE_BACKOFF_MS = 100L
 
-        // Backoff after an opener throws (typically: subscribe-before-
-        // announce arrives at the relay before the publisher exists,
-        // and the relay FINs the bidi without a SubscribeOk/Drop). One
-        // second is well over moq-rs's typical announce-propagation
-        // latency (< 200 ms in production traces), so the next retry
-        // usually succeeds; long enough that a never-arriving publisher
-        // doesn't hammer the relay either.
-        private const val SUBSCRIBE_RETRY_BACKOFF_MS = 1_000L
+        // Exponential backoff for the opener-throws retry path.
+        // Typical case: subscribe-before-announce arrives at the relay
+        // before the publisher exists, and the relay FINs the bidi
+        // without a SubscribeOk/Drop reply.
+        //
+        // - INITIAL = 250 ms: under moq-rs's typical announce-propagation
+        //   latency (< 200 ms in production traces), so the very first
+        //   retry usually succeeds and the listener-side buffer hides
+        //   the gap.
+        // - Doubles each miss → 500 ms → 1 000 ms.
+        // - MAX = 1 000 ms: matches the previous flat constant; long
+        //   enough that a never-arriving publisher doesn't hammer the
+        //   relay, short enough to stay under the wrapper SharedFlow's
+        //   ~1.3 s buffer once playback is rolling on the next attempt.
+        // - Reset on first successful subscribe so a subsequent
+        //   publisher-cycle gap doesn't inherit the previous saturation.
+        private const val SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS = 250L
+        private const val SUBSCRIBE_RETRY_BACKOFF_MAX_MS = 1_000L
 
         private val SYNTH_OK =
             SubscribeOk(

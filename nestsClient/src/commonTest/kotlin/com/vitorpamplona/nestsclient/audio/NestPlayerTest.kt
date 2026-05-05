@@ -216,6 +216,130 @@ class NestPlayerTest {
             sut.stop()
         }
 
+    /**
+     * Pre-roll: with `prerollFrames=3`, [AudioPlayer.beginPlayback]
+     * must NOT fire until the third decoded frame has arrived, and
+     * once it fires the AudioPlayer's queue must already contain
+     * the buffered pre-roll (i.e. flushed atomically with playback
+     * start, not lazily on the next enqueue).
+     */
+    @Test
+    fun preroll_defers_beginPlayback_until_threshold_is_met() =
+        runTest {
+            val channel = Channel<MoqObject>(capacity = 8)
+            val decoder = FakeOpusDecoder { byteToShorts(it) }
+            val player = FakeAudioPlayer()
+
+            val sut =
+                NestPlayer(
+                    decoder = decoder,
+                    player = player,
+                    scope = this,
+                    prerollFrames = 3,
+                )
+            sut.play(channel.receiveAsFlow())
+            testScheduler.runCurrent()
+
+            // Frames 1 and 2: pre-roll buffer fills, beginPlayback NOT
+            // called yet, AudioPlayer hasn't seen a single enqueue.
+            channel.send(moqObject(byteArrayOf(0x01)))
+            channel.send(moqObject(byteArrayOf(0x02)))
+            testScheduler.advanceUntilIdle()
+            assertEquals(0, player.beginPlaybackCount, "beginPlayback before threshold")
+            assertEquals(0, player.queued.size, "no enqueue before threshold")
+
+            // Frame 3 trips the threshold: beginPlayback fires exactly
+            // once, and the pre-rolled frames must ALREADY be sitting
+            // in the AudioPlayer queue at that moment (otherwise the
+            // device starts playback against an empty buffer and
+            // pre-roll's whole point is defeated). [NestPlayer.play]
+            // implements this by flushing-then-beginPlayback —
+            // AudioTrack MODE_STREAM explicitly supports write()
+            // before play().
+            channel.send(moqObject(byteArrayOf(0x03)))
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, player.beginPlaybackCount)
+            // The fake records the queue size at the moment
+            // beginPlayback fires. With flush-then-begin ordering,
+            // all 3 pre-rolled frames are already in the queue.
+            assertEquals(3, player.queuedAtBeginPlayback, "pre-roll flushed before beginPlayback")
+            assertEquals(3, player.queued.size, "buffer populated when device starts")
+
+            // Subsequent frames bypass the buffer and go directly
+            // through enqueue.
+            channel.send(moqObject(byteArrayOf(0x04)))
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, player.beginPlaybackCount, "beginPlayback only fires once")
+            assertEquals(4, player.queued.size)
+
+            sut.stop()
+        }
+
+    /**
+     * Pre-roll: a flow that ends BEFORE the pre-roll threshold fires
+     * must still flush its partial buffer to the AudioPlayer.
+     * Otherwise a fast-cycling publisher could leave already-decoded
+     * frames stranded forever.
+     */
+    @Test
+    fun preroll_flushes_partial_buffer_when_flow_ends_early() =
+        runTest {
+            val decoder = FakeOpusDecoder { byteToShorts(it) }
+            val player = FakeAudioPlayer()
+
+            val sut =
+                NestPlayer(
+                    decoder = decoder,
+                    player = player,
+                    scope = this,
+                    prerollFrames = 5,
+                )
+            // Only 2 frames — pre-roll never reaches its 5-frame floor,
+            // but the upstream Flow ends so the loop's flush hook must
+            // begin playback and drain whatever's queued.
+            sut.play(
+                flowOf(
+                    moqObject(byteArrayOf(0x01)),
+                    moqObject(byteArrayOf(0x02)),
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(1, player.beginPlaybackCount)
+            assertEquals(2, player.queued.size)
+            assertContentEquals(byteToShorts(byteArrayOf(0x01)), player.queued[0])
+            assertContentEquals(byteToShorts(byteArrayOf(0x02)), player.queued[1])
+
+            sut.stop()
+        }
+
+    /**
+     * Pre-roll edge case: an empty flow shouldn't start playback at
+     * all. The AudioTrack stays in its allocated-but-not-playing
+     * state until [stop] tears it down.
+     */
+    @Test
+    fun preroll_does_not_begin_playback_when_flow_emits_no_pcm() =
+        runTest {
+            val decoder = FakeOpusDecoder { ShortArray(0) }
+            val player = FakeAudioPlayer()
+
+            val sut =
+                NestPlayer(
+                    decoder = decoder,
+                    player = player,
+                    scope = this,
+                    prerollFrames = 3,
+                )
+            sut.play(flowOf(moqObject(byteArrayOf(0x01)), moqObject(byteArrayOf(0x02))))
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(0, player.beginPlaybackCount, "no PCM → no playback")
+            assertEquals(0, player.queued.size)
+
+            sut.stop()
+        }
+
     // -- helpers -----------------------------------------------------------
 
     private fun moqObject(payload: ByteArray): MoqObject =
@@ -246,6 +370,26 @@ class NestPlayerTest {
     private class FakeAudioPlayer : AudioPlayer {
         var started = false
             private set
+
+        /**
+         * Counts the [AudioPlayer.beginPlayback] invocations. Used by
+         * the pre-roll regression tests to assert that playback only
+         * begins AFTER `prerollFrames` decoded frames have arrived (or
+         * after the upstream flow ends with a partial buffer). The
+         * default no-op `beginPlayback` in the interface lets fakes
+         * skip overriding when they don't care; we override here so
+         * the tests can verify the pre-roll wiring.
+         *
+         * Also tracks the size of `queued` at the moment beginPlayback
+         * fired — pre-roll's contract is that the buffer is flushed
+         * IN A TIGHT LOOP after beginPlayback, so we can read the
+         * snapshot to verify the flush ordering.
+         */
+        var beginPlaybackCount = 0
+            private set
+        var queuedAtBeginPlayback: Int = -1
+            private set
+
         var stopCount = 0
             private set
         val stopped: Boolean get() = stopCount > 0
@@ -255,6 +399,11 @@ class NestPlayerTest {
 
         override fun start() {
             started = true
+        }
+
+        override fun beginPlayback() {
+            beginPlaybackCount++
+            queuedAtBeginPlayback = queued.size
         }
 
         override suspend fun enqueue(pcm: ShortArray) {
