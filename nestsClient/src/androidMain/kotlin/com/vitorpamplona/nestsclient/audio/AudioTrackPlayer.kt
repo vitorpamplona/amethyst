@@ -96,6 +96,8 @@ class AudioTrackPlayer(
 
     override fun start() {
         if (track != null) return
+        com.vitorpamplona.quartz.utils.Log
+            .d("NestPlay") { "AudioTrackPlayer.start() — allocating AudioTrack" }
 
         val channelMask =
             when (AudioFormat.CHANNELS) {
@@ -178,6 +180,10 @@ class AudioTrackPlayer(
         audioExecutor = executor
         audioDispatcher = executor.asCoroutineDispatcher()
         track = newTrack
+        com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+            "AudioTrack allocated: state=${newTrack.state} playState=${newTrack.playState} " +
+                "bufferSizeBytes=$bufferBytes minBuffer=$minBuffer sampleRate=${AudioFormat.SAMPLE_RATE_HZ}"
+        }
     }
 
     override fun beginPlayback() {
@@ -189,12 +195,18 @@ class AudioTrackPlayer(
         val t = track ?: return
         try {
             t.play()
+            com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                "AudioTrack.play() returned, state=${t.playState} bufferSize=${t.bufferSizeInFrames} muted=$muted volume=$volume"
+            }
         } catch (e: Throwable) {
             // PLAY-on-uninitialized AudioTrack is the only realistic
             // failure here, and we already guard against an unallocated
             // track above. Throw so [NestPlayer]'s outer catch surfaces
             // it via `onError(AudioException.PlaybackFailed)` — same path
             // that handles every other mid-stream device failure.
+            com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                "AudioTrack.play() threw: ${e::class.simpleName}: ${e.message}"
+            }
             throw AudioException(
                 AudioException.Kind.DeviceUnavailable,
                 "AudioTrack.play() rejected start",
@@ -215,21 +227,33 @@ class AudioTrackPlayer(
         withContext(dispatcher) {
             val written = t.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
             if (written < 0) {
+                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                    "AudioTrack.write returned error $written (state=${t.playState})"
+                }
                 throw AudioException(
                     AudioException.Kind.PlaybackFailed,
                     "AudioTrack.write returned error code $written",
                 )
+            }
+            if (written != pcm.size) {
+                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                    "AudioTrack.write partial: requested=${pcm.size} written=$written"
+                }
             }
         }
     }
 
     override fun setMuted(muted: Boolean) {
         this.muted = muted
+        com.vitorpamplona.quartz.utils.Log
+            .d("NestPlay") { "AudioTrackPlayer.setMuted($muted) volume=$volume" }
         track?.let { applyMuteVolume(it) }
     }
 
     override fun setVolume(volume: Float) {
         this.volume = volume.coerceIn(0f, 1f)
+        com.vitorpamplona.quartz.utils.Log
+            .d("NestPlay") { "AudioTrackPlayer.setVolume($volume) muted=$muted" }
         track?.let { applyMuteVolume(it) }
     }
 

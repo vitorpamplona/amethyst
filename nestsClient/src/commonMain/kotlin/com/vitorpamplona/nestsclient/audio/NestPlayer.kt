@@ -122,6 +122,15 @@ class NestPlayer(
             scope.launch {
                 val preroll = ArrayDeque<ShortArray>(prerollFrames.coerceAtLeast(1))
                 var playbackBegun = false
+                // Diagnostic counters: at 50 fps a per-frame log floods logcat;
+                // throttle to every Nth event.
+                var receivedObjects: Long = 0L
+                var decodedFrames: Long = 0L
+                var emptyDecodes: Long = 0L
+                var enqueued: Long = 0L
+                com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                    "NestPlayer.play started (prerollFrames=$prerollFrames)"
+                }
 
                 suspend fun beginAndFlushIfNeeded() {
                     if (playbackBegun) return
@@ -137,20 +146,34 @@ class NestPlayer(
                     // hardware starts pulling samples; getting
                     // [enqueue] in first means the very first sample
                     // pulled is from our pre-rolled audio, not silence.
+                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                        "NestPlayer flushing preroll (${preroll.size} frames) → beginPlayback"
+                    }
                     while (preroll.isNotEmpty()) {
                         player.enqueue(preroll.removeFirst())
                     }
                     player.beginPlayback()
                     playbackBegun = true
+                    com.vitorpamplona.quartz.utils.Log
+                        .d("NestPlay") { "NestPlayer beginPlayback returned" }
                 }
                 try {
                     objects.collect { obj ->
+                        receivedObjects += 1
+                        if (receivedObjects % PLAY_LOG_THROTTLE == 0L) {
+                            com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                                "NestPlayer received obj #$receivedObjects (decoded=$decodedFrames empty=$emptyDecodes enqueued=$enqueued playbackBegun=$playbackBegun)"
+                            }
+                        }
                         val pcm =
                             try {
                                 decoder.decode(obj.payload)
                             } catch (ce: CancellationException) {
                                 throw ce
                             } catch (t: Throwable) {
+                                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                                    "decoder.decode threw on obj #$receivedObjects: ${t::class.simpleName}: ${t.message}"
+                                }
                                 onError(
                                     AudioException(
                                         AudioException.Kind.DecoderError,
@@ -160,10 +183,26 @@ class NestPlayer(
                                 )
                                 return@collect
                             }
-                        if (pcm.isNotEmpty()) {
+                        if (pcm.isEmpty()) {
+                            emptyDecodes += 1
+                            if (emptyDecodes % PLAY_LOG_THROTTLE == 0L) {
+                                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                                    "decoder returned empty pcm (count=$emptyDecodes / received=$receivedObjects)"
+                                }
+                            }
+                        } else {
+                            decodedFrames += 1
                             onLevel(peakAmplitude(pcm))
                             if (playbackBegun) {
+                                val enqueueStart = System.currentTimeMillis()
                                 player.enqueue(pcm)
+                                val enqueueMs = System.currentTimeMillis() - enqueueStart
+                                enqueued += 1
+                                if (enqueued % PLAY_LOG_THROTTLE == 0L || enqueueMs > 50) {
+                                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                                        "NestPlayer enqueued #$enqueued (took ${enqueueMs}ms)"
+                                    }
+                                }
                             } else {
                                 preroll.addLast(pcm)
                                 if (preroll.size >= prerollFrames) {
@@ -172,14 +211,23 @@ class NestPlayer(
                             }
                         }
                     }
+                    com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                        "NestPlayer objects flow COMPLETED (received=$receivedObjects decoded=$decodedFrames empty=$emptyDecodes enqueued=$enqueued)"
+                    }
                     // Flow ended without enough frames to fill the pre-roll
                     // (e.g. the publisher cycled before pre-roll was full,
                     // or the room ended). Flush whatever's queued so any
                     // already-decoded audio still reaches the device.
                     beginAndFlushIfNeeded()
                 } catch (ce: CancellationException) {
+                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                        "NestPlayer cancelled (received=$receivedObjects decoded=$decodedFrames enqueued=$enqueued)"
+                    }
                     throw ce
                 } catch (t: Throwable) {
+                    com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                        "NestPlayer pipeline threw: ${t::class.simpleName}: ${t.message}"
+                    }
                     onError(
                         AudioException(
                             AudioException.Kind.PlaybackFailed,
@@ -203,8 +251,16 @@ class NestPlayer(
     suspend fun stop() {
         if (stopped) return
         stopped = true
+        com.vitorpamplona.quartz.utils.Log
+            .d("NestPlay") { "NestPlayer.stop()" }
         job?.cancelAndJoin()
         runCatching { player.stop() }
         runCatching { decoder.release() }
+    }
+
+    companion object {
+        // Diagnostic throttle: log every Nth event during normal flow so a
+        // sustained 50 fps stream doesn't flood logcat.
+        private const val PLAY_LOG_THROTTLE: Long = 50L
     }
 }

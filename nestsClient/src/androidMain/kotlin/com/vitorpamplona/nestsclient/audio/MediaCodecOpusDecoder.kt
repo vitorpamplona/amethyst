@@ -38,11 +38,20 @@ import java.nio.ByteOrder
 class MediaCodecOpusDecoder : OpusDecoder {
     private val codec: MediaCodec =
         try {
-            MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_AUDIO_OPUS).apply {
-                configure(buildFormat(), null, null, 0)
-                start()
-            }
+            MediaCodec
+                .createDecoderByType(MediaFormat.MIMETYPE_AUDIO_OPUS)
+                .apply {
+                    configure(buildFormat(), null, null, 0)
+                    start()
+                }.also {
+                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                        "MediaCodecOpusDecoder allocated codec='${it.name}'"
+                    }
+                }
         } catch (t: Throwable) {
+            com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                "MediaCodec audio/opus decoder allocation FAILED: ${t::class.simpleName}: ${t.message}"
+            }
             throw AudioException(
                 AudioException.Kind.DeviceUnavailable,
                 "Failed to allocate MediaCodec audio/opus decoder",
