@@ -22,6 +22,10 @@ package com.vitorpamplona.nestsclient.audio
 
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.media.AudioFormat as AndroidAudioFormat
@@ -32,6 +36,19 @@ import android.media.AudioFormat as AndroidAudioFormat
  * voice-chat libraries use, so it gets the platform's echo-cancellation and
  * noise-suppression filters when available.
  *
+ * **Audio effects (AEC / NS / AGC).** On most modern Android devices the
+ * `VOICE_COMMUNICATION` source is enough to engage the platform's echo
+ * canceller automatically. On a small set of older / OEM-customised
+ * devices it isn't — the AEC engine only attaches when the device is in
+ * `MODE_IN_COMMUNICATION`, which an audio-room app deliberately avoids
+ * driving (it reroutes everything through the call audio path and shows a
+ * "phone call" notification icon). To cover those devices without
+ * touching `AudioManager.mode` we explicitly attach the standalone
+ * [AcousticEchoCanceler] / [NoiseSuppressor] / [AutomaticGainControl]
+ * effects to the AudioRecord's session id. On devices where the source
+ * already engages them, attaching a second effect is a no-op (the
+ * platform deduplicates by session id) — so this is purely additive.
+ *
  * **Permission:** the caller is responsible for holding `RECORD_AUDIO` before
  * calling [start]; this class will throw [AudioException.Kind.DeviceUnavailable]
  * if the OS denies the resource.
@@ -40,6 +57,9 @@ class AudioRecordCapture(
     private val source: Int = MediaRecorder.AudioSource.VOICE_COMMUNICATION,
 ) : AudioCapture {
     private var record: AudioRecord? = null
+    private var aec: AcousticEchoCanceler? = null
+    private var ns: NoiseSuppressor? = null
+    private var agc: AutomaticGainControl? = null
     private var stopped = false
 
     override fun start() {
@@ -97,6 +117,34 @@ class AudioRecordCapture(
             )
         }
         record = rec
+        // Attach standalone audio effects to the session. This covers
+        // devices where the VOICE_COMMUNICATION source alone doesn't
+        // engage AEC (typically because they only attach AEC under
+        // MODE_IN_COMMUNICATION). All three are best-effort — a device
+        // that doesn't support an effect leaves it null without
+        // affecting capture.
+        attachAudioEffects(rec.audioSessionId)
+    }
+
+    private fun attachAudioEffects(sessionId: Int) {
+        if (AcousticEchoCanceler.isAvailable()) {
+            aec =
+                runCatching { AcousticEchoCanceler.create(sessionId)?.apply { enabled = true } }
+                    .onFailure { Log.w("NestTx") { "AcousticEchoCanceler.create failed: ${it.message}" } }
+                    .getOrNull()
+        }
+        if (NoiseSuppressor.isAvailable()) {
+            ns =
+                runCatching { NoiseSuppressor.create(sessionId)?.apply { enabled = true } }
+                    .onFailure { Log.w("NestTx") { "NoiseSuppressor.create failed: ${it.message}" } }
+                    .getOrNull()
+        }
+        if (AutomaticGainControl.isAvailable()) {
+            agc =
+                runCatching { AutomaticGainControl.create(sessionId)?.apply { enabled = true } }
+                    .onFailure { Log.w("NestTx") { "AutomaticGainControl.create failed: ${it.message}" } }
+                    .getOrNull()
+        }
     }
 
     override suspend fun readFrame(): ShortArray? {
@@ -128,6 +176,16 @@ class AudioRecordCapture(
     override fun stop() {
         if (stopped) return
         stopped = true
+        // Release the audio effects BEFORE the AudioRecord — they hold
+        // a session-id reference and the platform expects effect
+        // teardown to precede the AudioRecord.release() that frees
+        // the session.
+        runCatching { aec?.release() }
+        runCatching { ns?.release() }
+        runCatching { agc?.release() }
+        aec = null
+        ns = null
+        agc = null
         val rec = record ?: return
         record = null
         runCatching { rec.stop() }

@@ -116,6 +116,27 @@ interface NestsListener {
             "announces() is moq-lite-only; IETF listener has no announce-prefix flow.",
         )
 
+    /**
+     * Force the underlying transport / MoQ session to be torn down and
+     * a fresh one opened in its place — without permanently closing
+     * this listener. Used by the platform layer on a network change
+     * (Wi-Fi ↔ cellular handover) to skip the ~30 s QUIC PTO that
+     * would otherwise have to fire before the wrapper notices the
+     * old socket is dead.
+     *
+     * Default no-op for non-reconnecting implementations (raw
+     * [DefaultNestsListener] / [MoqLiteNestsListener]) — there's no
+     * orchestrator to drive a reconnect, so a force recycle would
+     * just close the listener. The reconnecting wrapper
+     * (`ReconnectingHandle` from [connectReconnectingNestsListener])
+     * overrides to close the active inner listener so its
+     * orchestrator opens a fresh session.
+     */
+    suspend fun recycleSession() {
+        // no-op — only the reconnecting wrapper has anywhere to
+        // recycle to.
+    }
+
     /** Tear down the MoQ session + underlying transport. Idempotent. */
     suspend fun close()
 }

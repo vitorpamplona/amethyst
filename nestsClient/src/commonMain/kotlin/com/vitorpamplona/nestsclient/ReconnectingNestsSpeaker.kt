@@ -358,6 +358,17 @@ private class ReconnectingSpeakerHandle(
             handle
         }
 
+    /**
+     * Force-close the active inner speaker so the orchestrator opens
+     * a fresh session against the (presumably new) network. Used by
+     * the platform layer on a network change. Mirror of the listener
+     * wrapper's [com.vitorpamplona.nestsclient.NestsListener.recycleSession].
+     */
+    override suspend fun recycleSession() {
+        val current = activeSpeaker.value ?: return
+        runCatching { current.close() }
+    }
+
     override suspend fun close() {
         orchestrator.cancel()
         runCatching { activeBroadcast?.close() }

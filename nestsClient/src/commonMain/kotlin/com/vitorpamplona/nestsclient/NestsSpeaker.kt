@@ -66,6 +66,27 @@ interface NestsSpeaker {
      */
     suspend fun startBroadcasting(onLevel: (Float) -> Unit = { /* no-op */ }): BroadcastHandle
 
+    /**
+     * Force the underlying transport / MoQ session to be torn down and
+     * a fresh one opened in its place — without permanently closing
+     * this speaker. Mirror of [NestsListener.recycleSession]; same
+     * use case (network handover) and same default no-op for non-
+     * reconnecting implementations.
+     *
+     * The reconnecting wrapper from
+     * [connectReconnectingNestsSpeaker] overrides to close the
+     * inner speaker so its orchestrator opens a fresh session.
+     * For moq-lite speakers, the long-lived
+     * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster]
+     * keeps capturing through the recycle and the
+     * [BroadcastHandle.swapPublisher]-based pump retargets onto
+     * the new session's publisher with no audible gap.
+     */
+    suspend fun recycleSession() {
+        // no-op — only the reconnecting wrapper has anywhere to
+        // recycle to.
+    }
+
     /** Tear down the MoQ session + transport. Idempotent. */
     suspend fun close()
 }

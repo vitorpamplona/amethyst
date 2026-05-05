@@ -420,6 +420,29 @@ private class ReconnectingHandle(
         )
     }
 
+    /**
+     * Force-close the active inner listener so the orchestrator's
+     * `terminalAwait` returns Closed and the next loop iteration opens
+     * a fresh session. Used by the platform layer on a network change
+     * (Wi-Fi ↔ cellular) — without this, the wrapper would have to
+     * wait for the QUIC PTO to fire on the now-dead old socket
+     * (~30 s of silence) before noticing.
+     *
+     * The SubscribeHandle re-issuance pump cuts existing subs over to
+     * the new session as soon as it's Connected — same path the
+     * JWT-refresh recycle uses — so the consumer-facing
+     * [SubscribeHandle.objects] flow keeps emitting once the new
+     * session lands.
+     */
+    override suspend fun recycleSession() {
+        val current = activeListener.value ?: return
+        // Best-effort. If the close races a concurrent reconnect path
+        // (extremely rare — we only call this on deliberate user /
+        // platform signals), the orchestrator absorbs both via its
+        // existing terminal-state handling.
+        runCatching { current.close() }
+    }
+
     override suspend fun close() {
         orchestrator.cancel()
         runCatching { activeListener.value?.close() }
