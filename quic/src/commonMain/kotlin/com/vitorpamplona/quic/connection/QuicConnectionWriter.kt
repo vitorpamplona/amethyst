@@ -31,7 +31,10 @@ import com.vitorpamplona.quic.frame.Frame
 import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
+import com.vitorpamplona.quic.frame.NewConnectionIdFrame
 import com.vitorpamplona.quic.frame.PingFrame
+import com.vitorpamplona.quic.frame.ResetStreamFrame
+import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.encodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
@@ -535,6 +538,65 @@ private fun appendFlowControlUpdates(
         }
         conn.pendingMaxStreamData.clear()
     }
+
+    // Per-stream RESET_STREAM / STOP_SENDING. Both are reliable per
+    // RFC 9000 §13.3 — the writer drains the per-stream emit-pending
+    // flag, attaches the corresponding RecoveryToken, and clears the
+    // flag. The loss dispatcher re-flags on packet loss; ACK latches
+    // resetAcked / stopSendingAcked so subsequent stale loss tokens
+    // are dropped.
+    for (stream in conn.streamsListLocked()) {
+        val resetState = stream.resetState
+        if (resetState != null && stream.resetEmitPending && !stream.resetAcked) {
+            frames +=
+                ResetStreamFrame(
+                    streamId = stream.streamId,
+                    applicationErrorCode = resetState.errorCode,
+                    finalSize = resetState.finalSize,
+                )
+            tokens +=
+                RecoveryToken.ResetStream(
+                    streamId = stream.streamId,
+                    errorCode = resetState.errorCode,
+                    finalSize = resetState.finalSize,
+                )
+            stream.resetEmitPending = false
+        }
+        val stopSendingState = stream.stopSendingState
+        if (stopSendingState != null && stream.stopSendingEmitPending && !stream.stopSendingAcked) {
+            frames +=
+                StopSendingFrame(
+                    streamId = stream.streamId,
+                    applicationErrorCode = stopSendingState.errorCode,
+                )
+            tokens +=
+                RecoveryToken.StopSending(
+                    streamId = stream.streamId,
+                    errorCode = stopSendingState.errorCode,
+                )
+            stream.stopSendingEmitPending = false
+        }
+    }
+
+    // NEW_CONNECTION_ID retransmits. No application path emits these
+    // initially today (connection-ID rotation isn't wired); the map
+    // is populated only by the loss dispatcher, so this branch only
+    // fires for genuine retransmits.
+    if (conn.pendingNewConnectionId.isNotEmpty()) {
+        val pendingNewCidEntries = conn.pendingNewConnectionId.entries.toList()
+        for ((_, token) in pendingNewCidEntries) {
+            frames +=
+                NewConnectionIdFrame(
+                    sequenceNumber = token.sequenceNumber,
+                    retirePriorTo = token.retirePriorTo,
+                    connectionId = token.connectionId,
+                    statelessResetToken = token.statelessResetToken,
+                )
+            tokens += token
+        }
+        conn.pendingNewConnectionId.clear()
+    }
+
     val cfg = conn.config
     var totalRecvAdvanced = 0L
     // Round-4 perf #9 + round-5 #9: walk the streams via the index-friendly

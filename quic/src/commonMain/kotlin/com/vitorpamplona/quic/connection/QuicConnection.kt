@@ -206,26 +206,13 @@ class QuicConnection(
     internal val pendingMaxStreamData: MutableMap<Long, Long> = HashMap()
 
     /**
-     * Pending retransmits for `RESET_STREAM` frames (RFC 9000 §19.4).
-     * Keyed by stream id; the dispatcher records lost RESET_STREAM
-     * tokens here. `:quic` has no emit path for RESET_STREAM today,
-     * so the writer never drains this map — scaffolding for future
-     * stream-reset support. Caller must hold [lock].
-     */
-    internal val pendingResetStream:
-        MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream> = HashMap()
-
-    /**
-     * Pending retransmits for `STOP_SENDING` frames (RFC 9000 §19.5).
-     * Same scaffolding-only status as [pendingResetStream].
-     */
-    internal val pendingStopSending:
-        MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending> = HashMap()
-
-    /**
      * Pending retransmits for `NEW_CONNECTION_ID` frames (RFC 9000
-     * §19.15). Keyed by sequenceNumber. Same scaffolding-only status
-     * as [pendingResetStream].
+     * §19.15). Keyed by sequence number. Populated on loss via
+     * [onTokensLost]; drained by the writer on the next outbound.
+     * Connection-ID rotation isn't currently triggered by any
+     * application path inside `:quic`, so the public emit API is
+     * limited to test usage — but the retransmit machinery is
+     * complete so any future emit path lands cleanly.
      */
     internal val pendingNewConnectionId:
         MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId> = HashMap()
@@ -790,13 +777,28 @@ class QuicConnection(
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsBidi,
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxData,
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamData,
-                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream,
-                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending,
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId,
                 -> {
-                    // Control frames have no per-buffer state to release on
-                    // ACK. (Pending* maps are populated only on loss; an ACK
-                    // for a frame that never lost is naturally absent.)
+                    // Flow-control extensions and NEW_CONNECTION_ID
+                    // have no per-buffer state to release on ACK; the
+                    // pending* maps are populated only on loss, so an
+                    // ACK for a frame that never lost is naturally
+                    // absent.
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream -> {
+                    // Latch resetAcked = true. Subsequent loss
+                    // notifications for stale RESET_STREAM tokens are
+                    // dropped (see onTokensLost).
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.resetAcked = true
+                    stream.resetEmitPending = false
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending -> {
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.stopSendingAcked = true
+                    stream.stopSendingEmitPending = false
                 }
 
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Stream -> {
@@ -888,16 +890,19 @@ class QuicConnection(
                 }
 
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream -> {
-                    // Reliable per RFC 9000 §13.3 — re-emit verbatim
-                    // on loss. `:quic` doesn't currently have an emit
-                    // path for RESET_STREAM, so the pending-list is
-                    // populated but never drained today; the field is
-                    // scaffolding for future emit support.
-                    pendingResetStream[token.streamId] = token
+                    // Reliable per RFC 9000 §13.3. Re-flag the
+                    // owning stream's RESET_STREAM emit pending so
+                    // the next writer drain re-emits — unless the
+                    // peer already ACK'd it (resetAcked == true), in
+                    // which case the lost token is a stale duplicate
+                    // and we drop it.
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    if (!stream.resetAcked) stream.resetEmitPending = true
                 }
 
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending -> {
-                    pendingStopSending[token.streamId] = token
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    if (!stream.stopSendingAcked) stream.stopSendingEmitPending = true
                 }
 
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId -> {

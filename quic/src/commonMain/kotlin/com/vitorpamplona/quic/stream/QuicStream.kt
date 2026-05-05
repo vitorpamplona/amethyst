@@ -100,4 +100,81 @@ class QuicStream(
     internal fun closeIncoming() {
         incomingChannel.close()
     }
+
+    /**
+     * RFC 9000 §3.5: abruptly terminate the SEND side. Application code
+     * calls this when it wants to cancel a partially-written stream
+     * (e.g. user cancelled a request mid-upload). After [resetStream]:
+     *
+     *   - A `RESET_STREAM(streamId, errorCode, finalSize)` frame is
+     *     queued for emission on the next writer drain. `finalSize` is
+     *     the largest stream offset the application has appended, i.e.
+     *     [SendBuffer.nextOffset] at reset time (RFC 9000 §3.5 — the
+     *     peer uses this to satisfy its receive-side flow-control
+     *     accounting even though it discards the bytes).
+     *   - The frame is reliable per §13.3 — if its carrying packet is
+     *     declared lost, the dispatcher in
+     *     [com.vitorpamplona.quic.connection.QuicConnection.onTokensLost]
+     *     re-flags [resetEmitPending] for re-emit on next drain.
+     *   - Once the peer ACKs the RESET_STREAM, [resetAcked] latches
+     *     true and the writer stops re-emitting.
+     *
+     * Idempotent: a second [resetStream] call overwrites the queued
+     * entry with the newer error code (in practice apps shouldn't
+     * reset twice — the second call is benign).
+     */
+    fun resetStream(errorCode: Long) {
+        resetState =
+            ResetState(
+                errorCode = errorCode,
+                finalSize = send.nextOffset,
+            )
+        resetEmitPending = true
+    }
+
+    /**
+     * RFC 9000 §3.5: ask the peer to stop sending on this stream's
+     * RECEIVE side. Application calls this when it's done reading
+     * (e.g. an HTTP/3 request handler returned an early response and
+     * doesn't care about the rest of the request body). The
+     * `STOP_SENDING(streamId, errorCode)` frame is queued for emission
+     * on the next writer drain; reliable per §13.3, retransmitted on
+     * loss like [resetStream].
+     */
+    fun stopSending(errorCode: Long) {
+        stopSendingState = StopSendingState(errorCode = errorCode)
+        stopSendingEmitPending = true
+    }
+
+    /** RFC 9000 §3.5 send-side reset state. Set by [resetStream]. */
+    internal var resetState: ResetState? = null
+
+    /**
+     * True while a RESET_STREAM emit is pending. Cleared after the
+     * writer emits; set back to true by the loss dispatcher; cleared
+     * again (and not re-set) once [resetAcked] latches.
+     */
+    internal var resetEmitPending: Boolean = false
+
+    /**
+     * Latches true when the peer ACKs the RESET_STREAM. After this
+     * the writer no longer re-emits even if a stale lost token shows
+     * up. Mirrors neqo's `send_stream::ResetAcked` state.
+     */
+    internal var resetAcked: Boolean = false
+
+    /** Receive-side stop-sending state. Set by [stopSending]. */
+    internal var stopSendingState: StopSendingState? = null
+
+    internal var stopSendingEmitPending: Boolean = false
+    internal var stopSendingAcked: Boolean = false
+
+    internal data class ResetState(
+        val errorCode: Long,
+        val finalSize: Long,
+    )
+
+    internal data class StopSendingState(
+        val errorCode: Long,
+    )
 }
