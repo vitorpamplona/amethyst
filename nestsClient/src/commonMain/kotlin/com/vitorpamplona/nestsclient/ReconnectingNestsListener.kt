@@ -252,7 +252,11 @@ private class ReconnectingHandle(
      */
     override fun announces(): Flow<RoomAnnouncement> =
         flow {
+            Log.d("NestRx") { "wrapper.announces() flow starting collect on activeListener" }
+            var iter = 0
             activeListener.collectLatest { listener ->
+                iter += 1
+                Log.d("NestRx") { "wrapper.announces() iter=$iter activeListener=${if (listener == null) "null" else "set"}" }
                 if (listener == null) return@collectLatest
                 val terminalOrConnected =
                     listener.state.first { state ->
@@ -260,9 +264,19 @@ private class ReconnectingHandle(
                             state is NestsListenerState.Closed ||
                             state is NestsListenerState.Failed
                     }
+                Log.d("NestRx") { "wrapper.announces() iter=$iter inner state=${terminalOrConnected::class.simpleName}" }
                 if (terminalOrConnected !is NestsListenerState.Connected) return@collectLatest
-                runCatching {
-                    listener.announces().collect { emit(it) }
+                var fwd = 0
+                val outcome =
+                    runCatching {
+                        listener.announces().collect {
+                            fwd += 1
+                            emit(it)
+                        }
+                    }
+                Log.w("NestRx") {
+                    val why = outcome.exceptionOrNull()?.let { "${it::class.simpleName}: ${it.message}" } ?: "naturally"
+                    "wrapper.announces() iter=$iter inner collect ended $why fwd=$fwd"
                 }
             }
         }

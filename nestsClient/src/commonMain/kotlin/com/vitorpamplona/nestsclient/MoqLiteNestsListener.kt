@@ -128,6 +128,8 @@ class MoqLiteNestsListener internal constructor(
 
     override fun announces(): Flow<RoomAnnouncement> =
         flow {
+            com.vitorpamplona.quartz.utils.Log
+                .d("NestRx") { "MoqLiteNestsListener.announces flow STARTING (state=${state.value::class.simpleName})" }
             check(state.value is NestsListenerState.Connected) {
                 "NestsListener.announces requires Connected state, was ${state.value}"
             }
@@ -136,8 +138,15 @@ class MoqLiteNestsListener internal constructor(
             // suffix is the broadcast's path component within the
             // room — for nests this is the speaker pubkey hex.
             val handle = session.announce(prefix = "")
+            com.vitorpamplona.quartz.utils.Log
+                .d("NestRx") { "MoqLiteNestsListener.announces opened bidi#2 (VM-level)" }
+            var emissionCount = 0
             try {
                 handle.updates.collect { announce ->
+                    emissionCount += 1
+                    com.vitorpamplona.quartz.utils.Log.d("NestRx") {
+                        "MoqLiteNestsListener.announces bidi#2 #$emissionCount status=${announce.status} suffix='${announce.suffix.take(12)}'"
+                    }
                     emit(
                         RoomAnnouncement(
                             pubkey = announce.suffix,
@@ -145,7 +154,11 @@ class MoqLiteNestsListener internal constructor(
                         ),
                     )
                 }
+                com.vitorpamplona.quartz.utils.Log
+                    .w("NestRx") { "MoqLiteNestsListener.announces bidi#2 collect ENDED naturally after $emissionCount emissions" }
             } finally {
+                com.vitorpamplona.quartz.utils.Log
+                    .w("NestRx") { "MoqLiteNestsListener.announces bidi#2 finally (emissions=$emissionCount)" }
                 // The flow's `finally` runs on both normal completion
                 // and cancellation — let cancel propagate after closing
                 // the announce handle.

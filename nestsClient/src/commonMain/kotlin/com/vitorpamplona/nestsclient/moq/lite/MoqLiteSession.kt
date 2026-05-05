@@ -136,21 +136,33 @@ class MoqLiteSession internal constructor(
                 replay = 64,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
+        Log.d("NestRx") { "session.announce(prefix='$prefix') bidi opened, pump launching (replayCap=64)" }
         val pump =
             scope.launch {
                 val buffer = MoqLiteFrameBuffer()
+                var chunkCount = 0
+                var emitCount = 0
                 try {
                     bidi.incoming().collect { chunk ->
+                        chunkCount += 1
                         buffer.push(chunk)
                         while (true) {
                             val payload = buffer.readSizePrefixed() ?: break
-                            updates.emit(MoqLiteCodec.decodeAnnounce(payload))
+                            val decoded = MoqLiteCodec.decodeAnnounce(payload)
+                            emitCount += 1
+                            Log.d("NestRx") {
+                                "session.announce(prefix='$prefix') bidi pump emit #$emitCount " +
+                                    "status=${decoded.status} suffix='${decoded.suffix.take(12)}' " +
+                                    "(chunks=$chunkCount)"
+                            }
+                            updates.emit(decoded)
                         }
                     }
+                    Log.w("NestRx") { "session.announce(prefix='$prefix') bidi.incoming() ended naturally (chunks=$chunkCount, emits=$emitCount)" }
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
-                    Log.w("NestRx") { "announce(prefix='$prefix'): bidi.incoming() threw ${t::class.simpleName}: ${t.message}" }
+                    Log.w("NestRx") { "announce(prefix='$prefix'): bidi.incoming() threw ${t::class.simpleName}: ${t.message} (chunks=$chunkCount, emits=$emitCount)" }
                     // Flow terminated (peer FIN or transport close).
                     // The Announce stream's emit-side just stops; consumers
                     // see an end-of-flow.

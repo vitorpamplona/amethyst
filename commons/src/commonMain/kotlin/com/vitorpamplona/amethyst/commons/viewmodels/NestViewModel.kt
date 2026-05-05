@@ -820,15 +820,27 @@ class NestViewModel(
         announcesJob?.cancel()
         announcesJob =
             viewModelScope.launch {
-                runCatching {
-                    l.announces().collect { ann ->
-                        if (closed) return@collect
-                        if (ann.active) {
-                            _announcedSpeakers.update { it + ann.pubkey }
-                        } else {
-                            _announcedSpeakers.update { it - ann.pubkey }
+                com.vitorpamplona.quartz.utils.Log
+                    .d("NestRx") { "observeAnnounces launching collect on l.announces()" }
+                var emissionCount = 0
+                val outcome =
+                    runCatching {
+                        l.announces().collect { ann ->
+                            if (closed) return@collect
+                            emissionCount += 1
+                            com.vitorpamplona.quartz.utils.Log.d("NestRx") {
+                                "observeAnnounces #$emissionCount active=${ann.active} pubkey='${ann.pubkey.take(12)}' → ${if (ann.active) "ADD" else "REMOVE"}"
+                            }
+                            if (ann.active) {
+                                _announcedSpeakers.update { it + ann.pubkey }
+                            } else {
+                                _announcedSpeakers.update { it - ann.pubkey }
+                            }
                         }
                     }
+                com.vitorpamplona.quartz.utils.Log.w("NestRx") {
+                    val why = outcome.exceptionOrNull()?.let { "${it::class.simpleName}: ${it.message}" } ?: "naturally"
+                    "observeAnnounces collect ENDED $why (emissions=$emissionCount, _announcedSpeakers.size=${_announcedSpeakers.value.size})"
                 }
             }
     }
