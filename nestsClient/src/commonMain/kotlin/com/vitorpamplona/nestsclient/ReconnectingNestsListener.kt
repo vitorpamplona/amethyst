@@ -392,11 +392,17 @@ private class ReconnectingHandle(
                         // inheriting the last failure window's saturation).
                         subscribeRetryDelayMs = SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS
                         liveHandleRef.set(handle)
+                        Log.d("NestRx") { "wrapper: handle attached id=${handle.subscribeId}, starting collect" }
+                        var emitted = 0L
                         try {
-                            handle.objects.collect { frames.emit(it) }
+                            handle.objects.collect {
+                                emitted += 1
+                                frames.emit(it)
+                            }
                         } finally {
                             if (liveHandleRef.get() === handle) liveHandleRef.set(null)
                         }
+                        Log.w("NestRx") { "wrapper: handle objects flow ENDED id=${handle.subscribeId} emitted=$emitted — re-issuing after ${RESUBSCRIBE_BACKOFF_MS}ms" }
                         // Brief backoff so a permanently-gone
                         // publisher doesn't tight-loop the relay
                         // with re-subscribes. 100 ms stays well

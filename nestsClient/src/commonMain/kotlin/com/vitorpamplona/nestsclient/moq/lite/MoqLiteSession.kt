@@ -262,6 +262,7 @@ class MoqLiteSession internal constructor(
             subscriptionsBySubscribeId[id] = sub
             if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
         }
+        Log.d("NestRx") { "SUBSCRIBE send id=$id broadcast='$broadcast' track='$track' maxLatencyMs=$maxLatencyMillis" }
         // Now that the subscription is registered, push the SUBSCRIBE
         // bytes. If `bidi.write` throws (transport torn down, peer
         // reset) we'd otherwise leave an orphaned map entry whose
@@ -272,6 +273,7 @@ class MoqLiteSession internal constructor(
             bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
             bidi.write(MoqLiteCodec.encodeSubscribe(request))
         } catch (t: Throwable) {
+            Log.w("NestRx") { "SUBSCRIBE write failed id=$id: ${t::class.simpleName}: ${t.message}" }
             state.withLock { subscriptionsBySubscribeId.remove(id) }
             frames.close()
             runCatching { bidi.finish() }
@@ -314,6 +316,7 @@ class MoqLiteSession internal constructor(
                 if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(ce)
                 throw ce
             } catch (t: Throwable) {
+                Log.w("NestRx") { "SUBSCRIBE bidi collector threw id=$id: ${t::class.simpleName}: ${t.message}" }
                 if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(t)
             }
             if (!responseDeferred.isCompleted) {
@@ -325,6 +328,9 @@ class MoqLiteSession internal constructor(
             // (or any throw from await), it already removed the
             // subscription before throwing. Either way: remove + close.
             val removed = state.withLock { subscriptionsBySubscribeId.remove(id) }
+            if (removed != null) {
+                Log.w("NestRx") { "SUBSCRIBE bidi exited, closing frames id=$id broadcast='${removed.request.broadcast}' track='${removed.request.track}'" }
+            }
             removed?.frames?.close()
         }
 
@@ -353,6 +359,7 @@ class MoqLiteSession internal constructor(
             }
 
             is MoqLiteCodec.SubscribeResponse.Ok -> {
+                Log.d("NestRx") { "SUBSCRIBE_OK id=$id broadcast='$broadcast' track='$track'" }
                 return MoqLiteSubscribeHandle(
                     id = id,
                     ok = resp.ok,
@@ -428,6 +435,7 @@ class MoqLiteSession internal constructor(
     private suspend fun pumpAnnounceWatch(handle: MoqLiteAnnouncesHandle) {
         try {
             handle.updates.collect { update ->
+                Log.d("NestRx") { "ANNOUNCE update status=${update.status} suffix='${update.suffix}' hops=${update.hops}" }
                 if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
                 val targets =
                     state.withLock {
@@ -435,6 +443,9 @@ class MoqLiteSession internal constructor(
                             .filter { it.request.broadcast == update.suffix }
                             .toList()
                     }
+                if (targets.isNotEmpty()) {
+                    Log.w("NestRx") { "ANNOUNCE Ended for suffix='${update.suffix}' → closing ${targets.size} subscription(s): ${targets.map { "id=${it.id} track='${it.request.track}'" }}" }
+                }
                 for (sub in targets) {
                     // Just close the frames channel — the
                     // wrapper-level collect of `frames.consumeAsFlow()`
@@ -450,9 +461,11 @@ class MoqLiteSession internal constructor(
                     runCatching { sub.bidi.finish() }
                 }
             }
+            Log.w("NestRx") { "ANNOUNCE pump: updates flow ended naturally" }
         } catch (ce: kotlinx.coroutines.CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "ANNOUNCE pump threw ${t::class.simpleName}: ${t.message}" }
             // Announce bidi died — same best-effort fallback.
         } finally {
             runCatching { handle.close() }
@@ -470,6 +483,8 @@ class MoqLiteSession internal constructor(
      * One pump per session — started lazily on the first subscribe.
      */
     private suspend fun pumpUniStreams() {
+        Log.d("NestRx") { "pumpUniStreams started" }
+        var streamCount = 0L
         try {
             // coroutineScope binds each per-stream drain to this pump's
             // job — when the pump is cancelled (session close), every
@@ -478,24 +493,32 @@ class MoqLiteSession internal constructor(
             // independently errors out.
             kotlinx.coroutines.coroutineScope {
                 transport.incomingUniStreams().collect { stream ->
-                    launch { drainOneGroup(stream) }
+                    val n = ++streamCount
+                    launch { drainOneGroup(stream, n) }
                 }
             }
+            Log.w("NestRx") { "pumpUniStreams: incomingUniStreams flow ended naturally after $streamCount streams" }
         } catch (ce: CancellationException) {
             throw ce
         } catch (t: Throwable) {
-            Log.w("NestRx") { "pumpUniStreams ended with ${t::class.simpleName}: ${t.message}" }
+            Log.w("NestRx") { "pumpUniStreams ended after $streamCount streams with ${t::class.simpleName}: ${t.message}" }
             // Transport closed — subscriptions will surface end-of-flow
             // via their own bidi pumps as well.
         }
     }
 
-    private suspend fun drainOneGroup(stream: com.vitorpamplona.nestsclient.transport.WebTransportReadStream) {
+    private suspend fun drainOneGroup(
+        stream: com.vitorpamplona.nestsclient.transport.WebTransportReadStream,
+        streamSeq: Long,
+    ) {
         val buffer = MoqLiteFrameBuffer()
         var typeRead = false
         var subscribeId: Long = -1L
         var groupSequence: Long = -1L
         var headerRead = false
+        var frameCount = 0
+        var droppedNoSub = 0
+        var trySendFailures = 0
         try {
             stream.incoming().collect { chunk ->
                 buffer.push(chunk)
@@ -512,25 +535,35 @@ class MoqLiteSession internal constructor(
                     subscribeId = hdr.subscribeId
                     groupSequence = hdr.sequence
                     headerRead = true
+                    Log.d("NestRx") { "drainOneGroup#$streamSeq header subId=$subscribeId groupSeq=$groupSequence" }
                 }
                 while (true) {
                     val frame = buffer.readSizePrefixed() ?: break
                     val sub = state.withLock { subscriptionsBySubscribeId[subscribeId] }
-                    sub?.frames?.trySend(
-                        MoqLiteFrame(
-                            groupSequence = groupSequence,
-                            payload = frame,
-                        ),
-                    )
+                    if (sub == null) {
+                        droppedNoSub += 1
+                    } else {
+                        val sent =
+                            sub.frames.trySend(
+                                MoqLiteFrame(
+                                    groupSequence = groupSequence,
+                                    payload = frame,
+                                ),
+                            )
+                        if (!sent.isSuccess) trySendFailures += 1
+                    }
+                    frameCount += 1
                     // If the subscription has been closed already we
                     // silently drop the frame — the publisher hasn't
                     // observed the unsubscribe yet (its uni streams
                     // are independent of our bidi FIN).
                 }
             }
+            Log.d("NestRx") { "drainOneGroup#$streamSeq FIN subId=$subscribeId groupSeq=$groupSequence frames=$frameCount droppedNoSub=$droppedNoSub trySendFail=$trySendFailures" }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "drainOneGroup#$streamSeq threw subId=$subscribeId groupSeq=$groupSequence frames=$frameCount: ${t::class.simpleName}: ${t.message}" }
             // Stream errored / FIN'd. Nothing to do — the next group
             // arrives on a fresh uni stream.
         }
@@ -669,12 +702,14 @@ class MoqLiteSession internal constructor(
                                 ),
                             )
                             publisher.registerAnnounceBidi(bidi, emittedSuffix)
+                            Log.d("NestTx") { "ANNOUNCE inbound prefix='${please.prefix}' → emitted Active suffix='$emittedSuffix' (publisher.suffix='${publisher.suffix}')" }
                             dispatched = true
                         }
 
                         MoqLiteControlType.Subscribe -> {
                             val subPayload = buffer.readSizePrefixed() ?: return@collect
                             val sub = MoqLiteCodec.decodeSubscribe(subPayload)
+                            Log.d("NestTx") { "SUBSCRIBE inbound id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' (publisher track='${publisher.track}')" }
                             // Register the subscription BEFORE sending Ok so the
                             // peer's observation of Ok is a happens-after of
                             // `inboundSubs += sub`. Otherwise on dispatchers that
@@ -809,13 +844,19 @@ class MoqLiteSession internal constructor(
      */
     private inner class PublisherStateImpl(
         override val suffix: String,
-        private val track: String,
+        internal val track: String,
     ) : MoqLitePublisherHandle {
         private val gate = Mutex()
         private val announceBidis = mutableListOf<AnnounceBidiEntry>()
         private val inboundSubs = mutableListOf<MoqLiteSubscribe>()
         private var currentGroup: GroupOutbound? = null
         private var nextSequence: Long = 0L
+
+        // Diagnostic: throttled counter for "send returned false" logs so a
+        // long no-subscriber window doesn't flood logcat at 50 Hz.
+        private val sendNoSubLogCount =
+            java.util.concurrent.atomic
+                .AtomicLong(0L)
 
         @Volatile private var publisherClosed = false
 
@@ -834,9 +875,16 @@ class MoqLiteSession internal constructor(
 
         suspend fun registerInboundSubscription(sub: MoqLiteSubscribe) {
             gate.withLock {
-                if (publisherClosed) return
-                if (sub.track != track) return
+                if (publisherClosed) {
+                    Log.w("NestTx") { "SUBSCRIBE inbound rejected (publisher closed) id=${sub.id} track='${sub.track}'" }
+                    return
+                }
+                if (sub.track != track) {
+                    Log.w("NestTx") { "SUBSCRIBE inbound track mismatch id=${sub.id} sub.track='${sub.track}' publisher.track='$track' — ignored" }
+                    return
+                }
                 inboundSubs += sub
+                Log.d("NestTx") { "SUBSCRIBE registered id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' inboundSubs.size=${inboundSubs.size}" }
             }
         }
 
@@ -853,6 +901,7 @@ class MoqLiteSession internal constructor(
             gate.withLock {
                 if (publisherClosed) return
                 if (!inboundSubs.remove(sub)) return
+                Log.w("NestTx") { "SUBSCRIBE removed (peer FIN/error) id=${sub.id} track='${sub.track}' inboundSubs.size=${inboundSubs.size}" }
                 runCatching { currentGroup?.uni?.finish() }
                 currentGroup = null
             }
@@ -868,8 +917,18 @@ class MoqLiteSession internal constructor(
 
         override suspend fun send(payload: ByteArray): Boolean {
             gate.withLock {
-                if (publisherClosed) return false
-                if (inboundSubs.isEmpty()) return false
+                if (publisherClosed) {
+                    if (sendNoSubLogCount.getAndIncrement() % SEND_LOG_THROTTLE == 0L) {
+                        Log.w("NestTx") { "send returning false — publisher closed (count=${sendNoSubLogCount.get()})" }
+                    }
+                    return false
+                }
+                if (inboundSubs.isEmpty()) {
+                    if (sendNoSubLogCount.getAndIncrement() % SEND_LOG_THROTTLE == 0L) {
+                        Log.w("NestTx") { "send returning false — no inboundSubs (count=${sendNoSubLogCount.get()}, payload=${payload.size}B)" }
+                    }
+                    return false
+                }
                 val group = currentGroup ?: openNextGroupLocked().also { currentGroup = it }
                 // Single-allocation framing: write the varint length
                 // directly into a buffer sized for `varint + payload`,
@@ -952,7 +1011,16 @@ class MoqLiteSession internal constructor(
             // model), so this is fine.
             val sub = inboundSubs.first()
             val sequence = nextSequence++
-            val uni = openGroupStream(subscribeId = sub.id, sequence = sequence)
+            val uni =
+                try {
+                    openGroupStream(subscribeId = sub.id, sequence = sequence)
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    Log.w("NestTx") { "openGroupStream threw subId=${sub.id} seq=$sequence: ${t::class.simpleName}: ${t.message}" }
+                    throw t
+                }
+            Log.d("NestTx") { "openGroupStream subId=${sub.id} seq=$sequence" }
             return GroupOutbound(sequence = sequence, uni = uni)
         }
     }
@@ -970,6 +1038,10 @@ class MoqLiteSession internal constructor(
     companion object {
         /** moq-lite priority byte midpoint — neutral default. */
         const val DEFAULT_PRIORITY: Int = 0x80
+
+        // Diagnostic: log "send returned false" once every N invocations.
+        // At 50 fps and N=50 → ≤ 1 log/sec for a sustained no-sub window.
+        private const val SEND_LOG_THROTTLE: Long = 50L
 
         /**
          * Per-subscription channel buffer for inbound frames. 128 audio

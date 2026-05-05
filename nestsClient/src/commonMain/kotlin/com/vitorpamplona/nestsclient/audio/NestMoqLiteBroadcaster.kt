@@ -181,6 +181,10 @@ class NestMoqLiteBroadcaster(
                 // we bail. publisher.send returning `false` (no inbound
                 // subscriber) is NOT counted — empty rooms are normal.
                 var consecutiveSendErrors = 0
+                // Diagnostic counters: throttled logging at 50Hz capture rate
+                // would flood logcat without these.
+                var sentFrames: Long = 0L
+                var droppedNoSubFrames: Long = 0L
                 // Track which publisher we last sent to. On swapPublisher
                 // (JWT-refresh hot swap), the snapshot below picks up the
                 // new reference; we reset framesInCurrentGroup so the
@@ -229,16 +233,32 @@ class NestMoqLiteBroadcaster(
                         // for the production cliff this works around.
                         val sendOutcome =
                             runCatching {
-                                current.send(opus)
+                                val accepted = current.send(opus)
                                 framesInCurrentGroup += 1
                                 if (framesInCurrentGroup >= framesPerGroup) {
                                     current.endGroup()
                                     framesInCurrentGroup = 0
                                 }
+                                accepted
                             }
                         sendOutcome
-                            .onSuccess {
+                            .onSuccess { accepted ->
                                 consecutiveSendErrors = 0
+                                if (accepted) {
+                                    sentFrames += 1
+                                    if (sentFrames % SEND_LOG_THROTTLE == 0L) {
+                                        com.vitorpamplona.quartz.utils.Log.d("NestTx") {
+                                            "broadcaster sent frame #$sentFrames (group $framesInCurrentGroup/$framesPerGroup)"
+                                        }
+                                    }
+                                } else {
+                                    droppedNoSubFrames += 1
+                                    if (droppedNoSubFrames % SEND_LOG_THROTTLE == 0L) {
+                                        com.vitorpamplona.quartz.utils.Log.w("NestTx") {
+                                            "broadcaster send returned false — frame dropped (count=$droppedNoSubFrames, sent=$sentFrames)"
+                                        }
+                                    }
+                                }
                                 // Fire the speaking-ring tap only on
                                 // a successful send. If the publisher
                                 // throws (transport gone, peer dead),
@@ -248,6 +268,9 @@ class NestMoqLiteBroadcaster(
                             }.onFailure { t ->
                                 if (t is CancellationException) throw t
                                 consecutiveSendErrors += 1
+                                com.vitorpamplona.quartz.utils.Log.w("NestTx") {
+                                    "broadcaster send threw (consecutive=$consecutiveSendErrors): ${t::class.simpleName}: ${t.message}"
+                                }
                                 onError(
                                     AudioException(
                                         AudioException.Kind.PlaybackFailed,
@@ -377,5 +400,9 @@ class NestMoqLiteBroadcaster(
          * transport is irrecoverably dead.
          */
         const val MAX_CONSECUTIVE_SEND_ERRORS: Int = 250
+
+        // Diagnostic: log every Nth frame (sent or dropped) so a sustained
+        // window doesn't flood logcat at 50 fps.
+        private const val SEND_LOG_THROTTLE: Long = 50L
     }
 }
