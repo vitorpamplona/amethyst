@@ -305,43 +305,68 @@ class SendBuffer {
         // length == 0 only meaningful for FIN-only ranges; handle by
         // matching the exact-offset zero-length range.
         if (length == 0L) {
-            val it = list.iterator()
-            while (it.hasNext()) {
-                val r = it.next()
+            // Binary-search for offset; the FIN-only range, if present,
+            // sits at the position whose offset equals the requested
+            // offset. Multiple zero-length ranges at the same offset are
+            // disallowed by [addToInFlight]'s sort invariant — at most
+            // one FIN-only range exists per buffer.
+            val startIndex = firstOverlapIndex(list, offset)
+            if (startIndex < list.size) {
+                val r = list[startIndex]
                 if (r.offset == offset && r.length == 0L) {
-                    it.remove()
+                    list.removeAt(startIndex)
                     if (ackedNotLost) {
                         if (r.fin) _finAcked = true
                     } else {
                         retransmit.addLast(r)
                     }
-                    return
                 }
             }
             return
         }
         val rangeEnd = offset + length
-        val replacements = mutableListOf<Range>()
-        val it = list.iterator()
-        while (it.hasNext()) {
-            val r = it.next()
+        // Find the first list entry whose end-offset is > the requested
+        // start (i.e. the leftmost potential overlap). All earlier
+        // entries fall entirely below the request and are untouched —
+        // we skip them in O(log N) instead of the prior O(N) full scan.
+        var startIndex = firstOverlapIndex(list, offset)
+        if (startIndex >= list.size) return
+
+        // Walk forward. Two outputs from this loop:
+        //   - dropCount: number of consecutive entries (starting at
+        //     startIndex) we need to remove via a single subList clear,
+        //     instead of O(N²) per-element removeAt.
+        //   - replacements: kept-pieces (left and right of an overlap
+        //     that doesn't fully cover an entry) re-inserted at the
+        //     end. Sort-stable by offset since we process entries in
+        //     ascending order.
+        val replacements = ArrayList<Range>(2)
+        var endIndex = startIndex
+        while (endIndex < list.size) {
+            val r = list[endIndex]
+            // Sorted invariant: once r.offset >= rangeEnd, no later
+            // entry overlaps. Early-exit before the prior O(N) scan
+            // would have continued.
+            if (r.offset >= rangeEnd) break
             val rEnd = r.offset + r.length
-            if (rEnd <= offset || r.offset >= rangeEnd) continue
-            // Overlap exists. Compute up-to-three pieces:
-            //   leftKept: [r.offset, max(r.offset, offset))
-            //   covered:  [max(r.offset, offset), min(rEnd, rangeEnd))
-            //   rightKept:[min(rEnd, rangeEnd), rEnd)
-            val coveredStart = maxOf(r.offset, offset)
-            val coveredEnd = minOf(rEnd, rangeEnd)
+            // r.offset < rangeEnd guarantees overlap candidacy; rule
+            // out the case where r ends exactly at offset.
+            if (rEnd <= offset) {
+                // Should not happen given firstOverlapIndex semantics,
+                // but defensively skip.
+                endIndex += 1
+                continue
+            }
+            val coveredStart = if (r.offset > offset) r.offset else offset
+            val coveredEnd = if (rEnd < rangeEnd) rEnd else rangeEnd
             val coveredLen = coveredEnd - coveredStart
-            it.remove()
             if (coveredStart > r.offset) {
                 replacements +=
                     Range(
                         offset = r.offset,
                         length = coveredStart - r.offset,
-                        // FIN belongs to the LAST covered piece; the left
-                        // kept piece never carries FIN.
+                        // FIN belongs to the rightmost covered piece;
+                        // a left-kept piece never carries FIN.
                         fin = false,
                     )
             }
@@ -350,7 +375,6 @@ class SendBuffer {
                     Range(
                         offset = coveredEnd,
                         length = rEnd - coveredEnd,
-                        // FIN, if any, lives on the rightmost piece.
                         fin = r.fin,
                     )
             }
@@ -368,23 +392,86 @@ class SendBuffer {
                     )
                 }
             }
+            endIndex += 1
         }
-        // Re-insert kept pieces in offset order.
-        replacements.sortBy { it.offset }
+        // Bulk-remove the contiguous overlap span [startIndex, endIndex).
+        // ArrayDeque doesn't expose subList.clear, so fall back to a
+        // tight removeAt loop walking backward — still O(k) per call
+        // but with a single shift of trailing entries instead of one
+        // shift per removed item.
+        if (endIndex > startIndex) {
+            // Walking backward minimises shift work: removeAt at the
+            // rightmost index of the span first leaves the trailing
+            // entries (after endIndex) where they are; only the leftward
+            // entries shift, and they shift by 1 each iteration.
+            var i = endIndex - 1
+            while (i >= startIndex) {
+                list.removeAt(i)
+                i -= 1
+            }
+        }
+        // Re-insert kept pieces. Both pieces (left + right) for a single
+        // overlap are themselves in offset-ascending order because
+        // they're emitted left-then-right per loop iteration. Across
+        // multiple processed overlaps they remain sorted (each overlap's
+        // left-piece sits below the next overlap's left-piece). So no
+        // explicit sort needed.
         for (r in replacements) addToInFlight(r)
     }
 
-    /** Insert [r] into [inFlight] preserving offset-ascending order. */
+    /**
+     * Binary-search [list] for the index of the first entry whose
+     * end-offset (`offset + length`) is strictly greater than
+     * [targetOffset]. All entries strictly before that index end
+     * at-or-before [targetOffset] and therefore cannot overlap any
+     * range starting at [targetOffset]. The binary search runs in
+     * O(log N).
+     *
+     * Returns `list.size` when every entry ends at-or-before
+     * [targetOffset] — meaning no overlap exists.
+     */
+    private fun firstOverlapIndex(
+        list: ArrayDeque<Range>,
+        targetOffset: Long,
+    ): Int {
+        // Standard lower-bound-style binary search adapted to "first
+        // entry whose end > targetOffset". Entries are kept sorted by
+        // start offset (sort invariant of [addToInFlight]); since
+        // ranges within the list don't overlap each other, "sorted by
+        // start" implies "sorted by end" too.
+        var lo = 0
+        var hi = list.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            val midEnd = list[mid].offset + list[mid].length
+            if (midEnd > targetOffset) hi = mid else lo = mid + 1
+        }
+        return lo
+    }
+
+    /**
+     * Insert [r] into [inFlight] preserving offset-ascending order.
+     * Append is the common case (writer drains fresh bytes in offset
+     * order); when an in-the-middle insert is needed (after a partial
+     * overlap split), uses binary search to find the position in
+     * O(log N) instead of the prior linear walk.
+     */
     private fun addToInFlight(r: Range) {
-        // Append is the common case (writer drains in offset order).
+        // Append fast-path: empty list, or new range starts at-or-after
+        // the current tail's start offset (i.e. it's the new max).
         if (inFlight.isEmpty() || inFlight.last().offset <= r.offset) {
             inFlight.addLast(r)
             return
         }
-        // Otherwise insert in sorted position.
-        var i = 0
-        while (i < inFlight.size && inFlight[i].offset < r.offset) i += 1
-        inFlight.add(i, r)
+        // Otherwise binary-search for the first index where the existing
+        // entry's offset >= r.offset, and insert before it.
+        var lo = 0
+        var hi = inFlight.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (inFlight[mid].offset < r.offset) lo = mid + 1 else hi = mid
+        }
+        inFlight.add(lo, r)
     }
 
     /**
