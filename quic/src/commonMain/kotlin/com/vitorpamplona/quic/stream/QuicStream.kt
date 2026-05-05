@@ -33,10 +33,18 @@ import kotlinx.coroutines.flow.consumeAsFlow
 class QuicStream(
     val streamId: Long,
     val direction: Direction,
+    /**
+     * If true, lost STREAM bytes are dropped instead of retransmitted
+     * (see [SendBuffer.bestEffort]). Used by moq-lite group streams
+     * carrying real-time Opus audio: a STREAM frame arriving 200 ms
+     * late is worse than useless. Default false (RFC 9000 §3.5
+     * reliable byte sequence).
+     */
+    val bestEffort: Boolean = false,
 ) {
     enum class Direction { BIDIRECTIONAL, UNIDIRECTIONAL_LOCAL_TO_REMOTE, UNIDIRECTIONAL_REMOTE_TO_LOCAL }
 
-    val send = SendBuffer()
+    val send = SendBuffer(bestEffort = bestEffort)
     val receive = ReceiveBuffer()
 
     /**

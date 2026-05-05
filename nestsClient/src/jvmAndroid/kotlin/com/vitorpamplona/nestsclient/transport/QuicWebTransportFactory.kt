@@ -278,8 +278,8 @@ class QuicWebTransportSession(
         return QuicBidiStreamAdapter(s, state.driver)
     }
 
-    override suspend fun openUniStream(): WebTransportWriteStream {
-        val s = state.openUniStream()
+    override suspend fun openUniStream(bestEffort: Boolean): WebTransportWriteStream {
+        val s = state.openUniStream(bestEffort = bestEffort)
         return QuicUniWriteStreamAdapter(s, state.driver)
     }
 

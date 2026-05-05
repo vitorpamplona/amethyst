@@ -1,6 +1,19 @@
 # Congestion control for `:quic` — implementation plan
 
-**Status:** plan, not started.
+**Status:** **parked indefinitely 2026-05-05.** After drafting this
+plan we concluded the audio-rooms workload doesn't actually need CC —
+see [Why](#why-and-why-this-is-honestly-low-priority) below. The one
+real concern that surfaced (STREAM retransmit wasting bandwidth on
+stale Opus frames) is addressed by a much smaller fix — a
+`bestEffort` flag on `SendBuffer` that drops lost ranges instead of
+retransmitting them, set by moq-lite for group streams. That
+follow-up landed on the same branch.
+
+This plan is preserved as a reference if a future workload (large
+file transfer over `:quic`, multiple concurrent media streams,
+running on heavily-shared mobile uplinks with hostile routers) ever
+makes CC necessary. The architecture below is sound; we just don't
+have a problem big enough to justify the implementation cost today.
 
 ## Why (and why this is honestly low-priority)
 

@@ -696,7 +696,14 @@ class MoqLiteSession internal constructor(
         subscribeId: Long,
         sequence: Long,
     ): com.vitorpamplona.nestsclient.transport.WebTransportWriteStream {
-        val uni = transport.openUniStream()
+        // Group streams carry a single Opus packet. They're real-time
+        // and best-effort — a STREAM frame arriving 200 ms late is
+        // worse than useless because the listener has already moved
+        // past that group's sequence number. Setting bestEffort=true
+        // tells the underlying QUIC SendBuffer to drop lost ranges
+        // instead of retransmitting them, bounding the bandwidth waste
+        // we'd otherwise incur on a lossy uplink.
+        val uni = transport.openUniStream(bestEffort = true)
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))
         return uni

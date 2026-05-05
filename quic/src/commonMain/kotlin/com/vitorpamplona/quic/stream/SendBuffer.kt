@@ -73,8 +73,22 @@ package com.vitorpamplona.quic.stream
  * drained). [markAcked] / [markLost] respect FIN — a lost range that
  * carried FIN is re-sent with FIN set, and the buffer's "FIN delivered"
  * latch ([finAcked]) only flips when the FIN-carrying range is ACK'd.
+ *
+ * # Best-effort streams
+ *
+ * Setting [bestEffort] = true changes [markLost] semantics: lost
+ * ranges are dropped without being re-queued for retransmit, the FIN
+ * bit (if present in a lost range) is not re-emitted, and the
+ * underlying byte storage compacts as if the range had been ACK'd.
+ * This is the moq-lite group-stream case — Opus audio frames
+ * arriving 200 ms late are worse than useless. The peer will see a
+ * truncated stream; that's expected and the moq-lite layer relies on
+ * its own per-stream timeouts. Default is false (reliable per RFC
+ * 9000 §3.5).
  */
-class SendBuffer {
+class SendBuffer(
+    val bestEffort: Boolean = false,
+) {
     /**
      * Contiguous byte storage covering `[flushedFloor, nextOffset)`.
      * Indexing: byte at logical offset `o` lives at `data[(o - flushedFloor).toInt()]`.
@@ -251,7 +265,7 @@ class SendBuffer {
         length: Long,
     ) {
         synchronized(this) {
-            removeOverlap(inFlight, offset, length, ackedNotLost = true)
+            removeOverlap(inFlight, offset, length, OverlapAction.ACK)
             advanceFlushedFloorIfPossible()
         }
     }
@@ -280,27 +294,48 @@ class SendBuffer {
             // to retransmit. Clamp the requested range to the retained
             // window to keep the operation idempotent.
             if (offset + length <= flushedFloor) {
-                if (fin && !_finAcked) _finSent = false
+                if (fin && !_finAcked && !bestEffort) _finSent = false
                 return
             }
             val clampedOffset = maxOf(offset, flushedFloor)
             val clampedLength = (offset + length) - clampedOffset
-            removeOverlap(inFlight, clampedOffset, clampedLength, ackedNotLost = false)
-            if (fin && !_finAcked) _finSent = false
+            if (bestEffort) {
+                // Drop without retransmit (see class kdoc). Bytes vanish
+                // from inFlight and the data buffer can compact, the
+                // same way an ACK would. The FIN flag intentionally
+                // stays as `_finSent = true` — best-effort means we
+                // don't try to re-emit FIN either; the peer either saw
+                // it on the original wire or it's lost forever.
+                removeOverlap(inFlight, clampedOffset, clampedLength, OverlapAction.DROP)
+                advanceFlushedFloorIfPossible()
+            } else {
+                removeOverlap(inFlight, clampedOffset, clampedLength, OverlapAction.RETRANSMIT)
+                if (fin && !_finAcked) _finSent = false
+            }
         }
     }
 
     /**
+     * Disposition for a range that overlapped a [markAcked] / [markLost]
+     * range. ACK drops the range and latches `_finAcked` if the FIN
+     * was covered. RETRANSMIT moves the range to the retransmit queue
+     * for re-emission. DROP just removes the range, used by best-effort
+     * streams where retransmit would deliver stale data.
+     */
+    private enum class OverlapAction { ACK, RETRANSMIT, DROP }
+
+    /**
      * Walk [list] for any range overlapping `[offset, offset + length)`,
-     * remove the overlapping portion, and either drop it (ACK path) or
-     * push it onto [retransmit] (loss path). Splits ranges where the
-     * overlap is partial.
+     * remove the overlapping portion, and dispose of it per [action]:
+     * ACK latches `_finAcked` if FIN was covered; RETRANSMIT moves the
+     * covered range to the retransmit queue; DROP just removes it.
+     * Splits ranges where the overlap is partial.
      */
     private fun removeOverlap(
         list: ArrayDeque<Range>,
         offset: Long,
         length: Long,
-        ackedNotLost: Boolean,
+        action: OverlapAction,
     ) {
         // length == 0 only meaningful for FIN-only ranges; handle by
         // matching the exact-offset zero-length range.
@@ -315,10 +350,16 @@ class SendBuffer {
                 val r = list[startIndex]
                 if (r.offset == offset && r.length == 0L) {
                     list.removeAt(startIndex)
-                    if (ackedNotLost) {
-                        if (r.fin) _finAcked = true
-                    } else {
-                        retransmit.addLast(r)
+                    when (action) {
+                        OverlapAction.ACK -> {
+                            if (r.fin) _finAcked = true
+                        }
+
+                        OverlapAction.RETRANSMIT -> {
+                            retransmit.addLast(r)
+                        }
+
+                        OverlapAction.DROP -> {} // discard
                     }
                 }
             }
@@ -380,16 +421,22 @@ class SendBuffer {
             }
             if (coveredLen > 0L || r.length == 0L) {
                 val coveredFin = r.fin && coveredEnd == rEnd
-                if (ackedNotLost) {
-                    if (coveredFin) _finAcked = true
-                } else {
-                    retransmit.addLast(
-                        Range(
-                            offset = coveredStart,
-                            length = coveredLen,
-                            fin = coveredFin,
-                        ),
-                    )
+                when (action) {
+                    OverlapAction.ACK -> {
+                        if (coveredFin) _finAcked = true
+                    }
+
+                    OverlapAction.RETRANSMIT -> {
+                        retransmit.addLast(
+                            Range(
+                                offset = coveredStart,
+                                length = coveredLen,
+                                fin = coveredFin,
+                            ),
+                        )
+                    }
+
+                    OverlapAction.DROP -> {} // discard the covered piece
                 }
             }
             endIndex += 1

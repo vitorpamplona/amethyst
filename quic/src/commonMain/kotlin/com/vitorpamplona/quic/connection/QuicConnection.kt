@@ -477,8 +477,16 @@ class QuicConnection(
             stream
         }
 
-    /** Allocate a new client-initiated unidirectional (write-only) stream. Locked. */
-    suspend fun openUniStream(): QuicStream =
+    /**
+     * Allocate a new client-initiated unidirectional (write-only) stream.
+     * Locked.
+     *
+     * If [bestEffort] is true, the stream's [SendBuffer] drops lost
+     * ranges instead of retransmitting them (see
+     * [QuicStream.bestEffort]). Used for moq-lite group streams
+     * carrying real-time Opus audio.
+     */
+    suspend fun openUniStream(bestEffort: Boolean = false): QuicStream =
         lock.withLock {
             if (nextLocalUniIndex >= peerMaxStreamsUni) {
                 throw QuicStreamLimitException(
@@ -487,7 +495,7 @@ class QuicConnection(
                 )
             }
             val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE)
+            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE, bestEffort = bestEffort)
             stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
             stream.receiveLimit = 0L // can't receive
             streams[id] = stream
