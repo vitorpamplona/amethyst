@@ -384,32 +384,53 @@ class NestMoqLiteBroadcaster(
 
     companion object {
         /**
-         * Default moq-lite group size = 10 Opus frames ≈ 200 ms of audio.
+         * Default moq-lite group size = 50 Opus frames ≈ 1 s of audio.
          *
-         * Picked to keep the QUIC uni-stream creation rate (5 streams/sec
-         * at 20 ms cadence) well under the production nostrnests relay's
-         * per-subscriber forward queue cliff. Two-phone production tests
-         * (`claude/fix-nests-audio-receiver-HCgOY` logcat) showed the
-         * relay still cliffed at ~135 streams under sustained load even
-         * with the old 5-frame default (10 streams/sec), giving ~13 s of
-         * audio before the listener's incoming uni-stream flow stopped
-         * — the same bug class documented in
-         * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`,
-         * just shifted by half. Doubling the pack to 10 cuts the rate
-         * in half again and roughly doubles the cliff window in the
-         * worst case while halving the relay-side stream-handling
-         * pressure that triggers it.
+         * The relay-side cliff this defends against is per-subscriber
+         * forward-stream-rate, not per-frame or per-byte: moq-rs
+         * starts FIN'ing the per-subscriber publisher pipe once its
+         * per-subscriber uni-stream creation queue can't drain fast
+         * enough. Two-phone production tests on
+         * `claude/fix-nests-audio-receiver-HCgOY` showed:
          *
-         * Belt-and-suspenders: pair this with the listener-side
-         * cliff-detector in `NestViewModel` (no-data-while-announced
-         * triggers `recycleSession()`) so the room recovers from a
-         * cliff event regardless of the exact threshold.
+         *   - `framesPerGroup = 10` (5 streams/sec) → cliff after
+         *     ~16 s of streaming, ~6 s of audio lost at the tail
+         *     (commit 6e4df4a logcat, run 18:37:43..18:38:08)
+         *   - `framesPerGroup = 5`  (10 streams/sec) → cliff after
+         *     ~13 s of streaming, same dropout shape (commit
+         *     d6517cf logcat run 14:25 — original bug report).
          *
-         * Late-join gap: ≤ 200 ms (one group boundary) instead of
-         * ≤ 100 ms with `framesPerGroup = 5` — still imperceptible
-         * for live audio rooms.
+         * 50 frames/group → 1 stream/sec at the production 50 fps
+         * Opus cadence. The relay's per-subscriber forward queue
+         * has measurable headroom at 1 stream/sec — sweep tests
+         * (`fpg-all` = 100 frames in a single group) consistently
+         * deliver 100/100 in production, and `fpg20` similarly
+         * passes. We pick 50 (not 100) because:
+         *
+         *   - Late-join gap is bounded by group size: a listener
+         *     joining mid-broadcast has to wait until the next
+         *     group boundary for the first frame. 50 frames = 1 s
+         *     gap, which matches what the existing
+         *     `ROOM_PLAYER_PREROLL_FRAMES = 5` audio-buffer + the
+         *     ~250 ms AudioTrack jitter buffer was already designed
+         *     to mask. 100 frames (2 s) is past that.
+         *   - QUIC stream-level reliability: each group is one uni
+         *     stream, and a stream RST loses the whole group. 1 s
+         *     of audio loss on RST is bearable; 2 s is noticeably
+         *     a "skip".
+         *   - Sender-side encode latency stays at 1 s — no worse
+         *     than the natural buffering audio rooms already do.
+         *
+         * Pair with the listener-side cliff-detector in
+         * `NestViewModel` as belt-and-suspenders: if 50 frames/group
+         * STILL hits a cliff (relay version drift, network
+         * congestion, etc.) the detector recycles the transport so
+         * the next session reopens the relay's queue.
+         *
+         * Late-join gap: ≤ 1 s (one group boundary) — within the
+         * existing audio-room buffering envelope.
          */
-        const val DEFAULT_FRAMES_PER_GROUP: Int = 10
+        const val DEFAULT_FRAMES_PER_GROUP: Int = 50
 
         /**
          * Maximum consecutive [MoqLitePublisherHandle.send] / [endGroup]

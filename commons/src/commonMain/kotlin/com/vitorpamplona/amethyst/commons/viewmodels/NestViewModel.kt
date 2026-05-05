@@ -1702,12 +1702,19 @@ const val ROOM_AUDIO_MAX_LATENCY_MS: Long = 500L
  * orchestrator opens a fresh QUIC transport. Resets the relay's
  * per-subscriber forward queue.
  *
- * 4 s gives enough headroom to ride out a publisher-side group-rollover
- * hiccup (typically < 200 ms) without false-positive recycling, while
- * keeping the audible gap from a real cliff to ~5 s of silence at
- * worst (4 s detection + ~1 s reconnect handshake).
+ * 2 500 ms is past every legitimate group boundary (`framesPerGroup =
+ * 50` packs 1 s of audio per uni stream, so the receiver sees one
+ * `drainOneGroup` FIN every ~1 s on a healthy stream — 2.5 s of
+ * silence means more than two group cycles missed, very likely a
+ * cliff). Earlier than 2 s would false-positive on the natural 1 s
+ * cadence; later than 3 s wastes audible audio at every cliff edge.
+ *
+ * Production logs (`6e4df4a` run 18:37:43..18:38:08) showed the
+ * cliff-after-streaming case losing ~6 s of audio at the 4 s
+ * detector + ~2 s reconnect handshake. Tightening detection to
+ * 2.5 s shaves ~1.5 s off the audible gap.
  */
-const val ROOM_AUDIO_CLIFF_TIMEOUT_MS: Long = 4_000L
+const val ROOM_AUDIO_CLIFF_TIMEOUT_MS: Long = 2_500L
 
 /**
  * How often the cliff detector wakes up to scan

@@ -103,14 +103,14 @@ class CliffDetectorTest {
 
     @Test
     fun returnsEmptyJustBeforeThreshold() {
-        // Boundary case: 1 ms under the 4 s threshold. The detector
+        // Boundary case: 1 ms under the 2.5 s threshold. The detector
         // should still consider this healthy. Relevant because audio
-        // groups arrive at ~100 ms cadence (framesPerGroup=10), so a
+        // groups arrive at ~1 s cadence (framesPerGroup=50), so a
         // false positive at ≈ threshold would recycle on every
         // group-rollover hiccup.
         val ts = TestTimeSource()
         val frameMark = ts.markNow()
-        ts += 3_999.milliseconds
+        ts += 2_499.milliseconds
 
         val result =
             computeStalledSpeakers(
@@ -129,7 +129,7 @@ class CliffDetectorTest {
         // user-visible (this is the "audio went silent" detection).
         val ts = TestTimeSource()
         val frameMark = ts.markNow()
-        ts += 4_000.milliseconds
+        ts += 2_500.milliseconds
 
         val result =
             computeStalledSpeakers(
@@ -164,12 +164,14 @@ class CliffDetectorTest {
         // should fire for the stalled set and leave charlie alone —
         // the `recycleSession` itself takes the whole listener down,
         // but the test here is the predicate's classification.
+        // Threshold = 2.5 s default. Spacings: alice/bob 4 s old (past),
+        // charlie 1.5 s old (under).
         val ts = TestTimeSource()
         val aliceFrame = ts.markNow()
         val bobFrame = ts.markNow()
-        ts += 3_000.milliseconds
+        ts += 2_500.milliseconds
         val charlieFrame = ts.markNow()
-        ts += 3_000.milliseconds
+        ts += 1_500.milliseconds
 
         val result =
             computeStalledSpeakers(
@@ -251,7 +253,7 @@ class CliffDetectorTest {
                 lastFrameAt = mapOf(ALICE to frameMark),
                 lastRecycleAt = null,
             )
-        assertTrue(withDefault.isEmpty(), "1 s elapsed shouldn't trip 4 s default")
+        assertTrue(withDefault.isEmpty(), "1 s elapsed shouldn't trip 2.5 s default")
 
         val withTightTimeout =
             computeStalledSpeakers(
