@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -37,9 +38,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -251,8 +252,25 @@ private class ReconnectingHandle(
      * swallowed so a future moq-lite session keeps emitting.
      */
     override fun announces(): Flow<RoomAnnouncement> =
-        flow {
-            Log.d("NestRx") { "wrapper.announces() flow starting collect on activeListener" }
+        // `channelFlow` (NOT `flow`) is required here for the same
+        // reason `MoqLiteNestsListener.announces` is channelFlow:
+        // we drive emissions from a `collectLatest` that internally
+        // launches a child coroutine per `activeListener` emission.
+        // `flow {}`'s SafeFlow guard rejects emissions from any
+        // coroutine other than the flow-builder's own — so on the
+        // very first listener emission the inner `emit(it)` lands
+        // in a child coroutine of `collectLatest`, throws
+        // IllegalStateException, the consumer's `runCatching`
+        // swallows it, and `_announcedSpeakers` never populates.
+        // Two-phone production logs at commit f17e7ad showed this
+        // exact failure even AFTER the inner listener was switched
+        // to channelFlow — the wrapper layer was the second
+        // un-fixed `flow {}`. `channelFlow` + `send(...)` instead
+        // of `emit(...)` allows cross-coroutine production, which
+        // is exactly what `collectLatest`'s per-emission child
+        // coroutines need.
+        channelFlow {
+            Log.d("NestRx") { "wrapper.announces() channelFlow starting collect on activeListener" }
             var iter = 0
             activeListener.collectLatest { listener ->
                 iter += 1
@@ -271,7 +289,7 @@ private class ReconnectingHandle(
                     runCatching {
                         listener.announces().collect {
                             fwd += 1
-                            emit(it)
+                            send(it)
                         }
                     }
                 Log.w("NestRx") {
@@ -279,6 +297,12 @@ private class ReconnectingHandle(
                     "wrapper.announces() iter=$iter inner collect ended $why fwd=$fwd"
                 }
             }
+            // collectLatest above never returns naturally — it
+            // collects activeListener forever. awaitClose fires when
+            // the consumer cancels the channelFlow, at which point
+            // the collectLatest is cancelled too via structured
+            // concurrency.
+            awaitClose { }
         }
 
     /**
