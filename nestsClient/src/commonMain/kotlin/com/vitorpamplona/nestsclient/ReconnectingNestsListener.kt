@@ -476,18 +476,23 @@ private class ReconnectingHandle(
         // before the publisher exists, and the relay FINs the bidi
         // without a SubscribeOk/Drop reply.
         //
-        // - INITIAL = 250 ms: under moq-rs's typical announce-propagation
-        //   latency (< 200 ms in production traces), so the very first
-        //   retry usually succeeds and the listener-side buffer hides
-        //   the gap.
-        // - Doubles each miss → 500 ms → 1 000 ms.
-        // - MAX = 1 000 ms: matches the previous flat constant; long
-        //   enough that a never-arriving publisher doesn't hammer the
-        //   relay, short enough to stay under the wrapper SharedFlow's
-        //   ~1.3 s buffer once playback is rolling on the next attempt.
+        // - INITIAL = 100 ms: lower than the prior 250 ms because
+        //   join-time logs (`claude/fix-nests-audio-receiver-HCgOY`)
+        //   showed the listener was paying ~4 s of dead air on every
+        //   first-join while the broadcaster's session warmed up
+        //   on the relay (5 retries: 250+500+1000+1000+1000 = 3.75 s).
+        //   100 ms initial halves that to ~1.9 s
+        //   (100+200+400+800+1000) without thrashing the relay on a
+        //   permanently-gone publisher (the MAX cap below still
+        //   bounds the total per-attempt rate).
+        // - Doubles each miss → 200 ms → 400 ms → 800 ms → 1 000 ms.
+        // - MAX = 1 000 ms: long enough that a never-arriving
+        //   publisher doesn't hammer the relay; short enough to stay
+        //   under the wrapper SharedFlow's ~1.3 s buffer once playback
+        //   is rolling on the next attempt.
         // - Reset on first successful subscribe so a subsequent
         //   publisher-cycle gap doesn't inherit the previous saturation.
-        private const val SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS = 250L
+        private const val SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS = 100L
         private const val SUBSCRIBE_RETRY_BACKOFF_MAX_MS = 1_000L
 
         private val SYNTH_OK =

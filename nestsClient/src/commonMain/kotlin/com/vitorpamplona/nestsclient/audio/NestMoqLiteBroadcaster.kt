@@ -251,6 +251,14 @@ class NestMoqLiteBroadcaster(
                                             "broadcaster sent frame #$sentFrames (group $framesInCurrentGroup/$framesPerGroup)"
                                         }
                                     }
+                                    // Only tap the speaking-ring on a frame
+                                    // that actually reached an inbound
+                                    // subscriber. Without this gate the local
+                                    // ring lights up during the pre-subscribe
+                                    // window AND after a relay-side cliff —
+                                    // the speaker would believe they're being
+                                    // heard when no audio is on the wire.
+                                    onLevel(peakAmplitude(pcm))
                                 } else {
                                     droppedNoSubFrames += 1
                                     if (droppedNoSubFrames % SEND_LOG_THROTTLE == 0L) {
@@ -259,12 +267,6 @@ class NestMoqLiteBroadcaster(
                                         }
                                     }
                                 }
-                                // Fire the speaking-ring tap only on
-                                // a successful send. If the publisher
-                                // throws (transport gone, peer dead),
-                                // the frame didn't actually go out and
-                                // the UI shouldn't claim we're talking.
-                                onLevel(peakAmplitude(pcm))
                             }.onFailure { t ->
                                 if (t is CancellationException) throw t
                                 consecutiveSendErrors += 1
@@ -382,15 +384,32 @@ class NestMoqLiteBroadcaster(
 
     companion object {
         /**
-         * Default moq-lite group size = 5 Opus frames ≈ 100 ms of audio.
-         * Picked to keep the QUIC uni-stream creation rate
-         * (10 streams/sec at 20 ms cadence) under the production
-         * nostrnests relay's sustained per-subscriber forward
-         * ceiling (~40 streams/sec) while still giving late-joining
-         * subscribers a sub-100 ms initial audio gap. See
-         * [framesPerGroup] kdoc for the full rationale + history.
+         * Default moq-lite group size = 10 Opus frames ≈ 200 ms of audio.
+         *
+         * Picked to keep the QUIC uni-stream creation rate (5 streams/sec
+         * at 20 ms cadence) well under the production nostrnests relay's
+         * per-subscriber forward queue cliff. Two-phone production tests
+         * (`claude/fix-nests-audio-receiver-HCgOY` logcat) showed the
+         * relay still cliffed at ~135 streams under sustained load even
+         * with the old 5-frame default (10 streams/sec), giving ~13 s of
+         * audio before the listener's incoming uni-stream flow stopped
+         * — the same bug class documented in
+         * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`,
+         * just shifted by half. Doubling the pack to 10 cuts the rate
+         * in half again and roughly doubles the cliff window in the
+         * worst case while halving the relay-side stream-handling
+         * pressure that triggers it.
+         *
+         * Belt-and-suspenders: pair this with the listener-side
+         * cliff-detector in `NestViewModel` (no-data-while-announced
+         * triggers `recycleSession()`) so the room recovers from a
+         * cliff event regardless of the exact threshold.
+         *
+         * Late-join gap: ≤ 200 ms (one group boundary) instead of
+         * ≤ 100 ms with `framesPerGroup = 5` — still imperceptible
+         * for live audio rooms.
          */
-        const val DEFAULT_FRAMES_PER_GROUP: Int = 5
+        const val DEFAULT_FRAMES_PER_GROUP: Int = 10
 
         /**
          * Maximum consecutive [MoqLitePublisherHandle.send] / [endGroup]

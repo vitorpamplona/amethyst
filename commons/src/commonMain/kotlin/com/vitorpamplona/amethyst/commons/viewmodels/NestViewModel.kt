@@ -266,6 +266,41 @@ class NestViewModel(
     private val speakingExpiryJobs = mutableMapOf<String, Job>()
 
     /**
+     * Monotonic [kotlin.time.TimeMark] of the last MoQ object delivered
+     * to the consumer flow per speaker pubkey. Updated in
+     * [onSpeakerActivity] alongside the speaking-now flag. Read by
+     * [cliffDetectorJob] to spot the relay-side forward-queue cliff
+     * documented in
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`:
+     * the relay stops opening new uni streams to the listener while
+     * the announce stream still says the broadcast is Active and the
+     * subscribe bidi is still open from QUIC's POV — meaning no other
+     * layer notices.
+     */
+    private val lastFrameAt = mutableMapOf<String, kotlin.time.TimeSource.Monotonic.ValueTimeMark>()
+
+    /**
+     * Periodic scan of [activeSubscriptions] vs [_announcedSpeakers]
+     * vs [lastFrameAt]. When a speaker has been announced Active
+     * AND we have an active subscription AND no frames have arrived
+     * for [ROOM_AUDIO_CLIFF_TIMEOUT_MS], force a `recycleSession()`
+     * so the orchestrator opens a fresh QUIC transport — a clean
+     * recovery from the relay-side per-subscriber forward-queue
+     * starvation that has no QUIC- or moq-lite-level signal.
+     */
+    private var cliffDetectorJob: Job? = null
+
+    /**
+     * [kotlin.time.TimeMark] of the most recent recycle the cliff
+     * detector triggered, or `null` if it has never fired. Acts as a
+     * cooldown so a single cliff event doesn't kick off multiple
+     * recycles back-to-back while the wrapper is mid-handshake on
+     * the new session — the new session has no incoming frames yet,
+     * which would otherwise trip the detector again immediately.
+     */
+    private var lastCliffRecycleAt: kotlin.time.TimeSource.Monotonic.ValueTimeMark? = null
+
+    /**
      * Per-speaker catalog-fetch coroutines. Each entry is the
      * background `subscribeCatalog` collector launched in
      * [fetchSpeakerCatalog]; cancelled in [closeSubscription] so
@@ -561,7 +596,10 @@ class NestViewModel(
      * session over a separate WebTransport — nests' protocol uses one
      * session per direction.
      */
-    fun startBroadcast(speakerPubkeyHex: String) {
+    fun startBroadcast(
+        speakerPubkeyHex: String,
+        initialMuted: Boolean = false,
+    ) {
         if (closed || !canBroadcast) return
         if (_uiState.value.connection !is ConnectionUiState.Connected) return
         if (_uiState.value.broadcast is BroadcastUiState.Broadcasting ||
@@ -608,7 +646,26 @@ class NestViewModel(
                             },
                         )
                     broadcastHandle = handle
-                    _uiState.update { it.copy(broadcast = BroadcastUiState.Broadcasting(isMuted = false)) }
+                    // Auto-start path (room creation): the host wants
+                    // listeners to be able to subscribe BEFORE they hit
+                    // unmute, so we open the publisher session pre-muted.
+                    // The mic stays open + the broadcaster keeps
+                    // capturing + encoding, but `setMuted(true)` makes
+                    // every send drop on the floor inside
+                    // `NestMoqLiteBroadcaster.start`'s `if (muted) continue`
+                    // gate. Listener-side announces fire as soon as the
+                    // publisher registers with the relay, so the audience
+                    // can subscribe immediately and switch from
+                    // "Connecting…" to "Live (silent)" while they wait
+                    // for the host's first word. Composes with `focusMuted`
+                    // exactly the same way [setMicMuted] does so an
+                    // inbound phone call during the auto-start window
+                    // doesn't get a silent unmute.
+                    if (initialMuted) {
+                        val effective = initialMuted || focusMuted
+                        runCatching { handle.setMuted(effective) }
+                    }
+                    _uiState.update { it.copy(broadcast = BroadcastUiState.Broadcasting(isMuted = initialMuted)) }
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
@@ -855,6 +912,7 @@ class NestViewModel(
                     listener = l
                     observeListenerState(l)
                     observeAnnounces(l)
+                    startCliffDetector()
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
@@ -915,6 +973,11 @@ class NestViewModel(
         if (rawAudioLevels.remove(slot.pubkey) != null) {
             _audioLevels.value = rawAudioLevels.toMap()
         }
+        // Drop the cliff-detector heartbeat for this pubkey so the next
+        // tick doesn't see a stale "last frame was 30s ago" entry for a
+        // speaker we already stopped subscribing to and trigger a
+        // gratuitous recycle.
+        lastFrameAt.remove(slot.pubkey)
         if (roomPlayer != null || handle != null) {
             viewModelScope.launch {
                 roomPlayer?.runCatching { stop() }
@@ -961,7 +1024,21 @@ class NestViewModel(
     ) {
         if (closed || activeSubscriptions[pubkey] !== slot) return
         try {
-            val handle = l.subscribeSpeaker(pubkey)
+            // [maxLatencyMs] tells the relay our staleness tolerance:
+            // groups older than this should be evicted, not queued.
+            // With `0L` (the wire default the JS reference uses) the
+            // relay's per-subscriber forward queue grows unbounded
+            // until it cliffs — see
+            // `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+            // 500 ms is long enough to ride out a typical relay-side
+            // hiccup without pruning a healthy group, short enough
+            // that a wedged subscriber drains its buffer before the
+            // queue overflows. Combined with the cliff-detector below
+            // that triggers `recycleSession()` when frames stop
+            // arriving despite the broadcast still being announced,
+            // this is a defense-in-depth pair against the moq-rs
+            // forward-queue starvation behaviour.
+            val handle = l.subscribeSpeaker(pubkey, maxLatencyMs = ROOM_AUDIO_MAX_LATENCY_MS)
             // Re-check after the suspending subscribeSpeaker — the user
             // may have removed this speaker via updateSpeakers / disconnected
             // while the SUBSCRIBE was in flight. If so, abandon the handle
@@ -1089,6 +1166,10 @@ class NestViewModel(
         announcesJob = null
         levelEmitterJob?.cancel()
         levelEmitterJob = null
+        cliffDetectorJob?.cancel()
+        cliffDetectorJob = null
+        lastFrameAt.clear()
+        lastCliffRecycleAt = null
         // Audio-focus observation only ends on the final teardown —
         // a transient disconnect+reconnect (user retry, room swap)
         // keeps the bus subscription alive so a focus loss that
@@ -1175,6 +1256,14 @@ class NestViewModel(
      */
     private fun onSpeakerActivity(pubkey: String) {
         if (closed) return
+        // Cliff-detector heartbeat: each MoQ object proves the
+        // listener-side relay-forward queue is still flowing for this
+        // speaker. The detector only acts when an announced speaker's
+        // last-frame timestamp ages past `ROOM_AUDIO_CLIFF_TIMEOUT_MS`,
+        // so an active stream resets it on every frame.
+        lastFrameAt[pubkey] =
+            kotlin.time.TimeSource.Monotonic
+                .markNow()
         speakingExpiryJobs[pubkey]?.cancel()
         // First frame for this subscription — clear the buffering
         // overlay. Subsequent frames are no-ops here.
@@ -1188,6 +1277,61 @@ class NestViewModel(
             viewModelScope.launch {
                 delay(SPEAKING_TIMEOUT_MS)
                 clearSpeaking(pubkey)
+            }
+    }
+
+    /**
+     * Periodic scan that detects the relay-side forward-queue cliff:
+     * an announced speaker whose subscription is open but hasn't
+     * delivered any object in [ROOM_AUDIO_CLIFF_TIMEOUT_MS]. Triggers
+     * `recycleSession()` on the listener so the wrapper opens a fresh
+     * QUIC transport — the new session has a fresh per-subscriber
+     * queue on the relay's side.
+     *
+     * Idempotent on start. Stops itself when the listener is gone
+     * (explicit teardown signal) — no-ops on transient empty
+     * `activeSubscriptions` so an audience-only listener doesn't
+     * needlessly recycle.
+     */
+    private fun startCliffDetector() {
+        if (cliffDetectorJob?.isActive == true) return
+        cliffDetectorJob =
+            viewModelScope.launch {
+                while (true) {
+                    delay(ROOM_AUDIO_CLIFF_CHECK_INTERVAL_MS)
+                    if (closed) return@launch
+                    val l = listener ?: continue
+                    if (_uiState.value.connection !is ConnectionUiState.Connected) continue
+                    // Cooldown: if we very recently triggered a recycle,
+                    // give the orchestrator time to bring up the new
+                    // session before re-checking. A new session has
+                    // nothing in `lastFrameAt` yet which would otherwise
+                    // immediately re-trigger.
+                    val sinceRecycle = lastCliffRecycleAt?.elapsedNow()
+                    if (sinceRecycle != null &&
+                        sinceRecycle.inWholeMilliseconds < ROOM_AUDIO_CLIFF_COOLDOWN_MS
+                    ) {
+                        continue
+                    }
+                    val announced = _announcedSpeakers.value
+                    val stalled =
+                        activeSubscriptions
+                            .asSequence()
+                            .filter { (pubkey, slot) -> slot.isPlaying && pubkey in announced }
+                            .filter { (pubkey, _) ->
+                                val mark = lastFrameAt[pubkey] ?: return@filter false
+                                mark.elapsedNow().inWholeMilliseconds >= ROOM_AUDIO_CLIFF_TIMEOUT_MS
+                            }.map { it.key }
+                            .toList()
+                    if (stalled.isEmpty()) continue
+                    com.vitorpamplona.quartz.utils.Log.w("NestRx") {
+                        "cliff-detector: announced+subscribed but silent for ≥${ROOM_AUDIO_CLIFF_TIMEOUT_MS}ms — recycling session. stalled=$stalled"
+                    }
+                    lastCliffRecycleAt =
+                        kotlin.time.TimeSource.Monotonic
+                            .markNow()
+                    runCatching { l.recycleSession() }
+                }
             }
     }
 
@@ -1441,6 +1585,54 @@ const val ROOM_PLAYER_PREROLL_FRAMES: Int = 5
  * a busy stage stays trivial.
  */
 const val LEVEL_TICK_MS: Long = 100L
+
+/**
+ * `max_latency` we send on every speaker SUBSCRIBE. Tells the relay
+ * to evict groups older than this from the per-subscriber forward
+ * queue rather than holding them up to the relay's `MAX_GROUP_AGE`
+ * default (30 s). Defends against the moq-rs forward-queue cliff
+ * documented in
+ * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
+ * 500 ms = 25 Opus frames at 20 ms cadence — long enough to ride
+ * out a typical hiccup without dropping a healthy frame, short
+ * enough to keep the relay's per-subscriber queue bounded.
+ */
+const val ROOM_AUDIO_MAX_LATENCY_MS: Long = 500L
+
+/**
+ * Inactivity threshold for the listener-side cliff detector. If
+ * a speaker is `_announcedSpeakers` (= relay says they're broadcasting)
+ * AND the wrapper's MoqObject flow doesn't deliver a frame for this
+ * many milliseconds, the listener forces a `recycleSession()` so the
+ * orchestrator opens a fresh QUIC transport. Resets the relay's
+ * per-subscriber forward queue.
+ *
+ * 4 s gives enough headroom to ride out a publisher-side group-rollover
+ * hiccup (typically < 200 ms) without false-positive recycling, while
+ * keeping the audible gap from a real cliff to ~5 s of silence at
+ * worst (4 s detection + ~1 s reconnect handshake).
+ */
+const val ROOM_AUDIO_CLIFF_TIMEOUT_MS: Long = 4_000L
+
+/**
+ * How often the cliff detector wakes up to scan
+ * `activeSubscriptions` against `lastFrameAt`. 1 s is a coarse
+ * enough cadence not to cost anything (one map walk per second)
+ * while keeping detection latency well under the 4 s threshold.
+ */
+const val ROOM_AUDIO_CLIFF_CHECK_INTERVAL_MS: Long = 1_000L
+
+/**
+ * Cooldown after a cliff-detector-driven recycle. Suppresses
+ * back-to-back recycles while the wrapper is mid-handshake on the
+ * fresh session — a brand-new session has no `lastFrameAt` entries
+ * yet, which would otherwise immediately re-trigger the detector
+ * on the next 1 s tick. Long enough to cover the typical reconnect
+ * handshake plus a couple of audio-frame round trips, short enough
+ * that a recycle that didn't actually clear the cliff is recovered
+ * from quickly.
+ */
+const val ROOM_AUDIO_CLIFF_COOLDOWN_MS: Long = 8_000L
 
 /**
  * How long a kind-7 reaction stays in
