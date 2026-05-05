@@ -99,10 +99,36 @@ interface AudioCapture {
 /**
  * Sink for PCM audio playback. Implementations buffer internally — [enqueue]
  * may suspend if the device's playback buffer is full.
+ *
+ * **Two-phase startup.** [start] allocates the underlying device + per-instance
+ * resources but does NOT begin consuming samples; [beginPlayback] flips the
+ * device into the playing state. Splitting the two lets [com.vitorpamplona.nestsclient.audio.NestPlayer]
+ * pre-roll a few decoded frames into the device's buffer before playback
+ * starts, so the AudioTrack has slack the moment the hardware begins pulling
+ * samples. Calling [enqueue] between [start] and [beginPlayback] is allowed
+ * and is the intended pattern. Implementations that don't need the
+ * distinction (test fakes, software-only sinks) can leave the default
+ * [beginPlayback] no-op alone.
  */
 interface AudioPlayer {
-    /** Allocate underlying audio resources and begin playback. */
+    /**
+     * Allocate underlying audio resources. The returned device is in a
+     * "ready, not playing" state — [enqueue] is allowed but the hardware
+     * doesn't consume samples until [beginPlayback] is called. Throws on
+     * device-unavailable so callers (typically
+     * [com.vitorpamplona.nestsclient.audio.NestPlayer.play]) get a
+     * synchronous failure they can roll back the subscription on.
+     */
     fun start()
+
+    /**
+     * Transition the allocated device into the playing state. The
+     * hardware begins pulling samples from whatever's already been
+     * [enqueue]d. Default no-op so test fakes / software-only sinks
+     * don't have to grow a method they'll never use; production
+     * Android implementations override to call `AudioTrack.play()`.
+     */
+    fun beginPlayback() {}
 
     /**
      * Feed one PCM frame (any length, but typically [AudioFormat.FRAME_SIZE_SAMPLES]

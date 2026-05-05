@@ -93,30 +93,41 @@ class NestPlayer(
         check(!stopped) { "NestPlayer already stopped" }
         check(job == null) { "NestPlayer.play already called" }
 
-        // Pre-roll buffer holds decoded PCM until either [prerollFrames]
-        // frames have arrived or the upstream flow ends. The underlying
-        // [AudioPlayer] is only started once we have something to flush,
-        // so a flow that never produces PCM (decoder always empty, no
-        // audio in the room) never opens the device.
+        // Allocate the device synchronously so a [AudioException.DeviceUnavailable]
+        // (audio policy denial, AudioTrack rejected, etc.) propagates to
+        // the caller — typically `NestViewModel.openSubscription`, which
+        // catches and rolls back the freshly-reserved subscription slot.
+        // Routing this failure through `onError` instead would attach the
+        // slot first and leave a permanent "Connecting…" spinner on the
+        // speaker tile when the device fails to allocate.
         //
-        // Note: `player.start()` is now deferred into the launch body. If
-        // it throws, the failure is reported via `onError` rather than
-        // propagating synchronously to `play()`'s caller. This is
-        // intentional — the device-allocation cost was previously paid
-        // up-front and amplified perceived join latency; pushing it
-        // behind the first decoded frame both lets pre-roll work and
-        // matches the rest of the pipeline's "audible-failure-via-onError"
-        // contract.
+        // Two-phase startup: [AudioPlayer.start] allocates without
+        // beginning playback; [AudioPlayer.beginPlayback] flips the
+        // device into the playing state. We delay [beginPlayback] until
+        // the pre-roll buffer is full so the first frames already
+        // populate the device's internal buffer when the hardware
+        // starts pulling samples.
+        player.start()
+
+        // Pre-roll buffer holds decoded PCM until either [prerollFrames]
+        // frames have arrived or the upstream flow ends. Once the
+        // threshold is met (or the flow ends with anything queued), we
+        // call [AudioPlayer.beginPlayback] and flush the buffer in a
+        // tight loop so the device starts playback with a populated
+        // buffer. A flow that never produces PCM (decoder always empty,
+        // no audio in the room) never calls [beginPlayback] — the
+        // allocated device sits in the "ready, not playing" state until
+        // [stop] tears it down.
         job =
             scope.launch {
                 val preroll = ArrayDeque<ShortArray>(prerollFrames.coerceAtLeast(1))
-                var started = false
+                var playbackBegun = false
 
-                suspend fun startAndFlushIfNeeded() {
-                    if (started) return
+                suspend fun beginAndFlushIfNeeded() {
+                    if (playbackBegun) return
                     if (preroll.isEmpty()) return
-                    player.start()
-                    started = true
+                    player.beginPlayback()
+                    playbackBegun = true
                     while (preroll.isNotEmpty()) {
                         player.enqueue(preroll.removeFirst())
                     }
@@ -140,12 +151,12 @@ class NestPlayer(
                             }
                         if (pcm.isNotEmpty()) {
                             onLevel(peakAmplitude(pcm))
-                            if (started) {
+                            if (playbackBegun) {
                                 player.enqueue(pcm)
                             } else {
                                 preroll.addLast(pcm)
                                 if (preroll.size >= prerollFrames) {
-                                    startAndFlushIfNeeded()
+                                    beginAndFlushIfNeeded()
                                 }
                             }
                         }
@@ -154,7 +165,7 @@ class NestPlayer(
                     // (e.g. the publisher cycled before pre-roll was full,
                     // or the room ended). Flush whatever's queued so any
                     // already-decoded audio still reaches the device.
-                    startAndFlushIfNeeded()
+                    beginAndFlushIfNeeded()
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {

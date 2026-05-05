@@ -64,6 +64,15 @@ import android.media.AudioFormat as AndroidAudioFormat
  * frame (~50 hops/sec/speaker) and contended with whatever else `Dispatchers.IO`
  * was running; an audio-priority dedicated thread gets reliable scheduling
  * and removes the contention.
+ *
+ * Two-phase startup: [start] allocates the AudioTrack (in stopped state)
+ * + spins up the writer thread. [beginPlayback] calls `AudioTrack.play()`
+ * to flip the device into the playing state. Splitting the two lets
+ * [NestPlayer] pre-roll several decoded frames into the AudioTrack's
+ * internal buffer BEFORE the hardware starts pulling samples, so playback
+ * begins with ~100 ms of buffered audio instead of underrunning on the
+ * first frame. AudioTrack in `MODE_STREAM` explicitly supports `write()`
+ * before `play()` per the platform docs — this is the intended pattern.
  */
 class AudioTrackPlayer(
     private val usage: Int = AudioAttributes.USAGE_MEDIA,
@@ -144,16 +153,11 @@ class AudioTrackPlayer(
                 )
             }
 
-        try {
-            newTrack.play()
-        } catch (t: Throwable) {
-            runCatching { newTrack.release() }
-            throw AudioException(
-                AudioException.Kind.DeviceUnavailable,
-                "AudioTrack.play() rejected start",
-                t,
-            )
-        }
+        // NOTE: deliberately NOT calling `newTrack.play()` here — that's
+        // [beginPlayback]'s job. AudioTrack.write is legal in the not-yet-
+        // playing state for `MODE_STREAM`, which is the contract that lets
+        // [NestPlayer] pre-roll decoded frames into the buffer before the
+        // hardware starts consuming.
         applyMuteVolume(newTrack)
         // Spin up the audio-priority writer thread. The executor is private
         // to this player instance so per-speaker NestPlayer pumps don't
@@ -174,6 +178,29 @@ class AudioTrackPlayer(
         audioExecutor = executor
         audioDispatcher = executor.asCoroutineDispatcher()
         track = newTrack
+    }
+
+    override fun beginPlayback() {
+        // Idempotent: AudioTrack.play() on an already-playing track is a
+        // no-op, and we gate on the track itself being non-null so a
+        // beginPlayback before start (or after stop) silently no-ops
+        // rather than blowing up — matches the rest of the player's
+        // tolerant-of-misordered-calls posture.
+        val t = track ?: return
+        try {
+            t.play()
+        } catch (e: Throwable) {
+            // PLAY-on-uninitialized AudioTrack is the only realistic
+            // failure here, and we already guard against an unallocated
+            // track above. Throw so [NestPlayer]'s outer catch surfaces
+            // it via `onError(AudioException.PlaybackFailed)` — same path
+            // that handles every other mid-stream device failure.
+            throw AudioException(
+                AudioException.Kind.DeviceUnavailable,
+                "AudioTrack.play() rejected start",
+                e,
+            )
+        }
     }
 
     override suspend fun enqueue(pcm: ShortArray) {

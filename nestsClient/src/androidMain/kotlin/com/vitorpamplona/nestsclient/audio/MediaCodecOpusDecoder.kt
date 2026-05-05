@@ -57,8 +57,33 @@ class MediaCodecOpusDecoder : OpusDecoder {
     override fun decode(opusPacket: ByteArray): ShortArray {
         check(!released) { "decoder released" }
 
-        val inputIndex = codec.dequeueInputBuffer(DEQUEUE_TIMEOUT_US)
-        if (inputIndex < 0) return ShortArray(0)
+        // Pre-sized output. Write decoded samples directly into the array
+        // via ShortBuffer.get(dst, off, len) — the previous shape went
+        // through ArrayList<Short>, which boxed every PCM sample
+        // (~48 000 alloc/sec/speaker on the audio hot path).
+        val out = ShortArray(AudioFormat.FRAME_SIZE_SAMPLES)
+        var outPos = 0
+
+        // 1. Acquire an input slot. On rare back-pressure (output buffers
+        //    haven't been drained fast enough → all input slots are tied
+        //    up), drain whatever output IS ready first to free slots,
+        //    then retry input dequeue with a longer timeout. The previous
+        //    shape returned `ShortArray(0)` immediately when the first
+        //    10 ms dequeue missed, turning every transient stall (thermal
+        //    throttle, GC pause) into a 20 ms audio gap.
+        var inputIndex = codec.dequeueInputBuffer(DEQUEUE_TIMEOUT_US)
+        if (inputIndex < 0) {
+            outPos = drainAvailableOutput(out, outPos)
+            inputIndex = codec.dequeueInputBuffer(DEQUEUE_RETRY_TIMEOUT_US)
+            if (inputIndex < 0) {
+                // Genuine input starvation past the retry window. Drop
+                // this packet (presentationTimeUs is NOT advanced — Opus
+                // PLC will paper over the gap on the listener) and
+                // return whatever we drained from output so the player
+                // doesn't underrun on the back of one tight cycle.
+                return if (outPos > 0) out.copyOf(outPos) else ShortArray(0)
+            }
+        }
         val inputBuffer =
             codec.getInputBuffer(inputIndex)
                 ?: throw AudioException(
@@ -71,17 +96,25 @@ class MediaCodecOpusDecoder : OpusDecoder {
         // Advance presentation time by one 20 ms frame.
         presentationTimeUs += FRAME_DURATION_US
 
-        // Drain whatever output is ready right now. A single Opus packet
-        // typically yields exactly one output buffer, but on some devices the
-        // first call returns INFO_OUTPUT_FORMAT_CHANGED before the PCM frame.
-        //
-        // Write the decoded samples directly into a pre-sized ShortArray
-        // via ShortBuffer.get(dst, off, len) — the previous shape went via
-        // ArrayList<Short>, which boxed every PCM sample (one heap object
-        // per Short × 960 samples × 50 fps × N speakers ≈ 48 000
-        // allocations/sec/speaker on the audio hot path).
-        val out = ShortArray(AudioFormat.FRAME_SIZE_SAMPLES)
-        var outPos = 0
+        // 2. Drain whatever output is ready right now. A single Opus
+        //    packet typically yields exactly one output buffer, but
+        //    [drainAvailableOutput] tolerates an INFO_OUTPUT_FORMAT_CHANGED
+        //    that some devices emit before the first PCM frame.
+        outPos = drainAvailableOutput(out, outPos)
+        return if (outPos == out.size) out else out.copyOf(outPos)
+    }
+
+    /**
+     * Drain any output buffers MediaCodec has ready, copying samples into
+     * [out] starting at [startPos]. Returns the new write position.
+     * Stops on the first empty / EOS / TRY_AGAIN_LATER signal — never
+     * blocks past the [DEQUEUE_TIMEOUT_US] dequeue probe.
+     */
+    private fun drainAvailableOutput(
+        out: ShortArray,
+        startPos: Int,
+    ): Int {
+        var outPos = startPos
         var formatChangeAbsorbed = false
         drain@ while (true) {
             val outputIndex = codec.dequeueOutputBuffer(bufferInfo, DEQUEUE_TIMEOUT_US)
@@ -126,7 +159,7 @@ class MediaCodecOpusDecoder : OpusDecoder {
                 }
             }
         }
-        return if (outPos == out.size) out else out.copyOf(outPos)
+        return outPos
     }
 
     override fun release() {
@@ -138,6 +171,20 @@ class MediaCodecOpusDecoder : OpusDecoder {
 
     companion object {
         private const val DEQUEUE_TIMEOUT_US = 10_000L // 10 ms
+
+        /**
+         * Fallback timeout after the first input dequeue misses + we
+         * drain pending output to free slots. Deliberately well under
+         * the 20 ms frame cadence so a tight back-pressure window is
+         * absorbed without falling off the per-frame budget. The
+         * previous code took a 0 ms retry (i.e. dropped the frame
+         * outright on the first miss), which turned every transient
+         * stall into ~20 ms of silence. 5 ms gives MediaCodec time to
+         * free a slot after the output drain without blowing the
+         * frame budget.
+         */
+        private const val DEQUEUE_RETRY_TIMEOUT_US = 5_000L // 5 ms
+
         private const val FRAME_DURATION_US = 20_000L // 20 ms
 
         private fun buildFormat(): MediaFormat {
