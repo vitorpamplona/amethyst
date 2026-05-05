@@ -21,7 +21,7 @@ tests, 39 test files, five rounds of parallel audit + fix passes.
 | C. Initial + Handshake packets | 2 wk | done | RFC 9001 §A.2/§A.3 vectors pass; ChaCha20 per §A.5 |
 | D. 1-RTT + STREAM | 1 wk | done | Stream offset reassembly, FIN, fuzzed |
 | E. ACK + flow control | 1 wk | done | MAX_DATA / MAX_STREAM_DATA / MAX_STREAMS routing + writer enforcement |
-| F. Loss recovery + congestion control | 1 wk | partial | PTO timer for handshake retries; **no retransmit-on-loss in steady state** (out of scope — see "deferred" below) |
+| F. Loss recovery + congestion control | 1 wk | done (no CC) | RFC 9002 §5/§6 RTT estimator + packet/time-threshold loss detection + PTO + per-frame retransmit shipped 2026-05-05; congestion control still TBD |
 | G. Datagram extension | ½ wk | done | RFC 9221 frames + bounded incoming queue |
 | H. Connection lifecycle | 1 wk | done | CONNECTION_CLOSE, idle timeout, draining/closing, idempotent driver close |
 | I. HTTP/3 | 2 wk | done | Control stream + SETTINGS + GOAWAY (with id-regression check) + duplicate-id rejection |
@@ -61,6 +61,9 @@ quic/
     │   ├── packet/                       ← LongHeaderPacket, ShortHeaderPacket, RetryPacket, peekHeader
     │   ├── qpack/                        ← QpackDecoder, QpackEncoder, QpackHuffman, QpackInteger,
     │   │                                   QpackStaticTable
+    │   ├── connection/recovery/         ← RecoveryToken + SentPacket + QuicLossDetection
+    │   │                                   (RFC 9002 §5/§6 RTT estimator + loss detection +
+    │   │                                   PTO; per-frame retransmit dispatch)
     │   ├── recovery/                     ← AckTracker (with ack-eliciting gating)
     │   ├── stream/                       ← QuicStream, ReceiveBuffer (with FIN-fully-read), SendBuffer, StreamId
     │   ├── tls/                          ← TlsClient state machine + ClientHello/ServerHello/EE/Cert/CV/Finished
@@ -112,14 +115,12 @@ explicit `PermissiveCertificateValidator`; production passes
 - **QPACK dynamic-table inserts on the encoder.** We send literal-only;
   decoder accepts dynamic-table indexed lines.
 - **ECN / anti-amplification limits.** We're a client.
-- **Retransmit-on-loss in steady state.** `SendBuffer.takeChunk` releases
-  bytes to the wire and doesn't retain them. The handshake survives via the
-  `Driver.sendLoop` PTO path which re-pulls from CRYPTO send buffers; for
-  STREAM data, a real loss event truncates the stream silently. This is
-  acceptable for MoQ (DATAGRAM-mode audio, plus stream usage is
-  control-plane only) but would be the first item to add for general use.
 - **TLS Key-Update / NewSessionTicket.** Detected and refused (KeyUpdate
   fails the connection rather than silently desynchronising).
+- **Congestion control (NewReno / CUBIC / BBR).** Loss detection is in
+  place (RFC 9002 §5/§6) but no rate-limiting feedback loop reacts to
+  losses; we send as fast as the application provides bytes. Independent
+  follow-up.
 
 ## Verified interop
 
@@ -164,7 +165,13 @@ Roughly grouped:
   `TlsTranscriptHashTest`.
 - **WT / HTTP/3:** `CapsuleReaderTest`, `WtPeerStreamDemuxTest`,
   `WtFramingTest`.
-- **Recovery:** `AckTrackerCoalescedTest`, `AckTrackerGatingTest`.
+- **Recovery:** `AckTrackerCoalescedTest`, `AckTrackerGatingTest`,
+  `RecoveryTokenTest`, `SentPacketTest`, `ReceiverFlowControlTest` (9
+  cases mirrored from neqo `fc.rs`), `QuicLossDetectionTest`,
+  `PtoTest`, `QuicConnectionRetransmitTest`,
+  `SendBufferRetainUntilAckTest` (14 cases for the rewrite),
+  `StreamRetransmitTest`, `CryptoRetransmitTest`,
+  `ResetStopSendingEmitTest` (7 cases).
 - **Interop:** `InteropRunner` (jvmTest, drives a real socket against a
   Dockerised aioquic; opt-in, not in CI).
 
@@ -174,9 +181,13 @@ These are the items future audit rounds keep flagging that we've
 consciously not tackled — all confined to the steady-state path that audio
 rooms don't exercise heavily:
 
-1. **No STREAM retransmit on loss** (audit-4 #10). Acceptable for MoQ
-   datagram audio; would block any heavy stream-based use. ~1 wk to add.
-2. **`SendBuffer` doesn't retain bytes until ACK.** Same scope as #1.
+1. ~~**No STREAM retransmit on loss** (audit-4 #10).~~ **Resolved 2026-05-05** —
+   `SendBuffer` rewritten for retain-until-ACK with three-state range
+   tracking; ACK / loss dispatchers re-queue lost ranges to the
+   retransmit FIFO. Also covers CRYPTO retransmit per encryption level
+   and RESET_STREAM / STOP_SENDING / NEW_CONNECTION_ID retransmit.
+   See [`2026-05-04-control-frame-retransmit.md`](2026-05-04-control-frame-retransmit.md).
+2. ~~**`SendBuffer` doesn't retain bytes until ACK.**~~ Resolved with #1.
 3. **No Initial / Handshake key discard.** RFC 9000 §17.2.2 / RFC 9001 §4.9
    require dropping these after handshake completes; we hold them
    indefinitely. Memory leak per long session.
@@ -191,11 +202,14 @@ rooms don't exercise heavily:
    class` into an interface so the test side can stub. The driver is
    covered indirectly by every pipe-based test plus the live interop
    runner.
+8. **No congestion control.** Loss detection is wired but nothing
+   throttles send rate in response. Independent ~1-2 wk project.
 
 ## Pointers
 
 - Original (frozen) plan: `docs/plans/2026-04-22-pure-kotlin-quic-webtransport-plan.md`
 - Audio-rooms NIP draft: `docs/plans/2026-04-22-nip-audio-rooms-draft.md`
 - Completion plan: `nestsClient/plans/2026-04-26-audio-rooms-completion.md`
+- Retransmit plan + implementation log: [`2026-05-04-control-frame-retransmit.md`](2026-05-04-control-frame-retransmit.md)
 - Live interop runner: `quic/src/jvmTest/.../interop/InteropRunner.kt`
 - Audit history: `git log --grep='audit' -- quic/`

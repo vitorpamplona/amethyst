@@ -1,6 +1,10 @@
 # Control-frame retransmit for `:quic` — implementation plan
 
-**Status:** plan, not started.
+**Status:** **shipped 2026-05-05** on branch `claude/fix-nest-audio-display-3chAG`.
+Steps 1–9 landed as planned; the deferred follow-ups (STREAM data, CRYPTO,
+RESET_STREAM / STOP_SENDING / NEW_CONNECTION_ID) all shipped on top, plus an
+audit cleanup pass. See [Implementation log](#implementation-log) at the end
+for the full commit list.
 
 ## Why
 
@@ -351,3 +355,114 @@ work for at least a week without regressions.
 - A new `MoqLiteSessionRetransmitTest` simulates packet loss at the moment of `MAX_STREAMS_UNI` emission and confirms audio continues flowing past the threshold.
 - Existing `QuicConnectionWriterTest`, `PeerStreamCreditExtensionTest`, etc. unchanged.
 - No regression in handshake latency or throughput under steady-state.
+
+## Implementation log
+
+Shipped over 13 commits on `claude/fix-nest-audio-display-3chAG`:
+
+| # | Commit | Subject |
+|---|---|---|
+| plan | `c246305` | `docs(quic): plan control-frame retransmit subsystem mirroring neqo` |
+| 1 | `9e6fa3d` | `feat(quic): step 1 of RFC 9002 retransmit — RecoveryToken + SentPacket types` |
+| 2 | `ea15a9a` | `feat(quic): step 2 of RFC 9002 retransmit — record SentPacket per outbound` |
+| 3 | `0ced269` | `feat(quic): step 3 of RFC 9002 retransmit — drain SentPacket on ACK` |
+| 4 | `2928263` | `feat(quic): step 4 of RFC 9002 retransmit — pending* fields + writer drain` |
+| 5 | `1df6441` | `feat(quic): step 5 of RFC 9002 retransmit — loss detection + RTT estimator` |
+| 6 | `15a6bfc` | `feat(quic): step 6 of RFC 9002 retransmit — dispatch lost tokens to pending*` |
+| 7–9 | `c43c951` | `feat(quic): steps 7, 8, 9 of RFC 9002 retransmit — PTO + integration test + revert workaround` |
+| follow-up A | `7f6d908` | `feat(quic): extend RecoveryToken — Stream, Crypto, ResetStream, StopSending, NewConnectionId` |
+| follow-up B | `03cfb31` | `feat(quic): rewrite SendBuffer for retain-until-ACK with markAcked/markLost` |
+| follow-up C | `f623e88` | `feat(quic): wire STREAM data retransmit — token emission + ACK/loss dispatch` |
+| follow-up D | `0c847b4` | `feat(quic): wire CRYPTO retransmit per encryption level` |
+| follow-up E | `996ab39` | `feat(quic): emit RESET_STREAM / STOP_SENDING + per-stream retransmit dispatch` |
+| perf | `303caa8` | `perf(quic): binary-search SendBuffer overlap + insert (O(log N))` |
+| audit | `086a9c7` | `fix(quic): RESET_STREAM/STOP_SENDING first-call-wins + threading contract` |
+
+### What changed vs the plan
+
+The original scope was **only** the receive-side flow-control frames
+(`MAX_STREAMS_UNI/BIDI`, `MAX_DATA`, `MAX_STREAM_DATA`). Once the
+RecoveryToken / SentPacket / loss-detection scaffolding existed, the
+remaining retransmittable frames were a small extension:
+
+- **STREAM data retransmit (B + C).** Required rewriting `SendBuffer`
+  from "release on send" to "retain until ACK", with three logical
+  regions (`in-flight` / `needs retransmit` / `unsent`) tracked as
+  sorted offset ranges. Bytes are released on `markAcked`; lost ranges
+  re-prioritise to the front of `takeChunk` via a FIFO retransmit queue.
+  Removes the "STREAM truncates silently on loss" item from the
+  deferred-work list.
+- **CRYPTO retransmit (D).** Same `SendBuffer` machinery applied
+  per-encryption-level (Initial / Handshake / Application). Closes the
+  handshake reliability gap that previously relied on the driver's PTO
+  re-pull-from-CRYPTO hack.
+- **RESET_STREAM / STOP_SENDING / NEW_CONNECTION_ID emit + retransmit (E).**
+  Public API on `QuicStream` (`resetStream(errorCode)` /
+  `stopSending(errorCode)`); writer drain emits with a `RecoveryToken`;
+  loss dispatcher re-flags per-stream emit-pending bits; ACK dispatcher
+  latches `resetAcked` / `stopSendingAcked` so stale loss tokens don't
+  re-emit. NEW_CONNECTION_ID retransmit drains
+  `QuicConnection.pendingNewConnectionId` (no public emit API yet —
+  `:quic` doesn't rotate connection IDs — but the wiring is in place).
+
+### Performance optimisation
+
+`303caa8` replaced the O(N) full-scan in `SendBuffer.removeOverlap` and
+the O(N) middle-insert in `addToInFlight` with a binary-search-based
+`firstOverlapIndex` + early-exit walk. Hot-path ACK / loss notification
+is now O(log N + k) where k is the number of in-flight ranges actually
+overlapping the ACK range (typically 1).
+
+### Audit follow-up
+
+`086a9c7` cleaned up correctness + threading issues found by re-reading
+the emit commit:
+
+1. `resetStream` / `stopSending` now no-op on the second call. RFC 9000
+   §3.5 pins `finalSize` at first emission; the original "idempotent —
+   second call overwrites with newer error code" claim was wrong (a
+   retransmit after additional `enqueue` would replay with a larger
+   `finalSize`, triggering `FINAL_SIZE_ERROR` on the peer). Two new
+   tests — `resetStream_secondCallIsNoOp_finalSizeFrozen`,
+   `stopSending_secondCallIsNoOp` — lock the contract.
+2. `resetEmitPending`, `resetAcked`, `stopSendingEmitPending`,
+   `stopSendingAcked` are now `@Volatile`. The public emit APIs are
+   callable from any coroutine while the writer / dispatchers read the
+   same fields under `QuicConnection.lock`; volatile gives the
+   cross-thread happens-before, and the first-call-wins gate above
+   eliminates the only multi-writer race.
+3. Stale `SendBuffer` class KDoc claiming O(N) range arithmetic
+   refreshed to reflect the actual O(log N + k) cost.
+4. `removeOverlap`'s bulk-removal comment toned down — it had claimed
+   O(k) per call but `ArrayDeque.removeAt(i)` shifts on every call;
+   actual cost is O(k · (size − end + k)) worst case, fine in practice
+   because k is 1–2 in steady state.
+
+### Test coverage shipped
+
+The 50 planned tests landed plus the follow-up suites:
+
+- `RecoveryTokenTest`, `SentPacketTest` (codec + equality).
+- `ReceiverFlowControlTest` (9 mirrored from neqo's `fc.rs`).
+- `QuicLossDetectionTest` (~15 mirrored from `recovery/mod.rs`).
+- `PtoTest` (~7 mirrored from `recovery/mod.rs` PTO subset).
+- `QuicConnectionRetransmitTest` (integration: lost MAX_STREAMS bump
+  re-emits and lands).
+- `MoqLiteSessionRetransmitTest` (drops a packet at the
+  half-window-threshold MAX_STREAMS_UNI emit; audio keeps flowing).
+- `SendBufferRetainUntilAckTest` (14 cases for the retain-until-ACK
+  rewrite — ack/loss/split/FIN/compaction).
+- `StreamRetransmitTest`, `CryptoRetransmitTest` (token emission + loss
+  re-queues bytes).
+- `ResetStopSendingEmitTest` (7 cases: emit-and-token, retransmit on
+  loss, ack-then-stale-loss-drop, stop-sending emission,
+  NEW_CONNECTION_ID retransmit drain, first-call-wins for both APIs).
+
+### Cap-workaround status
+
+Step 9 of the original plan ("revert `initialMaxStreamsUni` from
+1 000 000 back to a smaller value once retransmit is durable") landed
+in `c43c951`. `QuicConnectionConfig.initialMaxStreamsUni` is now
+`10_000L` — large enough to avoid the moq-rs cliff at startup but
+small enough that the rolling-extension + retransmit path actually
+runs in long sessions. The 1 000 000 emergency value is gone.
