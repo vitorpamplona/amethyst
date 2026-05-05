@@ -164,6 +164,24 @@ tasks.withType<Download>().configureEach {
     tempAndMove(true)
 }
 
+// Opt-out for VLC bundling. CI (build.yml) and ephemeral build sandboxes
+// (Claude Code web) routinely lose connectivity to get.videolan.org and the
+// retry budget above is not enough to mask it. Setting `-PskipVlcSetup=true`
+// (or env `AMETHYST_SKIP_VLC=true`) disables the vlc/upx download + extract
+// tasks so packaging proceeds without bundling VLC. The release workflow
+// (create-release.yml) does NOT set this, so production artifacts still ship
+// with VLC bundled.
+val skipVlcSetup =
+    (project.findProperty("skipVlcSetup") as? String)?.toBoolean() == true ||
+        System.getenv("AMETHYST_SKIP_VLC") == "true"
+
+if (skipVlcSetup) {
+    logger.lifecycle("desktopApp: skipVlcSetup=true — disabling vlcDownload/upxDownload/vlcSetup. Built artifacts will NOT bundle VLC.")
+    tasks.matching { it.name in setOf("vlcDownload", "upxDownload", "vlcSetup") }.configureEach {
+        enabled = false
+    }
+}
+
 // --- AppImage packaging (Linux) ---
 //
 // Compose Multiplatform's TargetFormat.AppImage is known-broken in 1.10.x (CMP-7101).

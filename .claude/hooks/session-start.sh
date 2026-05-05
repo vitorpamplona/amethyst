@@ -172,6 +172,10 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export ANDROID_HOME=$ANDROID_SDK_DIR" >> "$CLAUDE_ENV_FILE"
   echo "export ANDROID_SDK_ROOT=$ANDROID_SDK_DIR" >> "$CLAUDE_ENV_FILE"
   echo "export PATH=\$PATH:$ANDROID_SDK_DIR/platform-tools" >> "$CLAUDE_ENV_FILE"
+  # get.videolan.org is unreachable / heavily rate-limited from CCW egress,
+  # so disable the desktopApp vlcDownload / upxDownload / vlcSetup tasks by
+  # default. See desktopApp/build.gradle.kts for the opt-out wiring.
+  echo "export AMETHYST_SKIP_VLC=true" >> "$CLAUDE_ENV_FILE"
 fi
 
 # --- Kotlin/Native: pre-install native dependencies (GCC sysroot, LLDB) ---

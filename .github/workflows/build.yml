@@ -65,8 +65,13 @@ jobs:
           java-version: 21
           cache: gradle
 
+      # `-PskipVlcSetup=true` disables the vlcDownload / upxDownload / vlcSetup
+      # tasks (see desktopApp/build.gradle.kts). PR CI artifacts are smoke-test
+      # only — get.videolan.org is too flaky from GitHub-hosted runners to gate
+      # PRs on. Release packaging (create-release.yml) deliberately omits this
+      # flag so shipped artifacts still bundle VLC.
       - name: Test + Build Desktop (gradle)
-        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }} --no-daemon
+        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }} --no-daemon -PskipVlcSetup=true
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
