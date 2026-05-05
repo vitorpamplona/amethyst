@@ -26,12 +26,16 @@ import com.vitorpamplona.nestsclient.moq.SubscribeOk
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteAnnounceStatus
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSubscribeException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -127,9 +131,26 @@ class MoqLiteNestsListener internal constructor(
     }
 
     override fun announces(): Flow<RoomAnnouncement> =
-        flow {
-            com.vitorpamplona.quartz.utils.Log
-                .d("NestRx") { "MoqLiteNestsListener.announces flow STARTING (state=${state.value::class.simpleName})" }
+        // `channelFlow` (NOT `flow`) is mandatory here. The downstream
+        // emission source is `handle.updates`, a MutableSharedFlow
+        // populated by a launched bidi pump on the session's scope.
+        // SharedFlow's `collect { lambda }` resumes the lambda inline
+        // when emit happens — so when the pump emits a chunk, the
+        // collect lambda runs on the pump's coroutine, not the
+        // collector's. `flow {}` enforces the "emit only from the
+        // builder coroutine" invariant and throws
+        // `IllegalStateException: Flow invariant is violated` the
+        // moment we call `emit()` from a different coroutine. Two-
+        // phone production logs (commit 1fc8dbc, run 15:34:40)
+        // showed exactly this — the first Active arrived, the
+        // collect lambda fired, emit() threw, the wrapper's
+        // `runCatching { listener.announces().collect { emit(it) } }`
+        // swallowed it, `_announcedSpeakers` stayed empty forever,
+        // and the cliff detector reported `active=1 announced=0`
+        // indefinitely. `channelFlow` is the documented fix
+        // (the error message itself recommends it): emissions go
+        // through a buffered channel that's safe across coroutines.
+        channelFlow {
             check(state.value is NestsListenerState.Connected) {
                 "NestsListener.announces requires Connected state, was ${state.value}"
             }
@@ -138,37 +159,48 @@ class MoqLiteNestsListener internal constructor(
             // suffix is the broadcast's path component within the
             // room — for nests this is the speaker pubkey hex.
             val handle = session.announce(prefix = "")
-            com.vitorpamplona.quartz.utils.Log
-                .d("NestRx") { "MoqLiteNestsListener.announces opened bidi#2 (VM-level)" }
-            var emissionCount = 0
-            try {
-                handle.updates.collect { announce ->
-                    emissionCount += 1
-                    com.vitorpamplona.quartz.utils.Log.d("NestRx") {
-                        "MoqLiteNestsListener.announces bidi#2 #$emissionCount status=${announce.status} suffix='${announce.suffix.take(12)}'"
+            // Run the inner collect on a child of channelFlow's scope
+            // so we can `awaitClose` on the producer side and let
+            // close handle the unsub side-effect. Without the launch,
+            // we'd block here in `collect` forever and never reach
+            // `awaitClose` — but channelFlow's contract requires
+            // awaitClose for clean shutdown.
+            val pump =
+                launch {
+                    try {
+                        handle.updates.collect { announce ->
+                            send(
+                                RoomAnnouncement(
+                                    pubkey = announce.suffix,
+                                    active = announce.status == MoqLiteAnnounceStatus.Active,
+                                ),
+                            )
+                        }
+                    } catch (ce: kotlinx.coroutines.CancellationException) {
+                        throw ce
+                    } catch (_: Throwable) {
+                        // updates flow died — close the channel so the
+                        // consumer sees end-of-flow and the wrapper
+                        // can decide what to do (typically wait for
+                        // the next activeListener emission).
+                    } finally {
+                        // Close the announce bidi on the same scope
+                        // that owned the pump. `handle.close` is
+                        // suspend (it FINs the bidi and joins the
+                        // session-side pump); run it under
+                        // NonCancellable so cancellation of this
+                        // coroutine doesn't skip the FIN.
+                        withContext(NonCancellable) {
+                            runCatching { handle.close() }
+                        }
                     }
-                    emit(
-                        RoomAnnouncement(
-                            pubkey = announce.suffix,
-                            active = announce.status == MoqLiteAnnounceStatus.Active,
-                        ),
-                    )
                 }
-                com.vitorpamplona.quartz.utils.Log
-                    .w("NestRx") { "MoqLiteNestsListener.announces bidi#2 collect ENDED naturally after $emissionCount emissions" }
-            } finally {
-                com.vitorpamplona.quartz.utils.Log
-                    .w("NestRx") { "MoqLiteNestsListener.announces bidi#2 finally (emissions=$emissionCount)" }
-                // The flow's `finally` runs on both normal completion
-                // and cancellation — let cancel propagate after closing
-                // the announce handle.
-                try {
-                    handle.close()
-                } catch (ce: kotlinx.coroutines.CancellationException) {
-                    throw ce
-                } catch (_: Throwable) {
-                    // Best-effort.
-                }
+            awaitClose {
+                // Caller cancelled, OR the wrapping `collectLatest`
+                // restarted (listener swap). Cancel the pump; its
+                // finally above runs the suspend close on a
+                // NonCancellable context.
+                pump.cancel()
             }
         }
 
