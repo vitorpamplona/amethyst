@@ -83,6 +83,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.TimeoutCancellationException
@@ -487,6 +488,67 @@ class EventNotificationConsumer(
                 senderName = inviterName,
                 time = event.createdAt,
                 pictureUrl = inviterPicture,
+                uri = noteUri,
+                applicationContext = applicationContext,
+                accountNpub = accountNpub,
+                accountPictureUrl = account.userProfile().profilePicture(),
+                chatroomMembers = null,
+            )
+    }
+
+    /**
+     * Marmot kind:445 group messages have no `p` tag (recipients are routed
+     * by the `h` tag carrying the nostr_group_id), so the cache-observer path
+     * in [NotificationDispatcher] can't match them to an account. They're
+     * dispatched here directly from [com.vitorpamplona.amethyst.ui.screen.loggedIn.GroupEventHandler]
+     * once [com.vitorpamplona.quartz.marmot.MarmotInboundProcessor] has
+     * decrypted the outer ChaCha20-Poly1305 layer and verified the inner
+     * MLS-signed payload.
+     *
+     * Only kind:9 chat messages produce a notification — reactions, control
+     * messages, and deletions stay silent, mirroring how NIP-17 (kind:14)
+     * is the only DM kind we notify.
+     */
+    suspend fun notifyGroupMessage(
+        innerEvent: Event,
+        nostrGroupId: String,
+        account: Account,
+    ) = withWakeLock {
+        Log.d(TAG, "New Marmot Group Message to Notify")
+
+        if (innerEvent.kind != ChatEvent.KIND) return@withWakeLock
+        if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
+        if (MainActivity.isResumed) return@withWakeLock
+
+        // old event being re-broadcast
+        if (innerEvent.createdAt < TimeUtils.fifteenMinutesAgo()) return@withWakeLock
+        // a message we ourselves sent
+        if (innerEvent.pubKey == account.signer.pubKey) return@withWakeLock
+
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "Private group"
+        val sender = LocalCache.getOrCreateUser(innerEvent.pubKey)
+        val senderName = sender.toBestDisplayName()
+        val senderPicture = sender.profilePicture()
+        // Show the message body when present; reactions/empty payloads fall
+        // back to a generic prompt so the popup is still actionable.
+        val body = innerEvent.content.takeIf { it.isNotBlank() } ?: "New message"
+
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        // marmot:<groupHex>?account=<npub> — same scheme as notifyWelcome,
+        // taps deep-link straight to the group's chatroom.
+        val noteUri = "marmot:$nostrGroupId$ACCOUNT_QUERY_PARAM$accountNpub"
+
+        notificationManager()
+            .sendDMNotification(
+                id = innerEvent.id,
+                messageBody = "$senderName: $body",
+                senderName = groupName,
+                time = innerEvent.createdAt,
+                pictureUrl = senderPicture,
                 uri = noteUri,
                 applicationContext = applicationContext,
                 accountNpub = accountNpub,

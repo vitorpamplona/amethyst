@@ -660,6 +660,18 @@ class GroupEventHandler(
                     // re-persist would silently grow the on-disk log).
                     if (isNew) {
                         manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
+
+                        // GroupEvents have no `p` tag, so the cache-observer
+                        // notification path can't route them. Fire the popup
+                        // directly here — only on first-time decryption, so
+                        // a relay re-broadcast or persist-replay doesn't
+                        // double-notify. The notifier itself filters by
+                        // inner kind (chat only) and freshness.
+                        Amethyst.instance.notificationDispatcher.notifyGroupMessage(
+                            innerEvent,
+                            result.groupId,
+                            account,
+                        )
                     }
                 }
 
