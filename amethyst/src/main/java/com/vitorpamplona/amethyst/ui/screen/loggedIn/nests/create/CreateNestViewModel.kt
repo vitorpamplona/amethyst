@@ -70,14 +70,39 @@ class CreateNestViewModel : ViewModel() {
     fun bindAccountIfMissing(accountViewModel: AccountViewModel) {
         if (account != null) return
         account = accountViewModel
-        // Seed the URL fields from the user's saved kind-10112 list so
-        // first-time use flows naturally from the Settings screen. If
-        // the list is empty (or the user hasn't published one yet), keep
-        // the nostrnests.com defaults already in [FormState.defaults].
+        seedDefaultsFromAccount()
+    }
+
+    /**
+     * Reset the form to fresh defaults and re-seed the service / endpoint
+     * URLs from the user's saved kind-10112 list. Called after a
+     * successful publish so the next open of the sheet doesn't show
+     * stale fields (room name, summary, image URL) or — worse — a stuck
+     * `isPublishing=true` Submit button. The ViewModel is keyed by the
+     * user's pubkey, so without this reset the same instance survives
+     * across sheet open/close cycles.
+     */
+    fun resetForm() {
+        _state.value = FormState.defaults()
+        seedDefaultsFromAccount()
+    }
+
+    /**
+     * Seed the URL fields from the user's saved kind-10112 list so
+     * first-time use flows naturally from the Settings screen. If the
+     * list is empty (or the user hasn't published one yet), keep the
+     * nostrnests.com defaults already in [FormState.defaults].
+     */
+    private fun seedDefaultsFromAccount() {
         val first =
-            accountViewModel.account.nestsServers.flow.value
-                .firstOrNull()
-        if (first != null && first.relay.startsWith("http") && first.auth.startsWith("http")) {
+            account
+                ?.account
+                ?.nestsServers
+                ?.flow
+                ?.value
+                ?.firstOrNull()
+                ?: return
+        if (first.relay.startsWith("http") && first.auth.startsWith("http")) {
             _state.update { it.copy(serviceUrl = first.auth, endpointUrl = first.relay) }
         }
     }
@@ -287,9 +312,10 @@ class CreateNestViewModel : ViewModel() {
                 return null
             }
 
-        // Don't reset isPublishing here — the sheet dismisses on success
-        // and the VM is scoped per-composition so the next open starts
-        // fresh anyway.
+        // Reset the form so the next open of the sheet starts fresh —
+        // the VM is keyed by pubkey via `viewModel(key = …)` and is
+        // reused across sheet open/close cycles.
+        resetForm()
         return RoomLaunchInfo(
             addressValue = signed.address().toValue(),
             authBaseUrl = service,
