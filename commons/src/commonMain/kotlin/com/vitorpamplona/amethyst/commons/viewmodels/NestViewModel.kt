@@ -1396,9 +1396,31 @@ class NestViewModel(
                         com.vitorpamplona.quartz.utils.Log.w("NestRx") {
                             "cliff-detector: announced+subscribed but silent for ≥${ROOM_AUDIO_CLIFF_TIMEOUT_MS}ms — recycling session. stalled=$stalled"
                         }
-                        lastCliffRecycleAt =
+                        val recycleMark =
                             kotlin.time.TimeSource.Monotonic
                                 .markNow()
+                        lastCliffRecycleAt = recycleMark
+                        // Reset `lastFrameAt` for every stalled pubkey so
+                        // the cliff timer starts counting from the recycle
+                        // moment, not from the old (pre-recycle) last
+                        // frame timestamp. Without this reset the next
+                        // tick after the cooldown immediately re-trips —
+                        // because `lastFrameAt[pubkey].elapsedNow()` is
+                        // still the giant pre-recycle value plus the
+                        // cooldown window. Production logs at commit
+                        // ea08c43 showed exactly this: 4 recycles in
+                        // ~30 s eventually drove the relay into a
+                        // "subscribe stream FIN before reply" loop where
+                        // it refused fresh subscribes entirely. Using
+                        // the recycle moment as a synthetic frame event
+                        // gives the new session [ROOM_AUDIO_CLIFF_TIMEOUT_MS]
+                        // wall-clock to deliver before the next cliff
+                        // check, matching the expectation a freshly-
+                        // attached subscription should clear inside
+                        // that window if the relay is healthy.
+                        for (pubkey in stalled) {
+                            lastFrameAt[pubkey] = recycleMark
+                        }
                         runCatching { l.recycleSession() }
                     }
                 } finally {
@@ -1698,14 +1720,22 @@ const val ROOM_AUDIO_CLIFF_CHECK_INTERVAL_MS: Long = 1_000L
 /**
  * Cooldown after a cliff-detector-driven recycle. Suppresses
  * back-to-back recycles while the wrapper is mid-handshake on the
- * fresh session — a brand-new session has no `lastFrameAt` entries
- * yet, which would otherwise immediately re-trigger the detector
- * on the next 1 s tick. Long enough to cover the typical reconnect
- * handshake plus a couple of audio-frame round trips, short enough
- * that a recycle that didn't actually clear the cliff is recovered
- * from quickly.
+ * fresh session AND while the relay is recovering its
+ * per-subscriber forward queue.
+ *
+ * Production logs at commit ea08c43 showed an 8 s cooldown was
+ * not enough — moq-rs needed longer to recover between aggressive
+ * recycles, and 4 recycles in ~30 s drove the relay into a
+ * "subscribe stream FIN before reply" loop that refused all
+ * subsequent subscribes. 30 s gives the relay's per-subscriber
+ * forward task pool time to drain stale pending writes from the
+ * previous subscription before the new subscribe lands. The
+ * audible-gap cost rises from ~5 s to ~30 s in the worst case
+ * (a fully-stalled relay), but the trade is correct: 30 s of
+ * silence + recovered audio beats endless silence with the relay
+ * locked out.
  */
-const val ROOM_AUDIO_CLIFF_COOLDOWN_MS: Long = 8_000L
+const val ROOM_AUDIO_CLIFF_COOLDOWN_MS: Long = 30_000L
 
 /**
  * Diagnostic log frequency for the cliff detector. Emit a state-dump

@@ -193,13 +193,15 @@ class CliffDetectorTest {
         // pubkey; without a cooldown we would re-trigger on the
         // very next 1 s tick because the prior tick's stalled
         // pubkeys still age past the threshold (their lastFrameAt
-        // hasn't been updated by the new session yet). 8 s cooldown
-        // covers the typical reconnect handshake.
+        // hasn't been updated by the new session yet). 30 s cooldown
+        // covers the typical reconnect handshake AND gives moq-rs
+        // time to drain its per-subscriber forward queue from the
+        // prior subscription before the new subscribe lands.
         val ts = TestTimeSource()
         val frameMark = ts.markNow()
         ts += 4_500.milliseconds // past threshold
         val recycleMark = ts.markNow() // recycle just fired
-        ts += 1_000.milliseconds // 1 s into cooldown
+        ts += 5_000.milliseconds // 5 s into cooldown — well within 30 s window
 
         val result =
             computeStalledSpeakers(
@@ -221,7 +223,7 @@ class CliffDetectorTest {
         val frameMark = ts.markNow()
         ts += 4_500.milliseconds
         val recycleMark = ts.markNow()
-        ts += 8_001.milliseconds // 1 ms past cooldown
+        ts += 30_001.milliseconds // 1 ms past 30 s cooldown
 
         val result =
             computeStalledSpeakers(
