@@ -164,12 +164,18 @@ private fun dispatchFrames(
     for (frame in frames) {
         when (frame) {
             is AckFrame -> {
-                // Purge our own ACK tracker below the peer's largest
-                // acknowledged: the peer has confirmed receipt of those
-                // ACKs, so we don't need to keep advertising them —
-                // without this the range list grows unboundedly on long
-                // connections.
-                state.ackTracker.purgeBelow(frame.largestAcknowledged - frame.firstAckRange)
+                // The peer's `frame.largestAcknowledged` is in OUR
+                // outbound PN space — the inbound `state.ackTracker`
+                // tracks PNs WE RECEIVED from the peer. The previous
+                // purge here was conceptually wrong (mixed two
+                // unrelated number spaces) but happened to mostly
+                // work because both PN spaces grow at similar rates.
+                // The correct purge is now driven by the
+                // ACK-of-ACK dispatch in [QuicConnection.onTokensAcked]
+                // for [RecoveryToken.Ack]: when the peer ACKs the
+                // packet that carried our outbound ACK frame, we
+                // know the peer received our ACK and we can drop
+                // the corresponding inbound PNs from the tracker.
                 // Step 5 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
                 // (a) snapshot the send time of the largest-acked PN
                 // BEFORE drain so we can update RTT, (b) drain ACK'd

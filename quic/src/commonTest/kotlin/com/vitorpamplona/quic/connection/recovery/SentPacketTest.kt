@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quic.connection.recovery
 
+import com.vitorpamplona.quic.connection.EncryptionLevel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -63,7 +64,7 @@ class SentPacketTest {
                 sentAtMillis = 0L,
                 ackEliciting = false,
                 sizeBytes = 16,
-                tokens = listOf(RecoveryToken.Ack),
+                tokens = listOf(RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = 0L)),
             )
         val differentPn = a.copy(packetNumber = 8L)
         assertNotEquals(a, differentPn)
@@ -95,10 +96,13 @@ class SentPacketTest {
                 sentAtMillis = 0L,
                 ackEliciting = false,
                 sizeBytes = 24,
-                tokens = listOf(RecoveryToken.Ack),
+                tokens = listOf(RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = 0L)),
             )
         assertTrue(ackOnly.tokens.isNotEmpty())
-        assertEquals(RecoveryToken.Ack, ackOnly.tokens.single())
+        assertEquals(
+            RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = 0L),
+            ackOnly.tokens.single(),
+        )
     }
 
     @Test

@@ -80,7 +80,10 @@ class RetransmitIntegrationTest {
                         sentAtMillis = 1L,
                         ackEliciting = true,
                         sizeBytes = 64,
-                        tokens = listOf(RecoveryToken.Ack),
+                        tokens =
+                            listOf(
+                                RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = 0L),
+                            ),
                     )
                 // Drain the ACK'd packet from the map (simulating the
                 // parser path).

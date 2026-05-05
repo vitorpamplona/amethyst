@@ -248,7 +248,7 @@ private fun collectHandshakeLevelFrames(
     val tokens = mutableListOf<RecoveryToken>()
     state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let {
         frames += it
-        tokens += RecoveryToken.Ack
+        tokens += RecoveryToken.Ack(level = level, largestAcked = it.largestAcknowledged)
     }
     val cryptoChunk = state.cryptoSend.takeChunk(maxBytes = 1100)
     if (cryptoChunk != null && cryptoChunk.data.isNotEmpty()) {
@@ -351,7 +351,7 @@ private fun buildApplicationPacket(
 
     state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let {
         frames += it
-        tokens += RecoveryToken.Ack
+        tokens += RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = it.largestAcknowledged)
     }
 
     // Step 7: PTO probe. The driver sets `pendingPing` when its

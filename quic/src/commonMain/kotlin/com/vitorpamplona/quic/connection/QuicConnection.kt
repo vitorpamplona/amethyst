@@ -769,8 +769,16 @@ class QuicConnection(
     internal fun onTokensAcked(tokens: List<com.vitorpamplona.quic.connection.recovery.RecoveryToken>) {
         for (token in tokens) {
             when (token) {
-                com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
-                    // ACK-of-ACK is a no-op.
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
+                    // ACK-of-ACK: peer has now received our ACK, so
+                    // we can drop everything at-or-below
+                    // [token.largestAcked] from the inbound tracker.
+                    // RFC 9000 §13.2.1 doesn't require us to keep
+                    // re-advertising acknowledged PNs once the peer
+                    // has confirmed receipt of our ACK that covered
+                    // them. Without this the tracker's range list
+                    // grows over the connection lifetime.
+                    levelState(token.level).ackTracker.purgeBelow(token.largestAcked + 1)
                 }
 
                 is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsUni,
@@ -837,7 +845,7 @@ class QuicConnection(
     internal fun onTokensLost(tokens: List<com.vitorpamplona.quic.connection.recovery.RecoveryToken>) {
         for (token in tokens) {
             when (token) {
-                com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
                     // ACK frames are not retransmittable per RFC 9000
                     // §13.2.1; the peer's own ACKs cover newer ranges.
                 }

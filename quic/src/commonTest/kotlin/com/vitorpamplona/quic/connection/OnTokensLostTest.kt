@@ -49,7 +49,7 @@ class OnTokensLostTest {
             val conn = newConn()
             conn.lock.lock()
             try {
-                conn.onTokensLost(listOf(RecoveryToken.Ack))
+                conn.onTokensLost(listOf(RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = 0L)))
             } finally {
                 conn.lock.unlock()
             }
@@ -161,7 +161,7 @@ class OnTokensLostTest {
                 conn.advertisedMaxData = 5_000_000L
                 conn.onTokensLost(
                     listOf(
-                        RecoveryToken.Ack,
+                        RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = 0L),
                         RecoveryToken.MaxStreamsUni(maxStreams = 150L),
                         RecoveryToken.MaxStreamsBidi(maxStreams = 200L),
                         RecoveryToken.MaxData(maxData = 5_000_000L),

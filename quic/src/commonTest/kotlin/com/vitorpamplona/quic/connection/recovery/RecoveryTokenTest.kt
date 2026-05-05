@@ -23,12 +23,11 @@ package com.vitorpamplona.quic.connection.recovery
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 /**
  * Type-level invariants for [RecoveryToken]: equality + hashCode
- * correctness across data-class variants, the singleton [Ack] object,
- * and the typed-token shape required by the dispatcher in step 6 of
+ * correctness across data-class variants and the typed-token shape
+ * required by the dispatcher in step 6 of
  * `quic/plans/2026-05-04-control-frame-retransmit.md`.
  *
  * No connection state is exercised here — these are unit tests on
@@ -36,11 +35,18 @@ import kotlin.test.assertTrue
  */
 class RecoveryTokenTest {
     @Test
-    fun ack_isSingleton() {
-        val a: RecoveryToken = RecoveryToken.Ack
-        val b: RecoveryToken = RecoveryToken.Ack
-        // `data object Ack` ⇒ same reference, same hash.
-        assertTrue(a === b)
+    fun ack_carriesLevelAndLargestAcked() {
+        val a: RecoveryToken =
+            RecoveryToken.Ack(
+                level = com.vitorpamplona.quic.connection.EncryptionLevel.APPLICATION,
+                largestAcked = 42L,
+            )
+        val b: RecoveryToken =
+            RecoveryToken.Ack(
+                level = com.vitorpamplona.quic.connection.EncryptionLevel.APPLICATION,
+                largestAcked = 42L,
+            )
+        // Data class equality, not identity.
         assertEquals(a, b)
         assertEquals(a.hashCode(), b.hashCode())
     }
@@ -93,7 +99,10 @@ class RecoveryTokenTest {
         // compiling — caught at build time, not at runtime.
         val tokens: List<RecoveryToken> =
             listOf(
-                RecoveryToken.Ack,
+                RecoveryToken.Ack(
+                    level = com.vitorpamplona.quic.connection.EncryptionLevel.APPLICATION,
+                    largestAcked = 0L,
+                ),
                 RecoveryToken.MaxStreamsUni(150L),
                 RecoveryToken.MaxStreamsBidi(150L),
                 RecoveryToken.MaxData(1_000_000L),
@@ -116,7 +125,7 @@ class RecoveryTokenTest {
         val labels =
             tokens.map {
                 when (it) {
-                    RecoveryToken.Ack -> "ack"
+                    is RecoveryToken.Ack -> "ack"
                     is RecoveryToken.MaxStreamsUni -> "msu:${it.maxStreams}"
                     is RecoveryToken.MaxStreamsBidi -> "msb:${it.maxStreams}"
                     is RecoveryToken.MaxData -> "md:${it.maxData}"

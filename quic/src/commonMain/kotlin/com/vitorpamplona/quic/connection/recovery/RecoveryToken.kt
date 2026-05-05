@@ -53,12 +53,33 @@ package com.vitorpamplona.quic.connection.recovery
  */
 sealed class RecoveryToken {
     /**
-     * Marks an ACK frame in the carrying packet. Recorded so the
-     * sent-packet map's invariant ("every retained packet has a
-     * non-empty `tokens` list") holds for ACK-only packets too, but
-     * never re-emitted on loss.
+     * Marks an ACK frame in the carrying packet. Carries enough
+     * context for the dispatcher to purge our own [com.vitorpamplona.quic.recovery.AckTracker]
+     * once the peer ACKs the carrying packet — i.e. an ACK-of-ACK.
+     *
+     * RFC 9000 §13.2.1: ACK frames are not ack-eliciting and not
+     * retransmitted. But the ACK we sent IS itself acknowledgeable
+     * (it rides on a packet whose other frames may be ack-eliciting),
+     * and the peer's ACK of THAT packet means the peer has now
+     * received our ACK for everything up to [largestAcked]. We can
+     * stop including those PNs in subsequent outbound ACK frames.
+     *
+     * Pre-fix the parser purged on every inbound ACK using the
+     * peer's `largestAcknowledged - firstAckRange` value — but that
+     * is in OUR outbound PN space, not the inbound PN space the
+     * tracker holds. The values happened to grow at similar rates so
+     * the bug rarely manifested as outright wrongness, just
+     * range-list bloat over long sessions where the two spaces drift
+     * apart (e.g. listener receiving ~50 audio frames/sec while
+     * sending ~1 ACK/sec).
+     *
+     * [level] routes the purge to the right per-space [com.vitorpamplona.quic.connection.LevelState.ackTracker]
+     * since we track separately for Initial / Handshake / Application.
      */
-    data object Ack : RecoveryToken()
+    data class Ack(
+        val level: com.vitorpamplona.quic.connection.EncryptionLevel,
+        val largestAcked: Long,
+    ) : RecoveryToken()
 
     /**
      * `MAX_STREAMS_UNI` extension we sent. On loss, only re-emit if
