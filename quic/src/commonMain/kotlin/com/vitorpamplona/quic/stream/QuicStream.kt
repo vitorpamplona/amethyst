@@ -119,11 +119,21 @@ class QuicStream(
      *   - Once the peer ACKs the RESET_STREAM, [resetAcked] latches
      *     true and the writer stops re-emitting.
      *
-     * Idempotent: a second [resetStream] call overwrites the queued
-     * entry with the newer error code (in practice apps shouldn't
-     * reset twice — the second call is benign).
+     * First call wins. A second [resetStream] is a no-op: RFC 9000 §3.5
+     * pins `finalSize` at the first emission; replaying retransmits with
+     * a larger value (because the app enqueued more bytes between the
+     * two calls) would trigger `FINAL_SIZE_ERROR` on the peer. The
+     * `errorCode` is likewise frozen.
+     *
+     * Threading: callable from any coroutine. The boolean flags
+     * ([resetEmitPending], [resetAcked]) are `@Volatile` so the writer
+     * (which reads them under [com.vitorpamplona.quic.connection.QuicConnection.lock])
+     * sees the assignment without acquiring the connection mutex. The
+     * "first call wins" gate above closes the only multi-writer race
+     * (two app threads racing the writer's clear-after-emit).
      */
     fun resetStream(errorCode: Long) {
+        if (resetState != null) return
         resetState =
             ResetState(
                 errorCode = errorCode,
@@ -140,33 +150,56 @@ class QuicStream(
      * `STOP_SENDING(streamId, errorCode)` frame is queued for emission
      * on the next writer drain; reliable per §13.3, retransmitted on
      * loss like [resetStream].
+     *
+     * First call wins (same reasoning as [resetStream]: the peer treats
+     * the first STOP_SENDING as authoritative; replaying retransmits
+     * with a different `errorCode` would visibly disagree with the
+     * original frame already on the wire).
      */
     fun stopSending(errorCode: Long) {
+        if (stopSendingState != null) return
         stopSendingState = StopSendingState(errorCode = errorCode)
         stopSendingEmitPending = true
     }
 
-    /** RFC 9000 §3.5 send-side reset state. Set by [resetStream]. */
+    /**
+     * RFC 9000 §3.5 send-side reset state. Set once by [resetStream]
+     * (subsequent calls no-op); read by the writer + loss/ACK
+     * dispatchers. Once set, contents are immutable.
+     */
     internal var resetState: ResetState? = null
 
     /**
      * True while a RESET_STREAM emit is pending. Cleared after the
      * writer emits; set back to true by the loss dispatcher; cleared
      * again (and not re-set) once [resetAcked] latches.
+     *
+     * `@Volatile` because [resetStream] writes it from an arbitrary
+     * coroutine while the writer / dispatchers read it under
+     * [com.vitorpamplona.quic.connection.QuicConnection.lock]. Volatile
+     * gives the cross-thread happens-before; the "first call wins"
+     * gate in [resetStream] eliminates the write-write race with the
+     * writer's clear-after-emit.
      */
+    @Volatile
     internal var resetEmitPending: Boolean = false
 
     /**
      * Latches true when the peer ACKs the RESET_STREAM. After this
      * the writer no longer re-emits even if a stale lost token shows
-     * up. Mirrors neqo's `send_stream::ResetAcked` state.
+     * up. Mirrors neqo's `send_stream::ResetAcked` state. Volatile for
+     * the same reason as [resetEmitPending].
      */
+    @Volatile
     internal var resetAcked: Boolean = false
 
     /** Receive-side stop-sending state. Set by [stopSending]. */
     internal var stopSendingState: StopSendingState? = null
 
+    @Volatile
     internal var stopSendingEmitPending: Boolean = false
+
+    @Volatile
     internal var stopSendingAcked: Boolean = false
 
     internal data class ResetState(

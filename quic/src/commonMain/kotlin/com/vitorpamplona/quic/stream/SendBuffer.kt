@@ -108,10 +108,10 @@ class SendBuffer {
      * by [takeChunk] (append), [markAcked] (remove / split), [markLost]
      * (remove and move to [retransmit]).
      *
-     * Range arithmetic is O(N) on the inFlight list; for the moq-rooms
-     * workload (a few thousand ranges max per connection) this is fine.
-     * If profiling later shows it on the hot path, swap in a TreeMap
-     * keyed by offset.
+     * Overlap lookup uses [firstOverlapIndex] (binary search, O(log N));
+     * the early-exit forward walk visits only the k entries that actually
+     * overlap. A single ACK or loss notification therefore costs
+     * O(log N + k), with k typically 1-2 for a well-aligned ACK range.
      */
     private val inFlight: ArrayDeque<Range> = ArrayDeque()
 
@@ -394,16 +394,13 @@ class SendBuffer {
             }
             endIndex += 1
         }
-        // Bulk-remove the contiguous overlap span [startIndex, endIndex).
-        // ArrayDeque doesn't expose subList.clear, so fall back to a
-        // tight removeAt loop walking backward — still O(k) per call
-        // but with a single shift of trailing entries instead of one
-        // shift per removed item.
+        // Remove the contiguous overlap span [startIndex, endIndex).
+        // ArrayDeque has no bulk-clear-range; each removeAt(i) shifts
+        // (size - i) elements, so total cost is O(k * (size - end + k))
+        // worst case. Backward iteration shrinks the per-step shift —
+        // negligible for our workload (k is 1 in steady state, occasionally
+        // 2 across a partial-overlap split).
         if (endIndex > startIndex) {
-            // Walking backward minimises shift work: removeAt at the
-            // rightmost index of the span first leaves the trailing
-            // entries (after endIndex) where they are; only the leftward
-            // entries shift, and they shift by 1 each iteration.
             var i = endIndex - 1
             while (i >= startIndex) {
                 list.removeAt(i)

@@ -184,6 +184,56 @@ class ResetStopSendingEmitTest {
         }
 
     @Test
+    fun resetStream_secondCallIsNoOp_finalSizeFrozen() =
+        runBlocking {
+            // RFC 9000 §3.5: finalSize is fixed at first emission.
+            // A second resetStream() must not overwrite resetState
+            // — otherwise a retransmit after additional enqueue would
+            // replay with a larger finalSize, triggering FINAL_SIZE_ERROR.
+            val client = handshakedClient()
+            val stream = client.openUniStream()
+            stream.send.enqueue("first".encodeToByteArray()) // 5 bytes
+            stream.resetStream(errorCode = 1L)
+
+            // App enqueues more bytes (writer's send loop is racing) and
+            // calls resetStream again with a different code.
+            stream.send.enqueue("more-bytes".encodeToByteArray()) // +10 bytes
+            stream.resetStream(errorCode = 99L)
+
+            runCatching { drainOutbound(client, nowMillis = 1L) }
+            val tokenEntry =
+                client.application.sentPackets.entries
+                    .firstOrNull { it.value.tokens.any { t -> t is RecoveryToken.ResetStream } }
+            assertNotNull(tokenEntry)
+            val token =
+                tokenEntry.value.tokens
+                    .filterIsInstance<RecoveryToken.ResetStream>()
+                    .single()
+            assertEquals(1L, token.errorCode, "first errorCode wins")
+            assertEquals(5L, token.finalSize, "finalSize frozen at first call (RFC 9000 §3.5)")
+        }
+
+    @Test
+    fun stopSending_secondCallIsNoOp() =
+        runBlocking {
+            val client = handshakedClient()
+            val stream = client.openBidiStream()
+            stream.stopSending(errorCode = 5L)
+            stream.stopSending(errorCode = 42L)
+
+            runCatching { drainOutbound(client, nowMillis = 1L) }
+            val tokenEntry =
+                client.application.sentPackets.entries
+                    .firstOrNull { it.value.tokens.any { t -> t is RecoveryToken.StopSending } }
+            assertNotNull(tokenEntry)
+            val token =
+                tokenEntry.value.tokens
+                    .filterIsInstance<RecoveryToken.StopSending>()
+                    .single()
+            assertEquals(5L, token.errorCode, "first errorCode wins")
+        }
+
+    @Test
     fun newConnectionId_retransmittedOnLoss() =
         runBlocking {
             val client = handshakedClient()
