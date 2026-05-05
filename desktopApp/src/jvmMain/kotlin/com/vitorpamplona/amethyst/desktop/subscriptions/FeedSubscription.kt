@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.desktop.subscriptions
 
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**
  * Feed mode for feed subscriptions.
@@ -30,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 enum class FeedMode {
     GLOBAL,
     FOLLOWING,
+    CUSTOM,
 }
 
 /**
@@ -362,3 +365,77 @@ fun createChessSubscription(
         onEvent = onEvent,
         onEose = onEose,
     )
+
+/**
+ * Creates a subscription config for a custom feed based on FeedSource.Filter.
+ */
+fun createCustomFeedSubscription(
+    source: FeedSource.Filter,
+    relays: Set<NormalizedRelayUrl>,
+    limit: Int = 200,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    val filters = mutableListOf<Filter>()
+
+    val kinds = source.kinds.ifEmpty { listOf(1, 6, 16) }
+
+    when {
+        source.authors.isNotEmpty() && source.hashtags.isNotEmpty() -> {
+            // Authors + hashtags: two separate filters (relay does OR between filters)
+            filters.add(
+                Filter(
+                    kinds = kinds,
+                    authors = source.authors.toList(),
+                    limit = limit,
+                ),
+            )
+            filters.add(
+                Filter(
+                    kinds = kinds,
+                    tags = mapOf("t" to source.hashtags.toList()),
+                    limit = limit,
+                ),
+            )
+        }
+
+        source.authors.isNotEmpty() -> {
+            filters.add(
+                Filter(
+                    kinds = kinds,
+                    authors = source.authors.toList(),
+                    limit = limit,
+                ),
+            )
+        }
+
+        source.hashtags.isNotEmpty() -> {
+            filters.add(
+                Filter(
+                    kinds = kinds,
+                    tags = mapOf("t" to source.hashtags.toList()),
+                    limit = limit,
+                ),
+            )
+        }
+
+        else -> {
+            return null
+        }
+    }
+
+    if (filters.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("custom-feed"),
+        filters = filters,
+        relays =
+            if (source.relays.isNotEmpty()) {
+                source.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+            } else {
+                relays
+            },
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}

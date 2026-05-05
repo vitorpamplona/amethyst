@@ -74,6 +74,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
+import com.vitorpamplona.amethyst.commons.feeds.custom.canBecomeFeed
+import com.vitorpamplona.amethyst.commons.feeds.custom.toFeedDefinition
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
@@ -102,6 +104,7 @@ import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.launch
 
 @Composable
 fun SearchScreen(
@@ -459,6 +462,29 @@ fun SearchScreen(
                             },
                     )
                 }
+                // "Save as Feed" button — visible when query has feed-able criteria
+                if (query.canBecomeFeed()) {
+                    val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
+                    var showFeedBuilder by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showFeedBuilder = true }) {
+                        Icon(
+                            MaterialSymbols.Bookmark,
+                            contentDescription = "Save as Feed",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (showFeedBuilder) {
+                        com.vitorpamplona.amethyst.desktop.ui.deck.FeedBuilderDialog(
+                            initial = query.toFeedDefinition(name = ""),
+                            localCache = localCache,
+                            onSave = { feed ->
+                                scope.launch { feedRepo.add(feed) }
+                                showFeedBuilder = false
+                            },
+                            onDismiss = { showFeedBuilder = false },
+                        )
+                    }
+                }
             }
 
             // Search relay picker dialog
@@ -510,7 +536,7 @@ fun SearchScreen(
                     onExcludeRemoved = { state.removeExcludeTerm(it) },
                     onLanguageChanged = { state.updateLanguage(it) },
                     onClear = { state.clearSearch() },
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = 8.dp, start = sidePadding, end = sidePadding),
                 )
             }
 
@@ -522,7 +548,10 @@ fun SearchScreen(
 
             if (bech32Results.isNotEmpty()) {
                 // Show bech32 results (exact lookup)
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = sidePadding),
+                ) {
                     Text(
                         "Direct lookup",
                         style = MaterialTheme.typography.labelMedium,
@@ -544,12 +573,14 @@ fun SearchScreen(
                     onNavigateToProfile = onNavigateToProfile,
                     onNavigateToThread = onNavigateToThread,
                     localCache = localCache,
+                    modifier = Modifier.padding(horizontal = sidePadding),
                 )
             } else if (!debouncedQuery.isEmpty && !isSearching) {
                 Text(
                     "No results found. Try broader terms or fewer filters.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = sidePadding),
                 )
             } else if (!isSearching) {
                 // Empty state: show history + saved searches + operator hints

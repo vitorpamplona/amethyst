@@ -87,6 +87,7 @@ fun SinglePaneLayout(
     singlePaneState: SinglePaneState,
     pinnedNavBarState: PinnedNavBarState,
     onOpenAppDrawer: () -> Unit,
+    onOpenFeedsDrawer: () -> Unit = onOpenAppDrawer,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
@@ -112,6 +113,8 @@ fun SinglePaneLayout(
             ) {
                 val pinnedScreens by pinnedNavBarState.pinnedScreens.collectAsState()
                 pinnedScreens.forEach { screenType ->
+                    // Rename "Home" to "Feeds" in the nav rail
+                    val label = if (screenType == DeckColumnType.HomeFeed) "Feeds" else screenType.title()
                     NavigationRailItem(
                         selected = currentColumnType == screenType && navStack.isEmpty(),
                         onClick = {
@@ -121,13 +124,13 @@ fun SinglePaneLayout(
                         icon = {
                             Icon(
                                 screenType.icon(),
-                                contentDescription = screenType.title(),
+                                contentDescription = label,
                                 modifier = Modifier.size(22.dp),
                             )
                         },
                         label = {
                             Text(
-                                screenType.title(),
+                                label,
                                 style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -249,6 +252,7 @@ fun SinglePaneLayout(
                     onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                     onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
                     onNavigateToRelays = { singlePaneState.navigate(DeckColumnType.Relays) },
+                    onOpenFeedsDrawer = onOpenFeedsDrawer,
                 )
                 if (currentOverlay != null) {
                     Surface(

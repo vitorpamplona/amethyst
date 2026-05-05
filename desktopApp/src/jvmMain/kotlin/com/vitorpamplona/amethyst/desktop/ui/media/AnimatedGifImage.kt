@@ -88,23 +88,26 @@ fun AnimatedGifImage(
     val data = gifFrames
     when {
         data != null && data.frames.size > 1 -> {
+            val safeFrame = currentFrame.coerceIn(0, data.frames.size - 1)
+
             LaunchedEffect(data) {
                 while (isActive) {
-                    val duration = data.durations[currentFrame].coerceAtLeast(MIN_FRAME_DURATION_MS)
+                    val frameIdx = currentFrame.coerceIn(0, data.frames.size - 1)
+                    val duration = data.durations[frameIdx].coerceAtLeast(MIN_FRAME_DURATION_MS)
                     delay(duration.toLong())
                     currentFrame = (currentFrame + 1) % data.frames.size
                 }
             }
 
             Image(
-                bitmap = data.frames[currentFrame],
+                bitmap = data.frames[safeFrame],
                 contentDescription = contentDescription,
                 modifier = modifier,
                 contentScale = contentScale,
             )
         }
 
-        data != null -> {
+        data != null && data.frames.isNotEmpty() -> {
             Image(
                 bitmap = data.frames[0],
                 contentDescription = contentDescription,

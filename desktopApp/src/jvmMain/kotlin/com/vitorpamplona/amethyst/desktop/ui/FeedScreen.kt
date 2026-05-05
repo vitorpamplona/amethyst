@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopCustomFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createCustomFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
@@ -274,6 +276,9 @@ fun FeedScreen(
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
     iAccount: com.vitorpamplona.amethyst.desktop.model.DesktopIAccount? = null,
+    customFeedId: String? = null,
+    customFeedSource: com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter? = null,
+    onOpenFeedsDrawer: () -> Unit = {},
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     initialFeedMode: FeedMode? = null,
@@ -297,7 +302,15 @@ fun FeedScreen(
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     var showRelayPicker by remember { mutableStateOf(false) }
-    var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
+    var activeFeedId by remember { mutableStateOf(customFeedId) }
+    var activeFeedSource by remember {
+        mutableStateOf(customFeedSource)
+    }
+    var feedMode by remember {
+        mutableStateOf(
+            if (customFeedSource != null) FeedMode.CUSTOM else (initialFeedMode ?: DesktopPreferences.feedMode),
+        )
+    }
 
     // Subscribe to contact list (kind 3) — populates localCache.followedUsers
     rememberSubscription(allRelayUrls, account, relayManager = relayManager) {
@@ -315,7 +328,7 @@ fun FeedScreen(
     }
 
     // Subscribe to feed events (kind 1) — populates cache via coordinator
-    rememberSubscription(feedRelays, feedMode, followedUsers, relayManager = relayManager) {
+    rememberSubscription(feedRelays, feedMode, followedUsers, activeFeedSource, relayManager = relayManager) {
         if (feedRelays.isEmpty()) return@rememberSubscription null
 
         when (feedMode) {
@@ -342,12 +355,27 @@ fun FeedScreen(
                     null
                 }
             }
+
+            FeedMode.CUSTOM -> {
+                val src = activeFeedSource
+                if (src != null) {
+                    createCustomFeedSubscription(
+                        source = src,
+                        relays = feedRelays,
+                        onEvent = { event, _, relay, _ ->
+                            subscriptionsCoordinator?.consumeEvent(event, relay)
+                        },
+                    )
+                } else {
+                    null
+                }
+            }
         }
     }
 
     // DesktopFeedViewModel keyed on feedMode — recreated on mode switch
     val viewModel =
-        remember(feedMode) {
+        remember(feedMode, activeFeedId) {
             val filter =
                 when (feedMode) {
                     FeedMode.GLOBAL -> {
@@ -358,6 +386,15 @@ fun FeedScreen(
                         DesktopFollowingFeedFilter(localCache) {
                             localCache.followedUsers.value
                         }
+                    }
+
+                    FeedMode.CUSTOM -> {
+                        DesktopCustomFeedFilter(
+                            localCache,
+                            activeFeedId ?: "custom",
+                            activeFeedSource ?: com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
+                                .Filter(),
+                        )
                     }
                 }
             DesktopFeedViewModel(filter, localCache)
@@ -489,20 +526,28 @@ fun FeedScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         ReadingColumn {
-            // Header with compose button
-            FeedHeader(
+            // Header: pinned feed tabs + "Show More +"
+            FeedTabsHeader(
                 feedMode = feedMode,
-                account = account,
-                feedRelays = feedRelays,
-                followedUsersCount = followedUsers.size,
+                activeFeedId = activeFeedId,
                 onFeedModeChange = { mode ->
                     feedMode = mode
-                    DesktopPreferences.feedMode = mode
+                    activeFeedId = null
+                    activeFeedSource = null
+                    if (mode != FeedMode.CUSTOM) {
+                        DesktopPreferences.feedMode = mode
+                    }
                 },
-                onRefresh = { relayManager.connect() },
+                onNavigateToFeed = { feed ->
+                    val source = feed.source
+                    if (source is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter) {
+                        activeFeedId = feed.id
+                        activeFeedSource = source
+                        feedMode = FeedMode.CUSTOM
+                    }
+                },
+                onOpenFeedsDrawer = onOpenFeedsDrawer,
                 onCompose = onCompose,
-                onNavigateToRelays = onNavigateToRelays,
-                onOpenRelayPicker = { showRelayPicker = true },
             )
 
             Spacer(Modifier.height(8.dp))
@@ -665,6 +710,83 @@ fun FeedScreen(
  * the relays icon (desktop convention \u2014 the at-a-glance info is preserved
  * without stealing header real estate).
  */
+@Composable
+private fun FeedTabsHeader(
+    feedMode: FeedMode,
+    activeFeedId: String? = null,
+    onFeedModeChange: (FeedMode) -> Unit,
+    onNavigateToFeed: (com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition) -> Unit = {},
+    onOpenFeedsDrawer: () -> Unit,
+    onCompose: () -> Unit,
+) {
+    val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
+    val pinnedFeeds by feedRepo.pinnedFeeds.collectAsState()
+    val sidePadding = LocalReadingSidePadding.current
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = sidePadding + 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Pinned feed tabs
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            pinnedFeeds.forEach { feed ->
+                val isSelected =
+                    when (feed.source) {
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> {
+                            feedMode == FeedMode.FOLLOWING
+                        }
+
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> {
+                            feedMode == FeedMode.GLOBAL
+                        }
+
+                        else -> {
+                            activeFeedId == feed.id
+                        }
+                    }
+                FilterChip(
+                    selected = isSelected,
+                    onClick = {
+                        when (feed.source) {
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> {
+                                onFeedModeChange(FeedMode.FOLLOWING)
+                            }
+
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> {
+                                onFeedModeChange(FeedMode.GLOBAL)
+                            }
+
+                            else -> {
+                                onNavigateToFeed(feed)
+                            }
+                        }
+                    },
+                    label = { Text("${feed.emoji} ${feed.name}") },
+                )
+            }
+            // "Show More +" button
+            FilterChip(
+                selected = false,
+                onClick = onOpenFeedsDrawer,
+                label = { Text("+ More") },
+            )
+        }
+
+        // Compose button
+        IconButton(onClick = onCompose) {
+            Icon(
+                MaterialSymbols.Edit,
+                contentDescription = "Compose",
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedHeader(

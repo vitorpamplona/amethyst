@@ -690,6 +690,10 @@ fun App(
         return // Nothing below runs until Tor is Active
     }
 
+    var appDrawerInitialTab by remember {
+        mutableStateOf<com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab?>(null)
+    }
+
     val localCache = remember { DesktopLocalCache() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
@@ -943,6 +947,11 @@ fun App(
                                 onShowComposeDialog = onShowComposeDialog,
                                 onShowReplyDialog = onShowReplyDialog,
                                 onShowAppDrawer = onShowAppDrawer,
+                                onOpenFeedsDrawer = {
+                                    appDrawerInitialTab =
+                                        com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
+                                    onShowAppDrawer()
+                                },
                             )
                         }
 
@@ -960,6 +969,7 @@ fun App(
                         if (showAppDrawer) {
                             val openColumns by deckState.columns.collectAsState()
                             AppDrawer(
+                                initialTab = appDrawerInitialTab,
                                 openColumnTypes =
                                     if (layoutMode == LayoutMode.DECK) {
                                         openColumns.map { it.type.typeKey() }.toSet()
@@ -1002,7 +1012,10 @@ fun App(
                                         }
                                     }
                                 },
-                                onDismiss = onDismissAppDrawer,
+                                onDismiss = {
+                                    appDrawerInitialTab = null
+                                    onDismissAppDrawer()
+                                },
                             )
                         }
                     }
@@ -1040,6 +1053,7 @@ fun MainContent(
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onShowAppDrawer: () -> Unit,
+    onOpenFeedsDrawer: () -> Unit = onShowAppDrawer,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -1230,6 +1244,7 @@ fun MainContent(
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
+        com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
@@ -1252,6 +1267,7 @@ fun MainContent(
                                 singlePaneState = singlePaneState,
                                 pinnedNavBarState = pinnedNavBarState,
                                 onOpenAppDrawer = onShowAppDrawer,
+                                onOpenFeedsDrawer = onOpenFeedsDrawer,
                                 onShowComposeDialog = onShowComposeDialog,
                                 onShowReplyDialog = onShowReplyDialog,
                                 onZapFeedback = onZapFeedback,
