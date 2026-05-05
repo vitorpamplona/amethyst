@@ -277,7 +277,7 @@ class NestViewModel(
      * subscribe bidi is still open from QUIC's POV — meaning no other
      * layer notices.
      */
-    private val lastFrameAt = mutableMapOf<String, kotlin.time.TimeSource.Monotonic.ValueTimeMark>()
+    private val lastFrameAt = mutableMapOf<String, kotlin.time.TimeMark>()
 
     /**
      * Periodic scan of [activeSubscriptions] vs [_announcedSpeakers]
@@ -298,7 +298,7 @@ class NestViewModel(
      * the new session — the new session has no incoming frames yet,
      * which would otherwise trip the detector again immediately.
      */
-    private var lastCliffRecycleAt: kotlin.time.TimeSource.Monotonic.ValueTimeMark? = null
+    private var lastCliffRecycleAt: kotlin.time.TimeMark? = null
 
     /**
      * Per-speaker catalog-fetch coroutines. Each entry is the
@@ -851,6 +851,18 @@ class NestViewModel(
                             // this is typically a no-op in toAdd / toRemove
                             // — runs anyway for the first-Connected path.
                             reconcileSubscriptions()
+                            // Defensive restart: if the wrapper went
+                            // through a Closed transient (e.g. the cliff
+                            // detector itself triggered `recycleSession()`,
+                            // which closes the inner listener and waits
+                            // for the orchestrator to reopen), our
+                            // [Closed] branch below cancelled the
+                            // detector via [teardown]. We need it back
+                            // up on the fresh session — otherwise a
+                            // second cliff event during the same room
+                            // sits undetected. Idempotent: returns
+                            // immediately if a job is already active.
+                            startCliffDetector()
                         }
 
                         is NestsListenerState.Failed -> {
@@ -1295,42 +1307,68 @@ class NestViewModel(
      */
     private fun startCliffDetector() {
         if (cliffDetectorJob?.isActive == true) return
+        com.vitorpamplona.quartz.utils.Log
+            .d("NestRx") { "cliff-detector launched" }
         cliffDetectorJob =
             viewModelScope.launch {
-                while (true) {
-                    delay(ROOM_AUDIO_CLIFF_CHECK_INTERVAL_MS)
-                    if (closed) return@launch
-                    val l = listener ?: continue
-                    if (_uiState.value.connection !is ConnectionUiState.Connected) continue
-                    // Cooldown: if we very recently triggered a recycle,
-                    // give the orchestrator time to bring up the new
-                    // session before re-checking. A new session has
-                    // nothing in `lastFrameAt` yet which would otherwise
-                    // immediately re-trigger.
-                    val sinceRecycle = lastCliffRecycleAt?.elapsedNow()
-                    if (sinceRecycle != null &&
-                        sinceRecycle.inWholeMilliseconds < ROOM_AUDIO_CLIFF_COOLDOWN_MS
-                    ) {
-                        continue
+                var ticks = 0L
+                try {
+                    while (true) {
+                        delay(ROOM_AUDIO_CLIFF_CHECK_INTERVAL_MS)
+                        ticks += 1
+                        if (closed) return@launch
+                        val l = listener
+                        val connState = _uiState.value.connection
+                        if (l == null || connState !is ConnectionUiState.Connected) {
+                            // Periodic visibility into "why isn't the cliff
+                            // detector acting" — the receiver-side cliff
+                            // we're chasing has been silent in production
+                            // logs even when the wire conditions look right,
+                            // so dump our gating state every 5 s.
+                            if (ticks % CLIFF_DIAG_LOG_EVERY == 0L) {
+                                com.vitorpamplona.quartz.utils.Log.d("NestRx") {
+                                    "cliff-detector tick=$ticks gated: listener=${l != null} conn=${connState::class.simpleName}"
+                                }
+                            }
+                            continue
+                        }
+                        val activeSpeakers =
+                            activeSubscriptions
+                                .asSequence()
+                                .filter { (_, slot) -> slot.isPlaying }
+                                .map { it.key }
+                                .toSet()
+                        val announced = _announcedSpeakers.value
+                        if (ticks % CLIFF_DIAG_LOG_EVERY == 0L) {
+                            val ages =
+                                lastFrameAt.entries.joinToString { (k, mark) ->
+                                    "${k.take(8)}=${mark.elapsedNow().inWholeMilliseconds}ms"
+                                }
+                            com.vitorpamplona.quartz.utils.Log.d("NestRx") {
+                                "cliff-detector tick=$ticks active=${activeSpeakers.size} announced=${announced.size} lastFrameAges=[$ages]"
+                            }
+                        }
+                        val stalled =
+                            computeStalledSpeakers(
+                                activeSpeakers = activeSpeakers,
+                                announcedSpeakers = announced,
+                                lastFrameAt = lastFrameAt,
+                                lastRecycleAt = lastCliffRecycleAt,
+                                cliffTimeoutMs = ROOM_AUDIO_CLIFF_TIMEOUT_MS,
+                                cooldownMs = ROOM_AUDIO_CLIFF_COOLDOWN_MS,
+                            )
+                        if (stalled.isEmpty()) continue
+                        com.vitorpamplona.quartz.utils.Log.w("NestRx") {
+                            "cliff-detector: announced+subscribed but silent for ≥${ROOM_AUDIO_CLIFF_TIMEOUT_MS}ms — recycling session. stalled=$stalled"
+                        }
+                        lastCliffRecycleAt =
+                            kotlin.time.TimeSource.Monotonic
+                                .markNow()
+                        runCatching { l.recycleSession() }
                     }
-                    val announced = _announcedSpeakers.value
-                    val stalled =
-                        activeSubscriptions
-                            .asSequence()
-                            .filter { (pubkey, slot) -> slot.isPlaying && pubkey in announced }
-                            .filter { (pubkey, _) ->
-                                val mark = lastFrameAt[pubkey] ?: return@filter false
-                                mark.elapsedNow().inWholeMilliseconds >= ROOM_AUDIO_CLIFF_TIMEOUT_MS
-                            }.map { it.key }
-                            .toList()
-                    if (stalled.isEmpty()) continue
-                    com.vitorpamplona.quartz.utils.Log.w("NestRx") {
-                        "cliff-detector: announced+subscribed but silent for ≥${ROOM_AUDIO_CLIFF_TIMEOUT_MS}ms — recycling session. stalled=$stalled"
-                    }
-                    lastCliffRecycleAt =
-                        kotlin.time.TimeSource.Monotonic
-                            .markNow()
-                    runCatching { l.recycleSession() }
+                } finally {
+                    com.vitorpamplona.quartz.utils.Log
+                        .w("NestRx") { "cliff-detector EXITED after $ticks ticks (closed=$closed)" }
                 }
             }
     }
@@ -1633,6 +1671,62 @@ const val ROOM_AUDIO_CLIFF_CHECK_INTERVAL_MS: Long = 1_000L
  * from quickly.
  */
 const val ROOM_AUDIO_CLIFF_COOLDOWN_MS: Long = 8_000L
+
+/**
+ * Diagnostic log frequency for the cliff detector. Emit a state-dump
+ * line every Nth 1-second tick — i.e. every 5 s while connected and
+ * idle, so logcat captures the "active / announced / lastFrameAges"
+ * snapshot we use to debug silent-cliff cases without flooding when
+ * everything is fine.
+ */
+private const val CLIFF_DIAG_LOG_EVERY: Long = 5L
+
+/**
+ * Pure logic of the cliff detector — extracted so headless tests can
+ * exercise it with a [kotlin.time.TestTimeSource] without standing up
+ * the full [NestViewModel] coroutine machinery.
+ *
+ * Returns the list of pubkeys that should trigger a `recycleSession()`
+ * RIGHT NOW. Empty list means "no cliff observed; do nothing on this
+ * tick."
+ *
+ * Recycle conditions, all-of:
+ *   - the pubkey has an active subscription on our side
+ *     ([activeSpeakers]) — i.e. we're actively pulling its audio,
+ *   - the relay has told us this pubkey is broadcasting
+ *     ([announcedSpeakers]),
+ *   - we've received at least one MoQ object in the past
+ *     ([lastFrameAt] has an entry — we don't preemptively recycle
+ *     a brand-new subscription that simply hasn't ramped up yet),
+ *   - the elapsed time since that last object is at or past
+ *     [cliffTimeoutMs].
+ *
+ * Suppression:
+ *   - if [lastRecycleAt] is non-null and less than [cooldownMs] has
+ *     elapsed since it, returns empty (no cascading recycles while
+ *     the wrapper is mid-handshake on a fresh session).
+ */
+internal fun computeStalledSpeakers(
+    activeSpeakers: Set<String>,
+    announcedSpeakers: Set<String>,
+    lastFrameAt: Map<String, kotlin.time.TimeMark>,
+    lastRecycleAt: kotlin.time.TimeMark?,
+    cliffTimeoutMs: Long = ROOM_AUDIO_CLIFF_TIMEOUT_MS,
+    cooldownMs: Long = ROOM_AUDIO_CLIFF_COOLDOWN_MS,
+): List<String> {
+    if (lastRecycleAt != null &&
+        lastRecycleAt.elapsedNow().inWholeMilliseconds < cooldownMs
+    ) {
+        return emptyList()
+    }
+    return activeSpeakers
+        .asSequence()
+        .filter { it in announcedSpeakers }
+        .filter { pubkey ->
+            val mark = lastFrameAt[pubkey] ?: return@filter false
+            mark.elapsedNow().inWholeMilliseconds >= cliffTimeoutMs
+        }.toList()
+}
 
 /**
  * How long a kind-7 reaction stays in
