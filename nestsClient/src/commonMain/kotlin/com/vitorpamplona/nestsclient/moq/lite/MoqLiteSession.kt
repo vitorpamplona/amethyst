@@ -119,7 +119,23 @@ class MoqLiteSession internal constructor(
         bidi.write(Varint.encode(MoqLiteControlType.Announce.code))
         bidi.write(MoqLiteCodec.encodeAnnouncePlease(MoqLiteAnnouncePlease(prefix)))
 
-        val updates = MutableSharedFlow<MoqLiteAnnounce>(replay = 0, extraBufferCapacity = 64)
+        // replay=64, DROP_OLDEST: announces emitted before the
+        // caller's `collect` attaches MUST NOT be dropped — that's
+        // the late-attach race that left `_announcedSpeakers` empty
+        // in production receiver logs even after a clear Active
+        // arrived (the session-internal pumpAnnounceWatch beat the
+        // VM-level `observeAnnounces` to subscribing, then the
+        // VM-level bidi's pump emitted to a SharedFlow with no
+        // collector yet, and the prior `replay=0` silently dropped
+        // it). Replay buffer covers up to 64 distinct announces —
+        // far more than nests rooms have speakers — and DROP_OLDEST
+        // means the bidi pump never has to suspend on emit, so
+        // backpressure can't propagate up into the QUIC read loop.
+        val updates =
+            MutableSharedFlow<MoqLiteAnnounce>(
+                replay = 64,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         val pump =
             scope.launch {
                 val buffer = MoqLiteFrameBuffer()
