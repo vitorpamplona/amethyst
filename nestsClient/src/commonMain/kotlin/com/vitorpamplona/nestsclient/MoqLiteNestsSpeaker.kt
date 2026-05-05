@@ -75,8 +75,19 @@ class MoqLiteNestsSpeaker internal constructor(
 
             // Per the audio-rooms NIP draft + JS reference
             // (`@moq/publish/screen-B680RFft.js:5641`), publishers
-            // claim a broadcast suffix equal to their pubkey hex.
-            val publisher = session.publish(broadcastSuffix = speakerPubkeyHex)
+            // claim a broadcast suffix equal to their pubkey hex and
+            // the audio data sits on track "audio/data". The publisher
+            // must be track-scoped because listeners typically open
+            // BOTH a catalog subscribe AND an audio subscribe per
+            // speaker; without the track filter the publisher would
+            // route Opus frames onto whichever subscribe arrived first
+            // (in practice the catalog one) and the audio subscription
+            // would silently starve.
+            val publisher =
+                session.publish(
+                    broadcastSuffix = speakerPubkeyHex,
+                    track = MoqLiteNestsListener.AUDIO_TRACK,
+                )
             // From here on, the publisher is registered in the session
             // and has a live announce/subscribe path. Anything that
             // throws before we hand a working handle back to the caller

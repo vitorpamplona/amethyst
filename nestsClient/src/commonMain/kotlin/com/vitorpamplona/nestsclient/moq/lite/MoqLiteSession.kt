@@ -23,6 +23,7 @@ package com.vitorpamplona.nestsclient.moq.lite
 import com.vitorpamplona.nestsclient.moq.MoqCodecException
 import com.vitorpamplona.nestsclient.moq.MoqWriter
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -132,7 +133,8 @@ class MoqLiteSession internal constructor(
                     }
                 } catch (ce: CancellationException) {
                     throw ce
-                } catch (_: Throwable) {
+                } catch (t: Throwable) {
+                    Log.w("NestRx") { "announce(prefix='$prefix'): bidi.incoming() threw ${t::class.simpleName}: ${t.message}" }
                     // Flow terminated (peer FIN or transport close).
                     // The Announce stream's emit-side just stops; consumers
                     // see an end-of-flow.
@@ -298,6 +300,10 @@ class MoqLiteSession internal constructor(
             }
         when (resp) {
             is MoqLiteCodec.SubscribeResponse.Dropped -> {
+                Log.w("NestRx") {
+                    "SUBSCRIBE_DROP id=$id broadcast='$broadcast' track='$track' " +
+                        "errCode=${resp.drop.errorCode} reason='${resp.drop.reasonPhrase}'"
+                }
                 state.withLock { subscriptionsBySubscribeId.remove(id) }
                 frames.close()
                 runCatching { bidi.finish() }
@@ -438,7 +444,8 @@ class MoqLiteSession internal constructor(
             }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "pumpUniStreams ended with ${t::class.simpleName}: ${t.message}" }
             // Transport closed — subscriptions will surface end-of-flow
             // via their own bidi pumps as well.
         }
@@ -470,14 +477,12 @@ class MoqLiteSession internal constructor(
                 while (true) {
                     val frame = buffer.readSizePrefixed() ?: break
                     val sub = state.withLock { subscriptionsBySubscribeId[subscribeId] }
-                    if (sub != null) {
-                        sub.frames.trySend(
-                            MoqLiteFrame(
-                                groupSequence = groupSequence,
-                                payload = frame,
-                            ),
-                        )
-                    }
+                    sub?.frames?.trySend(
+                        MoqLiteFrame(
+                            groupSequence = groupSequence,
+                            payload = frame,
+                        ),
+                    )
                     // If the subscription has been closed already we
                     // silently drop the frame — the publisher hasn't
                     // observed the unsubscribe yet (its uni streams
@@ -524,7 +529,10 @@ class MoqLiteSession internal constructor(
      * Only one [publish] is supported per session for now. Calling
      * [publish] twice on the same session is rejected with [IllegalStateException].
      */
-    suspend fun publish(broadcastSuffix: String): MoqLitePublisherHandle {
+    suspend fun publish(
+        broadcastSuffix: String,
+        track: String,
+    ): MoqLitePublisherHandle {
         ensureOpen()
         val normalised = MoqLitePath.normalize(broadcastSuffix)
         val publisher: PublisherStateImpl
@@ -533,7 +541,7 @@ class MoqLiteSession internal constructor(
             check(activePublisher == null) {
                 "MoqLiteSession.publish called twice — only one broadcast per session is supported"
             }
-            publisher = PublisherStateImpl(suffix = normalised)
+            publisher = PublisherStateImpl(suffix = normalised, track = track)
             activePublisher = publisher
             // Lazy launch — the inbound-bidi pump needs to keep running
             // for the lifetime of any active publisher.
@@ -562,7 +570,8 @@ class MoqLiteSession internal constructor(
             }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestTx") { "pumpInboundBidis ended with ${t::class.simpleName}: ${t.message}" }
             // Transport closed.
         }
     }
@@ -687,7 +696,14 @@ class MoqLiteSession internal constructor(
         subscribeId: Long,
         sequence: Long,
     ): com.vitorpamplona.nestsclient.transport.WebTransportWriteStream {
-        val uni = transport.openUniStream()
+        // Group streams carry a single Opus packet. They're real-time
+        // and best-effort — a STREAM frame arriving 200 ms late is
+        // worse than useless because the listener has already moved
+        // past that group's sequence number. Setting bestEffort=true
+        // tells the underlying QUIC SendBuffer to drop lost ranges
+        // instead of retransmitting them, bounding the bandwidth waste
+        // we'd otherwise incur on a lossy uplink.
+        val uni = transport.openUniStream(bestEffort = true)
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))
         return uni
@@ -728,13 +744,33 @@ class MoqLiteSession internal constructor(
     /**
      * Publisher state. Tracks the announce bidis the relay opened to us
      * + the inbound subscriptions a relay (or peer) opened against our
-     * broadcast, and owns the current group's uni stream.
+     * broadcast for [track], and owns the current group's uni stream.
+     *
+     * Per moq-lite Lite-03 a publisher is responsible for one
+     * `(broadcast, track)` tuple — the relay multiplexes multiple
+     * tracks per broadcast by routing each inbound SUBSCRIBE to the
+     * publisher whose track field matches. Subs whose `sub.track`
+     * doesn't match this publisher's [track] are intentionally
+     * ignored so a listener subscribing to e.g. `catalog.json` while
+     * we're only publishing `audio/data` doesn't accidentally hijack
+     * the audio routing — see [registerInboundSubscription] for the
+     * filter and the bug history below.
+     *
+     * Bug history (`nestsClient/plans/2026-05-04-publisher-track-routing.md`):
+     * before this filter, [openNextGroupLocked] keyed each group
+     * stream off `inboundSubs.first()`. When a listener opened both a
+     * `catalog.json` subscribe and an `audio/data` subscribe, whichever
+     * arrived first won the routing race — and because the catalog
+     * SUBSCRIBE typically races ahead of the audio one by a few ms,
+     * every Opus frame ended up on the catalog stream. Listeners saw
+     * a perpetually-spinning speaker avatar with no audio.
      *
      * `gate` serialises access to per-group state so concurrent
      * `send` / `startGroup` / `endGroup` / `close` can't race.
      */
     private inner class PublisherStateImpl(
         override val suffix: String,
+        private val track: String,
     ) : MoqLitePublisherHandle {
         private val gate = Mutex()
         private val announceBidis = mutableListOf<AnnounceBidiEntry>()
@@ -760,6 +796,7 @@ class MoqLiteSession internal constructor(
         suspend fun registerInboundSubscription(sub: MoqLiteSubscribe) {
             gate.withLock {
                 if (publisherClosed) return
+                if (sub.track != track) return
                 inboundSubs += sub
             }
         }

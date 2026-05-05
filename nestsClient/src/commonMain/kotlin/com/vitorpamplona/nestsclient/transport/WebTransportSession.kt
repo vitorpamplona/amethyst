@@ -55,8 +55,14 @@ interface WebTransportSession {
      * audio frames is pushed on a fresh uni stream that the publisher
      * opens — see `rs/moq-lite/src/lite/publisher.rs:338`
      * (`session.open_uni()`).
+     *
+     * If [bestEffort] is true, the underlying QUIC stream drops lost
+     * STREAM bytes instead of retransmitting them — for real-time
+     * audio (Opus group streams) this avoids pushing 200-ms-stale
+     * frames after a loss. Default false (RFC 9000 §3.5 reliable byte
+     * sequence).
      */
-    suspend fun openUniStream(): WebTransportWriteStream
+    suspend fun openUniStream(bestEffort: Boolean = false): WebTransportWriteStream
 
     /**
      * Flow of inbound unidirectional streams initiated by the peer.

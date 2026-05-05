@@ -121,7 +121,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
             val speakerSession = MoqLiteSession.client(speakerWt, pumpScope)
             val publisher =
                 InteropDebug.stepSuspending(scope, "host: session.publish(broadcastSuffix=hostPub)") {
-                    speakerSession.publish(broadcastSuffix = hostSigner.pubKey)
+                    speakerSession.publish(broadcastSuffix = hostSigner.pubKey, track = "audio/data")
                 }
 
             // ---- listener side: production code path, unchanged.
@@ -452,7 +452,7 @@ class NostrNestsSustainedSendOutcomesInteropTest {
         val speakerSession = MoqLiteSession.client(speakerWt, pumpScope)
         val publisher =
             InteropDebug.stepSuspending(scope, "host: session.publish(broadcastSuffix=hostPub)") {
-                speakerSession.publish(broadcastSuffix = hostSigner.pubKey)
+                speakerSession.publish(broadcastSuffix = hostSigner.pubKey, track = "audio/data")
             }
 
         val listeners = mutableListOf<com.vitorpamplona.nestsclient.NestsListener>()

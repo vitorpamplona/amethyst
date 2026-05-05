@@ -21,6 +21,7 @@
 package com.vitorpamplona.quic.connection
 
 import com.vitorpamplona.quic.QuicCodecException
+import com.vitorpamplona.quic.connection.recovery.drainAckedSentPackets
 import com.vitorpamplona.quic.frame.AckFrame
 import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
@@ -163,12 +164,68 @@ private fun dispatchFrames(
     for (frame in frames) {
         when (frame) {
             is AckFrame -> {
-                // We don't currently retransmit, so we just absorb ACKs. But
-                // we DO purge our own ACK tracker below the peer's largest
-                // acknowledged: the peer has confirmed receipt of those ACKs,
-                // so we don't need to keep advertising them — without this
-                // the range list grows unboundedly on long connections.
-                state.ackTracker.purgeBelow(frame.largestAcknowledged - frame.firstAckRange)
+                // The peer's `frame.largestAcknowledged` is in OUR
+                // outbound PN space — the inbound `state.ackTracker`
+                // tracks PNs WE RECEIVED from the peer. The previous
+                // purge here was conceptually wrong (mixed two
+                // unrelated number spaces) but happened to mostly
+                // work because both PN spaces grow at similar rates.
+                // The correct purge is now driven by the
+                // ACK-of-ACK dispatch in [QuicConnection.onTokensAcked]
+                // for [RecoveryToken.Ack]: when the peer ACKs the
+                // packet that carried our outbound ACK frame, we
+                // know the peer received our ACK and we can drop
+                // the corresponding inbound PNs from the tracker.
+                // Step 5 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
+                // (a) snapshot the send time of the largest-acked PN
+                // BEFORE drain so we can update RTT, (b) drain ACK'd
+                // packets, (c) if the ACK advanced largestAckedPn AND
+                // any drained packet was ack-eliciting, update RTT,
+                // (d) detect-and-remove lost packets. The lost-token
+                // dispatch (step 6) is a TODO — for step 5 we drop the
+                // returned list on the floor.
+                val largestSentTime = state.sentPackets[frame.largestAcknowledged]?.sentAtMillis
+                val drained = drainAckedSentPackets(state.sentPackets, frame)
+                // Step C of the deferred-follow-ups pass: dispatch ACK
+                // to per-buffer markAcked for Stream / Crypto tokens.
+                // Releases SendBuffer memory and advances its
+                // flushedFloor as low-end ACKs accumulate.
+                for (drainedPacket in drained) {
+                    conn.onTokensAcked(drainedPacket.tokens)
+                }
+                val advancedLargest =
+                    state.largestAckedPn?.let { it < frame.largestAcknowledged } ?: true
+                if (advancedLargest) {
+                    state.largestAckedPn = frame.largestAcknowledged
+                    state.largestAckedSentTimeMs = largestSentTime
+                }
+                if (advancedLargest && largestSentTime != null && drained.any { it.ackEliciting }) {
+                    val ackDelayUs = frame.ackDelay shl conn.config.ackDelayExponent.toInt()
+                    val ackDelayMs = ackDelayUs / 1_000L
+                    conn.lossDetection.onRttSample(
+                        largestAckedSentTimeMs = largestSentTime,
+                        ackDelayMs = ackDelayMs,
+                        nowMs = nowMillis,
+                    )
+                    // Step 7: reset PTO count on any new ack-eliciting
+                    // ACK (RFC 9002 §6.2.1). The peer responded, so the
+                    // exponential backoff resets.
+                    conn.consecutivePtoCount = 0
+                }
+                state.largestAckedPn?.let { largestAckedPn ->
+                    val lost =
+                        conn.lossDetection.detectAndRemoveLost(
+                            sentPackets = state.sentPackets,
+                            largestAckedPn = largestAckedPn,
+                            nowMs = nowMillis,
+                        )
+                    // Step 6: dispatch each lost packet's tokens to the
+                    // matching pending* field. The supersede check (lost
+                    // value still == advertised) lives inside onTokensLost.
+                    for (lostPacket in lost) {
+                        conn.onTokensLost(lostPacket.tokens)
+                    }
+                }
             }
 
             is CryptoFrame -> {
@@ -362,6 +419,12 @@ private fun dispatchFrames(
                 if (conn.status == QuicConnection.Status.HANDSHAKING) {
                     conn.status = QuicConnection.Status.CONNECTED
                 }
+                // RFC 9001 §4.9.2 + §4.1.2: a client confirms the handshake
+                // on receipt of HANDSHAKE_DONE; once confirmed, MUST discard
+                // Handshake keys. Frees the AEAD cipher state and any
+                // residual handshake CRYPTO bookkeeping that's no longer
+                // needed for the lifetime of the connection.
+                conn.handshake.discardKeys()
             }
 
             is PingFrame -> {

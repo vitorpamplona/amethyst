@@ -258,7 +258,7 @@ class MoqLiteSessionTest {
             val (clientSide, serverSide) = FakeWebTransport.pair()
             val session = MoqLiteSession.client(clientSide, pumpScope)
 
-            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
 
             // Relay (serverSide) opens an Announce bidi to us with
             // AnnouncePlease(prefix="").
@@ -283,7 +283,7 @@ class MoqLiteSessionTest {
             val (clientSide, serverSide) = FakeWebTransport.pair()
             val session = MoqLiteSession.client(clientSide, pumpScope)
 
-            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
 
             // Step 1: relay opens Subscribe bidi.
             val subBidi = serverSide.openBidiStream()
@@ -346,7 +346,7 @@ class MoqLiteSessionTest {
             val (clientSide, _) = FakeWebTransport.pair()
             val session = MoqLiteSession.client(clientSide, pumpScope)
 
-            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
             // No relay-opened Subscribe bidi → no subscribers → send is
             // a silent no-op (returns false), matching the listener
             // semantics where the speaker keeps capturing audio even
@@ -363,7 +363,7 @@ class MoqLiteSessionTest {
             val (clientSide, serverSide) = FakeWebTransport.pair()
             val session = MoqLiteSession.client(clientSide, pumpScope)
 
-            val publisher = session.publish(broadcastSuffix = "speakerPubkey")
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
 
             // Relay opens an announce bidi.
             val relayBidi = serverSide.openBidiStream()

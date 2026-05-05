@@ -173,6 +173,79 @@ class QuicConnection(
     internal var advertisedMaxStreamsBidi: Long = config.initialMaxStreamsBidi
 
     /**
+     * RFC 9002 retransmit pending-state for the receive-side flow-
+     * control extensions. Non-null means "the last MAX_STREAMS_UNI
+     * we sent was lost; the writer should re-emit on its next pass".
+     *
+     * The value held is the limit that was lost — meaningful only
+     * when it equals [advertisedMaxStreamsUni], which is the
+     * supersede-check from neqo's `fc.rs::frame_lost` (if a newer,
+     * higher extension has since gone out, the older lost frame is
+     * irrelevant). Step 6 of
+     * `quic/plans/2026-05-04-control-frame-retransmit.md` populates
+     * this field via the loss dispatcher; step 4 (this commit) wires
+     * the writer to drain it before running the rolling-extension
+     * threshold check.
+     *
+     * Caller of any read/write must hold [lock].
+     */
+    internal var pendingMaxStreamsUni: Long? = null
+
+    /** Bidi counterpart of [pendingMaxStreamsUni]. */
+    internal var pendingMaxStreamsBidi: Long? = null
+
+    /** Connection-level MAX_DATA counterpart of [pendingMaxStreamsUni]. */
+    internal var pendingMaxData: Long? = null
+
+    /**
+     * Per-stream MAX_STREAM_DATA pending-state. Keyed by stream id.
+     * Same semantics as [pendingMaxStreamsUni]: present iff a
+     * MAX_STREAM_DATA for that stream was lost and hasn't been
+     * superseded by a higher emit. Wired by step 6.
+     */
+    internal val pendingMaxStreamData: MutableMap<Long, Long> = HashMap()
+
+    /**
+     * Pending retransmits for `NEW_CONNECTION_ID` frames (RFC 9000
+     * §19.15). Keyed by sequence number. Populated on loss via
+     * [onTokensLost]; drained by the writer on the next outbound.
+     * Connection-ID rotation isn't currently triggered by any
+     * application path inside `:quic`, so the public emit API is
+     * limited to test usage — but the retransmit machinery is
+     * complete so any future emit path lands cleanly.
+     */
+    internal val pendingNewConnectionId:
+        MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId> = HashMap()
+
+    /**
+     * RFC 9002 RTT estimator + loss-detection algorithm. Single
+     * shared instance per connection (RTT is per-path; we model a
+     * single path). Per-space `largestAcked*` lives on
+     * [LevelState]. Step 6 wires the loss-detection callback.
+     */
+    internal val lossDetection: com.vitorpamplona.quic.connection.recovery.QuicLossDetection =
+        com.vitorpamplona.quic.connection.recovery
+            .QuicLossDetection()
+
+    /**
+     * RFC 9002 §6.2 Probe Timeout signalling. When the driver loop's
+     * PTO timer fires (no ack-eliciting packet has been ACK'd in
+     * the PTO window), it sets [pendingPing] = true so the writer
+     * emits a PING frame on the next drain. The PING elicits an
+     * ACK from the peer; that ACK runs through loss detection and
+     * declares any in-flight packets lost, triggering retransmit.
+     */
+    internal var pendingPing: Boolean = false
+
+    /**
+     * RFC 9002 §6.2.2 consecutive PTO count. Incremented on each
+     * PTO expiration without an intervening ACK; reset to 0 when an
+     * inbound ACK acknowledges any ack-eliciting packet. The driver
+     * doubles its sleep between probes by `1 shl consecutivePtoCount`.
+     */
+    internal var consecutivePtoCount: Int = 0
+
+    /**
      * Optional supplier of underlying UDP-socket counters. Wired by the
      * platform-specific driver since `UdpSocket`'s counters are
      * JVM-side fields the commonMain side can't see directly.
@@ -404,8 +477,16 @@ class QuicConnection(
             stream
         }
 
-    /** Allocate a new client-initiated unidirectional (write-only) stream. Locked. */
-    suspend fun openUniStream(): QuicStream =
+    /**
+     * Allocate a new client-initiated unidirectional (write-only) stream.
+     * Locked.
+     *
+     * If [bestEffort] is true, the stream's [SendBuffer] drops lost
+     * ranges instead of retransmitting them (see
+     * [QuicStream.bestEffort]). Used for moq-lite group streams
+     * carrying real-time Opus audio.
+     */
+    suspend fun openUniStream(bestEffort: Boolean = false): QuicStream =
         lock.withLock {
             if (nextLocalUniIndex >= peerMaxStreamsUni) {
                 throw QuicStreamLimitException(
@@ -414,7 +495,7 @@ class QuicConnection(
                 )
             }
             val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE)
+            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE, bestEffort = bestEffort)
             stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
             stream.receiveLimit = 0L // can't receive
             streams[id] = stream
@@ -679,6 +760,173 @@ class QuicConnection(
 
     /** Caller must hold [lock]. */
     internal fun streamByIdLocked(id: Long): QuicStream? = streams[id]
+
+    /**
+     * ACK-path counterpart to [onTokensLost]. Called by the parser
+     * after [com.vitorpamplona.quic.connection.recovery.drainAckedSentPackets]
+     * removes the carrying packet from the sent map. Tokens whose
+     * underlying byte ranges live in a [com.vitorpamplona.quic.stream.SendBuffer]
+     * (Stream / Crypto) trigger a [com.vitorpamplona.quic.stream.SendBuffer.markAcked]
+     * call so the buffer can advance its flushedFloor and release
+     * memory. Other token types are ACK-no-ops (the peer's
+     * acknowledgment of a control frame doesn't require any local
+     * action — the frame already did its job by reaching the peer).
+     *
+     * Caller must hold [lock].
+     */
+    internal fun onTokensAcked(tokens: List<com.vitorpamplona.quic.connection.recovery.RecoveryToken>) {
+        for (token in tokens) {
+            when (token) {
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
+                    // ACK-of-ACK: peer has now received our ACK, so
+                    // we can drop everything at-or-below
+                    // [token.largestAcked] from the inbound tracker.
+                    // RFC 9000 §13.2.1 doesn't require us to keep
+                    // re-advertising acknowledged PNs once the peer
+                    // has confirmed receipt of our ACK that covered
+                    // them. Without this the tracker's range list
+                    // grows over the connection lifetime.
+                    levelState(token.level).ackTracker.purgeBelow(token.largestAcked + 1)
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsUni,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsBidi,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxData,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamData,
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId,
+                -> {
+                    // Flow-control extensions and NEW_CONNECTION_ID
+                    // have no per-buffer state to release on ACK; the
+                    // pending* maps are populated only on loss, so an
+                    // ACK for a frame that never lost is naturally
+                    // absent.
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream -> {
+                    // Latch resetAcked = true. Subsequent loss
+                    // notifications for stale RESET_STREAM tokens are
+                    // dropped (see onTokensLost).
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.resetAcked = true
+                    stream.resetEmitPending = false
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending -> {
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.stopSendingAcked = true
+                    stream.stopSendingEmitPending = false
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Stream -> {
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.send.markAcked(offset = token.offset, length = token.length)
+                    if (token.length == 0L && token.fin) {
+                        // FIN-only ACK: treat as zero-length ACK at offset.
+                        // markAcked already handles length==0 ⇒ FIN match.
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Crypto -> {
+                    levelState(token.level).cryptoSend.markAcked(
+                        offset = token.offset,
+                        length = token.length,
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Step 6 of `quic/plans/2026-05-04-control-frame-retransmit.md`:
+     * dispatch the tokens of declared-lost packets to the matching
+     * `pending*` field, applying the supersede check from neqo's
+     * `fc.rs::frame_lost`. The supersede invariant: only re-flag for
+     * retransmit if the lost value still equals the connection's
+     * current advertised cap. If a higher extension has since gone
+     * out, the older lost frame is irrelevant — the newer value
+     * supersedes it.
+     *
+     * Called by the parser's AckFrame handler after
+     * [com.vitorpamplona.quic.connection.recovery.QuicLossDetection.detectAndRemoveLost]
+     * returns the lost set. Caller must hold [lock].
+     */
+    internal fun onTokensLost(tokens: List<com.vitorpamplona.quic.connection.recovery.RecoveryToken>) {
+        for (token in tokens) {
+            when (token) {
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Ack -> {
+                    // ACK frames are not retransmittable per RFC 9000
+                    // §13.2.1; the peer's own ACKs cover newer ranges.
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsUni -> {
+                    if (token.maxStreams == advertisedMaxStreamsUni) {
+                        pendingMaxStreamsUni = token.maxStreams
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamsBidi -> {
+                    if (token.maxStreams == advertisedMaxStreamsBidi) {
+                        pendingMaxStreamsBidi = token.maxStreams
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxData -> {
+                    if (token.maxData == advertisedMaxData) {
+                        pendingMaxData = token.maxData
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.MaxStreamData -> {
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    if (token.maxData == stream.receiveLimit) {
+                        pendingMaxStreamData[token.streamId] = token.maxData
+                    }
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Stream -> {
+                    // Re-queue the lost byte range on the stream's send
+                    // buffer. The next writer drain pulls from the
+                    // retransmit queue first (FIFO ahead of new sends).
+                    // See [com.vitorpamplona.quic.stream.SendBuffer.markLost].
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    stream.send.markLost(
+                        offset = token.offset,
+                        length = token.length,
+                        fin = token.fin,
+                    )
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.Crypto -> {
+                    // Same shape, applied to the per-level CRYPTO buffer.
+                    levelState(token.level).cryptoSend.markLost(
+                        offset = token.offset,
+                        length = token.length,
+                        fin = false,
+                    )
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.ResetStream -> {
+                    // Reliable per RFC 9000 §13.3. Re-flag the
+                    // owning stream's RESET_STREAM emit pending so
+                    // the next writer drain re-emits — unless the
+                    // peer already ACK'd it (resetAcked == true), in
+                    // which case the lost token is a stale duplicate
+                    // and we drop it.
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    if (!stream.resetAcked) stream.resetEmitPending = true
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.StopSending -> {
+                    val stream = streamByIdLocked(token.streamId) ?: continue
+                    if (!stream.stopSendingAcked) stream.stopSendingEmitPending = true
+                }
+
+                is com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId -> {
+                    pendingNewConnectionId[token.sequenceNumber] = token
+                }
+            }
+        }
+    }
 
     companion object {
         /**

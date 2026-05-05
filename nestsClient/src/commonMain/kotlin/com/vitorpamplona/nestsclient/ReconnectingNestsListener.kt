@@ -25,6 +25,7 @@ import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.moq.SubscribeOk
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -351,9 +352,30 @@ private class ReconnectingHandle(
                                 // one extra iteration before the next
                                 // suspend re-checked active state.
                                 throw ce
-                            } catch (_: Throwable) {
+                            } catch (t: Throwable) {
+                                // The opener can throw for a transient
+                                // reason — most commonly: the listener
+                                // joined the room before the speaker started
+                                // publishing, the announce-watch hasn't yet
+                                // surfaced an Active for this broadcast, and
+                                // the relay FINs the SUBSCRIBE bidi without
+                                // a SubscribeOk/SubscribeDrop reply. The
+                                // earlier shape returned `null` and `break`'d
+                                // out of the inner re-issue loop, which made
+                                // a single pre-publisher subscribe permanent
+                                // — the audio never recovered when the
+                                // speaker did come up. Retry with the same
+                                // backoff used between publisher cycles.
+                                Log.w("NestRx") {
+                                    "ReconnectingHandle.opener threw ${t::class.simpleName}: ${t.message} " +
+                                        "— retrying after ${SUBSCRIBE_RETRY_BACKOFF_MS}ms"
+                                }
                                 null
-                            } ?: break
+                            }
+                        if (handle == null) {
+                            delay(SUBSCRIBE_RETRY_BACKOFF_MS)
+                            continue
+                        }
                         liveHandleRef.set(handle)
                         try {
                             handle.objects.collect { frames.emit(it) }
@@ -404,6 +426,15 @@ private class ReconnectingHandle(
         // ~1.3 s of audio headroom; long enough that a permanently-
         // gone publisher doesn't spin the relay with re-subscribes.
         private const val RESUBSCRIBE_BACKOFF_MS = 100L
+
+        // Backoff after an opener throws (typically: subscribe-before-
+        // announce arrives at the relay before the publisher exists,
+        // and the relay FINs the bidi without a SubscribeOk/Drop). One
+        // second is well over moq-rs's typical announce-propagation
+        // latency (< 200 ms in production traces), so the next retry
+        // usually succeeds; long enough that a never-arriving publisher
+        // doesn't hammer the relay either.
+        private const val SUBSCRIBE_RETRY_BACKOFF_MS = 1_000L
 
         private val SYNTH_OK =
             SubscribeOk(
