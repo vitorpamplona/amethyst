@@ -868,7 +868,19 @@ class NestViewModel(
             try {
                 val isMuted = _uiState.value.isMuted
                 val isHushed = pubkey in _uiState.value.locallyHushed
-                val roomPlayer = NestPlayer(decoder, player, viewModelScope)
+                val roomPlayer =
+                    NestPlayer(
+                        decoder = decoder,
+                        player = player,
+                        scope = viewModelScope,
+                        // ~100 ms of audio buffered before the AudioTrack
+                        // starts consuming. Long enough to hide a typical
+                        // Main-thread hiccup (Compose recomposition / GC)
+                        // without making the join feel laggy. Empirically
+                        // tuned in the audio-rooms audit; see NestPlayer
+                        // kdoc for details.
+                        prerollFrames = ROOM_PLAYER_PREROLL_FRAMES,
+                    )
                 // Apply current mute + per-speaker hush state before play()
                 // opens the device so the first frame respects them.
                 player.setMutedSafe(isMuted)
@@ -1245,6 +1257,17 @@ sealed class BroadcastUiState {
  * indicator flicker.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/**
+ * Per-speaker pre-roll: number of decoded PCM frames buffered before the
+ * underlying [com.vitorpamplona.nestsclient.audio.AudioPlayer] starts
+ * consuming. 5 × 20 ms ≈ 100 ms of audio — long enough to mask a typical
+ * Main-thread stall (Compose recomposition / GC) without adding perceptible
+ * join latency. Combines with [com.vitorpamplona.nestsclient.audio.AudioTrackPlayer]'s
+ * ~250 ms AudioTrack buffer for ~350 ms of total slack between the
+ * arrival-of-frame and the underrun horizon.
+ */
+const val ROOM_PLAYER_PREROLL_FRAMES: Int = 5
 
 /**
  * Coalescing interval for [NestViewModel.audioLevels]. The decode loop

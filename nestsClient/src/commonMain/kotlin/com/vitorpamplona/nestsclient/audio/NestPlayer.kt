@@ -45,7 +45,27 @@ class NestPlayer(
     private val decoder: OpusDecoder,
     private val player: AudioPlayer,
     private val scope: CoroutineScope,
+    /**
+     * Number of decoded PCM frames to buffer before starting the underlying
+     * [AudioPlayer]. Without pre-roll, the device begins consuming audio the
+     * instant the first frame arrives and underruns at the first decode that
+     * misses its 20 ms cadence — the most common cause of perceptible
+     * dropouts on devices where Compose recomposition or GC briefly stalls
+     * the decode loop.
+     *
+     * Production callers typically pass `5` (≈ 100 ms) — long enough to mask
+     * a typical Main-thread hiccup, short enough that listeners don't notice
+     * the join latency. Tests pass `0` to preserve the synchronous test
+     * scheduler behaviour the existing assertions rely on.
+     *
+     * Default is `0` so existing tests stand without modification.
+     */
+    private val prerollFrames: Int = 0,
 ) {
+    init {
+        require(prerollFrames >= 0) { "prerollFrames must be >= 0, got $prerollFrames" }
+    }
+
     private var job: Job? = null
     private var stopped = false
 
@@ -73,9 +93,34 @@ class NestPlayer(
         check(!stopped) { "NestPlayer already stopped" }
         check(job == null) { "NestPlayer.play already called" }
 
-        player.start()
+        // Pre-roll buffer holds decoded PCM until either [prerollFrames]
+        // frames have arrived or the upstream flow ends. The underlying
+        // [AudioPlayer] is only started once we have something to flush,
+        // so a flow that never produces PCM (decoder always empty, no
+        // audio in the room) never opens the device.
+        //
+        // Note: `player.start()` is now deferred into the launch body. If
+        // it throws, the failure is reported via `onError` rather than
+        // propagating synchronously to `play()`'s caller. This is
+        // intentional — the device-allocation cost was previously paid
+        // up-front and amplified perceived join latency; pushing it
+        // behind the first decoded frame both lets pre-roll work and
+        // matches the rest of the pipeline's "audible-failure-via-onError"
+        // contract.
         job =
             scope.launch {
+                val preroll = ArrayDeque<ShortArray>(prerollFrames.coerceAtLeast(1))
+                var started = false
+
+                suspend fun startAndFlushIfNeeded() {
+                    if (started) return
+                    if (preroll.isEmpty()) return
+                    player.start()
+                    started = true
+                    while (preroll.isNotEmpty()) {
+                        player.enqueue(preroll.removeFirst())
+                    }
+                }
                 try {
                     objects.collect { obj ->
                         val pcm =
@@ -95,9 +140,21 @@ class NestPlayer(
                             }
                         if (pcm.isNotEmpty()) {
                             onLevel(peakAmplitude(pcm))
-                            player.enqueue(pcm)
+                            if (started) {
+                                player.enqueue(pcm)
+                            } else {
+                                preroll.addLast(pcm)
+                                if (preroll.size >= prerollFrames) {
+                                    startAndFlushIfNeeded()
+                                }
+                            }
                         }
                     }
+                    // Flow ended without enough frames to fill the pre-roll
+                    // (e.g. the publisher cycled before pre-roll was full,
+                    // or the room ended). Flush whatever's queued so any
+                    // already-decoded audio still reaches the device.
+                    startAndFlushIfNeeded()
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {

@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 class NestMoqLiteBroadcaster(
     private val capture: AudioCapture,
     private val encoder: OpusEncoder,
-    private val publisher: MoqLitePublisherHandle,
+    initialPublisher: MoqLitePublisherHandle,
     private val scope: CoroutineScope,
     /**
      * Number of consecutive Opus frames to pack into a single moq-lite
@@ -97,6 +97,26 @@ class NestMoqLiteBroadcaster(
     @Volatile private var stopped: Boolean = false
 
     @Volatile private var muted: Boolean = false
+
+    /**
+     * Active publisher the capture loop pushes frames into. Mutable +
+     * `@Volatile` so [swapPublisher] can atomically retarget the loop
+     * onto a fresh moq-lite session's publisher when the
+     * [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker]
+     * orchestrator recycles the WebTransport session for a JWT
+     * refresh — without restarting capture or the encoder. The
+     * capture loop snapshots this reference once per frame, so a swap
+     * takes effect on the very next frame and any in-flight send on
+     * the previous publisher is allowed to complete (or fail
+     * gracefully, caught by `runCatching`).
+     *
+     * Per-instance group sequence: each publisher restarts at sequence
+     * 0, since the publisher state lives inside [MoqLitePublisherHandle]
+     * (one per moq-lite session). That's fine — listeners use group
+     * sequence for ordering within a single subscription's uni-stream-
+     * per-group flow, not across publisher cycles.
+     */
+    @Volatile private var publisher: MoqLitePublisherHandle = initialPublisher
 
     /**
      * Start capturing + encoding + publishing in the background.
@@ -161,6 +181,16 @@ class NestMoqLiteBroadcaster(
                 // we bail. publisher.send returning `false` (no inbound
                 // subscriber) is NOT counted — empty rooms are normal.
                 var consecutiveSendErrors = 0
+                // Track which publisher we last sent to. On swapPublisher
+                // (JWT-refresh hot swap), the snapshot below picks up the
+                // new reference; we reset framesInCurrentGroup so the
+                // first frame on the new publisher starts a fresh group
+                // (the new publisher's group sequence is 0 anyway). Without
+                // this, a mid-group swap would feed the new publisher
+                // frames as if they continued the old publisher's group,
+                // and the relay would see two unrelated uni streams under
+                // the same logical group.
+                var lastPublisher: MoqLitePublisherHandle = publisher
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
@@ -181,16 +211,28 @@ class NestMoqLiteBroadcaster(
                             }
                         if (opus.isEmpty()) continue
                         if (muted) continue
+                        // Snapshot the publisher reference once per frame.
+                        // If [swapPublisher] mid-loop installed a new
+                        // reference, pick it up here and reset the group
+                        // counter so the new publisher's first frame
+                        // starts a clean group. Frames already in flight
+                        // on the previous publisher are allowed to
+                        // complete (or fail gracefully on `runCatching`).
+                        val current = publisher
+                        if (current !== lastPublisher) {
+                            framesInCurrentGroup = 0
+                            lastPublisher = current
+                        }
                         // Pack [framesPerGroup] consecutive Opus frames
                         // into the same moq-lite group / QUIC uni stream
                         // before FINning. See the [framesPerGroup] kdoc
                         // for the production cliff this works around.
                         val sendOutcome =
                             runCatching {
-                                publisher.send(opus)
+                                current.send(opus)
                                 framesInCurrentGroup += 1
                                 if (framesInCurrentGroup >= framesPerGroup) {
-                                    publisher.endGroup()
+                                    current.endGroup()
                                     framesInCurrentGroup = 0
                                 }
                             }
@@ -235,11 +277,14 @@ class NestMoqLiteBroadcaster(
                             }
                     }
                     // EOF on the capture side. Flush whatever's in the
-                    // open group so the relay sees its FIN and the
-                    // listener doesn't sit on a half-delivered group
-                    // buffer. Mirrors the per-group endGroup above.
+                    // open group on the most-recently-used publisher so
+                    // the relay sees its FIN and the listener doesn't
+                    // sit on a half-delivered group buffer. Use
+                    // [lastPublisher] (not the live [publisher] field)
+                    // because a swap-then-EOF would otherwise FIN a
+                    // group on a publisher that didn't open it.
                     if (framesInCurrentGroup > 0) {
-                        runCatching { publisher.endGroup() }
+                        runCatching { lastPublisher.endGroup() }
                     }
                 } catch (ce: CancellationException) {
                     throw ce
@@ -262,6 +307,38 @@ class NestMoqLiteBroadcaster(
     fun setMuted(muted: Boolean) {
         if (stopped) return
         this.muted = muted
+    }
+
+    /**
+     * Hot-swap the underlying publisher. Used by
+     * [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker]'s
+     * orchestrator to retarget the broadcaster onto a fresh moq-lite
+     * session's publisher when the JWT-refresh window fires — without
+     * tearing down the AudioRecord / Opus encoder. Returns the previous
+     * publisher reference so the caller can close it after the new one
+     * is wired up.
+     *
+     * **Closing the returned old publisher** is the caller's
+     * responsibility — this method only swaps the reference so the
+     * capture loop's next snapshot picks up the new publisher. The
+     * caller typically does:
+     *
+     *   1. Open a new moq-lite session, mint a new publisher on it.
+     *   2. Call [swapPublisher] with the new publisher; cache the old.
+     *   3. Close the old publisher (FINs the announce bidi + current
+     *      group's uni stream on the old session).
+     *   4. Close the old moq-lite session (drops the WebTransport).
+     *
+     * No-op if the broadcaster is already [stop]ped (returns null) — the
+     * capture loop is already gone, so swapping in a new publisher would
+     * just leak it.
+     */
+    fun swapPublisher(newPublisher: MoqLitePublisherHandle): MoqLitePublisherHandle? {
+        if (stopped) return null
+        val old = publisher
+        if (old === newPublisher) return null
+        publisher = newPublisher
+        return old
     }
 
     /**
