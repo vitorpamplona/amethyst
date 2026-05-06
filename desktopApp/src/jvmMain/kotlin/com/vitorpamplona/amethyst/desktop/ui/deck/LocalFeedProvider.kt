@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionRepository
 import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionSerializer
 import com.vitorpamplona.amethyst.commons.feeds.custom.defaultFeeds
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.launchIn
@@ -72,5 +73,10 @@ val LocalFeedScope =
 
 val LocalDesktopCache =
     compositionLocalOf<DesktopLocalCache?> {
+        null
+    }
+
+val LocalRelayManager =
+    compositionLocalOf<DesktopRelayConnectionManager?> {
         null
     }

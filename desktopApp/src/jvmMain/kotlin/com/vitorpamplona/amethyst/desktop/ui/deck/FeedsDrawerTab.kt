@@ -67,6 +67,7 @@ fun FeedsDrawerTab(
     onSelectFeed: (FeedDefinition) -> Unit,
     onDismiss: () -> Unit,
     localCache: DesktopLocalCache? = LocalDesktopCache.current,
+    relayManager: com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager? = LocalRelayManager.current,
     feedRepository: FeedDefinitionRepository = LocalFeedRepository.current,
     scope: CoroutineScope = LocalFeedScope.current,
 ) {
@@ -79,6 +80,7 @@ fun FeedsDrawerTab(
     if (showBuilder) {
         FeedBuilderDialog(
             localCache = localCache,
+            relayManager = relayManager,
             onSave = { feed ->
                 scope.launch { feedRepository.add(feed) }
                 showBuilder = false
