@@ -94,19 +94,66 @@ jobs:
           restore-keys: |
             vlcsetup-${{ runner.os }}-
 
-      # Wrap the Gradle invocation in nick-fields/retry so a transient
-      # SocketTimeoutException inside vlcDownload / upxDownload (the de.undercouch
-      # Download tasks talking to get.videolan.org) doesn't sink the whole job.
-      # The in-build retry budget (retries(4) + 5min readTimeout in
-      # desktopApp/build.gradle.kts) handles short blips inside one task; this
-      # outer retry handles the case where get.videolan.org is unreachable for
-      # long enough to exhaust that budget — matches the release workflow.
+      # Pre-fetch VLC + UPX archives into ~/.gradle/vlcSetup before invoking
+      # Gradle. The vlc-setup plugin (ir.mahozad.vlc-setup 0.1.0) writes its
+      # downloads to ${gradleUserHomeDir}/vlcSetup/ and sets overwrite(false),
+      # so an existing file there makes vlcDownload / upxDownload up-to-date
+      # and Gradle never opens a socket to videolan.org.
+      #
+      # Why curl instead of relying on de.undercouch.gradle.tasks.download:
+      # curl --retry-all-errors with a long --retry-max-time tolerates a
+      # sustained get.videolan.org outage far better than the plugin's inner
+      # retry budget (retries(4) + 5min readTimeout in build.gradle.kts),
+      # which has been hitting SocketTimeoutException on Windows runners.
+      #
+      # Cache hit: the file is already on disk, fetch() short-circuits, this
+      # step takes <1s. Cache miss: curl downloads with aggressive retries,
+      # populating the cache for the next run.
+      #
+      # Versions are pinned to match desktopApp/build.gradle.kts (vlcVersion
+      # = 3.0.21) and the vlc-setup extension default (upxVersion = 4.2.4).
+      # macOS does not download UPX — UPX cannot compress .dylib files.
+      - name: Pre-fetch VLC + UPX archives
+        env:
+          VLC_VERSION: "3.0.21"
+          UPX_VERSION: "4.2.4"
+        run: |
+          set -euo pipefail
+          DEST="$HOME/.gradle/vlcSetup"
+          mkdir -p "$DEST"
+          fetch() {
+            local url="$1" out="$2"
+            if [[ -s "$out" ]]; then
+              echo "cached: $out"
+              return 0
+            fi
+            echo "fetching: $url"
+            curl -fL --retry 10 --retry-delay 5 --retry-all-errors \
+                 --retry-max-time 900 --connect-timeout 30 \
+                 -o "$out.part" "$url"
+            mv "$out.part" "$out"
+          }
+          case "${{ runner.os }}" in
+            Windows)
+              fetch "https://get.videolan.org/vlc/${VLC_VERSION}/win64/vlc-${VLC_VERSION}-win64.zip" \
+                    "$DEST/vlc-${VLC_VERSION}.zip"
+              fetch "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-win64.zip" \
+                    "$DEST/upx-${UPX_VERSION}.zip"
+              ;;
+            Linux)
+              fetch "https://repo1.maven.org/maven2/ir/mahozad/vlc-plugins-linux/${VLC_VERSION}/vlc-plugins-linux-${VLC_VERSION}.jar" \
+                    "$DEST/vlc-${VLC_VERSION}.jar"
+              fetch "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz" \
+                    "$DEST/upx-${UPX_VERSION}.tar.xz"
+              ;;
+            macOS)
+              fetch "https://get.videolan.org/vlc/${VLC_VERSION}/macosx/vlc-${VLC_VERSION}-universal.dmg" \
+                    "$DEST/vlc-${VLC_VERSION}.dmg"
+              ;;
+          esac
+
       - name: Test + Build Desktop (gradle)
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
-        with:
-          max_attempts: 2
-          timeout_minutes: 45
-          command: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}
+        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
