@@ -33,7 +33,7 @@ class MoqLiteHangCatalogTest {
         val expected =
             "{\"audio\":{\"renditions\":{\"audio/data\":{" +
                 "\"codec\":\"opus\",\"container\":{\"kind\":\"legacy\"}," +
-                "\"sampleRate\":48000,\"numberOfChannels\":1}}}}"
+                "\"sampleRate\":48000,\"numberOfChannels\":1,\"jitter\":20}}}}"
         val actual =
             MoqLiteHangCatalog.opusMono48k("audio/data").encodeJsonBytes().decodeToString()
         assertEquals(expected, actual)

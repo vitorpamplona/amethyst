@@ -40,6 +40,7 @@ import kotlinx.serialization.json.Json
  *           "container": { "kind": "legacy" },
  *           "sampleRate": 48000,
  *           "numberOfChannels": 1,
+ *           "jitter": 20,              // ms; matches one Opus frame
  *           "bitrate": 32000           // optional
  *         }
  *       }
@@ -67,6 +68,15 @@ internal data class MoqLiteHangCatalog(
         val container: Container,
         val sampleRate: Int,
         val numberOfChannels: Int,
+        /**
+         * Publisher-side cadence hint (ms). hang.js's watcher uses
+         * this to size its jitter buffer — emit a real value rather
+         * than relying on the watcher's fallback default. For Opus
+         * this is the codec frame duration (20 ms at 48 kHz / 960
+         * samples) and matches what hang.js's encoder emits at
+         * `js/publish/src/audio/encoder.ts:#runConfig`.
+         */
+        val jitter: Int,
     )
 
     @Serializable
@@ -124,9 +134,20 @@ internal data class MoqLiteHangCatalog(
                                         container = Container(kind = "legacy"),
                                         sampleRate = 48_000,
                                         numberOfChannels = 1,
+                                        jitter = OPUS_FRAME_DURATION_MS,
                                     ),
                             ),
                     ),
             )
+
+        /**
+         * Opus frame duration in milliseconds — 960 samples / 48 kHz =
+         * 20 ms. Matches
+         * [com.vitorpamplona.nestsclient.audio.Audio.FRAME_SIZE_SAMPLES].
+         * Published as the catalog `jitter` hint so hang.js's watcher
+         * sizes its jitter buffer to one Opus frame, the natural
+         * cadence of our encoder.
+         */
+        private const val OPUS_FRAME_DURATION_MS: Int = 20
     }
 }

@@ -137,7 +137,7 @@ class RoomSpeakerCatalogTest {
         val emitted =
             "{\"audio\":{\"renditions\":{\"audio/data\":{" +
                 "\"codec\":\"opus\",\"container\":{\"kind\":\"legacy\"}," +
-                "\"sampleRate\":48000,\"numberOfChannels\":1}}}}"
+                "\"sampleRate\":48000,\"numberOfChannels\":1,\"jitter\":20}}}}"
         val catalog = RoomSpeakerCatalog.parseOrNull(emitted.encodeToByteArray())
         assertNotNull(catalog)
         val rendition = catalog.primaryAudio()
@@ -146,5 +146,10 @@ class RoomSpeakerCatalogTest {
         assertEquals("legacy", rendition.container?.kind)
         assertEquals(48_000, rendition.sampleRate)
         assertEquals(1, rendition.numberOfChannels)
+        // `jitter` is intentionally not asserted on `rendition` — the
+        // commons-side parser drops unknown fields via the JsonMapper's
+        // `ignoreUnknownKeys = true`. Adding it to `RoomSpeakerCatalog`
+        // is forward work; the byte-exact match in the literal above
+        // already pins the wire shape.
     }
 }
