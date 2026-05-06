@@ -30,14 +30,13 @@ reorder / migration scenarios that are awkward to reproduce in unit tests.
 # In our repo:
 make -C quic/interop build
 
-# In a sibling clone of quic-interop-runner, add to implementations.json:
-"amethyst": {
-    "image": "amethyst-quic-interop:latest",
-    "url":   "https://github.com/vitorpamplona/amethyst",
-    "role":  "client"
-}
+# In a sibling clone of quic-interop-runner, merge our entry into
+# implementations.json (snippet checked in at quic/interop/quic-interop-runner-snippet.json):
+jq -s '.[0] * .[1]' implementations.json \
+   ../amethyst/quic/interop/quic-interop-runner-snippet.json \
+   > implementations.json.new && mv implementations.json.new implementations.json
 
-python run.py -d -i amethyst -s aioquic -t handshake --log-dir ./logs
+python run.py -d -i amethyst -s aioquic -t handshake,chacha20 --log-dir ./logs
 ```
 
 Inspect `./logs/<run>/client_qlog/*.qlog` in qvis when something breaks.

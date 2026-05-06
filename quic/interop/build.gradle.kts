@@ -36,11 +36,16 @@ sourceSets {
     main {
         kotlin.srcDir("src/main/kotlin")
     }
+    test {
+        kotlin.srcDir("src/test/kotlin")
+    }
 }
 
 dependencies {
     implementation(project(":quic"))
     implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(libs.kotlin.test)
 }
 
 application {

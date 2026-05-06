@@ -125,9 +125,6 @@ private fun runHandshakeTest(
                             ),
                     extraSecretsListener = keyLogger?.listener,
                 )
-            // clientRandom is null until QuicConnection.start() runs the TLS
-            // state machine, so the logger reads it lazily during flush().
-            keyLogger?.bindConnection(conn)
             val driver = QuicConnectionDriver(conn, socket, scope)
             driver.start()
 
@@ -142,7 +139,7 @@ private fun runHandshakeTest(
                     else -> "failed: ${handshake.exceptionOrNull()?.message ?: "?"}"
                 }
             runCatching { driver.close() }
-            keyLogger?.flush()
+            conn.tls.clientRandom?.let { keyLogger?.flush(it) }
             delay(50)
             result
         }
@@ -179,10 +176,9 @@ private fun parseFirstTarget(requests: String): Pair<String, Int>? {
  *   CLIENT_TRAFFIC_SECRET_0 <client_random_hex> <secret_hex>
  *   SERVER_TRAFFIC_SECRET_0 <client_random_hex> <secret_hex>
  */
-private class SslKeyLogger(
+internal class SslKeyLogger(
     private val file: File,
 ) {
-    private var clientRandomLookup: (() -> ByteArray?)? = null
     private val pending = mutableListOf<Pair<String, ByteArray>>()
 
     val listener: TlsSecretsListener =
@@ -208,13 +204,8 @@ private class SslKeyLogger(
             override fun onHandshakeComplete() = Unit
         }
 
-    fun bindConnection(conn: QuicConnection) {
-        clientRandomLookup = { conn.tls.clientRandom }
-    }
-
-    fun flush() {
-        val random = clientRandomLookup?.invoke() ?: return
-        val randomHex = random.toHex()
+    fun flush(clientRandom: ByteArray) {
+        val randomHex = clientRandom.toHex()
         file.parentFile?.mkdirs()
         file.appendText(
             buildString {
@@ -232,7 +223,7 @@ private class SslKeyLogger(
     }
 }
 
-private fun ByteArray.toHex(): String =
+internal fun ByteArray.toHex(): String =
     buildString(size * 2) {
         for (b in this@toHex) {
             val v = b.toInt() and 0xff
