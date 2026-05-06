@@ -189,21 +189,16 @@ class CliffDetectorTest {
     }
 
     @Test
-    fun cooldownSuppressesRecycleEvenWhenStalled() {
-        // After a recycle, the wrapper opens a fresh QUIC transport.
-        // The new session has no `lastFrameAt` entries yet for any
-        // pubkey; without a cooldown we would re-trigger on the
-        // very next 1 s tick because the prior tick's stalled
-        // pubkeys still age past the threshold (their lastFrameAt
-        // hasn't been updated by the new session yet). 30 s cooldown
-        // covers the typical reconnect handshake AND gives moq-rs
-        // time to drain its per-subscriber forward queue from the
-        // prior subscription before the new subscribe lands.
+    fun postRecycleGraceSuppressesEvenAtAttemptZero() {
+        // Inside the 3 s post-recycle handshake window, never recycle
+        // — the wrapper is still tearing down + reopening QUIC, so
+        // "no frames since recycle" is just the handshake, not a
+        // relay-side cliff.
         val ts = TestTimeSource()
         val frameMark = ts.markNow()
-        ts += 4_500.milliseconds // past threshold
-        val recycleMark = ts.markNow() // recycle just fired
-        ts += 5_000.milliseconds // 5 s into cooldown — well within 30 s window
+        ts += 4_500.milliseconds
+        val recycleMark = ts.markNow()
+        ts += 2_000.milliseconds // inside 3 s grace
 
         val result =
             computeStalledSpeakers(
@@ -211,21 +206,22 @@ class CliffDetectorTest {
                 announcedSpeakers = setOf(ALICE),
                 lastFrameAt = mapOf(ALICE to frameMark),
                 lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 0,
             )
         assertTrue(result.isEmpty())
     }
 
     @Test
-    fun cooldownReleasesAfterTimeoutPasses() {
-        // Once cooldown elapses, a still-stalled subscription
-        // becomes eligible to recycle again. Important for the
-        // case where the recycle didn't actually fix the cliff —
-        // we want a second attempt rather than getting wedged.
+    fun attemptZeroFiresImmediatelyOnceGracePasses() {
+        // After a recovered-then-restall pattern: counter has been
+        // reset by `onSpeakerActivity`, so even though there's a
+        // prior recycleMark, the next cliff fires as soon as the
+        // 3 s grace passes — no extended backoff.
         val ts = TestTimeSource()
         val frameMark = ts.markNow()
         ts += 4_500.milliseconds
         val recycleMark = ts.markNow()
-        ts += 30_001.milliseconds // 1 ms past 30 s cooldown
+        ts += 3_500.milliseconds // past 3 s grace, attempt=0 schedule = 0 ms
 
         val result =
             computeStalledSpeakers(
@@ -233,8 +229,162 @@ class CliffDetectorTest {
                 announcedSpeakers = setOf(ALICE),
                 lastFrameAt = mapOf(ALICE to frameMark),
                 lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 0,
             )
         assertEquals(listOf(ALICE), result)
+    }
+
+    @Test
+    fun attemptOneBackoffSuppressesUntilFiveSeconds() {
+        // First failed recycle: schedule says wait 5 s before next.
+        // 4 s in: still suppressed.
+        val ts = TestTimeSource()
+        val frameMark = ts.markNow()
+        ts += 4_500.milliseconds
+        val recycleMark = ts.markNow()
+        ts += 4_000.milliseconds
+
+        val result =
+            computeStalledSpeakers(
+                activeSpeakers = setOf(ALICE),
+                announcedSpeakers = setOf(ALICE),
+                lastFrameAt = mapOf(ALICE to frameMark),
+                lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 1,
+            )
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun attemptOneBackoffReleasesAtFiveSeconds() {
+        val ts = TestTimeSource()
+        val frameMark = ts.markNow()
+        ts += 4_500.milliseconds
+        val recycleMark = ts.markNow()
+        ts += 5_000.milliseconds // exactly at attempt-1 boundary
+
+        val result =
+            computeStalledSpeakers(
+                activeSpeakers = setOf(ALICE),
+                announcedSpeakers = setOf(ALICE),
+                lastFrameAt = mapOf(ALICE to frameMark),
+                lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 1,
+            )
+        assertEquals(listOf(ALICE), result)
+    }
+
+    @Test
+    fun attemptTwoBackoffSuppressesUntilTwelveSeconds() {
+        val ts = TestTimeSource()
+        val frameMark = ts.markNow()
+        ts += 4_500.milliseconds
+        val recycleMark = ts.markNow()
+        ts += 11_000.milliseconds
+
+        val result =
+            computeStalledSpeakers(
+                activeSpeakers = setOf(ALICE),
+                announcedSpeakers = setOf(ALICE),
+                lastFrameAt = mapOf(ALICE to frameMark),
+                lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 2,
+            )
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun attemptTwoBackoffReleasesPastTwelveSeconds() {
+        val ts = TestTimeSource()
+        val frameMark = ts.markNow()
+        ts += 4_500.milliseconds
+        val recycleMark = ts.markNow()
+        ts += 12_500.milliseconds
+
+        val result =
+            computeStalledSpeakers(
+                activeSpeakers = setOf(ALICE),
+                announcedSpeakers = setOf(ALICE),
+                lastFrameAt = mapOf(ALICE to frameMark),
+                lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 2,
+            )
+        assertEquals(listOf(ALICE), result)
+    }
+
+    @Test
+    fun attemptFourCapsAtThirtySecondMax() {
+        // Fourth and beyond consecutive failed recycle: backoff
+        // saturates at the 30 s cap (matching the original flat
+        // cooldown — by this point we ARE the moq-rs-protection
+        // case the old constant existed for).
+        val ts = TestTimeSource()
+        val frameMark = ts.markNow()
+        ts += 4_500.milliseconds
+        val recycleMark = ts.markNow()
+        ts += 25_000.milliseconds // past attempt-3 (24 s), inside attempt-4 cap (30 s)
+
+        val resultStillSuppressed =
+            computeStalledSpeakers(
+                activeSpeakers = setOf(ALICE),
+                announcedSpeakers = setOf(ALICE),
+                lastFrameAt = mapOf(ALICE to frameMark),
+                lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 4,
+            )
+        assertTrue(resultStillSuppressed.isEmpty())
+
+        ts += 6_000.milliseconds // now past 30 s cap
+        val resultReleased =
+            computeStalledSpeakers(
+                activeSpeakers = setOf(ALICE),
+                announcedSpeakers = setOf(ALICE),
+                lastFrameAt = mapOf(ALICE to frameMark),
+                lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 4,
+            )
+        assertEquals(listOf(ALICE), resultReleased)
+    }
+
+    @Test
+    fun customBackoffFunctionIsHonored() {
+        // A test can override the schedule (e.g. shorter intervals
+        // for unit tests that don't want to march through 30 s of
+        // virtual time) without mutating the production constants.
+        val ts = TestTimeSource()
+        val frameMark = ts.markNow()
+        ts += 3_000.milliseconds
+        val recycleMark = ts.markNow()
+        ts += 1_000.milliseconds // past grace=500, past tightBackoff(1)=750
+
+        val tightBackoff = { attempt: Int -> if (attempt <= 0) 0L else 750L }
+        val result =
+            computeStalledSpeakers(
+                activeSpeakers = setOf(ALICE),
+                announcedSpeakers = setOf(ALICE),
+                lastFrameAt = mapOf(ALICE to frameMark),
+                lastRecycleAt = recycleMark,
+                consecutiveFailedRecycles = 1,
+                postRecycleGraceMs = 500L,
+                backoffForAttempt = tightBackoff,
+            )
+        assertEquals(listOf(ALICE), result)
+    }
+
+    @Test
+    fun defaultBackoffSchedulePinsValues() {
+        // Pin the production schedule so a future tweak is visible
+        // in code review. attempt 0 → immediate, 1 → 5 s, 2 → 12 s,
+        // 3 → 24 s, 4+ → 30 s cap. Cumulative wall-clock to the
+        // Nth recycle: 0, 5, 17, 41, 71 s — slower than the
+        // 4-recycles-in-30 s pattern that wedged moq-rs in
+        // commit ea08c43.
+        assertEquals(0L, defaultCliffBackoffMs(0))
+        assertEquals(5_000L, defaultCliffBackoffMs(1))
+        assertEquals(12_000L, defaultCliffBackoffMs(2))
+        assertEquals(24_000L, defaultCliffBackoffMs(3))
+        assertEquals(30_000L, defaultCliffBackoffMs(4))
+        assertEquals(30_000L, defaultCliffBackoffMs(10))
     }
 
     @Test
