@@ -39,42 +39,46 @@ Added on top of the Phase 1 scaffolding:
   for Opus look-ahead + relay buffering). Verified green on Linux
   x86_64.
 
-## Known gap — Amethyst speaker → hang-listen (I1 forward direction)
+## I1 — Amethyst speaker → hang-listen — green at `framesPerGroup=5`
 
-Wired in `HangInteropTest` initially as
-`amethyst_speaker_to_hang_listener_static_tone_440` but it doesn't
-pass yet. Symptom: the hang `Container::Legacy` decoder receives
-each `moq-lite Group { subscribe, sequence }` control message but
-never receives the per-frame `varint(timestamp_us) + opus` payload
-that should follow on the same uni stream. Both sides agree on
-`moq-lite-03`, the audio rendition catalog parses correctly, the
-audio SUBSCRIBE registers on the speaker's audio publisher
-(`inboundSubs.size=1`), and the broadcaster's send loop reports
-50 frames/sec going out — yet hang-listen sees no
-`varint(size) + bytes` after each Group header.
+Initial diagnosis (Kotlin speaker → hang-listen sees `Group {
+subscribe, sequence }` headers but no frame payloads) was bisected
+by adding `KotlinSpeakerKotlinListenerThroughNativeRelayTest` —
+a Kotlin↔Kotlin path through the same `moq-relay` 0.10.x. That
+test reproduced the failure too, ruling out a Kotlin↔Rust-specific
+mismatch. Bisecting `framesPerGroup`:
 
-The race fix in the test (`speaker.startBroadcasting()` before
-spawning `hang-listen`) is needed to keep the catalog publisher's
-`setOnNewSubscriber` hook installed in time, but doesn't unblock
-the audio path. The catalog uni stream's frame data DOES make it
-through — only the audio uni stream's frames are lost. The bug is
-likely in `:nestsClient`'s audio uni-stream framing (in
-`MoqLiteSession.openGroupStream` / `PublisherStateImpl.send`) and
-needs a wire-byte capture against the existing Kotlin↔Kotlin
-listener path to confirm the issue is symmetric (i.e. only Rust
-fails to read) or producer-side (Kotlin fails to write the frame
-size prefix the way the spec calls for). The smoke-test version
-`HangInteropTest.rust_hang_publish_to_rust_hang_listener_round_trip_440`
-proves the harness + cargo workspace + JVM Opus all work; the
-Kotlin-speaker path is gated behind this open issue and tracked
-in this doc.
+  - `framesPerGroup = 1` (one frame per uni stream): **passes**
+  - `framesPerGroup = 5` (the value
+    `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`
+    recommends): **passes**
+  - `framesPerGroup = 50` (the repo's current
+    `NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP`): **fails**
 
-When picking up: replace the test body with the speaker-→-listener
-shape from the plan's "Patterns" section (already prototyped in
-the deleted `amethyst_speaker_to_hang_listener_static_tone_440`),
-and capture the first audio uni stream's bytes via a custom
-`WebTransportFactory` that sniffs writes — then compare against
-what the Rust subscriber's `run_group` parser expects.
+The 50-frame default writes ~6 KB onto a single uni stream over
+~1 s, which exceeds moq-relay 0.10.25's per-subscriber forward
+buffer; the relay forwards the Group control header but holds the
+frame data, never delivering it downstream. This matches the
+audit summarised in the cliff-investigation plan: the bug is a
+moq-relay 0.10.x policy interacting with our publish cadence, not
+a wire-format defect on either side.
+
+`HangInteropTest.amethyst_speaker_to_hang_listener_static_tone_440`
+now pins `framesPerGroup = 5` to match what the cliff plan
+already documents as the safe production cadence. The Kotlin↔
+Kotlin diagnostic test
+`KotlinSpeakerKotlinListenerThroughNativeRelayTest`
+also pins `framesPerGroup = 5` and is kept as a regression for
+the cadence interaction — if a future relay bump changes the
+ceiling, both tests will trip together and the failure will be
+attributable in one place.
+
+**Follow-up (out of scope here):** the repo's
+`NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP = 50` should
+move down to `5` to match the cliff plan and the values our
+production deployment already uses on the wire. That's a
+production-code change, separate from these test plumbing
+deliverables.
 
 **Origin:** companion to `nestsClient/plans/2026-05-06-cross-stack-interop-test.md`.
 This file records what actually shipped in Phase 1, the deviations from

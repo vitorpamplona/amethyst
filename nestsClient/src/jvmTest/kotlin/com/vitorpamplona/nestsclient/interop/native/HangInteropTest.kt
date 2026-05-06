@@ -20,8 +20,23 @@
  */
 package com.vitorpamplona.nestsclient.interop.native
 
+import com.vitorpamplona.nestsclient.NestsClient
+import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.audio.AudioFormat
+import com.vitorpamplona.nestsclient.audio.JvmOpusEncoder
 import com.vitorpamplona.nestsclient.audio.PcmAssertions
+import com.vitorpamplona.nestsclient.audio.SineWaveAudioCapture
+import com.vitorpamplona.nestsclient.connectNestsSpeaker
+import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -38,31 +53,134 @@ import kotlin.test.assertTrue
  * [NativeMoqRelayHarness] (i.e. through the same `moq-relay`
  * subprocess Amethyst tests use).
  *
- * Phase 2 ships the **Rust↔Rust** scenario — a pure-Rust round-trip
- * over our harness. This proves:
- *   - the cargo workspace at `cli/hang-interop/` builds binaries
- *     that interop with `moq-relay 0.10.x` over `moq-lite-03`;
- *   - the harness's relay configuration (`--auth-public ""`, self-
- *     signed TLS, sandbox-IPv4 client bind) accepts real publishers
- *     and subscribers;
- *   - signal-domain assertions over a 5 s 440 Hz tone catch any
- *     wire-format drift in either binary.
+ * Phase 2 ships:
+ *   - **I1 forward**: Amethyst Kotlin speaker → `hang-listen`. The
+ *     speaker pins `framesPerGroup = 5` (per the cliff-investigation
+ *     plan); larger groups overflow moq-relay 0.10.x's per-subscriber
+ *     buffer and the relay holds frame bytes without forwarding.
+ *     Diagnosed via the companion
+ *     [KotlinSpeakerKotlinListenerThroughNativeRelayTest] which
+ *     reproduces the same cliff Kotlin↔Kotlin.
+ *   - **Rust↔Rust** round-trip: pure-Rust through our harness, proves
+ *     the cargo workspace + relay config + `moq-lite-03` ALPN.
  *
- * **Phase 2 deferred**: the **Amethyst speaker → hang-listen**
- * scenario (the spec's I1) is wired in `:nestsClient` but currently
- * fails because the Kotlin speaker's audio uni stream isn't
- * delivering frame bytes to the upstream hang `Container::Legacy`
- * decoder — the Group control message arrives but no
- * `varint(timestamp_us) + opus` payload follows. Tracked in
- * `nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md`.
- *
- * Gated by `-DnestsHangInterop=true`.
+ * Both scenarios assert FFT peak / ZCR / sample-count on the decoded
+ * Float32 PCM hang-listen wrote to disk. Gated by `-DnestsHangInterop=true`.
  */
 class HangInteropTest {
     @BeforeTest
     fun gate() {
         NativeMoqRelayHarness.assumeHangInterop()
     }
+
+    /**
+     * I1 — Amethyst Kotlin speaker → reference `hang-listen`. The
+     * speaker uses 5 frames per moq-lite group; the relay's per-
+     * subscriber forward queue keeps up at that cadence (per
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`).
+     * Asserts FFT peak at 440 Hz and ZCR at 880/sec on the decoded
+     * PCM hang-listen wrote to disk.
+     */
+    @Test
+    fun amethyst_speaker_to_hang_listener_static_tone_440() =
+        runBlocking {
+            val harness = NativeMoqRelayHarness.shared()
+
+            val signer: NostrSigner = NostrSignerInternal(KeyPair())
+            val pubkey = signer.pubKey
+            val roomId = "rt-${UUID.randomUUID()}"
+            val room =
+                NestsRoomConfig(
+                    authBaseUrl = "<unused-public-relay>",
+                    endpoint = harness.relayUrl,
+                    hostPubkey = pubkey,
+                    roomId = roomId,
+                )
+            val moqNamespace = room.moqNamespace()
+
+            val pcmFile = File.createTempFile("hang-listen-pcm", ".bin").also { it.deleteOnExit() }
+
+            val pumpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            val transport =
+                QuicWebTransportFactory(
+                    certificateValidator = PermissiveCertificateValidator(),
+                )
+
+            // Sequence: speaker fully up → spawn hang-listen.
+            // Catches the `setOnNewSubscriber` race in
+            // MoqLiteNestsSpeaker — the catalog hook is set AFTER
+            // session.publish() returns, so a subscriber that races
+            // in faster registers with hook=null and never gets the
+            // catalog. Letting the hook install before hang-listen
+            // attaches sidesteps this for the test.
+            lateinit var listenProc: Process
+            try {
+                val speaker =
+                    connectNestsSpeaker(
+                        httpClient = StaticTokenNestsClient,
+                        transport = transport,
+                        scope = pumpScope,
+                        room = room,
+                        signer = signer,
+                        speakerPubkeyHex = pubkey,
+                        captureFactory = { SineWaveAudioCapture(freqHz = 440) },
+                        encoderFactory = { JvmOpusEncoder() },
+                        // Per cliff-investigation plan: 5 frames/group
+                        // = 10 streams/sec, comfortably within
+                        // moq-relay 0.10's per-subscriber forward
+                        // ceiling. The repo's current
+                        // `DEFAULT_FRAMES_PER_GROUP=50` exceeds the
+                        // moq-relay 0.10.x stream-data buffer for a
+                        // single uni stream and the audio frames
+                        // never reach downstream subscribers.
+                        framesPerGroup = 5,
+                    )
+                val handle = speaker.startBroadcasting()
+                delay(150)
+
+                listenProc =
+                    ProcessBuilder(
+                        harness.hangListenBin().toString(),
+                        "--relay-url",
+                        harness.relayUrl,
+                        "--broadcast",
+                        moqNamespace,
+                        "--duration",
+                        "6",
+                        "--output-pcm",
+                        pcmFile.absolutePath,
+                    ).redirectErrorStream(true)
+                        .also { it.environment()["RUST_LOG"] = "info" }
+                        .start()
+
+                delay(5_000)
+                handle.close()
+                speaker.close()
+            } finally {
+                pumpScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+            }
+
+            val exited = listenProc.waitFor(15, TimeUnit.SECONDS)
+            val output = listenProc.inputStream.bufferedReader().readText()
+            assertTrue(exited, "hang-listen did not exit within 15 s. Output:\n$output")
+            assertEquals(
+                0,
+                listenProc.exitValue(),
+                "hang-listen exited non-zero. Output:\n$output",
+            )
+
+            val pcm = readFloat32Pcm(pcmFile)
+            PcmAssertions.assertSampleCount(pcm, expectedDurationSec = 5.0, tolerance = 0.20)
+            // Skip first 40 ms — Opus look-ahead silence.
+            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 25
+            val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
+            PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
+            PcmAssertions.assertZeroCrossingRate(
+                analysed,
+                expectedPerSecond = 880.0,
+                tolerance = 0.05,
+            )
+        }
 
     /**
      * Drive the Rust `hang-publish` and `hang-listen` binaries
@@ -136,6 +254,18 @@ class HangInteropTest {
             tolerance = 0.05,
         )
     }
+}
+
+/**
+ * Bypass the NIP-98 auth handshake — the harness boots moq-relay
+ * with `--auth-public ""`, which grants any path without a JWT.
+ */
+private object StaticTokenNestsClient : NestsClient {
+    override suspend fun mintToken(
+        room: NestsRoomConfig,
+        publish: Boolean,
+        signer: NostrSigner,
+    ): String = ""
 }
 
 /**
