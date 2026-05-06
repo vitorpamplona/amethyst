@@ -48,6 +48,27 @@ class QuicStream(
     val receive = ReceiveBuffer()
 
     /**
+     * Send-side scheduling priority. The connection writer's drain loop
+     * iterates streams by descending priority; same-priority streams keep
+     * their existing round-robin order. Higher value = drains first under
+     * congestion. Default 0 matches pre-priority round-robin behaviour for
+     * every existing call site.
+     *
+     * Used by moq-lite group streams: the publisher assigns each new group
+     * a priority equal to its sequence number so that newer groups
+     * (fresher audio) drain ahead of older ones when retransmits queue up
+     * on a lossy link. Mirrors `Publisher::serve_group` in
+     * `rs/moq-lite/src/lite/publisher.rs` (`stream.set_priority`).
+     *
+     * `@Volatile` because callers (e.g. moq-lite's openGroupStream)
+     * assign from arbitrary coroutines while the writer reads it under
+     * [com.vitorpamplona.quic.connection.QuicConnection.lock] during a
+     * drain pass.
+     */
+    @Volatile
+    var priority: Int = 0
+
+    /**
      * Bytes received and confirmed contiguous, exposed as a flow to the consumer.
      *
      * Bounded buffer (64 chunks). The producer (parser) uses [trySend] and
