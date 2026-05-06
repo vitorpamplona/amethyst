@@ -22,7 +22,10 @@ reorder / migration scenarios that are awkward to reproduce in unit tests.
   OpenJDK 21 runtime, copies the `installDist` output.
 - `run_endpoint.sh` sources the base image's `/setup.sh` then execs our JVM
   binary.
-- `Makefile` wrappers: `make build`, `make smoke`, `make clean`.
+- `Makefile` wrappers: `make build`, `make clean`. (A `make smoke`
+  target previously stood up picoquic + our endpoint on a private Docker
+  bridge to bisect runner failures from impl failures; dropped once
+  the runner reliably exercised both paths.)
 
 ## Local iteration loop
 

@@ -2,19 +2,14 @@
 # quic-interop-runner endpoint entry point.
 #
 # The base image (martenseemann/quic-network-simulator-endpoint) provides
-# /setup.sh, which configures routing for the runner's ns-3 sim. We source
-# it inside the runner — but for `make smoke` runs against a plain Docker
-# bridge network, sourcing /setup.sh succeeds AND breaks DNS resolution
-# (it points the resolver at the sim's nameserver which doesn't exist
-# in smoke mode). Set SMOKE_MODE=1 to skip /setup.sh entirely.
+# /setup.sh, which configures routing for the runner's ns-3 sim. Source it
+# inside the runner; tolerate failure (e.g. missing NET_ADMIN cap) so the
+# JVM client still launches if a caller invokes the image outside the
+# runner — they get default container networking instead.
 set -uo pipefail
 
-if [ "${SMOKE_MODE:-0}" = "1" ]; then
-    echo "(smoke mode — skipping /setup.sh, using container default networking)" >&2
-else
-    # shellcheck disable=SC1091
-    source /setup.sh 2>/dev/null || echo "(setup.sh skipped — running outside the runner sim)" >&2
-fi
+# shellcheck disable=SC1091
+source /setup.sh 2>/dev/null || echo "(setup.sh skipped — not under the runner sim)" >&2
 
 set -e
 
