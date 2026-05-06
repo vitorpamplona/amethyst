@@ -62,12 +62,19 @@ fun drainOutbound(
 ): ByteArray? {
     val parts = mutableListOf<ByteArray>()
 
-    // Closing — emit a CONNECTION_CLOSE at the highest available level.
+    // Closing — emit a CONNECTION_CLOSE at the highest available level. The
+    // datagram-build paths below MUST satisfy two RFC 9000 constraints we
+    // got wrong before:
+    //  - §10.2.3: at Initial / Handshake levels, only CONNECTION_CLOSE
+    //    (Transport, 0x1c) is allowed; the application-level close (0x1d) is
+    //    forbidden because app state would leak before the handshake is
+    //    encrypted with the application key.
+    //  - §14.1: a client datagram containing an Initial MUST be ≥ 1200 bytes
+    //    in UDP-payload terms, even when carrying only a CONNECTION_CLOSE.
     if (conn.status == QuicConnection.Status.CLOSING) {
-        val frame = ConnectionCloseFrame(conn.closeErrorCode, null, conn.closeReason ?: "")
-        val packet = buildBestLevelPacket(conn, listOf(frame)) ?: return null
+        val datagram = buildClosingDatagram(conn, nowMillis)
         conn.status = QuicConnection.Status.CLOSED
-        return packet
+        return datagram
     }
 
     // Drain destructive frame sources into local lists, ONCE.
@@ -118,21 +125,42 @@ fun drainOutbound(
             var natural = 0
             for (p in firstPass) natural += p.size
             if (natural < 1200) {
-                val deficit = 1200 - natural
-                // Rewind the Initial PN — we'll reissue with the same PN and the
-                // same captured frames plus padding. The SentPacket entry recorded
-                // by the natural-size build will be overwritten by the rebuild
-                // below since both use the same PN.
-                initialState.pnSpace.rewindOutboundForRebuild()
-                val paddedInitial =
-                    buildLongHeaderFromFrames(
-                        conn = conn,
-                        level = EncryptionLevel.INITIAL,
-                        frames = initialContents!!.frames, // null-safe: gated by `initialNatural != null` above
-                        tokens = initialContents.tokens,
-                        nowMillis = nowMillis,
-                        padBytes = deficit,
-                    )
+                // Padding rebuild: re-issue the Initial with PADDING frames inside
+                // the AEAD envelope so the on-wire datagram clears the §14.1 floor.
+                //
+                // Off-by-one trap: the QUIC long-header Length field is a varint
+                // (RFC 9000 §16). When the natural-size payload is tiny enough
+                // for Length to fit in 1 byte (body ≤ 63 bytes), the rebuild's
+                // larger body crosses the 64-byte threshold and Length grows to
+                // 2 bytes — adding 1 wire byte that wasn't in `natural`. Same
+                // shape at 16384 bytes (2 → 4) and 2^30 (4 → 8). A naive
+                // `padBytes = 1200 - natural` then produces a 1199-byte
+                // datagram for PING-only Initials.
+                //
+                // Solution: rebuild with the initial deficit, measure, and if we
+                // still fall short, bump by the residual and rebuild once more.
+                // Each iteration adds PADDING bytes 1:1 to the wire size; the
+                // varint grows monotonically so this terminates in ≤ 2 rounds
+                // for any reachable payload size.
+                var padBytes = 1200 - natural
+                var paddedInitial: ByteArray
+                while (true) {
+                    initialState.pnSpace.rewindOutboundForRebuild()
+                    paddedInitial =
+                        buildLongHeaderFromFrames(
+                            conn = conn,
+                            level = EncryptionLevel.INITIAL,
+                            frames = initialContents!!.frames, // null-safe: gated by `initialNatural != null` above
+                            tokens = initialContents.tokens,
+                            nowMillis = nowMillis,
+                            padBytes = padBytes,
+                        )
+                    var totalAfterRebuild = paddedInitial.size
+                    if (handshakeNatural != null) totalAfterRebuild += handshakeNatural.size
+                    if (applicationPkt != null) totalAfterRebuild += applicationPkt.size
+                    if (totalAfterRebuild >= 1200) break
+                    padBytes += 1200 - totalAfterRebuild
+                }
                 concat(listOfNotNull(paddedInitial, handshakeNatural, applicationPkt))
             } else {
                 concat(firstPass)
@@ -165,6 +193,93 @@ private fun concat(parts: List<ByteArray>): ByteArray {
     }
     return out
 }
+
+/**
+ * Build a CONNECTION_CLOSE-only datagram at the highest encryption level we
+ * have keys for. Two RFC 9000 constraints make this trickier than a normal
+ * packet build:
+ *
+ *  - §10.2.3 — at Initial / Handshake levels, only CONNECTION_CLOSE
+ *    (Transport, 0x1c) is allowed. An application-level close is replaced
+ *    with `APPLICATION_ERROR (0x0c)` + frameType=0 + empty reason so we don't
+ *    leak app state pre-handshake.
+ *  - §14.1 — a client datagram containing an Initial MUST be ≥ 1200 bytes,
+ *    even a close-only one. We do this by building once at natural size and,
+ *    if short, rewinding the PN and rebuilding with a PADDING-frame deficit
+ *    inside the AEAD envelope. The rebuild loops because the long-header
+ *    Length varint (RFC 9000 §16) can grow by 1 byte once the body crosses
+ *    the 64-byte threshold, so a single-shot deficit can land 1 byte short
+ *    of 1200.
+ */
+private fun buildClosingDatagram(
+    conn: QuicConnection,
+    nowMillis: Long,
+): ByteArray? {
+    val app = conn.application
+    if (app.sendProtection != null) {
+        // 1-RTT level reached: app close (0x1d) is allowed and carries the
+        // original error code + reason.
+        val frame = ConnectionCloseFrame(conn.closeErrorCode, null, conn.closeReason ?: "")
+        return buildBestLevelPacket(conn, listOf(frame))
+    }
+
+    // Pre-1-RTT: must use transport-encoded close. RFC 9000 §20.1
+    // APPLICATION_ERROR = 0x0c — "the application or application protocol
+    // caused the connection to be closed during the handshake".
+    val transportFrame =
+        ConnectionCloseFrame(
+            errorCode = APPLICATION_ERROR,
+            frameType = 0L,
+            reason = "",
+        )
+
+    val hs = conn.handshake
+    if (hs.sendProtection != null) {
+        return buildLongHeaderFromFrames(
+            conn = conn,
+            level = EncryptionLevel.HANDSHAKE,
+            frames = listOf(transportFrame),
+            tokens = emptyList(),
+            nowMillis = nowMillis,
+            padBytes = 0,
+        )
+    }
+
+    val init = conn.initial
+    if (init.sendProtection != null && !init.keysDiscarded) {
+        val natural =
+            buildLongHeaderFromFrames(
+                conn = conn,
+                level = EncryptionLevel.INITIAL,
+                frames = listOf(transportFrame),
+                tokens = emptyList(),
+                nowMillis = nowMillis,
+                padBytes = 0,
+            )
+        if (natural.size >= 1200) return natural
+        var padBytes = 1200 - natural.size
+        var padded: ByteArray
+        do {
+            init.pnSpace.rewindOutboundForRebuild()
+            padded =
+                buildLongHeaderFromFrames(
+                    conn = conn,
+                    level = EncryptionLevel.INITIAL,
+                    frames = listOf(transportFrame),
+                    tokens = emptyList(),
+                    nowMillis = nowMillis,
+                    padBytes = padBytes,
+                )
+            if (padded.size >= 1200) break
+            padBytes += 1200 - padded.size
+        } while (true)
+        return padded
+    }
+    return null
+}
+
+/** RFC 9000 §20.1 — application-or-protocol caused close during handshake. */
+private const val APPLICATION_ERROR: Long = 0x0cL
 
 private fun buildBestLevelPacket(
     conn: QuicConnection,
@@ -280,9 +395,36 @@ private fun collectHandshakeLevelFrames(
                 length = cryptoChunk.data.size.toLong(),
             )
     }
+    // RFC 9002 §6.2.4: PTO probe MUST be emitted at the encryption level
+    // that has unacknowledged data. `buildApplicationPacket` consumes
+    // [pendingPing] preferentially when 1-RTT keys exist; if they don't,
+    // the probe lives or dies here at Handshake / Initial level. Pre-fix
+    // the flag was set but never honored pre-handshake — the connection
+    // sat silent through every PTO, never retransmitting the ClientHello
+    // even when the first datagram was lost. This caused the
+    // "1-packet-on-the-wire-then-timeout" symptom against aioquic in the
+    // quic-interop-runner sim where the first ClientHello was dropped
+    // because the server hadn't finished startup yet.
+    if (conn.pendingPing && conn.application.sendProtection == null && level == highestPreApplicationLevel(conn)) {
+        frames += PingFrame
+        conn.pendingPing = false
+    }
     if (frames.isEmpty()) return null
     return HandshakeLevelContents(frames = frames, tokens = tokens)
 }
+
+/**
+ * The highest encryption level for which we currently hold send keys, given
+ * that 1-RTT keys are NOT yet installed. Used by [collectHandshakeLevelFrames]
+ * to decide where a PTO PING probe should ride when the application level
+ * isn't usable yet.
+ */
+private fun highestPreApplicationLevel(conn: QuicConnection): EncryptionLevel =
+    when {
+        conn.handshake.sendProtection != null -> EncryptionLevel.HANDSHAKE
+        conn.initial.sendProtection != null && !conn.initial.keysDiscarded -> EncryptionLevel.INITIAL
+        else -> EncryptionLevel.INITIAL // fallback; collectHandshakeLevelFrames already early-returns on no keys
+    }
 
 /**
  * Build a long-header packet from already-collected frames, with optional
