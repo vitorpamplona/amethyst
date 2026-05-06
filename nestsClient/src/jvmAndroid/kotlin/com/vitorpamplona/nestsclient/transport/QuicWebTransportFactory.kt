@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.nestsclient.transport
 
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteAlpn
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
@@ -89,8 +90,19 @@ class QuicWebTransportFactory(
      * post-CONNECT message is decoded as SETUP_CLIENT, producing
      * `connection closed err=invalid value` on the relay side and a stalled
      * subscribe / `subscribe stream FIN before reply` on the client side.
+     *
+     * `moq-lite-04` is also advertised because the production relay
+     * (moq.nostrnests.com) and the kixelated browser client both ship
+     * Lite-04 now; without it in our list a Lite-04-only deployment
+     * would refuse the CONNECT. The on-the-wire framing for Subscribe /
+     * Group / Announce did NOT change between Lite-03 and Lite-04, so
+     * our existing codec handles either selection. List `moq-lite-03`
+     * first because it's our previously-tested negotiation target —
+     * a relay that supports both should pick the listed-first option,
+     * and a Lite-04-only relay falls through to the second entry.
      */
-    private val webTransportSubProtocols: List<String> = listOf("moq-lite-03"),
+    private val webTransportSubProtocols: List<String> =
+        listOf(MoqLiteAlpn.LITE_03, MoqLiteAlpn.LITE_04),
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,
