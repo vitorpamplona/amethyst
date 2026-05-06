@@ -339,7 +339,7 @@ fun DisplayNip05ProfileStatus(
                     text =
                         remember(nip05State) {
                             buildAnnotatedString {
-                                appendLink(nip05State.nip05.toValue(), color) {
+                                appendLink(nip05State.nip05.toDisplayValue(), color) {
                                     runCatching { uri.openUri("https://${nip05State.nip05.domain}") }
                                 }
                             }

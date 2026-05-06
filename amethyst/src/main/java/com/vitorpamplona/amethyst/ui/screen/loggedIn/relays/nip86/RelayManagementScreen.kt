@@ -490,7 +490,7 @@ private fun PubkeyNip05Row(
 
     when (val nip05State = nip05StateMetadata) {
         is Nip05State.Exists -> {
-            if (nip05State.nip05.name != "_") {
+            if (nip05State.nip05.hasLocalPart()) {
                 Text(
                     text = remember(nip05State) { AnnotatedString(nip05State.nip05.name) },
                     fontSize = Font14SP,
