@@ -358,6 +358,50 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun publisher_replies_subscribeDrop_when_track_is_not_published() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Publisher serves audio/data only.
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+
+            // Relay opens a Subscribe bidi for a DIFFERENT track. The
+            // session must reply with SubscribeDrop carrying the
+            // TRACK_DOES_NOT_EXIST code rather than a silent FIN —
+            // otherwise the watcher's response wait resolves only when
+            // the bidi is FIN'd, with no indication WHY (looks
+            // identical to "publisher disappeared mid-subscribe").
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 99L,
+                        broadcast = "speakerPubkey",
+                        track = "video/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+
+            val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
+            val resp = MoqLiteCodec.decodeSubscribeResponse(ackChunk)
+            val dropped = resp as MoqLiteCodec.SubscribeResponse.Dropped
+            assertEquals(MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST, dropped.drop.errorCode)
+            // Reason phrase is informational; pin substring rather than
+            // the exact text so we can keep tweaking the wording.
+            kotlin.test.assertContains(dropped.drop.reasonPhrase, "video/data")
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_close_emits_ended_announce() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()

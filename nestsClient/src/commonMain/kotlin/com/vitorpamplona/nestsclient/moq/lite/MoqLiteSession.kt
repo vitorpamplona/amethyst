@@ -849,11 +849,34 @@ class MoqLiteSession internal constructor(
                             // single-track-per-publisher model, only one match is possible.
                             val targetPublisher = publishersSnapshot.firstOrNull { it.track == sub.track }
                             if (targetPublisher == null) {
+                                // Reply SubscribeDrop with a TRACK_DOES_NOT_EXIST
+                                // error code BEFORE we FIN — without this the
+                                // peer's response wait resolves only on
+                                // bidi-FIN with no indication WHY (looks
+                                // identical to "publisher disappeared mid-
+                                // subscribe"). Drop carries the error code +
+                                // reason phrase the watcher can log /
+                                // surface, and matches what kixelated's
+                                // `rs/moq-lite/src/lite/subscribe.rs`
+                                // expects for an unrecognised track on a
+                                // live broadcast.
                                 Log.w("NestTx") {
                                     "SUBSCRIBE inbound id=${sub.id} track='${sub.track}' has no matching publisher " +
-                                        "on this session (have ${publishersSnapshot.map { it.track }}) — finishing bidi"
+                                        "on this session (have ${publishersSnapshot.map { it.track }}) — replying SubscribeDrop"
                                 }
-                                runCatching { bidi.finish() }
+                                runCatching {
+                                    bidi.write(
+                                        MoqLiteCodec.encodeSubscribeDrop(
+                                            MoqLiteSubscribeDrop(
+                                                errorCode = MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST,
+                                                reasonPhrase =
+                                                    "track '${sub.track}' is not published on this broadcast " +
+                                                        "(available: ${publishersSnapshot.joinToString(",") { it.track }})",
+                                            ),
+                                        ),
+                                    )
+                                    bidi.finish()
+                                }
                                 dispatched = true
                                 return@collect
                             }

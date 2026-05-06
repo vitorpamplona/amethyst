@@ -231,13 +231,39 @@ data class MoqLiteSubscribeOk(
  * RESET_STREAM, but the publisher can pre-emptively decline a
  * subscription with [MoqLiteSubscribeDrop] before any group flows.
  *
- * Decode-only as far as the client cares — we never send Drop back
- * upstream.
+ * Sent by [MoqLiteSession] when a relay opens a SUBSCRIBE bidi for a
+ * `track` we don't publish (e.g. a watcher subscribes to a `video/data`
+ * rendition but our broadcast only declares `audio/data` + `catalog.json`
+ * in its catalog). Without a Drop reply the watcher's response wait
+ * resolves only when the bidi is FIN'd, with no indication WHY — Drop
+ * carries the error code and a reason phrase the watcher can log /
+ * surface.
+ *
+ * Decoded by [MoqLiteSession] when the relay or upstream publisher
+ * rejects one of OUR subscriptions — we surface it as
+ * [MoqLiteSubscribeException] so callers see a typed protocol-level
+ * rejection rather than a silent end-of-flow.
  */
 data class MoqLiteSubscribeDrop(
     val errorCode: Long,
     val reasonPhrase: String,
 )
+
+/**
+ * Error codes carried in the [MoqLiteSubscribeDrop.errorCode] varint.
+ * moq-lite leaves these application-defined; we mirror the IETF-MoQ
+ * conventions in `com.vitorpamplona.nestsclient.moq.ErrorCode` so a
+ * cross-protocol reader gets the same semantic from either path.
+ */
+object MoqLiteSubscribeDropCode {
+    /**
+     * The publisher does not serve this `(broadcast, track)` tuple.
+     * Sent for a subscribe whose `track` doesn't match any of the
+     * publishers we registered on this session. Mirrors
+     * `com.vitorpamplona.nestsclient.moq.ErrorCode.TRACK_DOES_NOT_EXIST`.
+     */
+    const val TRACK_DOES_NOT_EXIST: Long = 0x04L
+}
 
 /**
  * Header at the start of a Group uni stream. After the
