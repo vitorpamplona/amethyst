@@ -27,7 +27,7 @@ reorder / migration scenarios that are awkward to reproduce in unit tests.
 ## Local iteration loop
 
 The fast path: `quic/interop/run-matrix.sh` clones the runner alongside
-this repo, sets up a venv, merges our `implementations.json` snippet,
+this repo, sets up a venv, merges our `implementations_quic.json` snippet,
 builds the endpoint image, and invokes `run.py`. All steps are
 idempotent so repeated invocations just iterate.
 
@@ -49,9 +49,9 @@ Manual flow (if `run-matrix.sh` doesn't fit):
 ```
 make -C quic/interop build
 # Then in a sibling clone of quic-interop-runner, merge our snippet:
-jq -s '.[0] * .[1]' implementations.json \
+jq -s '.[0] * .[1]' implementations_quic.json \
    ../amethyst/quic/interop/quic-interop-runner-snippet.json \
-   > implementations.json.new && mv implementations.json.new implementations.json
+   > implementations_quic.json.new && mv implementations_quic.json.new implementations_quic.json
 python run.py -d -i amethyst -s aioquic -t handshake,chacha20 --log-dir ./logs
 ```
 

@@ -2,7 +2,7 @@
 #
 #   make build              # compile JVM dist + build Docker image
 #   make smoke              # quick handshake test against a local picoquic
-#   make image-name         # print the image tag (for use in implementations.json)
+#   make image-name         # print the image tag (for use in implementations_quic.json)
 #
 # These targets are deliberately thin wrappers — the real harness is the
 # `quic-interop-runner` repo (clone separately and register `amethyst` with

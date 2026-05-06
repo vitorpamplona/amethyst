@@ -2,7 +2,7 @@
 # Drive the quic-interop-runner against the :quic-interop endpoint image.
 #
 # Idempotent: clones the runner alongside this repo if missing, sets up its
-# venv, registers `amethyst` in implementations.json, builds our endpoint
+# venv, registers `amethyst` in implementations_quic.json, builds our endpoint
 # image, then invokes run.py with the user's args.
 #
 # Usage:
@@ -73,15 +73,15 @@ if [ ! -d "$RUNNER_DIR/.venv" ]; then
 fi
 "$RUNNER_DIR/.venv/bin/pip" install -q -r "$RUNNER_DIR/requirements.txt"
 
-# 3. Register our endpoint in implementations.json (idempotent).
-if ! jq -e '.amethyst' "$RUNNER_DIR/implementations.json" >/dev/null 2>&1; then
-    echo "==> registering 'amethyst' in implementations.json"
+# 3. Register our endpoint in implementations_quic.json (idempotent).
+if ! jq -e '.amethyst' "$RUNNER_DIR/implementations_quic.json" >/dev/null 2>&1; then
+    echo "==> registering 'amethyst' in implementations_quic.json"
     tmp=$(mktemp)
     jq -s '.[0] * .[1]' \
-        "$RUNNER_DIR/implementations.json" \
+        "$RUNNER_DIR/implementations_quic.json" \
         "$SCRIPT_DIR/quic-interop-runner-snippet.json" \
         > "$tmp"
-    mv "$tmp" "$RUNNER_DIR/implementations.json"
+    mv "$tmp" "$RUNNER_DIR/implementations_quic.json"
 fi
 
 # 4. Build the endpoint image (skippable for tight loops).
