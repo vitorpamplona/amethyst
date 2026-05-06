@@ -111,9 +111,35 @@ fi
 # run.py hard-exits if --log-dir already exists, so we use a fresh
 # per-invocation subdirectory under $LOG_DIR. The parent must exist; the
 # child must not. Tail of `ls -t "$LOG_DIR" | head -1` finds the latest.
+#
+# Output filter: by default we drop the runner / container boilerplate
+# (interface checksum offload toggles, route setup, container lifecycle,
+# the long Command: WAITFORSERVER=... line, the platform-mismatch warning
+# that fires once per test on Apple Silicon). Set VERBOSE=1 to bypass.
 mkdir -p "$LOG_DIR"
 RUN_LOG_DIR="$LOG_DIR/run-$(date +%Y%m%d-%H%M%S)"
 echo "==> running matrix (args: $* | logs: $RUN_LOG_DIR)"
 cd "$RUNNER_DIR"
-exec "$RUNNER_DIR/.venv/bin/python" run.py \
-    -d -i amethyst --log-dir "$RUN_LOG_DIR" "$@"
+
+if [ "${VERBOSE:-0}" = "1" ]; then
+    exec "$RUNNER_DIR/.venv/bin/python" run.py \
+        -d -i amethyst --log-dir "$RUN_LOG_DIR" "$@"
+else
+    "$RUNNER_DIR/.venv/bin/python" run.py \
+        -d -i amethyst --log-dir "$RUN_LOG_DIR" "$@" 2>&1 \
+        | grep -Ev \
+            -e '^(client|server|sim) +\| +(Setting up routes|Actual changes:|tx-[a-z0-9-]+:|Endpoint'\''s IPv[46] address is)' \
+            -e '^ Container [a-z]+  +(Recreate|Recreated|Stopping|Stopped|Starting|Started)( [0-9.]+s)?$' \
+            -e '^ server The requested image'\''s platform' \
+            -e '^Attaching to client, server, sim$' \
+            -e '^Aborting on container exit\.\.\.$' \
+            -e '^(client|server|sim) exited with code [0-9]+$' \
+            -e '^Packets captured: [0-9]+$' \
+            -e '^sim +\| +Packets received/dropped on interface ' \
+            -e '^sim +\| +(Received signal:|msg=|NS_FATAL)' \
+            -e '^Using the client'\''s key log file\.$' \
+            -e '^Command: WAITFORSERVER=' \
+            -e '^==> ' \
+            -e '^$'
+    exit "${PIPESTATUS[0]}"
+fi

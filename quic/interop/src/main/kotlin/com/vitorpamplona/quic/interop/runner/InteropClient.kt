@@ -72,11 +72,16 @@ fun main() {
     val downloadsDir = File("/downloads")
     val keyLogPath = System.getenv("SSLKEYLOGFILE")?.takeIf { it.isNotBlank() }
 
-    System.err.println("== quic-interop client ==")
-    System.err.println("testcase:       $testcase")
-    System.err.println("requests:       $requests")
-    System.err.println("downloads dir:  ${downloadsDir.absolutePath} (exists=${downloadsDir.isDirectory})")
-    System.err.println("sslkeylogfile:  ${keyLogPath ?: "(unset)"}")
+    // One-line context header. Verbose per-field dump deferred to debug
+    // mode (env var QUIC_INTEROP_DEBUG=1) so the runner's aggregated output
+    // stays readable across a full matrix run.
+    if (System.getenv("QUIC_INTEROP_DEBUG") == "1") {
+        System.err.println("== quic-interop client ==")
+        System.err.println("testcase:       $testcase")
+        System.err.println("requests:       $requests")
+        System.err.println("downloads dir:  ${downloadsDir.absolutePath} (exists=${downloadsDir.isDirectory})")
+        System.err.println("sslkeylogfile:  ${keyLogPath ?: "(unset)"}")
+    }
 
     val cipherSuites =
         when (testcase) {
@@ -207,7 +212,6 @@ private fun runTransferTest(
                         }
                         val name = url.path.substringAfterLast('/').ifBlank { "index" }
                         File(downloadsDir, name).writeBytes(resp.body)
-                        System.err.println("GET ${url.path} → ${resp.body.size} bytes")
                     }
                     if (anyFailed) "request_failed" else "ok"
                 } ?: "transfer_timeout"
@@ -220,7 +224,6 @@ private fun runTransferTest(
     scope.cancel()
 
     return if (outcome == "ok") {
-        System.err.println("transfer ok")
         EXIT_OK
     } else {
         System.err.println("transfer $outcome")
