@@ -31,18 +31,33 @@ import java.nio.ByteOrder
  * encoder shipped later). One instance per outgoing track.
  *
  * Configuration:
- *   - 48 kHz mono input PCM 16-bit (matches [AudioFormat]).
+ *   - 48 kHz PCM 16-bit input (matches [AudioFormat.SAMPLE_RATE_HZ]).
+ *   - [channelCount] — 1 (mono) or 2 (stereo, L/R interleaved). Drives
+ *     the MediaFormat channel count; the supplied PCM frame must hold
+ *     `FRAME_SIZE_SAMPLES * channelCount` samples per call.
  *   - Target bitrate ~32 kbit/s VBR — high-quality wideband speech.
  *   - 20 ms frames (the encoder requires the input buffer to hold one frame
  *     at a time for low latency).
+ *
+ * Default is [AudioFormat.DEFAULT_CHANNELS] (mono) so existing call sites
+ * that don't pass a channel count keep the prior behaviour. Pair with a
+ * matching [com.vitorpamplona.nestsclient.AudioBroadcastConfig] on the
+ * speaker so the published catalog declares the same channel count.
  */
 class MediaCodecOpusEncoder(
+    private val channelCount: Int = AudioFormat.DEFAULT_CHANNELS,
     private val targetBitrate: Int = DEFAULT_BITRATE_BPS,
 ) : OpusEncoder {
+    init {
+        require(channelCount in 1..2) {
+            "MediaCodecOpusEncoder supports mono (1) or stereo (2) only, got $channelCount"
+        }
+    }
+
     private val codec: MediaCodec =
         try {
             MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_OPUS).apply {
-                configure(buildFormat(targetBitrate), null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+                configure(buildFormat(channelCount, targetBitrate), null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
                 start()
             }
         } catch (t: Throwable) {
@@ -195,12 +210,15 @@ class MediaCodecOpusEncoder(
          */
         private const val MAX_CSD_SKIPS_PER_CALL: Int = 4
 
-        private fun buildFormat(bitrate: Int): MediaFormat =
+        private fun buildFormat(
+            channelCount: Int,
+            bitrate: Int,
+        ): MediaFormat =
             MediaFormat
                 .createAudioFormat(
                     MediaFormat.MIMETYPE_AUDIO_OPUS,
                     AudioFormat.SAMPLE_RATE_HZ,
-                    AudioFormat.CHANNELS,
+                    channelCount,
                 ).apply {
                     setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
                     setInteger(MediaFormat.KEY_PCM_ENCODING, android.media.AudioFormat.ENCODING_PCM_16BIT)
