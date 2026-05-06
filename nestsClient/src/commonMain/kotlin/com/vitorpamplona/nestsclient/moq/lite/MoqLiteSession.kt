@@ -1023,14 +1023,21 @@ class MoqLiteSession internal constructor(
         subscribeId: Long,
         sequence: Long,
     ): com.vitorpamplona.nestsclient.transport.WebTransportWriteStream {
-        // Group streams carry a single Opus packet. They're real-time
-        // and best-effort — a STREAM frame arriving 200 ms late is
-        // worse than useless because the listener has already moved
-        // past that group's sequence number. Setting bestEffort=true
-        // tells the underlying QUIC SendBuffer to drop lost ranges
-        // instead of retransmitting them, bounding the bandwidth waste
-        // we'd otherwise incur on a lossy uplink.
-        val uni = transport.openUniStream(bestEffort = true)
+        // Group streams use reliable QUIC delivery to match the
+        // moq-lite reference (kixelated/moq-rs `serve_group` writes
+        // reliable streams; bestEffort is not a moq-lite concept).
+        // The previous shape opened with `bestEffort=true`, which
+        // caused `:quic`'s `SendBuffer.markLost` to drop lost ranges
+        // without retransmit AND without RESET_STREAM — leaving the
+        // peer's stream-reassembly buffer permanently wedged at the
+        // hole boundary. The watcher's `Group.readFrame` parks until
+        // the relay's 30 s `MAX_GROUP_AGE` ages the broadcast queue
+        // out, manifesting as a 30 s silent dropout per lost packet
+        // on lossy networks. Reliable delivery costs marginal extra
+        // bandwidth on retransmits (a lost STREAM range arriving 50–
+        // 150 ms late still falls inside hang's default ~200 ms
+        // jitter buffer) and avoids the dropout entirely.
+        val uni = transport.openUniStream()
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))
         return uni
