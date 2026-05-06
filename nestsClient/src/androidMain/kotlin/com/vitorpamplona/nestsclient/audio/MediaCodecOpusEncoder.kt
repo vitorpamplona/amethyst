@@ -56,6 +56,16 @@ class MediaCodecOpusEncoder(
     private var presentationTimeUs: Long = 0L
     private var released = false
 
+    /**
+     * Latch so a single conspicuous log fires the FIRST time we drop a
+     * [MediaCodec.BUFFER_FLAG_CODEC_CONFIG] output buffer. Without
+     * this latch the same encoder can produce 2-3 CSD buffers in a row
+     * (OpusHead + OpusTags on some Android Codec2 stacks) and we'd
+     * spam the log; with it, we record the fact once per encoder
+     * lifetime and stay quiet thereafter.
+     */
+    private var loggedCsdSkip = false
+
     override fun encode(pcm: ShortArray): ByteArray {
         check(!released) { "encoder released" }
         require(pcm.isNotEmpty()) { "PCM frame must not be empty" }
@@ -86,6 +96,34 @@ class MediaCodecOpusEncoder(
             when {
                 outputIndex >= 0 -> {
                     val outputBuffer = codec.getOutputBuffer(outputIndex) ?: continue
+                    // CODEC_CONFIG buffers carry codec-specific data
+                    // (CSD): on the Android `audio/opus` encoder these
+                    // are the 19-byte OpusHead identification header
+                    // and (on some Codec2 stacks) the OpusTags
+                    // comment header. They are NOT Opus packets — they
+                    // are decoder-config blobs that should be supplied
+                    // out-of-band on the receive side (we already do
+                    // this in `MediaCodecOpusDecoder.buildOpusIdHeader`).
+                    // Sending them to the wire as audio frames means
+                    // the watcher's WebCodecs `AudioDecoder.decode`
+                    // sees garbage in the first frame, burning a
+                    // warmup slot and producing a click on group
+                    // rollover after every JWT-refresh hot-swap.
+                    val isCodecConfig =
+                        bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0
+                    if (isCodecConfig) {
+                        codec.releaseOutputBuffer(outputIndex, false)
+                        if (!loggedCsdSkip) {
+                            loggedCsdSkip = true
+                            com.vitorpamplona.quartz.utils.Log.d("NestTx") {
+                                "MediaCodecOpusEncoder skipped ${bufferInfo.size}-byte CODEC_CONFIG (OpusHead/OpusTags) — not an audio frame"
+                            }
+                        }
+                        // Don't return; loop to find the next output
+                        // buffer (the next dequeue may be the actual
+                        // first audio frame).
+                        continue
+                    }
                     val opus = ByteArray(bufferInfo.size)
                     outputBuffer.position(bufferInfo.offset)
                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
