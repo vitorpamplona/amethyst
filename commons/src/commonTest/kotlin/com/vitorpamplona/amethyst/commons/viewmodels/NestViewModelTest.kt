@@ -455,8 +455,8 @@ class NestViewModelTest {
         NestViewModel(
             httpClient = NoopNestsClient,
             transport = NoopWebTransportFactory,
-            decoderFactory = { NoopOpusDecoder },
-            playerFactory = { NoopAudioPlayer() },
+            decoderFactory = { _ -> NoopOpusDecoder },
+            playerFactory = { _ -> NoopAudioPlayer() },
             signer = NoopSigner,
             room = ROOM_CONFIG,
             connector =

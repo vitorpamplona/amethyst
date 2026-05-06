@@ -35,6 +35,7 @@ import com.vitorpamplona.nestsclient.NestsSpeaker
 import com.vitorpamplona.nestsclient.NestsSpeakerState
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.AudioException
+import com.vitorpamplona.nestsclient.audio.AudioFormat
 import com.vitorpamplona.nestsclient.audio.AudioPlayer
 import com.vitorpamplona.nestsclient.audio.NestPlayer
 import com.vitorpamplona.nestsclient.audio.OpusDecoder
@@ -56,9 +57,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -81,7 +86,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * Audio-pipeline construction is injected via [decoderFactory] /
  * [playerFactory] so commonMain doesn't have to know which platform's
  * MediaCodec / AudioTrack is in play. M1 wires Android-only — desktop
- * passes nothing here yet.
+ * passes nothing here yet. Both factories take a `channelCount` (1 for
+ * mono, 2 for stereo) discovered from the publisher's `catalog.json`
+ * audio rendition; subscriptions await a brief catalog-arrival window
+ * before constructing the decoder + player so a stereo web publisher
+ * doesn't get its frames decoded as mono with downmix artifacts.
  *
  * **Threading contract:** all public methods (`connect`, `disconnect`,
  * `updateSpeakers`, `setMuted`, `setMicMuted`, `startBroadcast`,
@@ -98,8 +107,8 @@ import kotlin.coroutines.cancellation.CancellationException
 class NestViewModel(
     private val httpClient: NestsClient,
     private val transport: WebTransportFactory,
-    private val decoderFactory: () -> OpusDecoder,
-    private val playerFactory: () -> AudioPlayer,
+    private val decoderFactory: (channelCount: Int) -> OpusDecoder,
+    private val playerFactory: (channelCount: Int) -> AudioPlayer,
     private val signer: NostrSigner,
     private val room: NestsRoomConfig,
     // Speaker-side audio capture/encode actuals. Optional — desktop and
@@ -1039,6 +1048,55 @@ class NestViewModel(
     }
 
     /**
+     * Wait briefly for [pubkey]'s catalog to land in [_speakerCatalogs]
+     * and pick the channel count for the decoder + AudioTrack. Returns
+     * [AudioFormat.CHANNELS] on timeout (the catalog never arrived
+     * within [timeoutMs]) or when the catalog declares an unsupported
+     * count (anything outside `1..2`). Caller is responsible for
+     * having started [fetchSpeakerCatalog] first; otherwise this
+     * always times out.
+     *
+     * Why a timeout: the catalog handshake is best-effort. If the
+     * publisher doesn't publish a catalog (legacy publishers) or the
+     * relay never forwards the catalog group, audio playback should
+     * still proceed in the default config rather than block forever.
+     * 500 ms is generous — with the speaker-side
+     * `setOnNewSubscriber` hook the catalog group is on the wire
+     * within one round-trip of the SUBSCRIBE_OK, so this typically
+     * returns within tens of ms.
+     */
+    private suspend fun awaitDecoderChannelCount(
+        pubkey: String,
+        timeoutMs: Long,
+    ): Int {
+        val catalog =
+            withTimeoutOrNull(timeoutMs) {
+                _speakerCatalogs
+                    .map { it[pubkey] }
+                    .filterNotNull()
+                    .first()
+            }
+        val declared = catalog?.primaryAudio()?.numberOfChannels
+        return when {
+            declared == null -> {
+                AudioFormat.CHANNELS
+            }
+
+            declared !in 1..2 -> {
+                Log.w("NestRx") {
+                    "publisher catalog for pubkey='${pubkey.take(8)}' declares numberOfChannels=$declared " +
+                        "(only 1 / 2 supported); falling back to mono"
+                }
+                AudioFormat.CHANNELS
+            }
+
+            else -> {
+                declared
+            }
+        }
+    }
+
+    /**
      * Open the speaker's `catalog.json` track in the background, parse
      * the first frame, and stash it in [speakerCatalogs]. Best-effort —
      * any failure (IETF listener throws UnsupportedOperationException,
@@ -1100,15 +1158,29 @@ class NestViewModel(
                 viewModelScope.launch { runCatching { handle.unsubscribe() } }
                 return
             }
+            // Start the catalog fetch BEFORE we wait for it — runs in
+            // parallel with the main subscribe so the round-trip overlaps
+            // with the audio-side handshake. Cancelled by closeSubscription.
+            fetchSpeakerCatalog(l, pubkey)
+            // Wait briefly for the catalog so we can configure the
+            // decoder + AudioTrack to match the publisher's actual
+            // channel layout. With the speaker-side emit-on-subscribe
+            // hook the catalog frame is on the wire within one round-trip
+            // of the SUBSCRIBE_OK, so this typically returns within tens
+            // of ms. Falls back to mono if no catalog arrives within
+            // [CATALOG_AWAIT_TIMEOUT_MS] — covers legacy publishers and
+            // the failure-mode where the relay never forwards the catalog
+            // group; audio still plays, just in the default config.
+            val channelCount = awaitDecoderChannelCount(pubkey, CATALOG_AWAIT_TIMEOUT_MS)
             // Allocate native resources (MediaCodec decoder + AudioTrack
             // player on Android). Both are heavy and leaky if dropped on
             // the floor — wrap them in a nested try so any cancellation
             // or throw between here and slot.attach releases them
             // (audit round-2 VM #7).
-            val decoder = decoderFactory()
+            val decoder = decoderFactory(channelCount)
             val player =
                 try {
-                    playerFactory()
+                    playerFactory(channelCount)
                 } catch (t: Throwable) {
                     runCatching { decoder.release() }
                     throw t
@@ -1221,12 +1293,10 @@ class NestViewModel(
                 _uiState.update {
                     it.copy(connectingSpeakers = (it.connectingSpeakers + pubkey).toPersistentSet())
                 }
-                // Parallel catalog fetch — best-effort, doesn't gate
-                // audio playback. Tracked in catalogJobs; cancelled
-                // by closeSubscription so a removed speaker doesn't
-                // leave the catalog collector running on the
-                // wrapper's still-live re-issuing handle.
-                fetchSpeakerCatalog(l, pubkey)
+                // Catalog fetch was started earlier (before the decoder
+                // wait) so it could overlap with the audio-side handshake;
+                // its job is already in [catalogJobs] and gets cancelled
+                // by [closeSubscription] alongside the audio path.
             } catch (t: Throwable) {
                 // Either CancellationException (scope cancelled mid-construction)
                 // or an unexpected throw — release the half-built pipeline and
@@ -1717,6 +1787,22 @@ sealed class BroadcastUiState {
  * indicator flicker.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/**
+ * How long [NestViewModel.openSubscription] waits for the publisher's
+ * `catalog.json` to land before constructing the decoder + AudioTrack.
+ * The catalog declares the audio rendition's `numberOfChannels`, which
+ * the decoder needs at construction time so a stereo web publisher
+ * doesn't get its frames decoded as mono with downmix artifacts.
+ *
+ * Sized to be generous enough that a typical publisher's catalog
+ * (which arrives within a single round-trip of the SUBSCRIBE_OK with
+ * the speaker-side emit-on-subscribe hook in place) lands well before
+ * the timeout, and short enough that a publisher that never emits a
+ * catalog (legacy publishers, relay-side bug) doesn't visibly stall
+ * the listener — audio playback proceeds in the default mono config.
+ */
+const val CATALOG_AWAIT_TIMEOUT_MS: Long = 500L
 
 /**
  * Per-subscription consecutive Opus decode-error count that triggers a

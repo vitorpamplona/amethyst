@@ -77,7 +77,22 @@ import android.media.AudioFormat as AndroidAudioFormat
 class AudioTrackPlayer(
     private val usage: Int = AudioAttributes.USAGE_MEDIA,
     private val contentType: Int = AudioAttributes.CONTENT_TYPE_SPEECH,
+    /**
+     * Number of channels in the PCM stream this player will receive. Must
+     * match the [com.vitorpamplona.nestsclient.audio.OpusDecoder]'s output
+     * configuration (mono Opus → 1, stereo Opus → 2 with L/R interleaving).
+     * Drives both the AudioTrack channel mask and the underlying buffer-
+     * size target. Default is [AudioFormat.CHANNELS] (mono) so existing
+     * call sites that don't pass a channel count keep the prior behaviour.
+     */
+    private val channelCount: Int = AudioFormat.CHANNELS,
 ) : AudioPlayer {
+    init {
+        require(channelCount in 1..2) {
+            "AudioTrackPlayer supports mono (1) or stereo (2) only, got $channelCount"
+        }
+    }
+
     private var track: AudioTrack? = null
     private var muted: Boolean = false
     private var volume: Float = 1f
@@ -100,10 +115,10 @@ class AudioTrackPlayer(
             .d("NestPlay") { "AudioTrackPlayer.start() — allocating AudioTrack" }
 
         val channelMask =
-            when (AudioFormat.CHANNELS) {
+            when (channelCount) {
                 1 -> AndroidAudioFormat.CHANNEL_OUT_MONO
                 2 -> AndroidAudioFormat.CHANNEL_OUT_STEREO
-                else -> error("unsupported channel count ${AudioFormat.CHANNELS}")
+                else -> error("unsupported channel count $channelCount")
             }
 
         val minBuffer =
@@ -122,9 +137,11 @@ class AudioTrackPlayer(
         // miss its 20 ms cadence by an order of magnitude before the device
         // underruns. Take the larger of `minBuffer * 16` and an explicit
         // 250 ms-equivalent so devices that report a small minBuffer still
-        // get the same wall-clock slack.
+        // get the same wall-clock slack. Stereo doubles the byte count
+        // per sample (interleaved L,R 16-bit shorts) — scaling
+        // [channelCount] in keeps the wall-clock target constant.
         val targetBytes250Ms =
-            (AudioFormat.SAMPLE_RATE_HZ / 4) * AudioFormat.BYTES_PER_SAMPLE * AudioFormat.CHANNELS
+            (AudioFormat.SAMPLE_RATE_HZ / 4) * AudioFormat.BYTES_PER_SAMPLE * channelCount
         val bufferBytes = maxOf(minBuffer * 16, targetBytes250Ms)
 
         val newTrack =

@@ -53,8 +53,8 @@ internal class NestViewModelFactory(
             // `httpClient` slot rather than as the first positional arg.
             httpClient = OkHttpNestsClient(httpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForVideo),
             transport = QuicWebTransportFactory(),
-            decoderFactory = { MediaCodecOpusDecoder() },
-            playerFactory = { AudioTrackPlayer() },
+            decoderFactory = { channelCount -> MediaCodecOpusDecoder(channelCount = channelCount) },
+            playerFactory = { channelCount -> AudioTrackPlayer(channelCount = channelCount) },
             signer = signer,
             room = room,
             captureFactory = { AudioRecordCapture() },
