@@ -36,6 +36,15 @@ object AudioFormat {
     /** 20 ms at 48 kHz. */
     const val FRAME_SIZE_SAMPLES: Int = 960
 
+    /**
+     * Duration of one Opus frame in microseconds — derived from
+     * [FRAME_SIZE_SAMPLES] / [SAMPLE_RATE_HZ]. Used by the publisher
+     * to stamp each frame at frame-index × this value, giving hang.js's
+     * watcher a perfect 20 ms cadence even when the broadcaster's send
+     * loop suspends on transport backpressure.
+     */
+    const val FRAME_DURATION_US: Long = (FRAME_SIZE_SAMPLES.toLong() * 1_000_000L) / SAMPLE_RATE_HZ
+
     /** Bytes per PCM 16-bit sample. */
     const val BYTES_PER_SAMPLE: Int = 2
 }

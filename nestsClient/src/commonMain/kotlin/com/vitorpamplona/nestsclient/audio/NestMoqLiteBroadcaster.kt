@@ -27,8 +27,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 
 /**
  * Mirror of [NestBroadcaster] but driving a moq-lite
@@ -207,15 +205,44 @@ class NestMoqLiteBroadcaster(
                 // will skip the leading varint as a microsecond
                 // timestamp; they MUST receive a real timestamp or
                 // their decoder picks up garbage bytes ahead of the
-                // Opus packet. We use a monotonic mark captured at
-                // capture-loop start so timestamps are robust to mute
-                // gaps and survive publisher hot-swap (the wire is
-                // single-broadcast, single-encoder; timestamps are
-                // codec-payload metadata, not stream-position).
-                val frameStartMark: TimeMark = TimeSource.Monotonic.markNow()
+                // Opus packet.
+                //
+                // Frame-index-derived timestamp (NOT wall clock). Each
+                // captured PCM frame occupies exactly one
+                // [AudioFormat.FRAME_DURATION_US] slot in the timeline,
+                // and the timestamp is `nextFrameIndex *
+                // FRAME_DURATION_US` snapped to that grid. This matters
+                // because:
+                //   - `current.send(...)` suspends on transport
+                //     backpressure; a wall-clock timestamp captured at
+                //     send-time would drift forward of the actual
+                //     capture time of the audio sample, and the watcher's
+                //     WebCodecs AudioDecoder would schedule playback
+                //     at the wrong instant (audible offset between
+                //     speaker and listener).
+                //   - The capture loop is wall-clock-pinned anyway —
+                //     `capture.readFrame()` blocks until the next 20 ms
+                //     of PCM is ready — so frame-index advances at the
+                //     same rate as wall time across the whole
+                //     broadcast lifetime, with no codec drift relative
+                //     to the watcher's playback clock.
+                //
+                // The counter advances on EVERY captured PCM frame —
+                // including encoder failures, empty-encoded frames, and
+                // muted frames — so a mute gap shows up on the wire as
+                // a real wall-clock gap (timestamps jump forward by the
+                // muted duration) rather than collapsing the silence.
+                // Survives publisher hot-swap (single-broadcast,
+                // single-encoder; the new publisher inherits the
+                // running counter) for the same reason the old
+                // wall-clock TimeMark did: timestamps are codec-payload
+                // metadata, not stream-position.
+                var nextFrameIndex = 0L
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
+                        val timestampUs = nextFrameIndex * AudioFormat.FRAME_DURATION_US
+                        nextFrameIndex += 1
                         val opus =
                             try {
                                 encoder.encode(pcm)
@@ -251,7 +278,7 @@ class NestMoqLiteBroadcaster(
                         // for the production cliff this works around.
                         val sendOutcome =
                             runCatching {
-                                val tsBytes = Varint.encode(frameStartMark.elapsedNow().inWholeMicroseconds)
+                                val tsBytes = Varint.encode(timestampUs)
                                 val payload = ByteArray(tsBytes.size + opus.size)
                                 tsBytes.copyInto(payload, 0)
                                 opus.copyInto(payload, tsBytes.size)
