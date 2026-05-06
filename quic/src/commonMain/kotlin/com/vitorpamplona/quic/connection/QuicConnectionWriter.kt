@@ -493,46 +493,74 @@ private fun buildApplicationPacket(
     // insertion-ordered and stays in sync with the streams map.
     val streamsView = conn.streamsListLocked()
     if (streamsView.isNotEmpty()) {
-        val start = conn.streamRoundRobinStart % streamsView.size
-        for (i in streamsView.indices) {
-            if (packetBudget <= 64) break
-            val stream = streamsView[(start + i) % streamsView.size]
-            val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
-            // Skip if both stream and connection have no credit; FIN-only
-            // (zero-byte) chunks may still go through because they don't
-            // consume credit.
-            if (streamRemaining <= 0L && connBudget <= 0L && !stream.send.finPending) continue
-            val effectiveCap = minOf(streamRemaining, connBudget)
-            val maxBytes =
-                minOf(packetBudget - 32, effectiveCap.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-            val chunk = stream.send.takeChunk(maxBytes = maxBytes) ?: continue
-            if (chunk.data.isNotEmpty() || chunk.fin) {
-                frames +=
-                    StreamFrame(
-                        streamId = stream.streamId,
-                        offset = chunk.offset,
-                        data = chunk.data,
-                        fin = chunk.fin,
-                        explicitLength = true,
-                    )
-                // Step C of the deferred-follow-ups pass: track this
-                // STREAM emission so RFC 9002 retransmit can re-queue
-                // the byte range on loss. SendBuffer.markLost (commit B)
-                // moves the range from in-flight back to the retransmit
-                // queue, and the next takeChunk replays it.
-                tokens +=
-                    RecoveryToken.Stream(
-                        streamId = stream.streamId,
-                        offset = chunk.offset,
-                        length = chunk.data.size.toLong(),
-                        fin = chunk.fin,
-                    )
-                packetBudget -= chunk.data.size + 32
-                connBudget -= chunk.data.size
-                conn.sendConnectionFlowConsumed += chunk.data.size
+        // Strict priority across tiers, round-robin within each tier.
+        // Higher-priority streams (e.g. moq-lite newer-sequence group
+        // streams) ALWAYS drain ahead of lower-priority ones; the
+        // rotating start-index only rotates among same-priority peers.
+        // This is the spec-aligned shape — applying the rotation
+        // globally over the sorted list would flip cross-tier order on
+        // alternating drains, defeating the priority hint entirely.
+        //
+        // Default priority is 0; if every stream is at the default, all
+        // streams form a single tier and iteration order matches the
+        // pre-priority round-robin behaviour exactly.
+        //
+        // Cost: O(N log N) per drain pass plus one transient sorted
+        // list. N is small (1–10 in the moq-lite audio path); if it
+        // ever grows enough to matter, switch to an indirect index sort
+        // or maintain an incrementally-sorted view on setPriority.
+        val sorted =
+            if (streamsView.size > 1) streamsView.sortedByDescending { it.priority } else streamsView
+        val rotation = conn.streamRoundRobinStart
+        var tierStart = 0
+        outer@ while (tierStart < sorted.size) {
+            // Walk the contiguous run of same-priority streams.
+            val tierPriority = sorted[tierStart].priority
+            var tierEnd = tierStart + 1
+            while (tierEnd < sorted.size && sorted[tierEnd].priority == tierPriority) tierEnd++
+            val tierSize = tierEnd - tierStart
+            val tierRotation = if (tierSize > 1) rotation % tierSize else 0
+            for (k in 0 until tierSize) {
+                if (packetBudget <= 64) break@outer
+                val stream = sorted[tierStart + ((tierRotation + k) % tierSize)]
+                val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
+                // Skip if both stream and connection have no credit; FIN-only
+                // (zero-byte) chunks may still go through because they don't
+                // consume credit.
+                if (streamRemaining <= 0L && connBudget <= 0L && !stream.send.finPending) continue
+                val effectiveCap = minOf(streamRemaining, connBudget)
+                val maxBytes =
+                    minOf(packetBudget - 32, effectiveCap.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                val chunk = stream.send.takeChunk(maxBytes = maxBytes) ?: continue
+                if (chunk.data.isNotEmpty() || chunk.fin) {
+                    frames +=
+                        StreamFrame(
+                            streamId = stream.streamId,
+                            offset = chunk.offset,
+                            data = chunk.data,
+                            fin = chunk.fin,
+                            explicitLength = true,
+                        )
+                    // Step C of the deferred-follow-ups pass: track this
+                    // STREAM emission so RFC 9002 retransmit can re-queue
+                    // the byte range on loss. SendBuffer.markLost (commit B)
+                    // moves the range from in-flight back to the retransmit
+                    // queue, and the next takeChunk replays it.
+                    tokens +=
+                        RecoveryToken.Stream(
+                            streamId = stream.streamId,
+                            offset = chunk.offset,
+                            length = chunk.data.size.toLong(),
+                            fin = chunk.fin,
+                        )
+                    packetBudget -= chunk.data.size + 32
+                    connBudget -= chunk.data.size
+                    conn.sendConnectionFlowConsumed += chunk.data.size
+                }
             }
+            tierStart = tierEnd
         }
-        conn.streamRoundRobinStart = (start + 1) % streamsView.size
+        conn.streamRoundRobinStart = (rotation + 1) % streamsView.size
     }
 
     if (frames.isEmpty()) return null
