@@ -38,6 +38,7 @@ smoke: docker smoke-down
 	@echo "picoquic up on $(SMOKE_PICOQUIC):4433 (in $(SMOKE_NET))"
 	docker run --rm --name $(SMOKE_CLIENT) \
 	    --network $(SMOKE_NET) \
+	    -e SMOKE_MODE=1 \
 	    -e ROLE=client \
 	    -e TESTCASE=handshake \
 	    -e REQUESTS="https://$(SMOKE_PICOQUIC):4433/" \
