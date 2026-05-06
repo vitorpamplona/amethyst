@@ -94,8 +94,19 @@ jobs:
           restore-keys: |
             vlcsetup-${{ runner.os }}-
 
+      # Wrap the Gradle invocation in nick-fields/retry so a transient
+      # SocketTimeoutException inside vlcDownload / upxDownload (the de.undercouch
+      # Download tasks talking to get.videolan.org) doesn't sink the whole job.
+      # The in-build retry budget (retries(4) + 5min readTimeout in
+      # desktopApp/build.gradle.kts) handles short blips inside one task; this
+      # outer retry handles the case where get.videolan.org is unreachable for
+      # long enough to exhaust that budget — matches the release workflow.
       - name: Test + Build Desktop (gradle)
-        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        with:
+          max_attempts: 2
+          timeout_minutes: 45
+          command: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
