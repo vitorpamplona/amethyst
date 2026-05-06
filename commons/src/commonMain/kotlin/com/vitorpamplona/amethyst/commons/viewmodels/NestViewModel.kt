@@ -42,7 +42,6 @@ import com.vitorpamplona.nestsclient.audio.OpusDecoder
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.connectReconnectingNestsListener
 import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
-import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -1672,48 +1671,8 @@ class NestViewModel(
             }
     }
 
-    private class ActiveSubscription private constructor(
-        val pubkey: String,
-    ) {
-        private var handle: SubscribeHandle? = null
-        private var roomPlayer: NestPlayer? = null
-        var player: AudioPlayer? = null
-            private set
-        var isPlaying: Boolean = false
-            private set
-
-        fun attach(
-            handle: SubscribeHandle,
-            roomPlayer: NestPlayer,
-            player: AudioPlayer,
-        ) {
-            this.handle = handle
-            this.roomPlayer = roomPlayer
-            this.player = player
-            this.isPlaying = true
-        }
-
-        /**
-         * Hand the player + handle back to the caller's coroutine scope —
-         * `NestPlayer.stop()` and `SubscribeHandle.unsubscribe()` are
-         * both suspend, and the caller has the right scope to await them
-         * (so native MediaCodec/AudioTrack release runs after the decode
-         * loop has unwound, per audit MoQ #11/#12).
-         */
-        fun detach(): Pair<NestPlayer?, SubscribeHandle?> {
-            isPlaying = false
-            val p = roomPlayer
-            val h = handle
-            roomPlayer = null
-            handle = null
-            player = null
-            return p to h
-        }
-
-        companion object {
-            fun pending(pubkey: String) = ActiveSubscription(pubkey)
-        }
-    }
+    // ActiveSubscription was extracted to its own file in the same
+    // package — see [ActiveSubscription.kt].
 
     // Platform-specific Factory lives in `amethyst/.../nests/room/`,
     // not commonMain — the lifecycle KMP `ViewModelProvider.Factory`
