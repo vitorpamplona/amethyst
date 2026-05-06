@@ -22,6 +22,7 @@ package com.vitorpamplona.nestsclient.audio
 
 import android.media.MediaCodec
 import android.media.MediaFormat
+import com.vitorpamplona.quartz.utils.Log
 import java.nio.ByteOrder
 
 /**
@@ -122,7 +123,7 @@ class MediaCodecOpusEncoder(
                         codec.releaseOutputBuffer(outputIndex, false)
                         if (!loggedCsdSkip) {
                             loggedCsdSkip = true
-                            com.vitorpamplona.quartz.utils.Log.d("NestTx") {
+                            Log.d("NestTx") {
                                 "MediaCodecOpusEncoder skipped ${bufferInfo.size}-byte CODEC_CONFIG (OpusHead/OpusTags) — not an audio frame"
                             }
                         }
@@ -135,7 +136,7 @@ class MediaCodecOpusEncoder(
                             // contract — broadcaster's
                             // `if (opus.isEmpty()) continue` handles it
                             // and the next encode call retries.
-                            com.vitorpamplona.quartz.utils.Log.w("NestTx") {
+                            Log.w("NestTx") {
                                 "MediaCodecOpusEncoder hit MAX_CSD_SKIPS_PER_CALL=$MAX_CSD_SKIPS_PER_CALL; bailing this encode call (encoder may be misbehaving)"
                             }
                             return ByteArray(0)

@@ -22,6 +22,7 @@ package com.vitorpamplona.nestsclient.audio
 
 import android.media.MediaCodec
 import android.media.MediaFormat
+import com.vitorpamplona.quartz.utils.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -84,12 +85,12 @@ class MediaCodecOpusDecoder(
                     configure(buildFormat(channelCount, sampleRate), null, null, 0)
                     start()
                 }.also {
-                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                    Log.d("NestPlay") {
                         "MediaCodecOpusDecoder allocated codec='${it.name}' channelCount=$channelCount"
                     }
                 }
         } catch (t: Throwable) {
-            com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+            Log.w("NestPlay") {
                 "MediaCodec audio/opus decoder allocation FAILED: ${t::class.simpleName}: ${t.message}"
             }
             throw AudioException(

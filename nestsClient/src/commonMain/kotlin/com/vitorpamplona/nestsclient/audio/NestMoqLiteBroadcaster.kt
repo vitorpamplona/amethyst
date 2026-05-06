@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient.audio
 
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -356,7 +357,7 @@ class NestMoqLiteBroadcaster(
                                 if (accepted) {
                                     sentFrames += 1
                                     if (sentFrames % SEND_LOG_THROTTLE == 0L) {
-                                        com.vitorpamplona.quartz.utils.Log.d("NestTx") {
+                                        Log.d("NestTx") {
                                             "broadcaster sent frame #$sentFrames (group $framesInCurrentGroup/$framesPerGroup)"
                                         }
                                     }
@@ -371,7 +372,7 @@ class NestMoqLiteBroadcaster(
                                 } else {
                                     droppedNoSubFrames += 1
                                     if (droppedNoSubFrames % SEND_LOG_THROTTLE == 0L) {
-                                        com.vitorpamplona.quartz.utils.Log.w("NestTx") {
+                                        Log.w("NestTx") {
                                             "broadcaster send returned false — frame dropped (count=$droppedNoSubFrames, sent=$sentFrames)"
                                         }
                                     }
@@ -379,7 +380,7 @@ class NestMoqLiteBroadcaster(
                             }.onFailure { t ->
                                 if (t is CancellationException) throw t
                                 consecutiveSendErrors += 1
-                                com.vitorpamplona.quartz.utils.Log.w("NestTx") {
+                                Log.w("NestTx") {
                                     "broadcaster send threw (consecutive=$consecutiveSendErrors): ${t::class.simpleName}: ${t.message}"
                                 }
                                 onError(

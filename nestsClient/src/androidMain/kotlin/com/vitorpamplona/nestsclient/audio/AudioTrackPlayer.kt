@@ -23,6 +23,7 @@ package com.vitorpamplona.nestsclient.audio
 import android.media.AudioAttributes
 import android.media.AudioTrack
 import android.os.Process
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -126,7 +127,7 @@ class AudioTrackPlayer(
 
     override fun start() {
         if (track != null) return
-        com.vitorpamplona.quartz.utils.Log
+        Log
             .d("NestPlay") { "AudioTrackPlayer.start() — allocating AudioTrack" }
 
         val channelMask =
@@ -214,7 +215,7 @@ class AudioTrackPlayer(
         audioExecutor = executor
         audioDispatcher = executor.asCoroutineDispatcher()
         track = newTrack
-        com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+        Log.d("NestPlay") {
             "AudioTrack allocated: state=${newTrack.state} playState=${newTrack.playState} " +
                 "bufferSizeBytes=$bufferBytes minBuffer=$minBuffer sampleRate=$sampleRate"
         }
@@ -229,7 +230,7 @@ class AudioTrackPlayer(
         val t = track ?: return
         try {
             t.play()
-            com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+            Log.d("NestPlay") {
                 "AudioTrack.play() returned, state=${t.playState} bufferSize=${t.bufferSizeInFrames} muted=$muted volume=$volume"
             }
         } catch (e: Throwable) {
@@ -238,7 +239,7 @@ class AudioTrackPlayer(
             // track above. Throw so [NestPlayer]'s outer catch surfaces
             // it via `onError(AudioException.PlaybackFailed)` — same path
             // that handles every other mid-stream device failure.
-            com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+            Log.w("NestPlay") {
                 "AudioTrack.play() threw: ${e::class.simpleName}: ${e.message}"
             }
             throw AudioException(
@@ -261,7 +262,7 @@ class AudioTrackPlayer(
         withContext(dispatcher) {
             val written = t.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
             if (written < 0) {
-                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                Log.w("NestPlay") {
                     "AudioTrack.write returned error $written (state=${t.playState})"
                 }
                 throw AudioException(
@@ -270,7 +271,7 @@ class AudioTrackPlayer(
                 )
             }
             if (written != pcm.size) {
-                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                Log.w("NestPlay") {
                     "AudioTrack.write partial: requested=${pcm.size} written=$written"
                 }
             }
@@ -279,14 +280,14 @@ class AudioTrackPlayer(
 
     override fun setMuted(muted: Boolean) {
         this.muted = muted
-        com.vitorpamplona.quartz.utils.Log
+        Log
             .d("NestPlay") { "AudioTrackPlayer.setMuted($muted) volume=$volume" }
         track?.let { applyMuteVolume(it) }
     }
 
     override fun setVolume(volume: Float) {
         this.volume = volume.coerceIn(0f, 1f)
-        com.vitorpamplona.quartz.utils.Log
+        Log
             .d("NestPlay") { "AudioTrackPlayer.setVolume($volume) muted=$muted" }
         track?.let { applyMuteVolume(it) }
     }

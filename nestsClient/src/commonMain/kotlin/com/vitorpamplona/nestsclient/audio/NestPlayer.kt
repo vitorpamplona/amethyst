@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient.audio
 
 import com.vitorpamplona.nestsclient.moq.MoqObject
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -161,7 +162,7 @@ class NestPlayer(
                 var decodedFrames: Long = 0L
                 var emptyDecodes: Long = 0L
                 var enqueued: Long = 0L
-                com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                Log.d("NestPlay") {
                     "NestPlayer.play started (prerollFrames=$prerollFrames)"
                 }
 
@@ -179,7 +180,7 @@ class NestPlayer(
                     // hardware starts pulling samples; getting
                     // [enqueue] in first means the very first sample
                     // pulled is from our pre-rolled audio, not silence.
-                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                    Log.d("NestPlay") {
                         "NestPlayer flushing preroll (${preroll.size} frames) → beginPlayback"
                     }
                     while (preroll.isNotEmpty()) {
@@ -187,7 +188,7 @@ class NestPlayer(
                     }
                     player.beginPlayback()
                     playbackBegun = true
-                    com.vitorpamplona.quartz.utils.Log
+                    Log
                         .d("NestPlay") { "NestPlayer beginPlayback returned" }
                 }
                 // Track-alias of the most recently observed object.
@@ -201,7 +202,7 @@ class NestPlayer(
                     objects.collect { obj ->
                         receivedObjects += 1
                         if (receivedObjects % PLAY_LOG_THROTTLE == 0L) {
-                            com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                            Log.d("NestPlay") {
                                 "NestPlayer received obj #$receivedObjects (decoded=$decodedFrames empty=$emptyDecodes enqueued=$enqueued playbackBegun=$playbackBegun)"
                             }
                         }
@@ -233,14 +234,14 @@ class NestPlayer(
                                 runCatching { factory() }
                                     .onFailure { t ->
                                         if (t is CancellationException) throw t
-                                        com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                                        Log.w("NestPlay") {
                                             "NestPlayer decoder factory threw on trackAlias " +
                                                 "$lastTrackAlias → ${obj.trackAlias}; keeping old decoder " +
                                                 "(${t::class.simpleName}: ${t.message})"
                                         }
                                     }.getOrNull()
                             if (replacement != null) {
-                                com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                                Log.d("NestPlay") {
                                     "NestPlayer publisher boundary: trackAlias $lastTrackAlias → ${obj.trackAlias}; rebuilding decoder"
                                 }
                                 runCatching { decoder.release() }
@@ -254,7 +255,7 @@ class NestPlayer(
                             } catch (ce: CancellationException) {
                                 throw ce
                             } catch (t: Throwable) {
-                                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                                Log.w("NestPlay") {
                                     "decoder.decode threw on obj #$receivedObjects: ${t::class.simpleName}: ${t.message}"
                                 }
                                 onError(
@@ -269,7 +270,7 @@ class NestPlayer(
                         if (pcm.isEmpty()) {
                             emptyDecodes += 1
                             if (emptyDecodes % PLAY_LOG_THROTTLE == 0L) {
-                                com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                                Log.w("NestPlay") {
                                     "decoder returned empty pcm (count=$emptyDecodes / received=$receivedObjects)"
                                 }
                             }
@@ -282,7 +283,7 @@ class NestPlayer(
                                 val enqueueMs = System.currentTimeMillis() - enqueueStart
                                 enqueued += 1
                                 if (enqueued % PLAY_LOG_THROTTLE == 0L || enqueueMs > 50) {
-                                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                                    Log.d("NestPlay") {
                                         "NestPlayer enqueued #$enqueued (took ${enqueueMs}ms)"
                                     }
                                 }
@@ -294,7 +295,7 @@ class NestPlayer(
                             }
                         }
                     }
-                    com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                    Log.w("NestPlay") {
                         "NestPlayer objects flow COMPLETED (received=$receivedObjects decoded=$decodedFrames empty=$emptyDecodes enqueued=$enqueued)"
                     }
                     // Flow ended without enough frames to fill the pre-roll
@@ -303,12 +304,12 @@ class NestPlayer(
                     // already-decoded audio still reaches the device.
                     beginAndFlushIfNeeded()
                 } catch (ce: CancellationException) {
-                    com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                    Log.d("NestPlay") {
                         "NestPlayer cancelled (received=$receivedObjects decoded=$decodedFrames enqueued=$enqueued)"
                     }
                     throw ce
                 } catch (t: Throwable) {
-                    com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                    Log.w("NestPlay") {
                         "NestPlayer pipeline threw: ${t::class.simpleName}: ${t.message}"
                     }
                     onError(
@@ -334,7 +335,7 @@ class NestPlayer(
     suspend fun stop() {
         if (stopped) return
         stopped = true
-        com.vitorpamplona.quartz.utils.Log
+        Log
             .d("NestPlay") { "NestPlayer.stop()" }
         job?.cancelAndJoin()
         runCatching { player.stop() }
