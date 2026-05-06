@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -220,6 +221,26 @@ class NotificationDispatcher(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Failed to dispatch Welcome notification ${event.id}", e)
+        }
+    }
+
+    /**
+     * Direct-invocation entry point for Marmot kind:445 group messages.
+     * Bypasses the cache-observer path because GroupEvents are routed by
+     * the `h` tag (nostr_group_id), not by `p` tag. Called from
+     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.GroupEventHandler]
+     * once the MLS-decrypted inner event has been parsed and indexed.
+     */
+    suspend fun notifyGroupMessage(
+        innerEvent: ChatEvent,
+        nostrGroupId: String,
+        account: Account,
+    ) {
+        try {
+            consumer.notifyGroupMessage(innerEvent, nostrGroupId, account)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Failed to dispatch Group Message notification ${innerEvent.id}", e)
         }
     }
 }

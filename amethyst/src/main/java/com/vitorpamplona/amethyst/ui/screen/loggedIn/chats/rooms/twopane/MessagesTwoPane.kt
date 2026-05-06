@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -73,6 +74,7 @@ fun MessagesTwoPane(
     val displayFeatures = calculateDisplayFeatures(act)
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         topBar = {
             UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
         },
