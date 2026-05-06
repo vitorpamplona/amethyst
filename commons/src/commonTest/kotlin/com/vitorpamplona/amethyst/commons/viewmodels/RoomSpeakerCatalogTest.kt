@@ -127,12 +127,13 @@ class RoomSpeakerCatalogTest {
 
     @Test
     fun stripPrefixRoundTripsCanonicalCatalog() {
-        // The catalog payload [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker]
-        // emits MUST round-trip through the parser — guards against
-        // either side drifting from the kixelated/hang shape.
-        // SPEAKER_CATALOG_JSON lives in nestsClient and isn't
-        // accessible from commons; keep an inline literal that mirrors
-        // it verbatim so a desync triggers this assertion.
+        // The catalog payload `MoqLiteHangCatalog.opusMono48k(...)` emits
+        // (in `:nestsClient`) MUST round-trip through this parser — the
+        // two classes target the same wire shape independently because
+        // `:nestsClient` does not depend on `:commons` and vice versa.
+        // `MoqLiteHangCatalog` isn't reachable from this module; keep an
+        // inline literal that mirrors what the publisher emits verbatim
+        // so a desync on either side trips this assertion.
         val emitted =
             "{\"audio\":{\"renditions\":{\"audio/data\":{" +
                 "\"codec\":\"opus\",\"container\":{\"kind\":\"legacy\"}," +

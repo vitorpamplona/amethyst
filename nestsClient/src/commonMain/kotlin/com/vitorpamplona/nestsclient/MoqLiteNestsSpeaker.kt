@@ -23,6 +23,7 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteHangCatalog
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import kotlinx.coroutines.CancellationException
@@ -155,7 +156,8 @@ class MoqLiteNestsSpeaker internal constructor(
             // every CATALOG_REPUBLISH_INTERVAL_MS so late-joining
             // watchers don't wait an arbitrary amount of time for the
             // next refresh.
-            val catalogJson = SPEAKER_CATALOG_JSON.encodeToByteArray()
+            val catalogJson =
+                MoqLiteHangCatalog.opusMono48k(MoqLiteNestsListener.AUDIO_TRACK).encodeJsonBytes()
             val republishJob =
                 try {
                     catalogPublisher.send(catalogJson)
@@ -201,32 +203,6 @@ class MoqLiteNestsSpeaker internal constructor(
     }
 
     companion object {
-        /**
-         * moq-lite catalog manifest broadcast on the
-         * [MoqLiteNestsListener.CATALOG_TRACK] track. Verbatim
-         * canonical kixelated/moq `hang` shape (camelCase, nested
-         * `audio.renditions[<trackName>]`, `container.kind = "legacy"`).
-         * The rendition key MUST equal the moq-lite track we publish
-         * audio frames on ([MoqLiteNestsListener.AUDIO_TRACK]) so the
-         * watcher's "subscribe to this rendition" path resolves to our
-         * actual audio stream.
-         *
-         * `container.kind = "legacy"` declares the wire layout the
-         * watcher must expect inside each moq-lite frame: a single
-         * `varint(timestamp_us)` prefix followed by the raw codec
-         * payload (no MOOF/MDAT wrapping). The publisher side honours
-         * this contract in
-         * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster].
-         *
-         * Hard-coded because the speaker's encoder is fixed at
-         * 48 kHz mono Opus today; if [OpusEncoder] becomes parameterised
-         * this should be derived from the encoder config instead.
-         */
-        const val SPEAKER_CATALOG_JSON: String =
-            "{\"audio\":{\"renditions\":{\"" + MoqLiteNestsListener.AUDIO_TRACK + "\":{" +
-                "\"codec\":\"opus\",\"container\":{\"kind\":\"legacy\"}," +
-                "\"sampleRate\":48000,\"numberOfChannels\":1}}}}"
-
         /**
          * How often the catalog group is re-emitted. The relay drops
          * the catalog group when its last subscriber drops, so a

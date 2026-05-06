@@ -23,6 +23,7 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteHangCatalog
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -572,7 +573,8 @@ private class ReissuingBroadcastHandle(
         // and any watcher that attaches AFTER the recycle sees nothing
         // to subscribe to. Mirror of [MoqLiteNestsSpeaker.startBroadcasting]'s
         // catalog setup; same JSON, same republish cadence.
-        val catalogPayload = MoqLiteNestsSpeaker.SPEAKER_CATALOG_JSON.encodeToByteArray()
+        val catalogPayload =
+            MoqLiteHangCatalog.opusMono48k(MoqLiteNestsListener.AUDIO_TRACK).encodeJsonBytes()
         val priorCatalogPublisher = hotSwapCatalogPublisher
         val priorCatalogJob = hotSwapCatalogJob
         val newCatalogPublisher =
