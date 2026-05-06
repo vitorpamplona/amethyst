@@ -26,16 +26,32 @@ reorder / migration scenarios that are awkward to reproduce in unit tests.
 
 ## Local iteration loop
 
-```
-# In our repo:
-make -C quic/interop build
+The fast path: `quic/interop/run-matrix.sh` clones the runner alongside
+this repo, sets up a venv, merges our `implementations.json` snippet,
+builds the endpoint image, and invokes `run.py`. All steps are
+idempotent so repeated invocations just iterate.
 
-# In a sibling clone of quic-interop-runner, merge our entry into
-# implementations.json (snippet checked in at quic/interop/quic-interop-runner-snippet.json):
+```
+# Single test against the most permissive peer:
+quic/interop/run-matrix.sh -s aioquic -t handshake
+
+# A focused triangulation:
+quic/interop/run-matrix.sh -s aioquic   -t handshake,chacha20
+quic/interop/run-matrix.sh -s quic-go   -t handshake,chacha20
+quic/interop/run-matrix.sh -s picoquic  -t handshake,chacha20
+
+# Tight inner loop — skip the image rebuild between test selections:
+SKIP_BUILD=1 quic/interop/run-matrix.sh -s aioquic -t transfer
+```
+
+Manual flow (if `run-matrix.sh` doesn't fit):
+
+```
+make -C quic/interop build
+# Then in a sibling clone of quic-interop-runner, merge our snippet:
 jq -s '.[0] * .[1]' implementations.json \
    ../amethyst/quic/interop/quic-interop-runner-snippet.json \
    > implementations.json.new && mv implementations.json.new implementations.json
-
 python run.py -d -i amethyst -s aioquic -t handshake,chacha20 --log-dir ./logs
 ```
 
