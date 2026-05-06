@@ -238,6 +238,21 @@ class NestMoqLiteBroadcaster(
                 // wall-clock TimeMark did: timestamps are codec-payload
                 // metadata, not stream-position.
                 var nextFrameIndex = 0L
+                // Mute-edge tracking. On the unmuted→muted transition we
+                // FIN the open uni stream so the watcher sees a clean
+                // group boundary instead of a half-delivered group that
+                // never completes — kixelated/hang's
+                // `Container.Consumer.#runGroup` parks on
+                // `await group.consumer.readFrame()` until either a
+                // frame arrives or the group hits FIN, and renders a
+                // "stalled" indicator while it waits. Without the FIN,
+                // muting Amethyst lights up that indicator on every web
+                // watcher even though the broadcast is intentionally
+                // silent. The FIN clears it; unmuting opens a fresh
+                // group cleanly via the standard
+                // `currentGroup ?: openNextGroupLocked()` path inside
+                // `PublisherStateImpl.send`.
+                var wasMuted = false
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
@@ -259,7 +274,27 @@ class NestMoqLiteBroadcaster(
                                 continue
                             }
                         if (opus.isEmpty()) continue
-                        if (muted) continue
+                        if (muted) {
+                            // Unmuted → muted edge: FIN the current
+                            // group's uni stream once. Doesn't reset
+                            // [framesInCurrentGroup] since
+                            // `endGroup` is a no-op when no group is
+                            // open, and the next post-unmute send will
+                            // open a fresh group anyway. `runCatching`
+                            // because a transport-side close during
+                            // mute is non-fatal — the broadcaster's
+                            // terminal-failure path picks up real
+                            // breakage on the next live frame.
+                            if (!wasMuted) {
+                                wasMuted = true
+                                runCatching { publisher.endGroup() }
+                                framesInCurrentGroup = 0
+                            }
+                            continue
+                        }
+                        // Muted → unmuted edge: clear the latch so the
+                        // next mute transition fires endGroup again.
+                        wasMuted = false
                         // Snapshot the publisher reference once per frame.
                         // If [swapPublisher] mid-loop installed a new
                         // reference, pick it up here and reset the group
