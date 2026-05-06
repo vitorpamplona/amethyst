@@ -302,13 +302,25 @@ class NestViewModel(
 
     /**
      * [kotlin.time.TimeMark] of the most recent recycle the cliff
-     * detector triggered, or `null` if it has never fired. Acts as a
-     * cooldown so a single cliff event doesn't kick off multiple
-     * recycles back-to-back while the wrapper is mid-handshake on
-     * the new session — the new session has no incoming frames yet,
-     * which would otherwise trip the detector again immediately.
+     * detector triggered, or `null` if it has never fired. Combined
+     * with [consecutiveCliffRecycles] to drive the per-attempt
+     * backoff schedule in [computeStalledSpeakers] — short backoff
+     * after the first failed recycle so a single moq-rs cliff
+     * recovers within a few seconds, escalating to the
+     * [ROOM_AUDIO_CLIFF_BACKOFF_MAX_MS] cap if the relay stays
+     * stalled across multiple recycles.
      */
     private var lastCliffRecycleAt: kotlin.time.TimeMark? = null
+
+    /**
+     * Number of consecutive `recycleSession()` calls the detector has
+     * issued without seeing a real frame in between. Reset to 0 in
+     * [onSpeakerActivity] when any speaker delivers a frame, so a
+     * recovered-then-restall pattern re-enters with attempt = 0
+     * (immediate recycle eligible) rather than inheriting backoff
+     * from a prior failed-recycle streak.
+     */
+    private var consecutiveCliffRecycles: Int = 0
 
     /**
      * Per-speaker catalog-fetch coroutines. Each entry is the
@@ -320,7 +332,19 @@ class NestViewModel(
      */
     private val catalogJobs = mutableMapOf<String, Job>()
     private var requestedSpeakers: Set<String> = emptySet()
-    private var closed = false
+
+    /**
+     * `@Volatile` because [closed] is read by background coroutines
+     * (cliff-detector, observe* loops, audio-focus + network observers)
+     * but written from `leave()` / `onCleared()` which can fire from
+     * the Activity destroy callback on a different stack frame than
+     * the coroutine that's about to suspend in [delay] / [collect].
+     * Without the marker, a coroutine that resumes from cancellation
+     * could read a stale `closed = false` even though the user has
+     * already left the room — visible in the trace as
+     * `cliff-detector EXITED ... closed=false` after a Leave press.
+     */
+    @Volatile private var closed = false
 
     // Speaker / publisher path
     private var speaker: NestsSpeaker? = null
@@ -1389,6 +1413,7 @@ class NestViewModel(
         cliffDetectorJob = null
         lastFrameAt.clear()
         lastCliffRecycleAt = null
+        consecutiveCliffRecycles = 0
         // Audio-focus observation only ends on the final teardown —
         // a transient disconnect+reconnect (user retry, room swap)
         // keeps the bus subscription alive so a focus loss that
@@ -1469,9 +1494,17 @@ class NestViewModel(
     }
 
     /**
-     * Mark [pubkey] as currently speaking and (re)arm a [SPEAKING_TIMEOUT_MS]
-     * coroutine that clears it once they go quiet. Called once per
-     * MoQ object received on the speaker's track.
+     * Per-frame heartbeat. Called once per MoQ object received on the
+     * speaker's track — i.e. once per ~20 ms regardless of whether
+     * that frame contains actual speech, silence, or background noise.
+     *
+     * Bumps the cliff-detector timestamp so an active stream keeps
+     * resetting the relay-forward-queue stall watchdog, and clears
+     * the per-speaker buffering overlay the first time a frame lands.
+     *
+     * NB: this does NOT mark the speaker as "speaking right now".
+     * That signal is energy-gated and lives in [onAudioLevel] —
+     * mic-on with no voice MUST NOT light up the green ring.
      */
     private fun onSpeakerActivity(pubkey: String) {
         if (closed) return
@@ -1483,12 +1516,27 @@ class NestViewModel(
         lastFrameAt[pubkey] =
             kotlin.time.TimeSource.Monotonic
                 .markNow()
-        speakingExpiryJobs[pubkey]?.cancel()
+        // A real frame proves the most recent recycle (if any) actually
+        // fixed the cliff. Reset the consecutive-failed counter so a
+        // future re-stall starts from attempt 0 (immediate-fire) rather
+        // than inheriting a long backoff from the prior streak.
+        if (consecutiveCliffRecycles != 0) consecutiveCliffRecycles = 0
         // First frame for this subscription — clear the buffering
         // overlay. Subsequent frames are no-ops here.
         if (_uiState.value.connectingSpeakers.contains(pubkey)) {
             _uiState.update { it.copy(connectingSpeakers = (it.connectingSpeakers - pubkey).toPersistentSet()) }
         }
+    }
+
+    /**
+     * Mark [pubkey] as currently speaking and (re)arm a
+     * [SPEAKING_TIMEOUT_MS] coroutine that clears the flag once their
+     * audio drops back below the threshold for that long. Called from
+     * [onAudioLevel] only when the decoded peak is loud enough to
+     * read as speech (see [SPEAKING_LEVEL_THRESHOLD]).
+     */
+    private fun markSpeaking(pubkey: String) {
+        speakingExpiryJobs[pubkey]?.cancel()
         if (!_uiState.value.speakingNow.contains(pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow + pubkey).toPersistentSet()) }
         }
@@ -1570,43 +1618,53 @@ class NestViewModel(
                                 announcedSpeakers = announced,
                                 lastFrameAt = lastFrameAt,
                                 lastRecycleAt = lastCliffRecycleAt,
+                                consecutiveFailedRecycles = consecutiveCliffRecycles,
                                 cliffTimeoutMs = ROOM_AUDIO_CLIFF_TIMEOUT_MS,
-                                cooldownMs = ROOM_AUDIO_CLIFF_COOLDOWN_MS,
+                                postRecycleGraceMs = ROOM_AUDIO_CLIFF_RECYCLE_GRACE_MS,
                             )
                         if (stalled.isEmpty()) continue
+                        consecutiveCliffRecycles += 1
                         com.vitorpamplona.quartz.utils.Log.w("NestRx") {
-                            "cliff-detector: announced+subscribed but silent for ≥${ROOM_AUDIO_CLIFF_TIMEOUT_MS}ms — recycling session. stalled=$stalled"
+                            "cliff-detector: announced+subscribed but silent for ≥${ROOM_AUDIO_CLIFF_TIMEOUT_MS}ms — recycling session " +
+                                "(consecutive=$consecutiveCliffRecycles). stalled=$stalled"
                         }
                         com.vitorpamplona.nestsclient.trace.NestsTrace.emit("cliff_recycle") {
                             "\"timeout_ms\":$ROOM_AUDIO_CLIFF_TIMEOUT_MS," +
+                                "\"consecutive\":$consecutiveCliffRecycles," +
                                 "\"stalled\":${com.vitorpamplona.nestsclient.trace.jsonArrStr(stalled)}"
                         }
-                        val recycleMark =
+                        lastCliffRecycleAt =
                             kotlin.time.TimeSource.Monotonic
                                 .markNow()
-                        lastCliffRecycleAt = recycleMark
-                        // Reset `lastFrameAt` for every stalled pubkey so
-                        // the cliff timer starts counting from the recycle
-                        // moment, not from the old (pre-recycle) last
-                        // frame timestamp. Without this reset the next
-                        // tick after the cooldown immediately re-trips —
-                        // because `lastFrameAt[pubkey].elapsedNow()` is
-                        // still the giant pre-recycle value plus the
-                        // cooldown window. Production logs at commit
-                        // ea08c43 showed exactly this: 4 recycles in
-                        // ~30 s eventually drove the relay into a
-                        // "subscribe stream FIN before reply" loop where
-                        // it refused fresh subscribes entirely. Using
-                        // the recycle moment as a synthetic frame event
-                        // gives the new session [ROOM_AUDIO_CLIFF_TIMEOUT_MS]
-                        // wall-clock to deliver before the next cliff
-                        // check, matching the expectation a freshly-
-                        // attached subscription should clear inside
-                        // that window if the relay is healthy.
-                        for (pubkey in stalled) {
-                            lastFrameAt[pubkey] = recycleMark
+                        // Note: we deliberately do NOT overwrite
+                        // `lastFrameAt[pubkey]` with the recycle moment.
+                        // Keeping the real-frame timestamp lets the next
+                        // tick distinguish "the recycle delivered audio,
+                        // we then re-stalled" (lastFrameAt advances past
+                        // lastCliffRecycleAt — counter resets in
+                        // `onSpeakerActivity`, attempt = 0, fire-eligible
+                        // immediately) from "the recycle did nothing,
+                        // still no frames" (lastFrameAt unchanged,
+                        // counter keeps growing, backoff escalates).
+                        // The previous reset collapsed both cases into
+                        // a flat 30 s wait, which made a single failed
+                        // recycle sound like a 30 s+ dropout to the
+                        // user even when retrying earlier would have
+                        // recovered.
+                        try {
+                            l.recycleSession()
+                        } catch (ce: CancellationException) {
+                            // User left mid-recycle — exit promptly
+                            // rather than letting the next delay() be
+                            // the one to honor the cancel. `runCatching`
+                            // would have swallowed this CE and run one
+                            // more loop body before exiting.
+                            throw ce
+                        } catch (_: Throwable) {
+                            // Any other recycle failure is best-effort;
+                            // keep the loop running so a follow-up tick
+                            // can re-detect the cliff and retry.
                         }
-                        runCatching { l.recycleSession() }
                     }
                 } finally {
                     com.vitorpamplona.quartz.utils.Log
@@ -1641,6 +1699,20 @@ class NestViewModel(
     ) {
         if (closed) return
         rawAudioLevels[pubkey] = level
+        // Energy-gated speaking detector. The MoQ track delivers a
+        // frame every ~20 ms while the mic is open, even when the
+        // speaker is silent or only picking up room noise — gating the
+        // green ring on "frame arrived" therefore lights it up the
+        // moment the mic is unmuted, not when there's actually a voice
+        // on it. The decoded peak amplitude (`peakAmplitude` in
+        // nestsClient/audio/Amplitude.kt) gives us the signal we need:
+        // background noise / breath stays under a few percent of full
+        // scale, while even a quiet voice clears [SPEAKING_LEVEL_THRESHOLD].
+        // The 250 ms expiry already wired up in [markSpeaking] gives
+        // the indicator natural hysteresis between syllables.
+        if (level >= SPEAKING_LEVEL_THRESHOLD) {
+            markSpeaking(pubkey)
+        }
         startLevelEmitter()
     }
 
@@ -1799,11 +1871,28 @@ sealed class BroadcastUiState {
 }
 
 /**
- * How long a speaker stays "speaking" after their last received MoQ object.
- * Roughly 12 × the 20 ms Opus frame so brief packet jitter doesn't make the
- * indicator flicker.
+ * How long a speaker stays "speaking" after their last decoded frame
+ * over the [SPEAKING_LEVEL_THRESHOLD]. Roughly 12 × the 20 ms Opus
+ * frame so brief packet jitter and inter-syllable pauses don't make
+ * the indicator flicker between adjacent words.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/**
+ * Minimum decoded peak amplitude (normalized to `[0, 1]`) that counts
+ * as "this person is actually speaking right now". Frames whose peak
+ * lands below this threshold are treated as silence / room tone /
+ * breath — they keep the per-speaker subscription healthy (the cliff
+ * heartbeat in [NestViewModel.onSpeakerActivity] still fires) but do
+ * NOT light up the green speaking ring.
+ *
+ * 0.06 ≈ -24 dBFS, comfortably above the typical residential-mic
+ * noise floor (~-40 to -30 dBFS) while still tripping on a quiet
+ * voice. Tuned in conjunction with [SPEAKING_TIMEOUT_MS]: a single
+ * loud frame is enough to arm the indicator; ≥ 250 ms below the
+ * threshold drops it.
+ */
+const val SPEAKING_LEVEL_THRESHOLD: Float = 0.06f
 
 /**
  * How long [NestViewModel.openSubscription] waits for the publisher's
@@ -1926,24 +2015,34 @@ const val ROOM_AUDIO_CLIFF_TIMEOUT_MS: Long = 2_500L
 const val ROOM_AUDIO_CLIFF_CHECK_INTERVAL_MS: Long = 1_000L
 
 /**
- * Cooldown after a cliff-detector-driven recycle. Suppresses
- * back-to-back recycles while the wrapper is mid-handshake on the
- * fresh session AND while the relay is recovering its
- * per-subscriber forward queue.
+ * Post-recycle handshake grace. NEVER recycle again within this
+ * window of the previous recycle — the wrapper is still tearing
+ * down + reopening the QUIC session, so a "no frames since recycle"
+ * reading is just the handshake, not a relay-side cliff.
  *
- * Production logs at commit ea08c43 showed an 8 s cooldown was
- * not enough — moq-rs needed longer to recover between aggressive
- * recycles, and 4 recycles in ~30 s drove the relay into a
- * "subscribe stream FIN before reply" loop that refused all
- * subsequent subscribes. 30 s gives the relay's per-subscriber
- * forward task pool time to drain stale pending writes from the
- * previous subscription before the new subscribe lands. The
- * audible-gap cost rises from ~5 s to ~30 s in the worst case
- * (a fully-stalled relay), but the trade is correct: 30 s of
- * silence + recovered audio beats endless silence with the relay
- * locked out.
+ * 3 s covers a typical re-handshake (drain old session UNSUB +
+ * UNANNOUNCE + WT_CLOSE + open new WebTransport + SUBSCRIBE +
+ * SUBSCRIBE_OK). Anything shorter risks recycling inside our own
+ * handshake window; longer wastes audible silence in the recovering-
+ * within-grace case.
  */
-const val ROOM_AUDIO_CLIFF_COOLDOWN_MS: Long = 30_000L
+const val ROOM_AUDIO_CLIFF_RECYCLE_GRACE_MS: Long = 3_000L
+
+/**
+ * Maximum backoff for the consecutive-failed-recycle schedule —
+ * the cap that [defaultCliffBackoffMs] saturates at.
+ *
+ * The earlier flat 30 s cooldown was motivated by production logs
+ * at commit ea08c43 where 4 back-to-back recycles in ~30 s drove
+ * moq-rs into a "subscribe stream FIN before reply" loop that
+ * refused all subsequent subscribes. The replacement schedule
+ * (5 s → 12 s → 24 s → 30 s, reset on first real frame) keeps
+ * the same final-state protection — by the 4th consecutive failed
+ * recycle we're spaced 30 s apart — while letting the *recovering*
+ * case (your trace: 1st recycle worked, 2nd cliff fires later)
+ * retry within ~5 s instead of the previous 30 s of dead air.
+ */
+const val ROOM_AUDIO_CLIFF_BACKOFF_MAX_MS: Long = 30_000L
 
 /**
  * Diagnostic log frequency for the cliff detector. Emit a state-dump
@@ -1953,6 +2052,36 @@ const val ROOM_AUDIO_CLIFF_COOLDOWN_MS: Long = 30_000L
  * everything is fine.
  */
 private const val CLIFF_DIAG_LOG_EVERY: Long = 5L
+
+/**
+ * Default backoff schedule for consecutive failed recycles. Returns
+ * the minimum elapsed time since [NestViewModel.lastCliffRecycleAt]
+ * before the [attempt + 1]-th recycle is permitted.
+ *
+ *   attempt 0  → 0 ms       (no recycle yet — first cliff fires immediately)
+ *   attempt 1  → 5 000 ms   (one prior recycle, no audio since)
+ *   attempt 2  → 12 000 ms
+ *   attempt 3  → 24 000 ms
+ *   attempt 4+ → 30 000 ms  (cap, [ROOM_AUDIO_CLIFF_BACKOFF_MAX_MS])
+ *
+ * Resets to 0 on the first real frame after a recycle (see
+ * [NestViewModel.onSpeakerActivity]) — so a recover-then-restall
+ * pattern always gets the immediate-fire treatment again rather
+ * than inheriting backoff from the prior failed-recycle streak.
+ *
+ * Cumulative wall-clock at attempt N: 0 → 5 → 17 → 41 → 71 s.
+ * 4 consecutive recycles span ~41 s — meaningfully slower than the
+ * "4 in ~30 s" pattern that wedged moq-rs in commit ea08c43, while
+ * still letting the typical 1-failure case retry inside 5 s.
+ */
+internal fun defaultCliffBackoffMs(attempt: Int): Long =
+    when {
+        attempt <= 0 -> 0L
+        attempt == 1 -> 5_000L
+        attempt == 2 -> 12_000L
+        attempt == 3 -> 24_000L
+        else -> ROOM_AUDIO_CLIFF_BACKOFF_MAX_MS
+    }
 
 /**
  * Pure logic of the cliff detector — extracted so headless tests can
@@ -1974,23 +2103,30 @@ private const val CLIFF_DIAG_LOG_EVERY: Long = 5L
  *   - the elapsed time since that last object is at or past
  *     [cliffTimeoutMs].
  *
- * Suppression:
- *   - if [lastRecycleAt] is non-null and less than [cooldownMs] has
- *     elapsed since it, returns empty (no cascading recycles while
- *     the wrapper is mid-handshake on a fresh session).
+ * Suppression (when [lastRecycleAt] is non-null):
+ *   - while elapsed since [lastRecycleAt] is below [postRecycleGraceMs],
+ *     never recycle — we're still inside the previous handshake window.
+ *   - while elapsed is below [backoffForAttempt]([consecutiveFailedRecycles]),
+ *     suppress as well: the per-attempt schedule throttles
+ *     consecutive failed recycles so we don't hammer the relay.
+ *   - the consecutive counter is reset by the caller on the first
+ *     real frame after a recycle, so a recovered-then-restall
+ *     case always re-enters with attempt = 0 and fires immediately.
  */
 internal fun computeStalledSpeakers(
     activeSpeakers: Set<String>,
     announcedSpeakers: Set<String>,
     lastFrameAt: Map<String, kotlin.time.TimeMark>,
     lastRecycleAt: kotlin.time.TimeMark?,
+    consecutiveFailedRecycles: Int = 0,
     cliffTimeoutMs: Long = ROOM_AUDIO_CLIFF_TIMEOUT_MS,
-    cooldownMs: Long = ROOM_AUDIO_CLIFF_COOLDOWN_MS,
+    postRecycleGraceMs: Long = ROOM_AUDIO_CLIFF_RECYCLE_GRACE_MS,
+    backoffForAttempt: (Int) -> Long = ::defaultCliffBackoffMs,
 ): List<String> {
-    if (lastRecycleAt != null &&
-        lastRecycleAt.elapsedNow().inWholeMilliseconds < cooldownMs
-    ) {
-        return emptyList()
+    if (lastRecycleAt != null) {
+        val sinceRecycleMs = lastRecycleAt.elapsedNow().inWholeMilliseconds
+        if (sinceRecycleMs < postRecycleGraceMs) return emptyList()
+        if (sinceRecycleMs < backoffForAttempt(consecutiveFailedRecycles)) return emptyList()
     }
     return activeSpeakers
         .asSequence()

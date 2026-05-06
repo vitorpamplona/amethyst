@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
@@ -420,28 +421,18 @@ private fun MemberCell(
             },
         label = "speaker-outer-ring-width",
     )
+    // Reserve enough space around the avatar Box to fit the outer ring
+    // and glow halo. Without this padding the rings clip against the
+    // surrounding Surface / LazyVerticalGrid bounds (most visibly at
+    // the top edge for the first row, where the stage card's rounded
+    // corner cuts into the glow). The glow extends up to MAX_GLOW_RADIUS
+    // past the avatar; the outer ring extends OUTER_RING_GAP +
+    // OUTER_RING_MAX_WIDTH past it.
+    val ringPadding =
+        maxOf(MAX_GLOW_RADIUS.value, (OUTER_RING_GAP + OUTER_RING_MAX_WIDTH).value).dp
     val avatarModifier =
         Modifier
-            .drawBehind {
-                if (animatedGlowAlpha > 0.001f) {
-                    val baseRadius = size.minDimension / 2f
-                    val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
-                    drawCircle(
-                        color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
-                        radius = baseRadius + extra,
-                    )
-                }
-                if (animatedOuterRingAlpha > 0.001f && animatedOuterRingWidth > 0.dp) {
-                    val baseRadius = size.minDimension / 2f
-                    val strokePx = animatedOuterRingWidth.toPx()
-                    val ringRadius = baseRadius + OUTER_RING_GAP.toPx() + strokePx / 2f
-                    drawCircle(
-                        color = NEST_SPEAKING_COLOR.copy(alpha = animatedOuterRingAlpha),
-                        radius = ringRadius,
-                        style = Stroke(width = strokePx),
-                    )
-                }
-            }.border(animatedRingWidth, animatedRingColor, CircleShape)
+            .border(animatedRingWidth, animatedRingColor, CircleShape)
             .let { if (member.absent) it.alpha(0.5f) else it }
     val user =
         remember(member.pubkey) {
@@ -480,58 +471,53 @@ private fun MemberCell(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            ClickableUserPicture(
-                baseUserHex = member.pubkey,
-                size = avatarSize,
-                accountViewModel = accountViewModel,
-                modifier = avatarModifier,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            )
-            if (isConnecting) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(avatarSize - 8.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            val role = member.role
-            if (role == ROLE.HOST || role == ROLE.MODERATOR) {
-                RoleBadge(
-                    role = role,
-                    modifier = Modifier.align(Alignment.TopStart),
-                )
-            }
-            if (member.handRaised) {
-                HandRaiseBadge(
-                    modifier = Modifier.align(Alignment.TopEnd),
-                )
-            }
-            // Show the mic badge for any on-stage speaker that has
-            // an audio state to surface — currently broadcasting
-            // (`publishing=1`) OR mic-muted (`muted=1, publishing=0`).
-            // Gating only on `publishing` would hide the muted icon
-            // the moment the user mutes, which is exactly when it's
-            // supposed to appear.
-            if (showMicBadge && (member.publishing || member.muted == true)) {
-                MicStateBadge(
+        // Outer Box paints the glow halo + detached outer ring on a
+        // canvas that's bigger than the avatar by [ringPadding]. The
+        // inner Box keeps its tight-to-avatar bounds so badge corner
+        // alignment (TopStart, TopEnd, BottomCenter, BottomEnd) still
+        // tracks the avatar circle, not the padded outer area.
+        Box(
+            modifier =
+                Modifier.drawBehind {
+                    val avatarRadiusPx = avatarSize.toPx() / 2f
+                    val cx = size.width / 2f
+                    val cy = size.height / 2f
+                    if (animatedGlowAlpha > 0.001f) {
+                        val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
+                        drawCircle(
+                            color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
+                            radius = avatarRadiusPx + extra,
+                            center = Offset(cx, cy),
+                        )
+                    }
+                    if (animatedOuterRingAlpha > 0.001f && animatedOuterRingWidth > 0.dp) {
+                        val strokePx = animatedOuterRingWidth.toPx()
+                        val ringRadius = avatarRadiusPx + OUTER_RING_GAP.toPx() + strokePx / 2f
+                        drawCircle(
+                            color = NEST_SPEAKING_COLOR.copy(alpha = animatedOuterRingAlpha),
+                            radius = ringRadius,
+                            center = Offset(cx, cy),
+                            style = Stroke(width = strokePx),
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier.padding(ringPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                AvatarAndBadges(
+                    member = member,
+                    avatarSize = avatarSize,
+                    accountViewModel = accountViewModel,
+                    avatarModifier = avatarModifier,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    isConnecting = isConnecting,
+                    showMicBadge = showMicBadge,
                     isSpeaking = isSpeaking,
-                    isMuted = member.muted == true,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
-            // Reactions float over the avatar's bottom-right corner so
-            // a 👏 burst no longer pushes the username down and reflows
-            // neighbouring cells. The mic badge sits at BottomCenter,
-            // so BottomEnd + a small outward offset keeps them clear.
-            if (reactions.isNotEmpty()) {
-                SpeakerReactionOverlay(
                     reactions = reactions,
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset(x = 6.dp, y = 6.dp),
                 )
             }
         }
@@ -542,6 +528,76 @@ private fun MemberCell(
             textAlign = TextAlign.Center,
             accountViewModel = accountViewModel,
         )
+    }
+}
+
+@Composable
+private fun AvatarAndBadges(
+    member: RoomMember,
+    avatarSize: Dp,
+    accountViewModel: AccountViewModel,
+    avatarModifier: Modifier,
+    onClick: ((String) -> Unit)?,
+    onLongClick: ((String) -> Unit)?,
+    isConnecting: Boolean,
+    showMicBadge: Boolean,
+    isSpeaking: Boolean,
+    reactions: List<RoomReaction>,
+) {
+    Box(contentAlignment = Alignment.Center) {
+        ClickableUserPicture(
+            baseUserHex = member.pubkey,
+            size = avatarSize,
+            accountViewModel = accountViewModel,
+            modifier = avatarModifier,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+        if (isConnecting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(avatarSize - 8.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        val role = member.role
+        if (role == ROLE.HOST || role == ROLE.MODERATOR) {
+            RoleBadge(
+                role = role,
+                modifier = Modifier.align(Alignment.TopStart),
+            )
+        }
+        if (member.handRaised) {
+            HandRaiseBadge(
+                modifier = Modifier.align(Alignment.TopEnd),
+            )
+        }
+        // Show the mic badge for any on-stage speaker that has
+        // an audio state to surface — currently broadcasting
+        // (`publishing=1`) OR mic-muted (`muted=1, publishing=0`).
+        // Gating only on `publishing` would hide the muted icon
+        // the moment the user mutes, which is exactly when it's
+        // supposed to appear.
+        if (showMicBadge && (member.publishing || member.muted == true)) {
+            MicStateBadge(
+                isSpeaking = isSpeaking,
+                isMuted = member.muted == true,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+        // Reactions float over the avatar's bottom-right corner so
+        // a 👏 burst no longer pushes the username down and reflows
+        // neighbouring cells. The mic badge sits at BottomCenter,
+        // so BottomEnd + a small outward offset keeps them clear.
+        if (reactions.isNotEmpty()) {
+            SpeakerReactionOverlay(
+                reactions = reactions,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 6.dp, y = 6.dp),
+            )
+        }
     }
 }
 

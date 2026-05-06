@@ -111,6 +111,86 @@ class QuicConnectionWriterTest {
     }
 
     @Test
+    fun writer_drains_higher_priority_streams_before_lower_priority() {
+        // T11.3 follow-up: priority must dominate iteration order on
+        // EVERY drain, not just the first. The naive "sort by priority
+        // then apply the existing rotating start globally" shape looks
+        // right at a glance but the rotating start advances on every
+        // drain, so cross-tier ordering flips on alternate drains and
+        // the priority hint is silently defeated. The correct shape is
+        // strict priority across tiers + round-robin only within a
+        // tier, which we pin here by draining TWICE and asserting the
+        // higher-priority stream's StreamFrame lands first in BOTH
+        // packets. Low-priority stream is opened FIRST so insertion-
+        // order can't accidentally pass for priority ordering.
+        runBlocking {
+            val (client, pipe) = connectedClient()
+            val low = client.openBidiStream()
+            val high = client.openBidiStream()
+            low.priority = 0
+            high.priority = 10
+
+            repeat(2) { round ->
+                low.send.enqueue(ByteArray(200) { 0xAA.toByte() })
+                high.send.enqueue(ByteArray(200) { 0xBB.toByte() })
+
+                val datagram = drainOutbound(client, nowMillis = 0L)
+                assertNotNull(datagram, "drain on round $round must emit a packet")
+                val frames = pipe.decryptClientApplicationFrames(datagram)
+                assertNotNull(frames, "decrypt must succeed on round $round")
+                val streamFrames = frames.filterIsInstance<StreamFrame>()
+                assertEquals(
+                    2,
+                    streamFrames.size,
+                    "expected one StreamFrame per stream on round $round, got $streamFrames",
+                )
+                assertEquals(
+                    high.streamId,
+                    streamFrames[0].streamId,
+                    "higher-priority stream must drain first on round $round; " +
+                        "saw ${streamFrames.map { it.streamId }}",
+                )
+                assertEquals(low.streamId, streamFrames[1].streamId, "low second on round $round")
+            }
+        }
+    }
+
+    @Test
+    fun writer_round_robins_within_a_priority_tier() {
+        // Regression guard for the tier-local round-robin: same-priority
+        // streams must still rotate so an early-opened stream doesn't
+        // monopolise a packet's stream-frame slot indefinitely. We open
+        // three streams at the default (0) priority and verify the
+        // rotating start advances by one per drain, matching the
+        // pre-priority behaviour.
+        runBlocking {
+            val (client, pipe) = connectedClient()
+            val a = client.openBidiStream()
+            val b = client.openBidiStream()
+            val c = client.openBidiStream()
+            // All default priority — single tier, three streams.
+            val expectedRotation =
+                listOf(
+                    listOf(a.streamId, b.streamId, c.streamId),
+                    listOf(b.streamId, c.streamId, a.streamId),
+                    listOf(c.streamId, a.streamId, b.streamId),
+                )
+            for ((round, expected) in expectedRotation.withIndex()) {
+                a.send.enqueue(ByteArray(64) { 0xA1.toByte() })
+                b.send.enqueue(ByteArray(64) { 0xB2.toByte() })
+                c.send.enqueue(ByteArray(64) { 0xC3.toByte() })
+
+                val datagram = drainOutbound(client, nowMillis = 0L)
+                assertNotNull(datagram, "drain $round must emit a packet")
+                val frames = pipe.decryptClientApplicationFrames(datagram)
+                assertNotNull(frames, "decrypt must succeed on round $round")
+                val ids = frames.filterIsInstance<StreamFrame>().map { it.streamId }
+                assertEquals(expected, ids, "round $round round-robin order")
+            }
+        }
+    }
+
+    @Test
     fun writer_respects_connection_level_send_credit_cap() {
         // Audit-4 #9: pre-fix the writer ignored sendConnectionFlowCredit
         // and would happily send past the peer's initial_max_data, ending

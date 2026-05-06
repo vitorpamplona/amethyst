@@ -327,6 +327,46 @@ class InMemoryQuicPipe(
      */
     fun buildServerApplicationPacket(frames: List<com.vitorpamplona.quic.frame.Frame>): ByteArray? = buildServerApplicationDatagram(frames)
 
+    /**
+     * Decrypt the application-level (1-RTT) packet inside a client-emitted
+     * datagram and return its frames in wire order. Test-only helper for
+     * assertions that depend on per-frame ordering inside a packet (e.g.
+     * stream priority scheduling). Walks past any coalesced long-header
+     * packets (Initial / Handshake) at the front of the datagram, since the
+     * client may still flush ACKs at those levels post-handshake. Returns
+     * null if no short-header packet is present or decryption fails.
+     */
+    fun decryptClientApplicationFrames(datagram: ByteArray): List<com.vitorpamplona.quic.frame.Frame>? {
+        if (datagram.isEmpty()) return null
+        var offset = 0
+        while (offset < datagram.size) {
+            val first = datagram[offset].toInt() and 0xFF
+            if ((first and 0x80) == 0) {
+                val proto = serverApplicationRx ?: return null
+                val parsed =
+                    ShortHeaderPacket.parseAndDecrypt(
+                        bytes = datagram,
+                        offset = offset,
+                        dcidLen = serverScid.length,
+                        aead = proto.aead,
+                        key = proto.key,
+                        iv = proto.iv,
+                        hp = proto.hp,
+                        hpKey = proto.hpKey,
+                        largestReceivedInSpace = applicationPnSpace.largestReceived,
+                    ) ?: return null
+                applicationPnSpace.observeInbound(parsed.packet.packetNumber, 0L)
+                return decodeFrames(parsed.packet.payload)
+            }
+            // Long header — skip past it using the encoded length field so
+            // we can inspect any short-header packet that was coalesced
+            // after it.
+            val peeked = LongHeaderPacket.peekHeader(datagram, offset) ?: return null
+            offset += peeked.totalLength
+        }
+        return null
+    }
+
     private fun buildServerInitialPacket(crypto: ByteArray): ByteArray {
         val proto =
             PacketProtection(
