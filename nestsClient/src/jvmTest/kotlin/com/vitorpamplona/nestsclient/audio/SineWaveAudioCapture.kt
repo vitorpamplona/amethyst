@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.nestsclient.audio
 
+import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -28,12 +29,13 @@ import kotlin.math.sin
  *
  * Generates [AudioFormat.FRAME_SIZE_SAMPLES] samples per call at the
  * audio pipeline's native [AudioFormat.SAMPLE_RATE_HZ] (48 kHz). The
- * sample counter is frame-perfect and never reads wall-clock — what
- * the test sends is exactly what reaches the decoder. The decoded
- * peak-frequency assertion in
- * [com.vitorpamplona.nestsclient.audio.PcmAssertions.assertFftPeak]
- * relies on this determinism; a wall-clock-based source would drift
- * and trigger spurious failures on slow CI workers.
+ * sample counter is frame-perfect and the function paces itself to
+ * real time — production microphone sources block on hardware until
+ * a frame's worth of samples are available, so the broadcaster's
+ * read loop relies on `readFrame` not returning faster than wallclock.
+ * Without that pacing the encoder + relay would be flooded with
+ * 50 million frames/sec instead of 50 frames/sec, fill the relay's
+ * buffers, and surface as "no inboundSubs" frame drops.
  *
  * Mono only (`channels = 1`) for Phase 1 — the I4 stereo scenario
  * (Phase 2) extends this to a per-channel `freqHzL` / `freqHzR` pair.
@@ -44,8 +46,11 @@ class SineWaveAudioCapture(
 ) : AudioCapture {
     private var sampleIdx: Long = 0L
 
+    /** Wallclock target for the next frame (`System.nanoTime` units). */
+    private var nextFrameNanos: Long = 0L
+
     override fun start() {
-        // No device to allocate.
+        nextFrameNanos = System.nanoTime() + FRAME_NANOS
     }
 
     override suspend fun readFrame(): ShortArray? {
@@ -61,10 +66,21 @@ class SineWaveAudioCapture(
             out[i] = v.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
         }
         sampleIdx = baseIdx + samples
+
+        // Pace to real time — block until the next 20-ms boundary.
+        val now = System.nanoTime()
+        val sleepNanos = nextFrameNanos - now
+        if (sleepNanos > 0) delay(sleepNanos / 1_000_000L)
+        nextFrameNanos += FRAME_NANOS
         return out
     }
 
     override fun stop() {
         // No device to release.
+    }
+
+    private companion object {
+        /** 20 ms in nanoseconds — the audio pipeline's frame cadence. */
+        private const val FRAME_NANOS: Long = AudioFormat.FRAME_DURATION_US * 1_000L
     }
 }

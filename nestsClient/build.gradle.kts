@@ -74,6 +74,17 @@ kotlin {
                 implementation(libs.kotlin.test)
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.secp256k1.kmp.jni.jvm)
+                // JNA bindings + bundled libopus.so used by the cross-stack
+                // interop tests (T16). The Android targets keep their
+                // existing `MediaCodecOpusEncoder/Decoder`; only JVM
+                // tests need a host-side codec, and `club.minnced:opus-java`
+                // ships natives for linux-x86-64 / aarch64 / darwin / win32.
+                // No Android dependency is added. opus-java-api declares
+                // JNA as runtime-scope; Kotlin needs it at compile time to
+                // resolve the `tomp2p.opuswrapper.Opus extends com.sun.jna.Library`
+                // supertype, so pull it explicitly.
+                implementation("club.minnced:opus-java:1.1.1")
+                implementation("net.java.dev.jna:jna:5.14.0")
             }
         }
 

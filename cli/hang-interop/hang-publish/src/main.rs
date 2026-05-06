@@ -21,8 +21,10 @@ const FRAME_SIZE_SAMPLES: usize = 960;
 const FRAME_DURATION_US: u64 = 20_000;
 /// 5 frames per group → 100 ms group cadence, matching nests speaker.
 const FRAMES_PER_GROUP: usize = 5;
-/// Audio rendition track name in the catalog.
-const TRACK_NAME: &str = "audio";
+/// Default audio rendition track name in the catalog. Amethyst's
+/// listener subscribes to `audio/data` per `MoqLiteNestsListener.AUDIO_TRACK`,
+/// so that's what we ship by default. Override via `--track-name`.
+const DEFAULT_TRACK_NAME: &str = "audio/data";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -56,6 +58,12 @@ struct Args {
     /// a Phase-2 follow-up.
     #[arg(long, default_value_t = 1)]
     channels: u32,
+
+    /// Audio rendition track name. Default `audio/data` matches
+    /// Amethyst's `MoqLiteNestsListener.AUDIO_TRACK`. Override for
+    /// custom interop scenarios.
+    #[arg(long, default_value_t = DEFAULT_TRACK_NAME.to_string())]
+    track_name: String,
 }
 
 #[tokio::main]
@@ -81,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run(args: Args) -> anyhow::Result<()> {
-    let url = build_url(&args.relay_url, &args.broadcast, args.jwt.as_deref())?;
+    let url = build_url(&args.relay_url, args.jwt.as_deref())?;
 
     let cfg = moq_native::ClientConfig::parse_from([
         "hang-publish",
@@ -131,7 +139,7 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
 
     let mut renditions = std::collections::BTreeMap::new();
     renditions.insert(
-        TRACK_NAME.to_string(),
+        args.track_name.clone(),
         AudioConfig {
             codec: AudioCodec::Opus,
             sample_rate: SAMPLE_RATE_HZ,
@@ -163,7 +171,7 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
     // 2. Audio track.
     let mut audio_track = broadcast
         .create_track(moq_lite::Track {
-            name: TRACK_NAME.to_string(),
+            name: args.track_name.clone(),
             priority: 1,
         })
         .context("create audio track")?;
@@ -260,12 +268,20 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
     Ok(())
 }
 
-fn build_url(relay_url: &str, broadcast: &str, jwt: Option<&str>) -> anyhow::Result<url::Url> {
+/// Build the WebTransport URL the publisher connects to.
+///
+/// `relay_url` is taken as the *full* URL the publisher connects to
+/// (scheme + authority + optional path). `broadcast` is the relative
+/// announce-suffix passed to `Origin::create_broadcast`, NOT appended
+/// to the URL. Callers that want the publisher's URL path to also be
+/// `broadcast` should pass `--relay-url=<host>/<broadcast>` and
+/// `--broadcast=<broadcast>` (the simple Rust↔Rust shape).
+fn build_url(relay_url: &str, jwt: Option<&str>) -> anyhow::Result<url::Url> {
     let trimmed = relay_url.trim_end_matches('/');
     let raw = if let Some(jwt) = jwt {
-        format!("{trimmed}/{broadcast}?jwt={jwt}")
+        format!("{trimmed}?jwt={jwt}")
     } else {
-        format!("{trimmed}/{broadcast}")
+        trimmed.to_string()
     };
-    url::Url::parse(&raw).with_context(|| format!("malformed relay/broadcast url: {raw}"))
+    url::Url::parse(&raw).with_context(|| format!("malformed relay url: {raw}"))
 }

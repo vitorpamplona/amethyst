@@ -85,28 +85,25 @@ class NativeMoqRelayHarnessSmokeTest {
     }
 
     @Test
-    fun stub_hang_listen_runs_cleanly() {
+    fun hang_listen_invokes_with_help_flag() {
+        // Phase 2 fleshed in the real subscribe loop. The cheapest
+        // smoke check that doesn't need a publisher is `--help` —
+        // proves the binary is reachable from the test JVM, clap
+        // parsing succeeds, and the bundled libopus / aws-lc-rs
+        // natives load on the host platform.
         val harness = NativeMoqRelayHarness.shared()
-        // The stub returns immediately with exit code 0. This proves
-        // the binary is reachable from the test JVM and clap parsing
-        // succeeds — i.e. Phase 2 only has to flesh out the body.
         val proc =
             ProcessBuilder(
                 harness.hangListenBin().toString(),
-                "--relay-url",
-                harness.relayUrl,
-                "--broadcast",
-                "test/smoke",
-                "--duration",
-                "1",
+                "--help",
             ).redirectErrorStream(true).start()
         val exited = proc.waitFor(10, TimeUnit.SECONDS)
         val output = proc.inputStream.bufferedReader().readText()
-        assertTrue(exited, "hang-listen stub did not exit within 10 s. Output:\n$output")
-        assertEquals(0, proc.exitValue(), "hang-listen stub exited non-zero. Output:\n$output")
+        assertTrue(exited, "hang-listen --help did not exit within 10 s. Output:\n$output")
+        assertEquals(0, proc.exitValue(), "hang-listen --help exited non-zero. Output:\n$output")
         assertTrue(
-            output.contains("Phase-1 stub"),
-            "expected hang-listen Phase-1 stub banner in output. Got:\n$output",
+            output.contains("--relay-url"),
+            "expected --relay-url in hang-listen --help output. Got:\n$output",
         )
     }
 }

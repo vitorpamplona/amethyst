@@ -1,6 +1,80 @@
-# Plan: cross-stack interop test (T16) — Phase 1 results
+# Plan: cross-stack interop test (T16) — Phase 1 + Phase 2 results
 
-**Status:** Phase 1 landed (scaffolding-only). Phase 2 + 3 + 4 + 5 deferred.
+**Status:** Phase 1 + most of Phase 2 landed. Phases 3–5 still deferred.
+
+## Phase 2 update
+
+Added on top of the Phase 1 scaffolding:
+
+- **`hang-listen` real body** — connects to a `moq-lite-03` relay,
+  reads the hang catalog, picks the first Opus / Container::Legacy
+  audio rendition, decodes each Opus packet via the `opus = "0.3"`
+  crate, and writes Float32 little-endian PCM to `--output-pcm`.
+- **`hang-publish` real body** — claims a broadcast, publishes a hang
+  catalog with one Opus rendition (track name configurable via
+  `--track-name`, default `audio/data` to match Amethyst's
+  `MoqLiteNestsListener.AUDIO_TRACK`), encodes a sine wave with
+  libopus, and pumps Opus frames in 5-frame groups for `--duration`
+  seconds. Uses `audiopus`-equivalent `opus = "0.3"`.
+- Both binaries explicitly install the rustls aws-lc-rs crypto
+  provider (rustls 0.23 no longer auto-installs) and use
+  `--client-version moq-lite-03` + `--tls-disable-verify=true`
+  to interop with the harness's self-signed `--tls-generate localhost`
+  relay.
+- **JVM Opus encoder/decoder** via `club.minnced:opus-java:1.1.1`
+  (JNA bindings + bundled libopus.so / libopus.dylib / opus.dll
+  natives). Lives in `nestsClient/src/jvmTest/.../audio/JvmOpusEncoder.kt`
+  + `JvmOpusDecoder.kt`. Verified by
+  `JvmOpusRoundTripTest.sine_440_round_trips_through_libopus` —
+  encode → decode preserves the FFT peak at 440 Hz and the
+  zero-crossing rate at 880/sec within 5%.
+- **Real-time pacing** in `SineWaveAudioCapture` — `readFrame`
+  blocks until the next 20-ms boundary, mirroring how a microphone
+  source paces. Without this the broadcaster's read loop would
+  flood the relay with millions of frames/sec.
+- **`HangInteropTest.rust_hang_publish_to_rust_hang_listener_round_trip_440`**
+  — Rust↔Rust round-trip through the harness. Spawns `hang-publish`
+  + `hang-listen` as subprocesses, asserts the decoded PCM has FFT
+  peak at 440 Hz, ZCR at 880/sec, and 5 s of samples (±20% slack
+  for Opus look-ahead + relay buffering). Verified green on Linux
+  x86_64.
+
+## Known gap — Amethyst speaker → hang-listen (I1 forward direction)
+
+Wired in `HangInteropTest` initially as
+`amethyst_speaker_to_hang_listener_static_tone_440` but it doesn't
+pass yet. Symptom: the hang `Container::Legacy` decoder receives
+each `moq-lite Group { subscribe, sequence }` control message but
+never receives the per-frame `varint(timestamp_us) + opus` payload
+that should follow on the same uni stream. Both sides agree on
+`moq-lite-03`, the audio rendition catalog parses correctly, the
+audio SUBSCRIBE registers on the speaker's audio publisher
+(`inboundSubs.size=1`), and the broadcaster's send loop reports
+50 frames/sec going out — yet hang-listen sees no
+`varint(size) + bytes` after each Group header.
+
+The race fix in the test (`speaker.startBroadcasting()` before
+spawning `hang-listen`) is needed to keep the catalog publisher's
+`setOnNewSubscriber` hook installed in time, but doesn't unblock
+the audio path. The catalog uni stream's frame data DOES make it
+through — only the audio uni stream's frames are lost. The bug is
+likely in `:nestsClient`'s audio uni-stream framing (in
+`MoqLiteSession.openGroupStream` / `PublisherStateImpl.send`) and
+needs a wire-byte capture against the existing Kotlin↔Kotlin
+listener path to confirm the issue is symmetric (i.e. only Rust
+fails to read) or producer-side (Kotlin fails to write the frame
+size prefix the way the spec calls for). The smoke-test version
+`HangInteropTest.rust_hang_publish_to_rust_hang_listener_round_trip_440`
+proves the harness + cargo workspace + JVM Opus all work; the
+Kotlin-speaker path is gated behind this open issue and tracked
+in this doc.
+
+When picking up: replace the test body with the speaker-→-listener
+shape from the plan's "Patterns" section (already prototyped in
+the deleted `amethyst_speaker_to_hang_listener_static_tone_440`),
+and capture the first audio uni stream's bytes via a custom
+`WebTransportFactory` that sniffs writes — then compare against
+what the Rust subscriber's `run_group` parser expects.
 
 **Origin:** companion to `nestsClient/plans/2026-05-06-cross-stack-interop-test.md`.
 This file records what actually shipped in Phase 1, the deviations from
