@@ -172,15 +172,15 @@ jobs:
           path: ${{ matrix.desktop-artifact-path }}
 
   # Cross-stack interop tests (T16). Builds the Rust hang-listen +
-  # hang-publish sidecars (cli/hang-interop/), `cargo install`s
+  # hang-publish sidecars (nestsClient/tests/hang-interop/), `cargo install`s
   # moq-relay + moq-token-cli at the version pinned in
-  # `cli/hang-interop/REV`, then runs `:nestsClient:jvmTest
+  # `nestsClient/tests/hang-interop/REV`, then runs `:nestsClient:jvmTest
   # -DnestsHangInterop=true`. See
   # `nestsClient/plans/2026-05-06-cross-stack-interop-test.md`.
   #
   # Linux-only: the cargo install of `moq-relay` 0.10.x has nontrivial
   # native deps (aws-lc-sys, ring) that take 5+ min cold; we cache
-  # both ~/.cargo and the cli/hang-interop/target tree so the warm
+  # both ~/.cargo and the nestsClient/tests/hang-interop/target tree so the warm
   # path is a few seconds. macOS / Windows runs would double the
   # matrix cost without catching anything Linux doesn't catch — the
   # protocol logic is platform-agnostic and the JNA libopus natives
@@ -220,9 +220,9 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            cli/hang-interop/target
+            nestsClient/tests/hang-interop/target
             ~/.cache/amethyst-nests-interop/hang-interop-cargo
-          key: ${{ runner.os }}-cargo-${{ hashFiles('cli/hang-interop/Cargo.lock', 'cli/hang-interop/REV') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('nestsClient/tests/hang-interop/Cargo.lock', 'nestsClient/tests/hang-interop/REV') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 

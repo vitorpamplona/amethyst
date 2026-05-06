@@ -104,7 +104,7 @@ nestsClient-browser-interop/
 Pin all `@moq/*` deps to the same versions `nostrnests/nests`
 ships in `NestsUI-v2/package.json`. Document the rev in
 `nestsClient-browser-interop/REV` (parallel to
-`cli/hang-interop/REV`).
+`nestsClient/tests/hang-interop/REV`).
 
 ### 2. `listen.ts` — browser listener
 

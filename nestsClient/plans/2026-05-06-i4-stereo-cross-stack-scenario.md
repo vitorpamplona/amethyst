@@ -192,14 +192,14 @@ FFT assertion on each. ZCR can be done the same way.
 ### `hang-listen` already supports stereo
 
 Verify by reading the existing
-`cli/hang-interop/hang-listen/src/main.rs`: it already passes
+`nestsClient/tests/hang-interop/hang-listen/src/main.rs`: it already passes
 `audio_cfg.channel_count` into `opus::Decoder::new(...)` and
 allocates a stereo PCM buffer if the catalog says so. No Rust
 change needed.
 
 ### `hang-publish` already supports stereo
 
-Verify by reading `cli/hang-interop/hang-publish/src/main.rs`:
+Verify by reading `nestsClient/tests/hang-interop/hang-publish/src/main.rs`:
 the `--channels <1|2>` flag plumbs through to the catalog, the
 opus encoder, and the sine generator. No Rust change needed.
 *(Note: the current sine generator uses the same frequency on

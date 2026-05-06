@@ -36,7 +36,7 @@ import kotlin.concurrent.withLock
  * binary paths for the cross-stack interop harness.
  *
  *   - `moq-relay` is `cargo install`ed at the version pinned in
- *     `cli/hang-interop/REV` and cached under
+ *     `nestsClient/tests/hang-interop/REV` and cached under
  *     `~/.cache/amethyst-nests-interop/hang-interop-cargo/bin/`.
  *   - TLS: `--tls-generate localhost` so the relay self-signs at
  *     startup. Kotlin clients use the existing
@@ -95,7 +95,7 @@ class NativeMoqRelayHarness private constructor(
 
         /**
          * `interopBuildHangSidecars` writes this. Points to
-         * `cli/hang-interop/target/release` where the (Phase-1
+         * `nestsClient/tests/hang-interop/target/release` where the (Phase-1
          * stub) sidecar binaries live.
          */
         const val SIDECARS_DIR_PROPERTY = "nestsHangInteropSidecarsDir"

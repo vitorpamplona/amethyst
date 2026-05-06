@@ -107,13 +107,13 @@ the spec, and the concrete pickup points for Phase 2.
 
 ## What landed
 
-### Cargo workspace (`cli/hang-interop/`)
+### Cargo workspace (`nestsClient/tests/hang-interop/`)
 
 - Workspace with three binary crates: `hang-listen`, `hang-publish`,
   `udp-loss-shim`. **All three are Phase-1 stubs** — they parse their
   CLI flags via `clap`, print a banner, and exit 0. Phase 2 fills the
   bodies.
-- `cli/hang-interop/REV` documents the pinned upstream
+- `nestsClient/tests/hang-interop/REV` documents the pinned upstream
   `kixelated/moq` rev (`9e2461ee...`) plus the published crate
   versions on crates.io that track that rev (`moq-relay 0.10.25`,
   `moq-token-cli 0.5.23`, `hang 0.15.8`, `moq-lite 0.15.15`,
@@ -128,7 +128,7 @@ the spec, and the concrete pickup points for Phase 2.
   the binary already exists in the cache.
 - `interopInstallMoqTokenCli` — same shape for `moq-token-cli`.
 - `interopBuildSidecars` — `cargo build --release` over the local
-  `cli/hang-interop/` workspace.
+  `nestsClient/tests/hang-interop/` workspace.
 - `interopBuildHangSidecars` — umbrella task that depends on the
   three above. Runs as a test dependency only when
   `-DnestsHangInterop=true` is set.
@@ -210,7 +210,7 @@ rendition with `container.kind == "legacy"` and
 `Bytes`-encoded VarInt timestamp + Opus packet, run the Opus
 packets through `audiopus::Decoder`, write Float32 PCM to
 `--output-pcm`. Dependencies to add to
-`cli/hang-interop/hang-listen/Cargo.toml`:
+`nestsClient/tests/hang-interop/hang-listen/Cargo.toml`:
 
 ```toml
 hang = "0.15"
@@ -297,7 +297,7 @@ the smoke test.
 ## Files
 
 ```
-cli/hang-interop/
+nestsClient/tests/hang-interop/
 ├── REV
 ├── Cargo.toml + Cargo.lock
 ├── hang-listen/{Cargo.toml,src/main.rs}        # Phase 2: real subscribe + decode

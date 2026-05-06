@@ -128,7 +128,7 @@ tasks.withType<Test>().configureEach {
 
 // ---- Cross-stack interop: Rust sidecar build + binary path forwarding -------
 //
-// Phase 1 of the interop plan ships the workspace at `cli/hang-interop/`
+// Phase 1 of the interop plan ships the workspace at `nestsClient/tests/hang-interop/`
 // with three stub binaries (hang-listen, hang-publish, udp-loss-shim).
 // `interopBuildHangSidecars` runs `cargo build --release` against it and
 // resolves the upstream `moq-relay` + `moq-token` binaries via
@@ -140,15 +140,15 @@ tasks.withType<Test>().configureEach {
 // actual interop scenarios land in Phase 2 once `hang-listen` /
 // `hang-publish` have real subscribe/publish loops. See
 // `nestsClient/plans/2026-05-06-cross-stack-interop-test.md` for the
-// full plan and the pinned upstream versions in `cli/hang-interop/REV`.
+// full plan and the pinned upstream versions in `nestsClient/tests/hang-interop/REV`.
 
-val hangInteropDir = rootProject.layout.projectDirectory.dir("cli/hang-interop")
+val hangInteropDir = rootProject.layout.projectDirectory.dir("nestsClient/tests/hang-interop")
 val hangInteropCacheDir =
     layout.projectDirectory
         .dir(System.getProperty("user.home") ?: "/tmp")
         .dir(".cache/amethyst-nests-interop/hang-interop-cargo")
 
-// Versions are duplicated from cli/hang-interop/REV so Gradle has them
+// Versions are duplicated from nestsClient/tests/hang-interop/REV so Gradle has them
 // at configuration time; bumping requires touching both files.
 val moqRelayVersion = "0.10.25"
 val moqTokenCliVersion = "0.5.23"
@@ -194,7 +194,7 @@ val interopInstallMoqTokenCli by tasks.registering(Exec::class) {
 }
 
 val interopBuildSidecars by tasks.registering(Exec::class) {
-    description = "cargo build --release for cli/hang-interop sidecars"
+    description = "cargo build --release for nestsClient/tests/hang-interop sidecars"
     group = "interop"
     workingDir = hangInteropDir.asFile
     commandLine("cargo", "build", "--release")
