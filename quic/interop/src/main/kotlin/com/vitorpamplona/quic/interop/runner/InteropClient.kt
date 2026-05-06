@@ -24,6 +24,8 @@ import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
+import com.vitorpamplona.quic.tls.TlsConstants
+import com.vitorpamplona.quic.tls.TlsSecretsListener
 import com.vitorpamplona.quic.transport.UdpSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 import java.net.URI
 import kotlin.system.exitProcess
 
@@ -60,20 +63,37 @@ fun main() {
 
     val testcase = System.getenv("TESTCASE")?.trim().orEmpty()
     val requests = System.getenv("REQUESTS")?.trim().orEmpty()
+    val keyLogPath = System.getenv("SSLKEYLOGFILE")?.takeIf { it.isNotBlank() }
 
     System.err.println("== quic-interop client ==")
-    System.err.println("testcase: $testcase")
-    System.err.println("requests: $requests")
+    System.err.println("testcase:       $testcase")
+    System.err.println("requests:       $requests")
+    System.err.println("sslkeylogfile:  ${keyLogPath ?: "(unset)"}")
+
+    val cipherSuites =
+        when (testcase) {
+            "chacha20" -> intArrayOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256)
+            else -> null
+        }
 
     val code =
         when (testcase) {
-            "handshake" -> runHandshakeTest(requests)
+            // Both `handshake` and `chacha20` only require the handshake to
+            // complete; `chacha20` adds the constraint that we offered only
+            // ChaCha20-Poly1305 (verified by the runner via tshark on the
+            // sim's pcap, decrypted using SSLKEYLOGFILE).
+            "handshake", "chacha20" -> runHandshakeTest(requests, cipherSuites, keyLogPath)
+
             else -> EXIT_UNSUPPORTED
         }
     exitProcess(code)
 }
 
-private fun runHandshakeTest(requests: String): Int {
+private fun runHandshakeTest(
+    requests: String,
+    cipherSuites: IntArray?,
+    keyLogPath: String?,
+): Int {
     val target =
         parseFirstTarget(requests) ?: run {
             System.err.println("no parseable target in REQUESTS")
@@ -91,12 +111,23 @@ private fun runHandshakeTest(requests: String): Int {
                 } catch (t: Throwable) {
                     return@runBlocking "udp_failed: ${t.message ?: t::class.simpleName}"
                 }
+            val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
             val conn =
                 QuicConnection(
                     serverName = host,
                     config = QuicConnectionConfig(),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
+                    cipherSuites =
+                        cipherSuites
+                            ?: intArrayOf(
+                                TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+                                TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+                            ),
+                    extraSecretsListener = keyLogger?.listener,
                 )
+            // clientRandom is null until QuicConnection.start() runs the TLS
+            // state machine, so the logger reads it lazily during flush().
+            keyLogger?.bindConnection(conn)
             val driver = QuicConnectionDriver(conn, socket, scope)
             driver.start()
 
@@ -111,6 +142,7 @@ private fun runHandshakeTest(requests: String): Int {
                     else -> "failed: ${handshake.exceptionOrNull()?.message ?: "?"}"
                 }
             runCatching { driver.close() }
+            keyLogger?.flush()
             delay(50)
             result
         }
@@ -137,3 +169,74 @@ private fun parseFirstTarget(requests: String): Pair<String, Int>? {
     val port = uri.port.takeIf { it > 0 } ?: 443
     return host to port
 }
+
+/**
+ * Writes [NSS Key Log Format](https://firefox-source-docs.mozilla.org/security/nss/legacy/key_log_format/index.html)
+ * lines so Wireshark can decrypt the sim's captured pcap.
+ *
+ *   CLIENT_HANDSHAKE_TRAFFIC_SECRET <client_random_hex> <secret_hex>
+ *   SERVER_HANDSHAKE_TRAFFIC_SECRET <client_random_hex> <secret_hex>
+ *   CLIENT_TRAFFIC_SECRET_0 <client_random_hex> <secret_hex>
+ *   SERVER_TRAFFIC_SECRET_0 <client_random_hex> <secret_hex>
+ */
+private class SslKeyLogger(
+    private val file: File,
+) {
+    private var clientRandomLookup: (() -> ByteArray?)? = null
+    private val pending = mutableListOf<Pair<String, ByteArray>>()
+
+    val listener: TlsSecretsListener =
+        object : TlsSecretsListener {
+            override fun onHandshakeKeysReady(
+                cipherSuite: Int,
+                clientSecret: ByteArray,
+                serverSecret: ByteArray,
+            ) {
+                pending += "CLIENT_HANDSHAKE_TRAFFIC_SECRET" to clientSecret
+                pending += "SERVER_HANDSHAKE_TRAFFIC_SECRET" to serverSecret
+            }
+
+            override fun onApplicationKeysReady(
+                cipherSuite: Int,
+                clientSecret: ByteArray,
+                serverSecret: ByteArray,
+            ) {
+                pending += "CLIENT_TRAFFIC_SECRET_0" to clientSecret
+                pending += "SERVER_TRAFFIC_SECRET_0" to serverSecret
+            }
+
+            override fun onHandshakeComplete() = Unit
+        }
+
+    fun bindConnection(conn: QuicConnection) {
+        clientRandomLookup = { conn.tls.clientRandom }
+    }
+
+    fun flush() {
+        val random = clientRandomLookup?.invoke() ?: return
+        val randomHex = random.toHex()
+        file.parentFile?.mkdirs()
+        file.appendText(
+            buildString {
+                for ((label, secret) in pending) {
+                    append(label)
+                        .append(' ')
+                        .append(randomHex)
+                        .append(' ')
+                        .append(secret.toHex())
+                        .append('\n')
+                }
+            },
+        )
+        pending.clear()
+    }
+}
+
+private fun ByteArray.toHex(): String =
+    buildString(size * 2) {
+        for (b in this@toHex) {
+            val v = b.toInt() and 0xff
+            append("0123456789abcdef"[v ushr 4])
+            append("0123456789abcdef"[v and 0xf])
+        }
+    }

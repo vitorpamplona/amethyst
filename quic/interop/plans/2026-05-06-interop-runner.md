@@ -52,12 +52,28 @@ Inspect `./logs/<run>/client_qlog/*.qlog` in qvis when something breaks.
 | 3 | Edge cases | `retry`, `resumption`, `zerortt`, `keyupdate`, `rebinding-*`, `blackhole`, `amplificationlimit` | every test green or unsupported-127 with a written reason |
 | 4 | CI gate | nightly Phases 1–2; PR-blocking subset on every push | qlogs uploaded as artifacts on red |
 
-## Known follow-ups (NOT in Phase 0)
+## Phase 1a — landed 2026-05-06
 
-- `SSLKEYLOGFILE` and `QLOGDIR` are not yet wired through to `:quic` — the
-  runner will set them but our endpoint ignores them. Phase 1 must surface
-  TLS keys (so Wireshark can decrypt the sim's pcap captures) and qlog
-  output (so qvis is useful).
+- `SSLKEYLOGFILE` writer in `InteropClient` (NSS Key Log Format) so Wireshark
+  decrypts the sim's pcap captures. Backed by:
+  - `TlsClient.clientRandom` (new public read-only property, captured in
+    `start()` before sending ClientHello).
+  - `QuicConnection.extraSecretsListener` (new optional constructor param,
+    chained after the connection's own key-installation listener; no-op
+    default, so production callers are unaffected).
+- `chacha20` testcase: forces ChaCha20-Poly1305 only via new
+  `QuicConnection.cipherSuites` knob (threaded through `TlsClient` →
+  `buildQuicClientHello` → `TlsClientHello`).
+
+## Phase 1b — open
+
+- `QLOGDIR`: `:quic` has no qlog observer infrastructure yet. Wiring needs
+  hooks at packet send/recv, frame dispatch, recovery, and TLS state
+  transitions, plus the qlog JSON-NDJSON schema. Sized as its own design
+  doc before implementation.
+- `versionnegotiation`: `QuicConnectionWriter` hard-codes `QuicVersion.V1`
+  in two call sites; threading a configurable initial-version through and
+  wiring the response-handling path is non-trivial. Defer.
 - Server role: we are client-first. Reassess after Phase 3.
 - WebTransport is **not** part of the standard interop matrix; it needs a
   separate harness against `moq-rs` / chrome-headless.

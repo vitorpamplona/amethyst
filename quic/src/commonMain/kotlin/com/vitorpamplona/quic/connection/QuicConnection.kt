@@ -73,6 +73,23 @@ class QuicConnection(
             .toEpochMilliseconds()
     },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
+    /**
+     * Optional second listener invoked after the connection's own
+     * key-installation listener. Used by the interop runner endpoint to
+     * dump SSLKEYLOG lines so Wireshark can decrypt captured pcaps.
+     * Default `null` keeps production callers unaffected.
+     */
+    val extraSecretsListener: TlsSecretsListener? = null,
+    /**
+     * TLS cipher suites to offer in the ClientHello. Override to e.g.
+     * `intArrayOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256)` for the
+     * `chacha20` interop testcase. Default matches [TlsClient]'s default.
+     */
+    val cipherSuites: IntArray =
+        intArrayOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
     var destinationConnectionId: ConnectionId = ConnectionId.random(8)
@@ -317,6 +334,7 @@ class QuicConnection(
             ) {
                 handshake.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 handshake.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
+                extraSecretsListener?.onHandshakeKeysReady(cipherSuite, clientSecret, serverSecret)
             }
 
             override fun onApplicationKeysReady(
@@ -326,6 +344,7 @@ class QuicConnection(
             ) {
                 application.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 application.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
+                extraSecretsListener?.onApplicationKeysReady(cipherSuite, clientSecret, serverSecret)
             }
 
             override fun onHandshakeComplete() {
@@ -333,6 +352,7 @@ class QuicConnection(
                 if (status == Status.HANDSHAKING) status = Status.CONNECTED
                 applyPeerTransportParameters()
                 handshakeDoneSignal.complete(Unit)
+                extraSecretsListener?.onHandshakeComplete()
             }
         }
 
@@ -358,6 +378,7 @@ class QuicConnection(
             secretsListener = tlsListener,
             certificateValidator = tlsCertificateValidator,
             offeredAlpns = alpnList,
+            cipherSuites = cipherSuites,
         )
 
     init {
