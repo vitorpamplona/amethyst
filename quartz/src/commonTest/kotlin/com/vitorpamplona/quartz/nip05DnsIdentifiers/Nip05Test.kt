@@ -124,6 +124,20 @@ class Nip05Test {
     }
 
     @Test
+    fun `hasLocalPart is true for regular name`() {
+        val nip05 = Nip05Id.parse("alice@example.com")
+        assertNotNull(nip05)
+        assertEquals(true, nip05.hasLocalPart())
+    }
+
+    @Test
+    fun `hasLocalPart is false for underscore name`() {
+        val nip05 = Nip05Id.parse("_@example.com")
+        assertNotNull(nip05)
+        assertEquals(false, nip05.hasLocalPart())
+    }
+
+    @Test
     fun `test json parsing with relays`() {
         val parsedNip05 = Nip05Id.parse("bob@test.com")
         assertNotNull(parsedNip05)

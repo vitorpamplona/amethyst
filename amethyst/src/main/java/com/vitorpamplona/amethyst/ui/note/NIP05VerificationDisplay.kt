@@ -378,7 +378,7 @@ fun ObserveAndDisplayNIP05(
 ) {
     val uri = LocalUriHandler.current
 
-    if (nip05State.nip05.name != "_") {
+    if (nip05State.nip05.hasLocalPart()) {
         Text(
             text = remember(nip05State) { AnnotatedString(nip05State.nip05.name) },
             fontSize = Font14SP,
@@ -407,7 +407,7 @@ fun DisplayNIP05(
 ) {
     val uri = LocalUriHandler.current
 
-    if (nip05State.nip05.name != "_") {
+    if (nip05State.nip05.hasLocalPart()) {
         Text(
             text = remember(nip05State) { AnnotatedString(nip05State.nip05.name) },
             fontSize = Font14SP,
