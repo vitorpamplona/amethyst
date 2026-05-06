@@ -1,0 +1,21 @@
+[package]
+name = "hang-listen"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+
+# Phase 1: stub. Subscribes are added in Phase 2 via `hang` +
+# `moq-lite` + `web-transport-quinn` against the rev pinned in
+# ../REV. See nestsClient/plans/2026-05-06-cross-stack-interop-test.md
+# (Phase 2 step 8) for the catalog → AudioConfig → Container::Legacy
+# decode loop this binary will host.
+
+[[bin]]
+name = "hang-listen"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+tokio.workspace = true

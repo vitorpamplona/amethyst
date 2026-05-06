@@ -1,0 +1,18 @@
+[package]
+name = "hang-publish"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+
+# Phase 1: stub. Phase 2 wires this against `hang` + `audiopus` for
+# the reverse direction (Rust → Amethyst) interop scenarios.
+
+[[bin]]
+name = "hang-publish"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+tokio.workspace = true

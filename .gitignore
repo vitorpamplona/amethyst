@@ -176,3 +176,7 @@ packaging/appimage/squashfs-root/
 benchmark/src/main/jniLibs/
 
 /tools/marmot-interop/state
+
+# Cargo build artifacts for the cross-stack interop sidecars at
+# cli/hang-interop/. Cargo.lock is committed (binary workspace).
+/cli/hang-interop/target/

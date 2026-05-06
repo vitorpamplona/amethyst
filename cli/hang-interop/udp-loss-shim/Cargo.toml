@@ -1,0 +1,17 @@
+[package]
+name = "udp-loss-shim"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+
+# Phase 1: stub. Phase 3 wires this for the I9 packet-loss scenario.
+
+[[bin]]
+name = "udp-loss-shim"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+tokio.workspace = true
