@@ -62,12 +62,19 @@ fun drainOutbound(
 ): ByteArray? {
     val parts = mutableListOf<ByteArray>()
 
-    // Closing — emit a CONNECTION_CLOSE at the highest available level.
+    // Closing — emit a CONNECTION_CLOSE at the highest available level. The
+    // datagram-build paths below MUST satisfy two RFC 9000 constraints we
+    // got wrong before:
+    //  - §10.2.3: at Initial / Handshake levels, only CONNECTION_CLOSE
+    //    (Transport, 0x1c) is allowed; the application-level close (0x1d) is
+    //    forbidden because app state would leak before the handshake is
+    //    encrypted with the application key.
+    //  - §14.1: a client datagram containing an Initial MUST be ≥ 1200 bytes
+    //    in UDP-payload terms, even when carrying only a CONNECTION_CLOSE.
     if (conn.status == QuicConnection.Status.CLOSING) {
-        val frame = ConnectionCloseFrame(conn.closeErrorCode, null, conn.closeReason ?: "")
-        val packet = buildBestLevelPacket(conn, listOf(frame)) ?: return null
+        val datagram = buildClosingDatagram(conn, nowMillis)
         conn.status = QuicConnection.Status.CLOSED
-        return packet
+        return datagram
     }
 
     // Drain destructive frame sources into local lists, ONCE.
@@ -165,6 +172,82 @@ private fun concat(parts: List<ByteArray>): ByteArray {
     }
     return out
 }
+
+/**
+ * Build a CONNECTION_CLOSE-only datagram at the highest encryption level we
+ * have keys for. Two RFC 9000 constraints make this trickier than a normal
+ * packet build:
+ *
+ *  - §10.2.3 — at Initial / Handshake levels, only CONNECTION_CLOSE
+ *    (Transport, 0x1c) is allowed. An application-level close is replaced
+ *    with `APPLICATION_ERROR (0x0c)` + frameType=0 + empty reason so we don't
+ *    leak app state pre-handshake.
+ *  - §14.1 — a client datagram containing an Initial MUST be ≥ 1200 bytes,
+ *    even a close-only one. We do this by building once at natural size and,
+ *    if short, rewinding the PN and rebuilding with a PADDING-frame deficit
+ *    inside the AEAD envelope.
+ */
+private fun buildClosingDatagram(
+    conn: QuicConnection,
+    nowMillis: Long,
+): ByteArray? {
+    val app = conn.application
+    if (app.sendProtection != null) {
+        // 1-RTT level reached: app close (0x1d) is allowed and carries the
+        // original error code + reason.
+        val frame = ConnectionCloseFrame(conn.closeErrorCode, null, conn.closeReason ?: "")
+        return buildBestLevelPacket(conn, listOf(frame))
+    }
+
+    // Pre-1-RTT: must use transport-encoded close. RFC 9000 §20.1
+    // APPLICATION_ERROR = 0x0c — "the application or application protocol
+    // caused the connection to be closed during the handshake".
+    val transportFrame =
+        ConnectionCloseFrame(
+            errorCode = APPLICATION_ERROR,
+            frameType = 0L,
+            reason = "",
+        )
+
+    val hs = conn.handshake
+    if (hs.sendProtection != null) {
+        return buildLongHeaderFromFrames(
+            conn = conn,
+            level = EncryptionLevel.HANDSHAKE,
+            frames = listOf(transportFrame),
+            tokens = emptyList(),
+            nowMillis = nowMillis,
+            padBytes = 0,
+        )
+    }
+
+    val init = conn.initial
+    if (init.sendProtection != null && !init.keysDiscarded) {
+        val natural =
+            buildLongHeaderFromFrames(
+                conn = conn,
+                level = EncryptionLevel.INITIAL,
+                frames = listOf(transportFrame),
+                tokens = emptyList(),
+                nowMillis = nowMillis,
+                padBytes = 0,
+            )
+        if (natural.size >= 1200) return natural
+        init.pnSpace.rewindOutboundForRebuild()
+        return buildLongHeaderFromFrames(
+            conn = conn,
+            level = EncryptionLevel.INITIAL,
+            frames = listOf(transportFrame),
+            tokens = emptyList(),
+            nowMillis = nowMillis,
+            padBytes = 1200 - natural.size,
+        )
+    }
+    return null
+}
+
+/** RFC 9000 §20.1 — application-or-protocol caused close during handshake. */
+private const val APPLICATION_ERROR: Long = 0x0cL
 
 private fun buildBestLevelPacket(
     conn: QuicConnection,
