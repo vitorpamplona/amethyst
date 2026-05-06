@@ -122,4 +122,37 @@ class LevelState {
         largestAckedSentTimeMs = null
         keysDiscarded = true
     }
+
+    /**
+     * RFC 9000 §17.2.5 Retry: install fresh protection material + re-seed
+     * the CRYPTO send buffer from [fresh] in place. Used by
+     * [QuicConnection.applyRetry] to re-init Initial-level state on the
+     * post-Retry DCID without the caller having to swap the level
+     * reference (which is a `val`).
+     *
+     * Re-zeros the PN counter (Initial-level PN restarts at 0 on the new
+     * keys per §17.2.5.2) and clears the keysDiscarded latch so the
+     * writer can build packets again.
+     *
+     * Caller must already have called [discardKeys] (or otherwise know
+     * the existing state is dead) — this method does not free the
+     * existing protection on its own; the assumption is the caller is
+     * replacing it.
+     */
+    internal fun restoreFromRetry(fresh: LevelState) {
+        sendProtection = fresh.sendProtection
+        receiveProtection = fresh.receiveProtection
+        cryptoSend = fresh.cryptoSend
+        cryptoReceive = fresh.cryptoReceive
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        // Clear the latch — keys are alive again on the new DCID.
+        keysDiscarded = false
+        // Restart the PN space on the new keys (RFC 9000 §17.2.5.2).
+        pnSpace.resetForRetry()
+    }
 }

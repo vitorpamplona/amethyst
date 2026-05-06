@@ -310,6 +310,16 @@ private fun buildLongHeaderFromFrames(
         }
     val pn = state.pnSpace.allocateOutbound()
     val type = if (level == EncryptionLevel.INITIAL) LongHeaderType.INITIAL else LongHeaderType.HANDSHAKE
+    // RFC 9000 §17.2.5.1: after a Retry, every Initial we send MUST carry
+    // the server-issued Retry token verbatim in the Initial header's Token
+    // field. Handshake packets have no Token field, so this only affects
+    // Initial-level builds.
+    val token =
+        if (type == LongHeaderType.INITIAL) {
+            conn.retryToken ?: ByteArray(0)
+        } else {
+            ByteArray(0)
+        }
     val packet =
         LongHeaderPacket.build(
             LongHeaderPlaintextPacket(
@@ -317,6 +327,7 @@ private fun buildLongHeaderFromFrames(
                 version = QuicVersion.V1,
                 dcid = conn.destinationConnectionId,
                 scid = conn.sourceConnectionId,
+                token = token,
                 packetNumber = pn,
                 payload = payload,
             ),

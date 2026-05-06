@@ -83,6 +83,33 @@ class QuicConnection(
     val handshake = LevelState()
     val application = LevelState()
 
+    /**
+     * RFC 9000 §17.2.5.1: the Retry token the server handed us in a Retry
+     * packet, which we must echo verbatim in the Token field of every
+     * subsequent Initial we send. Null until [applyRetry] runs.
+     */
+    @Volatile
+    var retryToken: ByteArray? = null
+        internal set
+
+    /**
+     * RFC 9000 §17.2.5.2: a client MUST NOT process more than one Retry
+     * packet per connection. Any subsequent Retry is silently dropped.
+     * Latched true by [applyRetry] on a successfully-verified Retry.
+     */
+    @Volatile
+    var retryConsumed: Boolean = false
+        internal set
+
+    /**
+     * The verbatim ClientHello CRYPTO bytes the TLS layer emitted at
+     * [start]. Captured so [applyRetry] can re-enqueue them after Retry
+     * resets the Initial-level CRYPTO send buffer (TLS itself only
+     * emits ClientHello once and we have no path to drive it to re-emit).
+     * Null until [start] has been called.
+     */
+    private var originalClientHello: ByteArray? = null
+
     var handshakeComplete: Boolean = false
         private set
 
@@ -377,7 +404,123 @@ class QuicConnection(
     fun start() {
         tls.start()
         // Drain ClientHello bytes into the Initial-level CRYPTO send buffer.
-        tls.pollOutbound(TlsClient.Level.INITIAL)?.let { initial.cryptoSend.enqueue(it) }
+        // Capture them too so [applyRetry] can re-queue the ClientHello onto
+        // the new Initial keys after a Retry rolls our DCID. The TLS state
+        // machine only emits ClientHello once — without a snapshot we'd have
+        // no way to resend it on the new keys (RFC 9000 §17.2.5.2).
+        tls.pollOutbound(TlsClient.Level.INITIAL)?.let { bytes ->
+            originalClientHello = bytes
+            initial.cryptoSend.enqueue(bytes)
+        }
+    }
+
+    /**
+     * RFC 9000 §17.2.5 + RFC 9001 §5.8 Retry handling.
+     *
+     * Called by the parser when a long-header packet of type Retry is seen.
+     * [originalPacketBytes] is the Retry packet's exact on-wire bytes
+     * (needed because RFC 9001 §5.8's integrity-tag AAD covers the entire
+     * Retry header including the unused low 4 bits of the first byte —
+     * which the server is free to set however).
+     *
+     * Steps applied on a verified Retry:
+     *
+     *   1. Verify the integrity tag using [originalDestinationConnectionId]
+     *      as the AAD prefix (the DCID we used in our first Initial).
+     *      A bad tag → silently drop, no state changes (RFC 9001 §5.8).
+     *   2. Drop any second / subsequent Retry (RFC 9000 §17.2.5.2 caps a
+     *      connection to one Retry).
+     *   3. Swap our DCID to the Retry's SCID — this is what the server
+     *      now expects to see on every Initial we send.
+     *   4. Re-derive Initial-level packet protection from the new DCID
+     *      and reinstall it on [initial].
+     *   5. Reset Initial-level state: PN counter back to 0, sentPackets
+     *      cleared (the original PN=0 ClientHello is irrelevant — it's
+     *      not retransmittable and the server already discarded its
+     *      receiving state), inbound ack-tracker reset (no Initials have
+     *      arrived yet on the new keys).
+     *   6. Re-queue the cached ClientHello bytes onto the fresh Initial
+     *      cryptoSend so the writer's next drain sends a Token-bearing
+     *      Initial.
+     *   7. Store the Retry token so [QuicConnectionWriter] writes it into
+     *      the Initial header's Token field on the next emit.
+     *   8. Latch [retryConsumed] so a second Retry is dropped.
+     *
+     * Returns true if the Retry was applied, false if dropped (bad tag,
+     * second-retry, or no [originalClientHello] captured because [start]
+     * hasn't been called).
+     *
+     * Caller is the parser, holding nothing — Retry handling occurs
+     * before any frame dispatch and before the connection lock is
+     * acquired by application paths. The mutated fields ([retryToken],
+     * [retryConsumed], [destinationConnectionId], [initial]) are all
+     * read by single-threaded loops (parser → writer in the driver) so
+     * extra synchronization is unnecessary; [retryToken] and
+     * [retryConsumed] are `@Volatile` for cross-thread visibility on
+     * the diagnostic side.
+     */
+    internal fun applyRetry(
+        retryPacket: com.vitorpamplona.quic.packet.RetryPacket,
+        originalPacketBytes: ByteArray,
+    ): Boolean {
+        // Step 2 ordering: an attacker who knows our original DCID and
+        // observed our first Initial could craft a "second Retry" with a
+        // forged tag computed over a freshly-randomised SCID. Honoring
+        // it would let them force us onto attacker-chosen keys. Rejecting
+        // BEFORE the integrity check would cost cycles on every spoofed
+        // tag — but more importantly, RFC 9000 §17.2.5.2 says a second
+        // Retry is dropped REGARDLESS of validity.
+        if (retryConsumed) return false
+        // Step 1.
+        if (!retryPacket.verifyIntegrityTag(originalPacketBytes, originalDestinationConnectionId.bytes)) {
+            return false
+        }
+        val savedClientHello = originalClientHello ?: return false
+
+        // Step 3.
+        destinationConnectionId = retryPacket.scid
+        // Step 4.
+        val proto = InitialSecrets.derive(destinationConnectionId.bytes)
+        val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
+        val freshInitial = LevelState()
+        freshInitial.sendProtection =
+            PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp)
+        freshInitial.receiveProtection =
+            PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp)
+        // Re-enqueue the captured ClientHello onto the fresh CRYPTO send buffer
+        // so the writer's next drain emits an Initial with PN=0 carrying the
+        // ClientHello CRYPTO + Retry token. The fresh LevelState gives us PN=0
+        // automatically (no rewind dance needed).
+        freshInitial.cryptoSend.enqueue(savedClientHello)
+        // Step 5: replace the LevelState wholesale via reflection-ish path —
+        // [initial] is a `val`, so instead of swapping the reference we copy
+        // the fields. Symmetric to how `discardKeys()` resets in place.
+        replaceInitialState(freshInitial)
+
+        // Steps 6 + 7 + 8.
+        retryToken = retryPacket.retryToken
+        retryConsumed = true
+        return true
+    }
+
+    /**
+     * Reinstall the Initial [LevelState] in-place from [fresh]. We can't
+     * reassign [initial] (it's a `val`); we mirror the logic
+     * [LevelState.discardKeys] uses — drop everything and re-seed from the
+     * fresh state's protection. The fresh state's CRYPTO send buffer is
+     * also taken over so the writer drains the re-queued ClientHello.
+     */
+    private fun replaceInitialState(fresh: LevelState) {
+        // Reset the existing LevelState's protection + buffers + ack tracking.
+        // We use [LevelState.discardKeys] to clear, then re-attach the freshly
+        // derived protection — this avoids leaking sentPackets / cryptoSend
+        // state from the pre-Retry Initial.
+        initial.discardKeys()
+        // discardKeys latches `keysDiscarded = true`; reverse that via a fresh
+        // LevelState swap. Since we can't replace the reference we use a small
+        // backdoor — restoreFromRetry on LevelState — to reinstall fields and
+        // clear the latch.
+        initial.restoreFromRetry(fresh)
     }
 
     private fun buildLocalTransportParameters(): TransportParameters =

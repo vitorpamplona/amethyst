@@ -39,6 +39,7 @@ import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.decodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
+import com.vitorpamplona.quic.packet.RetryPacket
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -85,6 +86,20 @@ private fun feedLongHeaderPacket(
     nowMillis: Long,
 ): Int? {
     val peeked = LongHeaderPacket.peekHeader(datagram, offset) ?: return null
+    // RFC 9000 §17.2.5 + RFC 9001 §5.8: Retry has no PN space, no AEAD
+    // payload protection, and cannot be coalesced with anything else
+    // (it consumes the rest of the datagram via peekHeader.totalLength).
+    // Branch out before the standard parse-and-decrypt path.
+    if (peeked.type == LongHeaderType.RETRY) {
+        val retryBytes = datagram.copyOfRange(offset, offset + peeked.totalLength)
+        val retryPacket = RetryPacket.parse(retryBytes)
+        if (retryPacket != null) {
+            // applyRetry returns false on bad-tag / second-Retry / pre-start —
+            // in all of those cases we silently drop without advancing state.
+            conn.applyRetry(retryPacket, retryBytes)
+        }
+        return peeked.totalLength
+    }
     val level =
         when (peeked.type) {
             LongHeaderType.INITIAL -> EncryptionLevel.INITIAL
