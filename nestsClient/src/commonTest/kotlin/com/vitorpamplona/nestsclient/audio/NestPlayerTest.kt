@@ -25,6 +25,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.runTest
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -346,17 +347,9 @@ class NestPlayerTest {
             // Two distinct decoders so we can prove the factory was
             // invoked. After the trackAlias change, frames should
             // route through `decoderB`, NOT `decoderA`.
-            val decoderA =
-                FakeOpusDecoder {
-                    byteArrayOf(0x0A) + it
-                    ShortArray(it.size) { _ -> 0xAA.toShort() }
-                }
-            val decoderB =
-                FakeOpusDecoder {
-                    byteArrayOf(0x0B) + it
-                    ShortArray(it.size) { _ -> 0xBB.toShort() }
-                }
-            val factoryCallCount = atomicIntZero()
+            val decoderA = FakeOpusDecoder { ShortArray(it.size) { _ -> 0xAA.toShort() } }
+            val decoderB = FakeOpusDecoder { ShortArray(it.size) { _ -> 0xBB.toShort() } }
+            val factoryCallCount = AtomicInteger(0)
             val factory: () -> OpusDecoder = {
                 if (factoryCallCount.getAndIncrement() == 0) decoderA else decoderB
             }
@@ -384,11 +377,52 @@ class NestPlayerTest {
             sut.play(objects)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(2, factoryCallCount.value, "factory invoked twice: initial + boundary")
+            assertEquals(2, factoryCallCount.get(), "factory invoked twice: initial + boundary")
             assertEquals(1, decoderA.releaseCount, "decoderA released on the boundary")
             assertEquals(0, decoderB.releaseCount, "decoderB still alive (released on stop)")
             sut.stop()
             assertEquals(1, decoderB.releaseCount, "decoderB released on stop")
+        }
+
+    @Test
+    fun publisher_boundary_keeps_old_decoder_when_factory_throws() =
+        runTest {
+            // The decoder field MUST NOT be left referencing a released
+            // decoder if the factory throws — every subsequent decode
+            // would otherwise fail with `IllegalStateException` and the
+            // subscription would be permanently dead.
+            val decoderA = FakeOpusDecoder { ShortArray(it.size) { _ -> 0xAA.toShort() } }
+            val factoryFailures = AtomicInteger(0)
+            val factory: () -> OpusDecoder = {
+                factoryFailures.incrementAndGet()
+                throw IllegalStateException("synthetic factory failure")
+            }
+            val player = FakeAudioPlayer()
+
+            val objects =
+                flowOf(
+                    moqObject(byteArrayOf(0x01), trackAlias = 7L),
+                    // Boundary: factory throws → decoderA must stay alive
+                    // and decode the next frame normally.
+                    moqObject(byteArrayOf(0x02), trackAlias = 8L),
+                )
+
+            val sut =
+                NestPlayer(
+                    initialDecoder = decoderA,
+                    player = player,
+                    scope = this,
+                    decoderFactory = factory,
+                )
+            sut.play(objects)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(1, factoryFailures.get(), "factory invoked once on the boundary")
+            // decoderA still alive → both frames decoded through it.
+            assertEquals(2, player.queued.size)
+            assertEquals(0, decoderA.releaseCount, "decoderA NOT released on factory failure")
+            sut.stop()
+            assertEquals(1, decoderA.releaseCount, "decoderA released exactly once on stop")
         }
 
     @Test
@@ -426,20 +460,6 @@ class NestPlayerTest {
             publisherPriority = 0x80,
             payload = payload,
         )
-
-    /**
-     * Tiny stand-in for AtomicInteger that's available in commonMain
-     * (kotlin.test scope). Used by the boundary-rebuild test to count
-     * factory invocations across the test scope's coroutine
-     * dispatcher.
-     */
-    private class IntBox {
-        var value: Int = 0
-
-        fun getAndIncrement(): Int = value++
-    }
-
-    private fun atomicIntZero(): IntBox = IntBox()
 
     private fun byteToShorts(b: ByteArray): ShortArray = ShortArray(b.size) { b[it].toShort() }
 

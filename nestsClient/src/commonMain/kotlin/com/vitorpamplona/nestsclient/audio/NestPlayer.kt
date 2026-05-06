@@ -216,13 +216,36 @@ class NestPlayer(
                         // side) or cliff-detector recycle (listener side).
                         // The prior-trackAlias guard avoids a spurious
                         // rebuild on the very first frame.
+                        //
+                        // Build the replacement BEFORE releasing the old
+                        // decoder so a factory failure (e.g. MediaCodec
+                        // contention, audio policy denial mid-session)
+                        // doesn't leave the field referencing a
+                        // released codec — every subsequent decode
+                        // would then throw `IllegalStateException` with
+                        // no recovery path. On factory failure, log
+                        // and keep using the existing decoder; cross-
+                        // publisher predictor state is wrong but at
+                        // least audio keeps playing.
                         val factory = decoderFactory
                         if (factory != null && lastTrackAlias != null && obj.trackAlias != lastTrackAlias) {
-                            com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
-                                "NestPlayer publisher boundary: trackAlias $lastTrackAlias → ${obj.trackAlias}; rebuilding decoder"
+                            val replacement =
+                                runCatching { factory() }
+                                    .onFailure { t ->
+                                        if (t is CancellationException) throw t
+                                        com.vitorpamplona.quartz.utils.Log.w("NestPlay") {
+                                            "NestPlayer decoder factory threw on trackAlias " +
+                                                "$lastTrackAlias → ${obj.trackAlias}; keeping old decoder " +
+                                                "(${t::class.simpleName}: ${t.message})"
+                                        }
+                                    }.getOrNull()
+                            if (replacement != null) {
+                                com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                                    "NestPlayer publisher boundary: trackAlias $lastTrackAlias → ${obj.trackAlias}; rebuilding decoder"
+                                }
+                                runCatching { decoder.release() }
+                                decoder = replacement
                             }
-                            runCatching { decoder.release() }
-                            decoder = factory()
                         }
                         lastTrackAlias = obj.trackAlias
                         val pcm =
