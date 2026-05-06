@@ -66,13 +66,16 @@ fun main() {
 
     val testcase = System.getenv("TESTCASE")?.trim().orEmpty()
     val requests = System.getenv("REQUESTS")?.trim().orEmpty()
-    val downloads = System.getenv("DOWNLOADS")?.takeIf { it.isNotBlank() }
+    // The runner mounts $CLIENT_DOWNLOADS to /downloads as a Docker volume
+    // (see quic-interop-runner's docker-compose.yml `client.volumes`). It
+    // does NOT export a DOWNLOADS env var. Hard-code the mount path.
+    val downloadsDir = File("/downloads")
     val keyLogPath = System.getenv("SSLKEYLOGFILE")?.takeIf { it.isNotBlank() }
 
     System.err.println("== quic-interop client ==")
     System.err.println("testcase:       $testcase")
     System.err.println("requests:       $requests")
-    System.err.println("downloads:      ${downloads ?: "(unset)"}")
+    System.err.println("downloads dir:  ${downloadsDir.absolutePath} (exists=${downloadsDir.isDirectory})")
     System.err.println("sslkeylogfile:  ${keyLogPath ?: "(unset)"}")
 
     val cipherSuites =
@@ -83,40 +86,30 @@ fun main() {
 
     val code =
         when (testcase) {
-            // Both `handshake` and `chacha20` only require the handshake to
-            // complete; `chacha20` adds the constraint that we offered only
-            // ChaCha20-Poly1305 (verified by the runner via tshark on the
-            // sim's pcap, decrypted using SSLKEYLOGFILE). `handshakeloss`
-            // is the same client behaviour against a lossy sim.
-            "handshake", "chacha20", "handshakeloss" -> {
-                runHandshakeTest(requests, cipherSuites, keyLogPath)
-            }
-
-            // `transfer` and `http3` both fetch every URL in REQUESTS and
-            // write each body to $DOWNLOADS/<basename>. `multiplexing`
-            // additionally requires the requests to be sent in parallel on
-            // separate streams (the runner verifies via tshark that the
-            // streams overlap in time). The remaining aliases run the same
-            // client logic against different sim configurations:
-            //   transferloss        — random packet loss
-            //   transfercorruption  — random bit-flips (recovery via AEAD AUTH FAIL → drop + retransmit)
-            //   longrtt             — emulated high-latency link
-            //   goodput             — throughput floor under default sim
-            //   crosstraffic        — competing UDP flows on the same link
+            // The runner's `handshake` / `chacha20` / `handshakeloss` testcases
+            // require BOTH a successful handshake AND the requested file
+            // transferred to /downloads — the validator checks file presence
+            // via _check_files() AND that exactly 1 handshake happened on the
+            // wire via _count_handshakes(). `chacha20` adds the constraint
+            // that we offered only ChaCha20-Poly1305 (verified by the runner
+            // via tshark on the sim's pcap decrypted using SSLKEYLOGFILE).
+            // `handshakeloss` is the same client behaviour against a lossy sim.
+            //
+            // `transfer` / `http3` / `multiplexing` and the network-condition
+            // aliases (transferloss / transfercorruption / longrtt / goodput
+            // / crosstraffic) run the same H3 GET pipeline; the runner just
+            // varies the sim configuration around them.
+            "handshake", "chacha20", "handshakeloss",
             "transfer", "http3", "multiplexing",
             "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
             -> {
-                if (downloads == null) {
-                    System.err.println("DOWNLOADS env var required for $testcase")
-                    EXIT_FAIL
-                } else {
-                    runTransferTest(
-                        requests = requests,
-                        downloadsDir = File(downloads),
-                        keyLogPath = keyLogPath,
-                        parallel = (testcase == "multiplexing"),
-                    )
-                }
+                runTransferTest(
+                    requests = requests,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    keyLogPath = keyLogPath,
+                    parallel = (testcase == "multiplexing"),
+                )
             }
 
             else -> {
@@ -126,74 +119,10 @@ fun main() {
     exitProcess(code)
 }
 
-private fun runHandshakeTest(
-    requests: String,
-    cipherSuites: IntArray?,
-    keyLogPath: String?,
-): Int {
-    val target =
-        parseFirstTarget(requests) ?: run {
-            System.err.println("no parseable target in REQUESTS")
-            return EXIT_FAIL
-        }
-    val (host, port) = target
-    System.err.println("handshake target: $host:$port")
-
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val outcome =
-        runBlocking {
-            val socket =
-                try {
-                    UdpSocket.connect(host, port)
-                } catch (t: Throwable) {
-                    return@runBlocking "udp_failed: ${t.message ?: t::class.simpleName}"
-                }
-            val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
-            val conn =
-                QuicConnection(
-                    serverName = host,
-                    config = QuicConnectionConfig(),
-                    tlsCertificateValidator = PermissiveCertificateValidator(),
-                    cipherSuites =
-                        cipherSuites
-                            ?: intArrayOf(
-                                TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
-                                TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
-                            ),
-                    extraSecretsListener = keyLogger?.listener,
-                )
-            val driver = QuicConnectionDriver(conn, socket, scope)
-            driver.start()
-
-            val handshake =
-                withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
-                    runCatching { conn.awaitHandshake() }
-                }
-            val result =
-                when {
-                    handshake == null -> "timeout"
-                    handshake.isSuccess -> "ok"
-                    else -> "failed: ${handshake.exceptionOrNull()?.message ?: "?"}"
-                }
-            runCatching { driver.close() }
-            conn.tls.clientRandom?.let { keyLogger?.flush(it) }
-            delay(50)
-            result
-        }
-    scope.cancel()
-
-    return if (outcome == "ok") {
-        System.err.println("handshake ok")
-        EXIT_OK
-    } else {
-        System.err.println("handshake $outcome")
-        EXIT_FAIL
-    }
-}
-
 private fun runTransferTest(
     requests: String,
     downloadsDir: File,
+    cipherSuites: IntArray?,
     keyLogPath: String?,
     parallel: Boolean,
 ): Int {
@@ -229,6 +158,12 @@ private fun runTransferTest(
                     serverName = host,
                     config = QuicConnectionConfig(),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
+                    cipherSuites =
+                        cipherSuites
+                            ?: intArrayOf(
+                                TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+                                TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+                            ),
                     extraSecretsListener = keyLogger?.listener,
                 )
             val driver = QuicConnectionDriver(conn, socket, scope)
@@ -291,19 +226,6 @@ private fun runTransferTest(
         System.err.println("transfer $outcome")
         EXIT_FAIL
     }
-}
-
-private fun parseFirstTarget(requests: String): Pair<String, Int>? {
-    val first = requests.split(Regex("\\s+")).firstOrNull { it.isNotBlank() } ?: return null
-    val uri =
-        try {
-            URI(first)
-        } catch (_: Throwable) {
-            return null
-        }
-    val host = uri.host ?: return null
-    val port = uri.port.takeIf { it > 0 } ?: 443
-    return host to port
 }
 
 /**
