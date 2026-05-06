@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # quic-interop-runner endpoint entry point.
 #
-# The base image (martenseemann/quic-network-simulator-endpoint) sets up
-# routing in /setup.sh; we source it then dispatch to our JVM client based
-# on the ROLE env var pushed in by the runner.
-set -euo pipefail
+# The base image (martenseemann/quic-network-simulator-endpoint) provides
+# /setup.sh, which configures routing for the runner's ns-3 sim. We try
+# to source it but tolerate failure so smoke tests outside the runner
+# (without --privileged / the sim's network) still launch the JVM client.
+# Inside the runner, /setup.sh succeeds because the runner provides the
+# necessary capabilities.
+set -uo pipefail
 
 # shellcheck disable=SC1091
-source /setup.sh
+source /setup.sh 2>/dev/null || echo "(setup.sh skipped — running outside the runner sim)" >&2
+
+set -e
 
 case "${ROLE:-client}" in
     client)
