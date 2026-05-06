@@ -165,6 +165,8 @@
     <string name="failed_to_save_the_image">चित्र का अभिलेखन असफल</string>
     <string name="video_saved_to_the_gallery">चलचित्र को संचारयन्त्र के चलचित्रालय में सुरक्षित रखा गया</string>
     <string name="failed_to_save_the_video">चलचित्र को सुरक्षित रखने में असफल</string>
+    <string name="pdf_saved_to_the_gallery">पीडीएफ॰ का अभिलेखन हुआ डौनलोड्स/अमेथिस्ट में</string>
+    <string name="failed_to_save_the_pdf">पीडीएफ॰ अभिलेखन असफल</string>
     <string name="upload_image">चित्र आरोहण</string>
     <string name="upload_file">अभिलेख आरोहण</string>
     <string name="take_a_picture">एक चित्र लें</string>
