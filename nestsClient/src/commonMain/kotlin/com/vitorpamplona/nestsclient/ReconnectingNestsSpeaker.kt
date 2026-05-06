@@ -496,9 +496,25 @@ private class ReissuingBroadcastHandle(
      * when the wrapper itself closes.
      */
     private suspend fun runHotSwapIteration(hotSwap: HotSwappablePublisherSource) {
+        // Carry the previous session's audio-track group sequence
+        // forward so kixelated/hang's `Container.Consumer.#run`
+        // doesn't drop every post-recycle group as `sequence <
+        // #active`. Read BEFORE opening the new publisher — there is
+        // a tiny race window where the broadcaster could send one
+        // more group on the old publisher between our read and the
+        // swap-snapshot below; in practice that window is microseconds
+        // (the broadcaster's swap is a single volatile write) and the
+        // broadcaster's group cadence is 1 group/sec at the production
+        // [NestMoqLiteBroadcaster.framesPerGroup], so the chance of a
+        // duplicate sequence is negligible. Worst case the watcher
+        // briefly stalls on one duplicate then catches up.
+        val startSequence: Long = hotSwapBroadcaster?.currentPublisher?.nextSequence ?: 0L
         val newPublisher =
             try {
-                hotSwap.openPublisherForHotSwap(MoqLiteNestsListener.AUDIO_TRACK)
+                hotSwap.openPublisherForHotSwap(
+                    track = MoqLiteNestsListener.AUDIO_TRACK,
+                    startSequence = startSequence,
+                )
             } catch (ce: kotlinx.coroutines.CancellationException) {
                 throw ce
             } catch (_: Throwable) {

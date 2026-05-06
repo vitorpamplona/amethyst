@@ -341,6 +341,65 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun publisher_startSequence_seeds_first_group_for_hot_swap_continuation() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Mint a publisher with a non-zero startSequence — simulates
+            // the hot-swap path's "carry forward old publisher's
+            // nextSequence" contract.
+            val publisher =
+                session.publish(
+                    broadcastSuffix = "speakerPubkey",
+                    track = "audio/data",
+                    startSequence = 42L,
+                )
+            assertEquals(42L, publisher.nextSequence, "fresh publisher reports startSequence as next")
+
+            // Wire up a subscriber so send() doesn't short-circuit.
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 11L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+            withTimeout(2_000) { subBidi.incoming().first() }
+
+            assertEquals(true, publisher.send("opus-1".encodeToByteArray()))
+            // FIN before draining so toList() terminates rather than
+            // blocking indefinitely on the still-open uni stream.
+            publisher.endGroup()
+            // After the first send, nextSequence should advance to 43.
+            assertEquals(43L, publisher.nextSequence)
+
+            // First uni stream's GroupHeader.sequence MUST be 42, not 0.
+            val relayUni = withTimeout(2_000) { serverSide.incomingUniStreams().first() }
+            val uniChunks = relayUni.incoming().toList()
+            val buf = MoqLiteFrameBuffer()
+            uniChunks.forEach { buf.push(it) }
+            assertEquals(MoqLiteDataType.Group.code, buf.readVarint())
+            val header =
+                MoqLiteCodec.decodeGroupHeader(
+                    buf.readSizePrefixed() ?: error("group header missing"),
+                )
+            assertEquals(42L, header.sequence, "first group's sequence is the seeded startSequence")
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_send_returns_false_when_no_inbound_subscriber() =
         runBlocking {
             val (clientSide, _) = FakeWebTransport.pair()

@@ -120,6 +120,18 @@ class NestMoqLiteBroadcaster(
     @Volatile private var publisher: MoqLitePublisherHandle = initialPublisher
 
     /**
+     * Volatile read of the broadcaster's current publisher reference,
+     * for callers (typically the hot-swap pump in
+     * [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker])
+     * that want to read its [MoqLitePublisherHandle.nextSequence]
+     * before swapping in a fresh publisher. Don't use this to send
+     * — that contract belongs to the broadcaster's send loop and
+     * the caller would race the loop's swap-snapshot.
+     */
+    val currentPublisher: MoqLitePublisherHandle
+        get() = publisher
+
+    /**
      * Start capturing + encoding + publishing in the background.
      * Returns immediately. Calling twice is an error. If
      * [AudioCapture.start] throws, the broadcaster is left stopped and

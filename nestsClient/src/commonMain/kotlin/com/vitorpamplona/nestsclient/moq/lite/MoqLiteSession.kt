@@ -703,12 +703,24 @@ class MoqLiteSession internal constructor(
      * distinct `track`. Re-publishing the same `(suffix, track)` pair
      * or mixing different suffixes is rejected with
      * [IllegalStateException].
+     *
+     * @param startSequence first group sequence the publisher will
+     *   assign. Defaults to 0 for fresh broadcasts. The hot-swap path
+     *   in [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker.openPublisherForHotSwap]
+     *   passes the previous publisher's
+     *   [MoqLitePublisherHandle.nextSequence] so the new session's
+     *   group lineage continues monotonically across JWT refreshes —
+     *   kixelated/hang's `Container.Consumer.#run` drops any group
+     *   with `sequence < #active`, so a reset to 0 after a recycle
+     *   silences the watcher until `#active` rolls over.
      */
     suspend fun publish(
         broadcastSuffix: String,
         track: String,
+        startSequence: Long = 0L,
     ): MoqLitePublisherHandle {
         ensureOpen()
+        require(startSequence >= 0L) { "startSequence must be >= 0, got $startSequence" }
         val normalised = MoqLitePath.normalize(broadcastSuffix)
         val publisher: PublisherStateImpl
         state.withLock {
@@ -721,7 +733,12 @@ class MoqLiteSession internal constructor(
             check(activePublishers.none { it.track == track }) {
                 "MoqLiteSession.publish called twice for the same track '$track' on suffix '$normalised'."
             }
-            publisher = PublisherStateImpl(suffix = normalised, track = track)
+            publisher =
+                PublisherStateImpl(
+                    suffix = normalised,
+                    track = track,
+                    startSequence = startSequence,
+                )
             activePublishers += publisher
             // Lazy launch — the inbound-bidi pump needs to keep running
             // for the lifetime of any active publisher.
@@ -1083,12 +1100,23 @@ class MoqLiteSession internal constructor(
     private inner class PublisherStateImpl(
         override val suffix: String,
         internal val track: String,
+        startSequence: Long,
     ) : MoqLitePublisherHandle {
         private val gate = Mutex()
         private val announceBidis = mutableListOf<AnnounceBidiEntry>()
         private val inboundSubs = mutableListOf<MoqLiteSubscribe>()
         private var currentGroup: GroupOutbound? = null
-        private var nextSequence: Long = 0L
+
+        // `@Volatile` so the hot-swap caller can read this from outside
+        // the publisher's gate (see [MoqLitePublisherHandle.nextSequence]
+        // kdoc). Mutation happens only inside [openNextGroupLocked]
+        // (which holds [gate]); the volatile guarantees a cross-thread
+        // read sees the latest write without contending the gate.
+        @Volatile
+        private var nextSequenceField: Long = startSequence
+
+        override val nextSequence: Long
+            get() = nextSequenceField
 
         // Diagnostic: throttled counter for "send returned false" logs so a
         // long no-subscriber window doesn't flood logcat at 50 Hz.
@@ -1272,7 +1300,8 @@ class MoqLiteSession internal constructor(
             // expected to be small (1 in nests's listener-per-room
             // model), so this is fine.
             val sub = inboundSubs.first()
-            val sequence = nextSequence++
+            val sequence = nextSequenceField
+            nextSequenceField = sequence + 1L
             val uni =
                 try {
                     openGroupStream(subscribeId = sub.id, sequence = sequence)
@@ -1407,6 +1436,31 @@ interface MoqLitePublisherHandle {
      * Always normalised per [MoqLitePath].
      */
     val suffix: String
+
+    /**
+     * The next group sequence number that will be assigned by [send] /
+     * [startGroup]. Snapshot-only — read AFTER the broadcaster has
+     * stopped sending into this publisher (typically just before the
+     * caller closes the publisher in a hot-swap), so the value is the
+     * highest-already-used sequence + 1.
+     *
+     * Used by [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker]'s
+     * hot-swap path to seed the new session's publisher with a
+     * monotonically-continuing sequence — without this, every JWT
+     * refresh restarts at sequence 0 and kixelated/hang's
+     * `Container.Consumer.#run` drops every group whose sequence is
+     * less than its current `#active` high-water mark, killing audio
+     * for the watcher until either `#active` rolls over or the
+     * watcher re-subscribes.
+     *
+     * `@Volatile` on the implementation; safe to read from any
+     * coroutine. The accept-tiny-race window between read and a
+     * concurrent `send` is closed in practice because the broadcaster
+     * is responsible for swapping its publisher reference BEFORE the
+     * caller reads this value (so no further sends land on this
+     * publisher).
+     */
+    val nextSequence: Long
 
     /**
      * Start a new group. Allocates a fresh sequence id and opens a new

@@ -190,7 +190,15 @@ class MoqLiteNestsSpeaker internal constructor(
      * reconnect wrapper's hot-swap path; not called from the
      * non-reconnecting path which goes through [startBroadcasting].
      */
-    override suspend fun openPublisherForHotSwap(track: String): MoqLitePublisherHandle = session.publish(broadcastSuffix = speakerPubkeyHex, track = track)
+    override suspend fun openPublisherForHotSwap(
+        track: String,
+        startSequence: Long,
+    ): MoqLitePublisherHandle =
+        session.publish(
+            broadcastSuffix = speakerPubkeyHex,
+            track = track,
+            startSequence = startSequence,
+        )
 
     /**
      * Compare-and-clear that runs from inside [close] (already holds
@@ -348,8 +356,20 @@ internal interface HotSwappablePublisherSource {
      * session. Caller owns the returned handle's lifetime (typically
      * via [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.swapPublisher]'s
      * close-the-old contract).
+     *
+     * @param startSequence first group sequence the new publisher will
+     *   assign. Used by the hot-swap path to seed the new session's
+     *   audio track with the previous session's
+     *   [MoqLitePublisherHandle.nextSequence] so kixelated/hang's
+     *   `Container.Consumer.#run` doesn't drop every post-recycle
+     *   group as `sequence < #active`. Pass `0L` for fresh (non-
+     *   continuation) publishers — the catalog track is one such
+     *   case, since its `#active` semantics are different from audio.
      */
-    suspend fun openPublisherForHotSwap(track: String): MoqLitePublisherHandle
+    suspend fun openPublisherForHotSwap(
+        track: String,
+        startSequence: Long = 0L,
+    ): MoqLitePublisherHandle
 
     /**
      * Surface a broadcast-pipeline terminal failure (e.g. sustained
