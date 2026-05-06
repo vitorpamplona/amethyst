@@ -43,6 +43,12 @@ class Amethyst : Application() {
 
         if (isDebug) {
             Logging.setup()
+            // Auto-enable the Nests session-trace recorder in debug
+            // builds so two-phone repros can be captured via
+            //   adb logcat -s NestsTraceJsonl:D -v raw > nest-trace.jsonl
+            // without rebuilding to flip a flag. Off in release.
+            com.vitorpamplona.nestsclient.trace.NestsTrace
+                .setRecording(true)
         }
 
         instance.initiate(this)

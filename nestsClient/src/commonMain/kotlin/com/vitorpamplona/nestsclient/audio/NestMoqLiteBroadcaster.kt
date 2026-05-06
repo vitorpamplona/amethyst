@@ -21,6 +21,8 @@
 package com.vitorpamplona.nestsclient.audio
 
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -119,6 +121,18 @@ class NestMoqLiteBroadcaster(
     @Volatile private var publisher: MoqLitePublisherHandle = initialPublisher
 
     /**
+     * Volatile read of the broadcaster's current publisher reference,
+     * for callers (typically the hot-swap pump in
+     * [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker])
+     * that want to read its [MoqLitePublisherHandle.nextSequence]
+     * before swapping in a fresh publisher. Don't use this to send
+     * — that contract belongs to the broadcaster's send loop and
+     * the caller would race the loop's swap-snapshot.
+     */
+    val currentPublisher: MoqLitePublisherHandle
+        get() = publisher
+
+    /**
      * Start capturing + encoding + publishing in the background.
      * Returns immediately. Calling twice is an error. If
      * [AudioCapture.start] throws, the broadcaster is left stopped and
@@ -181,6 +195,10 @@ class NestMoqLiteBroadcaster(
                 // we bail. publisher.send returning `false` (no inbound
                 // subscriber) is NOT counted — empty rooms are normal.
                 var consecutiveSendErrors = 0
+                // Diagnostic counters: throttled logging at 50Hz capture rate
+                // would flood logcat without these.
+                var sentFrames: Long = 0L
+                var droppedNoSubFrames: Long = 0L
                 // Track which publisher we last sent to. On swapPublisher
                 // (JWT-refresh hot swap), the snapshot below picks up the
                 // new reference; we reset framesInCurrentGroup so the
@@ -191,9 +209,68 @@ class NestMoqLiteBroadcaster(
                 // and the relay would see two unrelated uni streams under
                 // the same logical group.
                 var lastPublisher: MoqLitePublisherHandle = publisher
+                // kixelated/moq `hang` "legacy" container wire format:
+                // every frame inside a moq-lite group is
+                //   varint(timestamp_us) + raw_codec_payload
+                // (`rs/hang/src/container/frame.rs`,
+                // Timescale<1_000_000>). Watchers that read our
+                // catalog's `container.kind = "legacy"` declaration
+                // will skip the leading varint as a microsecond
+                // timestamp; they MUST receive a real timestamp or
+                // their decoder picks up garbage bytes ahead of the
+                // Opus packet.
+                //
+                // Frame-index-derived timestamp (NOT wall clock). Each
+                // captured PCM frame occupies exactly one
+                // [AudioFormat.FRAME_DURATION_US] slot in the timeline,
+                // and the timestamp is `nextFrameIndex *
+                // FRAME_DURATION_US` snapped to that grid. This matters
+                // because:
+                //   - `current.send(...)` suspends on transport
+                //     backpressure; a wall-clock timestamp captured at
+                //     send-time would drift forward of the actual
+                //     capture time of the audio sample, and the watcher's
+                //     WebCodecs AudioDecoder would schedule playback
+                //     at the wrong instant (audible offset between
+                //     speaker and listener).
+                //   - The capture loop is wall-clock-pinned anyway —
+                //     `capture.readFrame()` blocks until the next 20 ms
+                //     of PCM is ready — so frame-index advances at the
+                //     same rate as wall time across the whole
+                //     broadcast lifetime, with no codec drift relative
+                //     to the watcher's playback clock.
+                //
+                // The counter advances on EVERY captured PCM frame —
+                // including encoder failures, empty-encoded frames, and
+                // muted frames — so a mute gap shows up on the wire as
+                // a real wall-clock gap (timestamps jump forward by the
+                // muted duration) rather than collapsing the silence.
+                // Survives publisher hot-swap (single-broadcast,
+                // single-encoder; the new publisher inherits the
+                // running counter) for the same reason the old
+                // wall-clock TimeMark did: timestamps are codec-payload
+                // metadata, not stream-position.
+                var nextFrameIndex = 0L
+                // Mute-edge tracking. On the unmuted→muted transition we
+                // FIN the open uni stream so the watcher sees a clean
+                // group boundary instead of a half-delivered group that
+                // never completes — kixelated/hang's
+                // `Container.Consumer.#runGroup` parks on
+                // `await group.consumer.readFrame()` until either a
+                // frame arrives or the group hits FIN, and renders a
+                // "stalled" indicator while it waits. Without the FIN,
+                // muting Amethyst lights up that indicator on every web
+                // watcher even though the broadcast is intentionally
+                // silent. The FIN clears it; unmuting opens a fresh
+                // group cleanly via the standard
+                // `currentGroup ?: openNextGroupLocked()` path inside
+                // `PublisherStateImpl.send`.
+                var wasMuted = false
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
+                        val timestampUs = nextFrameIndex * AudioFormat.FRAME_DURATION_US
+                        nextFrameIndex += 1
                         val opus =
                             try {
                                 encoder.encode(pcm)
@@ -210,7 +287,27 @@ class NestMoqLiteBroadcaster(
                                 continue
                             }
                         if (opus.isEmpty()) continue
-                        if (muted) continue
+                        if (muted) {
+                            // Unmuted → muted edge: FIN the current
+                            // group's uni stream once. Doesn't reset
+                            // [framesInCurrentGroup] since
+                            // `endGroup` is a no-op when no group is
+                            // open, and the next post-unmute send will
+                            // open a fresh group anyway. `runCatching`
+                            // because a transport-side close during
+                            // mute is non-fatal — the broadcaster's
+                            // terminal-failure path picks up real
+                            // breakage on the next live frame.
+                            if (!wasMuted) {
+                                wasMuted = true
+                                runCatching { publisher.endGroup() }
+                                framesInCurrentGroup = 0
+                            }
+                            continue
+                        }
+                        // Muted → unmuted edge: clear the latch so the
+                        // next mute transition fires endGroup again.
+                        wasMuted = false
                         // Snapshot the publisher reference once per frame.
                         // If [swapPublisher] mid-loop installed a new
                         // reference, pick it up here and reset the group
@@ -229,25 +326,63 @@ class NestMoqLiteBroadcaster(
                         // for the production cliff this works around.
                         val sendOutcome =
                             runCatching {
-                                current.send(opus)
+                                // Single-allocation framing: write the
+                                // timestamp varint directly into a buffer
+                                // sized for `varint + opus`, then copy
+                                // the opus bytes after it. The earlier
+                                // shape (`Varint.encode(...) + opus`)
+                                // allocated twice per frame — once for
+                                // the varint ByteArray, once for the
+                                // concatenated payload. At 50 fps × N
+                                // speakers this is measurable young-gen
+                                // pressure on the audio hot path; the
+                                // mirror optimisation already lives in
+                                // `PublisherStateImpl.send` for the
+                                // outer size-prefix wrap.
+                                val tsLen = Varint.size(timestampUs)
+                                val payload = ByteArray(tsLen + opus.size)
+                                Varint.writeTo(timestampUs, payload, 0)
+                                opus.copyInto(payload, tsLen)
+                                val accepted = current.send(payload)
                                 framesInCurrentGroup += 1
                                 if (framesInCurrentGroup >= framesPerGroup) {
                                     current.endGroup()
                                     framesInCurrentGroup = 0
                                 }
+                                accepted
                             }
                         sendOutcome
-                            .onSuccess {
+                            .onSuccess { accepted ->
                                 consecutiveSendErrors = 0
-                                // Fire the speaking-ring tap only on
-                                // a successful send. If the publisher
-                                // throws (transport gone, peer dead),
-                                // the frame didn't actually go out and
-                                // the UI shouldn't claim we're talking.
-                                onLevel(peakAmplitude(pcm))
+                                if (accepted) {
+                                    sentFrames += 1
+                                    if (sentFrames % SEND_LOG_THROTTLE == 0L) {
+                                        Log.d("NestTx") {
+                                            "broadcaster sent frame #$sentFrames (group $framesInCurrentGroup/$framesPerGroup)"
+                                        }
+                                    }
+                                    // Only tap the speaking-ring on a frame
+                                    // that actually reached an inbound
+                                    // subscriber. Without this gate the local
+                                    // ring lights up during the pre-subscribe
+                                    // window AND after a relay-side cliff —
+                                    // the speaker would believe they're being
+                                    // heard when no audio is on the wire.
+                                    onLevel(peakAmplitude(pcm))
+                                } else {
+                                    droppedNoSubFrames += 1
+                                    if (droppedNoSubFrames % SEND_LOG_THROTTLE == 0L) {
+                                        Log.w("NestTx") {
+                                            "broadcaster send returned false — frame dropped (count=$droppedNoSubFrames, sent=$sentFrames)"
+                                        }
+                                    }
+                                }
                             }.onFailure { t ->
                                 if (t is CancellationException) throw t
                                 consecutiveSendErrors += 1
+                                Log.w("NestTx") {
+                                    "broadcaster send threw (consecutive=$consecutiveSendErrors): ${t::class.simpleName}: ${t.message}"
+                                }
                                 onError(
                                     AudioException(
                                         AudioException.Kind.PlaybackFailed,
@@ -359,15 +494,53 @@ class NestMoqLiteBroadcaster(
 
     companion object {
         /**
-         * Default moq-lite group size = 5 Opus frames ≈ 100 ms of audio.
-         * Picked to keep the QUIC uni-stream creation rate
-         * (10 streams/sec at 20 ms cadence) under the production
-         * nostrnests relay's sustained per-subscriber forward
-         * ceiling (~40 streams/sec) while still giving late-joining
-         * subscribers a sub-100 ms initial audio gap. See
-         * [framesPerGroup] kdoc for the full rationale + history.
+         * Default moq-lite group size = 50 Opus frames ≈ 1 s of audio.
+         *
+         * The relay-side cliff this defends against is per-subscriber
+         * forward-stream-rate, not per-frame or per-byte: moq-rs
+         * starts FIN'ing the per-subscriber publisher pipe once its
+         * per-subscriber uni-stream creation queue can't drain fast
+         * enough. Two-phone production tests on
+         * `claude/fix-nests-audio-receiver-HCgOY` showed:
+         *
+         *   - `framesPerGroup = 10` (5 streams/sec) → cliff after
+         *     ~16 s of streaming, ~6 s of audio lost at the tail
+         *     (commit 6e4df4a logcat, run 18:37:43..18:38:08)
+         *   - `framesPerGroup = 5`  (10 streams/sec) → cliff after
+         *     ~13 s of streaming, same dropout shape (commit
+         *     d6517cf logcat run 14:25 — original bug report).
+         *
+         * 50 frames/group → 1 stream/sec at the production 50 fps
+         * Opus cadence. The relay's per-subscriber forward queue
+         * has measurable headroom at 1 stream/sec — sweep tests
+         * (`fpg-all` = 100 frames in a single group) consistently
+         * deliver 100/100 in production, and `fpg20` similarly
+         * passes. We pick 50 (not 100) because:
+         *
+         *   - Late-join gap is bounded by group size: a listener
+         *     joining mid-broadcast has to wait until the next
+         *     group boundary for the first frame. 50 frames = 1 s
+         *     gap, which matches what the existing
+         *     `ROOM_PLAYER_PREROLL_FRAMES = 10` audio-buffer + the
+         *     ~250 ms AudioTrack jitter buffer was already designed
+         *     to mask. 100 frames (2 s) is past that.
+         *   - QUIC stream-level reliability: each group is one uni
+         *     stream, and a stream RST loses the whole group. 1 s
+         *     of audio loss on RST is bearable; 2 s is noticeably
+         *     a "skip".
+         *   - Sender-side encode latency stays at 1 s — no worse
+         *     than the natural buffering audio rooms already do.
+         *
+         * Pair with the listener-side cliff-detector in
+         * `NestViewModel` as belt-and-suspenders: if 50 frames/group
+         * STILL hits a cliff (relay version drift, network
+         * congestion, etc.) the detector recycles the transport so
+         * the next session reopens the relay's queue.
+         *
+         * Late-join gap: ≤ 1 s (one group boundary) — within the
+         * existing audio-room buffering envelope.
          */
-        const val DEFAULT_FRAMES_PER_GROUP: Int = 5
+        const val DEFAULT_FRAMES_PER_GROUP: Int = 50
 
         /**
          * Maximum consecutive [MoqLitePublisherHandle.send] / [endGroup]
@@ -377,5 +550,9 @@ class NestMoqLiteBroadcaster(
          * transport is irrecoverably dead.
          */
         const val MAX_CONSECUTIVE_SEND_ERRORS: Int = 250
+
+        // Diagnostic: log every Nth frame (sent or dropped) so a sustained
+        // window doesn't flood logcat at 50 fps.
+        private const val SEND_LOG_THROTTLE: Long = 50L
     }
 }

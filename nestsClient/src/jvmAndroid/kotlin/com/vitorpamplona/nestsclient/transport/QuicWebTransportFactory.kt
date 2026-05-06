@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.nestsclient.transport
 
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteAlpn
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
@@ -89,8 +90,27 @@ class QuicWebTransportFactory(
      * post-CONNECT message is decoded as SETUP_CLIENT, producing
      * `connection closed err=invalid value` on the relay side and a stalled
      * subscribe / `subscribe stream FIN before reply` on the client side.
+     *
+     * **Lite-04 is intentionally NOT advertised** even though the kixelated
+     * browser client now ships it. Lite-04 reshapes the on-the-wire
+     * Announce.hops field from a single varint count into a full
+     * `OriginList` (`kixelated/moq` commit 45db108, "moq-lite/moq-relay:
+     * hop-based clustering"), adds an `exclude_hop` field to
+     * AnnounceInterest, and adds an `rtt` field to Probe — Subscribe and
+     * Group framing are unchanged but Announce framing diverges. Our codec
+     * speaks pure Lite-03; if a Lite-04-preferring relay picks
+     * `moq-lite-04` from our advertised list, the very first Announce
+     * exchange would desync (we'd encode/read a bare hops varint where
+     * the peer expects `len + len × u62`) and the connection would abort.
+     * Until [com.vitorpamplona.nestsclient.moq.lite.MoqLiteCodec] gains
+     * version-aware Announce / AnnounceInterest / Probe paths and
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteAnnounce.hops]
+     * becomes a list, advertising Lite-04 is a footgun. See
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteAlpn] for the
+     * known-version constants.
      */
-    private val webTransportSubProtocols: List<String> = listOf("moq-lite-03"),
+    private val webTransportSubProtocols: List<String> =
+        listOf(MoqLiteAlpn.LITE_03),
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,

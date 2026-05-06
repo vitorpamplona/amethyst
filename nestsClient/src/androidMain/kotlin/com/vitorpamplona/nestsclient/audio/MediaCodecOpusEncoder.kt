@@ -22,6 +22,7 @@ package com.vitorpamplona.nestsclient.audio
 
 import android.media.MediaCodec
 import android.media.MediaFormat
+import com.vitorpamplona.quartz.utils.Log
 import java.nio.ByteOrder
 
 /**
@@ -56,6 +57,16 @@ class MediaCodecOpusEncoder(
     private var presentationTimeUs: Long = 0L
     private var released = false
 
+    /**
+     * Latch so a single conspicuous log fires the FIRST time we drop a
+     * [MediaCodec.BUFFER_FLAG_CODEC_CONFIG] output buffer. Without
+     * this latch the same encoder can produce 2-3 CSD buffers in a row
+     * (OpusHead + OpusTags on some Android Codec2 stacks) and we'd
+     * spam the log; with it, we record the fact once per encoder
+     * lifetime and stay quiet thereafter.
+     */
+    private var loggedCsdSkip = false
+
     override fun encode(pcm: ShortArray): ByteArray {
         check(!released) { "encoder released" }
         require(pcm.isNotEmpty()) { "PCM frame must not be empty" }
@@ -81,11 +92,60 @@ class MediaCodecOpusEncoder(
         // without producing output, which would otherwise busy-spin at
         // 100 Hz against the 10 ms dequeue timeout).
         var formatChangeAbsorbed = false
+        // CSD-skip iteration cap. Codec2 stacks have been observed to
+        // emit OpusHead AND OpusTags as separate CSD buffers; some
+        // future stack might emit more. Cap the per-call CSD-skip
+        // count so a buggy encoder that emits CSD on every dequeue
+        // can't busy-loop the per-frame budget. 4 is generous: the
+        // expected case is 1 (OpusHead) or 2 (OpusHead + OpusTags).
+        var csdSkipsThisCall = 0
         while (true) {
             val outputIndex = codec.dequeueOutputBuffer(bufferInfo, DEQUEUE_TIMEOUT_US)
             when {
                 outputIndex >= 0 -> {
                     val outputBuffer = codec.getOutputBuffer(outputIndex) ?: continue
+                    // CODEC_CONFIG buffers carry codec-specific data
+                    // (CSD): on the Android `audio/opus` encoder these
+                    // are the 19-byte OpusHead identification header
+                    // and (on some Codec2 stacks) the OpusTags
+                    // comment header. They are NOT Opus packets — they
+                    // are decoder-config blobs that should be supplied
+                    // out-of-band on the receive side (we already do
+                    // this in `MediaCodecOpusDecoder.buildOpusIdHeader`).
+                    // Sending them to the wire as audio frames means
+                    // the watcher's WebCodecs `AudioDecoder.decode`
+                    // sees garbage in the first frame, burning a
+                    // warmup slot and producing a click on group
+                    // rollover after every JWT-refresh hot-swap.
+                    val isCodecConfig =
+                        bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0
+                    if (isCodecConfig) {
+                        codec.releaseOutputBuffer(outputIndex, false)
+                        if (!loggedCsdSkip) {
+                            loggedCsdSkip = true
+                            Log.d("NestTx") {
+                                "MediaCodecOpusEncoder skipped ${bufferInfo.size}-byte CODEC_CONFIG (OpusHead/OpusTags) — not an audio frame"
+                            }
+                        }
+                        csdSkipsThisCall += 1
+                        if (csdSkipsThisCall >= MAX_CSD_SKIPS_PER_CALL) {
+                            // A buggy encoder is emitting CSD on every
+                            // dequeue; bail this call rather than
+                            // busy-looping the per-frame budget.
+                            // Returning empty is the existing "warmup"
+                            // contract — broadcaster's
+                            // `if (opus.isEmpty()) continue` handles it
+                            // and the next encode call retries.
+                            Log.w("NestTx") {
+                                "MediaCodecOpusEncoder hit MAX_CSD_SKIPS_PER_CALL=$MAX_CSD_SKIPS_PER_CALL; bailing this encode call (encoder may be misbehaving)"
+                            }
+                            return ByteArray(0)
+                        }
+                        // Don't return; loop to find the next output
+                        // buffer (the next dequeue may be the actual
+                        // first audio frame).
+                        continue
+                    }
                     val opus = ByteArray(bufferInfo.size)
                     outputBuffer.position(bufferInfo.offset)
                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
@@ -124,6 +184,16 @@ class MediaCodecOpusEncoder(
         const val DEFAULT_BITRATE_BPS: Int = 32_000
         private const val DEQUEUE_TIMEOUT_US = 10_000L
         private const val FRAME_DURATION_US = 20_000L
+
+        /**
+         * Per-encode-call cap on consecutive
+         * [MediaCodec.BUFFER_FLAG_CODEC_CONFIG] outputs we'll skip
+         * before bailing the call. Expected steady state is 0; the
+         * one-time startup cost is 1 (OpusHead) or 2 (OpusHead +
+         * OpusTags on Codec2). 4 leaves headroom for a future stack
+         * that emits more without uncapping the loop entirely.
+         */
+        private const val MAX_CSD_SKIPS_PER_CALL: Int = 4
 
         private fun buildFormat(bitrate: Int): MediaFormat =
             MediaFormat

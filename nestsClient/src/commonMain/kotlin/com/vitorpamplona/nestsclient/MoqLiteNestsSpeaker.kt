@@ -23,8 +23,10 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteHangCatalog
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -96,6 +98,26 @@ class MoqLiteNestsSpeaker internal constructor(
             // session's `activePublisher` slot — otherwise a subsequent
             // startBroadcasting fails with "already publishing" and the
             // publisher's announce state never tears down.
+            //
+            // Companion catalog publisher: the kixelated/moq browser
+            // watcher (and any standards-aligned moq-lite consumer)
+            // discovers a broadcast's tracks by subscribing to the
+            // `catalog.json` track and parsing the latest group's
+            // payload as a JSON manifest. Without this track our
+            // broadcasts are *invisible* to the canonical web watcher
+            // even though our audio frames are streaming fine — the
+            // watcher has nothing to subscribe to. Open it alongside
+            // audio so a single broadcast advertises both tracks.
+            val catalogPublisher =
+                try {
+                    session.publish(
+                        broadcastSuffix = speakerPubkeyHex,
+                        track = MoqLiteNestsListener.CATALOG_TRACK,
+                    )
+                } catch (t: Throwable) {
+                    runCatching { publisher.close() }
+                    throw t
+                }
             val broadcaster =
                 try {
                     NestMoqLiteBroadcaster(
@@ -120,9 +142,28 @@ class MoqLiteNestsSpeaker internal constructor(
                         )
                     }
                 } catch (t: Throwable) {
+                    runCatching { catalogPublisher.close() }
                     runCatching { publisher.close() }
                     throw t
                 }
+            // Catalog emit-on-subscribe: every time the relay opens a
+            // SUBSCRIBE bidi for catalog.json, fire the hook to write
+            // one group + FIN. moq-lite serves new listeners from the
+            // relay's per-track latest-group cache, so emitting once
+            // per relay-side subscribe is enough — late-joining
+            // watchers behind the same relay get the cached blob
+            // without us having to maintain a periodic re-emit loop.
+            // Set BEFORE the relay can race a SUBSCRIBE in; in
+            // practice the relay's SUBSCRIBE bidi takes a network
+            // round-trip after our ANNOUNCE Active, so this is safe
+            // even though the setter is non-suspending.
+            val catalogJson = MoqLiteHangCatalog.OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES
+            catalogPublisher.setOnNewSubscriber {
+                runCatching {
+                    catalogPublisher.send(catalogJson)
+                    catalogPublisher.endGroup()
+                }
+            }
             mutableState.value =
                 NestsSpeakerState.Broadcasting(
                     room = current.room,
@@ -133,6 +174,7 @@ class MoqLiteNestsSpeaker internal constructor(
                 MoqLiteBroadcastHandle(
                     broadcaster = broadcaster,
                     publisher = publisher,
+                    catalogPublisher = catalogPublisher,
                     parent = this,
                 )
             activeHandle = handle
@@ -147,7 +189,15 @@ class MoqLiteNestsSpeaker internal constructor(
      * reconnect wrapper's hot-swap path; not called from the
      * non-reconnecting path which goes through [startBroadcasting].
      */
-    override suspend fun openPublisherForHotSwap(track: String): MoqLitePublisherHandle = session.publish(broadcastSuffix = speakerPubkeyHex, track = track)
+    override suspend fun openPublisherForHotSwap(
+        track: String,
+        startSequence: Long,
+    ): MoqLitePublisherHandle =
+        session.publish(
+            broadcastSuffix = speakerPubkeyHex,
+            track = track,
+            startSequence = startSequence,
+        )
 
     /**
      * Compare-and-clear that runs from inside [close] (already holds
@@ -223,89 +273,4 @@ class MoqLiteNestsSpeaker internal constructor(
             // Best-effort.
         }
     }
-}
-
-internal class MoqLiteBroadcastHandle(
-    private val broadcaster: NestMoqLiteBroadcaster,
-    private val publisher: MoqLitePublisherHandle,
-    private val parent: MoqLiteNestsSpeaker,
-) : BroadcastHandle {
-    @Volatile private var muted: Boolean = false
-
-    @Volatile private var closed: Boolean = false
-
-    override val isMuted: Boolean get() = muted
-
-    override suspend fun setMuted(muted: Boolean) {
-        if (closed) return
-        this.muted = muted
-        broadcaster.setMuted(muted)
-        parent.reportMuteState(muted)
-    }
-
-    override suspend fun close() {
-        if (closed) return
-        closed = true
-        try {
-            broadcaster.stop()
-        } catch (ce: kotlinx.coroutines.CancellationException) {
-            // Even on cancel, run the rest of cleanup before rethrowing
-            // — broadcaster.stop already cancels its own job, so the
-            // mic + encoder + publisher are owed their close paths.
-            runCatching { publisher.close() }
-            parent.broadcastClosed(this)
-            throw ce
-        } catch (_: Throwable) {
-            // Best-effort; fall through to the defensive publisher.close.
-        }
-        // broadcaster.stop() already calls publisher.close(); call again
-        // defensively to make this method idempotent against partial
-        // failures on the broadcaster.stop path.
-        try {
-            publisher.close()
-        } catch (ce: kotlinx.coroutines.CancellationException) {
-            parent.broadcastClosed(this)
-            throw ce
-        } catch (_: Throwable) {
-            // Best-effort.
-        }
-        parent.broadcastClosed(this)
-    }
-}
-
-/**
- * Internal hot-swap seam: speakers that expose this interface let the
- * reconnect wrapper retarget a long-lived
- * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster] onto a
- * freshly-opened moq-lite session's publisher without restarting the
- * AudioRecord / Opus encoder pipeline. Implemented by
- * [MoqLiteNestsSpeaker]; not implemented by the IETF reference
- * [DefaultNestsSpeaker], which falls back to the close-then-restart path
- * inside [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker].
- *
- * The wrapper uses an `as?` cast to detect support so this interface
- * can stay package-internal — protocol consumers never see it.
- */
-internal interface HotSwappablePublisherSource {
-    /**
-     * Open a fresh [MoqLitePublisherHandle] on the underlying moq-lite
-     * session. Caller owns the returned handle's lifetime (typically
-     * via [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.swapPublisher]'s
-     * close-the-old contract).
-     */
-    suspend fun openPublisherForHotSwap(track: String): MoqLitePublisherHandle
-
-    /**
-     * Surface a broadcast-pipeline terminal failure (e.g. sustained
-     * `publisher.send` errors past
-     * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS])
-     * by flipping the speaker's state to [NestsSpeakerState.Failed].
-     * Called by the hot-swap pump when the long-lived broadcaster's
-     * `onTerminalFailure` fires; lets the reconnect orchestrator
-     * observe the terminal state and recycle the session, matching
-     * the legacy
-     * [MoqLiteNestsSpeaker.startBroadcasting] path's failure
-     * propagation.
-     */
-    fun reportBroadcastTerminalFailure()
 }

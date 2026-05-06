@@ -141,16 +141,19 @@ class SurgeDnsTest {
                 responses.get()
             }
         val syncRefresh = Executor { it.run() }
+        // 100ms TTL gives both branches enough headroom on slow CI: Thread.sleep(150) reliably
+        // expires the first entry, and the post-refresh entry can't expire between the two
+        // assertions below (microseconds apart on any sane runner).
         val dns =
             SurgeDns(
                 delegate = upstream,
-                positiveTtlMs = 1,
+                positiveTtlMs = 100,
                 positiveTtlJitterMs = 0,
                 refreshExecutor = syncRefresh,
             )
 
         assertEquals(listOf(ip("1.2.3.4")), dns.lookup("a.example"))
-        Thread.sleep(20)
+        Thread.sleep(150)
 
         // Upstream now returns a new IP. The next lookup should still serve the OLD IP
         // immediately, while the synchronous executor performs the refresh inline.

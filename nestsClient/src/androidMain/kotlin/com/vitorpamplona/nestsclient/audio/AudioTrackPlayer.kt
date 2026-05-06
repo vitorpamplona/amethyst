@@ -23,6 +23,7 @@ package com.vitorpamplona.nestsclient.audio
 import android.media.AudioAttributes
 import android.media.AudioTrack
 import android.os.Process
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -77,7 +78,37 @@ import android.media.AudioFormat as AndroidAudioFormat
 class AudioTrackPlayer(
     private val usage: Int = AudioAttributes.USAGE_MEDIA,
     private val contentType: Int = AudioAttributes.CONTENT_TYPE_SPEECH,
+    /**
+     * Number of channels in the PCM stream this player will receive. Must
+     * match the [com.vitorpamplona.nestsclient.audio.OpusDecoder]'s output
+     * configuration (mono Opus → 1, stereo Opus → 2 with L/R interleaving).
+     * Drives both the AudioTrack channel mask and the underlying buffer-
+     * size target. Default is [AudioFormat.CHANNELS] (mono) so existing
+     * call sites that don't pass a channel count keep the prior behaviour.
+     */
+    private val channelCount: Int = AudioFormat.CHANNELS,
+    /**
+     * PCM sample rate in Hz. Drives the AudioTrack output rate and the
+     * 250 ms target-buffer calculation. For Opus, Android's Codec2
+     * decoder always emits 48 kHz PCM regardless of the OpusHead
+     * `inputSampleRate`, so for the production Opus path this is
+     * always [AudioFormat.SAMPLE_RATE_HZ] — but threading the
+     * parameter through keeps the AudioTrack's declared rate matched
+     * to whatever the catalog says, and lets a future codec or
+     * container variant whose decoder DOES respect input sample rate
+     * (a non-Opus rendition) get the correct PCM clock.
+     */
+    private val sampleRate: Int = AudioFormat.SAMPLE_RATE_HZ,
 ) : AudioPlayer {
+    init {
+        require(channelCount in 1..2) {
+            "AudioTrackPlayer supports mono (1) or stereo (2) only, got $channelCount"
+        }
+        require(sampleRate > 0) {
+            "AudioTrackPlayer sampleRate must be positive, got $sampleRate"
+        }
+    }
+
     private var track: AudioTrack? = null
     private var muted: Boolean = false
     private var volume: Float = 1f
@@ -96,33 +127,39 @@ class AudioTrackPlayer(
 
     override fun start() {
         if (track != null) return
+        Log
+            .d("NestPlay") { "AudioTrackPlayer.start() — allocating AudioTrack" }
 
         val channelMask =
-            when (AudioFormat.CHANNELS) {
+            when (channelCount) {
                 1 -> AndroidAudioFormat.CHANNEL_OUT_MONO
                 2 -> AndroidAudioFormat.CHANNEL_OUT_STEREO
-                else -> error("unsupported channel count ${AudioFormat.CHANNELS}")
+                else -> error("unsupported channel count $channelCount")
             }
 
         val minBuffer =
             AudioTrack.getMinBufferSize(
-                AudioFormat.SAMPLE_RATE_HZ,
+                sampleRate,
                 channelMask,
                 AndroidAudioFormat.ENCODING_PCM_16BIT,
             )
         if (minBuffer <= 0) {
             throw AudioException(
                 AudioException.Kind.DeviceUnavailable,
-                "AudioTrack.getMinBufferSize returned $minBuffer for ${AudioFormat.SAMPLE_RATE_HZ} Hz",
+                "AudioTrack.getMinBufferSize returned $minBuffer for $sampleRate Hz",
             )
         }
         // Target ~250 ms of audio: enough headroom so the decode loop can
         // miss its 20 ms cadence by an order of magnitude before the device
         // underruns. Take the larger of `minBuffer * 16` and an explicit
         // 250 ms-equivalent so devices that report a small minBuffer still
-        // get the same wall-clock slack.
+        // get the same wall-clock slack. Stereo doubles the byte count
+        // per sample (interleaved L,R 16-bit shorts); a higher sample
+        // rate scales the per-second byte count linearly — both factor
+        // into the target so the wall-clock 250 ms target is preserved
+        // regardless of channel layout / sample rate.
         val targetBytes250Ms =
-            (AudioFormat.SAMPLE_RATE_HZ / 4) * AudioFormat.BYTES_PER_SAMPLE * AudioFormat.CHANNELS
+            (sampleRate / 4) * AudioFormat.BYTES_PER_SAMPLE * channelCount
         val bufferBytes = maxOf(minBuffer * 16, targetBytes250Ms)
 
         val newTrack =
@@ -139,7 +176,7 @@ class AudioTrackPlayer(
                         AndroidAudioFormat
                             .Builder()
                             .setEncoding(AndroidAudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(AudioFormat.SAMPLE_RATE_HZ)
+                            .setSampleRate(sampleRate)
                             .setChannelMask(channelMask)
                             .build(),
                     ).setBufferSizeInBytes(bufferBytes)
@@ -178,6 +215,10 @@ class AudioTrackPlayer(
         audioExecutor = executor
         audioDispatcher = executor.asCoroutineDispatcher()
         track = newTrack
+        Log.d("NestPlay") {
+            "AudioTrack allocated: state=${newTrack.state} playState=${newTrack.playState} " +
+                "bufferSizeBytes=$bufferBytes minBuffer=$minBuffer sampleRate=$sampleRate"
+        }
     }
 
     override fun beginPlayback() {
@@ -189,12 +230,18 @@ class AudioTrackPlayer(
         val t = track ?: return
         try {
             t.play()
+            Log.d("NestPlay") {
+                "AudioTrack.play() returned, state=${t.playState} bufferSize=${t.bufferSizeInFrames} muted=$muted volume=$volume"
+            }
         } catch (e: Throwable) {
             // PLAY-on-uninitialized AudioTrack is the only realistic
             // failure here, and we already guard against an unallocated
             // track above. Throw so [NestPlayer]'s outer catch surfaces
             // it via `onError(AudioException.PlaybackFailed)` — same path
             // that handles every other mid-stream device failure.
+            Log.w("NestPlay") {
+                "AudioTrack.play() threw: ${e::class.simpleName}: ${e.message}"
+            }
             throw AudioException(
                 AudioException.Kind.DeviceUnavailable,
                 "AudioTrack.play() rejected start",
@@ -215,21 +262,33 @@ class AudioTrackPlayer(
         withContext(dispatcher) {
             val written = t.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
             if (written < 0) {
+                Log.w("NestPlay") {
+                    "AudioTrack.write returned error $written (state=${t.playState})"
+                }
                 throw AudioException(
                     AudioException.Kind.PlaybackFailed,
                     "AudioTrack.write returned error code $written",
                 )
+            }
+            if (written != pcm.size) {
+                Log.w("NestPlay") {
+                    "AudioTrack.write partial: requested=${pcm.size} written=$written"
+                }
             }
         }
     }
 
     override fun setMuted(muted: Boolean) {
         this.muted = muted
+        Log
+            .d("NestPlay") { "AudioTrackPlayer.setMuted($muted) volume=$volume" }
         track?.let { applyMuteVolume(it) }
     }
 
     override fun setVolume(volume: Float) {
         this.volume = volume.coerceIn(0f, 1f)
+        Log
+            .d("NestPlay") { "AudioTrackPlayer.setVolume($volume) muted=$muted" }
         track?.let { applyMuteVolume(it) }
     }
 

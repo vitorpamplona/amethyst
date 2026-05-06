@@ -341,6 +341,65 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun publisher_startSequence_seeds_first_group_for_hot_swap_continuation() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Mint a publisher with a non-zero startSequence — simulates
+            // the hot-swap path's "carry forward old publisher's
+            // nextSequence" contract.
+            val publisher =
+                session.publish(
+                    broadcastSuffix = "speakerPubkey",
+                    track = "audio/data",
+                    startSequence = 42L,
+                )
+            assertEquals(42L, publisher.nextSequence, "fresh publisher reports startSequence as next")
+
+            // Wire up a subscriber so send() doesn't short-circuit.
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 11L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+            withTimeout(2_000) { subBidi.incoming().first() }
+
+            assertEquals(true, publisher.send("opus-1".encodeToByteArray()))
+            // FIN before draining so toList() terminates rather than
+            // blocking indefinitely on the still-open uni stream.
+            publisher.endGroup()
+            // After the first send, nextSequence should advance to 43.
+            assertEquals(43L, publisher.nextSequence)
+
+            // First uni stream's GroupHeader.sequence MUST be 42, not 0.
+            val relayUni = withTimeout(2_000) { serverSide.incomingUniStreams().first() }
+            val uniChunks = relayUni.incoming().toList()
+            val buf = MoqLiteFrameBuffer()
+            uniChunks.forEach { buf.push(it) }
+            assertEquals(MoqLiteDataType.Group.code, buf.readVarint())
+            val header =
+                MoqLiteCodec.decodeGroupHeader(
+                    buf.readSizePrefixed() ?: error("group header missing"),
+                )
+            assertEquals(42L, header.sequence, "first group's sequence is the seeded startSequence")
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_send_returns_false_when_no_inbound_subscriber() =
         runBlocking {
             val (clientSide, _) = FakeWebTransport.pair()
@@ -352,6 +411,167 @@ class MoqLiteSessionTest {
             // semantics where the speaker keeps capturing audio even
             // when nobody is listening.
             assertEquals(false, publisher.send("ignored".encodeToByteArray()))
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_setOnNewSubscriber_hook_fires_per_inbound_subscribe() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+            val hookFireCount =
+                java.util.concurrent.atomic
+                    .AtomicInteger(0)
+            publisher.setOnNewSubscriber {
+                hookFireCount.incrementAndGet()
+            }
+
+            // First inbound SUBSCRIBE → hook fires once.
+            val subBidi1 = serverSide.openBidiStream()
+            subBidi1.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi1.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 0L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+            // Wait for SubscribeOk to drain so we know registerInboundSubscription
+            // ran (and therefore the hook had its chance to launch).
+            withTimeout(2_000) { subBidi1.incoming().first() }
+            // Hook fires asynchronously on the session scope; give it a
+            // moment to land. Use a bounded retry rather than a flat
+            // delay so the test is fast on the happy path.
+            withTimeout(2_000) {
+                while (hookFireCount.get() < 1) kotlinx.coroutines.yield()
+            }
+            assertEquals(1, hookFireCount.get())
+
+            // Second inbound SUBSCRIBE → hook fires again.
+            val subBidi2 = serverSide.openBidiStream()
+            subBidi2.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi2.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 1L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+            withTimeout(2_000) { subBidi2.incoming().first() }
+            withTimeout(2_000) {
+                while (hookFireCount.get() < 2) kotlinx.coroutines.yield()
+            }
+            assertEquals(2, hookFireCount.get())
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_setOnNewSubscriber_hook_does_not_fire_on_track_mismatch() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Publisher serves audio/data only.
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+            val hookFireCount =
+                java.util.concurrent.atomic
+                    .AtomicInteger(0)
+            publisher.setOnNewSubscriber {
+                hookFireCount.incrementAndGet()
+            }
+
+            // Inbound SUBSCRIBE for a different track. Replies
+            // SubscribeDrop (covered in another test); hook MUST NOT
+            // fire because no subscriber was actually registered on
+            // this publisher.
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 7L,
+                        broadcast = "speakerPubkey",
+                        track = "video/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+            // Drain the Drop reply.
+            withTimeout(2_000) { subBidi.incoming().first() }
+            // No way to wait deterministically for "the hook didn't
+            // fire"; sleep briefly to let any racing launch surface,
+            // then assert. Short delay because the hook would launch
+            // on the same scope as registerInboundSubscription's caller.
+            kotlinx.coroutines.delay(100)
+            assertEquals(0, hookFireCount.get())
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_replies_subscribeDrop_when_track_is_not_published() =
+        runBlocking {
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Publisher serves audio/data only.
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+
+            // Relay opens a Subscribe bidi for a DIFFERENT track. The
+            // session must reply with SubscribeDrop carrying the
+            // TRACK_DOES_NOT_EXIST code rather than a silent FIN —
+            // otherwise the watcher's response wait resolves only when
+            // the bidi is FIN'd, with no indication WHY (looks
+            // identical to "publisher disappeared mid-subscribe").
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 99L,
+                        broadcast = "speakerPubkey",
+                        track = "video/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+
+            val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
+            val resp = MoqLiteCodec.decodeSubscribeResponse(ackChunk)
+            val dropped = resp as MoqLiteCodec.SubscribeResponse.Dropped
+            assertEquals(MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST, dropped.drop.errorCode)
+            // Reason phrase is informational; pin substring rather than
+            // the exact text so we can keep tweaking the wording.
+            kotlin.test.assertContains(dropped.drop.reasonPhrase, "video/data")
 
             publisher.close()
             session.close()

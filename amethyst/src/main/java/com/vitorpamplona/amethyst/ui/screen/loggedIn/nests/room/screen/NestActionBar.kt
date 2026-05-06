@@ -50,6 +50,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -270,8 +271,11 @@ private fun OnStageControls(
 
         is BroadcastUiState.Failed -> {
             // Reason is shown in the status strip; this button retries.
+            // Same auto-muted semantics as the idle path: the retry
+            // should bring the publisher back up without opening the
+            // mic, then the user can unmute deliberately.
             TalkButton(
-                onClick = { viewModel.startBroadcast(speakerPubkeyHex) },
+                onClick = { viewModel.startBroadcast(speakerPubkeyHex, initialMuted = true) },
                 contentDescription = stringRes(R.string.nest_talk),
             )
             LeaveStageButton(onClick = { viewModel.setOnStage(false) })
@@ -289,17 +293,43 @@ private fun OnStageIdleControls(
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             permissionDenied = !granted
-            if (granted) viewModel.startBroadcast(speakerPubkeyHex)
+            // Permission grant on a Talk-button tap should start a
+            // *muted* broadcast — auto-start semantics. The host
+            // taps Talk to claim the on-stage slot; unmute is a
+            // separate, deliberate action below.
+            if (granted) viewModel.startBroadcast(speakerPubkeyHex, initialMuted = true)
         }
     // The launcher callback never fires for Settings-deep-link grants, so
     // re-check on every recomposition to auto-clear the warning.
     val showDenialWarning =
         permissionDenied && !context.hasMicPermission()
 
+    // Auto-start the muted broadcast as soon as the host (or any
+    // on-stage speaker) lands on this composable WITH mic permission
+    // already granted. Without this, a host who creates a room sees
+    // a "Connecting..." spinner over their avatar until they tap Talk
+    // — the publisher session only opens on tap, so listeners can't
+    // subscribe yet, and the `connectingSpeakers` overlay sticks. By
+    // pre-opening the publisher in muted state here, listeners get
+    // an immediate Active announce and the host's avatar leaves the
+    // spinner state on its own. Unmute is still a separate tap on
+    // the mic toggle that appears once we transition to
+    // `BroadcastUiState.Broadcasting(isMuted = true)`.
+    //
+    // Permission-denied case is intentionally left to the manual
+    // Talk-button tap below: we don't want a host to be auto-prompted
+    // for the mic the instant they enter the room. Tapping Talk is
+    // the consent gesture that triggers `permissionLauncher`.
+    LaunchedEffect(speakerPubkeyHex) {
+        if (context.hasMicPermission()) {
+            viewModel.startBroadcast(speakerPubkeyHex, initialMuted = true)
+        }
+    }
+
     TalkButton(
         onClick = {
             if (context.hasMicPermission()) {
-                viewModel.startBroadcast(speakerPubkeyHex)
+                viewModel.startBroadcast(speakerPubkeyHex, initialMuted = true)
             } else {
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }

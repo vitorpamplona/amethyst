@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -37,9 +38,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -251,8 +252,29 @@ private class ReconnectingHandle(
      * swallowed so a future moq-lite session keeps emitting.
      */
     override fun announces(): Flow<RoomAnnouncement> =
-        flow {
+        // `channelFlow` (NOT `flow`) is required here for the same
+        // reason `MoqLiteNestsListener.announces` is channelFlow:
+        // we drive emissions from a `collectLatest` that internally
+        // launches a child coroutine per `activeListener` emission.
+        // `flow {}`'s SafeFlow guard rejects emissions from any
+        // coroutine other than the flow-builder's own — so on the
+        // very first listener emission the inner `emit(it)` lands
+        // in a child coroutine of `collectLatest`, throws
+        // IllegalStateException, the consumer's `runCatching`
+        // swallows it, and `_announcedSpeakers` never populates.
+        // Two-phone production logs at commit f17e7ad showed this
+        // exact failure even AFTER the inner listener was switched
+        // to channelFlow — the wrapper layer was the second
+        // un-fixed `flow {}`. `channelFlow` + `send(...)` instead
+        // of `emit(...)` allows cross-coroutine production, which
+        // is exactly what `collectLatest`'s per-emission child
+        // coroutines need.
+        channelFlow {
+            Log.d("NestRx") { "wrapper.announces() channelFlow starting collect on activeListener" }
+            var iter = 0
             activeListener.collectLatest { listener ->
+                iter += 1
+                Log.d("NestRx") { "wrapper.announces() iter=$iter activeListener=${if (listener == null) "null" else "set"}" }
                 if (listener == null) return@collectLatest
                 val terminalOrConnected =
                     listener.state.first { state ->
@@ -260,11 +282,27 @@ private class ReconnectingHandle(
                             state is NestsListenerState.Closed ||
                             state is NestsListenerState.Failed
                     }
+                Log.d("NestRx") { "wrapper.announces() iter=$iter inner state=${terminalOrConnected::class.simpleName}" }
                 if (terminalOrConnected !is NestsListenerState.Connected) return@collectLatest
-                runCatching {
-                    listener.announces().collect { emit(it) }
+                var fwd = 0
+                val outcome =
+                    runCatching {
+                        listener.announces().collect {
+                            fwd += 1
+                            send(it)
+                        }
+                    }
+                Log.w("NestRx") {
+                    val why = outcome.exceptionOrNull()?.let { "${it::class.simpleName}: ${it.message}" } ?: "naturally"
+                    "wrapper.announces() iter=$iter inner collect ended $why fwd=$fwd"
                 }
             }
+            // collectLatest above never returns naturally — it
+            // collects activeListener forever. awaitClose fires when
+            // the consumer cancels the channelFlow, at which point
+            // the collectLatest is cancelled too via structured
+            // concurrency.
+            awaitClose { }
         }
 
     /**
@@ -392,11 +430,17 @@ private class ReconnectingHandle(
                         // inheriting the last failure window's saturation).
                         subscribeRetryDelayMs = SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS
                         liveHandleRef.set(handle)
+                        Log.d("NestRx") { "wrapper: handle attached id=${handle.subscribeId}, starting collect" }
+                        var emitted = 0L
                         try {
-                            handle.objects.collect { frames.emit(it) }
+                            handle.objects.collect {
+                                emitted += 1
+                                frames.emit(it)
+                            }
                         } finally {
                             if (liveHandleRef.get() === handle) liveHandleRef.set(null)
                         }
+                        Log.w("NestRx") { "wrapper: handle objects flow ENDED id=${handle.subscribeId} emitted=$emitted — re-issuing after ${RESUBSCRIBE_BACKOFF_MS}ms" }
                         // Brief backoff so a permanently-gone
                         // publisher doesn't tight-loop the relay
                         // with re-subscribes. 100 ms stays well
@@ -470,18 +514,23 @@ private class ReconnectingHandle(
         // before the publisher exists, and the relay FINs the bidi
         // without a SubscribeOk/Drop reply.
         //
-        // - INITIAL = 250 ms: under moq-rs's typical announce-propagation
-        //   latency (< 200 ms in production traces), so the very first
-        //   retry usually succeeds and the listener-side buffer hides
-        //   the gap.
-        // - Doubles each miss → 500 ms → 1 000 ms.
-        // - MAX = 1 000 ms: matches the previous flat constant; long
-        //   enough that a never-arriving publisher doesn't hammer the
-        //   relay, short enough to stay under the wrapper SharedFlow's
-        //   ~1.3 s buffer once playback is rolling on the next attempt.
+        // - INITIAL = 100 ms: lower than the prior 250 ms because
+        //   join-time logs (`claude/fix-nests-audio-receiver-HCgOY`)
+        //   showed the listener was paying ~4 s of dead air on every
+        //   first-join while the broadcaster's session warmed up
+        //   on the relay (5 retries: 250+500+1000+1000+1000 = 3.75 s).
+        //   100 ms initial halves that to ~1.9 s
+        //   (100+200+400+800+1000) without thrashing the relay on a
+        //   permanently-gone publisher (the MAX cap below still
+        //   bounds the total per-attempt rate).
+        // - Doubles each miss → 200 ms → 400 ms → 800 ms → 1 000 ms.
+        // - MAX = 1 000 ms: long enough that a never-arriving
+        //   publisher doesn't hammer the relay; short enough to stay
+        //   under the wrapper SharedFlow's ~1.3 s buffer once playback
+        //   is rolling on the next attempt.
         // - Reset on first successful subscribe so a subsequent
         //   publisher-cycle gap doesn't inherit the previous saturation.
-        private const val SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS = 250L
+        private const val SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS = 100L
         private const val SUBSCRIBE_RETRY_BACKOFF_MAX_MS = 1_000L
 
         private val SYNTH_OK =
