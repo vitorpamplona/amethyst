@@ -66,10 +66,26 @@ if [ ! -d "$RUNNER_DIR" ]; then
     git clone --depth 1 https://github.com/quic-interop/quic-interop-runner.git "$RUNNER_DIR"
 fi
 
-# 2. venv + Python deps.
+# 2. venv + Python deps. Prefer 3.13 — pyshark (the runner's pcap parser)
+# trips on 3.14's asyncio.get_event_loop() removal. Fall back to whatever
+# `python3` resolves to if 3.13 isn't installed.
+PYTHON_BIN=""
+for candidate in python3.13 python3.12 python3.11 python3; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        if "$candidate" -c 'import sys; sys.exit(0 if sys.version_info < (3,14) else 1)' 2>/dev/null; then
+            PYTHON_BIN="$candidate"
+            break
+        fi
+    fi
+done
+if [ -z "$PYTHON_BIN" ]; then
+    echo "warning: no Python < 3.14 found; pyshark will likely crash on pcap validation." >&2
+    install_hint python3.13
+    PYTHON_BIN="python3"
+fi
 if [ ! -d "$RUNNER_DIR/.venv" ]; then
-    echo "==> creating venv at $RUNNER_DIR/.venv"
-    python3 -m venv "$RUNNER_DIR/.venv"
+    echo "==> creating venv at $RUNNER_DIR/.venv (using $PYTHON_BIN)"
+    "$PYTHON_BIN" -m venv "$RUNNER_DIR/.venv"
 fi
 "$RUNNER_DIR/.venv/bin/pip" install -q -r "$RUNNER_DIR/requirements.txt"
 
