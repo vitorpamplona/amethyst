@@ -106,15 +106,38 @@ data class RoomSpeakerCatalog(
     @Serializable
     data class Container(
         val kind: String? = null,
-    )
+    ) {
+        companion object {
+            /**
+             * The only `container.kind` value the Amethyst decoder
+             * pipeline currently understands: each moq-lite frame is
+             * `varint(timestamp_us) + raw_codec_payload`. Source:
+             * `kixelated/moq/rs/hang/src/container/legacy.rs`.
+             *
+             * Other documented kinds — `"cmaf"` (MOOF/MDAT-fragmented
+             * MP4) and a handful of in-flight experimental shapes —
+             * would require a different decoder path and are
+             * intentionally rejected by [primaryAudio].
+             */
+            const val LEGACY_KIND: String = "legacy"
+        }
+    }
 
     /**
-     * First audio rendition, if any. The current single-Opus reality.
-     * Map iteration order is the JSON insertion order (kotlinx.serialization
-     * uses LinkedHashMap), so this picks the first rendition the
-     * publisher declared rather than an arbitrary one.
+     * First audio rendition with a [Container.LEGACY_KIND] container,
+     * which is the only container layout the Amethyst decoder pipeline
+     * understands today (`varint(timestamp_us) + opus_packet` per
+     * frame). Returns null when no legacy rendition exists — the UI
+     * surfaces "no audio info" rather than a CMAF rendition we'd try
+     * to feed to our legacy decoder.
+     *
+     * Picks the first match in JSON iteration order
+     * (kotlinx.serialization uses LinkedHashMap), so the publisher's
+     * preferred legacy rendition wins. A future publisher that emits
+     * CMAF-first then legacy still surfaces the legacy entry; CMAF-
+     * only publishers correctly return null.
      */
-    fun primaryAudio(): AudioConfig? = audio?.renditions?.values?.firstOrNull()
+    fun primaryAudio(): AudioConfig? = audio?.renditions?.values?.firstOrNull { it.container?.kind == Container.LEGACY_KIND }
 
     companion object {
         /**

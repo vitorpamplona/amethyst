@@ -90,9 +90,17 @@ class RoomSpeakerCatalogTest {
     @Test
     fun toleratesUnknownKeys() {
         // Forward-compat: future hang catalog revisions can add
-        // fields without breaking older clients.
+        // fields without breaking older clients. Container.kind is
+        // declared as `legacy` because `primaryAudio()` filters to
+        // that kind — the unknown-key tolerance we're testing here
+        // is about unrecognized siblings, not about the container
+        // requirement itself.
         val json =
-            """{"audio":{"renditions":{"audio/data":{"codec":"opus","extra":"future-only"}}},"video":{},"newTopLevel":true}"""
+            """{"audio":{"renditions":{"audio/data":{
+            |  "codec":"opus","container":{"kind":"legacy"},
+            |  "extra":"future-only"
+            |}}},"video":{},"newTopLevel":true}
+            """.trimMargin()
         val catalog = RoomSpeakerCatalog.parseOrNull(json.encodeToByteArray())
         assertNotNull(catalog)
         assertEquals("opus", catalog.primaryAudio()?.codec)
@@ -112,6 +120,60 @@ class RoomSpeakerCatalogTest {
         // renditions yet (e.g. between codec switches). Accept the
         // shape and let primaryAudio() return null.
         val catalog = RoomSpeakerCatalog.parseOrNull("""{"audio":{"renditions":{}}}""".encodeToByteArray())
+        assertNotNull(catalog)
+        assertNull(catalog.primaryAudio())
+    }
+
+    @Test
+    fun primaryAudioPicksLegacyEvenWhenCmafComesFirst() {
+        // A future publisher may emit CMAF-first then legacy in the
+        // renditions map. We only know how to decode the legacy
+        // container today (varint(ts)+opus); CMAF (MOOF/MDAT) would
+        // be fed bytes-as-Opus and decode to garbage. The filter
+        // skips non-legacy renditions so the chosen entry is one we
+        // can actually play.
+        val mixed =
+            """{"audio":{"renditions":{
+            |  "video/cmaf":{"codec":"opus","container":{"kind":"cmaf"},"sampleRate":48000,"numberOfChannels":1},
+            |  "audio/data":{"codec":"opus","container":{"kind":"legacy"},"sampleRate":48000,"numberOfChannels":1}
+            |}}}
+            """.trimMargin()
+        val catalog = RoomSpeakerCatalog.parseOrNull(mixed.encodeToByteArray())
+        assertNotNull(catalog)
+        val rendition = catalog.primaryAudio()
+        assertNotNull(rendition, "expected the legacy rendition, not CMAF")
+        assertEquals("legacy", rendition.container?.kind)
+    }
+
+    @Test
+    fun primaryAudioReturnsNullForCmafOnlyPublisher() {
+        // No legacy rendition → no decoder path. Returning null is
+        // the right contract: the caller falls back to "unknown
+        // codec / no audio" rather than feeding CMAF bytes to the
+        // legacy decoder.
+        val cmafOnly =
+            """{"audio":{"renditions":{"audio/cmaf":{
+            |  "codec":"opus","container":{"kind":"cmaf"},
+            |  "sampleRate":48000,"numberOfChannels":1
+            |}}}}
+            """.trimMargin()
+        val catalog = RoomSpeakerCatalog.parseOrNull(cmafOnly.encodeToByteArray())
+        assertNotNull(catalog)
+        assertNull(catalog.primaryAudio())
+    }
+
+    @Test
+    fun primaryAudioReturnsNullWhenContainerKindIsMissing() {
+        // Defensive: a malformed publisher that omits `container`
+        // entirely must NOT be treated as legacy by default — we'd
+        // be guessing the wire shape. Same null fallback as the
+        // CMAF-only case.
+        val noContainer =
+            """{"audio":{"renditions":{"audio/data":{
+            |  "codec":"opus","sampleRate":48000,"numberOfChannels":1
+            |}}}}
+            """.trimMargin()
+        val catalog = RoomSpeakerCatalog.parseOrNull(noContainer.encodeToByteArray())
         assertNotNull(catalog)
         assertNull(catalog.primaryAudio())
     }
