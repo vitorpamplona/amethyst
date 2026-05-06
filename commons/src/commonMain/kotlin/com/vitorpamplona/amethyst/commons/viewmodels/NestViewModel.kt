@@ -1469,9 +1469,17 @@ class NestViewModel(
     }
 
     /**
-     * Mark [pubkey] as currently speaking and (re)arm a [SPEAKING_TIMEOUT_MS]
-     * coroutine that clears it once they go quiet. Called once per
-     * MoQ object received on the speaker's track.
+     * Per-frame heartbeat. Called once per MoQ object received on the
+     * speaker's track — i.e. once per ~20 ms regardless of whether
+     * that frame contains actual speech, silence, or background noise.
+     *
+     * Bumps the cliff-detector timestamp so an active stream keeps
+     * resetting the relay-forward-queue stall watchdog, and clears
+     * the per-speaker buffering overlay the first time a frame lands.
+     *
+     * NB: this does NOT mark the speaker as "speaking right now".
+     * That signal is energy-gated and lives in [onAudioLevel] —
+     * mic-on with no voice MUST NOT light up the green ring.
      */
     private fun onSpeakerActivity(pubkey: String) {
         if (closed) return
@@ -1483,12 +1491,22 @@ class NestViewModel(
         lastFrameAt[pubkey] =
             kotlin.time.TimeSource.Monotonic
                 .markNow()
-        speakingExpiryJobs[pubkey]?.cancel()
         // First frame for this subscription — clear the buffering
         // overlay. Subsequent frames are no-ops here.
         if (_uiState.value.connectingSpeakers.contains(pubkey)) {
             _uiState.update { it.copy(connectingSpeakers = (it.connectingSpeakers - pubkey).toPersistentSet()) }
         }
+    }
+
+    /**
+     * Mark [pubkey] as currently speaking and (re)arm a
+     * [SPEAKING_TIMEOUT_MS] coroutine that clears the flag once their
+     * audio drops back below the threshold for that long. Called from
+     * [onAudioLevel] only when the decoded peak is loud enough to
+     * read as speech (see [SPEAKING_LEVEL_THRESHOLD]).
+     */
+    private fun markSpeaking(pubkey: String) {
+        speakingExpiryJobs[pubkey]?.cancel()
         if (!_uiState.value.speakingNow.contains(pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow + pubkey).toPersistentSet()) }
         }
@@ -1641,6 +1659,20 @@ class NestViewModel(
     ) {
         if (closed) return
         rawAudioLevels[pubkey] = level
+        // Energy-gated speaking detector. The MoQ track delivers a
+        // frame every ~20 ms while the mic is open, even when the
+        // speaker is silent or only picking up room noise — gating the
+        // green ring on "frame arrived" therefore lights it up the
+        // moment the mic is unmuted, not when there's actually a voice
+        // on it. The decoded peak amplitude (`peakAmplitude` in
+        // nestsClient/audio/Amplitude.kt) gives us the signal we need:
+        // background noise / breath stays under a few percent of full
+        // scale, while even a quiet voice clears [SPEAKING_LEVEL_THRESHOLD].
+        // The 250 ms expiry already wired up in [markSpeaking] gives
+        // the indicator natural hysteresis between syllables.
+        if (level >= SPEAKING_LEVEL_THRESHOLD) {
+            markSpeaking(pubkey)
+        }
         startLevelEmitter()
     }
 
@@ -1799,11 +1831,28 @@ sealed class BroadcastUiState {
 }
 
 /**
- * How long a speaker stays "speaking" after their last received MoQ object.
- * Roughly 12 × the 20 ms Opus frame so brief packet jitter doesn't make the
- * indicator flicker.
+ * How long a speaker stays "speaking" after their last decoded frame
+ * over the [SPEAKING_LEVEL_THRESHOLD]. Roughly 12 × the 20 ms Opus
+ * frame so brief packet jitter and inter-syllable pauses don't make
+ * the indicator flicker between adjacent words.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/**
+ * Minimum decoded peak amplitude (normalized to `[0, 1]`) that counts
+ * as "this person is actually speaking right now". Frames whose peak
+ * lands below this threshold are treated as silence / room tone /
+ * breath — they keep the per-speaker subscription healthy (the cliff
+ * heartbeat in [NestViewModel.onSpeakerActivity] still fires) but do
+ * NOT light up the green speaking ring.
+ *
+ * 0.06 ≈ -24 dBFS, comfortably above the typical residential-mic
+ * noise floor (~-40 to -30 dBFS) while still tripping on a quiet
+ * voice. Tuned in conjunction with [SPEAKING_TIMEOUT_MS]: a single
+ * loud frame is enough to arm the indicator; ≥ 250 ms below the
+ * threshold drops it.
+ */
+const val SPEAKING_LEVEL_THRESHOLD: Float = 0.06f
 
 /**
  * How long [NestViewModel.openSubscription] waits for the publisher's
