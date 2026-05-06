@@ -401,7 +401,11 @@ class EventStoreProjectionTest {
             val time = TimeUtils.now()
             val safe = signer.sign(TextNoteEvent.build("safe", createdAt = time) { expiration(time + 100) })
             observable.insert(safe)
-            val short = signer.sign(TextNoteEvent.build("short", createdAt = time) { expiration(time + 1) })
+            // The SQL trigger rejects an insert whose expiration is
+            // already <= unixepoch(), so this buffer must comfortably
+            // outlive any signing/insert latency. Mirrors the pattern
+            // in ExpirationTest.testDeletingExpiredEvents.
+            val short = signer.sign(TextNoteEvent.build("short", createdAt = time) { expiration(time + 5) })
             observable.insert(short)
 
             val projection =
@@ -412,7 +416,7 @@ class EventStoreProjectionTest {
             // Let the short expiration lapse, then ask the store to
             // sweep — the projection drops the expired slot in
             // response to the resulting StoreChange.Delete(Expired).
-            delay(2000)
+            delay(6000)
             observable.deleteExpiredEvents()
 
             val after = projection.awaitItems { it.size == 1 }
