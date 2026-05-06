@@ -662,11 +662,28 @@ class QuicConnection(
      * still `trySend(Unit)` into a never-consumed channel. All three channels
      * close idempotently, so calling this from both `close()` and
      * `markClosedExternally` is safe.
+     *
+     * Also closes every per-stream `incomingChannel` so application
+     * coroutines suspended on `stream.incoming.collect { … }` unblock with
+     * a clean Flow termination instead of hanging forever waiting for a
+     * FIN that will never come. Without this an interop run that drops
+     * the connection mid-response (e.g. quic-interop-runner's
+     * `multiplexing` case where 677 collectors were waiting for replies
+     * when the parser tripped INTERNAL_ERROR) leaves every per-stream
+     * collector pinned indefinitely. Closing the channel after the
+     * channel already has buffered chunks is safe — `consumeAsFlow`
+     * drains the buffer before terminating, so any bytes already
+     * delivered are surfaced to the collector before the Flow completes.
      */
     private fun closeAllSignals() {
         closedSignal.close()
         peerStreamSignal.close()
         incomingDatagramSignal.close()
+        // Iterate the snapshot list (safe: we never remove from it).
+        // closeIncoming is idempotent on the underlying Channel.close().
+        for (stream in streamsList) {
+            stream.closeIncoming()
+        }
     }
 
     /**
