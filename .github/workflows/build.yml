@@ -111,11 +111,14 @@ jobs:
       # populating the cache for the next run.
       #
       # Versions are pinned to match desktopApp/build.gradle.kts (vlcVersion
-      # = 3.0.21) and the vlc-setup extension default (upxVersion = 4.2.4).
+      # = 3.0.20) and the vlc-setup extension default (upxVersion = 4.2.4).
+      # NOTE: vlcVersion lags behind upstream VLC because the Linux plugins on
+      # Maven Central (ir.mahozad:vlc-plugins-linux) are only published for
+      # 3.0.20 / 3.0.20-2. Bump only after the Maven artifact is republished.
       # macOS does not download UPX — UPX cannot compress .dylib files.
       - name: Pre-fetch VLC + UPX archives
         env:
-          VLC_VERSION: "3.0.21"
+          VLC_VERSION: "3.0.20"
           UPX_VERSION: "4.2.4"
         run: |
           set -euo pipefail
