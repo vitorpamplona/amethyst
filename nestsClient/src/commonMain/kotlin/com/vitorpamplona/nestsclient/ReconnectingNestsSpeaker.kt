@@ -23,11 +23,13 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
+import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -427,6 +429,20 @@ private class ReissuingBroadcastHandle(
     /** Hot-swap path's long-lived broadcaster. Null until the first session arrives. */
     @Volatile private var hotSwapBroadcaster: NestMoqLiteBroadcaster? = null
 
+    /**
+     * Hot-swap path's per-session catalog publisher and its periodic
+     * republish job. Catalog has no long-lived encoder pipeline (unlike
+     * audio), so each session gets a fresh publisher + republish loop;
+     * cleanup happens at the start of the next iteration after the new
+     * pair is installed (mirroring how the old audio publisher is
+     * closed only after [NestMoqLiteBroadcaster.swapPublisher] returns
+     * it). Both nullable so [close] can no-op when no iteration ever
+     * ran (i.e. wrapper closed before the first session connected).
+     */
+    @Volatile private var hotSwapCatalogPublisher: MoqLitePublisherHandle? = null
+
+    @Volatile private var hotSwapCatalogJob: Job? = null
+
     /** Legacy path's per-session handle. Cleared when the session swaps. */
     private val liveHandle = AtomicReference<BroadcastHandle?>(null)
     private var pumpJob: Job? = null
@@ -549,16 +565,83 @@ private class ReissuingBroadcastHandle(
             if (old != null) runCatching { old.close() }
         }
 
+        // Catalog track on the new session. Keeps the broadcast
+        // discoverable to standards-aligned moq-lite watchers (the
+        // kixelated/moq browser reference) across JWT refresh — without
+        // this the catalog goes silent the moment the session recycles
+        // and any watcher that attaches AFTER the recycle sees nothing
+        // to subscribe to. Mirror of [MoqLiteNestsSpeaker.startBroadcasting]'s
+        // catalog setup; same JSON, same republish cadence.
+        val catalogPayload = MoqLiteNestsSpeaker.SPEAKER_CATALOG_JSON.encodeToByteArray()
+        val priorCatalogPublisher = hotSwapCatalogPublisher
+        val priorCatalogJob = hotSwapCatalogJob
+        val newCatalogPublisher =
+            try {
+                hotSwap.openPublisherForHotSwap(MoqLiteNestsListener.CATALOG_TRACK)
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                // Couldn't mint a catalog publisher on this session.
+                // Audio path is already live; treat as non-fatal — the
+                // next session swap retries. Leave prior catalog state
+                // alone (it's about to die with the prior session).
+                null
+            }
+        if (newCatalogPublisher != null) {
+            val newCatalogJob =
+                try {
+                    newCatalogPublisher.send(catalogPayload)
+                    newCatalogPublisher.endGroup()
+                    scope.launch {
+                        try {
+                            while (true) {
+                                delay(MoqLiteNestsSpeaker.CATALOG_REPUBLISH_INTERVAL_MS)
+                                newCatalogPublisher.send(catalogPayload)
+                                newCatalogPublisher.endGroup()
+                            }
+                        } catch (ce: kotlinx.coroutines.CancellationException) {
+                            throw ce
+                        } catch (_: Throwable) {
+                            // Best-effort: a transient catalog send
+                            // failure on this session is non-fatal —
+                            // the audio path owns terminal-failure
+                            // detection.
+                        }
+                    }
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    runCatching { newCatalogPublisher.close() }
+                    throw ce
+                } catch (_: Throwable) {
+                    runCatching { newCatalogPublisher.close() }
+                    null
+                }
+            if (newCatalogJob != null) {
+                hotSwapCatalogPublisher = newCatalogPublisher
+                hotSwapCatalogJob = newCatalogJob
+                // Tear down the prior session's catalog state AFTER the
+                // new one is installed so the watcher only sees a brief
+                // overlap rather than a gap. The prior publisher's
+                // session is about to be torn down by the orchestrator
+                // anyway, but graceful Announce(Ended) keeps the relay
+                // book-keeping clean.
+                if (priorCatalogJob != null) runCatching { priorCatalogJob.cancelAndJoin() }
+                if (priorCatalogPublisher != null) runCatching { priorCatalogPublisher.close() }
+            }
+        }
+
         try {
             // Park until [collectLatest] cancels us on the next session
             // swap, OR [close] cancels [pumpJob]. The broadcaster keeps
             // running through the cancellation; only close() stops it.
             awaitCancellation()
         } finally {
-            // Intentionally do NOT close the broadcaster here.
-            // collectLatest cancels this iteration on every session
-            // swap; closing the broadcaster would create the exact
-            // 50–150 ms gap this whole path exists to avoid.
+            // Intentionally do NOT close the broadcaster or the catalog
+            // publisher here. collectLatest cancels this iteration on
+            // every session swap; closing now would force the catalog
+            // republisher to drop a beat between sessions. The next
+            // iteration handles teardown of the prior catalog after
+            // installing its replacement (above), and [close] handles
+            // teardown when the wrapper itself closes.
         }
     }
 
@@ -615,6 +698,15 @@ private class ReissuingBroadcastHandle(
         // current publisher (broadcaster.stop calls publisher.close
         // internally). For legacy, the per-session handle's close
         // releases its own broadcaster.
+        //
+        // Catalog gets explicit teardown because — unlike the audio
+        // publisher which broadcaster.stop() closes for us — the
+        // catalog publisher + republisher have no broadcaster wrapper.
+        // Cancel the republish loop FIRST so it can't race the close.
+        hotSwapCatalogJob?.let { runCatching { it.cancelAndJoin() } }
+        hotSwapCatalogJob = null
+        hotSwapCatalogPublisher?.let { runCatching { it.close() } }
+        hotSwapCatalogPublisher = null
         hotSwapBroadcaster?.let { runCatching { it.stop() } }
         hotSwapBroadcaster = null
         liveHandle.getAndSet(null)?.let { runCatching { it.close() } }
