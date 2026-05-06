@@ -145,12 +145,37 @@ class QuicConnectionDriver(
                     Unit
                 }
             if (woke == null) {
-                // PTO fired. Set pendingPing so the writer emits a
-                // PING on the next drain (RFC 9002 §6.2.4 probe
-                // packet). The peer's ACK feeds loss detection +
-                // retransmit (steps 5–6).
+                // PTO fired. RFC 9002 §6.2.4: the probe packet MUST
+                // be ack-eliciting at the encryption level with
+                // unacknowledged data, and SHOULD retransmit lost
+                // data rather than just emit a PING.
+                //
+                // Pre-1-RTT we have a concrete thing to retransmit:
+                // the unacknowledged ClientHello (at Initial) or
+                // ClientFinished (at Handshake). We requeue ALL
+                // currently-inflight CRYPTO bytes for the highest
+                // active pre-application level so the next drain's
+                // takeChunk emits a fresh CRYPTO frame at the
+                // original offset. The PING flag is still set as a
+                // belt-and-suspenders fallback — `collectHandshakeLevelFrames`
+                // emits the PING only when no CRYPTO retransmit ends
+                // up in the same frame list, so once we have CRYPTO
+                // to send we don't waste a frame on a redundant PING.
+                //
+                // Post-handshake (1-RTT installed) we retain the
+                // bare-PING behavior; STREAM retransmit is driven by
+                // packet-number-threshold loss detection from the
+                // ACK that the PING elicits, which is a richer signal
+                // than blindly requeueing every inflight byte across
+                // every open stream.
                 connection.lock.withLock {
                     connection.pendingPing = true
+                    if (connection.application.sendProtection == null) {
+                        val level = highestPreApplicationLevel(connection)
+                        if (level != null) {
+                            connection.requeueAllInflightCrypto(level)
+                        }
+                    }
                     connection.consecutivePtoCount =
                         (connection.consecutivePtoCount + 1).coerceAtMost(6)
                 }
@@ -223,3 +248,19 @@ class QuicConnectionDriver(
         private const val CLOSE_FLUSH_TIMEOUT_MILLIS = 250L
     }
 }
+
+/**
+ * Highest encryption level for which `conn` currently holds send keys
+ * AND hasn't yet discarded them, given that 1-RTT keys are NOT
+ * installed. Returns null when the level state has been completely
+ * cleared (e.g. CLOSED after a CONNECTION_CLOSE was sent). Mirrors the
+ * private helper in [com.vitorpamplona.quic.connection.QuicConnectionWriter]
+ * — kept in lockstep so the driver's PTO branch and the writer's PING
+ * placement target the same level.
+ */
+private fun highestPreApplicationLevel(conn: QuicConnection): EncryptionLevel? =
+    when {
+        conn.handshake.sendProtection != null -> EncryptionLevel.HANDSHAKE
+        conn.initial.sendProtection != null && !conn.initial.keysDiscarded -> EncryptionLevel.INITIAL
+        else -> null
+    }

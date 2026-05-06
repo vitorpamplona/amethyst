@@ -395,18 +395,32 @@ private fun collectHandshakeLevelFrames(
                 length = cryptoChunk.data.size.toLong(),
             )
     }
-    // RFC 9002 §6.2.4: PTO probe MUST be emitted at the encryption level
-    // that has unacknowledged data. `buildApplicationPacket` consumes
-    // [pendingPing] preferentially when 1-RTT keys exist; if they don't,
-    // the probe lives or dies here at Handshake / Initial level. Pre-fix
-    // the flag was set but never honored pre-handshake — the connection
-    // sat silent through every PTO, never retransmitting the ClientHello
-    // even when the first datagram was lost. This caused the
-    // "1-packet-on-the-wire-then-timeout" symptom against aioquic in the
-    // quic-interop-runner sim where the first ClientHello was dropped
-    // because the server hadn't finished startup yet.
-    if (conn.pendingPing && conn.application.sendProtection == null && level == highestPreApplicationLevel(conn)) {
-        frames += PingFrame
+    // RFC 9002 §6.2.4: PTO probe MUST be ack-eliciting at the
+    // encryption level with unacknowledged data. `buildApplicationPacket`
+    // consumes [pendingPing] when 1-RTT keys exist; pre-1-RTT we
+    // honor it here at the highest active level (Handshake > Initial).
+    //
+    // The driver's PTO branch also calls
+    // [QuicConnection.requeueAllInflightCrypto], which moves any
+    // unacknowledged ClientHello / ClientFinished bytes back onto
+    // the cryptoSend retransmit queue — so the takeChunk above
+    // already produced a CRYPTO frame in that case, and the PING
+    // would be redundant. We only emit a bare PING when there's no
+    // CRYPTO retransmit available (e.g. the unacknowledged data was
+    // already sitting in cryptoSend's retransmit queue from a
+    // previous PTO and got drained, or the original Initial was
+    // never sent at all). This preserves the "send something
+    // ack-eliciting on every PTO" contract without wasting a frame.
+    if (conn.pendingPing &&
+        conn.application.sendProtection == null &&
+        level == highestPreApplicationLevel(conn)
+    ) {
+        if (frames.none { it is CryptoFrame }) {
+            frames += PingFrame
+        }
+        // Either the CRYPTO frame already covers the ack-eliciting
+        // requirement at this level, or we just appended a PING.
+        // Clear the flag so the next drain doesn't double-fire.
         conn.pendingPing = false
     }
     if (frames.isEmpty()) return null
@@ -414,16 +428,16 @@ private fun collectHandshakeLevelFrames(
 }
 
 /**
- * The highest encryption level for which we currently hold send keys, given
- * that 1-RTT keys are NOT yet installed. Used by [collectHandshakeLevelFrames]
- * to decide where a PTO PING probe should ride when the application level
- * isn't usable yet.
+ * Highest encryption level for which we currently hold send keys, given
+ * 1-RTT keys are NOT installed. Used by [collectHandshakeLevelFrames]
+ * to place a PTO PING (RFC 9002 §6.2.4) at the right level when the
+ * application path can't carry it.
  */
 private fun highestPreApplicationLevel(conn: QuicConnection): EncryptionLevel =
     when {
         conn.handshake.sendProtection != null -> EncryptionLevel.HANDSHAKE
         conn.initial.sendProtection != null && !conn.initial.keysDiscarded -> EncryptionLevel.INITIAL
-        else -> EncryptionLevel.INITIAL // fallback; collectHandshakeLevelFrames already early-returns on no keys
+        else -> EncryptionLevel.INITIAL // collectHandshakeLevelFrames already returned null on no keys
     }
 
 /**

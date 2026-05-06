@@ -762,6 +762,38 @@ class QuicConnection(
             EncryptionLevel.APPLICATION -> application
         }
 
+    /**
+     * RFC 9002 §6.2.4 PTO probe — spec-correct retransmit path. Move
+     * every byte currently sent-but-not-yet-ACK'd in the [level]'s
+     * CRYPTO send buffer back to its retransmit queue, so the next
+     * [com.vitorpamplona.quic.connection.drainOutbound] re-emits the
+     * same bytes (at the same offsets) inside a fresh CRYPTO frame on
+     * a new packet number.
+     *
+     * The driver calls this from its PTO branch when 1-RTT keys
+     * aren't yet installed — i.e. the handshake hasn't finished, so
+     * the only thing the peer could be missing is our ClientHello /
+     * ClientFinished. A bare PING is insufficient because if the
+     * server never saw our original Initial it has no DCID state to
+     * correlate a PING against (it'll be dropped). Retransmitting the
+     * CRYPTO actually advances the handshake.
+     *
+     * Idempotent: a second consecutive call is a no-op because the
+     * first call moved everything out of inFlight. Old `RecoveryToken.Crypto`
+     * entries in [LevelState.sentPackets] for the still-tracked
+     * original PNs remain harmless — when loss detection eventually
+     * declares them lost, [onTokensLost] re-runs `markLost` on the
+     * same offset/length range, which is itself idempotent (the bytes
+     * are already in retransmit or already ACK'd by then).
+     *
+     * Caller must hold [lock] (or call from inside an existing locked
+     * region — typically the driver's PTO branch under
+     * [QuicConnectionDriver.sendLoop]).
+     */
+    internal fun requeueAllInflightCrypto(level: EncryptionLevel) {
+        levelState(level).cryptoSend.requeueAllInflight()
+    }
+
     /** Caller must hold [lock]. Snapshot of streams for the driver's send loop. */
     internal fun streamsLocked(): Map<Long, QuicStream> = streams
 
