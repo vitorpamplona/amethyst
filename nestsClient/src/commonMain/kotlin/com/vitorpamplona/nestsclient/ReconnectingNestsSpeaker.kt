@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -442,8 +441,6 @@ private class ReissuingBroadcastHandle(
      */
     @Volatile private var hotSwapCatalogPublisher: MoqLitePublisherHandle? = null
 
-    @Volatile private var hotSwapCatalogJob: Job? = null
-
     /** Legacy path's per-session handle. Cleared when the session swaps. */
     private val liveHandle = AtomicReference<BroadcastHandle?>(null)
     private var pumpJob: Job? = null
@@ -572,11 +569,10 @@ private class ReissuingBroadcastHandle(
         // this the catalog goes silent the moment the session recycles
         // and any watcher that attaches AFTER the recycle sees nothing
         // to subscribe to. Mirror of [MoqLiteNestsSpeaker.startBroadcasting]'s
-        // catalog setup; same JSON, same republish cadence.
+        // catalog setup; same JSON, same emit-on-subscribe pattern.
         val catalogPayload =
             MoqLiteHangCatalog.opusMono48k(MoqLiteNestsListener.AUDIO_TRACK).encodeJsonBytes()
         val priorCatalogPublisher = hotSwapCatalogPublisher
-        val priorCatalogJob = hotSwapCatalogJob
         val newCatalogPublisher =
             try {
                 hotSwap.openPublisherForHotSwap(MoqLiteNestsListener.CATALOG_TRACK)
@@ -590,45 +586,23 @@ private class ReissuingBroadcastHandle(
                 null
             }
         if (newCatalogPublisher != null) {
-            val newCatalogJob =
-                try {
+            // Set the emit-on-subscribe hook BEFORE installing the
+            // publisher reference, so the relay can't race a SUBSCRIBE
+            // in between.
+            newCatalogPublisher.setOnNewSubscriber {
+                runCatching {
                     newCatalogPublisher.send(catalogPayload)
                     newCatalogPublisher.endGroup()
-                    scope.launch {
-                        try {
-                            while (true) {
-                                delay(MoqLiteNestsSpeaker.CATALOG_REPUBLISH_INTERVAL_MS)
-                                newCatalogPublisher.send(catalogPayload)
-                                newCatalogPublisher.endGroup()
-                            }
-                        } catch (ce: kotlinx.coroutines.CancellationException) {
-                            throw ce
-                        } catch (_: Throwable) {
-                            // Best-effort: a transient catalog send
-                            // failure on this session is non-fatal —
-                            // the audio path owns terminal-failure
-                            // detection.
-                        }
-                    }
-                } catch (ce: kotlinx.coroutines.CancellationException) {
-                    runCatching { newCatalogPublisher.close() }
-                    throw ce
-                } catch (_: Throwable) {
-                    runCatching { newCatalogPublisher.close() }
-                    null
                 }
-            if (newCatalogJob != null) {
-                hotSwapCatalogPublisher = newCatalogPublisher
-                hotSwapCatalogJob = newCatalogJob
-                // Tear down the prior session's catalog state AFTER the
-                // new one is installed so the watcher only sees a brief
-                // overlap rather than a gap. The prior publisher's
-                // session is about to be torn down by the orchestrator
-                // anyway, but graceful Announce(Ended) keeps the relay
-                // book-keeping clean.
-                if (priorCatalogJob != null) runCatching { priorCatalogJob.cancelAndJoin() }
-                if (priorCatalogPublisher != null) runCatching { priorCatalogPublisher.close() }
             }
+            hotSwapCatalogPublisher = newCatalogPublisher
+            // Tear down the prior session's catalog publisher AFTER the
+            // new one is installed so the watcher only sees a brief
+            // overlap rather than a gap. The prior publisher's session
+            // is about to be torn down by the orchestrator anyway, but
+            // graceful Announce(Ended) keeps the relay book-keeping
+            // clean.
+            if (priorCatalogPublisher != null) runCatching { priorCatalogPublisher.close() }
         }
 
         try {
@@ -703,10 +677,10 @@ private class ReissuingBroadcastHandle(
         //
         // Catalog gets explicit teardown because — unlike the audio
         // publisher which broadcaster.stop() closes for us — the
-        // catalog publisher + republisher have no broadcaster wrapper.
-        // Cancel the republish loop FIRST so it can't race the close.
-        hotSwapCatalogJob?.let { runCatching { it.cancelAndJoin() } }
-        hotSwapCatalogJob = null
+        // catalog publisher has no broadcaster wrapper. The
+        // emit-on-subscribe hook itself doesn't need shutdown: it
+        // only fires inside [PublisherStateImpl.registerInboundSubscription],
+        // and closing the publisher prevents any further hook fires.
         hotSwapCatalogPublisher?.let { runCatching { it.close() } }
         hotSwapCatalogPublisher = null
         hotSwapBroadcaster?.let { runCatching { it.stop() } }

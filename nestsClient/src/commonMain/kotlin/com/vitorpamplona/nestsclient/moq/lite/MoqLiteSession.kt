@@ -1079,6 +1079,18 @@ class MoqLiteSession internal constructor(
 
         @Volatile private var publisherClosed = false
 
+        /**
+         * Caller-installed hook fired once per accepted inbound
+         * SUBSCRIBE — see [MoqLitePublisherHandle.setOnNewSubscriber].
+         * Read-and-fire happens OUTSIDE [gate] to avoid deadlocking on
+         * the hook's own calls to [send] / [endGroup].
+         */
+        @Volatile private var onNewSubscriberHook: (suspend () -> Unit)? = null
+
+        override fun setOnNewSubscriber(hook: (suspend () -> Unit)?) {
+            onNewSubscriberHook = hook
+        }
+
         suspend fun registerAnnounceBidi(
             bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
             emittedSuffix: String,
@@ -1093,6 +1105,11 @@ class MoqLiteSession internal constructor(
         }
 
         suspend fun registerInboundSubscription(sub: MoqLiteSubscribe) {
+            // Capture the hook INSIDE the lock — guarantees the hook
+            // observes a fully-registered subscriber when it fires —
+            // but invoke it OUTSIDE so a hook that calls [send] /
+            // [endGroup] doesn't deadlock on the same gate.
+            var hookToFire: (suspend () -> Unit)? = null
             gate.withLock {
                 if (publisherClosed) {
                     Log.w("NestTx") { "SUBSCRIBE inbound rejected (publisher closed) id=${sub.id} track='${sub.track}'" }
@@ -1103,7 +1120,14 @@ class MoqLiteSession internal constructor(
                     return
                 }
                 inboundSubs += sub
+                hookToFire = onNewSubscriberHook
                 Log.d("NestTx") { "SUBSCRIBE registered id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' inboundSubs.size=${inboundSubs.size}" }
+            }
+            // Launch on the session's scope so the hook outlives the
+            // bidi pump's per-bidi coroutine if it's slow (e.g. a
+            // catalog send blocked on transport backpressure).
+            hookToFire?.let { hook ->
+                scope.launch { runCatching { hook.invoke() } }
             }
         }
 
@@ -1387,6 +1411,31 @@ interface MoqLitePublisherHandle {
 
     /** FIN the current group's uni stream. The next [send] starts a fresh group. */
     suspend fun endGroup()
+
+    /**
+     * Register a callback that fires once each time a new inbound
+     * subscriber is registered against this publisher's track (i.e.
+     * each track-matching SUBSCRIBE bidi the relay opens to us). Used
+     * to push a "track-latest" payload — the canonical example is the
+     * broadcast catalog manifest, which a watcher needs to receive on
+     * subscribe but doesn't change between subscribers — without
+     * forcing the publisher to maintain a periodic re-emit loop.
+     *
+     * Called once per accepted SUBSCRIBE (track filter passed). Fires
+     * OUTSIDE the publisher's serialisation lock, so the hook can
+     * safely call [send] / [endGroup] without deadlocking.
+     *
+     * Caller MUST set the hook before any subscriber attaches (typically
+     * immediately after [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession.publish]
+     * returns) — there's no "fire-on-set for existing subscribers"
+     * replay. For the typical catalog use case the publisher is fresh
+     * when the hook is set, and the relay's SUBSCRIBE bidi takes a
+     * round-trip to arrive, so this is safe in practice.
+     *
+     * Pass `null` to clear the hook. Calling twice with non-null
+     * replaces the previous hook (no de-duplication).
+     */
+    fun setOnNewSubscriber(hook: (suspend () -> Unit)?)
 
     /**
      * Stop publishing. Sends `Announce(Ended)` on every active announce

@@ -28,13 +28,9 @@ import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -150,39 +146,25 @@ class MoqLiteNestsSpeaker internal constructor(
                     runCatching { publisher.close() }
                     throw t
                 }
-            // Push catalog once before launching the periodic republish
-            // pump so the manifest is on the wire before any subscriber
-            // attaches; the republisher then re-emits a fresh group
-            // every CATALOG_REPUBLISH_INTERVAL_MS so late-joining
-            // watchers don't wait an arbitrary amount of time for the
-            // next refresh.
+            // Catalog emit-on-subscribe: every time the relay opens a
+            // SUBSCRIBE bidi for catalog.json, fire the hook to write
+            // one group + FIN. moq-lite serves new listeners from the
+            // relay's per-track latest-group cache, so emitting once
+            // per relay-side subscribe is enough — late-joining
+            // watchers behind the same relay get the cached blob
+            // without us having to maintain a periodic re-emit loop.
+            // Set BEFORE the relay can race a SUBSCRIBE in; in
+            // practice the relay's SUBSCRIBE bidi takes a network
+            // round-trip after our ANNOUNCE Active, so this is safe
+            // even though the setter is non-suspending.
             val catalogJson =
                 MoqLiteHangCatalog.opusMono48k(MoqLiteNestsListener.AUDIO_TRACK).encodeJsonBytes()
-            val republishJob =
-                try {
+            catalogPublisher.setOnNewSubscriber {
+                runCatching {
                     catalogPublisher.send(catalogJson)
                     catalogPublisher.endGroup()
-                    scope.launch {
-                        try {
-                            while (true) {
-                                delay(CATALOG_REPUBLISH_INTERVAL_MS)
-                                catalogPublisher.send(catalogJson)
-                                catalogPublisher.endGroup()
-                            }
-                        } catch (ce: CancellationException) {
-                            throw ce
-                        } catch (_: Throwable) {
-                            // Best-effort: a transient catalog send
-                            // failure is non-fatal — the audio path
-                            // owns terminal-failure detection.
-                        }
-                    }
-                } catch (t: Throwable) {
-                    runCatching { catalogPublisher.close() }
-                    runCatching { broadcaster.stop() }
-                    runCatching { publisher.close() }
-                    throw t
                 }
+            }
             mutableState.value =
                 NestsSpeakerState.Broadcasting(
                     room = current.room,
@@ -194,23 +176,11 @@ class MoqLiteNestsSpeaker internal constructor(
                     broadcaster = broadcaster,
                     publisher = publisher,
                     catalogPublisher = catalogPublisher,
-                    catalogRepublishJob = republishJob,
                     parent = this,
                 )
             activeHandle = handle
             return handle
         }
-    }
-
-    companion object {
-        /**
-         * How often the catalog group is re-emitted. The relay drops
-         * the catalog group when its last subscriber drops, so a
-         * watcher that attaches mid-broadcast needs a freshly-published
-         * group to receive the manifest. 2 s keeps late-attach worst
-         * case bounded without spamming the relay.
-         */
-        const val CATALOG_REPUBLISH_INTERVAL_MS: Long = 2_000L
     }
 
     /**
@@ -302,7 +272,6 @@ internal class MoqLiteBroadcastHandle(
     private val broadcaster: NestMoqLiteBroadcaster,
     private val publisher: MoqLitePublisherHandle,
     private val catalogPublisher: MoqLitePublisherHandle,
-    private val catalogRepublishJob: Job,
     private val parent: MoqLiteNestsSpeaker,
 ) : BroadcastHandle {
     @Volatile private var muted: Boolean = false
@@ -321,20 +290,8 @@ internal class MoqLiteBroadcastHandle(
     override suspend fun close() {
         if (closed) return
         closed = true
-        // Stop the catalog republisher first so it doesn't race a
-        // concurrent send against the publisher.close below.
-        try {
-            catalogRepublishJob.cancelAndJoin()
-        } catch (ce: kotlinx.coroutines.CancellationException) {
-            // The parent scope is being cancelled. Continue cleanup of
-            // the audio + publisher resources, then rethrow.
-            runCatching { catalogPublisher.close() }
-            runCatching { publisher.close() }
-            parent.broadcastClosed(this)
-            throw ce
-        } catch (_: Throwable) {
-            // Best-effort.
-        }
+        // Stop the broadcaster first so the audio capture + encoder
+        // don't keep producing into a closing publisher.
         try {
             broadcaster.stop()
         } catch (ce: kotlinx.coroutines.CancellationException) {
