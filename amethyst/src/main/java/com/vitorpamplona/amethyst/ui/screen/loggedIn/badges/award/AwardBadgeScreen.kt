@@ -48,10 +48,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -231,35 +230,10 @@ private fun SelectedUserRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            UserSecondaryLine(user)
+            Nip05OrPubkeyLine(user)
         }
         TextButton(onClick = onClear) {
             Text(stringRes(R.string.award_badge_remove_recipient))
         }
     }
-}
-
-@Composable
-private fun UserSecondaryLine(user: User) {
-    val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
-
-    val text =
-        when (val state = nip05StateMetadata) {
-            is Nip05State.Exists -> {
-                val name = state.nip05.name
-                if (name == "_") state.nip05.domain else "$name@${state.nip05.domain}"
-            }
-
-            else -> {
-                user.pubkeyDisplayHex()
-            }
-        }
-
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
 }

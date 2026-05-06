@@ -110,6 +110,20 @@ class Nip05Test {
     }
 
     @Test
+    fun `toDisplayValue with regular name returns name@domain`() {
+        val nip05 = Nip05Id.parse("alice@example.com")
+        assertNotNull(nip05)
+        assertEquals("alice@example.com", nip05.toDisplayValue())
+    }
+
+    @Test
+    fun `toDisplayValue with underscore name returns domain only`() {
+        val nip05 = Nip05Id.parse("_@example.com")
+        assertNotNull(nip05)
+        assertEquals("example.com", nip05.toDisplayValue())
+    }
+
+    @Test
     fun `test json parsing with relays`() {
         val parsedNip05 = Nip05Id.parse("bob@test.com")
         assertNotNull(parsedNip05)

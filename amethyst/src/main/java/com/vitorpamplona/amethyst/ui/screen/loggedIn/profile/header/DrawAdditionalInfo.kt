@@ -338,10 +338,8 @@ fun DisplayNip05ProfileStatus(
                 Text(
                     text =
                         remember(nip05State) {
-                            val name = nip05State.nip05.name
-                            val display = if (name == "_") nip05State.nip05.domain else "$name@${nip05State.nip05.domain}"
                             buildAnnotatedString {
-                                appendLink(display, color) {
+                                appendLink(nip05State.nip05.toDisplayValue(), color) {
                                     runCatching { uri.openUri("https://${nip05State.nip05.domain}") }
                                 }
                             }
