@@ -26,7 +26,10 @@ import com.vitorpamplona.nestsclient.audio.AudioFormat
 import com.vitorpamplona.nestsclient.audio.JvmOpusEncoder
 import com.vitorpamplona.nestsclient.audio.PcmAssertions
 import com.vitorpamplona.nestsclient.audio.SineWaveAudioCapture
+import com.vitorpamplona.nestsclient.buildRelayConnectTarget
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSubscribeException
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -37,7 +40,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -213,6 +219,169 @@ class HangInteropTest {
             val warmup = AudioFormat.SAMPLE_RATE_HZ / 25
             val analysed = pcm.copyOfRange(warmup, pcm.size)
             PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
+        }
+
+    /**
+     * I8 — SubscribeDrop on unknown track. Subscribes to a track
+     * the publisher hasn't claimed (`audio/data-not-here`); the
+     * publisher's `MoqLiteSession` replies with a SubscribeDrop
+     * (`TRACK_DOES_NOT_EXIST`).
+     *
+     * `moq-relay 0.10.x` forwards the SUBSCRIBE to the publisher
+     * but ALSO acknowledges the listener's bidi with `SubscribeOk`
+     * upfront — relay-level optimistic ack — so the listener-side
+     * `subscribe()` call returns a handle rather than throwing.
+     * The publisher's Drop arrives on the same bidi shortly after,
+     * the relay forwards a stream-FIN, and the handle's `frames`
+     * flow completes empty.
+     *
+     * The test's assertion: subscribing returns a handle (relay
+     * ack), the bidi closes within a short timeout (publisher's
+     * Drop reaches us), and **no frames** are emitted on the
+     * subscription. A regression that returned an "OK" but kept
+     * the bidi open forever would hang at `take(1)` past the
+     * deadline.
+     */
+    @Test
+    fun subscribe_drop_for_unknown_track() =
+        runBlocking {
+            val harness = NativeMoqRelayHarness.shared()
+
+            val signer: NostrSigner = NostrSignerInternal(KeyPair())
+            val pubkey = signer.pubKey
+            val room =
+                NestsRoomConfig(
+                    authBaseUrl = "<unused-public-relay>",
+                    endpoint = harness.relayUrl,
+                    hostPubkey = pubkey,
+                    roomId = "rt-${UUID.randomUUID()}",
+                )
+
+            val pumpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            val transport =
+                QuicWebTransportFactory(
+                    parentScope = pumpScope,
+                    certificateValidator = PermissiveCertificateValidator(),
+                )
+
+            try {
+                // Speaker side: claim "audio/data" + "catalog.json".
+                val speaker =
+                    connectNestsSpeaker(
+                        httpClient = StaticTokenNestsClient,
+                        transport = transport,
+                        scope = pumpScope,
+                        room = room,
+                        signer = signer,
+                        speakerPubkeyHex = pubkey,
+                        captureFactory = { SineWaveAudioCapture(freqHz = 440) },
+                        encoderFactory = { JvmOpusEncoder() },
+                        framesPerGroup = 5,
+                    )
+                val handle = speaker.startBroadcasting()
+                delay(150)
+
+                // Listener side: open a raw moq-lite session and
+                // SUBSCRIBE to a track the publisher never claimed.
+                val (authority, path) =
+                    buildRelayConnectTarget(
+                        endpoint = harness.relayUrl,
+                        namespace = room.moqNamespace(),
+                        token = "",
+                    )
+                val listenerWt =
+                    transport.connect(
+                        authority = authority,
+                        path = path,
+                        bearerToken = null,
+                    )
+                val listenerSession = MoqLiteSession.client(listenerWt, pumpScope)
+                try {
+                    val sub =
+                        try {
+                            listenerSession.subscribe(
+                                broadcast = pubkey,
+                                track = "audio/data-not-here",
+                            )
+                        } catch (t: MoqLiteSubscribeException) {
+                            // Tolerate either path: relay sends Drop
+                            // pre-Ok (test passes here), or ack-then-
+                            // Drop (test handles below).
+                            null
+                        }
+                    if (sub != null) {
+                        val frames =
+                            withTimeoutOrNull(2_000L) {
+                                sub.frames.take(1).toList()
+                            }
+                        // Either:
+                        //   - withTimeoutOrNull returned null (flow
+                        //     stayed open with no frames for 2 s):
+                        //     publisher Drop arrived but didn't
+                        //     surface — regression.
+                        //   - Empty list (flow closed empty before
+                        //     timeout): expected — Drop closed the
+                        //     bidi, no frames.
+                        assertTrue(
+                            frames != null && frames.isEmpty(),
+                            "subscribe to a non-existent track should close empty " +
+                                "(SubscribeDrop FINs the bidi), but received frames=$frames",
+                        )
+                    }
+                } finally {
+                    listenerSession.close()
+                }
+
+                handle.close()
+                speaker.close()
+            } finally {
+                pumpScope.coroutineContext[Job]?.cancel()
+            }
+        }
+
+    /**
+     * I10 — long broadcast. Sustained 60 s 440 Hz tone Kotlin
+     * speaker → hang-listen, asserts the decoded PCM has ≥ 95 %
+     * of the expected sample count.
+     *
+     * Catches relay-side queue overflow and listener-side stream-
+     * count cliff (`MAX_STREAMS_UNI` extension) regressions over
+     * minute-scale broadcasts. With `framesPerGroup = 5` the speaker
+     * opens ~10 uni streams/s = 600 streams across the run, well
+     * past the default 100-stream initial cap that the
+     * `:quic` `MaxStreamsFrame` fix in commit `d391ae1d` widened.
+     *
+     * Tagged so `gradle --tests` filters can include / exclude it
+     * (the 60 s wallclock is significant compared to the rest of
+     * the suite).
+     */
+    @Test
+    fun long_broadcast_60s_tone_round_trips() =
+        runBlocking {
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 60,
+                    captureFirstFrame = false,
+                )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            // ≥ 95 % of 60 s × 48 kHz, with the same skip-warmup
+            // window as the I1 scenario so an Opus look-ahead
+            // gap doesn't trip the threshold.
+            val expectedSamples = 60.0 * AudioFormat.SAMPLE_RATE_HZ
+            assertTrue(
+                pcm.size >= expectedSamples * 0.95,
+                "expected ≥ 95% of $expectedSamples samples in a 60 s broadcast, " +
+                    "got ${pcm.size} (${"%.1f".format(pcm.size / expectedSamples * 100)} %)",
+            )
+            // Spectral content still matches the tone at the tail —
+            // catches a silent regression where the relay forwards
+            // gibberish bytes after a stream-count limit hit.
+            val tailWindow =
+                pcm.copyOfRange(
+                    (pcm.size - AudioFormat.SAMPLE_RATE_HZ * 5).coerceAtLeast(0),
+                    pcm.size,
+                )
+            PcmAssertions.assertFftPeak(tailWindow, expectedHz = 440.0, halfWindowHz = 5.0)
         }
 
     /**

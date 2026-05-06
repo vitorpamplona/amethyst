@@ -73,12 +73,33 @@ the cadence interaction — if a future relay bump changes the
 ceiling, both tests will trip together and the failure will be
 attributable in one place.
 
-**Follow-up (out of scope here):** the repo's
-`NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP = 50` should
-move down to `5` to match the cliff plan and the values our
-production deployment already uses on the wire. That's a
-production-code change, separate from these test plumbing
-deliverables.
+**Conflict between plans (worth a maintainer's eye, NOT auto-applied
+here):** the 2026-05-01 cliff-investigation plan recommends
+`DEFAULT_FRAMES_PER_GROUP = 5`, but the current code has `50`
+with a kdoc citing later two-phone production tests on
+`claude/fix-nests-audio-receiver-HCgOY` that showed `5`/`10`
+hit a *different* listener-side cliff. The two are tuning for
+different bottlenecks:
+
+  - cliff-investigation plan ↦ relay-side per-subscriber forward
+    queue overflow at high stream-rate (which our cross-stack
+    tests against `moq-relay 0.10.25 --auth-public ""` reproduce
+    cleanly — `50` flatly fails to deliver frames downstream)
+  - HCgOY field tests ↦ listener-side cliff-detector recycling
+    the transport on stream RST, which favours larger groups
+    (fewer streams to lose)
+
+These are NOT contradictory at the protocol level — they're
+different failure modes triggered by different relay
+configurations. The interop harness's `--auth-public ""` minimal
+relay setup hits the first cliff; production's `nostrnests/nests`
+deployment apparently lives in a regime where the second cliff
+dominates. We pin `framesPerGroup = 5` in the test scenarios
+because that's the value at which our test succeeds; production
+keeps `50` because that's the value its field tests vetted.
+Reconciling the two — either by getting both setups under a
+single value, or by varying `framesPerGroup` per environment —
+is left to a maintainer who can run both rigs.
 
 **Origin:** companion to `nestsClient/plans/2026-05-06-cross-stack-interop-test.md`.
 This file records what actually shipped in Phase 1, the deviations from
@@ -218,6 +239,46 @@ is straightforward — see the spec for the pattern. The harness +
 `SineWaveAudioCapture` + `PcmAssertions` are already in place to
 support it.
 
+## Phase 2.E — additional scenarios
+
+Landed on top of I1:
+
+- **I11 wire-byte capture** (`first_audio_frame_is_not_opus_codec_config`):
+  hang-listen gained `--dump-first-frame <path>`. Test asserts the
+  first audio frame's post-Container-Legacy-strip codec payload
+  doesn't begin with `OpusHead` magic. Catches the T8 regression
+  where Android's `MediaCodecOpusEncoder` would emit
+  BUFFER_FLAG_CODEC_CONFIG bytes as a normal audio frame.
+- **I2 late-join** (`late_join_listener_still_decodes_tail`):
+  hang-listen attaches at T+2 s of a 5 s broadcast; asserts ≥1.5 s
+  of decoded audio with the 440 Hz peak still recoverable.
+- **I3 mute window** (`mid_broadcast_mute_shortens_decoded_pcm`):
+  speaker mutes for 1 s mid-broadcast. Amethyst's broadcaster FINs
+  the open uni stream rather than pushing zeros (so web watchers
+  don't park on `await readFrame`), so the mute manifests as a
+  sample-count deficit (~3 s for 4 s wallclock), not embedded
+  silence. Asserts the deficit is in the right ballpark.
+
+`runSpeakerToHangListen(...)` extracted as a per-scenario helper
+in `HangInteropTest`. Each scenario anchors the QUIC transport's
+coroutine scope to the per-test pumpScope so UDP sockets and
+QuicConnection pumps cleanly tear down between tests.
+
+The companion `KotlinSpeakerKotlinListenerThroughNativeRelayTest`
+(Kotlin↔Kotlin diagnostic for the I1 bisect) lives behind
+`-DnestsHangInteropDiagnostic=true` — it flakes when run in the
+same JVM as the 5 native-subprocess scenarios (relay-side state
+accumulation), and its only purpose is wire-format bisects.
+
+## Phase 2.E deferred
+
+- **I4 stereo** — needs a non-trivial production change in
+  `MoqLiteHangCatalog.OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES` (which
+  hard-codes mono). Out of scope for these test plumbing changes;
+  ship as a separate production-side patch.
+- **I8 SubscribeDrop**, **I10 long broadcast**, **I12 Goaway** —
+  next batch of P0 scenarios on the existing harness.
+
 ## Phase 3 + 4 + 5 deferred
 
 Untouched in Phase 1:
@@ -233,24 +294,31 @@ shows) is also pending — until Phase 2 lands a real test, there's
 nothing in `-DnestsHangInterop=true` worth gating CI on except
 the smoke test.
 
-## Files added in Phase 1
+## Files
 
 ```
 cli/hang-interop/
 ├── REV
-├── Cargo.toml
-├── hang-listen/{Cargo.toml,src/main.rs}
-├── hang-publish/{Cargo.toml,src/main.rs}
-└── udp-loss-shim/{Cargo.toml,src/main.rs}
+├── Cargo.toml + Cargo.lock
+├── hang-listen/{Cargo.toml,src/main.rs}        # Phase 2: real subscribe + decode
+├── hang-publish/{Cargo.toml,src/main.rs}       # Phase 2: real publish + sine encode
+└── udp-loss-shim/{Cargo.toml,src/main.rs}      # Phase 1 stub; Phase 3 fills body
 
-nestsClient/build.gradle.kts                  # +interopBuildHangSidecars + system props
+nestsClient/build.gradle.kts                    # +interopBuildHangSidecars + system props
 nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/
 ├── audio/
+│   ├── JvmOpusEncoder.kt                       # libopus via JNA (test-only)
+│   ├── JvmOpusDecoder.kt                       # libopus via JNA (test-only)
+│   ├── JvmOpusRoundTripTest.kt
 │   ├── PcmAssertions.kt
+│   ├── PcmAssertionsTest.kt
 │   └── SineWaveAudioCapture.kt
 └── interop/native/
-    ├── NativeMoqRelayHarness.kt
-    └── NativeMoqRelayHarnessSmokeTest.kt
+    ├── NativeMoqRelayHarness.kt                # boots moq-relay subprocess
+    ├── NativeMoqRelayHarnessSmokeTest.kt
+    ├── HangInteropTest.kt                      # I1 + I2 + I3 + I11 + Rust↔Rust
+    └── KotlinSpeakerKotlinListenerThroughNativeRelayTest.kt
+                                                # diagnostic, gated separately
 
 nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md  # this file
 ```
