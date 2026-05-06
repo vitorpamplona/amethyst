@@ -104,20 +104,54 @@ class CloseDatagramRfcComplianceTest {
                 datagram,
                 "PTO probe MUST produce an Initial datagram pre-handshake — RFC 9002 §6.2.4",
             )
-            // Padding aim is ≥ 1200 (RFC 9000 §14.1). The writer's existing
-            // padding code overshoots the deficit calculation by ~1 byte
-            // when the natural-size payload is small enough to use a 1-byte
-            // Length varint that grows to 2 after padding. We accept ≥ 1199
-            // here so the regression test catches the original
-            // "0-bytes-emitted" / "45-bytes-malformed" symptoms; the strict
-            // ≥ 1200 conformance is tracked separately as a tiny-payload
-            // padding fix (close-only datagrams already exceed 1200, this
-            // only affects PING-only PTO probes).
+            // RFC 9000 §14.1: client datagrams containing an Initial MUST
+            // be ≥ 1200 bytes. The writer's padding rebuild now accounts
+            // for Length-varint growth (1 → 2 bytes) when the natural-size
+            // payload is small (PING-only) so the deficit calculation
+            // produces a final size that strictly meets the spec floor.
             assertTrue(
-                datagram.size >= 1199,
-                "PTO Initial datagram must be padded close to 1200, got ${datagram.size}",
+                datagram.size >= 1200,
+                "PTO Initial datagram MUST be ≥ 1200 bytes per RFC 9000 §14.1, got ${datagram.size}",
             )
             assertEquals(false, conn.pendingPing, "pendingPing MUST be cleared after the probe")
+        }
+
+    @Test
+    fun `single-byte PING-only Initial pads to exactly 1200 bytes (no overshoot beyond varint growth)`() =
+        runBlocking {
+            // Boundary case for the padding-rebuild deficit calculation.
+            // The smallest possible Initial-level frame payload is a single
+            // PING frame (1 byte, encoded as 0x01 — RFC 9000 §19.2). With
+            // no token, the 1-byte natural payload encodes a Length varint
+            // of 1 byte. Once the rebuild adds ~1170 bytes of PADDING the
+            // Length value crosses the 63-byte varint boundary and grows
+            // to 2 bytes. The deficit calculation MUST account for that
+            // growth, otherwise the rebuilt packet falls 1 byte short of
+            // the §14.1 1200-byte floor.
+            //
+            // Asserts the strict floor (≥ 1200) AND that we don't overshoot
+            // by more than the varint-growth delta plus a small slack — the
+            // padded packet should land in the 1200..1203 range, never
+            // 1199 (pre-fix) and never 1300+ (over-correction).
+            val conn =
+                QuicConnection(
+                    serverName = "example.test",
+                    config = QuicConnectionConfig(),
+                    tlsCertificateValidator = PermissiveCertificateValidator(),
+                )
+            conn.pendingPing = true
+
+            val datagram = drainOutbound(conn, nowMillis = 0L)
+            assertNotNull(datagram, "PING-only PTO probe must produce a datagram")
+            assertTrue(
+                datagram.size >= 1200,
+                "padded Initial MUST be ≥ 1200 bytes (RFC 9000 §14.1), got ${datagram.size}",
+            )
+            assertTrue(
+                datagram.size <= 1203,
+                "padded Initial should not overshoot the 1200 floor by more than the " +
+                    "Length-varint growth (≤ 3 bytes), got ${datagram.size}",
+            )
         }
 
     @Test

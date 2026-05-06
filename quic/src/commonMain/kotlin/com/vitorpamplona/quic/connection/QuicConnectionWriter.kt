@@ -125,21 +125,42 @@ fun drainOutbound(
             var natural = 0
             for (p in firstPass) natural += p.size
             if (natural < 1200) {
-                val deficit = 1200 - natural
-                // Rewind the Initial PN — we'll reissue with the same PN and the
-                // same captured frames plus padding. The SentPacket entry recorded
-                // by the natural-size build will be overwritten by the rebuild
-                // below since both use the same PN.
-                initialState.pnSpace.rewindOutboundForRebuild()
-                val paddedInitial =
-                    buildLongHeaderFromFrames(
-                        conn = conn,
-                        level = EncryptionLevel.INITIAL,
-                        frames = initialContents!!.frames, // null-safe: gated by `initialNatural != null` above
-                        tokens = initialContents.tokens,
-                        nowMillis = nowMillis,
-                        padBytes = deficit,
-                    )
+                // Padding rebuild: re-issue the Initial with PADDING frames inside
+                // the AEAD envelope so the on-wire datagram clears the §14.1 floor.
+                //
+                // Off-by-one trap: the QUIC long-header Length field is a varint
+                // (RFC 9000 §16). When the natural-size payload is tiny enough
+                // for Length to fit in 1 byte (body ≤ 63 bytes), the rebuild's
+                // larger body crosses the 64-byte threshold and Length grows to
+                // 2 bytes — adding 1 wire byte that wasn't in `natural`. Same
+                // shape at 16384 bytes (2 → 4) and 2^30 (4 → 8). A naive
+                // `padBytes = 1200 - natural` then produces a 1199-byte
+                // datagram for PING-only Initials.
+                //
+                // Solution: rebuild with the initial deficit, measure, and if we
+                // still fall short, bump by the residual and rebuild once more.
+                // Each iteration adds PADDING bytes 1:1 to the wire size; the
+                // varint grows monotonically so this terminates in ≤ 2 rounds
+                // for any reachable payload size.
+                var padBytes = 1200 - natural
+                var paddedInitial: ByteArray
+                while (true) {
+                    initialState.pnSpace.rewindOutboundForRebuild()
+                    paddedInitial =
+                        buildLongHeaderFromFrames(
+                            conn = conn,
+                            level = EncryptionLevel.INITIAL,
+                            frames = initialContents!!.frames, // null-safe: gated by `initialNatural != null` above
+                            tokens = initialContents.tokens,
+                            nowMillis = nowMillis,
+                            padBytes = padBytes,
+                        )
+                    var totalAfterRebuild = paddedInitial.size
+                    if (handshakeNatural != null) totalAfterRebuild += handshakeNatural.size
+                    if (applicationPkt != null) totalAfterRebuild += applicationPkt.size
+                    if (totalAfterRebuild >= 1200) break
+                    padBytes += 1200 - totalAfterRebuild
+                }
                 concat(listOfNotNull(paddedInitial, handshakeNatural, applicationPkt))
             } else {
                 concat(firstPass)
@@ -185,7 +206,10 @@ private fun concat(parts: List<ByteArray>): ByteArray {
  *  - §14.1 — a client datagram containing an Initial MUST be ≥ 1200 bytes,
  *    even a close-only one. We do this by building once at natural size and,
  *    if short, rewinding the PN and rebuilding with a PADDING-frame deficit
- *    inside the AEAD envelope.
+ *    inside the AEAD envelope. The rebuild loops because the long-header
+ *    Length varint (RFC 9000 §16) can grow by 1 byte once the body crosses
+ *    the 64-byte threshold, so a single-shot deficit can land 1 byte short
+ *    of 1200.
  */
 private fun buildClosingDatagram(
     conn: QuicConnection,
@@ -233,15 +257,23 @@ private fun buildClosingDatagram(
                 padBytes = 0,
             )
         if (natural.size >= 1200) return natural
-        init.pnSpace.rewindOutboundForRebuild()
-        return buildLongHeaderFromFrames(
-            conn = conn,
-            level = EncryptionLevel.INITIAL,
-            frames = listOf(transportFrame),
-            tokens = emptyList(),
-            nowMillis = nowMillis,
-            padBytes = 1200 - natural.size,
-        )
+        var padBytes = 1200 - natural.size
+        var padded: ByteArray
+        do {
+            init.pnSpace.rewindOutboundForRebuild()
+            padded =
+                buildLongHeaderFromFrames(
+                    conn = conn,
+                    level = EncryptionLevel.INITIAL,
+                    frames = listOf(transportFrame),
+                    tokens = emptyList(),
+                    nowMillis = nowMillis,
+                    padBytes = padBytes,
+                )
+            if (padded.size >= 1200) break
+            padBytes += 1200 - padded.size
+        } while (true)
+        return padded
     }
     return null
 }
