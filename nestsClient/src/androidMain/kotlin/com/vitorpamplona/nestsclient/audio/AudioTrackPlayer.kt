@@ -83,10 +83,11 @@ class AudioTrackPlayer(
      * match the [com.vitorpamplona.nestsclient.audio.OpusDecoder]'s output
      * configuration (mono Opus → 1, stereo Opus → 2 with L/R interleaving).
      * Drives both the AudioTrack channel mask and the underlying buffer-
-     * size target. Default is [AudioFormat.CHANNELS] (mono) so existing
-     * call sites that don't pass a channel count keep the prior behaviour.
+     * size target. Default is [AudioFormat.DEFAULT_CHANNELS] (mono) so
+     * existing call sites that don't pass a channel count keep the prior
+     * behaviour.
      */
-    private val channelCount: Int = AudioFormat.CHANNELS,
+    private val channelCount: Int = AudioFormat.DEFAULT_CHANNELS,
     /**
      * PCM sample rate in Hz. Drives the AudioTrack output rate and the
      * 250 ms target-buffer calculation. For Opus, Android's Codec2

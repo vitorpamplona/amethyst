@@ -66,12 +66,14 @@ class AudioRecordCapture(
         check(!stopped) { "capture already stopped" }
         if (record != null) return
 
-        val channelMask =
-            when (AudioFormat.CHANNELS) {
-                1 -> AndroidAudioFormat.CHANNEL_IN_MONO
-                2 -> AndroidAudioFormat.CHANNEL_IN_STEREO
-                else -> error("unsupported channel count ${AudioFormat.CHANNELS}")
-            }
+        // Microphone capture is mono. The platform mic is a single-channel
+        // device (or a fixed multi-mic array routed through a mono mixdown
+        // by the AEC stack), so this isn't a per-stream configurable —
+        // there's no "stereo mic" path to take. Stereo broadcasts
+        // synthesise their second channel elsewhere (e.g. a stereo audio
+        // capture for music playback) and bypass [AudioRecordCapture]
+        // entirely.
+        val channelMask = AndroidAudioFormat.CHANNEL_IN_MONO
 
         val minBuffer =
             AudioRecord.getMinBufferSize(

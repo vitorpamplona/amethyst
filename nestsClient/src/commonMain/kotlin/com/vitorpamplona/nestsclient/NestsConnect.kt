@@ -188,6 +188,13 @@ suspend fun connectNestsSpeaker(
     framesPerGroup: Int =
         com.vitorpamplona.nestsclient.audio
             .NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP,
+    /**
+     * Per-broadcast audio shape. Defaults to mono so existing call sites
+     * keep the prior behaviour. Caller is responsible for matching the
+     * channel count to the encoder + capture they pass — see
+     * [AudioBroadcastConfig].
+     */
+    broadcastConfig: AudioBroadcastConfig = AudioBroadcastConfig(),
 ): NestsSpeaker {
     val state =
         MutableStateFlow<NestsSpeakerState>(
@@ -252,6 +259,7 @@ suspend fun connectNestsSpeaker(
         scope = scope,
         mutableState = state,
         framesPerGroup = framesPerGroup,
+        broadcastConfig = broadcastConfig,
     )
 }
 

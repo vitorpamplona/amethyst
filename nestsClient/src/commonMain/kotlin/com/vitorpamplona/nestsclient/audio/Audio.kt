@@ -23,15 +23,27 @@ package com.vitorpamplona.nestsclient.audio
 /**
  * PCM audio format the audio pipeline produces and consumes.
  *
- * Listener-only flow runs at 48 kHz mono signed-16-bit, matching the nests
- * Opus profile (RFC 6716 wideband at the codec's native rate). The whole
- * pipeline is hardcoded to this format for now — when nests starts varying
- * codec settings, this becomes a per-room negotiated value out of the
- * `/api/v1/nests/<room>` response.
+ * Sample rate + frame cadence are pipeline-wide invariants (48 kHz Opus,
+ * 20 ms frames) and live as flat constants. Channel count is **per-stream**:
+ * a microphone is mono, a stereo broadcast is two-channel, and a single
+ * listener may simultaneously decode tracks of different shapes. Call sites
+ * either inline `1` (the device is intrinsically mono — e.g. the production
+ * mic) or take a `channelCount` parameter, plumbed in from a catalog (on
+ * the listener side) or from an [com.vitorpamplona.nestsclient.AudioBroadcastConfig]
+ * (on the speaker side). [DEFAULT_CHANNELS] is what call sites use as the
+ * factory default when they want the historical mono behaviour.
  */
 object AudioFormat {
     const val SAMPLE_RATE_HZ: Int = 48_000
-    const val CHANNELS: Int = 1
+
+    /**
+     * Default channel count for call sites that don't yet thread a
+     * per-stream override through. Mono — matches what the pipeline
+     * shipped before stereo support landed. Use this only as a default
+     * value; do NOT assume every audio track is mono just because this
+     * exists.
+     */
+    const val DEFAULT_CHANNELS: Int = 1
 
     /** 20 ms at 48 kHz. */
     const val FRAME_SIZE_SAMPLES: Int = 960
