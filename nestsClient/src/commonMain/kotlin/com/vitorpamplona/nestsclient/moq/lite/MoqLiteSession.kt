@@ -98,8 +98,22 @@ class MoqLiteSession internal constructor(
      */
     private var announceWatchJob: Job? = null
 
-    /** Single active publisher per session (moq-lite doesn't model multi-broadcast publishers). */
-    private var activePublisher: PublisherStateImpl? = null
+    /**
+     * Active publishers on this session. moq-lite models a broadcast as
+     * `(suffix, set-of-tracks)`; the relay multiplexes Subscribe
+     * messages to whichever publisher claims the requested track. We
+     * allow N concurrent publishers per session as long as they share
+     * the same suffix (= same broadcast) and have distinct tracks.
+     *
+     * The nests audio room use case needs at least two: `audio/data`
+     * for Opus frames and `catalog.json` for the broadcast metadata
+     * the canonical kixelated/moq watcher subscribes to first to
+     * discover what's available. Without the catalog the broadcast is
+     * invisible to the JS reference watcher (the browser-side nests
+     * web client) — Amethyst-to-Amethyst kept working only because
+     * both sides hardcoded the audio track name and skipped discovery.
+     */
+    private val activePublishers: MutableList<PublisherStateImpl> = mutableListOf()
 
     @Volatile private var closed: Boolean = false
 
@@ -683,8 +697,12 @@ class MoqLiteSession internal constructor(
      *   - we open uni streams ourselves to push group data
      *     (`session.open_uni()`)
      *
-     * Only one [publish] is supported per session for now. Calling
-     * [publish] twice on the same session is rejected with [IllegalStateException].
+     * Multiple [publish] calls are supported on the same session as
+     * long as every call shares the same `broadcastSuffix` (you publish
+     * one broadcast per session, with multiple tracks) and uses a
+     * distinct `track`. Re-publishing the same `(suffix, track)` pair
+     * or mixing different suffixes is rejected with
+     * [IllegalStateException].
      */
     suspend fun publish(
         broadcastSuffix: String,
@@ -695,11 +713,16 @@ class MoqLiteSession internal constructor(
         val publisher: PublisherStateImpl
         state.withLock {
             check(!closed) { "session is closed" }
-            check(activePublisher == null) {
-                "MoqLiteSession.publish called twice — only one broadcast per session is supported"
+            val existingSuffix = activePublishers.firstOrNull()?.suffix
+            check(existingSuffix == null || existingSuffix == normalised) {
+                "MoqLiteSession.publish suffix mismatch: existing='$existingSuffix', new='$normalised'. " +
+                    "moq-lite models one broadcast per session — open a new session for a different broadcast."
+            }
+            check(activePublishers.none { it.track == track }) {
+                "MoqLiteSession.publish called twice for the same track '$track' on suffix '$normalised'."
             }
             publisher = PublisherStateImpl(suffix = normalised, track = track)
-            activePublisher = publisher
+            activePublishers += publisher
             // Lazy launch — the inbound-bidi pump needs to keep running
             // for the lifetime of any active publisher.
             if (bidiPump == null) bidiPump = scope.launch { pumpInboundBidis() }
@@ -734,7 +757,21 @@ class MoqLiteSession internal constructor(
     }
 
     private suspend fun handleInboundBidi(bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream) {
-        val publisher = state.withLock { activePublisher } ?: return
+        // Snapshot of publishers at bidi-arrival time. All publishers
+        // on a single session share a suffix (enforced in [publish]),
+        // so the Announce response is the same regardless of which
+        // publisher we route the bidi to. Subscribe responses pick the
+        // publisher whose `track` matches `sub.track`.
+        val publishersSnapshot = state.withLock { activePublishers.toList() }
+        if (publishersSnapshot.isEmpty()) return
+        // Designated publisher for Announce-bidi ownership: the first
+        // one. The Active/Ended pair is keyed off the broadcast
+        // SUFFIX (not per track), so emitting it once via one
+        // publisher matches the single-broadcast model the relay
+        // expects. All publishers close together in [close], so
+        // there's no risk of one closing while the announce bidi
+        // stays alive on another.
+        val announcePublisher = publishersSnapshot.first()
 
         // Single long-running collector for the bidi's full lifetime.
         // Pre-fix this dispatch was split into a `firstOrNull()` to
@@ -759,6 +796,16 @@ class MoqLiteSession internal constructor(
         var typeCode: Long? = null
         var dispatched = false
         var inboundSub: MoqLiteSubscribe? = null
+        // Track which publisher this bidi was routed to so the peer-FIN
+        // cleanup at the bottom calls removeInboundSubscription on the
+        // right one. `inboundAnnouncePublisher` is currently unused for
+        // cleanup (announce bidis live until publisher.close fires
+        // Ended), but we keep the assignment for symmetry / future
+        // explicit teardown.
+        var inboundSubPublisher: PublisherStateImpl? = null
+
+        @Suppress("UNUSED_VARIABLE")
+        var inboundAnnouncePublisher: PublisherStateImpl? = null
         try {
             bidi.incoming().collect { chunk ->
                 buffer.push(chunk)
@@ -776,7 +823,7 @@ class MoqLiteSession internal constructor(
                             val pleasePayload = buffer.readSizePrefixed() ?: return@collect
                             val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload)
                             val emittedSuffix =
-                                MoqLitePath.stripPrefix(please.prefix, publisher.suffix) ?: publisher.suffix
+                                MoqLitePath.stripPrefix(please.prefix, announcePublisher.suffix) ?: announcePublisher.suffix
                             bidi.write(
                                 MoqLiteCodec.encodeAnnounce(
                                     MoqLiteAnnounce(
@@ -786,15 +833,31 @@ class MoqLiteSession internal constructor(
                                     ),
                                 ),
                             )
-                            publisher.registerAnnounceBidi(bidi, emittedSuffix)
-                            Log.d("NestTx") { "ANNOUNCE inbound prefix='${please.prefix}' → emitted Active suffix='$emittedSuffix' (publisher.suffix='${publisher.suffix}')" }
+                            announcePublisher.registerAnnounceBidi(bidi, emittedSuffix)
+                            // Routed to publisher that owns the announce bidi for the lifecycle
+                            // — for the multi-track use case (audio + catalog), all share one
+                            // suffix and one announce bidi pointing at the first publisher.
+                            inboundAnnouncePublisher = announcePublisher
+                            Log.d("NestTx") { "ANNOUNCE inbound prefix='${please.prefix}' → emitted Active suffix='$emittedSuffix' (publisher.suffix='${announcePublisher.suffix}')" }
                             dispatched = true
                         }
 
                         MoqLiteControlType.Subscribe -> {
                             val subPayload = buffer.readSizePrefixed() ?: return@collect
                             val sub = MoqLiteCodec.decodeSubscribe(subPayload)
-                            Log.d("NestTx") { "SUBSCRIBE inbound id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' (publisher track='${publisher.track}')" }
+                            // Find the publisher that claims this track. With the
+                            // single-track-per-publisher model, only one match is possible.
+                            val targetPublisher = publishersSnapshot.firstOrNull { it.track == sub.track }
+                            if (targetPublisher == null) {
+                                Log.w("NestTx") {
+                                    "SUBSCRIBE inbound id=${sub.id} track='${sub.track}' has no matching publisher " +
+                                        "on this session (have ${publishersSnapshot.map { it.track }}) — finishing bidi"
+                                }
+                                runCatching { bidi.finish() }
+                                dispatched = true
+                                return@collect
+                            }
+                            Log.d("NestTx") { "SUBSCRIBE inbound id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' (publisher track='${targetPublisher.track}')" }
                             // Register the subscription BEFORE sending Ok so the
                             // peer's observation of Ok is a happens-after of
                             // `inboundSubs += sub`. Otherwise on dispatchers that
@@ -803,8 +866,9 @@ class MoqLiteSession internal constructor(
                             // (notably Windows under Dispatchers.Default), the
                             // peer's first `publisher.send` after Ok races the
                             // registration and observes an empty subscriber set.
-                            publisher.registerInboundSubscription(sub)
+                            targetPublisher.registerInboundSubscription(sub)
                             inboundSub = sub
+                            inboundSubPublisher = targetPublisher
                             bidi.write(
                                 MoqLiteCodec.encodeSubscribeOk(
                                     MoqLiteSubscribeOk(
@@ -843,7 +907,11 @@ class MoqLiteSession internal constructor(
         // groups off this dead subscriber. Announce bidis are
         // owned by the publisher state for sending Ended on
         // publisher-close — we don't remove them here.
-        inboundSub?.let { publisher.removeInboundSubscription(it) }
+        val sub = inboundSub
+        val pub = inboundSubPublisher
+        if (sub != null && pub != null) {
+            pub.removeInboundSubscription(sub)
+        }
     }
 
     /**
@@ -872,18 +940,20 @@ class MoqLiteSession internal constructor(
         if (closed) return
         closed = true
         val toClose: List<ListenerSubscription>
-        val publisherToClose: PublisherStateImpl?
+        val publishersToClose: List<PublisherStateImpl>
         state.withLock {
             toClose = subscriptionsBySubscribeId.values.toList()
             subscriptionsBySubscribeId.clear()
-            publisherToClose = activePublisher
-            activePublisher = null
+            publishersToClose = activePublishers.toList()
+            activePublishers.clear()
         }
         for (sub in toClose) {
             runCatching { sub.bidi.finish() }
             sub.frames.close()
         }
-        runCatching { publisherToClose?.close() }
+        for (p in publishersToClose) {
+            runCatching { p.close() }
+        }
         groupPump?.cancelAndJoin()
         bidiPump?.cancelAndJoin()
         runCatching { transport.close() }
@@ -1081,7 +1151,7 @@ class MoqLiteSession internal constructor(
             runCatching { groupToFinish?.uni?.finish() }
             // Detach from the session so a subsequent `publish` can run.
             state.withLock {
-                if (activePublisher === this) activePublisher = null
+                activePublishers.remove(this@PublisherStateImpl)
             }
         }
 

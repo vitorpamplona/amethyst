@@ -25,10 +25,15 @@ import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -96,6 +101,26 @@ class MoqLiteNestsSpeaker internal constructor(
             // session's `activePublisher` slot — otherwise a subsequent
             // startBroadcasting fails with "already publishing" and the
             // publisher's announce state never tears down.
+            //
+            // Companion catalog publisher: the kixelated/moq browser
+            // watcher (and any standards-aligned moq-lite consumer)
+            // discovers a broadcast's tracks by subscribing to the
+            // `catalog.json` track and parsing the latest group's
+            // payload as a JSON manifest. Without this track our
+            // broadcasts are *invisible* to the canonical web watcher
+            // even though our audio frames are streaming fine — the
+            // watcher has nothing to subscribe to. Open it alongside
+            // audio so a single broadcast advertises both tracks.
+            val catalogPublisher =
+                try {
+                    session.publish(
+                        broadcastSuffix = speakerPubkeyHex,
+                        track = MoqLiteNestsListener.CATALOG_TRACK,
+                    )
+                } catch (t: Throwable) {
+                    runCatching { publisher.close() }
+                    throw t
+                }
             val broadcaster =
                 try {
                     NestMoqLiteBroadcaster(
@@ -120,6 +145,39 @@ class MoqLiteNestsSpeaker internal constructor(
                         )
                     }
                 } catch (t: Throwable) {
+                    runCatching { catalogPublisher.close() }
+                    runCatching { publisher.close() }
+                    throw t
+                }
+            // Push catalog once before launching the periodic republish
+            // pump so the manifest is on the wire before any subscriber
+            // attaches; the republisher then re-emits a fresh group
+            // every CATALOG_REPUBLISH_INTERVAL_MS so late-joining
+            // watchers don't wait an arbitrary amount of time for the
+            // next refresh.
+            val catalogJson = SPEAKER_CATALOG_JSON.encodeToByteArray()
+            val republishJob =
+                try {
+                    catalogPublisher.send(catalogJson)
+                    catalogPublisher.endGroup()
+                    scope.launch {
+                        try {
+                            while (true) {
+                                delay(CATALOG_REPUBLISH_INTERVAL_MS)
+                                catalogPublisher.send(catalogJson)
+                                catalogPublisher.endGroup()
+                            }
+                        } catch (ce: CancellationException) {
+                            throw ce
+                        } catch (_: Throwable) {
+                            // Best-effort: a transient catalog send
+                            // failure is non-fatal — the audio path
+                            // owns terminal-failure detection.
+                        }
+                    }
+                } catch (t: Throwable) {
+                    runCatching { catalogPublisher.close() }
+                    runCatching { broadcaster.stop() }
                     runCatching { publisher.close() }
                     throw t
                 }
@@ -133,11 +191,38 @@ class MoqLiteNestsSpeaker internal constructor(
                 MoqLiteBroadcastHandle(
                     broadcaster = broadcaster,
                     publisher = publisher,
+                    catalogPublisher = catalogPublisher,
+                    catalogRepublishJob = republishJob,
                     parent = this,
                 )
             activeHandle = handle
             return handle
         }
+    }
+
+    companion object {
+        /**
+         * moq-lite catalog manifest broadcast on the
+         * [MoqLiteNestsListener.CATALOG_TRACK] track. The shape mirrors
+         * what the kixelated/moq browser watcher parses
+         * ([com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog]):
+         * a versioned envelope with an `audio[]` of track descriptors.
+         * Hard-coded because the speaker's encoder is fixed at
+         * 48 kHz mono Opus today; if [OpusEncoder] becomes parameterised
+         * this should be derived from the encoder config instead.
+         */
+        const val SPEAKER_CATALOG_JSON: String =
+            "{\"version\":1,\"audio\":[{\"track\":\"audio/data\"," +
+                "\"codec\":\"opus\",\"sample_rate\":48000,\"channel_count\":1}]}"
+
+        /**
+         * How often the catalog group is re-emitted. The relay drops
+         * the catalog group when its last subscriber drops, so a
+         * watcher that attaches mid-broadcast needs a freshly-published
+         * group to receive the manifest. 2 s keeps late-attach worst
+         * case bounded without spamming the relay.
+         */
+        const val CATALOG_REPUBLISH_INTERVAL_MS: Long = 2_000L
     }
 
     /**
@@ -228,6 +313,8 @@ class MoqLiteNestsSpeaker internal constructor(
 internal class MoqLiteBroadcastHandle(
     private val broadcaster: NestMoqLiteBroadcaster,
     private val publisher: MoqLitePublisherHandle,
+    private val catalogPublisher: MoqLitePublisherHandle,
+    private val catalogRepublishJob: Job,
     private val parent: MoqLiteNestsSpeaker,
 ) : BroadcastHandle {
     @Volatile private var muted: Boolean = false
@@ -246,12 +333,27 @@ internal class MoqLiteBroadcastHandle(
     override suspend fun close() {
         if (closed) return
         closed = true
+        // Stop the catalog republisher first so it doesn't race a
+        // concurrent send against the publisher.close below.
+        try {
+            catalogRepublishJob.cancelAndJoin()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            // The parent scope is being cancelled. Continue cleanup of
+            // the audio + publisher resources, then rethrow.
+            runCatching { catalogPublisher.close() }
+            runCatching { publisher.close() }
+            parent.broadcastClosed(this)
+            throw ce
+        } catch (_: Throwable) {
+            // Best-effort.
+        }
         try {
             broadcaster.stop()
         } catch (ce: kotlinx.coroutines.CancellationException) {
             // Even on cancel, run the rest of cleanup before rethrowing
             // — broadcaster.stop already cancels its own job, so the
             // mic + encoder + publisher are owed their close paths.
+            runCatching { catalogPublisher.close() }
             runCatching { publisher.close() }
             parent.broadcastClosed(this)
             throw ce
@@ -263,6 +365,15 @@ internal class MoqLiteBroadcastHandle(
         // failures on the broadcaster.stop path.
         try {
             publisher.close()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            runCatching { catalogPublisher.close() }
+            parent.broadcastClosed(this)
+            throw ce
+        } catch (_: Throwable) {
+            // Best-effort.
+        }
+        try {
+            catalogPublisher.close()
         } catch (ce: kotlinx.coroutines.CancellationException) {
             parent.broadcastClosed(this)
             throw ce
