@@ -91,8 +91,13 @@ if [ "${SKIP_BUILD:-0}" != "1" ]; then
 fi
 
 # 5. Drive the runner.
+#
+# run.py hard-exits if --log-dir already exists, so we use a fresh
+# per-invocation subdirectory under $LOG_DIR. The parent must exist; the
+# child must not. Tail of `ls -t "$LOG_DIR" | head -1` finds the latest.
 mkdir -p "$LOG_DIR"
-echo "==> running matrix (args: $* | logs: $LOG_DIR)"
+RUN_LOG_DIR="$LOG_DIR/run-$(date +%Y%m%d-%H%M%S)"
+echo "==> running matrix (args: $* | logs: $RUN_LOG_DIR)"
 cd "$RUNNER_DIR"
 exec "$RUNNER_DIR/.venv/bin/python" run.py \
-    -d -i amethyst --log-dir "$LOG_DIR" "$@"
+    -d -i amethyst --log-dir "$RUN_LOG_DIR" "$@"
