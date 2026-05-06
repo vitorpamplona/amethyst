@@ -133,7 +133,10 @@ compose.desktop {
 }
 
 vlcSetup {
-    vlcVersion.set("3.0.21")
+    // Pinned to 3.0.20 because the Linux VLC plugins on Maven Central
+    // (ir.mahozad:vlc-plugins-linux) have not been republished for 3.0.21 — the
+    // latest there is 3.0.20-2. Using 3.0.21 makes vlcDownload 404 on Linux CI.
+    vlcVersion.set("3.0.20")
     shouldCompressVlcFiles.set(true)
     shouldIncludeAllVlcFiles.set(true)
     pathToCopyVlcLinuxFilesTo.set(file("src/jvmMain/appResources/linux/vlc"))
