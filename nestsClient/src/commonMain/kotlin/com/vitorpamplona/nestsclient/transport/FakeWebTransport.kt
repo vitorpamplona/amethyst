@@ -162,6 +162,8 @@ class FakeBidiStream internal constructor(
     override suspend fun finish() {
         write.close()
     }
+
+    override fun setPriority(priority: Int) = Unit
 }
 
 class FakeReadStream internal constructor(
@@ -186,4 +188,6 @@ private class ChannelWriteStream(
     override suspend fun finish() {
         channel.close()
     }
+
+    override fun setPriority(priority: Int) = Unit
 }

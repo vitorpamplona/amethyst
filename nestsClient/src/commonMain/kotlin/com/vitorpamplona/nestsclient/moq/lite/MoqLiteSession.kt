@@ -1037,6 +1037,13 @@ class MoqLiteSession internal constructor(
         // 150 ms late still falls inside hang's default ~200 ms
         // jitter buffer) and avoids the dropout entirely.
         val uni = transport.openUniStream()
+        // Mirror moq-rs `Publisher::serve_group`
+        // (`rs/moq-lite/src/lite/publisher.rs`): newer groups get higher
+        // priority so the QUIC writer drains fresh audio first when
+        // retransmits queue up under loss. Saturating cast guards a
+        // theoretical broadcast that runs long enough for `sequence` to
+        // exceed Int.MAX_VALUE (≈ 71 years at 1 group/sec); defensive only.
+        uni.setPriority(sequence.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))
         return uni

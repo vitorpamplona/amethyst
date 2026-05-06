@@ -112,6 +112,22 @@ interface WebTransportWriteStream {
 
     /** Half-close the write side (FIN). No further writes after this call. */
     suspend fun finish()
+
+    /**
+     * Hint to the transport about this stream's drain priority relative
+     * to other streams on the same session. Higher value drains first
+     * under congestion; same-priority streams keep round-robin order.
+     * Default 0 = unchanged round-robin behaviour.
+     *
+     * moq-lite uses this to bias the writer toward newer group streams
+     * (sequence-numbered, fresher audio) so a backlog of retransmits on
+     * an older group doesn't starve the listener of fresh frames. See
+     * `Publisher::serve_group` in `rs/moq-lite/src/lite/publisher.rs`.
+     *
+     * Implementations that don't model priority (e.g. the in-memory
+     * fake) MAY treat this as a no-op.
+     */
+    fun setPriority(priority: Int)
 }
 
 /**

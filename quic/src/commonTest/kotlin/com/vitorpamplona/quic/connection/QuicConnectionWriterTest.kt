@@ -111,6 +111,50 @@ class QuicConnectionWriterTest {
     }
 
     @Test
+    fun writer_drains_higher_priority_streams_before_lower_priority() {
+        // T11.3 follow-up: the writer's drain loop must iterate streams
+        // in descending priority order so moq-lite group streams with a
+        // higher sequence number drain ahead of older ones under
+        // congestion. Pre-fix this test, the writer iterated in stable
+        // round-robin order regardless of priority — so a backlog of
+        // retransmits on an older group could starve the listener of
+        // fresh frames. We pin the load-bearing invariant by inspecting
+        // StreamFrame order in a single emitted packet: low-priority
+        // stream is opened FIRST (so insertion order would normally win
+        // round-robin), but the high-priority stream's bytes must land
+        // earlier in the packet.
+        runBlocking {
+            val (client, pipe) = connectedClient()
+            val low = client.openBidiStream()
+            val high = client.openBidiStream()
+            low.priority = 0
+            high.priority = 10
+            // Distinct payloads small enough to coexist in one packet.
+            val lowPayload = ByteArray(200) { 0xAA.toByte() }
+            val highPayload = ByteArray(200) { 0xBB.toByte() }
+            low.send.enqueue(lowPayload)
+            high.send.enqueue(highPayload)
+
+            val datagram = drainOutbound(client, nowMillis = 0L)
+            assertNotNull(datagram, "drain must emit a packet")
+            val frames = pipe.decryptClientApplicationFrames(datagram)
+            assertNotNull(frames, "decrypt must succeed at the application level")
+            val streamFrames = frames.filterIsInstance<StreamFrame>()
+            assertEquals(
+                2,
+                streamFrames.size,
+                "expected one StreamFrame per stream in this drain, got $streamFrames",
+            )
+            assertEquals(
+                high.streamId,
+                streamFrames[0].streamId,
+                "higher-priority stream must drain first; saw ${streamFrames.map { it.streamId }}",
+            )
+            assertEquals(low.streamId, streamFrames[1].streamId)
+        }
+    }
+
+    @Test
     fun writer_respects_connection_level_send_credit_cap() {
         // Audit-4 #9: pre-fix the writer ignored sendConnectionFlowCredit
         // and would happily send past the peer's initial_max_data, ending

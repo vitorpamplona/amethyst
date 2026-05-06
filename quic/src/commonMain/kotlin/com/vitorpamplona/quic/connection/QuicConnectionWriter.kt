@@ -410,10 +410,22 @@ private fun buildApplicationPacket(
     // insertion-ordered and stays in sync with the streams map.
     val streamsView = conn.streamsListLocked()
     if (streamsView.isNotEmpty()) {
-        val start = conn.streamRoundRobinStart % streamsView.size
-        for (i in streamsView.indices) {
+        // Priority-then-round-robin: stable sortedByDescending preserves
+        // insertion order within a tier, so same-priority streams keep
+        // the rotating start-index round-robin behaviour. Higher-priority
+        // streams (e.g. moq-lite newer-sequence group streams) drain
+        // first under congestion. Default priority is 0; if every stream
+        // is at the default, iteration order matches pre-priority code.
+        // Cost: O(N log N) per drain pass and one transient list
+        // allocation. N is small (1–10 in the moq-lite audio path); if
+        // it ever grows enough to matter, switch to an indirect index
+        // sort or maintain an incrementally-sorted view on setPriority.
+        val sorted =
+            if (streamsView.size > 1) streamsView.sortedByDescending { it.priority } else streamsView
+        val start = conn.streamRoundRobinStart % sorted.size
+        for (i in sorted.indices) {
             if (packetBudget <= 64) break
-            val stream = streamsView[(start + i) % streamsView.size]
+            val stream = sorted[(start + i) % sorted.size]
             val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
             // Skip if both stream and connection have no credit; FIN-only
             // (zero-byte) chunks may still go through because they don't
