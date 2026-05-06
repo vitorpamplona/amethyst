@@ -21,11 +21,14 @@
 package com.vitorpamplona.nestsclient.audio
 
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
+import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 /**
  * Mirror of [NestBroadcaster] but driving a moq-lite
@@ -195,6 +198,21 @@ class NestMoqLiteBroadcaster(
                 // and the relay would see two unrelated uni streams under
                 // the same logical group.
                 var lastPublisher: MoqLitePublisherHandle = publisher
+                // kixelated/moq `hang` "legacy" container wire format:
+                // every frame inside a moq-lite group is
+                //   varint(timestamp_us) + raw_codec_payload
+                // (`rs/hang/src/container/frame.rs`,
+                // Timescale<1_000_000>). Watchers that read our
+                // catalog's `container.kind = "legacy"` declaration
+                // will skip the leading varint as a microsecond
+                // timestamp; they MUST receive a real timestamp or
+                // their decoder picks up garbage bytes ahead of the
+                // Opus packet. We use a monotonic mark captured at
+                // capture-loop start so timestamps are robust to mute
+                // gaps and survive publisher hot-swap (the wire is
+                // single-broadcast, single-encoder; timestamps are
+                // codec-payload metadata, not stream-position).
+                val frameStartMark: TimeMark = TimeSource.Monotonic.markNow()
                 try {
                     while (true) {
                         val pcm = capture.readFrame() ?: break
@@ -233,7 +251,11 @@ class NestMoqLiteBroadcaster(
                         // for the production cliff this works around.
                         val sendOutcome =
                             runCatching {
-                                val accepted = current.send(opus)
+                                val tsBytes = Varint.encode(frameStartMark.elapsedNow().inWholeMicroseconds)
+                                val payload = ByteArray(tsBytes.size + opus.size)
+                                tsBytes.copyInto(payload, 0)
+                                opus.copyInto(payload, tsBytes.size)
+                                val accepted = current.send(payload)
                                 framesInCurrentGroup += 1
                                 if (framesInCurrentGroup >= framesPerGroup) {
                                     current.endGroup()

@@ -27,69 +27,72 @@ import kotlin.test.assertNull
 
 class RoomSpeakerCatalogTest {
     @Test
-    fun parsesNostrnestsShape() {
+    fun parsesKixelatedHangShape() {
+        // Verbatim shape produced by the canonical kixelated/moq `hang`
+        // crate (`rs/hang/src/catalog/`). Verifies that an Amethyst
+        // listener picks up a standards-aligned publisher's catalog.
         val json =
             """
             {
-              "version": 1,
-              "audio": [
-                {
-                  "track": "audio/data",
-                  "codec": "opus",
-                  "sample_rate": 48000,
-                  "channel_count": 2,
-                  "bitrate": 64000
+              "audio": {
+                "renditions": {
+                  "audio/data": {
+                    "codec": "opus",
+                    "container": { "kind": "legacy" },
+                    "sampleRate": 48000,
+                    "numberOfChannels": 2,
+                    "bitrate": 64000
+                  }
                 }
-              ]
+              }
             }
             """.trimIndent()
         val catalog = RoomSpeakerCatalog.parseOrNull(json.encodeToByteArray())
         assertNotNull(catalog)
-        assertEquals(1, catalog.version)
-        assertEquals(1, catalog.audio.size)
-        val track = catalog.primaryAudio()
-        assertNotNull(track)
-        assertEquals("audio/data", track.track)
-        assertEquals("opus", track.codec)
-        assertEquals(48_000, track.sampleRate)
-        assertEquals(2, track.channelCount)
-        assertEquals(64_000, track.bitrate)
+        assertEquals(1, catalog.audio?.renditions?.size)
+        val rendition = catalog.primaryAudio()
+        assertNotNull(rendition)
+        assertEquals("opus", rendition.codec)
+        assertEquals("legacy", rendition.container?.kind)
+        assertEquals(48_000, rendition.sampleRate)
+        assertEquals(2, rendition.numberOfChannels)
+        assertEquals(64_000, rendition.bitrate)
     }
 
     @Test
     fun describeFormatsHumanReadable() {
-        val track =
-            RoomSpeakerCatalog.AudioTrack(
+        val rendition =
+            RoomSpeakerCatalog.AudioConfig(
                 codec = "opus",
                 sampleRate = 48_000,
-                channelCount = 2,
+                numberOfChannels = 2,
             )
         // Codec uppercased, kHz / channel count short-formed —
         // intended for a single-line tooltip in the participant
         // sheet, not a verbose codec dump.
-        assertEquals("OPUS · 48kHz · 2ch", track.describe())
+        assertEquals("OPUS · 48kHz · 2ch", rendition.describe())
     }
 
     @Test
     fun describeMonoIsLabelled() {
-        val track = RoomSpeakerCatalog.AudioTrack(codec = "opus", channelCount = 1)
-        assertEquals("OPUS · mono", track.describe())
+        val rendition = RoomSpeakerCatalog.AudioConfig(codec = "opus", numberOfChannels = 1)
+        assertEquals("OPUS · mono", rendition.describe())
     }
 
     @Test
     fun describeAllNullReturnsNull() {
-        val track = RoomSpeakerCatalog.AudioTrack()
+        val rendition = RoomSpeakerCatalog.AudioConfig()
         // Empty catalog → caller doesn't render a "unknown · unknown"
         // line; describe() returns null so the UI can omit cleanly.
-        assertNull(track.describe())
+        assertNull(rendition.describe())
     }
 
     @Test
     fun toleratesUnknownKeys() {
-        // Forward-compat: future moq-lite catalog revisions can add
+        // Forward-compat: future hang catalog revisions can add
         // fields without breaking older clients.
         val json =
-            """{"version":2,"audio":[{"track":"audio/data","codec":"opus","extra":"future-only"}],"new_top_level":true}"""
+            """{"audio":{"renditions":{"audio/data":{"codec":"opus","extra":"future-only"}}},"video":{},"newTopLevel":true}"""
         val catalog = RoomSpeakerCatalog.parseOrNull(json.encodeToByteArray())
         assertNotNull(catalog)
         assertEquals("opus", catalog.primaryAudio()?.codec)
@@ -104,12 +107,43 @@ class RoomSpeakerCatalogTest {
     }
 
     @Test
-    fun emptyAudioListIsAllowed() {
+    fun emptyAudioRenditionsIsAllowed() {
         // A publisher might emit an "advertising" catalog with no
-        // tracks yet (e.g. between codec switches). Accept the shape
-        // and let primaryAudio() return null.
-        val catalog = RoomSpeakerCatalog.parseOrNull("""{"version":1,"audio":[]}""".encodeToByteArray())
+        // renditions yet (e.g. between codec switches). Accept the
+        // shape and let primaryAudio() return null.
+        val catalog = RoomSpeakerCatalog.parseOrNull("""{"audio":{"renditions":{}}}""".encodeToByteArray())
         assertNotNull(catalog)
         assertNull(catalog.primaryAudio())
+    }
+
+    @Test
+    fun missingAudioReturnsNullPrimary() {
+        // hang catalogs declaring only video MUST still parse without
+        // throwing — primaryAudio() returns null.
+        val catalog = RoomSpeakerCatalog.parseOrNull("""{}""".encodeToByteArray())
+        assertNotNull(catalog)
+        assertNull(catalog.primaryAudio())
+    }
+
+    @Test
+    fun stripPrefixRoundTripsCanonicalCatalog() {
+        // The catalog payload [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker]
+        // emits MUST round-trip through the parser — guards against
+        // either side drifting from the kixelated/hang shape.
+        // SPEAKER_CATALOG_JSON lives in nestsClient and isn't
+        // accessible from commons; keep an inline literal that mirrors
+        // it verbatim so a desync triggers this assertion.
+        val emitted =
+            "{\"audio\":{\"renditions\":{\"audio/data\":{" +
+                "\"codec\":\"opus\",\"container\":{\"kind\":\"legacy\"}," +
+                "\"sampleRate\":48000,\"numberOfChannels\":1}}}}"
+        val catalog = RoomSpeakerCatalog.parseOrNull(emitted.encodeToByteArray())
+        assertNotNull(catalog)
+        val rendition = catalog.primaryAudio()
+        assertNotNull(rendition)
+        assertEquals("opus", rendition.codec)
+        assertEquals("legacy", rendition.container?.kind)
+        assertEquals(48_000, rendition.sampleRate)
+        assertEquals(1, rendition.numberOfChannels)
     }
 }

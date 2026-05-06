@@ -22,35 +22,67 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
  * Decoded shape of a moq-lite `catalog.json` track for a single
- * audio-room speaker. Each broadcast advertises one or more tracks
- * (one per codec / quality tier) — for nests audio rooms there's
- * exactly one Opus track today, but the model carries a list for
- * forward compatibility.
+ * audio-room speaker. Mirrors the kixelated/moq `hang` reference
+ * catalog format — the canonical shape that `@kixelated/hang`'s
+ * browser watcher and the `moq-rs` Rust hang crate both produce and
+ * consume — so Amethyst publishers are visible to the moq-lite browser
+ * reference, and Amethyst listeners parse standards-aligned catalogs
+ * from non-Amethyst publishers.
  *
- * Best-effort schema: nostrnests' upstream moq-lite catalog spec
- * (kixelated/moq) has evolved across revisions, and not every
- * publisher fills in every field. The parser tolerates missing
- * keys via `ignoreUnknownKeys = true` on [JsonMapper] and the
- * `?`-marked properties.
+ * Shape (verbatim from `kixelated/moq/rs/hang/src/catalog/`):
+ *
+ *   {
+ *     "audio": {
+ *       "renditions": {
+ *         "<trackName>": {
+ *           "codec": "opus",
+ *           "container": { "kind": "legacy" },
+ *           "sampleRate": 48000,
+ *           "numberOfChannels": 1,
+ *           "bitrate": 32000           // optional
+ *         }
+ *       }
+ *     }
+ *   }
+ *
+ * Keys are camelCase per the upstream serde `rename_all = "camelCase"`.
+ * Every field except the rendition-key string is optional in the parser
+ * — older / partial publishers are tolerated. Field semantics:
+ *
+ *   - rendition key: the moq-lite `track` name a subscriber should
+ *     subscribe to for that audio rendition's frames (commonly the same
+ *     string for single-rendition broadcasts). Subscribers pick a
+ *     rendition (e.g. by codec / bitrate) and use this key as the
+ *     Subscribe.track string.
+ *   - `codec`: codec mimetype string (`"opus"`, `"mp4a.40.2"` for AAC).
+ *   - `container.kind`: frame wrapper. `"legacy"` = each frame is
+ *     `varint(timestamp_us) + raw_codec_payload` inside the moq-lite
+ *     group. `"cmaf"` = MOOF/MDAT-fragmented MP4. We only emit/parse
+ *     `legacy` today; unknown kinds are ignored at parse time.
+ *   - `sampleRate` / `numberOfChannels`: PCM source params.
  */
 @Immutable
 @Serializable
 data class RoomSpeakerCatalog(
-    val version: Int? = null,
-    val audio: List<AudioTrack> = emptyList(),
+    val audio: Audio? = null,
 ) {
     @Immutable
     @Serializable
-    data class AudioTrack(
-        val track: String? = null,
+    data class Audio(
+        val renditions: Map<String, AudioConfig> = emptyMap(),
+    )
+
+    @Immutable
+    @Serializable
+    data class AudioConfig(
         val codec: String? = null,
-        @SerialName("sample_rate") val sampleRate: Int? = null,
-        @SerialName("channel_count") val channelCount: Int? = null,
+        val container: Container? = null,
+        val sampleRate: Int? = null,
+        val numberOfChannels: Int? = null,
         val bitrate: Int? = null,
     ) {
         /**
@@ -64,14 +96,25 @@ data class RoomSpeakerCatalog(
                 buildList {
                     codec?.takeIf { it.isNotBlank() }?.let { add(it.uppercase()) }
                     sampleRate?.let { add("${it / 1000}kHz") }
-                    channelCount?.let { add(if (it == 1) "mono" else "${it}ch") }
+                    numberOfChannels?.let { add(if (it == 1) "mono" else "${it}ch") }
                 }
             return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
         }
     }
 
-    /** First audio track, if any. The current single-Opus reality. */
-    fun primaryAudio(): AudioTrack? = audio.firstOrNull()
+    @Immutable
+    @Serializable
+    data class Container(
+        val kind: String? = null,
+    )
+
+    /**
+     * First audio rendition, if any. The current single-Opus reality.
+     * Map iteration order is the JSON insertion order (kotlinx.serialization
+     * uses LinkedHashMap), so this picks the first rendition the
+     * publisher declared rather than an arbitrary one.
+     */
+    fun primaryAudio(): AudioConfig? = audio?.renditions?.values?.firstOrNull()
 
     companion object {
         /**

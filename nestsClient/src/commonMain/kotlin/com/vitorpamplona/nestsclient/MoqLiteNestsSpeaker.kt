@@ -203,17 +203,29 @@ class MoqLiteNestsSpeaker internal constructor(
     companion object {
         /**
          * moq-lite catalog manifest broadcast on the
-         * [MoqLiteNestsListener.CATALOG_TRACK] track. The shape mirrors
-         * what the kixelated/moq browser watcher parses
-         * ([com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog]):
-         * a versioned envelope with an `audio[]` of track descriptors.
+         * [MoqLiteNestsListener.CATALOG_TRACK] track. Verbatim
+         * canonical kixelated/moq `hang` shape (camelCase, nested
+         * `audio.renditions[<trackName>]`, `container.kind = "legacy"`).
+         * The rendition key MUST equal the moq-lite track we publish
+         * audio frames on ([MoqLiteNestsListener.AUDIO_TRACK]) so the
+         * watcher's "subscribe to this rendition" path resolves to our
+         * actual audio stream.
+         *
+         * `container.kind = "legacy"` declares the wire layout the
+         * watcher must expect inside each moq-lite frame: a single
+         * `varint(timestamp_us)` prefix followed by the raw codec
+         * payload (no MOOF/MDAT wrapping). The publisher side honours
+         * this contract in
+         * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster].
+         *
          * Hard-coded because the speaker's encoder is fixed at
          * 48 kHz mono Opus today; if [OpusEncoder] becomes parameterised
          * this should be derived from the encoder config instead.
          */
         const val SPEAKER_CATALOG_JSON: String =
-            "{\"version\":1,\"audio\":[{\"track\":\"audio/data\"," +
-                "\"codec\":\"opus\",\"sample_rate\":48000,\"channel_count\":1}]}"
+            "{\"audio\":{\"renditions\":{\"" + MoqLiteNestsListener.AUDIO_TRACK + "\":{" +
+                "\"codec\":\"opus\",\"container\":{\"kind\":\"legacy\"}," +
+                "\"sampleRate\":48000,\"numberOfChannels\":1}}}}"
 
         /**
          * How often the catalog group is re-emitted. The relay drops

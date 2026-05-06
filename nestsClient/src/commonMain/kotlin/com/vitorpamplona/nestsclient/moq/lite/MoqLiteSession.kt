@@ -883,9 +883,50 @@ class MoqLiteSession internal constructor(
                             dispatched = true
                         }
 
-                        else -> {
-                            // Lite-03 treats Session/Fetch/Probe as
-                            // separate flows; we don't implement them.
+                        MoqLiteControlType.Probe -> {
+                            // Subscriber-opened bidi asking us (the
+                            // publisher) for a bitrate hint. Per
+                            // `lite/probe.rs:Lite03+`, the publisher
+                            // writes one or more size-prefixed
+                            // `Probe { bitrate: u62 }` messages on
+                            // this bidi. We're a fixed-rate Opus
+                            // publisher, so emit a single hint and
+                            // FIN our write side — the peer treats
+                            // FIN as "no further updates" rather than
+                            // an error. Better than the old behaviour
+                            // of FINing without writing anything,
+                            // which left the subscriber's ABR
+                            // estimator with no signal.
+                            runCatching {
+                                bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = NESTS_AUDIO_BITRATE_HINT_BPS)))
+                                bidi.finish()
+                            }
+                            dispatched = true
+                        }
+
+                        MoqLiteControlType.Fetch -> {
+                            // Subscriber-opened bidi requesting a
+                            // historical group (`lite/fetch.rs`).
+                            // Audio rooms are live-only — we have no
+                            // group history to serve. FINing the
+                            // write side without any reply is the
+                            // spec-clean way to signal "no groups
+                            // available"; the subscriber's wait on
+                            // its receive side resolves to
+                            // end-of-stream and it falls back to a
+                            // live Subscribe. Ignoring inbound bytes
+                            // (the request body) is fine: we don't
+                            // need to know which group was requested
+                            // because we couldn't serve any of them.
+                            runCatching { bidi.finish() }
+                            dispatched = true
+                        }
+
+                        MoqLiteControlType.Session -> {
+                            // ControlType=0 was the Lite-01/02 setup
+                            // exchange. Lite-03 doesn't use it; if a
+                            // legacy peer sends one, FIN cleanly so
+                            // their bidi resolves rather than hanging.
                             runCatching { bidi.finish() }
                             dispatched = true
                         }
@@ -1193,6 +1234,15 @@ class MoqLiteSession internal constructor(
     companion object {
         /** moq-lite priority byte midpoint — neutral default. */
         const val DEFAULT_PRIORITY: Int = 0x80
+
+        /**
+         * Bitrate hint (bits/sec) we report on inbound moq-lite Probe
+         * bidis as a publisher. Mirrors the upper-bound of an Opus
+         * voice profile at 48 kHz mono, ≈32 kbps. Subscriber-side ABR
+         * estimators use this to size their forward queue; we emit the
+         * single hint and FIN since our encoder runs at a fixed bitrate.
+         */
+        const val NESTS_AUDIO_BITRATE_HINT_BPS: Long = 32_000L
 
         // Diagnostic: log "send returned false" once every N invocations.
         // At 50 fps and N=50 → ≤ 1 log/sec for a sustained no-sub window.

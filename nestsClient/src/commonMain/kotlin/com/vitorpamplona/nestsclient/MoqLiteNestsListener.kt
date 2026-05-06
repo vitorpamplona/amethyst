@@ -82,14 +82,36 @@ class MoqLiteNestsListener internal constructor(
     override suspend fun subscribeSpeaker(
         speakerPubkeyHex: String,
         maxLatencyMs: Long,
-    ): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = AUDIO_TRACK, maxLatencyMs = maxLatencyMs)
+    ): SubscribeHandle =
+        wrapSubscription(
+            broadcast = speakerPubkeyHex,
+            track = AUDIO_TRACK,
+            maxLatencyMs = maxLatencyMs,
+            // Audio frames arrive in kixelated/moq `hang` "legacy"
+            // container layout: each moq-lite frame is
+            // `varint(timestamp_us) + raw_opus_packet`. Strip the
+            // leading varint so downstream decoders see a pristine
+            // Opus packet exactly as if it came from
+            // [com.vitorpamplona.nestsclient.audio.OpusEncoder].
+            stripLegacyTimestamp = true,
+        )
 
-    override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle = wrapSubscription(broadcast = speakerPubkeyHex, track = CATALOG_TRACK, maxLatencyMs = 0L)
+    override suspend fun subscribeCatalog(speakerPubkeyHex: String): SubscribeHandle =
+        wrapSubscription(
+            broadcast = speakerPubkeyHex,
+            track = CATALOG_TRACK,
+            maxLatencyMs = 0L,
+            // Catalog frames carry raw JSON bytes — no container
+            // wrapping (the catalog itself is what tells you which
+            // container the audio track uses).
+            stripLegacyTimestamp = false,
+        )
 
     private suspend fun wrapSubscription(
         broadcast: String,
         track: String,
         maxLatencyMs: Long,
+        stripLegacyTimestamp: Boolean,
     ): SubscribeHandle {
         check(state.value is NestsListenerState.Connected) {
             "NestsListener.subscribe requires Connected state, was ${state.value}"
@@ -112,12 +134,13 @@ class MoqLiteNestsListener internal constructor(
         val objectIdSeq = AtomicLong(0L)
         val mapped =
             handle.frames.map { frame ->
+                val payload = if (stripLegacyTimestamp) stripLegacyTimestampPrefix(frame.payload) else frame.payload
                 MoqObject(
                     trackAlias = handle.id,
                     groupId = frame.groupSequence,
                     objectId = objectIdSeq.getAndIncrement(),
                     publisherPriority = MoqLiteSession.DEFAULT_PRIORITY,
-                    payload = frame.payload,
+                    payload = payload,
                 )
             }
 
@@ -242,5 +265,23 @@ class MoqLiteNestsListener internal constructor(
          * [subscribeCatalog].
          */
         const val CATALOG_TRACK: String = "catalog.json"
+
+        /**
+         * Strip the leading `varint(timestamp_us)` prefix from a
+         * kixelated/moq `hang` "legacy" container frame, returning
+         * the bare codec payload (e.g. an Opus packet) for downstream
+         * decoders. The varint length is encoded in the top 2 bits of
+         * the first byte per RFC 9000 §16: `00`→1, `01`→2, `10`→4,
+         * `11`→8 bytes. Returns the payload unchanged when the
+         * varint header would overrun the payload (malformed frame —
+         * surface upstream rather than silently mask).
+         */
+        internal fun stripLegacyTimestampPrefix(payload: ByteArray): ByteArray {
+            if (payload.isEmpty()) return payload
+            val tag = (payload[0].toInt() ushr 6) and 0x3
+            val varintLen = 1 shl tag
+            if (payload.size < varintLen) return payload
+            return payload.copyOfRange(varintLen, payload.size)
+        }
     }
 }

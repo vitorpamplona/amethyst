@@ -251,6 +251,20 @@ object MoqLiteCodec {
         return MoqLiteProbe(bitrate = bitrate)
     }
 
+    /**
+     * Encode a single Lite-03 Probe message body
+     * (`lite/probe.rs` — `bitrate: u62` only; `rtt` is Lite-04+).
+     * The publisher writes these size-prefixed onto a Probe bidi the
+     * subscriber opened, advertising the publisher's expected
+     * bandwidth. Wrapping (size prefix) is the caller's responsibility,
+     * matching [encodeAnnouncePlease] / [encodeAnnounce].
+     */
+    fun encodeProbe(probe: MoqLiteProbe): ByteArray {
+        val body = MoqWriter()
+        body.writeVarint(probe.bitrate)
+        return wrapSizePrefixed(body)
+    }
+
     // ---------------- internals ----------------
 
     /**
