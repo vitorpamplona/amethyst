@@ -280,9 +280,50 @@ private fun collectHandshakeLevelFrames(
                 length = cryptoChunk.data.size.toLong(),
             )
     }
+    // RFC 9002 §6.2.4: PTO probe MUST be ack-eliciting at the
+    // encryption level with unacknowledged data. `buildApplicationPacket`
+    // consumes [pendingPing] when 1-RTT keys exist; pre-1-RTT we
+    // honor it here at the highest active level (Handshake > Initial).
+    //
+    // The driver's PTO branch also calls
+    // [QuicConnection.requeueAllInflightCrypto], which moves any
+    // unacknowledged ClientHello / ClientFinished bytes back onto
+    // the cryptoSend retransmit queue — so the takeChunk above
+    // already produced a CRYPTO frame in that case, and the PING
+    // would be redundant. We only emit a bare PING when there's no
+    // CRYPTO retransmit available (e.g. the unacknowledged data was
+    // already sitting in cryptoSend's retransmit queue from a
+    // previous PTO and got drained, or the original Initial was
+    // never sent at all). This preserves the "send something
+    // ack-eliciting on every PTO" contract without wasting a frame.
+    if (conn.pendingPing &&
+        conn.application.sendProtection == null &&
+        level == highestPreApplicationLevel(conn)
+    ) {
+        if (frames.none { it is CryptoFrame }) {
+            frames += PingFrame
+        }
+        // Either the CRYPTO frame already covers the ack-eliciting
+        // requirement at this level, or we just appended a PING.
+        // Clear the flag so the next drain doesn't double-fire.
+        conn.pendingPing = false
+    }
     if (frames.isEmpty()) return null
     return HandshakeLevelContents(frames = frames, tokens = tokens)
 }
+
+/**
+ * Highest encryption level for which we currently hold send keys, given
+ * 1-RTT keys are NOT installed. Used by [collectHandshakeLevelFrames]
+ * to place a PTO PING (RFC 9002 §6.2.4) at the right level when the
+ * application path can't carry it.
+ */
+private fun highestPreApplicationLevel(conn: QuicConnection): EncryptionLevel =
+    when {
+        conn.handshake.sendProtection != null -> EncryptionLevel.HANDSHAKE
+        conn.initial.sendProtection != null && !conn.initial.keysDiscarded -> EncryptionLevel.INITIAL
+        else -> EncryptionLevel.INITIAL // collectHandshakeLevelFrames already returned null on no keys
+    }
 
 /**
  * Build a long-header packet from already-collected frames, with optional
