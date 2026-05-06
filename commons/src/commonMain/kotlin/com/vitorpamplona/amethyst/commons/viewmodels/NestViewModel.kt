@@ -831,6 +831,10 @@ class NestViewModel(
                             com.vitorpamplona.quartz.utils.Log.d("NestRx") {
                                 "observeAnnounces #$emissionCount active=${ann.active} pubkey='${ann.pubkey.take(12)}' → ${if (ann.active) "ADD" else "REMOVE"}"
                             }
+                            com.vitorpamplona.nestsclient.trace.NestsTrace.emit("vm_observe_announce") {
+                                "\"emission\":$emissionCount,\"active\":${ann.active}," +
+                                    "\"pubkey\":${com.vitorpamplona.nestsclient.trace.jsonStr(ann.pubkey)}"
+                            }
                             if (ann.active) {
                                 _announcedSpeakers.update { it + ann.pubkey }
                             } else {
@@ -1382,6 +1386,15 @@ class NestViewModel(
                             com.vitorpamplona.quartz.utils.Log.d("NestRx") {
                                 "cliff-detector tick=$ticks active=${activeSpeakers.size} announced=${announced.size} lastFrameAges=[$ages]"
                             }
+                            com.vitorpamplona.nestsclient.trace.NestsTrace.emit("cliff_tick") {
+                                "\"tick\":$ticks," +
+                                    "\"active\":${com.vitorpamplona.nestsclient.trace.jsonArrStr(activeSpeakers)}," +
+                                    "\"announced\":${com.vitorpamplona.nestsclient.trace.jsonArrStr(announced)}," +
+                                    "\"last_frame_age_ms\":{" +
+                                    lastFrameAt.entries.joinToString {
+                                        "${com.vitorpamplona.nestsclient.trace.jsonStr(it.key)}:${it.value.elapsedNow().inWholeMilliseconds}"
+                                    } + "}"
+                            }
                         }
                         val stalled =
                             computeStalledSpeakers(
@@ -1395,6 +1408,10 @@ class NestViewModel(
                         if (stalled.isEmpty()) continue
                         com.vitorpamplona.quartz.utils.Log.w("NestRx") {
                             "cliff-detector: announced+subscribed but silent for ≥${ROOM_AUDIO_CLIFF_TIMEOUT_MS}ms — recycling session. stalled=$stalled"
+                        }
+                        com.vitorpamplona.nestsclient.trace.NestsTrace.emit("cliff_recycle") {
+                            "\"timeout_ms\":$ROOM_AUDIO_CLIFF_TIMEOUT_MS," +
+                                "\"stalled\":${com.vitorpamplona.nestsclient.trace.jsonArrStr(stalled)}"
                         }
                         val recycleMark =
                             kotlin.time.TimeSource.Monotonic

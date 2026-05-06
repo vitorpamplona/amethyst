@@ -22,6 +22,8 @@ package com.vitorpamplona.nestsclient.moq.lite
 
 import com.vitorpamplona.nestsclient.moq.MoqCodecException
 import com.vitorpamplona.nestsclient.moq.MoqWriter
+import com.vitorpamplona.nestsclient.trace.NestsTrace
+import com.vitorpamplona.nestsclient.trace.jsonStr
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.Varint
@@ -137,6 +139,7 @@ class MoqLiteSession internal constructor(
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
         Log.d("NestRx") { "session.announce(prefix='$prefix') bidi opened, pump launching (replayCap=64)" }
+        NestsTrace.emit("announce_bidi_opened") { "\"prefix\":${jsonStr(prefix)}" }
         val pump =
             scope.launch {
                 val buffer = MoqLiteFrameBuffer()
@@ -155,14 +158,29 @@ class MoqLiteSession internal constructor(
                                     "status=${decoded.status} suffix='${decoded.suffix.take(12)}' " +
                                     "(chunks=$chunkCount)"
                             }
+                            NestsTrace.emit("announce_pump_emit") {
+                                "\"prefix\":${jsonStr(prefix)}," +
+                                    "\"emit_count\":$emitCount," +
+                                    "\"status\":${jsonStr(decoded.status.toString())}," +
+                                    "\"suffix\":${jsonStr(decoded.suffix)}," +
+                                    "\"chunks\":$chunkCount"
+                            }
                             updates.emit(decoded)
                         }
                     }
                     Log.w("NestRx") { "session.announce(prefix='$prefix') bidi.incoming() ended naturally (chunks=$chunkCount, emits=$emitCount)" }
+                    NestsTrace.emit("announce_bidi_ended_naturally") {
+                        "\"prefix\":${jsonStr(prefix)},\"chunks\":$chunkCount,\"emits\":$emitCount"
+                    }
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
                     Log.w("NestRx") { "announce(prefix='$prefix'): bidi.incoming() threw ${t::class.simpleName}: ${t.message} (chunks=$chunkCount, emits=$emitCount)" }
+                    NestsTrace.emit("announce_bidi_threw") {
+                        "\"prefix\":${jsonStr(prefix)},\"chunks\":$chunkCount,\"emits\":$emitCount," +
+                            "\"error\":${jsonStr(t::class.simpleName ?: "?")}," +
+                            "\"message\":${jsonStr(t.message ?: "")}"
+                    }
                     // Flow terminated (peer FIN or transport close).
                     // The Announce stream's emit-side just stops; consumers
                     // see an end-of-flow.
@@ -291,6 +309,10 @@ class MoqLiteSession internal constructor(
             if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
         }
         Log.d("NestRx") { "SUBSCRIBE send id=$id broadcast='$broadcast' track='$track' maxLatencyMs=$maxLatencyMillis" }
+        NestsTrace.emit("subscribe_send") {
+            "\"id\":$id,\"broadcast\":${jsonStr(broadcast)},\"track\":${jsonStr(track)}," +
+                "\"max_latency_ms\":$maxLatencyMillis"
+        }
         // Now that the subscription is registered, push the SUBSCRIBE
         // bytes. If `bidi.write` throws (transport torn down, peer
         // reset) we'd otherwise leave an orphaned map entry whose
@@ -358,6 +380,10 @@ class MoqLiteSession internal constructor(
             val removed = state.withLock { subscriptionsBySubscribeId.remove(id) }
             if (removed != null) {
                 Log.w("NestRx") { "SUBSCRIBE bidi exited, closing frames id=$id broadcast='${removed.request.broadcast}' track='${removed.request.track}'" }
+                NestsTrace.emit("subscribe_bidi_exited") {
+                    "\"id\":$id,\"broadcast\":${jsonStr(removed.request.broadcast)}," +
+                        "\"track\":${jsonStr(removed.request.track)}"
+                }
             }
             removed?.frames?.close()
         }
@@ -377,6 +403,11 @@ class MoqLiteSession internal constructor(
                     "SUBSCRIBE_DROP id=$id broadcast='$broadcast' track='$track' " +
                         "errCode=${resp.drop.errorCode} reason='${resp.drop.reasonPhrase}'"
                 }
+                NestsTrace.emit("subscribe_drop") {
+                    "\"id\":$id,\"broadcast\":${jsonStr(broadcast)},\"track\":${jsonStr(track)}," +
+                        "\"err_code\":${resp.drop.errorCode}," +
+                        "\"reason\":${jsonStr(resp.drop.reasonPhrase)}"
+                }
                 state.withLock { subscriptionsBySubscribeId.remove(id) }
                 frames.close()
                 runCatching { bidi.finish() }
@@ -388,6 +419,9 @@ class MoqLiteSession internal constructor(
 
             is MoqLiteCodec.SubscribeResponse.Ok -> {
                 Log.d("NestRx") { "SUBSCRIBE_OK id=$id broadcast='$broadcast' track='$track'" }
+                NestsTrace.emit("subscribe_ok") {
+                    "\"id\":$id,\"broadcast\":${jsonStr(broadcast)},\"track\":${jsonStr(track)}"
+                }
                 return MoqLiteSubscribeHandle(
                     id = id,
                     ok = resp.ok,
@@ -464,6 +498,11 @@ class MoqLiteSession internal constructor(
         try {
             handle.updates.collect { update ->
                 Log.d("NestRx") { "ANNOUNCE update status=${update.status} suffix='${update.suffix}' hops=${update.hops}" }
+                NestsTrace.emit("announce_watch_update") {
+                    "\"status\":${jsonStr(update.status.toString())}," +
+                        "\"suffix\":${jsonStr(update.suffix)}," +
+                        "\"hops\":${update.hops}"
+                }
                 if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
                 val targets =
                     state.withLock {
@@ -473,6 +512,10 @@ class MoqLiteSession internal constructor(
                     }
                 if (targets.isNotEmpty()) {
                     Log.w("NestRx") { "ANNOUNCE Ended for suffix='${update.suffix}' → closing ${targets.size} subscription(s): ${targets.map { "id=${it.id} track='${it.request.track}'" }}" }
+                    NestsTrace.emit("announce_watch_ended_closing_subs") {
+                        "\"suffix\":${jsonStr(update.suffix)}," +
+                            "\"closed_count\":${targets.size}"
+                    }
                 }
                 for (sub in targets) {
                     // Just close the frames channel — the
@@ -512,6 +555,7 @@ class MoqLiteSession internal constructor(
      */
     private suspend fun pumpUniStreams() {
         Log.d("NestRx") { "pumpUniStreams started" }
+        NestsTrace.emit("uni_pump_started")
         var streamCount = 0L
         try {
             // coroutineScope binds each per-stream drain to this pump's
@@ -564,6 +608,9 @@ class MoqLiteSession internal constructor(
                     groupSequence = hdr.sequence
                     headerRead = true
                     Log.d("NestRx") { "drainOneGroup#$streamSeq header subId=$subscribeId groupSeq=$groupSequence" }
+                    NestsTrace.emit("group_header") {
+                        "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence"
+                    }
                 }
                 while (true) {
                     val frame = buffer.readSizePrefixed() ?: break
@@ -588,10 +635,20 @@ class MoqLiteSession internal constructor(
                 }
             }
             Log.d("NestRx") { "drainOneGroup#$streamSeq FIN subId=$subscribeId groupSeq=$groupSequence frames=$frameCount droppedNoSub=$droppedNoSub trySendFail=$trySendFailures" }
+            NestsTrace.emit("group_fin") {
+                "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence," +
+                    "\"frames\":$frameCount,\"dropped_no_sub\":$droppedNoSub,\"try_send_fail\":$trySendFailures"
+            }
         } catch (ce: CancellationException) {
             throw ce
         } catch (t: Throwable) {
             Log.w("NestRx") { "drainOneGroup#$streamSeq threw subId=$subscribeId groupSeq=$groupSequence frames=$frameCount: ${t::class.simpleName}: ${t.message}" }
+            NestsTrace.emit("group_threw") {
+                "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence," +
+                    "\"frames\":$frameCount," +
+                    "\"error\":${jsonStr(t::class.simpleName ?: "?")}," +
+                    "\"message\":${jsonStr(t.message ?: "")}"
+            }
             // Stream errored / FIN'd. Nothing to do — the next group
             // arrives on a fresh uni stream.
         }
