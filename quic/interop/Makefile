@@ -38,7 +38,7 @@ smoke: docker smoke-down
 	docker network create $(SMOKE_NET) >/dev/null 2>&1 || true
 	docker run -d --name $(SMOKE_PICOQUIC) \
 	    --network $(SMOKE_NET) \
-	    --entrypoint picoquicdemo \
+	    --entrypoint /picoquic/picoquicdemo \
 	    privateoctopus/picoquic:latest -p 4433 >/dev/null
 	@PICOQUIC_IP=$$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(SMOKE_PICOQUIC)); \
 	    echo "picoquic at $$PICOQUIC_IP:4433 (in $(SMOKE_NET))"; \
