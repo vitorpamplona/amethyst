@@ -47,9 +47,25 @@ Inspect `./logs/<run>/client_qlog/*.qlog` in qvis when something breaks.
 |---|---|---|---|
 | 0 | Minimum harness | `handshake` | one test reproducible end-to-end ✅ |
 | 1 | Triangulate handshake bugs | + `versionnegotiation`, `chacha20` | green vs aioquic + quiche + picoquic |
-| 2 | Streams + loss + multiplexing | + `transfer`, `multiplexing`, `*loss`, `http3` | green vs aioquic + quiche; soak 500/500 |
+| 2 | Streams + loss + multiplexing | + `transfer`, `multiplexing`, `*loss`, `http3` | `transfer` / `multiplexing` / `http3` ✅ landed; loss tests pending |
 | 3 | Edge cases | `retry`, `resumption`, `zerortt`, `keyupdate`, `rebinding-*`, `blackhole`, `amplificationlimit` | every test green or unsupported-127 with a written reason |
 | 4 | CI gate | nightly Phases 1–2; PR-blocking subset on every push | qlogs uploaded as artifacts on red |
+
+## Phase 2 — landed 2026-05-06
+
+- Minimal `Http3GetClient` (in `:quic-interop`, NOT `:quic` — interop-test
+  surface, not a production HTTP/3 client). Opens the three required
+  client uni streams (control + QPACK encoder + QPACK decoder), sends
+  empty SETTINGS, then per request opens a bidi stream, encodes a HEADERS
+  frame with the four pseudo-headers using the existing literal-only
+  `QpackEncoder`, FINs, and reassembles HEADERS+DATA frames from the
+  response. Out-of-scope: GOAWAY, PUSH_PROMISE, dynamic QPACK table,
+  trailers, priority.
+- `transfer` + `http3` testcases: GET each URL in `REQUESTS` sequentially,
+  write each body to `$DOWNLOADS/<basename>`. Status != 200 fails.
+- `multiplexing` testcase: same as `transfer` but issues each GET in a
+  parallel `coroutineScope { async { … } }` so the request streams
+  genuinely overlap on the wire (what tshark verifies).
 
 ## Phase 1a — landed 2026-05-06
 

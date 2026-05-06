@@ -1,0 +1,150 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quic.interop.runner
+
+import com.vitorpamplona.quic.QuicWriter
+import com.vitorpamplona.quic.connection.QuicConnection
+import com.vitorpamplona.quic.http3.Http3Frame
+import com.vitorpamplona.quic.http3.Http3FrameReader
+import com.vitorpamplona.quic.http3.Http3FrameType
+import com.vitorpamplona.quic.http3.Http3Settings
+import com.vitorpamplona.quic.http3.Http3StreamType
+import com.vitorpamplona.quic.qpack.QpackDecoder
+import com.vitorpamplona.quic.qpack.QpackEncoder
+import kotlinx.coroutines.flow.collect
+
+/**
+ * Minimal HTTP/3 GET client used by the interop endpoint to satisfy the
+ * `transfer`, `multiplexing`, and `http3` testcases.
+ *
+ * Opens the three required client-side unidirectional streams (control,
+ * QPACK encoder, QPACK decoder) per RFC 9114 §6.2.1. Encodes requests with
+ * the literal-only [QpackEncoder] (no dynamic table — RFC 9204 Required
+ * Insert Count = 0) so we don't need to push QPACK encoder instructions.
+ *
+ * Not a production HTTP/3 client. Specifically: no GOAWAY handling, no
+ * priority, no push-promise, no trailers, no dynamic QPACK table.
+ */
+class Http3GetClient(
+    private val conn: QuicConnection,
+) {
+    suspend fun init() {
+        // Control stream: type-0x00 prefix followed by a SETTINGS frame
+        // (empty body is legal — RFC 9114 §7.2.4).
+        val control = conn.openUniStream()
+        val w = QuicWriter()
+        w.writeVarint(Http3StreamType.CONTROL)
+        w.writeBytes(Http3Settings(emptyMap()).encodeFrame())
+        control.send.enqueue(w.toByteArray())
+        // Control stream stays open for the lifetime of the H3 connection;
+        // do NOT call finish() — peers treat that as H3_CLOSED_CRITICAL_STREAM.
+
+        // Required: open QPACK encoder + decoder streams, even though we
+        // never insert into the dynamic table. Just send the type prefix.
+        val qpackEnc = conn.openUniStream()
+        val w2 = QuicWriter()
+        w2.writeVarint(Http3StreamType.QPACK_ENCODER)
+        qpackEnc.send.enqueue(w2.toByteArray())
+
+        val qpackDec = conn.openUniStream()
+        val w3 = QuicWriter()
+        w3.writeVarint(Http3StreamType.QPACK_DECODER)
+        qpackDec.send.enqueue(w3.toByteArray())
+    }
+
+    /**
+     * Issue a GET on a fresh bidi stream and return the parsed response.
+     * Suspends until the server FINs the response stream.
+     */
+    suspend fun get(
+        authority: String,
+        path: String,
+    ): Response {
+        val stream = conn.openBidiStream()
+        stream.send.enqueue(encodeRequest(authority, path))
+        stream.send.finish()
+
+        val reader = Http3FrameReader()
+        var status = 0
+        val body = mutableListOf<ByteArray>()
+        stream.incoming.collect { chunk ->
+            reader.push(chunk)
+            while (true) {
+                val frame = reader.next() ?: break
+                when (frame) {
+                    is Http3Frame.Headers -> {
+                        val fields = QpackDecoder().decodeFieldSection(frame.qpackPayload)
+                        status = fields.firstOrNull { it.first == ":status" }?.second?.toIntOrNull() ?: 0
+                    }
+
+                    is Http3Frame.Data -> {
+                        body += frame.body
+                    }
+
+                    else -> {
+                        Unit
+                    }
+                }
+            }
+        }
+        return Response(status = status, body = concat(body))
+    }
+
+    data class Response(
+        val status: Int,
+        val body: ByteArray,
+    )
+}
+
+/**
+ * Serialize a GET request as a single HEADERS frame ready to be enqueued
+ * onto a fresh bidi stream. Exposed for unit-testing the wire format
+ * without spinning up a QUIC connection.
+ */
+internal fun encodeRequest(
+    authority: String,
+    path: String,
+): ByteArray {
+    val headers =
+        listOf(
+            ":method" to "GET",
+            ":scheme" to "https",
+            ":authority" to authority,
+            ":path" to path,
+        )
+    val qpack = QpackEncoder().encodeFieldSection(headers)
+    val w = QuicWriter()
+    w.writeVarint(Http3FrameType.HEADERS)
+    w.writeVarint(qpack.size.toLong())
+    w.writeBytes(qpack)
+    return w.toByteArray()
+}
+
+private fun concat(parts: List<ByteArray>): ByteArray {
+    val total = parts.sumOf { it.size }
+    val out = ByteArray(total)
+    var off = 0
+    for (p in parts) {
+        p.copyInto(out, off)
+        off += p.size
+    }
+    return out
+}

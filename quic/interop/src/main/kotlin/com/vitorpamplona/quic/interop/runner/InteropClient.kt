@@ -30,7 +30,9 @@ import com.vitorpamplona.quic.transport.UdpSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -53,6 +55,7 @@ private const val EXIT_FAIL = 1
 private const val EXIT_UNSUPPORTED = 127
 
 private const val HANDSHAKE_TIMEOUT_SEC = 10L
+private const val TRANSFER_TIMEOUT_SEC = 30L
 
 fun main() {
     val role = System.getenv("ROLE") ?: "client"
@@ -63,11 +66,13 @@ fun main() {
 
     val testcase = System.getenv("TESTCASE")?.trim().orEmpty()
     val requests = System.getenv("REQUESTS")?.trim().orEmpty()
+    val downloads = System.getenv("DOWNLOADS")?.takeIf { it.isNotBlank() }
     val keyLogPath = System.getenv("SSLKEYLOGFILE")?.takeIf { it.isNotBlank() }
 
     System.err.println("== quic-interop client ==")
     System.err.println("testcase:       $testcase")
     System.err.println("requests:       $requests")
+    System.err.println("downloads:      ${downloads ?: "(unset)"}")
     System.err.println("sslkeylogfile:  ${keyLogPath ?: "(unset)"}")
 
     val cipherSuites =
@@ -82,9 +87,32 @@ fun main() {
             // complete; `chacha20` adds the constraint that we offered only
             // ChaCha20-Poly1305 (verified by the runner via tshark on the
             // sim's pcap, decrypted using SSLKEYLOGFILE).
-            "handshake", "chacha20" -> runHandshakeTest(requests, cipherSuites, keyLogPath)
+            "handshake", "chacha20" -> {
+                runHandshakeTest(requests, cipherSuites, keyLogPath)
+            }
 
-            else -> EXIT_UNSUPPORTED
+            // `transfer` and `http3` both fetch every URL in REQUESTS and
+            // write each body to $DOWNLOADS/<basename>. `multiplexing`
+            // additionally requires the requests to be sent in parallel on
+            // separate streams (the runner verifies via tshark that the
+            // streams overlap in time).
+            "transfer", "http3", "multiplexing" -> {
+                if (downloads == null) {
+                    System.err.println("DOWNLOADS env var required for $testcase")
+                    EXIT_FAIL
+                } else {
+                    runTransferTest(
+                        requests = requests,
+                        downloadsDir = File(downloads),
+                        keyLogPath = keyLogPath,
+                        parallel = (testcase == "multiplexing"),
+                    )
+                }
+            }
+
+            else -> {
+                EXIT_UNSUPPORTED
+            }
         }
     exitProcess(code)
 }
@@ -150,6 +178,108 @@ private fun runHandshakeTest(
         EXIT_OK
     } else {
         System.err.println("handshake $outcome")
+        EXIT_FAIL
+    }
+}
+
+private fun runTransferTest(
+    requests: String,
+    downloadsDir: File,
+    keyLogPath: String?,
+    parallel: Boolean,
+): Int {
+    val urls =
+        requests
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .map { runCatching { URI(it) }.getOrNull() }
+            .filter { it != null && it.host != null }
+            .map { it!! }
+    if (urls.isEmpty()) {
+        System.err.println("no parseable URL in REQUESTS")
+        return EXIT_FAIL
+    }
+    val first = urls[0]
+    val host = first.host
+    val port = first.port.takeIf { it > 0 } ?: 443
+
+    downloadsDir.mkdirs()
+
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val outcome =
+        runBlocking {
+            val socket =
+                try {
+                    UdpSocket.connect(host, port)
+                } catch (t: Throwable) {
+                    return@runBlocking "udp_failed: ${t.message ?: t::class.simpleName}"
+                }
+            val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
+            val conn =
+                QuicConnection(
+                    serverName = host,
+                    config = QuicConnectionConfig(),
+                    tlsCertificateValidator = PermissiveCertificateValidator(),
+                    extraSecretsListener = keyLogger?.listener,
+                )
+            val driver = QuicConnectionDriver(conn, socket, scope)
+            driver.start()
+
+            val handshake =
+                withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
+                    runCatching { conn.awaitHandshake() }
+                }
+            if (handshake == null || handshake.isFailure) {
+                runCatching { driver.close() }
+                conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+                return@runBlocking "handshake_failed"
+            }
+
+            val client = Http3GetClient(conn)
+            client.init()
+
+            val authority = if (port == 443) host else "$host:$port"
+            val outcome =
+                withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                    val responses =
+                        if (parallel) {
+                            // Open every request stream up-front so they
+                            // genuinely overlap on the wire — what the
+                            // multiplexing testcase verifies.
+                            coroutineScope {
+                                urls
+                                    .map { url -> async { url to client.get(authority, url.path) } }
+                                    .map { it.await() }
+                            }
+                        } else {
+                            urls.map { url -> url to client.get(authority, url.path) }
+                        }
+                    var anyFailed = false
+                    for ((url, resp) in responses) {
+                        if (resp.status != 200) {
+                            System.err.println("GET ${url.path} → status ${resp.status}")
+                            anyFailed = true
+                            continue
+                        }
+                        val name = url.path.substringAfterLast('/').ifBlank { "index" }
+                        File(downloadsDir, name).writeBytes(resp.body)
+                        System.err.println("GET ${url.path} → ${resp.body.size} bytes")
+                    }
+                    if (anyFailed) "request_failed" else "ok"
+                } ?: "transfer_timeout"
+
+            runCatching { driver.close() }
+            conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+            delay(50)
+            outcome
+        }
+    scope.cancel()
+
+    return if (outcome == "ok") {
+        System.err.println("transfer ok")
+        EXIT_OK
+    } else {
+        System.err.println("transfer $outcome")
         EXIT_FAIL
     }
 }
