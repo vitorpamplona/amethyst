@@ -89,21 +89,34 @@ fun main() {
             else -> null
         }
 
+    // ALPN per quic-interop-runner convention. Most testcases use
+    // `hq-interop` (HTTP/0.9 over QUIC, no H3/QPACK). Only the `http3` and
+    // `multiplexing` testcases use `h3`. quic-go-qns enforces this strictly
+    // (CRYPTO_ERROR 0x178 / TLS no_application_protocol on mismatch);
+    // aioquic and picoquic accept either. Match the per-test convention
+    // so we work everywhere.
+    val alpn =
+        when (testcase) {
+            "http3", "multiplexing" -> Alpn.H3
+            else -> Alpn.HQ_INTEROP
+        }
+
     val code =
         when (testcase) {
-            // The runner's `handshake` / `chacha20` / `handshakeloss` testcases
-            // require BOTH a successful handshake AND the requested file
-            // transferred to /downloads — the validator checks file presence
-            // via _check_files() AND that exactly 1 handshake happened on the
-            // wire via _count_handshakes(). `chacha20` adds the constraint
-            // that we offered only ChaCha20-Poly1305 (verified by the runner
-            // via tshark on the sim's pcap decrypted using SSLKEYLOGFILE).
-            // `handshakeloss` is the same client behaviour against a lossy sim.
-            //
-            // `transfer` / `http3` / `multiplexing` and the network-condition
-            // aliases (transferloss / transfercorruption / longrtt / goodput
-            // / crosstraffic) run the same H3 GET pipeline; the runner just
-            // varies the sim configuration around them.
+            // All these testcases require: successful handshake + file
+            // transferred to /downloads. Per-testcase notes:
+            //   chacha20            — runner verifies the negotiated cipher
+            //                         was ChaCha20-Poly1305 via tshark on the
+            //                         pcap (decrypted with SSLKEYLOGFILE).
+            //   handshakeloss/      — same client behaviour against the
+            //   transferloss          runner's sim with random packet loss.
+            //   transfercorruption  — random bit-flips (recovery via
+            //                         AEAD AUTH FAIL → drop + retransmit).
+            //   longrtt             — emulated high-latency link.
+            //   goodput / crosstraffic — throughput-floor / competing-flow
+            //                         scenarios.
+            //   multiplexing        — H3 GETs issued in parallel; runner
+            //                         verifies overlap on the wire via tshark.
             "handshake", "chacha20", "handshakeloss",
             "transfer", "http3", "multiplexing",
             "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
@@ -112,6 +125,7 @@ fun main() {
                     requests = requests,
                     downloadsDir = downloadsDir,
                     cipherSuites = cipherSuites,
+                    alpn = alpn,
                     keyLogPath = keyLogPath,
                     parallel = (testcase == "multiplexing"),
                 )
@@ -124,10 +138,24 @@ fun main() {
     exitProcess(code)
 }
 
+internal enum class Alpn(
+    val wireBytes: ByteArray,
+) {
+    /** RFC 9114 — full HTTP/3 + QPACK + H3 framing. */
+    H3("h3".encodeToByteArray()),
+
+    /** quic-interop-runner convention — HTTP/0.9 over QUIC. Just `GET /path\r\n`
+     *  on a fresh bidi stream, server returns the body, FIN both sides. No
+     *  control stream, no QPACK, no SETTINGS. Used for handshake / chacha20 /
+     *  transfer / loss-variant testcases. */
+    HQ_INTEROP("hq-interop".encodeToByteArray()),
+}
+
 private fun runTransferTest(
     requests: String,
     downloadsDir: File,
     cipherSuites: IntArray?,
+    alpn: Alpn,
     keyLogPath: String?,
     parallel: Boolean,
 ): Int {
@@ -163,6 +191,7 @@ private fun runTransferTest(
                     serverName = host,
                     config = QuicConnectionConfig(),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
+                    alpnList = listOf(alpn.wireBytes),
                     cipherSuites =
                         cipherSuites
                             ?: intArrayOf(
@@ -184,8 +213,11 @@ private fun runTransferTest(
                 return@runBlocking "handshake_failed"
             }
 
-            val client = Http3GetClient(conn)
-            client.init()
+            val client: GetClient =
+                when (alpn) {
+                    Alpn.H3 -> Http3GetClient(conn).also { it.init() }
+                    Alpn.HQ_INTEROP -> HqInteropGetClient(conn)
+                }
 
             val authority = if (port == 443) host else "$host:$port"
             val outcome =

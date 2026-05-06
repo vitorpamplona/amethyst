@@ -31,9 +31,22 @@ import com.vitorpamplona.quic.qpack.QpackDecoder
 import com.vitorpamplona.quic.qpack.QpackEncoder
 import kotlinx.coroutines.flow.collect
 
+/** Common shape for the two interop GET clients (HTTP/3 and HQ-interop). */
+interface GetClient {
+    suspend fun get(
+        authority: String,
+        path: String,
+    ): GetResponse
+}
+
+data class GetResponse(
+    val status: Int,
+    val body: ByteArray,
+)
+
 /**
  * Minimal HTTP/3 GET client used by the interop endpoint to satisfy the
- * `transfer`, `multiplexing`, and `http3` testcases.
+ * `http3` and `multiplexing` testcases.
  *
  * Opens the three required client-side unidirectional streams (control,
  * QPACK encoder, QPACK decoder) per RFC 9114 §6.2.1. Encodes requests with
@@ -45,7 +58,7 @@ import kotlinx.coroutines.flow.collect
  */
 class Http3GetClient(
     private val conn: QuicConnection,
-) {
+) : GetClient {
     suspend fun init() {
         // Control stream: type-0x00 prefix followed by a SETTINGS frame
         // (empty body is legal — RFC 9114 §7.2.4).
@@ -74,10 +87,10 @@ class Http3GetClient(
      * Issue a GET on a fresh bidi stream and return the parsed response.
      * Suspends until the server FINs the response stream.
      */
-    suspend fun get(
+    override suspend fun get(
         authority: String,
         path: String,
-    ): Response {
+    ): GetResponse {
         val stream = conn.openBidiStream()
         stream.send.enqueue(encodeRequest(authority, path))
         stream.send.finish()
@@ -105,13 +118,8 @@ class Http3GetClient(
                 }
             }
         }
-        return Response(status = status, body = concat(body))
+        return GetResponse(status = status, body = concat(body))
     }
-
-    data class Response(
-        val status: Int,
-        val body: ByteArray,
-    )
 }
 
 /**
