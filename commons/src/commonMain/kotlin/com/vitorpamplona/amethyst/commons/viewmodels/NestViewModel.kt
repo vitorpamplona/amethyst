@@ -1177,7 +1177,16 @@ class NestViewModel(
             // the floor — wrap them in a nested try so any cancellation
             // or throw between here and slot.attach releases them
             // (audit round-2 VM #7).
-            val decoder = decoderFactory(channelCount)
+            // Per-subscription decoder factory closure: captures the
+            // catalog-derived [channelCount] so a publisher-boundary
+            // decoder rebuild (see [NestPlayer]'s `decoderFactory`
+            // kdoc) reuses the SAME channel layout — without it, a
+            // rebuild after a cliff-recycle would default to mono and
+            // a stereo publisher would silently downmix on the new
+            // decoder. The factory is also called for the initial
+            // decoder so the construction path is uniform.
+            val perSubscriptionDecoderFactory: () -> OpusDecoder = { decoderFactory(channelCount) }
+            val decoder = perSubscriptionDecoderFactory()
             val player =
                 try {
                     playerFactory(channelCount)
@@ -1195,7 +1204,7 @@ class NestViewModel(
                 val isHushed = pubkey in _uiState.value.locallyHushed
                 val roomPlayer =
                     NestPlayer(
-                        decoder = decoder,
+                        initialDecoder = decoder,
                         player = player,
                         scope = viewModelScope,
                         // ~100 ms of audio buffered before the AudioTrack
@@ -1205,6 +1214,14 @@ class NestViewModel(
                         // tuned in the audio-rooms audit; see NestPlayer
                         // kdoc for details.
                         prerollFrames = ROOM_PLAYER_PREROLL_FRAMES,
+                        // Trigger a decoder rebuild on every publisher
+                        // boundary (re-issuing wrapper spliced in a new
+                        // SUBSCRIBE → trackAlias changes). Without this,
+                        // Opus's predictor state from the prior
+                        // publisher's last frame is fed into the new
+                        // publisher's first frame and produces audible
+                        // warble at every cliff-recycle / hot-swap.
+                        decoderFactory = perSubscriptionDecoderFactory,
                     )
                 // Apply current mute + per-speaker hush state before play()
                 // opens the device so the first frame respects them.

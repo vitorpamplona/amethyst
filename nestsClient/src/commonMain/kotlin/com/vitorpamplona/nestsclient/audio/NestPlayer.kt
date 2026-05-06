@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
  *     decoder. Idempotent.
  */
 class NestPlayer(
-    private val decoder: OpusDecoder,
+    initialDecoder: OpusDecoder,
     private val player: AudioPlayer,
     private val scope: CoroutineScope,
     /**
@@ -61,10 +61,43 @@ class NestPlayer(
      * Default is `0` so existing tests stand without modification.
      */
     private val prerollFrames: Int = 0,
+    /**
+     * Optional factory called on every detected publisher boundary
+     * (track-alias change in the inbound [MoqObject] stream) to mint a
+     * fresh [OpusDecoder]. Used by the listener wrapper's re-issuing
+     * subscription pump
+     * ([com.vitorpamplona.nestsclient.ReconnectingNestsListener.reissuingSubscribe]):
+     * each new SUBSCRIBE through the relay produces objects with a
+     * different `trackAlias`, but they're spliced into the same
+     * `SharedFlow` — without a decoder reset on the boundary, Opus's
+     * predictor state from the prior publisher's last frame is fed
+     * into the new publisher's first frame, producing an audible
+     * warble at every JWT-refresh hot-swap on the speaker side OR
+     * cliff-detector recycle on the listener side.
+     *
+     * Default `null` keeps the legacy behaviour (no boundary
+     * detection, decoder lives for the player's whole lifetime) so
+     * existing tests / callers that don't care about boundaries
+     * stand unchanged. Production callers in
+     * [com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel.openSubscription]
+     * pass a closure that captures the per-subscription channel-count
+     * and rebuilds via `decoderFactory(channelCount)`.
+     */
+    private val decoderFactory: (() -> OpusDecoder)? = null,
 ) {
     init {
         require(prerollFrames >= 0) { "prerollFrames must be >= 0, got $prerollFrames" }
     }
+
+    /**
+     * Active decoder. Replaced on detected publisher boundary when
+     * [decoderFactory] is non-null. `var` so the boundary path can
+     * release + rebuild without changing the rest of the loop's
+     * decoder reference; the `private` confines mutation to this
+     * class, and the decode loop runs single-coroutine so no cross-
+     * thread visibility hazards.
+     */
+    private var decoder: OpusDecoder = initialDecoder
 
     private var job: Job? = null
     private var stopped = false
@@ -157,6 +190,13 @@ class NestPlayer(
                     com.vitorpamplona.quartz.utils.Log
                         .d("NestPlay") { "NestPlayer beginPlayback returned" }
                 }
+                // Track-alias of the most recently observed object.
+                // A change signals a publisher boundary (re-issuing
+                // subscription wrapper spliced in a new SUBSCRIBE).
+                // Only consulted when [decoderFactory] is non-null;
+                // legacy callers without a factory keep the prior
+                // single-decoder behaviour.
+                var lastTrackAlias: Long? = null
                 try {
                     objects.collect { obj ->
                         receivedObjects += 1
@@ -165,6 +205,26 @@ class NestPlayer(
                                 "NestPlayer received obj #$receivedObjects (decoded=$decodedFrames empty=$emptyDecodes enqueued=$enqueued playbackBegun=$playbackBegun)"
                             }
                         }
+                        // Publisher-boundary detection: if the trackAlias
+                        // changed since the last object AND we have a
+                        // factory to mint a fresh decoder, release the
+                        // current decoder + build a new one. Without
+                        // this, Opus's predictor state from the prior
+                        // publisher's last frame is fed into the new
+                        // publisher's first frame, producing audible
+                        // warble at every JWT-refresh hot-swap (speaker
+                        // side) or cliff-detector recycle (listener side).
+                        // The prior-trackAlias guard avoids a spurious
+                        // rebuild on the very first frame.
+                        val factory = decoderFactory
+                        if (factory != null && lastTrackAlias != null && obj.trackAlias != lastTrackAlias) {
+                            com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
+                                "NestPlayer publisher boundary: trackAlias $lastTrackAlias → ${obj.trackAlias}; rebuilding decoder"
+                            }
+                            runCatching { decoder.release() }
+                            decoder = factory()
+                        }
+                        lastTrackAlias = obj.trackAlias
                         val pcm =
                             try {
                                 decoder.decode(obj.payload)

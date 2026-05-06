@@ -232,7 +232,7 @@ class NestPlayerTest {
 
             val sut =
                 NestPlayer(
-                    decoder = decoder,
+                    initialDecoder = decoder,
                     player = player,
                     scope = this,
                     prerollFrames = 3,
@@ -289,7 +289,7 @@ class NestPlayerTest {
 
             val sut =
                 NestPlayer(
-                    decoder = decoder,
+                    initialDecoder = decoder,
                     player = player,
                     scope = this,
                     prerollFrames = 5,
@@ -326,7 +326,7 @@ class NestPlayerTest {
 
             val sut =
                 NestPlayer(
-                    decoder = decoder,
+                    initialDecoder = decoder,
                     player = player,
                     scope = this,
                     prerollFrames = 3,
@@ -340,16 +340,106 @@ class NestPlayerTest {
             sut.stop()
         }
 
+    @Test
+    fun publisher_boundary_rebuilds_decoder_when_factory_provided() =
+        runTest {
+            // Two distinct decoders so we can prove the factory was
+            // invoked. After the trackAlias change, frames should
+            // route through `decoderB`, NOT `decoderA`.
+            val decoderA =
+                FakeOpusDecoder {
+                    byteArrayOf(0x0A) + it
+                    ShortArray(it.size) { _ -> 0xAA.toShort() }
+                }
+            val decoderB =
+                FakeOpusDecoder {
+                    byteArrayOf(0x0B) + it
+                    ShortArray(it.size) { _ -> 0xBB.toShort() }
+                }
+            val factoryCallCount = atomicIntZero()
+            val factory: () -> OpusDecoder = {
+                if (factoryCallCount.getAndIncrement() == 0) decoderA else decoderB
+            }
+            val player = FakeAudioPlayer()
+
+            val objects =
+                flowOf(
+                    // First subscription cycle: trackAlias = 7
+                    moqObject(byteArrayOf(0x01), trackAlias = 7L),
+                    moqObject(byteArrayOf(0x02), trackAlias = 7L),
+                    // Wrapper re-issued — new SUBSCRIBE produces a
+                    // different trackAlias. Decoder MUST be rebuilt
+                    // before the next decode runs.
+                    moqObject(byteArrayOf(0x03), trackAlias = 8L),
+                    moqObject(byteArrayOf(0x04), trackAlias = 8L),
+                )
+
+            val sut =
+                NestPlayer(
+                    initialDecoder = factory(),
+                    player = player,
+                    scope = this,
+                    decoderFactory = factory,
+                )
+            sut.play(objects)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(2, factoryCallCount.value, "factory invoked twice: initial + boundary")
+            assertEquals(1, decoderA.releaseCount, "decoderA released on the boundary")
+            assertEquals(0, decoderB.releaseCount, "decoderB still alive (released on stop)")
+            sut.stop()
+            assertEquals(1, decoderB.releaseCount, "decoderB released on stop")
+        }
+
+    @Test
+    fun publisher_boundary_no_op_when_factory_is_null() =
+        runTest {
+            // Without a factory, NestPlayer keeps the same decoder
+            // across trackAlias changes — backwards-compat path.
+            val decoder = FakeOpusDecoder { byteToShorts(it) }
+            val player = FakeAudioPlayer()
+            val objects =
+                flowOf(
+                    moqObject(byteArrayOf(0x01), trackAlias = 7L),
+                    moqObject(byteArrayOf(0x02), trackAlias = 8L),
+                )
+
+            val sut = NestPlayer(decoder, player, this)
+            sut.play(objects)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(0, decoder.releaseCount, "no boundary-driven release without a factory")
+            sut.stop()
+            assertEquals(1, decoder.releaseCount, "released exactly once on stop")
+        }
+
     // -- helpers -----------------------------------------------------------
 
-    private fun moqObject(payload: ByteArray): MoqObject =
+    private fun moqObject(
+        payload: ByteArray,
+        trackAlias: Long = 1L,
+    ): MoqObject =
         MoqObject(
-            trackAlias = 1,
+            trackAlias = trackAlias,
             groupId = 0,
             objectId = 0,
             publisherPriority = 0x80,
             payload = payload,
         )
+
+    /**
+     * Tiny stand-in for AtomicInteger that's available in commonMain
+     * (kotlin.test scope). Used by the boundary-rebuild test to count
+     * factory invocations across the test scope's coroutine
+     * dispatcher.
+     */
+    private class IntBox {
+        var value: Int = 0
+
+        fun getAndIncrement(): Int = value++
+    }
+
+    private fun atomicIntZero(): IntBox = IntBox()
 
     private fun byteToShorts(b: ByteArray): ShortArray = ShortArray(b.size) { b[it].toShort() }
 
