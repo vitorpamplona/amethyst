@@ -28,21 +28,26 @@ docker: dist
 # Stand up picoquic + our endpoint on a private Docker bridge network. This
 # avoids `--network host`, which on Docker Desktop for Mac is misleadingly
 # *not* the Mac host's network — it's the LinuxKit VM's, and port forwarding
-# trickery makes 127.0.0.1 unreliable. A dedicated bridge with name-based
-# DNS works the same on Mac and Linux.
+# trickery makes 127.0.0.1 unreliable.
+#
+# We pass the resolved IP directly rather than relying on Docker's embedded
+# DNS — the base image (martenseemann/quic-network-simulator-endpoint) ships
+# a /etc/resolv.conf primed for the runner's sim that breaks bridge-network
+# name resolution from the JVM.
 smoke: docker smoke-down
 	docker network create $(SMOKE_NET) >/dev/null 2>&1 || true
 	docker run -d --name $(SMOKE_PICOQUIC) \
 	    --network $(SMOKE_NET) \
 	    privateoctopus/picoquic:latest picoquicdemo -p 4433 >/dev/null
-	@echo "picoquic up on $(SMOKE_PICOQUIC):4433 (in $(SMOKE_NET))"
-	docker run --rm --name $(SMOKE_CLIENT) \
-	    --network $(SMOKE_NET) \
-	    -e SMOKE_MODE=1 \
-	    -e ROLE=client \
-	    -e TESTCASE=handshake \
-	    -e REQUESTS="https://$(SMOKE_PICOQUIC):4433/" \
-	    $(IMAGE)
+	@PICOQUIC_IP=$$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(SMOKE_PICOQUIC)); \
+	    echo "picoquic at $$PICOQUIC_IP:4433 (in $(SMOKE_NET))"; \
+	    docker run --rm --name $(SMOKE_CLIENT) \
+	        --network $(SMOKE_NET) \
+	        -e SMOKE_MODE=1 \
+	        -e ROLE=client \
+	        -e TESTCASE=handshake \
+	        -e REQUESTS="https://$$PICOQUIC_IP:4433/" \
+	        $(IMAGE)
 	@$(MAKE) smoke-down
 
 smoke-down:
