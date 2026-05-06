@@ -24,24 +24,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 
-/**
- * Single-line bodySmall label for a user secondary identifier: shows the
- * verified NIP-05 (formatted via [com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id.toDisplayValue])
- * when present, otherwise a shortened pubkey.
- */
+/** Shows the verified NIP-05 if present, otherwise a shortened pubkey. */
 @Composable
 fun Nip05OrPubkeyLine(user: User) {
     val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
+    val pubkeyShort = remember(user.pubkeyHex) { user.pubkeyDisplayHex() }
 
     val text =
         when (val state = nip05StateMetadata) {
             is Nip05State.Exists -> state.nip05.toDisplayValue()
-            else -> user.pubkeyDisplayHex()
+            is Nip05State.NotFound -> pubkeyShort
         }
 
     Text(
