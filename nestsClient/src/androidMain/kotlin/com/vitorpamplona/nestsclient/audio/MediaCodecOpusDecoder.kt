@@ -46,11 +46,11 @@ import java.nio.ByteOrder
  *     L,R interleaving).
  *   - CSD-1 / CSD-2: pre-skip + seek pre-roll, both zero (we don't seek).
  *
- * Default is [AudioFormat.CHANNELS] (mono) so existing call sites that
- * don't pass a channel count continue to behave exactly as before.
+ * Default is [AudioFormat.DEFAULT_CHANNELS] (mono) so existing call sites
+ * that don't pass a channel count continue to behave exactly as before.
  */
 class MediaCodecOpusDecoder(
-    private val channelCount: Int = AudioFormat.CHANNELS,
+    private val channelCount: Int = AudioFormat.DEFAULT_CHANNELS,
     /**
      * Source sample rate in Hz. Drives the OpusHead `inputSampleRate`
      * field and the MediaFormat `audio/opus` sample-rate hint.

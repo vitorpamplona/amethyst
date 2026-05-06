@@ -103,6 +103,13 @@ suspend fun connectReconnectingNestsSpeaker(
     speakerPubkeyHex: String,
     captureFactory: () -> AudioCapture,
     encoderFactory: () -> OpusEncoder,
+    /**
+     * Per-broadcast audio shape, threaded into [connectNestsSpeaker]
+     * (and therefore into the catalog payload) AND used by the
+     * hot-swap pump's per-session catalog publisher so the wire shape
+     * stays consistent across JWT-refresh recycles. Defaults to mono.
+     */
+    broadcastConfig: AudioBroadcastConfig = AudioBroadcastConfig(),
     policy: NestsReconnectPolicy = NestsReconnectPolicy(),
     /**
      * Proactive JWT refresh window. moq-auth issues bearer tokens
@@ -135,6 +142,7 @@ suspend fun connectReconnectingNestsSpeaker(
             speakerPubkeyHex = speakerPubkeyHex,
             captureFactory = captureFactory,
             encoderFactory = encoderFactory,
+            broadcastConfig = broadcastConfig,
         )
     },
 ): NestsSpeaker {
@@ -292,6 +300,7 @@ suspend fun connectReconnectingNestsSpeaker(
         scope = scope,
         captureFactory = captureFactory,
         encoderFactory = encoderFactory,
+        broadcastConfig = broadcastConfig,
     )
 }
 
@@ -320,6 +329,7 @@ private class ReconnectingSpeakerHandle(
      */
     private val captureFactory: () -> AudioCapture,
     private val encoderFactory: () -> OpusEncoder,
+    private val broadcastConfig: AudioBroadcastConfig,
 ) : NestsSpeaker {
     override val state: StateFlow<NestsSpeakerState> = mutableState.asStateFlow()
 
@@ -350,6 +360,7 @@ private class ReconnectingSpeakerHandle(
                     scope = scope,
                     captureFactory = captureFactory,
                     encoderFactory = encoderFactory,
+                    broadcastConfig = broadcastConfig,
                     onLevel = onLevel,
                     onClose = { closed ->
                         if (activeBroadcast === closed) activeBroadcast = null
@@ -412,6 +423,14 @@ private class ReissuingBroadcastHandle(
     private val scope: CoroutineScope,
     private val captureFactory: () -> AudioCapture,
     private val encoderFactory: () -> OpusEncoder,
+    /**
+     * Per-broadcast audio shape, used to pick the catalog payload the
+     * per-session catalog publisher emits. The shape is constant for
+     * the wrapper's lifetime (we don't renegotiate mid-broadcast), so
+     * caching the payload bytes once on the [opus48kJsonBytes]
+     * memoiser is enough.
+     */
+    private val broadcastConfig: AudioBroadcastConfig,
     /**
      * Forwarded to the underlying broadcaster (hot-swap path) or
      * `sp.startBroadcasting` (legacy path) so the local-speaking ring
@@ -586,7 +605,11 @@ private class ReissuingBroadcastHandle(
         // and any watcher that attaches AFTER the recycle sees nothing
         // to subscribe to. Mirror of [MoqLiteNestsSpeaker.startBroadcasting]'s
         // catalog setup; same JSON, same emit-on-subscribe pattern.
-        val catalogPayload = MoqLiteHangCatalog.OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES
+        val catalogPayload =
+            MoqLiteHangCatalog.opus48kJsonBytes(
+                audioTrackName = MoqLiteNestsListener.AUDIO_TRACK,
+                numberOfChannels = broadcastConfig.channelCount,
+            )
         val priorCatalogPublisher = hotSwapCatalogPublisher
         val newCatalogPublisher =
             try {

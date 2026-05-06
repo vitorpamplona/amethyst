@@ -1074,7 +1074,7 @@ class NestViewModel(
     /**
      * Wait briefly for [pubkey]'s catalog to land in [_speakerCatalogs]
      * and pick the audio config (channel count + sample rate) for the
-     * decoder + AudioTrack. Falls back to [AudioFormat.CHANNELS] /
+     * decoder + AudioTrack. Falls back to [AudioFormat.DEFAULT_CHANNELS] /
      * [AudioFormat.SAMPLE_RATE_HZ] on timeout (the catalog never
      * arrived within [timeoutMs]) or when the catalog declares
      * unsupported values (channelCount outside `1..2`, or non-positive
@@ -1108,7 +1108,7 @@ class NestViewModel(
         val channels =
             when {
                 declaredChannels == null -> {
-                    AudioFormat.CHANNELS
+                    AudioFormat.DEFAULT_CHANNELS
                 }
 
                 declaredChannels !in 1..2 -> {
@@ -1116,7 +1116,7 @@ class NestViewModel(
                         "publisher catalog for pubkey='${pubkey.take(8)}' declares numberOfChannels=$declaredChannels " +
                             "(only 1 / 2 supported); falling back to mono"
                     }
-                    AudioFormat.CHANNELS
+                    AudioFormat.DEFAULT_CHANNELS
                 }
 
                 else -> {

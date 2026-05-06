@@ -61,6 +61,17 @@ class MoqLiteNestsSpeaker internal constructor(
      * Defaults to [NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP].
      */
     private val framesPerGroup: Int = NestMoqLiteBroadcaster.DEFAULT_FRAMES_PER_GROUP,
+    /**
+     * Per-broadcast audio shape (channel count, future bitrate
+     * variants). Threaded into the catalog payload the speaker emits
+     * on the `catalog.json` track, so listeners see the shape the
+     * caller's encoder actually produces. Caller MUST construct the
+     * encoder + capture with a matching channel layout — see
+     * [AudioBroadcastConfig] for the contract. Defaults to mono so
+     * existing call sites that don't pass a config keep the prior
+     * behaviour.
+     */
+    private val broadcastConfig: AudioBroadcastConfig = AudioBroadcastConfig(),
 ) : NestsSpeaker,
     HotSwappablePublisherSource {
     override val state: StateFlow<NestsSpeakerState> = mutableState.asStateFlow()
@@ -157,7 +168,11 @@ class MoqLiteNestsSpeaker internal constructor(
             // practice the relay's SUBSCRIBE bidi takes a network
             // round-trip after our ANNOUNCE Active, so this is safe
             // even though the setter is non-suspending.
-            val catalogJson = MoqLiteHangCatalog.OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES
+            val catalogJson =
+                MoqLiteHangCatalog.opus48kJsonBytes(
+                    audioTrackName = MoqLiteNestsListener.AUDIO_TRACK,
+                    numberOfChannels = broadcastConfig.channelCount,
+                )
             catalogPublisher.setOnNewSubscriber {
                 runCatching {
                     catalogPublisher.send(catalogJson)
