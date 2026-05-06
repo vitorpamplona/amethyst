@@ -107,6 +107,24 @@ internal data class MoqLiteHangCatalog(
             }
 
         /**
+         * Cached canonical-shape catalog JSON bytes for the default
+         * Opus mono 48 kHz audio track ([MoqLiteNestsListener.AUDIO_TRACK]
+         * keyed under `audio.renditions["audio/data"]`). The catalog is
+         * a fixed string for the whole publisher lifetime — caching
+         * avoids re-running kotlinx.serialization on every
+         * [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker.startBroadcasting]
+         * call and every JWT-refresh hot-swap iteration in
+         * [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker].
+         *
+         * Hard-coded to track name `"audio/data"` because that's the
+         * only track Amethyst publishes today; if a future caller
+         * needs a different name, fall back to
+         * [opusMono48k] + [encodeJsonBytes].
+         */
+        val OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES: ByteArray =
+            opusMono48k("audio/data").encodeJsonBytes()
+
+        /**
          * Canonical Amethyst speaker catalog: a single `legacy`-container
          * Opus rendition under [audioTrackName], matching the encoder
          * config in [com.vitorpamplona.nestsclient.audio.OpusEncoder]

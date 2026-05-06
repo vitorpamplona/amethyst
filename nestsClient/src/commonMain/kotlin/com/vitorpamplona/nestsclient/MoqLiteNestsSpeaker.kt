@@ -157,8 +157,7 @@ class MoqLiteNestsSpeaker internal constructor(
             // practice the relay's SUBSCRIBE bidi takes a network
             // round-trip after our ANNOUNCE Active, so this is safe
             // even though the setter is non-suspending.
-            val catalogJson =
-                MoqLiteHangCatalog.opusMono48k(MoqLiteNestsListener.AUDIO_TRACK).encodeJsonBytes()
+            val catalogJson = MoqLiteHangCatalog.OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES
             catalogPublisher.setOnNewSubscriber {
                 runCatching {
                     catalogPublisher.send(catalogJson)

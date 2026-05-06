@@ -586,8 +586,7 @@ private class ReissuingBroadcastHandle(
         // and any watcher that attaches AFTER the recycle sees nothing
         // to subscribe to. Mirror of [MoqLiteNestsSpeaker.startBroadcasting]'s
         // catalog setup; same JSON, same emit-on-subscribe pattern.
-        val catalogPayload =
-            MoqLiteHangCatalog.opusMono48k(MoqLiteNestsListener.AUDIO_TRACK).encodeJsonBytes()
+        val catalogPayload = MoqLiteHangCatalog.OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES
         val priorCatalogPublisher = hotSwapCatalogPublisher
         val newCatalogPublisher =
             try {

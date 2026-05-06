@@ -325,10 +325,23 @@ class NestMoqLiteBroadcaster(
                         // for the production cliff this works around.
                         val sendOutcome =
                             runCatching {
-                                val tsBytes = Varint.encode(timestampUs)
-                                val payload = ByteArray(tsBytes.size + opus.size)
-                                tsBytes.copyInto(payload, 0)
-                                opus.copyInto(payload, tsBytes.size)
+                                // Single-allocation framing: write the
+                                // timestamp varint directly into a buffer
+                                // sized for `varint + opus`, then copy
+                                // the opus bytes after it. The earlier
+                                // shape (`Varint.encode(...) + opus`)
+                                // allocated twice per frame — once for
+                                // the varint ByteArray, once for the
+                                // concatenated payload. At 50 fps × N
+                                // speakers this is measurable young-gen
+                                // pressure on the audio hot path; the
+                                // mirror optimisation already lives in
+                                // `PublisherStateImpl.send` for the
+                                // outer size-prefix wrap.
+                                val tsLen = Varint.size(timestampUs)
+                                val payload = ByteArray(tsLen + opus.size)
+                                Varint.writeTo(timestampUs, payload, 0)
+                                opus.copyInto(payload, tsLen)
                                 val accepted = current.send(payload)
                                 framesInCurrentGroup += 1
                                 if (framesInCurrentGroup >= framesPerGroup) {
