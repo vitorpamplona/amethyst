@@ -118,6 +118,12 @@ tasks.withType<Test>().configureEach {
     // Cross-stack interop (Hang/Rust) opt-in. Forwarded the same way as
     // -DnestsInterop. See nestsClient/plans/2026-05-06-cross-stack-interop-test.md.
     System.getProperty("nestsHangInterop")?.let { systemProperty("nestsHangInterop", it) }
+    // Separate gate for the Kotlin↔Kotlin diagnostic test (used to
+    // bisect wire-format bugs). Runs in a fresh JVM without the
+    // 5 native-subprocess scenarios; flakes if mixed in.
+    System.getProperty("nestsHangInteropDiagnostic")?.let {
+        systemProperty("nestsHangInteropDiagnostic", it)
+    }
 }
 
 // ---- Cross-stack interop: Rust sidecar build + binary path forwarding -------

@@ -57,6 +57,15 @@ struct Args {
     /// If absent, the binary discards PCM (used as a smoke test).
     #[arg(long)]
     output_pcm: Option<String>,
+
+    /// Dump the first audio frame's raw bytes (the post-Hang::Legacy
+    /// payload — already stripped of the moq-lite frame size prefix
+    /// but NOT the hang VarInt timestamp prefix) to this path. Used
+    /// by I11 to assert the publisher isn't shipping
+    /// `OpusHead\\1\\1...` Codec-Specific-Data as the first audio
+    /// frame (the T8 regression in the audit branch).
+    #[arg(long)]
+    dump_first_frame: Option<String>,
 }
 
 #[tokio::main]
@@ -116,7 +125,13 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
     });
 
-    let listen_result = listen(consumer, args.output_pcm.as_deref(), args.duration).await;
+    let listen_result = listen(
+        consumer,
+        args.output_pcm.as_deref(),
+        args.dump_first_frame.as_deref(),
+        args.duration,
+    )
+    .await;
 
     // The session task will exit on its own when the URL closes; we
     // don't need to abort it for a clean shutdown.
@@ -128,6 +143,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
 async fn listen(
     mut origin: moq_lite::OriginConsumer,
     output_pcm: Option<&str>,
+    output_dump_first_frame: Option<&str>,
     duration_sec: u64,
 ) -> anyhow::Result<()> {
     // Open the PCM sink up front so we fail fast on a bad path.
@@ -202,6 +218,7 @@ async fn listen(
         opus::Decoder::new(audio_cfg.sample_rate, channels).context("init opus decoder")?;
     let mut pcm_buf = vec![0i16; MAX_PCM_PER_PACKET * audio_cfg.channel_count as usize];
 
+    let dump_first_frame_path = output_dump_first_frame.map(PathBuf::from);
     let deadline = tokio::time::Instant::now() + Duration::from_secs(duration_sec);
     let mut total_samples: u64 = 0;
     let mut frame_count: u64 = 0;
@@ -236,6 +253,18 @@ async fn listen(
                 break;
             }
         };
+
+        // First-frame capture for I11. payload is the post-
+        // Container::Legacy-strip codec payload (i.e. the raw
+        // Opus packet, no timestamp prefix). If the publisher
+        // accidentally ships `OpusHead\1\1...` Codec-Specific-Data
+        // as the first audio frame, this is where it shows up.
+        if frame_count == 0 {
+            if let Some(path) = dump_first_frame_path.as_ref() {
+                std::fs::write(path, frame.payload.as_ref())
+                    .with_context(|| format!("write dump-first-frame to '{}'", path.display()))?;
+            }
+        }
 
         // payload is the raw Opus packet — the timestamp varint has
         // already been stripped by `Hang::Legacy` decoding.

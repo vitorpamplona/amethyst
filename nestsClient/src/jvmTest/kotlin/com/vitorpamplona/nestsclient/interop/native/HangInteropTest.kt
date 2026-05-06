@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -45,27 +46,34 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
  * Cross-stack interop scenarios driving the reference `kixelated/moq`
- * `hang-publish` and `hang-listen` Rust binaries through
- * [NativeMoqRelayHarness] (i.e. through the same `moq-relay`
- * subprocess Amethyst tests use).
+ * `hang-listen` Rust binary against an Amethyst Kotlin speaker
+ * through [NativeMoqRelayHarness].
  *
- * Phase 2 ships:
- *   - **I1 forward**: Amethyst Kotlin speaker → `hang-listen`. The
- *     speaker pins `framesPerGroup = 5` (per the cliff-investigation
- *     plan); larger groups overflow moq-relay 0.10.x's per-subscriber
- *     buffer and the relay holds frame bytes without forwarding.
- *     Diagnosed via the companion
- *     [KotlinSpeakerKotlinListenerThroughNativeRelayTest] which
- *     reproduces the same cliff Kotlin↔Kotlin.
- *   - **Rust↔Rust** round-trip: pure-Rust through our harness, proves
- *     the cargo workspace + relay config + `moq-lite-03` ALPN.
+ * **Phase 2 P0 scenarios:**
+ *   - **I1** — sine-wave round-trip ([amethyst_speaker_to_hang_listener_static_tone_440]).
+ *   - **I11** — wire-byte capture: assert the first audio frame
+ *     payload isn't `OpusHead\1\1...` Codec-Specific-Data
+ *     ([first_audio_frame_is_not_opus_codec_config]).
+ *   - **I2** — late-join: listener attaches at T+2 s of a 5 s
+ *     broadcast, still receives ~3 s of decoded audio
+ *     ([late_join_listener_still_decodes_tail]).
+ *   - **I3** — mute-window: speaker mutes for 1 s mid-broadcast,
+ *     listener observes a corresponding silence window
+ *     ([mid_broadcast_mute_produces_silence_window]).
+ *   - **Rust↔Rust** round-trip: pure-Rust through our harness
+ *     ([rust_hang_publish_to_rust_hang_listener_round_trip_440]).
  *
- * Both scenarios assert FFT peak / ZCR / sample-count on the decoded
- * Float32 PCM hang-listen wrote to disk. Gated by `-DnestsHangInterop=true`.
+ * All scenarios pin the Kotlin speaker at `framesPerGroup = 5`
+ * to stay under the moq-relay 0.10.x per-subscriber forward
+ * cliff (see
+ * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`).
+ *
+ * Gated by `-DnestsHangInterop=true`.
  */
 class HangInteropTest {
     @BeforeTest
@@ -73,107 +81,20 @@ class HangInteropTest {
         NativeMoqRelayHarness.assumeHangInterop()
     }
 
-    /**
-     * I1 — Amethyst Kotlin speaker → reference `hang-listen`. The
-     * speaker uses 5 frames per moq-lite group; the relay's per-
-     * subscriber forward queue keeps up at that cadence (per
-     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`).
-     * Asserts FFT peak at 440 Hz and ZCR at 880/sec on the decoded
-     * PCM hang-listen wrote to disk.
-     */
+    /** I1: 5 s 440 Hz mono sine, asserted via FFT peak + ZCR. */
     @Test
     fun amethyst_speaker_to_hang_listener_static_tone_440() =
         runBlocking {
-            val harness = NativeMoqRelayHarness.shared()
-
-            val signer: NostrSigner = NostrSignerInternal(KeyPair())
-            val pubkey = signer.pubKey
-            val roomId = "rt-${UUID.randomUUID()}"
-            val room =
-                NestsRoomConfig(
-                    authBaseUrl = "<unused-public-relay>",
-                    endpoint = harness.relayUrl,
-                    hostPubkey = pubkey,
-                    roomId = roomId,
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 5,
+                    captureFirstFrame = false,
                 )
-            val moqNamespace = room.moqNamespace()
-
-            val pcmFile = File.createTempFile("hang-listen-pcm", ".bin").also { it.deleteOnExit() }
-
-            val pumpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-            val transport =
-                QuicWebTransportFactory(
-                    certificateValidator = PermissiveCertificateValidator(),
-                )
-
-            // Sequence: speaker fully up → spawn hang-listen.
-            // Catches the `setOnNewSubscriber` race in
-            // MoqLiteNestsSpeaker — the catalog hook is set AFTER
-            // session.publish() returns, so a subscriber that races
-            // in faster registers with hook=null and never gets the
-            // catalog. Letting the hook install before hang-listen
-            // attaches sidesteps this for the test.
-            lateinit var listenProc: Process
-            try {
-                val speaker =
-                    connectNestsSpeaker(
-                        httpClient = StaticTokenNestsClient,
-                        transport = transport,
-                        scope = pumpScope,
-                        room = room,
-                        signer = signer,
-                        speakerPubkeyHex = pubkey,
-                        captureFactory = { SineWaveAudioCapture(freqHz = 440) },
-                        encoderFactory = { JvmOpusEncoder() },
-                        // Per cliff-investigation plan: 5 frames/group
-                        // = 10 streams/sec, comfortably within
-                        // moq-relay 0.10's per-subscriber forward
-                        // ceiling. The repo's current
-                        // `DEFAULT_FRAMES_PER_GROUP=50` exceeds the
-                        // moq-relay 0.10.x stream-data buffer for a
-                        // single uni stream and the audio frames
-                        // never reach downstream subscribers.
-                        framesPerGroup = 5,
-                    )
-                val handle = speaker.startBroadcasting()
-                delay(150)
-
-                listenProc =
-                    ProcessBuilder(
-                        harness.hangListenBin().toString(),
-                        "--relay-url",
-                        harness.relayUrl,
-                        "--broadcast",
-                        moqNamespace,
-                        "--duration",
-                        "6",
-                        "--output-pcm",
-                        pcmFile.absolutePath,
-                    ).redirectErrorStream(true)
-                        .also { it.environment()["RUST_LOG"] = "info" }
-                        .start()
-
-                delay(5_000)
-                handle.close()
-                speaker.close()
-            } finally {
-                pumpScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
-            }
-
-            val exited = listenProc.waitFor(15, TimeUnit.SECONDS)
-            val output = listenProc.inputStream.bufferedReader().readText()
-            assertTrue(exited, "hang-listen did not exit within 15 s. Output:\n$output")
-            assertEquals(
-                0,
-                listenProc.exitValue(),
-                "hang-listen exited non-zero. Output:\n$output",
-            )
-
-            val pcm = readFloat32Pcm(pcmFile)
+            val pcm = readFloat32Pcm(out.pcmFile)
             PcmAssertions.assertSampleCount(pcm, expectedDurationSec = 5.0, tolerance = 0.20)
             // Skip first 40 ms — Opus look-ahead silence.
-            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 25
-            val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
+            val warmup = AudioFormat.SAMPLE_RATE_HZ / 25
+            val analysed = pcm.copyOfRange(warmup, pcm.size)
             PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
             PcmAssertions.assertZeroCrossingRate(
                 analysed,
@@ -183,10 +104,121 @@ class HangInteropTest {
         }
 
     /**
-     * Drive the Rust `hang-publish` and `hang-listen` binaries
-     * through our harness's `moq-relay` subprocess. End-to-end:
-     * 5 s of 440 Hz mono Opus → 880 zero-crossings/sec, FFT peak
-     * at 440 Hz, ~5 s of decoded PCM in the temp file.
+     * I11: assert the first audio frame's payload isn't
+     * `OpusHead\1\1...` codec-config bytes.
+     *
+     * Catches the T8 regression where Android's
+     * `MediaCodecOpusEncoder` would emit OPUS_INITIAL_OUTPUT
+     * config-data as the first uni-stream frame; downstream watchers
+     * (hang.js, our `JvmOpusDecoder`) decode that to a few ms of
+     * white-noise click before catching up. The fix in T8 filters
+     * BUFFER_FLAG_CODEC_CONFIG before the publisher pushes; this
+     * test is the cross-stack regression.
+     *
+     * The hang-listen `--dump-first-frame` flag writes the
+     * post-Container-Legacy-strip codec payload (i.e. the bytes the
+     * Opus decoder will be fed) to a file. We assert the leading
+     * bytes aren't the literal `OpusHead` magic.
+     */
+    @Test
+    fun first_audio_frame_is_not_opus_codec_config() =
+        runBlocking {
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 2,
+                    captureFirstFrame = true,
+                )
+            val firstFrame = out.firstFrameFile?.readBytes()
+            checkNotNull(firstFrame) { "hang-listen --dump-first-frame produced no file" }
+            assertTrue(
+                firstFrame.size >= 8,
+                "first frame is suspiciously short (${firstFrame.size} bytes); " +
+                    "expected an Opus packet",
+            )
+            val opusHeadMagic = "OpusHead".encodeToByteArray()
+            val startsWithOpusHead =
+                firstFrame.size >= opusHeadMagic.size &&
+                    opusHeadMagic.indices.all { firstFrame[it] == opusHeadMagic[it] }
+            assertFalse(
+                startsWithOpusHead,
+                "first audio frame begins with `OpusHead` magic (${firstFrame.take(16)} → " +
+                    "byte 0x${firstFrame[0].toUByte().toString(16)})—the speaker is " +
+                    "leaking codec-specific-data as a regular audio frame.",
+            )
+        }
+
+    /**
+     * I2 — late-join: listener attaches 2 s into a 5 s broadcast
+     * and still gets ~3 s of decoded audio. Asserts the 440 Hz
+     * tone is still recoverable from whatever segment the listener
+     * captured (so a future bug that cancels the broadcast on
+     * subscriber-after-start is caught).
+     */
+    @Test
+    fun late_join_listener_still_decodes_tail() =
+        runBlocking {
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 5,
+                    listenerLateJoinDelayMs = 2_000,
+                    captureFirstFrame = false,
+                )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            // Late-join pulls only the post-T+2 portion of the
+            // broadcast — expect 1.5–4 s of decoded audio.
+            assertTrue(
+                pcm.size >= AudioFormat.SAMPLE_RATE_HZ * 3 / 2,
+                "late-join listener decoded only ${pcm.size} samples — " +
+                    "expected at least 1.5 s of audio after the late-join window",
+            )
+            val warmup = AudioFormat.SAMPLE_RATE_HZ / 25
+            val analysed = pcm.copyOfRange(warmup, pcm.size)
+            PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
+        }
+
+    /**
+     * I3 — mute window: speaker mutes for 1 s mid-broadcast. The
+     * Amethyst broadcaster doesn't push Opus frames while muted
+     * (it FINs the open uni stream so web watchers don't park on
+     * `await readFrame`), so the decoded PCM ends up ~1 s shorter
+     * than the wallclock broadcast — the mute gap manifests as a
+     * sample-count deficit, not as embedded silence samples.
+     *
+     * The test asserts the deficit is in the right ballpark (so a
+     * regression that, e.g., kept pushing zeros instead of FINning
+     * would be caught — that'd produce a normal-length PCM with
+     * zero RMS in the middle, NOT a short PCM).
+     */
+    @Test
+    fun mid_broadcast_mute_shortens_decoded_pcm() =
+        runBlocking {
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 4,
+                    muteWindowMs = 1_000L..2_000L,
+                    captureFirstFrame = false,
+                )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            val durationSec = pcm.size.toDouble() / AudioFormat.SAMPLE_RATE_HZ
+            // Wallclock 4 s minus 1 s mute = ~3 s. Allow ±0.5 s
+            // for Opus look-ahead, group buffering, and the fact
+            // that hang-listen's consumer skips groups older than
+            // its 500 ms latency budget.
+            assertTrue(
+                durationSec in 2.5..3.5,
+                "expected 2.5–3.5 s of decoded PCM (4 s broadcast − 1 s mute), " +
+                    "got ${"%.2f".format(durationSec)} s",
+            )
+            // Sanity: the unmuted halves still carry a 440 Hz tone.
+            val warmup = AudioFormat.SAMPLE_RATE_HZ / 25
+            val analysed = pcm.copyOfRange(warmup, pcm.size)
+            PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
+        }
+
+    /**
+     * Rust↔Rust round-trip: pure-Rust through our harness.
+     * Validates the cargo workspace + relay config + `moq-lite-03`
+     * ALPN end-to-end without any Kotlin in the loop.
      */
     @Test
     fun rust_hang_publish_to_rust_hang_listener_round_trip_440() {
@@ -210,9 +242,6 @@ class HangInteropTest {
             ).redirectErrorStream(true)
                 .also { it.environment()["RUST_LOG"] = "info" }
                 .start()
-        // Tiny breathing room so the publisher's ANNOUNCE Active
-        // has propagated to the relay before the listener's
-        // OriginConsumer.announced() returns.
         Thread.sleep(300)
         val listenProc =
             ProcessBuilder(
@@ -239,14 +268,9 @@ class HangInteropTest {
         assertEquals(0, listenProc.exitValue(), "hang-listen exited non-zero. Output:\n$listenOut")
 
         val pcm = readFloat32Pcm(pcmFile)
-        // hang-publish ran for 5 s @ 50 fps mono Opus. With Opus
-        // look-ahead + relay buffering + listener's per-group
-        // catch-up window, expect 4.5–5.0 s of decoded audio.
         PcmAssertions.assertSampleCount(pcm, expectedDurationSec = 5.0, tolerance = 0.20)
-        // Skip the first 40 ms so the FFT window doesn't include
-        // Opus's silence-prefilled look-ahead.
-        val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 25
-        val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
+        val warmup = AudioFormat.SAMPLE_RATE_HZ / 25
+        val analysed = pcm.copyOfRange(warmup, pcm.size)
         PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
         PcmAssertions.assertZeroCrossingRate(
             analysed,
@@ -254,6 +278,145 @@ class HangInteropTest {
             tolerance = 0.05,
         )
     }
+}
+
+/**
+ * Container for files [runSpeakerToHangListen] hands back to the test.
+ */
+private class HangListenOutput(
+    val pcmFile: File,
+    val firstFrameFile: File?,
+)
+
+/**
+ * Run the Kotlin speaker for [speakerSeconds] seconds, drive a
+ * [hang-listen] subprocess to capture decoded PCM, optionally
+ * applying mute / late-join / first-frame-dump tweaks. Returns
+ * the captured files to the caller for assertion.
+ *
+ *   - [listenerLateJoinDelayMs]: spawn `hang-listen` after this
+ *     many ms of broadcast (default 150 ms — just enough for the
+ *     speaker's announce to reach the relay before the
+ *     subscriber connects, sidesteps the catalog-hook race in
+ *     `MoqLiteNestsSpeaker`).
+ *   - [muteWindowMs]: if non-null, mute the speaker for this
+ *     [start, end] window (in ms relative to broadcast start).
+ *   - [captureFirstFrame]: if true, pass `--dump-first-frame
+ *     <path>` so the test can read the first frame's raw bytes.
+ */
+private suspend fun runSpeakerToHangListen(
+    speakerSeconds: Int,
+    listenerLateJoinDelayMs: Long = 150L,
+    muteWindowMs: ClosedRange<Long>? = null,
+    captureFirstFrame: Boolean,
+): HangListenOutput {
+    val harness = NativeMoqRelayHarness.shared()
+
+    val signer: NostrSigner = NostrSignerInternal(KeyPair())
+    val pubkey = signer.pubKey
+    val room =
+        NestsRoomConfig(
+            authBaseUrl = "<unused-public-relay>",
+            endpoint = harness.relayUrl,
+            hostPubkey = pubkey,
+            roomId = "rt-${UUID.randomUUID()}",
+        )
+    val moqNamespace = room.moqNamespace()
+
+    val pcmFile =
+        File.createTempFile("hang-listen-pcm", ".bin").also { it.deleteOnExit() }
+    val firstFrameFile =
+        if (captureFirstFrame) {
+            File.createTempFile("hang-listen-first-frame", ".bin").also { it.deleteOnExit() }
+        } else {
+            null
+        }
+
+    val pumpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val transport =
+        QuicWebTransportFactory(
+            // Pin the transport's coroutine scope to the per-test
+            // pumpScope so cancelling pumpScope in `finally` also
+            // tears down the transport's UDP socket + QuicConnection
+            // pumps. Without this, each scenario leaks a UDP socket
+            // and a coroutine tree, and KotlinSpeakerKotlinListenerThroughNativeRelayTest
+            // (which runs last in the alphabetical order) flakes
+            // under the accumulated relay load.
+            parentScope = pumpScope,
+            certificateValidator = PermissiveCertificateValidator(),
+        )
+
+    lateinit var listenProc: Process
+    try {
+        val speaker =
+            connectNestsSpeaker(
+                httpClient = StaticTokenNestsClient,
+                transport = transport,
+                scope = pumpScope,
+                room = room,
+                signer = signer,
+                speakerPubkeyHex = pubkey,
+                captureFactory = { SineWaveAudioCapture(freqHz = 440) },
+                encoderFactory = { JvmOpusEncoder() },
+                framesPerGroup = 5,
+            )
+        val handle = speaker.startBroadcasting()
+        delay(listenerLateJoinDelayMs)
+
+        val cmd =
+            mutableListOf(
+                harness.hangListenBin().toString(),
+                "--relay-url",
+                harness.relayUrl,
+                "--broadcast",
+                moqNamespace,
+                "--duration",
+                "${speakerSeconds + 2}",
+                "--output-pcm",
+                pcmFile.absolutePath,
+            )
+        firstFrameFile?.let {
+            cmd += listOf("--dump-first-frame", it.absolutePath)
+        }
+        listenProc =
+            ProcessBuilder(cmd)
+                .redirectErrorStream(true)
+                .also { it.environment()["RUST_LOG"] = "info" }
+                .start()
+
+        if (muteWindowMs != null) {
+            val muteStart = muteWindowMs.start
+            val muteEnd = muteWindowMs.endInclusive
+            // listenerLateJoinDelayMs has already been waited
+            // before this point. Subtract it so the mute schedule
+            // is anchored to broadcast start.
+            val toMute = (muteStart - listenerLateJoinDelayMs).coerceAtLeast(0)
+            val toUnmute = muteEnd - muteStart
+            val toEnd = speakerSeconds * 1_000L - muteEnd
+
+            delay(toMute)
+            handle.setMuted(true)
+            delay(toUnmute)
+            handle.setMuted(false)
+            delay(toEnd)
+        } else {
+            delay(speakerSeconds * 1_000L - listenerLateJoinDelayMs)
+        }
+        handle.close()
+        speaker.close()
+    } finally {
+        pumpScope.coroutineContext[Job]?.cancel()
+    }
+
+    val exited = listenProc.waitFor(15, TimeUnit.SECONDS)
+    val output = listenProc.inputStream.bufferedReader().readText()
+    assertTrue(exited, "hang-listen did not exit within 15 s. Output:\n$output")
+    assertEquals(
+        0,
+        listenProc.exitValue(),
+        "hang-listen exited non-zero. Output:\n$output",
+    )
+    return HangListenOutput(pcmFile = pcmFile, firstFrameFile = firstFrameFile)
 }
 
 /**

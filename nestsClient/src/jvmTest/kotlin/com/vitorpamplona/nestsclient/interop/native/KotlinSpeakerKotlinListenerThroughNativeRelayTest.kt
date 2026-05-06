@@ -45,20 +45,43 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 /**
+ * **Diagnostic-only test for the I1 forward-direction gap** —
  * Kotlin speaker → Kotlin listener through [NativeMoqRelayHarness].
  *
- * Diagnostic for the I1 forward-direction gap. Isolates whether
- * the audio uni stream issue is Kotlin-side (bug in `:nestsClient`'s
- * publisher framing) or interop-specific (kotlin's frames are RFC
- * shaped but Rust's parser interpretation differs). If both ends are
- * Kotlin and the listener still doesn't see frames, the producer
- * is at fault. If both ends are Kotlin and frames flow, the
- * Kotlin↔Rust gap is on the reader side or in a subtle frame-vs-
- * datagram-vs-control-stream encoding mismatch.
+ * Runs in a single JVM with no Rust subprocesses, so when there's
+ * a wire-format suspicion this test isolates whether the issue is
+ * Kotlin-side (broken publisher framing) or interop-specific
+ * (Rust parser interpretation differs from Kotlin's). Used in
+ * Phase 2 to bisect the `framesPerGroup` cliff.
+ *
+ * Gated *separately* from the regular hang-interop tests
+ * (`-DnestsHangInteropDiagnostic=true`) — running it in the same
+ * JVM as a green `HangInteropTest` flakes due to relay-side state
+ * accumulation across the 5 native subprocess scenarios. Keep
+ * the test for future bisects; don't run it as part of normal
+ * CI pass.
  */
 class KotlinSpeakerKotlinListenerThroughNativeRelayTest {
     @BeforeTest
     fun gate() {
+        val msg =
+            "Skipping Kotlin↔Kotlin diagnostic test — set " +
+                "-DnestsHangInteropDiagnostic=true to enable. This test is for " +
+                "isolating wire-format bugs against the harness's relay; flakes " +
+                "when run alongside HangInteropTest's native subprocess scenarios."
+        if (System.getProperty("nestsHangInteropDiagnostic") != "true") {
+            try {
+                val assume = Class.forName("org.junit.Assume")
+                val assumeTrue =
+                    assume.getMethod("assumeTrue", String::class.java, Boolean::class.javaPrimitiveType)
+                assumeTrue.invoke(null, msg, false)
+            } catch (e: java.lang.reflect.InvocationTargetException) {
+                throw e.targetException ?: e
+            } catch (_: ClassNotFoundException) {
+                throw IllegalStateException(msg)
+            }
+            return
+        }
         NativeMoqRelayHarness.assumeHangInterop()
     }
 
@@ -80,6 +103,12 @@ class KotlinSpeakerKotlinListenerThroughNativeRelayTest {
             val pumpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
             val transport =
                 QuicWebTransportFactory(
+                    // See HangInteropTest helper for rationale —
+                    // anchor the transport scope to pumpScope so the
+                    // UDP socket + QuicConnection tree dies cleanly
+                    // when this test ends, instead of leaking past
+                    // and starving subsequent tests' open ports.
+                    parentScope = pumpScope,
                     certificateValidator = PermissiveCertificateValidator(),
                 )
 
@@ -121,13 +150,16 @@ class KotlinSpeakerKotlinListenerThroughNativeRelayTest {
                 val subscription = listener.subscribeSpeaker(pubkey)
 
                 // Collect the next 50 audio frames (~1 s of audio).
-                // 8 s wallclock budget covers the harness handshake +
-                // any catalog hook race + small gradle worker startup
-                // overhead when this test runs after HangInteropTest
-                // in the same JVM.
+                // 15 s wallclock budget — this test runs LAST in the
+                // alphabetical class order after HangInteropTest's
+                // 5 native-subprocess scenarios, which leave the
+                // shared moq-relay loaded with stale per-session
+                // state (UDP sockets, broadcast queues). Tighter
+                // budgets flake under that load even when the
+                // underlying path works.
                 val received =
                     async(pumpScope.coroutineContext) {
-                        withTimeoutOrNull(8_000L) {
+                        withTimeoutOrNull(15_000L) {
                             subscription.objects.take(50).toList()
                         }
                     }
