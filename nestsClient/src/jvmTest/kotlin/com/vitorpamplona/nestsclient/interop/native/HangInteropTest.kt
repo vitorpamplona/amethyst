@@ -28,6 +28,7 @@ import com.vitorpamplona.nestsclient.audio.PcmAssertions
 import com.vitorpamplona.nestsclient.audio.SineWaveAudioCapture
 import com.vitorpamplona.nestsclient.buildRelayConnectTarget
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
+import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSubscribeException
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
@@ -385,6 +386,88 @@ class HangInteropTest {
         }
 
     /**
+     * I9 — 1% packet loss via the `udp-loss-shim` between the
+     * Kotlin speaker's UDP socket and the relay. Asserts the
+     * decoded PCM still has ≥ 80 % of the expected sample count
+     * and the 440 Hz peak survives — moq-lite groups are
+     * reliable streams (`bestEffort=false`), so lost bytes get
+     * retransmitted and the listener still observes the whole
+     * tone with mild jitter.
+     */
+    @Test
+    fun packet_loss_1pct_does_not_kill_audio() =
+        runBlocking {
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 5,
+                    captureFirstFrame = false,
+                    udpLossRate = 0.01f,
+                )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            val expected = 5.0 * AudioFormat.SAMPLE_RATE_HZ
+            assertTrue(
+                pcm.size >= expected * 0.80,
+                "expected ≥ 80% of $expected samples under 1% packet loss, " +
+                    "got ${pcm.size} (${"%.1f".format(pcm.size / expected * 100)} %)",
+            )
+            val warmup = AudioFormat.SAMPLE_RATE_HZ / 25
+            val analysed = pcm.copyOfRange(warmup, pcm.size)
+            PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
+        }
+
+    /**
+     * I5 — speaker hot-swap mid-broadcast (proactive JWT refresh).
+     * Drives `connectReconnectingNestsSpeaker` with a 2.5 s
+     * `tokenRefreshAfterMs` so the speaker recycles its session
+     * mid-broadcast.
+     *
+     * **Limitation:** the reference `hang-listen` is single-shot
+     * — it reads the catalog once and subscribes once. When the
+     * speaker hot-swaps, the relay unannounces the old broadcast
+     * and announces a new one; hang-listen's audio subscription
+     * dies and it doesn't re-subscribe. So the listener captures
+     * only the pre-hot-swap chunk (~2.5 s of 5 s).
+     *
+     * The Amethyst production listener handles re-announce
+     * transparently (`ReconnectingNestsListener.kt`), so the
+     * "no audio gap" assertion the spec calls for is a property
+     * of the Amethyst path, not the hang-listen path. This test
+     * therefore asserts only:
+     *
+     *   - the speaker survives the hot-swap (no crash, got some
+     *     audio),
+     *   - the FFT peak on the captured pre-swap chunk is still
+     *     at 440 Hz (the swap doesn't corrupt active uni
+     *     streams).
+     *
+     * The "no audible gap" assertion belongs to a Phase 3
+     * follow-up that exercises this scenario through the
+     * Amethyst Kotlin LISTENER instead of `hang-listen`.
+     */
+    @Test
+    fun speaker_hot_swap_does_not_crash() =
+        runBlocking {
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 5,
+                    captureFirstFrame = false,
+                    hotSwapAfterMs = 2_500L,
+                )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            // Got SOMETHING (≥ 1 s of audio) — speaker didn't
+            // crash on the hot-swap.
+            assertTrue(
+                pcm.size >= AudioFormat.SAMPLE_RATE_HZ,
+                "expected ≥ 1 s of audio across the hot-swap, got ${pcm.size} samples",
+            )
+            // The captured chunk's tone is still 440 Hz —
+            // spectral integrity intact.
+            val warmup = AudioFormat.SAMPLE_RATE_HZ / 25
+            val analysed = pcm.copyOfRange(warmup, pcm.size)
+            PcmAssertions.assertFftPeak(analysed, expectedHz = 440.0, halfWindowHz = 5.0)
+        }
+
+    /**
      * Rust↔Rust round-trip: pure-Rust through our harness.
      * Validates the cargo workspace + relay config + `moq-lite-03`
      * ALPN end-to-end without any Kotlin in the loop.
@@ -478,15 +561,67 @@ private suspend fun runSpeakerToHangListen(
     listenerLateJoinDelayMs: Long = 150L,
     muteWindowMs: ClosedRange<Long>? = null,
     captureFirstFrame: Boolean,
+    /**
+     * If non-null, route the Kotlin speaker's UDP through a
+     * `udp-loss-shim` subprocess that drops this fraction of
+     * datagrams (0.0..=1.0). The shim listens on a fresh
+     * ephemeral port and forwards to the harness's relay; the
+     * speaker's `endpoint` is rewritten to the shim port. The
+     * hang-listen subprocess still connects directly to the
+     * relay (no loss), so any frame deficit is attributable to
+     * the speaker→relay leg.
+     */
+    udpLossRate: Float? = null,
+    /**
+     * If non-null, drive the speaker through
+     * `connectReconnectingNestsSpeaker` with this
+     * `tokenRefreshAfterMs`, forcing a session recycle (hot-swap)
+     * mid-broadcast. Default uses the simple non-reconnecting
+     * speaker — the I1/I2/I3/I8/I10/I11 scenarios don't need
+     * the reconnect orchestrator.
+     */
+    hotSwapAfterMs: Long? = null,
 ): HangListenOutput {
     val harness = NativeMoqRelayHarness.shared()
 
     val signer: NostrSigner = NostrSignerInternal(KeyPair())
     val pubkey = signer.pubKey
+
+    // If a loss rate is requested, spin up a udp-loss-shim
+    // between the speaker and the relay. The speaker connects
+    // through the shim (lossy); hang-listen still connects to
+    // the relay directly so any frame deficit is attributable
+    // to the lossy leg.
+    val (relayHostForSpeaker, relayPortForSpeaker, lossShimProc) =
+        if (udpLossRate != null) {
+            val shimPort = java.net.ServerSocket(0).use { it.localPort }
+            val (relayHost, relayPort) = harness.loopbackHostPort()
+            val proc =
+                ProcessBuilder(
+                    harness.udpLossShimBin().toString(),
+                    "--listen",
+                    "127.0.0.1:$shimPort",
+                    "--upstream",
+                    "$relayHost:$relayPort",
+                    "--loss-rate",
+                    udpLossRate.toString(),
+                ).redirectErrorStream(true)
+                    .also { it.environment()["RUST_LOG"] = "info" }
+                    .start()
+            // Tiny breathing room for the shim's listen socket
+            // to bind before the speaker's QUIC handshake hits.
+            Thread.sleep(200)
+            Triple("127.0.0.1", shimPort, proc)
+        } else {
+            val (h, p) = harness.loopbackHostPort()
+            Triple(h, p, null)
+        }
+    val speakerEndpoint = "https://$relayHostForSpeaker:$relayPortForSpeaker"
+
     val room =
         NestsRoomConfig(
             authBaseUrl = "<unused-public-relay>",
-            endpoint = harness.relayUrl,
+            endpoint = speakerEndpoint,
             hostPubkey = pubkey,
             roomId = "rt-${UUID.randomUUID()}",
         )
@@ -518,17 +653,44 @@ private suspend fun runSpeakerToHangListen(
     lateinit var listenProc: Process
     try {
         val speaker =
-            connectNestsSpeaker(
-                httpClient = StaticTokenNestsClient,
-                transport = transport,
-                scope = pumpScope,
-                room = room,
-                signer = signer,
-                speakerPubkeyHex = pubkey,
-                captureFactory = { SineWaveAudioCapture(freqHz = 440) },
-                encoderFactory = { JvmOpusEncoder() },
-                framesPerGroup = 5,
-            )
+            if (hotSwapAfterMs != null) {
+                connectReconnectingNestsSpeaker(
+                    httpClient = StaticTokenNestsClient,
+                    transport = transport,
+                    scope = pumpScope,
+                    room = room,
+                    signer = signer,
+                    speakerPubkeyHex = pubkey,
+                    captureFactory = { SineWaveAudioCapture(freqHz = 440) },
+                    encoderFactory = { JvmOpusEncoder() },
+                    tokenRefreshAfterMs = hotSwapAfterMs,
+                    connector = {
+                        connectNestsSpeaker(
+                            httpClient = StaticTokenNestsClient,
+                            transport = transport,
+                            scope = pumpScope,
+                            room = room,
+                            signer = signer,
+                            speakerPubkeyHex = pubkey,
+                            captureFactory = { SineWaveAudioCapture(freqHz = 440) },
+                            encoderFactory = { JvmOpusEncoder() },
+                            framesPerGroup = 5,
+                        )
+                    },
+                )
+            } else {
+                connectNestsSpeaker(
+                    httpClient = StaticTokenNestsClient,
+                    transport = transport,
+                    scope = pumpScope,
+                    room = room,
+                    signer = signer,
+                    speakerPubkeyHex = pubkey,
+                    captureFactory = { SineWaveAudioCapture(freqHz = 440) },
+                    encoderFactory = { JvmOpusEncoder() },
+                    framesPerGroup = 5,
+                )
+            }
         val handle = speaker.startBroadcasting()
         delay(listenerLateJoinDelayMs)
 
@@ -575,6 +737,7 @@ private suspend fun runSpeakerToHangListen(
         speaker.close()
     } finally {
         pumpScope.coroutineContext[Job]?.cancel()
+        lossShimProc?.destroy()
     }
 
     val exited = listenProc.waitFor(15, TimeUnit.SECONDS)
