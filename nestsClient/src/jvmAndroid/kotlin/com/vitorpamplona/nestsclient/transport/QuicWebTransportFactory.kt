@@ -91,18 +91,26 @@ class QuicWebTransportFactory(
      * `connection closed err=invalid value` on the relay side and a stalled
      * subscribe / `subscribe stream FIN before reply` on the client side.
      *
-     * `moq-lite-04` is also advertised because the production relay
-     * (moq.nostrnests.com) and the kixelated browser client both ship
-     * Lite-04 now; without it in our list a Lite-04-only deployment
-     * would refuse the CONNECT. The on-the-wire framing for Subscribe /
-     * Group / Announce did NOT change between Lite-03 and Lite-04, so
-     * our existing codec handles either selection. List `moq-lite-03`
-     * first because it's our previously-tested negotiation target —
-     * a relay that supports both should pick the listed-first option,
-     * and a Lite-04-only relay falls through to the second entry.
+     * **Lite-04 is intentionally NOT advertised** even though the kixelated
+     * browser client now ships it. Lite-04 reshapes the on-the-wire
+     * Announce.hops field from a single varint count into a full
+     * `OriginList` (`kixelated/moq` commit 45db108, "moq-lite/moq-relay:
+     * hop-based clustering"), adds an `exclude_hop` field to
+     * AnnounceInterest, and adds an `rtt` field to Probe — Subscribe and
+     * Group framing are unchanged but Announce framing diverges. Our codec
+     * speaks pure Lite-03; if a Lite-04-preferring relay picks
+     * `moq-lite-04` from our advertised list, the very first Announce
+     * exchange would desync (we'd encode/read a bare hops varint where
+     * the peer expects `len + len × u62`) and the connection would abort.
+     * Until [com.vitorpamplona.nestsclient.moq.lite.MoqLiteCodec] gains
+     * version-aware Announce / AnnounceInterest / Probe paths and
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteAnnounce.hops]
+     * becomes a list, advertising Lite-04 is a footgun. See
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteAlpn] for the
+     * known-version constants.
      */
     private val webTransportSubProtocols: List<String> =
-        listOf(MoqLiteAlpn.LITE_03, MoqLiteAlpn.LITE_04),
+        listOf(MoqLiteAlpn.LITE_03),
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,

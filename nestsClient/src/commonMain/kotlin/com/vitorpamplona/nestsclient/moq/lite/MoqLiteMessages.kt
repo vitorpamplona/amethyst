@@ -21,22 +21,38 @@
 package com.vitorpamplona.nestsclient.moq.lite
 
 /**
- * moq-lite ALPN strings. The on-the-wire framing for Subscribe / Group
- * / Announce did NOT change between Lite-03 and Lite-04, so advertising
- * both via `wt-available-protocols` is safe — the relay picks whichever
- * it prefers and our existing codec paths handle either. We keep 03 in
- * the list as the previously-tested target until the production relay's
- * Lite-04 path has interop coverage.
+ * moq-lite ALPN strings. ONLY [LITE_03] is wire-compatible with the
+ * codec in [MoqLiteCodec]; the other constants are kept for
+ * documentation and future codec upgrades.
+ *
+ * Subscribe / Group framing is identical across Lite-03 and Lite-04,
+ * but Lite-04 reshapes Announce.hops into an `OriginList`
+ * (`kixelated/moq` commit 45db108, "moq-lite/moq-relay: hop-based
+ * clustering"), adds an `exclude_hop` field to AnnounceInterest, and
+ * adds an `rtt` field to Probe. A relay that picks Lite-04 with our
+ * Lite-03 codec on the wire desyncs on the first Announce exchange.
+ * Don't add [LITE_04] to `wt-available-protocols` until
+ * [MoqLiteCodec] is version-aware and [MoqLiteAnnounce.hops] is a
+ * list rather than a single varint.
  *
  * `"moql"` is the legacy combined ALPN that requires an in-band SETUP
  * exchange — kept here for completeness; not advertised by the
  * factory.
  *
- * Source: `kixelated/moq-rs/rs/moq-lite/src/version.rs:21-26`,
- * `@moq/lite/connection/connect.js:277`.
+ * Source: `kixelated/moq/rs/moq-lite/src/lite/version.rs`,
+ * `kixelated/moq/rs/moq-lite/src/lite/announce.rs:11-105`,
+ * `kixelated/moq/rs/moq-lite/src/lite/probe.rs:9-55`.
  */
 object MoqLiteAlpn {
     const val LITE_03: String = "moq-lite-03"
+
+    /**
+     * `moq-lite-04` ALPN string. Wire-incompatible with [MoqLiteCodec]
+     * today — see the object kdoc for the codec diff. Defined here so
+     * a future patch that lands version-aware Announce / Probe codecs
+     * can drop it into the [QuicWebTransportFactory] sub-protocol list
+     * without re-deriving the constant.
+     */
     const val LITE_04: String = "moq-lite-04"
     const val LEGACY: String = "moql"
 }
