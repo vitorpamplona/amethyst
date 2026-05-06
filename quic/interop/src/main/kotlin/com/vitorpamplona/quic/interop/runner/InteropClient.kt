@@ -86,8 +86,9 @@ fun main() {
             // Both `handshake` and `chacha20` only require the handshake to
             // complete; `chacha20` adds the constraint that we offered only
             // ChaCha20-Poly1305 (verified by the runner via tshark on the
-            // sim's pcap, decrypted using SSLKEYLOGFILE).
-            "handshake", "chacha20" -> {
+            // sim's pcap, decrypted using SSLKEYLOGFILE). `handshakeloss`
+            // is the same client behaviour against a lossy sim.
+            "handshake", "chacha20", "handshakeloss" -> {
                 runHandshakeTest(requests, cipherSuites, keyLogPath)
             }
 
@@ -95,8 +96,16 @@ fun main() {
             // write each body to $DOWNLOADS/<basename>. `multiplexing`
             // additionally requires the requests to be sent in parallel on
             // separate streams (the runner verifies via tshark that the
-            // streams overlap in time).
-            "transfer", "http3", "multiplexing" -> {
+            // streams overlap in time). The remaining aliases run the same
+            // client logic against different sim configurations:
+            //   transferloss        — random packet loss
+            //   transfercorruption  — random bit-flips (recovery via AEAD AUTH FAIL → drop + retransmit)
+            //   longrtt             — emulated high-latency link
+            //   goodput             — throughput floor under default sim
+            //   crosstraffic        — competing UDP flows on the same link
+            "transfer", "http3", "multiplexing",
+            "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
+            -> {
                 if (downloads == null) {
                     System.err.println("DOWNLOADS env var required for $testcase")
                     EXIT_FAIL

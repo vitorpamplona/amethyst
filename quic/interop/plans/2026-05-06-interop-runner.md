@@ -66,6 +66,30 @@ Inspect `./logs/<run>/client_qlog/*.qlog` in qvis when something breaks.
 - `multiplexing` testcase: same as `transfer` but issues each GET in a
   parallel `coroutineScope { async { … } }` so the request streams
   genuinely overlap on the wire (what tshark verifies).
+- Aliased sim-driven testcases — these reuse the same client code paths;
+  the runner injects the network condition via the ns-3 sim. Failures
+  here are exactly the bug-finding signal we want, since they exercise
+  loss recovery / RTT estimator / congestion behaviour against real peers:
+  - `transferloss` → transfer (random packet loss)
+  - `transfercorruption` → transfer (random bit-flip; AEAD AUTH FAIL → drop + retransmit)
+  - `longrtt` → transfer (emulated high-latency link)
+  - `goodput` → transfer (throughput floor)
+  - `crosstraffic` → transfer (competing UDP flows on the same link)
+  - `handshakeloss` → handshake (loss during handshake — tests CRYPTO retransmit)
+
+## Explicitly unsupported testcases (return 127, runner skips)
+
+| Testcase | Reason |
+|---|---|
+| `versionnegotiation` | `QuicConnectionWriter` hard-codes `QuicVersion.V1`; needs a configurable initial version + VN-response retry path |
+| `resumption` | session ticket parsing + persistence not yet implemented |
+| `zerortt` | depends on `resumption` + early-data path |
+| `keyupdate` | KEY_PHASE bit handling not yet implemented in 1-RTT |
+| `retry` | `RetryPacket` parses but isn't fully wired into the connection feed-loop yet — claiming support without verifying would mask bugs |
+| `rebinding-port`, `rebinding-addr` | client-side connection migration (re-bind UDP socket, NEW_CONNECTION_ID rotation) not implemented |
+| `amplificationlimit` | server-side test, N/A for client role |
+| `blackhole` | inverse test (verifies we *fail* on dead network in bounded time); needs special handling |
+| `ipv6` | `UdpSocket` IPv6 path not exercised; risky to claim without testing |
 
 ## Phase 1a — landed 2026-05-06
 
