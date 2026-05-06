@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
+import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore.StoreChange
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -393,33 +394,41 @@ class EventStoreProjectionTest {
     /**
      * NIP-40 expiration drops slots only when the application calls
      * `deleteExpiredEvents()` on the observable store — projections
-     * no longer run their own ticker.
+     * no longer run their own ticker. Driven through the projection
+     * directly with a controllable clock so the SQL trigger's wall-
+     * clock check (`<= unixepoch()`) doesn't race the inserts and we
+     * don't need a real-time delay to simulate expiration. The full
+     * SQL sweep path is covered by `ExpirationTest.testDeletingExpiredEvents`.
      */
     @Test
     fun nip40ExpirationDroppedOnStoreSweep() =
         runBlocking {
             val time = TimeUtils.now()
+            // Both expirations safely in the future so the SQL
+            // trigger accepts both inserts unconditionally.
             val safe = signer.sign(TextNoteEvent.build("safe", createdAt = time) { expiration(time + 100) })
+            val short = signer.sign(TextNoteEvent.build("short", createdAt = time) { expiration(time + 50) })
             observable.insert(safe)
-            // The SQL trigger rejects an insert whose expiration is
-            // already <= unixepoch(), so this buffer must comfortably
-            // outlive any signing/insert latency. Mirrors the pattern
-            // in ExpirationTest.testDeletingExpiredEvents.
-            val short = signer.sign(TextNoteEvent.build("short", createdAt = time) { expiration(time + 5) })
             observable.insert(short)
 
+            var fakeNow = time
             val projection =
-                projectionOf<Event>(Filter(kinds = listOf(TextNoteEvent.KIND)))
-            projection.awaitLoaded()
-            assertEquals(2, projection.items.size)
+                EventStoreProjection<Event>(
+                    observable,
+                    listOf(Filter(kinds = listOf(TextNoteEvent.KIND))),
+                    nowProvider = { fakeNow },
+                )
+            projection.seed()
+            assertEquals(2, projection.snapshot().items.size)
 
-            // Let the short expiration lapse, then ask the store to
-            // sweep — the projection drops the expired slot in
-            // response to the resulting StoreChange.Delete(Expired).
-            delay(6000)
-            observable.deleteExpiredEvents()
+            // Jump the clock past `short`'s expiration and replay the
+            // StoreChange.DeleteExpired the observable would emit
+            // after a sweep at fakeNow.
+            fakeNow = time + 75
+            projection.apply(StoreChange.DeleteExpired(asOf = fakeNow))
 
-            val after = projection.awaitItems { it.size == 1 }
+            val after = projection.snapshot().items
+            assertEquals(1, after.size)
             assertEquals(safe.id, after[0].value.id)
         }
 
