@@ -50,10 +50,29 @@ import java.nio.ByteOrder
  */
 class MediaCodecOpusDecoder(
     private val channelCount: Int = AudioFormat.CHANNELS,
+    /**
+     * Source sample rate in Hz. Drives the OpusHead `inputSampleRate`
+     * field and the MediaFormat `audio/opus` sample-rate hint.
+     *
+     * **Note on Opus's actual decode rate**: Opus always decodes at
+     * 48 kHz internally regardless of [sampleRate] (the codec's
+     * design — RFC 6716). Android's Codec2 `audio/opus` decoder
+     * always emits 48 kHz PCM. So this parameter is informational at
+     * the OpusHead level and doesn't affect the PCM rate the
+     * downstream [AudioPlayer] sees. We thread it through anyway so
+     * the decoder declaration matches what the catalog says, and so a
+     * future codec or container variant that DOES respect input
+     * sample rate (e.g. a non-Opus rendition) gets the correct
+     * configuration.
+     */
+    private val sampleRate: Int = AudioFormat.SAMPLE_RATE_HZ,
 ) : OpusDecoder {
     init {
         require(channelCount in 1..2) {
             "MediaCodecOpusDecoder supports mono (1) or stereo (2) only, got $channelCount"
+        }
+        require(sampleRate > 0) {
+            "MediaCodecOpusDecoder sampleRate must be positive, got $sampleRate"
         }
     }
 
@@ -62,7 +81,7 @@ class MediaCodecOpusDecoder(
             MediaCodec
                 .createDecoderByType(MediaFormat.MIMETYPE_AUDIO_OPUS)
                 .apply {
-                    configure(buildFormat(channelCount), null, null, 0)
+                    configure(buildFormat(channelCount, sampleRate), null, null, 0)
                     start()
                 }.also {
                     com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
@@ -221,14 +240,17 @@ class MediaCodecOpusDecoder(
 
         private const val FRAME_DURATION_US = 20_000L // 20 ms
 
-        private fun buildFormat(channelCount: Int): MediaFormat {
+        private fun buildFormat(
+            channelCount: Int,
+            sampleRate: Int,
+        ): MediaFormat {
             val format =
                 MediaFormat.createAudioFormat(
                     MediaFormat.MIMETYPE_AUDIO_OPUS,
-                    AudioFormat.SAMPLE_RATE_HZ,
+                    sampleRate,
                     channelCount,
                 )
-            format.setByteBuffer("csd-0", ByteBuffer.wrap(buildOpusIdHeader(channelCount)))
+            format.setByteBuffer("csd-0", ByteBuffer.wrap(buildOpusIdHeader(channelCount, sampleRate)))
             // Pre-skip + seek pre-roll: both zero, encoded as little-endian
             // 64-bit nanoseconds per Android's MediaCodec contract.
             format.setByteBuffer("csd-1", ByteBuffer.wrap(zeroLongLe()))
@@ -236,7 +258,10 @@ class MediaCodecOpusDecoder(
             return format
         }
 
-        private fun buildOpusIdHeader(channelCount: Int): ByteArray {
+        private fun buildOpusIdHeader(
+            channelCount: Int,
+            sampleRate: Int,
+        ): ByteArray {
             // RFC 7845 §5.1 — 19 bytes, mapping family 0 (covers mono and
             // stereo with implicit L,R interleaving; no per-channel
             // mapping table required).
@@ -245,7 +270,7 @@ class MediaCodecOpusDecoder(
             buf.put(1.toByte()) // version
             buf.put(channelCount.toByte()) // channel count (1 or 2)
             buf.putShort(0) // pre-skip
-            buf.putInt(AudioFormat.SAMPLE_RATE_HZ) // input sample rate
+            buf.putInt(sampleRate) // input sample rate
             buf.putShort(0) // output gain (Q7.8 dB)
             buf.put(0.toByte()) // mapping family 0
             return buf.array()

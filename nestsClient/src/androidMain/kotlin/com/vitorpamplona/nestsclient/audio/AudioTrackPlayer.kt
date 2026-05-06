@@ -86,10 +86,25 @@ class AudioTrackPlayer(
      * call sites that don't pass a channel count keep the prior behaviour.
      */
     private val channelCount: Int = AudioFormat.CHANNELS,
+    /**
+     * PCM sample rate in Hz. Drives the AudioTrack output rate and the
+     * 250 ms target-buffer calculation. For Opus, Android's Codec2
+     * decoder always emits 48 kHz PCM regardless of the OpusHead
+     * `inputSampleRate`, so for the production Opus path this is
+     * always [AudioFormat.SAMPLE_RATE_HZ] — but threading the
+     * parameter through keeps the AudioTrack's declared rate matched
+     * to whatever the catalog says, and lets a future codec or
+     * container variant whose decoder DOES respect input sample rate
+     * (a non-Opus rendition) get the correct PCM clock.
+     */
+    private val sampleRate: Int = AudioFormat.SAMPLE_RATE_HZ,
 ) : AudioPlayer {
     init {
         require(channelCount in 1..2) {
             "AudioTrackPlayer supports mono (1) or stereo (2) only, got $channelCount"
+        }
+        require(sampleRate > 0) {
+            "AudioTrackPlayer sampleRate must be positive, got $sampleRate"
         }
     }
 
@@ -123,14 +138,14 @@ class AudioTrackPlayer(
 
         val minBuffer =
             AudioTrack.getMinBufferSize(
-                AudioFormat.SAMPLE_RATE_HZ,
+                sampleRate,
                 channelMask,
                 AndroidAudioFormat.ENCODING_PCM_16BIT,
             )
         if (minBuffer <= 0) {
             throw AudioException(
                 AudioException.Kind.DeviceUnavailable,
-                "AudioTrack.getMinBufferSize returned $minBuffer for ${AudioFormat.SAMPLE_RATE_HZ} Hz",
+                "AudioTrack.getMinBufferSize returned $minBuffer for $sampleRate Hz",
             )
         }
         // Target ~250 ms of audio: enough headroom so the decode loop can
@@ -138,10 +153,12 @@ class AudioTrackPlayer(
         // underruns. Take the larger of `minBuffer * 16` and an explicit
         // 250 ms-equivalent so devices that report a small minBuffer still
         // get the same wall-clock slack. Stereo doubles the byte count
-        // per sample (interleaved L,R 16-bit shorts) — scaling
-        // [channelCount] in keeps the wall-clock target constant.
+        // per sample (interleaved L,R 16-bit shorts); a higher sample
+        // rate scales the per-second byte count linearly — both factor
+        // into the target so the wall-clock 250 ms target is preserved
+        // regardless of channel layout / sample rate.
         val targetBytes250Ms =
-            (AudioFormat.SAMPLE_RATE_HZ / 4) * AudioFormat.BYTES_PER_SAMPLE * channelCount
+            (sampleRate / 4) * AudioFormat.BYTES_PER_SAMPLE * channelCount
         val bufferBytes = maxOf(minBuffer * 16, targetBytes250Ms)
 
         val newTrack =
@@ -158,7 +175,7 @@ class AudioTrackPlayer(
                         AndroidAudioFormat
                             .Builder()
                             .setEncoding(AndroidAudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(AudioFormat.SAMPLE_RATE_HZ)
+                            .setSampleRate(sampleRate)
                             .setChannelMask(channelMask)
                             .build(),
                     ).setBufferSizeInBytes(bufferBytes)
@@ -199,7 +216,7 @@ class AudioTrackPlayer(
         track = newTrack
         com.vitorpamplona.quartz.utils.Log.d("NestPlay") {
             "AudioTrack allocated: state=${newTrack.state} playState=${newTrack.playState} " +
-                "bufferSizeBytes=$bufferBytes minBuffer=$minBuffer sampleRate=${AudioFormat.SAMPLE_RATE_HZ}"
+                "bufferSizeBytes=$bufferBytes minBuffer=$minBuffer sampleRate=$sampleRate"
         }
     }
 
