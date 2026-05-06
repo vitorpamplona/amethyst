@@ -12,10 +12,24 @@ echo "$JAVA_HOME"
 echo "$(java -version)"
 echo "Running test... "
 
+# Single-variant pre-push tests. `./gradlew test` would compile six Android
+# variants of :amethyst (play/fdroid × debug/release/benchmark) plus full
+# native-libs merging per variant — ~6× the work of one variant. CI runs the
+# multi-flavor matrix on push to main; pre-push only needs one happy path.
+TASKS=(
+    :quartz:jvmTest
+    :commons:jvmTest
+    :nestsClient:jvmTest
+    :quic:jvmTest
+    :ammolite:testDebugUnitTest
+    :amethyst:testPlayDebugUnitTest
+    :cli:test
+)
+
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
-  ./gradlew test --quiet -x :desktopApp:test -x :desktopApp:upxDownload -x :desktopApp:vlcDownload
+    ./gradlew "${TASKS[@]}" --quiet
 else
-  ./gradlew test --quiet
+    ./gradlew "${TASKS[@]}" :desktopApp:test --quiet
 fi
 status=$?
 

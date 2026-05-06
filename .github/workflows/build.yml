@@ -26,7 +26,17 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-          cache: gradle
+
+      # Remote Gradle build cache: writes on push to main, reads on PRs and
+      # other branches. Caches both `~/.gradle/caches/` and individual task
+      # outputs, so dependency-only changes hit the cache and skip recompiling
+      # downstream modules / re-merging native libs (~600MB of work on
+      # :amethyst alone). Replaces the narrower `cache: gradle` previously on
+      # actions/setup-java, which only cached `modules-2`.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Linter (gradle)
         run: ./gradlew spotlessCheck
@@ -63,10 +73,29 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # Cache vlc-setup plugin downloads (VLC + UPX archives) keyed on the
+      # versions pinned in desktopApp/build.gradle.kts. Each OS gets its own
+      # cache namespace because the plugin downloads platform-specific archives.
+      # On a hit the vlcDownload / upxDownload tasks are up-to-date and we
+      # never touch get.videolan.org; on a miss (version bump or new runner)
+      # we fall back to fetching, which is what the in-build retry budget
+      # exists for.
+      - name: Cache vlc-setup downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/vlcSetup
+          key: vlcsetup-${{ runner.os }}-${{ hashFiles('desktopApp/build.gradle.kts') }}
+          restore-keys: |
+            vlcsetup-${{ runner.os }}-
 
       - name: Test + Build Desktop (gradle)
-        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }} --no-daemon
+        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
@@ -97,10 +126,42 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-          cache: gradle
 
-      - name: Android Lint (gradle)
-        run: ./gradlew :amethyst:lintFdroidBenchmark :amethyst:lintPlayBenchmark --no-daemon
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # Lint + focused unit tests + benchmark assembly in one Gradle invocation.
+      # Previously: one invocation for lint, one for `test` (which compiled all
+      # six amethyst variants × all flavors), one for `assembleBenchmark`
+      # (re-walking the same task graph). Combining them keeps the daemon hot
+      # across phases and lets task-level dedup (e.g. compileKotlin) only
+      # happen once.
+      #
+      # `-PdisableAbiSplits=true` produces a single non-split APK per
+      # (flavor, buildType) instead of 5 (4 ABIs + universal). The CI only
+      # uploads the universal-equivalent benchmark APK; per-ABI splits were
+      # being built and discarded, costing ~600MB of stripped_native_libs
+      # intermediates and several minutes per run.
+      #
+      # Test scope: only Debug unit tests for amethyst. The release/benchmark
+      # variants are compile-equivalent for unit-test purposes; running all six
+      # adds ~5× the kotlinc work without catching new defects on PRs. Push to
+      # main still gets the full test matrix via the production-build path.
+      - name: Test + Build Android (gradle)
+        run: |
+          ./gradlew \
+            :amethyst:lintFdroidBenchmark \
+            :amethyst:lintPlayBenchmark \
+            :quartz:jvmTest \
+            :commons:jvmTest \
+            :nestsClient:jvmTest \
+            :ammolite:testDebugUnitTest \
+            :amethyst:testFdroidDebugUnitTest \
+            :amethyst:testPlayDebugUnitTest \
+            :amethyst:assembleBenchmark \
+            -PdisableAbiSplits=true
 
       - name: Upload Android Lint Reports
         uses: actions/upload-artifact@v7
@@ -109,31 +170,35 @@ jobs:
           name: Android Lint Reports
           path: amethyst/build/reports/lint-results-*.html
 
-      - name: Test + Build Android (gradle)
-        run: ./gradlew test assembleBenchmark --no-daemon
-
       - name: Android Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
         if: always()
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v7
-        if: always()
+        if: failure()
         with:
           name: Test Reports
           path: amethyst/build/reports
 
+      # With -PdisableAbiSplits=true the APK is named without the ABI/universal
+      # suffix: amethyst-<flavor>-benchmark.apk. Glob both forms so this still
+      # works if a contributor runs CI on a branch that doesn't pass the flag.
       - name: Upload Play APK Benchmark
         uses: actions/upload-artifact@v7
         with:
           name: Play Benchmark APK
-          path: amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk
+          path: |
+            amethyst/build/outputs/apk/play/benchmark/amethyst-play-benchmark.apk
+            amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk
 
       - name: Upload FDroid APK Benchmark
         uses: actions/upload-artifact@v7
         with:
           name: FDroid Benchmark APK
-          path: amethyst/build/outputs/apk/fdroid/benchmark/amethyst-fdroid-universal-benchmark.apk
+          path: |
+            amethyst/build/outputs/apk/fdroid/benchmark/amethyst-fdroid-benchmark.apk
+            amethyst/build/outputs/apk/fdroid/benchmark/amethyst-fdroid-universal-benchmark.apk
 
       - name: Upload Compose Reports
         uses: actions/upload-artifact@v7
