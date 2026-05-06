@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.nestsclient.interop.native
 
+import com.vitorpamplona.nestsclient.AudioBroadcastConfig
 import com.vitorpamplona.nestsclient.NestsClient
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.nestsclient.audio.AudioFormat
+import com.vitorpamplona.nestsclient.audio.JvmOpusDecoder
 import com.vitorpamplona.nestsclient.audio.JvmOpusEncoder
 import com.vitorpamplona.nestsclient.audio.PcmAssertions
 import com.vitorpamplona.nestsclient.audio.SineWaveAudioCapture
 import com.vitorpamplona.nestsclient.buildRelayConnectTarget
+import com.vitorpamplona.nestsclient.connectNestsListener
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
 import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
@@ -474,6 +477,173 @@ class HangInteropTest {
         }
 
     /**
+     * I4 forward — Amethyst Kotlin speaker broadcasts stereo Opus
+     * (L=440 Hz, R=660 Hz) to `hang-listen`. Asserts each channel's
+     * peak frequency independently, so a regression that downmixes
+     * to mono or swaps channels is caught.
+     *
+     * Validates the speaker-side stereo path end-to-end:
+     *   - `AudioBroadcastConfig(channelCount = 2)` plumbs through
+     *     `connectNestsSpeaker` → `MoqLiteNestsSpeaker` → catalog,
+     *   - `MoqLiteHangCatalog.opus48k(name, 2)` emits
+     *     `numberOfChannels: 2` in the published JSON,
+     *   - `JvmOpusEncoder(channelCount = 2)` encodes interleaved
+     *     L/R PCM into stereo Opus packets,
+     *   - hang-listen's catalog reader picks up `channels = 2` and
+     *     constructs an `opus::Decoder` for stereo,
+     *   - the resulting Float32 PCM file is interleaved L/R/L/R/...
+     *     with the per-channel tones intact.
+     */
+    @Test
+    fun amethyst_speaker_to_hang_listener_stereo_440_660() =
+        runBlocking {
+            val out =
+                runSpeakerToHangListen(
+                    speakerSeconds = 5,
+                    captureFirstFrame = false,
+                    channelCount = 2,
+                    freqHzPerChannel = intArrayOf(440, 660),
+                )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            // Skip first 80 ms (40 ms × 2 channels = 80 ms of
+            // interleaved silence prefix). Opus look-ahead.
+            val warmup = AudioFormat.SAMPLE_RATE_HZ / 25 * 2
+            val analysed = pcm.copyOfRange(warmup, pcm.size)
+            PcmAssertions.assertFftPeakPerChannel(
+                analysed,
+                expectedHzPerChannel = doubleArrayOf(440.0, 660.0),
+                halfWindowHz = 5.0,
+            )
+        }
+
+    /**
+     * I4 reverse — `hang-publish` broadcasts stereo Opus
+     * (L=440 Hz, R=660 Hz); the Amethyst Kotlin listener
+     * decodes via `JvmOpusDecoder(channelCount = 2)` and
+     * asserts the per-channel FFT peaks. Mirror of the I4
+     * forward scenario for the listener-side stereo path.
+     *
+     * Validates:
+     *   - hang-publish's `--freq-hz-l` / `--freq-hz-r` /
+     *     `--channels 2` produce a real stereo Opus stream,
+     *   - the Kotlin listener's `subscribeSpeaker` flow
+     *     delivers stereo Opus packets (after timestamp
+     *     strip),
+     *   - `JvmOpusDecoder(channelCount = 2)` correctly
+     *     interleaves L/R PCM,
+     *   - per-channel FFT peaks are intact end-to-end.
+     */
+    @Test
+    fun rust_hang_publish_stereo_to_kotlin_listener_440_660() =
+        runBlocking {
+            val harness = NativeMoqRelayHarness.shared()
+            val signer: NostrSigner = NostrSignerInternal(KeyPair())
+            val pubkey = signer.pubKey
+            val room =
+                NestsRoomConfig(
+                    authBaseUrl = "<unused-public-relay>",
+                    endpoint = harness.relayUrl,
+                    hostPubkey = pubkey,
+                    roomId = "rt-${UUID.randomUUID()}",
+                )
+            val moqNamespace = room.moqNamespace()
+
+            val pumpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            val transport =
+                QuicWebTransportFactory(
+                    parentScope = pumpScope,
+                    certificateValidator = PermissiveCertificateValidator(),
+                )
+
+            // Spawn hang-publish under URL=<moqNamespace>, broadcast
+            // suffix=<pubkey>. The Kotlin listener subscribes to
+            // exactly that path via `subscribeSpeaker(pubkey)`.
+            val publishProc =
+                ProcessBuilder(
+                    harness.hangPublishBin().toString(),
+                    "--relay-url",
+                    "${harness.relayUrl}/$moqNamespace",
+                    "--broadcast",
+                    pubkey,
+                    "--track-name",
+                    "audio/data",
+                    "--channels",
+                    "2",
+                    "--freq-hz-l",
+                    "440",
+                    "--freq-hz-r",
+                    "660",
+                    "--duration",
+                    "5",
+                ).redirectErrorStream(true)
+                    .also { it.environment()["RUST_LOG"] = "info" }
+                    .start()
+
+            // Tiny breathing room so the publisher's ANNOUNCE
+            // Active is on the relay before we subscribe.
+            Thread.sleep(300)
+
+            try {
+                val listener =
+                    connectNestsListener(
+                        httpClient = StaticTokenNestsClient,
+                        transport = transport,
+                        scope = pumpScope,
+                        room = room,
+                        signer = signer,
+                    )
+                val subscription = listener.subscribeSpeaker(pubkey)
+                val decoder = JvmOpusDecoder(channelCount = 2)
+                val pcm = mutableListOf<Float>()
+                try {
+                    // Collect for ~4 s wallclock (publisher runs
+                    // 5 s; allow tail buffer). The flow doesn't
+                    // necessarily yield exactly N items — collect
+                    // by time, not count.
+                    withTimeoutOrNull(4_000L) {
+                        subscription.objects.collect { obj ->
+                            val samples = decoder.decode(obj.payload)
+                            for (s in samples) pcm += s.toFloat() / Short.MAX_VALUE.toFloat()
+                        }
+                    }
+                } finally {
+                    decoder.release()
+                    listener.close()
+                }
+
+                // Read publisher output BEFORE destroying so the
+                // stream is still open. Stops at EOF when the
+                // publisher exits naturally (5 s --duration), or
+                // returns whatever's been written so far if it's
+                // still running.
+                val published =
+                    runCatching {
+                        publishProc.inputStream.bufferedReader().readText()
+                    }.getOrDefault("(stdout unavailable)")
+                publishProc.destroy()
+                assertTrue(
+                    pcm.size >= AudioFormat.SAMPLE_RATE_HZ * 2,
+                    "expected ≥ 1 s of stereo PCM (= 2× sample rate floats), " +
+                        "got ${pcm.size} floats. hang-publish stderr:\n$published",
+                )
+
+                val pcmArr = pcm.toFloatArray()
+                // Skip first 80 ms (40 ms × 2 channels) — Opus look-
+                // ahead silence.
+                val warmup = AudioFormat.SAMPLE_RATE_HZ / 25 * 2
+                val analysed = pcmArr.copyOfRange(warmup, pcmArr.size)
+                PcmAssertions.assertFftPeakPerChannel(
+                    analysed,
+                    expectedHzPerChannel = doubleArrayOf(440.0, 660.0),
+                    halfWindowHz = 5.0,
+                )
+            } finally {
+                pumpScope.coroutineContext[Job]?.cancel()
+                publishProc.destroy()
+            }
+        }
+
+    /**
      * Rust↔Rust round-trip: pure-Rust through our harness.
      * Validates the cargo workspace + relay config + `moq-lite-03`
      * ALPN end-to-end without any Kotlin in the loop.
@@ -587,6 +757,12 @@ private suspend fun runSpeakerToHangListen(
      * the reconnect orchestrator.
      */
     hotSwapAfterMs: Long? = null,
+    /**
+     * Per-channel sine-wave config for the speaker. Default mono
+     * 440 Hz; I4 stereo passes `(channels=2, freqHzPerChannel=[440, 660])`.
+     */
+    channelCount: Int = 1,
+    freqHzPerChannel: IntArray? = null,
 ): HangListenOutput {
     val harness = NativeMoqRelayHarness.shared()
 
@@ -656,6 +832,18 @@ private suspend fun runSpeakerToHangListen(
             certificateValidator = PermissiveCertificateValidator(),
         )
 
+    val captureFactory: () -> SineWaveAudioCapture = {
+        SineWaveAudioCapture(
+            freqHz = 440,
+            channelCount = channelCount,
+            freqHzPerChannel = freqHzPerChannel,
+        )
+    }
+    val encoderFactory: () -> JvmOpusEncoder = {
+        JvmOpusEncoder(channelCount = channelCount)
+    }
+    val broadcastConfig = AudioBroadcastConfig(channelCount = channelCount)
+
     lateinit var listenProc: Process
     try {
         val speaker =
@@ -667,8 +855,9 @@ private suspend fun runSpeakerToHangListen(
                     room = room,
                     signer = signer,
                     speakerPubkeyHex = pubkey,
-                    captureFactory = { SineWaveAudioCapture(freqHz = 440) },
-                    encoderFactory = { JvmOpusEncoder() },
+                    captureFactory = captureFactory,
+                    encoderFactory = encoderFactory,
+                    broadcastConfig = broadcastConfig,
                     tokenRefreshAfterMs = hotSwapAfterMs,
                     connector = {
                         connectNestsSpeaker(
@@ -678,8 +867,9 @@ private suspend fun runSpeakerToHangListen(
                             room = room,
                             signer = signer,
                             speakerPubkeyHex = pubkey,
-                            captureFactory = { SineWaveAudioCapture(freqHz = 440) },
-                            encoderFactory = { JvmOpusEncoder() },
+                            captureFactory = captureFactory,
+                            encoderFactory = encoderFactory,
+                            broadcastConfig = broadcastConfig,
                             framesPerGroup = 5,
                         )
                     },
@@ -692,8 +882,9 @@ private suspend fun runSpeakerToHangListen(
                     room = room,
                     signer = signer,
                     speakerPubkeyHex = pubkey,
-                    captureFactory = { SineWaveAudioCapture(freqHz = 440) },
-                    encoderFactory = { JvmOpusEncoder() },
+                    captureFactory = captureFactory,
+                    encoderFactory = encoderFactory,
+                    broadcastConfig = broadcastConfig,
                     framesPerGroup = 5,
                 )
             }

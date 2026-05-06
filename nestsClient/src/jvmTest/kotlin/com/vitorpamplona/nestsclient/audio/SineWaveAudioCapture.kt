@@ -37,13 +37,30 @@ import kotlin.math.sin
  * 50 million frames/sec instead of 50 frames/sec, fill the relay's
  * buffers, and surface as "no inboundSubs" frame drops.
  *
- * Mono only (`channels = 1`) for Phase 1 — the I4 stereo scenario
- * (Phase 2) extends this to a per-channel `freqHzL` / `freqHzR` pair.
+ * Defaults to mono (`channelCount = 1`). Stereo with per-channel
+ * frequencies — the I4 scenario uses 440 Hz left / 660 Hz right —
+ * is supported via [freqHzPerChannel]: pass an `IntArray` of size
+ * [channelCount] holding the desired per-channel frequency. If
+ * left null, every channel runs at [freqHz].
+ *
+ * Output PCM is interleaved L/R/L/R/... for stereo — matches the
+ * format the Android `MediaCodecOpusEncoder` and our
+ * [JvmOpusEncoder] expect for stereo input.
  */
 class SineWaveAudioCapture(
     private val freqHz: Int = 440,
+    private val channelCount: Int = 1,
+    private val freqHzPerChannel: IntArray? = null,
     private val amplitude: Short = 16_383,
 ) : AudioCapture {
+    init {
+        if (freqHzPerChannel != null) {
+            require(freqHzPerChannel.size == channelCount) {
+                "freqHzPerChannel.size (${freqHzPerChannel.size}) must equal channelCount ($channelCount)"
+            }
+        }
+    }
+
     private var sampleIdx: Long = 0L
 
     /** Wallclock target for the next frame (`System.nanoTime` units). */
@@ -55,15 +72,21 @@ class SineWaveAudioCapture(
 
     override suspend fun readFrame(): ShortArray? {
         val samples = AudioFormat.FRAME_SIZE_SAMPLES
-        val out = ShortArray(samples)
+        val out = ShortArray(samples * channelCount)
         val baseIdx = sampleIdx
-        val angularStep = 2.0 * PI * freqHz / AudioFormat.SAMPLE_RATE_HZ
+        val twoPi = 2.0 * PI
+        val sampleRate = AudioFormat.SAMPLE_RATE_HZ.toDouble()
         for (i in 0 until samples) {
-            val v = (amplitude * sin(angularStep * (baseIdx + i))).toInt()
-            // Clamp defensively — amplitude is well below Short.MAX_VALUE
-            // by default, but a future bigger amplitude could otherwise
-            // wrap on the .toShort() truncation.
-            out[i] = v.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            val t = (baseIdx + i).toDouble()
+            for (ch in 0 until channelCount) {
+                val freq = freqHzPerChannel?.get(ch) ?: freqHz
+                val v = (amplitude * sin(twoPi * freq * t / sampleRate)).toInt()
+                // Clamp defensively — amplitude is well below Short.MAX_VALUE
+                // by default, but a future bigger amplitude could otherwise
+                // wrap on the .toShort() truncation.
+                out[i * channelCount + ch] =
+                    v.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
         }
         sampleIdx = baseIdx + samples
 

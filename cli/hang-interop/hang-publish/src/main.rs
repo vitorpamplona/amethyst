@@ -44,18 +44,30 @@ struct Args {
     #[arg(long)]
     broadcast: String,
 
-    /// Sine-wave frequency in Hz (mono only). For stereo, see
-    /// `--freq-hz-right` once that lands.
+    /// Sine-wave frequency in Hz. Used as the default for every
+    /// channel; override per-channel via `--freq-hz-l` / `--freq-hz-r`.
     #[arg(long, default_value_t = 440)]
     freq_hz: u32,
+
+    /// Per-channel frequency override for the LEFT channel. Falls
+    /// back to `--freq-hz` when unset.
+    #[arg(long)]
+    freq_hz_l: Option<u32>,
+
+    /// Per-channel frequency override for the RIGHT channel.
+    /// Ignored when `--channels 1`. Falls back to `--freq-hz` when
+    /// unset.
+    #[arg(long)]
+    freq_hz_r: Option<u32>,
 
     /// Maximum runtime in seconds.
     #[arg(long, default_value_t = 5)]
     duration: u64,
 
-    /// Channel count: 1 (mono) or 2 (stereo). Stereo uses the same
-    /// frequency on both channels for now; per-channel frequency is
-    /// a Phase-2 follow-up.
+    /// Channel count: 1 (mono) or 2 (stereo). With `2` and
+    /// `--freq-hz-l` / `--freq-hz-r` set, the L/R channels carry
+    /// independent tones — useful for the I4 stereo cross-stack
+    /// scenario.
     #[arg(long, default_value_t = 1)]
     channels: u32,
 
@@ -188,8 +200,19 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
         .context("set opus bitrate")?;
 
     let total_frames = (args.duration * 1_000_000 / FRAME_DURATION_US) as usize;
-    let phase_step =
-        2.0_f64 * std::f64::consts::PI * (args.freq_hz as f64) / (SAMPLE_RATE_HZ as f64);
+    // Per-channel phase step: each channel may have its own
+    // frequency (I4 stereo). Defaults to args.freq_hz on every
+    // channel.
+    let mut phase_steps: Vec<f64> = Vec::with_capacity(args.channels as usize);
+    for ch in 0..(args.channels as usize) {
+        let f = match (ch, args.freq_hz_l, args.freq_hz_r) {
+            (0, Some(l), _) => l,
+            (1, _, Some(r)) => r,
+            _ => args.freq_hz,
+        };
+        phase_steps
+            .push(2.0_f64 * std::f64::consts::PI * (f as f64) / (SAMPLE_RATE_HZ as f64));
+    }
     let mut sample_idx: u64 = 0;
     // Sized to libopus's worst-case output for one 20 ms frame.
     let mut opus_buf = vec![0u8; 4_000];
@@ -201,13 +224,14 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
     let mut group: Option<moq_lite::GroupProducer> = None;
 
     for frame_no in 0..total_frames {
-        // Generate one PCM frame at the configured frequency.
+        // Generate one PCM frame, possibly with a different sine
+        // tone on each channel.
         let mut pcm = vec![0i16; FRAME_SIZE_SAMPLES * args.channels as usize];
         for i in 0..FRAME_SIZE_SAMPLES {
-            let t = sample_idx + i as u64;
-            let v = ((t as f64) * phase_step).sin();
-            let s = (v * 16_383.0) as i16;
+            let t = (sample_idx + i as u64) as f64;
             for ch in 0..(args.channels as usize) {
+                let v = (t * phase_steps[ch]).sin();
+                let s = (v * 16_383.0) as i16;
                 pcm[i * args.channels as usize + ch] = s;
             }
         }

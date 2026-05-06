@@ -32,7 +32,7 @@ import java.nio.ShortBuffer
  */
 class JvmOpusDecoder(
     private val sampleRate: Int = AudioFormat.SAMPLE_RATE_HZ,
-    private val channelCount: Int = AudioFormat.CHANNELS,
+    private val channelCount: Int = AudioFormat.DEFAULT_CHANNELS,
 ) : OpusDecoder {
     private val handle: PointerByReference
 

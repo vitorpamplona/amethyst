@@ -96,6 +96,41 @@ object PcmAssertions {
     }
 
     /**
+     * Stereo / multi-channel variant of [assertFftPeak]. [interleaved]
+     * is L/R/L/R/... (or N-channel interleaved); [expectedHzPerChannel]
+     * has one entry per channel and each per-channel slice is asserted
+     * independently. Used by the I4 stereo scenario where left = 440
+     * and right = 660 — a regression that mixes channels (or sums
+     * them into mono) trips the per-channel FFT.
+     */
+    fun assertFftPeakPerChannel(
+        interleaved: FloatArray,
+        expectedHzPerChannel: DoubleArray,
+        halfWindowHz: Double = 5.0,
+        sampleRate: Int = AudioFormat.SAMPLE_RATE_HZ,
+    ) {
+        val channels = expectedHzPerChannel.size
+        require(interleaved.size % channels == 0) {
+            "interleaved size ${interleaved.size} not divisible by channels=$channels"
+        }
+        val perChannelLen = interleaved.size / channels
+        for (ch in 0 until channels) {
+            val slice = FloatArray(perChannelLen)
+            for (i in 0 until perChannelLen) {
+                slice[i] = interleaved[i * channels + ch]
+            }
+            try {
+                assertFftPeak(slice, expectedHzPerChannel[ch], halfWindowHz, sampleRate)
+            } catch (t: Throwable) {
+                throw IllegalStateException(
+                    "channel $ch (expected ${expectedHzPerChannel[ch]} Hz): ${t.message}",
+                    t,
+                )
+            }
+        }
+    }
+
+    /**
      * Zero crossings per second within ±[tolerance] (fractional)
      * of [expectedPerSecond]. Catches Opus predictor warble that
      * preserves average power but distorts waveform shape — e.g.
