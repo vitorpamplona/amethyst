@@ -953,6 +953,25 @@ class MoqLiteSession internal constructor(
                             runCatching { bidi.finish() }
                             dispatched = true
                         }
+
+                        MoqLiteControlType.Goaway -> {
+                            // Relay's graceful-shutdown signal — see
+                            // [MoqLiteControlType.Goaway]. We don't
+                            // act on the migration request today
+                            // (no body decode, no preferred-relay
+                            // failover); the `connectReconnecting*`
+                            // wrappers' transport-loss reconnect path
+                            // already handles the eventual hard
+                            // disconnect, so all this arm needs to do
+                            // is recognise the type code and FIN
+                            // cleanly instead of treating it as an
+                            // unknown control. Logged so a relay-
+                            // initiated migration shows up in logcat
+                            // rather than as a mystery silent reconnect.
+                            Log.w("NestRx") { "Goaway received from relay — FIN bidi (no migration handler today)" }
+                            runCatching { bidi.finish() }
+                            dispatched = true
+                        }
                     }
                 }
                 // Post-dispatch chunks are silently discarded —

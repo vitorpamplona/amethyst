@@ -73,6 +73,17 @@ enum class MoqLiteControlType(
     Subscribe(2L),
     Fetch(3L),
     Probe(4L),
+
+    /**
+     * Graceful relay-shutdown signal. moq-rs's `Publisher::run` accepts
+     * `ControlType::Goaway = 5` (`rs/moq-lite/src/lite/publisher.rs`)
+     * to migrate a publisher to a different relay node. We don't act
+     * on it today — recognising the type code prevents
+     * [MoqLiteSession.handleInboundBidi] from silently FINing the
+     * bidi as an unknown control type, which would lose the relay's
+     * shutdown notification. Wire body decoding is left as a follow-up.
+     */
+    Goaway(5L),
     ;
 
     companion object {
