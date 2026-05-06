@@ -45,6 +45,7 @@ import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
@@ -1142,6 +1143,19 @@ class NestViewModel(
                 // Tap the object flow to drive the speaking-now indicator before
                 // the decoder consumes it.
                 val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
+                // Per-subscription consecutive-decoder-error counter. Single-frame
+                // Opus errors are normal noise (PLC handles them), but a structural
+                // mismatch — wrong wire format, missing legacy-container varint
+                // strip, codec mismatch — fails *every* frame in a row. The
+                // previous behaviour was to silently swallow per-packet
+                // [AudioException.Kind.DecoderError] indefinitely, which made
+                // exactly that class of bug invisible (no audio, no log, no UI
+                // signal). Track the streak and surface it once per crossing so
+                // the next protocol regression shows up in `adb logcat | grep
+                // NestRx` rather than in a user bug report.
+                val consecutiveDecodeErrors =
+                    java.util.concurrent.atomic
+                        .AtomicLong(0L)
                 roomPlayer.play(
                     instrumented,
                     onError = { err ->
@@ -1158,7 +1172,28 @@ class NestViewModel(
                             AudioException.Kind.DecoderError,
                             AudioException.Kind.EncoderError,
                             -> {
-                                Unit
+                                val streak = consecutiveDecodeErrors.incrementAndGet()
+                                // 50 frames = 1 s of solid decode failures.
+                                // Anything past that is a structural bug, not
+                                // jitter. Log once per crossing (use exact
+                                // equality, not modulus) so we get a single
+                                // attention-grabbing line per stuck stream
+                                // rather than a 50 Hz flood.
+                                if (streak == DECODE_ERROR_STREAK_LOG_THRESHOLD) {
+                                    // Non-lambda overload here (rather than the
+                                    // allocation-free lambda one) so we preserve
+                                    // the throwable stacktrace — this fires
+                                    // exactly once per stuck-stream streak, so
+                                    // the unconditional string build is fine.
+                                    Log.w(
+                                        "NestRx",
+                                        "decoder failed $DECODE_ERROR_STREAK_LOG_THRESHOLD consecutive frames " +
+                                            "for pubkey='${pubkey.take(8)}' — likely wire-format mismatch " +
+                                            "(missing legacy-container varint strip, codec/channel-count mismatch, " +
+                                            "or corrupted Opus). last error: ${err.message}",
+                                        err.cause,
+                                    )
+                                }
                             }
 
                             AudioException.Kind.PlaybackFailed,
@@ -1170,7 +1205,13 @@ class NestViewModel(
                             }
                         }
                     },
-                    onLevel = { onAudioLevel(pubkey, it) },
+                    onLevel = { lvl ->
+                        // A successful decode resets the error streak.
+                        // Sample-rate-fast (50 Hz) but cheap on the
+                        // success path: Atomic.set with no allocation.
+                        consecutiveDecodeErrors.set(0L)
+                        onAudioLevel(pubkey, lvl)
+                    },
                 )
                 slot.attach(handle, roomPlayer, player)
                 publishActiveSpeakers()
@@ -1678,15 +1719,44 @@ sealed class BroadcastUiState {
 const val SPEAKING_TIMEOUT_MS: Long = 250L
 
 /**
+ * Per-subscription consecutive Opus decode-error count that triggers a
+ * single conspicuous warning log. Single-frame decode errors are normal
+ * — Opus PLC papers over them — and are silently swallowed; a streak of
+ * this size is structural (wire-format mismatch, missing
+ * legacy-container varint strip, codec/channel-count mismatch, corrupt
+ * publisher) and demands attention because the user-visible symptom is
+ * "speaker tile shows up but no audio plays" with no other signal.
+ *
+ * 50 × 20 ms ≈ 1 s. Long enough that a transient flurry of bad frames
+ * doesn't cry wolf; short enough that an "every frame fails" structural
+ * bug surfaces in a logcat line within the first second of audio.
+ *
+ * Logged once per crossing (exact equality, not modulus) so a stuck
+ * stream produces ONE attention-grabbing line rather than 50 Hz of
+ * noise.
+ */
+const val DECODE_ERROR_STREAK_LOG_THRESHOLD: Long = 50L
+
+/**
  * Per-speaker pre-roll: number of decoded PCM frames buffered before the
  * underlying [com.vitorpamplona.nestsclient.audio.AudioPlayer] starts
- * consuming. 5 × 20 ms ≈ 100 ms of audio — long enough to mask a typical
- * Main-thread stall (Compose recomposition / GC) without adding perceptible
- * join latency. Combines with [com.vitorpamplona.nestsclient.audio.AudioTrackPlayer]'s
- * ~250 ms AudioTrack buffer for ~350 ms of total slack between the
+ * consuming. 10 × 20 ms ≈ 200 ms of audio.
+ *
+ * Sized to absorb the slowest-cadence publisher we expect: kixelated/moq's
+ * web reference encoder uses `groupDuration: 100ms` (5 frames per group)
+ * by default but adds another 100–200 ms of jitter on the relay's
+ * outbound forward queue under residential network conditions. 100 ms of
+ * preroll (the previous value) reliably underran on web speakers — the
+ * AudioTrack ran out of samples between adjacent groups and the user
+ * heard short clicks. 200 ms covers the observed jitter envelope while
+ * keeping perceived join latency well under the typical "speaker becomes
+ * audible" delay on the wire.
+ *
+ * Combines with [com.vitorpamplona.nestsclient.audio.AudioTrackPlayer]'s
+ * ~250 ms AudioTrack buffer for ~450 ms of total slack between the
  * arrival-of-frame and the underrun horizon.
  */
-const val ROOM_PLAYER_PREROLL_FRAMES: Int = 5
+const val ROOM_PLAYER_PREROLL_FRAMES: Int = 10
 
 /**
  * Coalescing interval for [NestViewModel.audioLevels]. The decode loop

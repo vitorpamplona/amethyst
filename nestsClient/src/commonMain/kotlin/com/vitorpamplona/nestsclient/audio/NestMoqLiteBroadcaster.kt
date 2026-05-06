@@ -460,7 +460,7 @@ class NestMoqLiteBroadcaster(
          *     joining mid-broadcast has to wait until the next
          *     group boundary for the first frame. 50 frames = 1 s
          *     gap, which matches what the existing
-         *     `ROOM_PLAYER_PREROLL_FRAMES = 5` audio-buffer + the
+         *     `ROOM_PLAYER_PREROLL_FRAMES = 10` audio-buffer + the
          *     ~250 ms AudioTrack jitter buffer was already designed
          *     to mask. 100 frames (2 s) is past that.
          *   - QUIC stream-level reliability: each group is one uni
