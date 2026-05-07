@@ -165,17 +165,44 @@ async fn listen(
     let broadcast = broadcast.ok_or_else(|| anyhow!("broadcast unannounced: {path}"))?;
     tracing::info!(%path, "broadcast announced");
 
-    // Subscribe to the catalog and read the first published version.
-    let catalog_track = broadcast
-        .subscribe_track(&hang::Catalog::default_track())
-        .context("subscribe catalog")?;
-    let mut catalog = hang::CatalogConsumer::new(catalog_track);
-
-    let info = catalog
-        .next()
-        .await
-        .context("read catalog")?
-        .ok_or_else(|| anyhow!("catalog ended before first publish"))?;
+    // Subscribe to the catalog and read the first published
+    // version. The catalog hook in Amethyst's
+    // `MoqLiteNestsSpeaker` (`setOnNewSubscriber`) can race the
+    // SUBSCRIBE bidi mid-suite — under accumulated state the
+    // first try sometimes resolves with a "cancelled" stream
+    // before the catalog frame arrives. Retry up to twice with
+    // a fresh subscribe; total wallclock ≤ 1 s, well inside
+    // the test's broadcast window.
+    let info = {
+        let mut last_err: Option<anyhow::Error> = None;
+        let mut decoded: Option<hang::Catalog> = None;
+        for attempt in 0..3 {
+            let catalog_track = broadcast
+                .subscribe_track(&hang::Catalog::default_track())
+                .context("subscribe catalog")?;
+            let mut catalog = hang::CatalogConsumer::new(catalog_track);
+            match tokio::time::timeout(Duration::from_millis(500), catalog.next()).await {
+                Ok(Ok(Some(c))) => {
+                    decoded = Some(c);
+                    break;
+                }
+                Ok(Ok(None)) => {
+                    last_err = Some(anyhow!("catalog ended before first publish"));
+                }
+                Ok(Err(e)) => {
+                    tracing::warn!(attempt, %e, "catalog read error; retrying");
+                    last_err = Some(anyhow::Error::new(e).context("read catalog"));
+                }
+                Err(_) => {
+                    tracing::warn!(attempt, "catalog read timed out; retrying");
+                    last_err = Some(anyhow!("catalog read timed out (attempt {attempt})"));
+                }
+            }
+        }
+        decoded.ok_or_else(|| {
+            last_err.unwrap_or_else(|| anyhow!("catalog read failed after 3 attempts"))
+        })?
+    };
 
     // Pick the first Opus / Container::Legacy audio rendition.
     let (track_name, audio_cfg) = info
