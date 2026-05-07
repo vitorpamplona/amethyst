@@ -113,6 +113,16 @@ actual class UdpSocket private constructor(
     }
 
     actual companion object {
+        /**
+         * ECT(0) codepoint per RFC 3168 §5: the low 2 bits of the IPv4 TOS
+         * byte (or IPv6 Traffic Class byte) set to `10`. Setting this via
+         * StandardSocketOptions.IP_TOS marks every outgoing datagram. Note
+         * this MASKS into the byte, so we can't accidentally clobber a
+         * caller-set DSCP value at this level — we own the socket
+         * outright per QUIC connection.
+         */
+        private const val ECT0_TOS_BITS: Int = 0x02
+
         actual suspend fun connect(
             host: String,
             port: Int,
@@ -137,6 +147,22 @@ actual class UdpSocket private constructor(
                 // of headroom at sustained 1 KB/frame audio rates.
                 runCatching {
                     channel.setOption(StandardSocketOptions.SO_RCVBUF, 4 * 1024 * 1024)
+                }
+                // Mark every outgoing datagram with ECT(0) (low 2 bits of
+                // the IP TOS / Traffic Class byte set to `10` per RFC 3168
+                // §5). RFC 9000 §13.4 lets endpoints use ECT(0), ECT(1), or
+                // both; ECT(0) is the simplest and what most production
+                // QUIC stacks pick. Cheap path-quality signal: routers can
+                // mark CE on congestion instead of dropping, the peer
+                // reports back via ACK_ECN, and our loss-detection treats
+                // CE counts as a congestion event without false-positive
+                // retransmits. runCatching because IP_TOS support is
+                // platform-dependent — failure leaves us at no-ECN, which
+                // is also spec-compliant. The interop runner's `ecn`
+                // testcase verifies the pcap shows ECT(0)-marked client
+                // packets and ACK_ECN frames in both directions.
+                runCatching {
+                    channel.setOption(StandardSocketOptions.IP_TOS, ECT0_TOS_BITS)
                 }
                 channel.bind(InetSocketAddress(0)) // ephemeral
                 // We use receive()/send(addr) instead of channel.connect() so that
