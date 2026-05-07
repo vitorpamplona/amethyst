@@ -49,23 +49,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import java.util.concurrent.TimeUnit
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +90,7 @@ fun ScheduledPostsScreen(
     Scaffold(
         topBar = {
             ShorterTopAppBar(
-                title = { Text("Scheduled posts") },
+                title = { Text(stringRes(R.string.scheduled_posts)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) { ArrowBackIcon() }
                 },
@@ -115,11 +118,12 @@ fun ScheduledPostsScreen(
 
     pendingPublishId?.let { id ->
         ConfirmDialog(
-            title = "Send now?",
-            message = "This post will publish to relays immediately. The original schedule will be discarded.",
-            confirmLabel = "Send",
+            title = stringRes(R.string.scheduled_posts_send_now_title),
+            message = stringRes(R.string.scheduled_posts_send_now_message),
+            confirmLabel = stringRes(R.string.scheduled_posts_send_now_confirm),
             onConfirm = {
-                viewModel.publishNow(id, context)
+                viewModel.publishNow(id)
+                ScheduledPostWorker.scheduleCatchUp(context)
                 pendingPublishId = null
             },
             onDismiss = { pendingPublishId = null },
@@ -128,9 +132,9 @@ fun ScheduledPostsScreen(
 
     pendingCancelId?.let { id ->
         ConfirmDialog(
-            title = "Delete scheduled post?",
-            message = "The post will not be published. This cannot be undone.",
-            confirmLabel = "Delete",
+            title = stringRes(R.string.scheduled_posts_delete_title),
+            message = stringRes(R.string.scheduled_posts_delete_message),
+            confirmLabel = stringRes(R.string.scheduled_posts_delete_confirm),
             destructive = true,
             onConfirm = {
                 viewModel.cancel(id)
@@ -148,6 +152,7 @@ private fun ScheduledPostRow(
     onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
+    val preview = remember(post) { extractPreview(post) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(),
@@ -171,7 +176,7 @@ private fun ScheduledPostRow(
             }
 
             Text(
-                text = extractPreview(post),
+                text = preview,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
@@ -179,7 +184,7 @@ private fun ScheduledPostRow(
 
             if (post.status == ScheduledPostStatus.FAILED && post.lastError != null) {
                 Text(
-                    text = "Error: ${post.lastError}",
+                    text = stringRes(R.string.scheduled_posts_error_prefix, post.lastError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     maxLines = 2,
@@ -194,7 +199,7 @@ private fun ScheduledPostRow(
                 IconButton(onClick = onCancel) {
                     Icon(
                         symbol = MaterialSymbols.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringRes(R.string.scheduled_posts_action_delete),
                         modifier = Modifier.size(22.dp),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -202,7 +207,7 @@ private fun ScheduledPostRow(
                 IconButton(onClick = onPublishNow) {
                     Icon(
                         symbol = MaterialSymbols.AutoMirrored.Send,
-                        contentDescription = "Send now",
+                        contentDescription = stringRes(R.string.scheduled_posts_action_send_now),
                         modifier = Modifier.size(22.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -214,17 +219,17 @@ private fun ScheduledPostRow(
 
 @Composable
 private fun StatusChip(status: ScheduledPostStatus) {
-    val (label, tint) =
+    val (labelRes, tint) =
         when (status) {
-            ScheduledPostStatus.PENDING -> "Scheduled" to Color(0xFF1E88E5)
-            ScheduledPostStatus.PUBLISHING -> "Sending…" to Color(0xFFFFA000)
-            ScheduledPostStatus.FAILED -> "Failed" to MaterialTheme.colorScheme.error
-            ScheduledPostStatus.SENT -> "Sent" to Color(0xFF43A047)
-            ScheduledPostStatus.CANCELLED -> "Cancelled" to MaterialTheme.colorScheme.onSurfaceVariant
+            ScheduledPostStatus.PENDING -> R.string.scheduled_posts_status_pending to MaterialTheme.colorScheme.primary
+            ScheduledPostStatus.PUBLISHING -> R.string.scheduled_posts_status_publishing to MaterialTheme.colorScheme.tertiary
+            ScheduledPostStatus.FAILED -> R.string.scheduled_posts_status_failed to MaterialTheme.colorScheme.error
+            ScheduledPostStatus.SENT -> R.string.scheduled_posts_status_sent to MaterialTheme.colorScheme.tertiary
+            ScheduledPostStatus.CANCELLED -> R.string.scheduled_posts_status_cancelled to MaterialTheme.colorScheme.onSurfaceVariant
         }
     AssistChip(
         onClick = {},
-        label = { Text(label, fontWeight = FontWeight.Medium) },
+        label = { Text(stringRes(labelRes), fontWeight = FontWeight.Medium) },
         colors =
             AssistChipDefaults.assistChipColors(
                 labelColor = tint,
@@ -249,11 +254,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "No scheduled posts",
+                text = stringRes(R.string.scheduled_posts_empty_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = "Compose a note and tap the clock icon to schedule it for later.",
+                text = stringRes(R.string.scheduled_posts_empty_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -283,60 +288,28 @@ private fun ConfirmDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
         },
     )
 }
 
-private fun extractPreview(post: ScheduledPost): String {
-    val json = post.signedEventJson
-    val needle = "\"content\":\""
-    val start = json.indexOf(needle)
-    if (start < 0) return ""
-    val from = start + needle.length
-    val sb = StringBuilder()
-    var i = from
-    while (i < json.length) {
-        val c = json[i]
-        if (c == '\\' && i + 1 < json.length) {
-            when (json[i + 1]) {
-                'n' -> sb.append('\n')
-                't' -> sb.append('\t')
-                '\\' -> sb.append('\\')
-                '"' -> sb.append('"')
-                else -> sb.append(json[i + 1])
-            }
-            i += 2
-        } else if (c == '"') {
-            break
-        } else {
-            sb.append(c)
-            i++
-        }
-        if (sb.length > 200) break
-    }
-    return sb.toString().trim()
-}
+private fun extractPreview(post: ScheduledPost): String =
+    runCatching {
+        Event
+            .fromJson(post.signedEventJson)
+            .content
+            .take(200)
+            .trim()
+    }.getOrDefault("")
 
 private fun formatPublishMoment(
     publishAtSec: Long,
     context: android.content.Context,
 ): String {
     val nowSec = System.currentTimeMillis() / 1000
-    val deltaSec = publishAtSec - nowSec
-    return when {
-        deltaSec > 0 -> {
-            "Publishes in ${timeAheadNoDot(publishAtSec, context)}"
-        }
-
-        else -> {
-            val ago = -deltaSec
-            val mins = TimeUnit.SECONDS.toMinutes(ago)
-            when {
-                mins < 1 -> "Due now"
-                mins < 60 -> "Was due ${mins}m ago"
-                else -> "Was due ${TimeUnit.SECONDS.toHours(ago)}h ago"
-            }
-        }
+    return if (publishAtSec > nowSec) {
+        stringRes(context, R.string.schedule_post_publishes_in, timeAheadNoDot(publishAtSec, context))
+    } else {
+        stringRes(context, R.string.schedule_post_was_due, timeAgoNoDot(publishAtSec, context).trim())
     }
 }

@@ -168,7 +168,7 @@ class ScheduledPostStore(
         if (idx < 0) return false
         val before = posts[idx]
         val after = transform(before)
-        if (after === before) return false
+        if (after == before) return false
         posts[idx] = after
         return true
     }
@@ -190,11 +190,21 @@ class ScheduledPostStore(
         _flow.value = posts.toList()
     }
 
+    /**
+     * Writes the snapshot to disk *while holding the data mutex*. This is a
+     * deliberate tradeoff: moving the write outside the lock would require a
+     * separate write-mutex (or a sequence number) to preserve write ordering
+     * across concurrent mutations — otherwise an older snapshot can clobber a
+     * newer one if the OS schedules the second write to finish first. For a
+     * file that's a few KB and a single-process owner with infrequent writes,
+     * holding the mutex across the rename is the simpler and correct choice.
+     * Revisit if the store ever grows past a hundred rows or starts seeing
+     * concurrent multi-writer pressure.
+     */
     private fun persist() {
         val snapshot = posts.toList()
         _flow.value = snapshot
-        val parent = storageFile.parentFile
-        if (parent != null && !parent.exists()) parent.mkdirs()
+        storageFile.parentFile?.mkdirs()
         val tmp = File(storageFile.parentFile, storageFile.name + ".tmp")
         try {
             mapper.writeValue(tmp, ScheduledPostFile(version = 1, posts = snapshot))

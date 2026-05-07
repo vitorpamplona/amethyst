@@ -20,14 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -70,14 +68,9 @@ class ScheduledPostsViewModel(
         }
     }
 
-    fun publishNow(
-        id: String,
-        context: Context,
-    ) {
+    fun publishNow(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (store.publishNow(id)) {
-                ScheduledPostWorker.scheduleCatchUp(context)
-            }
+            store.publishNow(id)
         }
     }
 

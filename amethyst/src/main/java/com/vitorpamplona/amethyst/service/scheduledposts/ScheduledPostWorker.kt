@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -152,6 +153,8 @@ class ScheduledPostWorker(
 
                     store.markSent(post.id)
                     Log.d(TAG) { "client.publish(${post.id}) done; marked SENT" }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to publish scheduled post ${post.id}", e)
                     store.markFailed(post.id, e.message)
@@ -160,6 +163,8 @@ class ScheduledPostWorker(
 
             Log.d(TAG) { "doWork() EXIT success" }
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "doWork() unexpected failure", e)
             Result.retry()

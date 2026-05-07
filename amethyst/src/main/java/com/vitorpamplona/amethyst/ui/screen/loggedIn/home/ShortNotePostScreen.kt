@@ -409,13 +409,13 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                val alwaysOnEnabled by accountViewModel.account.settings.alwaysOnNotificationService
+                    .collectAsStateWithLifecycle()
+                val savedAccounts by com.vitorpamplona.amethyst.LocalPreferences
+                    .accountsFlow()
+                    .collectAsStateWithLifecycle()
+                val hasMultipleAccounts = (savedAccounts?.size ?: 0) > 1
                 postViewModel.scheduledForSec?.let { current ->
-                    val alwaysOnEnabled by accountViewModel.account.settings.alwaysOnNotificationService
-                        .collectAsStateWithLifecycle()
-                    val savedAccounts by com.vitorpamplona.amethyst.LocalPreferences
-                        .accountsFlow()
-                        .collectAsStateWithLifecycle()
-                    val hasMultipleAccounts = (savedAccounts?.size ?: 0) > 1
                     Row(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),

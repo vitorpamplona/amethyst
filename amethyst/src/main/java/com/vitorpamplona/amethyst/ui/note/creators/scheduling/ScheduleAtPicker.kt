@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.scheduling
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,14 +50,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -98,14 +100,14 @@ fun ScheduleAtPicker(
                 },
         )
 
+    val context = LocalContext.current
+
     val timePickerState =
         rememberTimePickerState(
             initialHour = currentTime.hour,
             initialMinute = currentTime.minute,
-            is24Hour = false,
+            is24Hour = DateFormat.is24HourFormat(context),
         )
-
-    val context = LocalContext.current
 
     Column(Modifier.fillMaxWidth()) {
         Row(
@@ -117,13 +119,13 @@ fun ScheduleAtPicker(
         ) {
             Icon(
                 symbol = MaterialSymbols.Timer,
-                contentDescription = "Scheduled time",
+                contentDescription = stringRes(R.string.schedule_post_time_label),
                 modifier = Modifier.size(20.dp),
-                tint = Color(0xFF1E88E5),
+                tint = MaterialTheme.colorScheme.primary,
             )
 
             Text(
-                text = "Schedule",
+                text = stringRes(R.string.schedule_post),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -133,7 +135,7 @@ fun ScheduleAtPicker(
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = "Posts publish within ~15 minutes of the scheduled time.",
+            text = stringRes(R.string.schedule_post_helper),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -150,14 +152,14 @@ fun ScheduleAtPicker(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(MaterialSymbols.Timer, contentDescription = "Pick scheduled time")
+                Icon(MaterialSymbols.Timer, contentDescription = stringRes(R.string.schedule_post_pick_time))
                 Spacer(Modifier.width(12.dp))
 
                 if (scheduledForSec < TimeUtils.oneMinuteFromNow()) {
-                    Text("Schedule for…", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringRes(R.string.schedule_post_pick_label), style = MaterialTheme.typography.bodyLarge)
                 } else {
                     Text(
-                        text = "Publishes in ${timeAheadNoDot(scheduledForSec, context)}",
+                        text = stringRes(R.string.schedule_post_publishes_in, timeAheadNoDot(scheduledForSec, context)),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -172,7 +174,7 @@ fun ScheduleAtPicker(
                 TextButton(onClick = {
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text("Next") }
+                }) { Text(stringRes(R.string.next)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -181,7 +183,7 @@ fun ScheduleAtPicker(
 
     if (showTimePicker) {
         TimePickerDialog(
-            title = { Text("Time") },
+            title = { Text(stringRes(R.string.schedule_post_picker_time_title)) },
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
                 TextButton(
@@ -199,7 +201,7 @@ fun ScheduleAtPicker(
                         onChanged(roundUpToNextQuarterHour(rawSec))
                         showTimePicker = false
                     },
-                ) { Text("Confirm") }
+                ) { Text(stringRes(R.string.confirm)) }
             },
         ) {
             TimePicker(state = timePickerState)
@@ -225,7 +227,7 @@ private fun ReliabilityWarning(hasMultipleAccounts: Boolean) {
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Text(
-                    text = "Always-on notifications disabled",
+                    text = stringRes(R.string.schedule_post_warning_title),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(start = 8.dp),
@@ -233,11 +235,13 @@ private fun ReliabilityWarning(hasMultipleAccounts: Boolean) {
             }
             Text(
                 text =
-                    if (hasMultipleAccounts) {
-                        "Scheduled posts may not publish until you reopen the app. Other accounts' scheduled posts won't fire while this account is active. Enable always-on in Settings → UI Preferences for reliable background scheduling."
-                    } else {
-                        "Scheduled posts may not publish until you next reopen the app. Enable always-on in Settings → UI Preferences for reliable background scheduling."
-                    },
+                    stringRes(
+                        if (hasMultipleAccounts) {
+                            R.string.schedule_post_warning_multi
+                        } else {
+                            R.string.schedule_post_warning_single
+                        },
+                    ),
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.padding(top = 6.dp),
             )

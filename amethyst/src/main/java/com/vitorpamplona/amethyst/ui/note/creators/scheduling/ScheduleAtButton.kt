@@ -25,22 +25,26 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun ScheduleAtButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = { onClick() }) {
+    IconButton(onClick = onClick) {
         Icon(
             symbol = MaterialSymbols.Schedule,
-            contentDescription = if (isActive) "Cancel scheduling" else "Schedule post",
+            contentDescription =
+                stringRes(
+                    if (isActive) R.string.schedule_post_button_remove else R.string.schedule_post_button_add,
+                ),
             modifier = Modifier.size(20.dp),
-            tint = if (isActive) Color(0xFF1E88E5) else MaterialTheme.colorScheme.onBackground,
+            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
         )
     }
 }
