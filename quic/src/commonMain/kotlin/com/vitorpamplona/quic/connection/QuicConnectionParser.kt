@@ -37,6 +37,7 @@ import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.decodeFrames
+import com.vitorpamplona.quic.observability.qlogFrameName
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
@@ -87,12 +88,33 @@ private fun feedLongHeaderPacket(
     val peeked = LongHeaderPacket.peekHeader(datagram, offset) ?: return null
     val level =
         when (peeked.type) {
-            LongHeaderType.INITIAL -> EncryptionLevel.INITIAL
-            LongHeaderType.HANDSHAKE -> EncryptionLevel.HANDSHAKE
-            LongHeaderType.ZERO_RTT, LongHeaderType.RETRY -> return null // unsupported in client
+            LongHeaderType.INITIAL -> {
+                EncryptionLevel.INITIAL
+            }
+
+            LongHeaderType.HANDSHAKE -> {
+                EncryptionLevel.HANDSHAKE
+            }
+
+            LongHeaderType.ZERO_RTT, LongHeaderType.RETRY -> {
+                // Not supported by client; surface as a drop so qvis can
+                // see we ignored a packet rather than silently moving on.
+                conn.qlogObserver.onPacketDropped(
+                    "unsupported long-header type ${peeked.type}",
+                    peeked.totalLength,
+                )
+                return null
+            }
         }
     val state = conn.levelState(level)
-    val proto = state.receiveProtection ?: return null
+    val proto = state.receiveProtection
+    if (proto == null) {
+        conn.qlogObserver.onPacketDropped(
+            "no receive keys at level $level",
+            peeked.totalLength,
+        )
+        return null
+    }
     val parsed =
         LongHeaderPacket.parseAndDecrypt(
             bytes = datagram,
@@ -103,7 +125,14 @@ private fun feedLongHeaderPacket(
             hp = proto.hp,
             hpKey = proto.hpKey,
             largestReceivedInSpace = state.pnSpace.largestReceived,
-        ) ?: return null
+        )
+    if (parsed == null) {
+        conn.qlogObserver.onPacketDropped(
+            "AEAD auth failed or header parse failed at level $level",
+            peeked.totalLength,
+        )
+        return null
+    }
 
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
 
@@ -112,6 +141,14 @@ private fun feedLongHeaderPacket(
         conn.destinationConnectionId = parsed.packet.scid
     }
 
+    if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
+        conn.qlogObserver.onPacketReceived(
+            level = level,
+            packetNumber = parsed.packet.packetNumber,
+            sizeBytes = parsed.consumed,
+            frames = peekFrameNames(parsed.packet.payload),
+        )
+    }
     dispatchFrames(conn, level, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
     return parsed.consumed
 }
@@ -123,7 +160,14 @@ private fun feedShortHeaderPacket(
     nowMillis: Long,
 ) {
     val state = conn.levelState(EncryptionLevel.APPLICATION)
-    val proto = state.receiveProtection ?: return
+    val proto = state.receiveProtection
+    if (proto == null) {
+        conn.qlogObserver.onPacketDropped(
+            "no application receive keys",
+            datagram.size - offset,
+        )
+        return
+    }
     val parsed =
         ShortHeaderPacket.parseAndDecrypt(
             bytes = datagram,
@@ -135,10 +179,41 @@ private fun feedShortHeaderPacket(
             hp = proto.hp,
             hpKey = proto.hpKey,
             largestReceivedInSpace = state.pnSpace.largestReceived,
-        ) ?: return
+        )
+    if (parsed == null) {
+        conn.qlogObserver.onPacketDropped(
+            "AEAD auth failed or header parse failed at level APPLICATION",
+            datagram.size - offset,
+        )
+        return
+    }
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
+    if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
+        conn.qlogObserver.onPacketReceived(
+            level = EncryptionLevel.APPLICATION,
+            packetNumber = parsed.packet.packetNumber,
+            sizeBytes = datagram.size - offset,
+            frames = peekFrameNames(parsed.packet.payload),
+        )
+    }
     dispatchFrames(conn, EncryptionLevel.APPLICATION, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
 }
+
+/**
+ * Decode the payload's frames just to surface their qlog names. Reuses
+ * the same [com.vitorpamplona.quic.frame.decodeFrames] path as
+ * [dispatchFrames]; if it throws (malformed peer payload), we return
+ * an empty list — the dispatch path will catch the same exception
+ * and surface the close via `markClosedExternally`.
+ */
+private fun peekFrameNames(payload: ByteArray): List<String> =
+    try {
+        com.vitorpamplona.quic.frame
+            .decodeFrames(payload)
+            .map { qlogFrameName(it::class.simpleName ?: "frame") }
+    } catch (_: QuicCodecException) {
+        emptyList()
+    }
 
 private fun dispatchFrames(
     conn: QuicConnection,
@@ -224,6 +299,9 @@ private fun dispatchFrames(
                     // value still == advertised) lives inside onTokensLost.
                     for (lostPacket in lost) {
                         conn.onTokensLost(lostPacket.tokens)
+                    }
+                    if (lost.isNotEmpty()) {
+                        conn.qlogObserver.onLossDetected(level, lost.map { it.packetNumber })
                     }
                 }
             }

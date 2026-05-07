@@ -149,11 +149,15 @@ class QuicConnectionDriver(
                 // PING on the next drain (RFC 9002 §6.2.4 probe
                 // packet). The peer's ACK feeds loss detection +
                 // retransmit (steps 5–6).
-                connection.lock.withLock {
-                    connection.pendingPing = true
-                    connection.consecutivePtoCount =
-                        (connection.consecutivePtoCount + 1).coerceAtMost(6)
-                }
+                val newPtoCount =
+                    connection.lock
+                        .withLock {
+                            connection.pendingPing = true
+                            connection.consecutivePtoCount =
+                                (connection.consecutivePtoCount + 1).coerceAtMost(6)
+                            connection.consecutivePtoCount
+                        }
+                connection.qlogObserver.onPtoFired(newPtoCount, ptoMillis)
             }
         }
     }

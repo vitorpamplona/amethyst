@@ -37,6 +37,8 @@ import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.encodeFrames
+import com.vitorpamplona.quic.observability.QlogObserver
+import com.vitorpamplona.quic.observability.qlogFrameName
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderPlaintextPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
@@ -176,23 +178,26 @@ private fun buildBestLevelPacket(
     if (app.sendProtection != null) {
         val proto = app.sendProtection!!
         val pn = app.pnSpace.allocateOutbound()
-        return ShortHeaderPacket.build(
-            ShortHeaderPlaintextPacket(conn.destinationConnectionId, pn, payload),
-            proto.aead,
-            proto.key,
-            proto.iv,
-            proto.hp,
-            proto.hpKey,
-            largestAckedInSpace = -1L,
-        )
+        val built =
+            ShortHeaderPacket.build(
+                ShortHeaderPlaintextPacket(conn.destinationConnectionId, pn, payload),
+                proto.aead,
+                proto.key,
+                proto.iv,
+                proto.hp,
+                proto.hpKey,
+                largestAckedInSpace = -1L,
+            )
+        emitQlogSent(conn, EncryptionLevel.APPLICATION, pn, built.size, frames)
+        return built
     }
     val hs = conn.handshake
     if (hs.sendProtection != null) {
-        return buildLongHeaderPacket(conn, EncryptionLevel.HANDSHAKE, payload)
+        return buildLongHeaderPacket(conn, EncryptionLevel.HANDSHAKE, payload, frames)
     }
     val init = conn.initial
     if (init.sendProtection != null) {
-        return buildLongHeaderPacket(conn, EncryptionLevel.INITIAL, payload)
+        return buildLongHeaderPacket(conn, EncryptionLevel.INITIAL, payload, frames)
     }
     return null
 }
@@ -201,6 +206,7 @@ private fun buildLongHeaderPacket(
     conn: QuicConnection,
     level: EncryptionLevel,
     payload: ByteArray,
+    frames: List<Frame>,
 ): ByteArray {
     val state = conn.levelState(level)
     val proto = state.sendProtection!!
@@ -211,22 +217,25 @@ private fun buildLongHeaderPacket(
             EncryptionLevel.HANDSHAKE -> LongHeaderType.HANDSHAKE
             EncryptionLevel.APPLICATION -> error("APPLICATION uses short-header packets")
         }
-    return LongHeaderPacket.build(
-        LongHeaderPlaintextPacket(
-            type = type,
-            version = QuicVersion.V1,
-            dcid = conn.destinationConnectionId,
-            scid = conn.sourceConnectionId,
-            packetNumber = pn,
-            payload = payload,
-        ),
-        proto.aead,
-        proto.key,
-        proto.iv,
-        proto.hp,
-        proto.hpKey,
-        largestAckedInSpace = -1L,
-    )
+    val built =
+        LongHeaderPacket.build(
+            LongHeaderPlaintextPacket(
+                type = type,
+                version = QuicVersion.V1,
+                dcid = conn.destinationConnectionId,
+                scid = conn.sourceConnectionId,
+                packetNumber = pn,
+                payload = payload,
+            ),
+            proto.aead,
+            proto.key,
+            proto.iv,
+            proto.hp,
+            proto.hpKey,
+            largestAckedInSpace = -1L,
+        )
+    emitQlogSent(conn, level, pn, built.size, frames)
+    return built
 }
 
 /**
@@ -345,7 +354,32 @@ private fun buildLongHeaderFromFrames(
             sizeBytes = packet.size,
             tokens = tokens,
         )
+    emitQlogSent(conn, level, pn, packet.size, frames)
     return packet
+}
+
+/**
+ * Fire [QlogObserver.onPacketSent] for one outbound packet. Skipped
+ * fast for the [QlogObserver.NoOp] default so production callers pay
+ * only one identity comparison + one virtual call.
+ */
+private fun emitQlogSent(
+    conn: QuicConnection,
+    level: EncryptionLevel,
+    packetNumber: Long,
+    sizeBytes: Int,
+    frames: List<com.vitorpamplona.quic.frame.Frame>,
+) {
+    val observer = conn.qlogObserver
+    if (observer === QlogObserver.NoOp) return
+    val frameNames = ArrayList<String>(frames.size)
+    for (f in frames) frameNames += qlogFrameName(f::class.simpleName ?: "frame")
+    observer.onPacketSent(
+        level = level,
+        packetNumber = packetNumber,
+        sizeBytes = sizeBytes,
+        frames = frameNames,
+    )
 }
 
 private fun buildApplicationPacket(
@@ -510,6 +544,9 @@ private fun buildApplicationPacket(
             sizeBytes = sizeBytes.getOrNull()?.size ?: 0,
             tokens = tokens.toList(),
         )
+    sizeBytes.getOrNull()?.let { built ->
+        emitQlogSent(conn, EncryptionLevel.APPLICATION, pn, built.size, frames)
+    }
     // Re-throw on encrypt failure so callers (driver loop) see the
     // same exception they did before this change. The bookkeeping
     // entry is still in place; if the throw was transient, retransmit
