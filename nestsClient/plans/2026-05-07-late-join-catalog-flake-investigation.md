@@ -1,14 +1,17 @@
 # `late_join_listener_still_decodes_tail` catalog-cancelled flake investigation
 
-**Status: partially fixed (commit `8cc7cbd42`), residual flake documented.**
+**Status: partially fixed (commits `8cc7cbd42`, `00f6cba31`,
+`207057374`), residual flake documented as upstream-territory.**
 
-`HangInteropTest.late_join_listener_still_decodes_tail` and (less
-frequently) `packet_loss_1pct_does_not_kill_audio` intermittently
+`HangInteropTest.late_join_listener_still_decodes_tail`,
+`packet_loss_1pct_does_not_kill_audio`,
+`long_broadcast_60s_tone_round_trips`, and
+`amethyst_speaker_to_hang_listener_stereo_440_660` intermittently
 fail with `hang-listen` exiting non-zero on a `subscribe error`
 during catalog read. Pre-fix flake rate: 5/5 fail in a sweep.
-Post-fix rate: ~3/5 fail. The fix closes one root cause; the
-residual is a separate, deeper bug that's beyond this investigation
-session's budget.
+After three layered mitigations: ~2-3/5 fail. The remaining flake
+is in moq-relay 0.10.x's per-broadcast announce → subscribe-pump
+setup race; the test-side mitigations have hit diminishing returns.
 
 ## Pre-fix root cause: moq-rs cancel cascade
 
@@ -143,17 +146,82 @@ SUBSCRIBE arriving normally.
    socket via `udp-loss-shim` modified to packet-log instead of drop.
    See exactly which streams open + close.
 
-## Mitigation if root cause stays elusive
+## Mitigations attempted (in order)
 
-The test's `listenerLateJoinDelayMs = 2_000` AND `speakerSeconds = 5`
-together leave only 3 s of catalog-read window AFTER the listener
-attaches. **Bumping `speakerSeconds` to 8 s** (or shrinking the
-late-join delay to 1 s) would give the catalog read more headroom
-without changing what the test asserts. This wouldn't fix the
-underlying flake but would mask it for CI-purposes.
+1. **Per-method `resetShared()`** (`706ccda67`) — kills the relay
+   subprocess between test methods. Closes a moq-rs accumulated-
+   state class but the catalog-cancel pattern persists.
+2. **hang-listen single long-lived subscribe** (`8cc7cbd42`) —
+   replaces the create-drop-recreate retry shape with one
+   subscribe held for the full 10 s read budget. Eliminates the
+   moq-rs `Error::Cancel` cascade. **5/5 fail → ~2-3/5 pass.**
+3. **Speaker warmup bump 150 ms → 600 ms** (`00f6cba31`) — gives
+   the relay more time to register the speaker's broadcast in
+   its origin before the listener subscribes. **No measurable
+   improvement** — the failing test still shows the speaker
+   receives ANNOUNCE Please/Active but no SUBSCRIBE inbound.
+4. **hang-listen 250 ms post-`origin.announced()` sleep**
+   (`207057374`) — gives the relay time to fully prime its
+   per-broadcast upstream-subscribe pump after the broadcast
+   appears in its origin map but before the listener subscribes.
+   **No measurable improvement** — same failure mode persists.
 
-Currently rejected because masking a real bug isn't a fix; the
-remaining 60% failure rate is a genuine signal.
+## Smoking gun (from speaker stderr trace)
+
+For broadcasts that fail (`10d4b6f2…`, `c75e2648…`, `f1be27ef…`),
+the speaker-side `Log.d("NestTx")` trace shows ONE event for the
+broadcast suffix:
+
+    12:53:32.293 ANNOUNCE inbound prefix='' → emitted Active suffix='f1be27ef…'
+
+…and then NOTHING for the entire 10 s catalog-read window. No
+`SUBSCRIBE inbound`, no `openGroupStream`. The audio publisher
+keeps logging `send returning false — no inboundSubs` at 50 fps
+until hang-listen times out. Meanwhile hang-listen's moq-rs client
+is logging `subscribe started id=0 catalog.json` and waiting.
+
+**Interpretation:** the relay accepts the listener's wire
+SUBSCRIBE on the downstream connection, BUT does not open an
+upstream SUBSCRIBE bidi to the speaker. The two sides are
+disconnected; nothing the test code can fix from above.
+
+For broadcasts that succeed (`688e130b…`, `6e577e5f…`), the same
+trace shows:
+
+    12:58:10.334  ANNOUNCE inbound prefix='' → emitted Active suffix='6e577e5f…'
+    12:58:11.246  SUBSCRIBE inbound id=0 broadcast='6e577e5f…' track='catalog.json'
+    12:58:11.246  SUBSCRIBE registered id=0 …
+    12:58:11.247  openGroupStream subId=0 seq=0
+    …
+
+The relay successfully forwards the upstream SUBSCRIBE. It's a
+binary "the relay does or does not forward" — there's no partial
+state.
+
+## Conclusion
+
+The flake is **moq-relay 0.10.x's relay-side per-broadcast
+forward-subscribe routing**, not anything the test or speaker can
+mitigate from outside. Some component of the relay's
+`Origin::announced()` → `broadcast.subscribe_track(...)` →
+upstream subscribe pump is set up asynchronously and intermittently
+fails to wire up the upstream subscribe.
+
+Possible next steps if this matters more:
+
+1. **Boot the relay with `RUST_LOG=moq_relay=trace,moq_lite=trace`**
+   under the test harness (currently `RUST_LOG=info`); capture per-
+   test relay stderr to a tempfile; check whether the relay logs
+   the upstream subscribe attempt for the failing broadcast suffix.
+2. **File an upstream issue at `kixelated/moq`** with this
+   reproducer (HangInteropTest 5x sweep, ~40-60% flake under load)
+   citing the smoking-gun trace pair above.
+3. **Stop pinning to `moq-relay 0.10.25`** and try the next minor
+   release — maybe the race has been fixed upstream since.
+
+Currently rejected: bumping `speakerSeconds` to 8 s and changing
+the test's threshold. That masks a real bug; the failure mode is
+worth surfacing.
 
 ## Files referenced
 
