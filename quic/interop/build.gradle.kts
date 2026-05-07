@@ -44,6 +44,7 @@ sourceSets {
 dependencies {
     implementation(project(":quic"))
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.jackson.module.kotlin)
 
     testImplementation(libs.kotlin.test)
 }

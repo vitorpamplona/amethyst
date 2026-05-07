@@ -112,6 +112,15 @@ fi
 # per-invocation subdirectory under $LOG_DIR. The parent must exist; the
 # child must not. Tail of `ls -t "$LOG_DIR" | head -1` finds the latest.
 #
+# NOTE: this script is NOT safe to run concurrently against itself.
+# quic-interop-runner's docker-compose.yml hardcodes `container_name:
+# sim/server/client`, which Docker enforces globally regardless of
+# COMPOSE_PROJECT_NAME. Two simultaneous invocations collide on
+# `docker create container "sim"`. Run sequentially:
+#   for peer in aioquic picoquic quic-go; do
+#       quic/interop/run-matrix.sh -s $peer -t handshake,chacha20,...
+#   done
+#
 # Output filter: by default we drop the runner / container boilerplate
 # (interface checksum offload toggles, route setup, container lifecycle,
 # the long Command: WAITFORSERVER=... line, the platform-mismatch warning

@@ -141,7 +141,12 @@ fun main() {
             "handshake", "chacha20", "handshakeloss",
             "transfer", "http3", "multiplexing",
             "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
-            "retry", "ipv6", "versionnegotiation",
+            "retry", "ipv6",
+            // NOTE: the runner does NOT have a `versionnegotiation` testcase
+            // (its Available list excludes it). The :quic VN-handling code
+            // (applyVersionNegotiation, FORCE_VERSION_NEGOTIATION constant)
+            // stays as defensive support for any server that decides to
+            // send a VN packet at us, but no testcase exercises it directly.
             -> {
                 runTransferTest(
                     requests = requests,
