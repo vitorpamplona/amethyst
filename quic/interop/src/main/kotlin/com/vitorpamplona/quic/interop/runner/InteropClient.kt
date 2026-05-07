@@ -85,8 +85,15 @@ private const val MULTIPLEX_PARALLELISM = 64
 fun main() {
     // Single env-var check, propagated to library code that opts into
     // verbose tracing only when this is set.
-    if (System.getenv("QUIC_INTEROP_DEBUG") == "1") {
+    val debugEnv = System.getenv("QUIC_INTEROP_DEBUG")
+    if (debugEnv == "1") {
         com.vitorpamplona.quic.connection.writerDebugEnabled = true
+        System.err.println(
+            "[boot] DEBUG=1; writerDebugEnabled=true; build_id=" +
+                "${com.vitorpamplona.quic.connection.WRITER_DEBUG_BUILD_ID}",
+        )
+    } else {
+        System.err.println("[boot] DEBUG=${debugEnv ?: "(unset)"} writerDebugEnabled=false")
     }
 
     val role = System.getenv("ROLE") ?: "client"

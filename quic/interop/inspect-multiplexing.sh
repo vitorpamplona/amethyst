@@ -38,7 +38,12 @@ echo "=============== writer-side debug traces (DEBUG=1 build only) ============
 # `grep -c` exits 1 on no matches AND prints "0", so a naive
 # `grep -c ... || echo 0` doubles up. Suppress the exit code
 # instead.
-WRITER_LINES=$(grep -cE '\[(writer|batch|interop)' "$CASE_DIR/output.txt" 2>/dev/null) || WRITER_LINES=0
+echo
+echo "=============== boot line (verifies image has latest debug build) ==============="
+grep '\[boot\]' "$CASE_DIR/output.txt" 2>/dev/null | head -n 5 \
+    || echo "(no [boot] lines — image is older than the boot log; rebuild with: DEBUG=1 ./quic/interop/run-matrix.sh ...)"
+
+WRITER_LINES=$(grep -cE '\[(writer|batch|interop|boot)' "$CASE_DIR/output.txt" 2>/dev/null) || WRITER_LINES=0
 if [[ "$WRITER_LINES" -gt 0 ]]; then
     echo "($WRITER_LINES diagnostic lines; [batch] / [interop] entries first then first 30 [writer.app]:)"
     # Use `|| true` because grep returns 1 on no matches and the

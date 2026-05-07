@@ -32,3 +32,11 @@ package com.vitorpamplona.quic.connection
  */
 @Volatile
 var writerDebugEnabled: Boolean = false
+
+/**
+ * Build identifier injected into the boot log so we can verify the
+ * deployed image actually has the latest debug code (i.e. that the
+ * docker layer cache didn't serve a stale jar). Bump when adding new
+ * trace lines to make them traceable from the wire run.
+ */
+const val WRITER_DEBUG_BUILD_ID: String = "2026-05-07-batch-log-v1"
