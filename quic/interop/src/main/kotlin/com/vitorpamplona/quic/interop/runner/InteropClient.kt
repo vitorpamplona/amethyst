@@ -64,6 +64,13 @@ private const val HANDSHAKE_TIMEOUT_SEC = 10L
 // inflating turnaround for the cases that actually complete fast.
 private const val TRANSFER_TIMEOUT_SEC = 60L
 
+// Per-stream timeout in the parallel-multiplexing path. If any single
+// GET hangs past this (e.g. its FIN was lost in the shuffle of
+// hundreds of concurrent streams), the await on that future returns
+// a status=0 response and the others continue. Without this, a single
+// stuck stream would block the whole .map { it.await() } chain.
+private const val PER_STREAM_TIMEOUT_SEC = 20L
+
 fun main() {
     val role = System.getenv("ROLE") ?: "client"
     if (role != "client") {
@@ -295,11 +302,24 @@ private fun runTransferTest(
                         if (parallel) {
                             // Open every request stream up-front so they
                             // genuinely overlap on the wire — what the
-                            // multiplexing testcase verifies.
+                            // multiplexing testcase verifies. Each get()
+                            // is wrapped in a per-stream timeout: a single
+                            // hung stream (e.g. its FIN got lost in the
+                            // shuffle) shouldn't block the rest from
+                            // completing. A timed-out stream surfaces as
+                            // status=0, which the loop below counts as
+                            // a failure but doesn't block on.
                             coroutineScope {
                                 urls
-                                    .map { url -> async { url to client.get(authority, url.path) } }
-                                    .map { it.await() }
+                                    .map { url ->
+                                        async {
+                                            val resp =
+                                                withTimeoutOrNull(PER_STREAM_TIMEOUT_SEC * 1_000L) {
+                                                    client.get(authority, url.path)
+                                                }
+                                            url to (resp ?: GetResponse(status = 0, body = ByteArray(0)))
+                                        }
+                                    }.map { it.await() }
                             }
                         } else {
                             urls.map { url -> url to client.get(authority, url.path) }
