@@ -60,6 +60,12 @@ class QlogWriter(
     // append=false → truncate any prior trace at this path so a reused
     // QLOGDIR doesn't accumulate stale events from a previous run.
     private val writer: BufferedWriter = BufferedWriter(FileWriter(file, false))
+
+    /** Latched true once close() runs OR once a write throws IOException.
+     *  Subsequent emits short-circuit instead of throwing into the
+     *  send loop and tearing down an otherwise-healthy connection. */
+    @Volatile
+    private var closed: Boolean = false
     private val lock = ReentrantLock()
     private val startMillis: Long = nowMillis()
 
@@ -259,6 +265,7 @@ class QlogWriter(
 
     override fun close() {
         lock.withLock {
+            closed = true
             try {
                 writer.flush()
             } finally {
@@ -286,11 +293,22 @@ class QlogWriter(
 
     private fun writeLineLocked(line: String) {
         lock.withLock {
-            writer.write(line)
-            writer.write("\n")
-            // Flush every line so a hard-killed process still leaves a
-            // partial-but-parseable trace.
-            writer.flush()
+            // The send loop may still emit packet_sent events for the
+            // CONNECTION_CLOSE packet after the application calls close()
+            // — observers MUST NOT break the connection. Silently swallow
+            // post-close IOExceptions; the trace is what we have.
+            if (closed) return
+            try {
+                writer.write(line)
+                writer.write("\n")
+                // Flush every line so a hard-killed process still leaves a
+                // partial-but-parseable trace.
+                writer.flush()
+            } catch (_: java.io.IOException) {
+                // Stream closed under us. Latch closed so subsequent emits
+                // skip the lock and return immediately.
+                closed = true
+            }
         }
     }
 
