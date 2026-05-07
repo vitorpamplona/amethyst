@@ -358,6 +358,8 @@ class NostrClient(
 
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = eventOutbox.activeOutboxCacheFor(url)
 
+    override fun pendingPublishRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>? = eventOutbox.pendingRelaysFor(eventId)
+
     override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeRequests.getSubscriptionFiltersOrNull(subId)
 
     override fun getCountFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeCounts.getSubscriptionFiltersOrNull(subId)

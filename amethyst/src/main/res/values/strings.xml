@@ -455,6 +455,11 @@
     <string name="scheduled_posts_day_tomorrow">Tomorrow</string>
     <string name="scheduled_posts_logout_toast_zero">Logged out</string>
     <string name="scheduled_posts_logout_toast">Logged out · %1$d scheduled post(s) deleted</string>
+    <string name="scheduled_posts_notification_sent_title">Scheduled post published</string>
+    <string name="scheduled_posts_notification_failed_title">Scheduled post failed</string>
+    <string name="app_notification_scheduled_posts_channel_id" translatable="false">ScheduledPostsID</string>
+    <string name="app_notification_scheduled_posts_channel_name">Scheduled posts</string>
+    <string name="app_notification_scheduled_posts_channel_description">Notifications when a scheduled post is published or fails to publish.</string>
     <string name="scheduled_posts_send_now_title">Send now?</string>
     <string name="scheduled_posts_send_now_message">This post will publish to relays immediately. The original schedule will be discarded.</string>
     <string name="scheduled_posts_send_now_confirm">Send</string>

@@ -90,6 +90,14 @@ class PoolEventOutbox {
         return myEvents
     }
 
+    /**
+     * Returns the relays that have NOT yet acknowledged [eventId] with an OK, or
+     * null if the event is not currently tracked (never sent or already fully done).
+     * Callers can poll this after publish to detect when relays ack: the set shrinks
+     * as OKs arrive, then the entry is removed from the outbox (returns null).
+     */
+    fun pendingRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>? = eventOutbox[eventId]?.relaysLeft()
+
     fun markAsSending(
         event: Event,
         relays: Set<NormalizedRelayUrl>,

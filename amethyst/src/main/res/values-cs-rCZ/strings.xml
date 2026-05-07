@@ -2484,4 +2484,8 @@
     <string name="scheduled_posts_status_sent">Odesláno</string>
     <string name="scheduled_posts_status_cancelled">Zrušeno</string>
     <string name="scheduled_posts_logout_warning">Máte %1$d naplánovaných příspěvků, které ještě nebyly publikovány. Odhlášením budou trvale smazány.</string>
+    <string name="scheduled_posts_notification_sent_title">Naplánovaný příspěvek publikován</string>
+    <string name="scheduled_posts_notification_failed_title">Naplánovaný příspěvek selhal</string>
+    <string name="app_notification_scheduled_posts_channel_name">Naplánované příspěvky</string>
+    <string name="app_notification_scheduled_posts_channel_description">Oznámení, když je naplánovaný příspěvek publikován nebo selže při publikaci.</string>
 </resources>

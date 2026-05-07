@@ -2475,4 +2475,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="scheduled_posts_status_sent">Gesendet</string>
     <string name="scheduled_posts_status_cancelled">Abgebrochen</string>
     <string name="scheduled_posts_logout_warning">Du hast %1$d geplante(n) Beitrag/Beiträge, der/die noch nicht veröffentlicht wurden. Beim Abmelden werden sie dauerhaft gelöscht.</string>
+    <string name="scheduled_posts_notification_sent_title">Geplanter Beitrag veröffentlicht</string>
+    <string name="scheduled_posts_notification_failed_title">Geplanter Beitrag fehlgeschlagen</string>
+    <string name="app_notification_scheduled_posts_channel_name">Geplante Beiträge</string>
+    <string name="app_notification_scheduled_posts_channel_description">Benachrichtigungen, wenn ein geplanter Beitrag veröffentlicht wird oder die Veröffentlichung fehlschlägt.</string>
 </resources>
