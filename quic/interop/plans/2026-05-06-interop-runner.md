@@ -114,13 +114,37 @@ Inspect `./logs/<run>/client_qlog/*.qlog` in qvis when something breaks.
   RFC 9000 §17.2.5 + RFC 9001 §5.8 implementation. `ipv6` should "just work"
   via JDK's `DatagramChannel` v6 support; runner-validated when run.
 
-## Validated against (as of 2026-05-07)
+## Validated against (as of 2026-05-07 evening)
 
-| Peer | handshake | chacha20 | transfer | http3 | multiplexing | transferloss | handshakeloss |
-|---|---|---|---|---|---|---|---|
-| aioquic   | ✓ | ✓ | ✓ | ✓ | (was ✕, fixed in this push) | ✓ | server-not-supported |
-| picoquic  | ✓ | ✓ | ✓ | ✓ | (untested in last run) | (untested) | (untested) |
-| quic-go   | (was ✕, fixed in this push) | (was ✕) | (was ✕) | (was ✕, multi-stream-bug) | (was ✕) | (untested) | (untested) |
+Latest run results before pushing the multi-ALPN fix `acfe815e1`:
+
+| Peer | handshake | chacha20 | transfer | http3 | multiplexing |
+|---|---|---|---|---|---|
+| aioquic   | ✓ | ✓ | ✓ | ✓ | ✕ (channel-saturation, agent C investigating) |
+| picoquic  | ✕ (alpn=hq-interop unsupported, fixed in `acfe815e1`) | ✕ | ✕ | ✓ | ✕ |
+| quic-go   | (untested post-fix) | | | | |
+
+After `acfe815e1`'s multi-ALPN offer, predictions:
+- picoquic returns to 4/4 (server picks `h3`, we run Http3GetClient).
+- quic-go: handshake / chacha20 / transfer / http3 should green (server picks `hq-interop` for non-h3 tests).
+- aioquic: still 4/5; multiplexing held back by channel-saturation bug.
+
+## Overnight agents in flight (2026-05-07)
+
+- **Agent A — `versionnegotiation`**: configurable initial QUIC version on
+  `QuicConnectionWriter` + VN-packet parser dispatch + retry-with-V1
+  state machine on `QuicConnection`. Adds the testcase to dispatch.
+- **Agent B — qlog observer infrastructure**: `QlogObserver` interface in
+  `:quic`, NoOp default, JSON-NDJSON `QlogWriter` in `:quic-interop`, hooks
+  at packet-sent/received/dropped, key-updated, conn-started/closed,
+  loss-detected, PTO-fired, transport-params, ALPN, version. Reads
+  `$QLOGDIR` env var the runner already sets.
+- **Agent C — multiplexing channel-saturation**: most likely root cause is
+  that `Http3GetClient` doesn't consume the server's incoming uni
+  streams (control + QPACK encoder + QPACK decoder); their per-stream
+  channels fill, parser tears down with INTERNAL_ERROR. Agent verifies
+  hypothesis, implements the spec-correct fix (consume + drain peer uni
+  streams), adds regression test.
 
 ## Explicitly unsupported testcases (return 127, runner skips)
 
