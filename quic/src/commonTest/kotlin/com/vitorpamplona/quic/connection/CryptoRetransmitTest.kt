@@ -81,12 +81,12 @@ class CryptoRetransmitTest {
                     .single()
 
             // Simulate loss via direct dispatch.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensLost(listOf(cryptoToken))
                 client.initial.sentPackets.remove(firstPn)
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
 
             // Initial-level cryptoSend should now have re-queued bytes
@@ -126,11 +126,11 @@ class CryptoRetransmitTest {
                 client.initial.sentPackets.entries
                     .first { it.value.tokens.any { t -> t is RecoveryToken.Crypto } }
             // ACK via direct dispatch.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensAcked(packet.value.tokens)
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             // After ACK the Initial-level cryptoSend's flushedFloor should
             // have advanced — we check by observing that another takeChunk

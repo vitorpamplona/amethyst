@@ -24,6 +24,8 @@ import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
 import com.vitorpamplona.quic.crypto.bestAes128GcmAead
+import com.vitorpamplona.quic.observability.QlogObserver
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -73,24 +75,119 @@ class QuicConnection(
             .toEpochMilliseconds()
     },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
+    /**
+     * Optional second listener invoked after the connection's own
+     * key-installation listener. Used by the interop runner endpoint to
+     * dump SSLKEYLOG lines so Wireshark can decrypt captured pcaps.
+     * Default `null` keeps production callers unaffected.
+     */
+    val extraSecretsListener: TlsSecretsListener? = null,
+    /**
+     * TLS cipher suites to offer in the ClientHello. Override to e.g.
+     * `intArrayOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256)` for the
+     * `chacha20` interop testcase. Default matches [TlsClient]'s default.
+     */
+    val cipherSuites: IntArray =
+        intArrayOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
+    /**
+     * Version this connection puts in the FIRST Initial it sends. Defaults
+     * to [QuicVersion.V1]; the interop runner sets it to
+     * [QuicVersion.FORCE_VERSION_NEGOTIATION] for the `versionnegotiation`
+     * testcase, which drives the client through the RFC 9000 §6 VN flow.
+     */
+    val initialVersion: Int = QuicVersion.V1,
+    /**
+     * Optional qlog observer (draft-marx-qlog). Production callers
+     * leave this at [QlogObserver.NoOp] (zero overhead). Interop /
+     * test runners attach a JSON-NDJSON writer so a failed run
+     * produces a `client.sqlog` consumable by qvis.
+     */
+    val qlogObserver: QlogObserver = QlogObserver.NoOp,
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
     var destinationConnectionId: ConnectionId = ConnectionId.random(8)
         internal set
     val originalDestinationConnectionId: ConnectionId = destinationConnectionId
 
+    /**
+     * Version the writer stamps into the long-header version field on the
+     * NEXT outbound Initial / Handshake packet. Initialised to
+     * [initialVersion]; switched to [QuicVersion.V1] by
+     * [applyVersionNegotiation] after a successful VN exchange.
+     */
+    @Volatile
+    var currentVersion: Int = initialVersion
+        internal set
+
+    /**
+     * RFC 9000 §6.2: a client MUST consume at most one VN response per
+     * connection. After [applyVersionNegotiation] runs once, any further
+     * inbound VN packet is dropped silently — the latch defends against a
+     * mid-handshake attacker who replays an old VN datagram to wedge us
+     * into an endless re-negotiation loop.
+     */
+    @Volatile
+    var vnConsumed: Boolean = false
+        internal set
+
+    /**
+     * RFC 9000 §17.2.5.1: the Retry token the server handed us in a Retry
+     * packet, which we must echo verbatim in the Token field of every
+     * subsequent Initial we send. Null until [applyRetry] runs.
+     */
+    @Volatile
+    var retryToken: ByteArray? = null
+        internal set
+
+    /**
+     * RFC 9000 §17.2.5.2: a client MUST NOT process more than one Retry
+     * packet per connection. Any subsequent Retry is silently dropped.
+     * Latched true by [applyRetry] on a successfully-verified Retry.
+     */
+    @Volatile
+    var retryConsumed: Boolean = false
+        internal set
+
+    /**
+     * Cached ClientHello bytes captured by [start]. Re-enqueued onto the
+     * fresh Initial-level [LevelState.cryptoSend] when
+     * [applyVersionNegotiation] or [applyRetry] resets the encryption
+     * level so the new Initial datagram still carries a valid TLS handshake.
+     * Without this the reset wipes the bytes that [TlsClient] already
+     * enqueued and the post-VN/post-Retry Initial would carry an empty
+     * CRYPTO frame.
+     */
+    private var originalClientHello: ByteArray? = null
+
     val initial = LevelState()
     val handshake = LevelState()
     val application = LevelState()
 
+    @Volatile
     var handshakeComplete: Boolean = false
         private set
 
+    /**
+     * Lock-split refactor (2026-05-08): @Volatile because the writer/parser
+     * read this without acquiring [lifecycleLock] (the field is written
+     * once at handshake completion, then immutable).
+     */
+    @Volatile
     var peerTransportParameters: TransportParameters? = null
         private set
 
     enum class Status { HANDSHAKING, CONNECTED, CLOSING, CLOSED }
 
+    /**
+     * Lock-split refactor (2026-05-08): @Volatile so concurrent loops can
+     * read the status without a lock — coarse "are we still alive?" checks.
+     * Mutating transitions still go through [lifecycleLock] for atomicity
+     * with [closeReason]/[closeErrorCode] updates.
+     */
+    @Volatile
     var status: Status = Status.HANDSHAKING
         internal set
 
@@ -234,7 +331,11 @@ class QuicConnection(
      * emits a PING frame on the next drain. The PING elicits an
      * ACK from the peer; that ACK runs through loss detection and
      * declares any in-flight packets lost, triggering retransmit.
+     *
+     * Lock-split refactor (2026-05-08): @Volatile so the driver
+     * sets it without acquiring any mutex.
      */
+    @Volatile
     internal var pendingPing: Boolean = false
 
     /**
@@ -317,6 +418,8 @@ class QuicConnection(
             ) {
                 handshake.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 handshake.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
+                qlogObserver.onKeyUpdated("client", EncryptionLevel.HANDSHAKE)
+                qlogObserver.onKeyUpdated("server", EncryptionLevel.HANDSHAKE)
             }
 
             override fun onApplicationKeysReady(
@@ -326,13 +429,17 @@ class QuicConnection(
             ) {
                 application.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 application.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
+                qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
+                qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
             }
 
             override fun onHandshakeComplete() {
                 handshakeComplete = true
                 if (status == Status.HANDSHAKING) status = Status.CONNECTED
                 applyPeerTransportParameters()
+                tls.negotiatedAlpn?.let { qlogObserver.onAlpnNegotiated(it.decodeToString()) }
                 handshakeDoneSignal.complete(Unit)
+                extraSecretsListener?.onHandshakeComplete()
             }
         }
 
@@ -358,6 +465,7 @@ class QuicConnection(
             secretsListener = tlsListener,
             certificateValidator = tlsCertificateValidator,
             offeredAlpns = alpnList,
+            cipherSuites = cipherSuites,
         )
 
     init {
@@ -375,9 +483,165 @@ class QuicConnection(
 
     /** Begin the handshake — emits ClientHello into Initial CRYPTO. */
     fun start() {
+        // qlog: emit connection_started + initial transport_parameters_set
+        // before any wire traffic so the trace makes chronological sense
+        // when handed to qvis.
+        qlogObserver.onConnectionStarted(
+            serverName = serverName,
+            dcid = destinationConnectionId.bytes,
+            scid = sourceConnectionId.bytes,
+        )
+        qlogObserver.onTransportParametersSet("local", localTransportParametersSummary())
+        // RFC 9000 §6: we're not doing version negotiation, so the
+        // chosen version is unconditional.
+        qlogObserver.onVersionInformation("v1", emptyList())
         tls.start()
         // Drain ClientHello bytes into the Initial-level CRYPTO send buffer.
-        tls.pollOutbound(TlsClient.Level.INITIAL)?.let { initial.cryptoSend.enqueue(it) }
+        // Cache the bytes so [applyVersionNegotiation] can re-enqueue them
+        // onto a fresh cryptoSend after resetting Initial-level state.
+        // Cannot re-pollOutbound — the queue is destructive.
+        tls.pollOutbound(TlsClient.Level.INITIAL)?.let {
+            originalClientHello = it
+            initial.cryptoSend.enqueue(it)
+        }
+    }
+
+    /**
+     * Apply a Version Negotiation packet (RFC 9000 §6) received from the
+     * server. The client offered [initialVersion]; the server replies with
+     * a list of versions it supports. We pick [QuicVersion.V1] from the
+     * list, regenerate the destination CID + Initial keys, reset the
+     * Initial encryption level, and re-emit the cached ClientHello so the
+     * next drain produces a valid v1 Initial packet.
+     *
+     * RFC 9000 §6.2 invariants enforced here:
+     *   - The supported_versions list MUST NOT contain
+     *     [initialVersion] — including it would mean the server received
+     *     our offer and STILL replied with VN, which is a downgrade signal.
+     *     Drop the packet (treat as no-op).
+     *   - At most one VN per connection (latched via [vnConsumed]).
+     *   - If we cannot speak any of the offered versions, fail the
+     *     handshake.
+     *
+     * Caller MUST hold [lock] (the parser already does).
+     */
+    internal fun applyVersionNegotiation(supportedVersions: List<Int>) {
+        // RFC 9000 §6.2: a second VN must be ignored.
+        if (vnConsumed) return
+        // Anti-downgrade: server-claimed support for the version we
+        // already offered indicates VN replay / spoof. Drop silently.
+        if (supportedVersions.contains(initialVersion)) return
+        // Pick a version we can speak. Today that's only v1.
+        if (!supportedVersions.contains(QuicVersion.V1)) {
+            signalHandshakeFailed(
+                QuicVersionNegotiationException(
+                    "VERSION_NEGOTIATION: server offered ${supportedVersions.map { v -> "0x" + v.toUInt().toString(16) }}, " +
+                        "client only supports 0x" + QuicVersion.V1.toUInt().toString(16),
+                ),
+            )
+            markClosedExternally("VERSION_NEGOTIATION: no mutually supported version")
+            return
+        }
+
+        // Latch BEFORE reset so a re-entrant inbound VN during the reset
+        // window is rejected by the early-return at the top.
+        vnConsumed = true
+
+        // Generate a fresh destination CID. RFC 9000 §6.2 doesn't strictly
+        // require this (the server hasn't indexed our CID with any state
+        // since its only response was VN), but it matches what reference
+        // implementations do and keeps the post-VN connection
+        // cryptographically isolated from the pre-VN exchange.
+        val newDcid = ConnectionId.random(8)
+        destinationConnectionId = newDcid
+
+        // Reset Initial-level state in place: fresh PN space (next
+        // allocateOutbound returns 0), fresh ackTracker, fresh
+        // cryptoSend / cryptoReceive, fresh sentPackets retention.
+        // Writer + parser only ever reach the level via [conn.initial],
+        // so we mutate the fields rather than swap the instance.
+        val proto = InitialSecrets.derive(newDcid.bytes)
+        val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
+        val newSend =
+            PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp)
+        val newReceive =
+            PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp)
+        initial.resetForVersionNegotiation(sendProtection = newSend, receiveProtection = newReceive)
+        // Re-enqueue the ClientHello so the next drainOutbound emits a v1
+        // Initial datagram with the same TLS handshake the original carried.
+        originalClientHello?.let { initial.cryptoSend.enqueue(it) }
+
+        // Switch the writer's stamp to v1 so the next Initial / Handshake
+        // long-header carries the right version.
+        currentVersion = QuicVersion.V1
+    }
+
+    /**
+     * Apply a verified Retry packet per RFC 9000 §17.2.5 + RFC 9001 §5.8.
+     * Validates the retry-integrity tag, swaps DCID, re-derives Initial keys,
+     * resets the Initial PN space, and re-enqueues the cached ClientHello so
+     * the next outbound Initial carries `Token = retryPacket.retryToken`.
+     *
+     * Returns false on bad tag, second Retry (RFC 9000 §17.2.5.2), or
+     * pre-start (no original ClientHello captured) — all silently dropped.
+     */
+    internal fun applyRetry(
+        retryPacket: com.vitorpamplona.quic.packet.RetryPacket,
+        originalPacketBytes: ByteArray,
+    ): Boolean {
+        if (retryConsumed) return false
+        if (!retryPacket.verifyIntegrityTag(originalPacketBytes, originalDestinationConnectionId.bytes)) {
+            return false
+        }
+        val savedClientHello = originalClientHello ?: return false
+
+        destinationConnectionId = retryPacket.scid
+        val proto = InitialSecrets.derive(destinationConnectionId.bytes)
+        val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
+        // Use resetForRetry, NOT resetForVersionNegotiation: RFC 9001 §5.7
+        // requires the Initial PN namespace to continue across the Retry
+        // boundary. Resetting PN to 0 caused the runner to flag
+        // "Client reset the packet number. Check failed for PN 0".
+        initial.resetForRetry(
+            sendProtection =
+                PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp),
+            receiveProtection =
+                PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp),
+        )
+        initial.cryptoSend.enqueue(savedClientHello)
+
+        retryToken = retryPacket.retryToken
+        retryConsumed = true
+        return true
+    }
+
+    private fun localTransportParametersSummary(): Map<String, String> {
+        val out = LinkedHashMap<String, String>(8)
+        out["initial_max_data"] = config.initialMaxData.toString()
+        out["initial_max_stream_data_bidi_local"] = config.initialMaxStreamDataBidiLocal.toString()
+        out["initial_max_stream_data_bidi_remote"] = config.initialMaxStreamDataBidiRemote.toString()
+        out["initial_max_stream_data_uni"] = config.initialMaxStreamDataUni.toString()
+        out["initial_max_streams_bidi"] = config.initialMaxStreamsBidi.toString()
+        out["initial_max_streams_uni"] = config.initialMaxStreamsUni.toString()
+        out["max_idle_timeout"] = config.maxIdleTimeoutMillis.toString()
+        out["max_udp_payload_size"] = config.maxUdpPayloadSize.toString()
+        out["max_datagram_frame_size"] = config.maxDatagramFrameSize.toString()
+        return out
+    }
+
+    private fun peerTransportParametersSummary(tp: TransportParameters): Map<String, String> {
+        val out = LinkedHashMap<String, String>(10)
+        tp.initialMaxData?.let { out["initial_max_data"] = it.toString() }
+        tp.initialMaxStreamDataBidiLocal?.let { out["initial_max_stream_data_bidi_local"] = it.toString() }
+        tp.initialMaxStreamDataBidiRemote?.let { out["initial_max_stream_data_bidi_remote"] = it.toString() }
+        tp.initialMaxStreamDataUni?.let { out["initial_max_stream_data_uni"] = it.toString() }
+        tp.initialMaxStreamsBidi?.let { out["initial_max_streams_bidi"] = it.toString() }
+        tp.initialMaxStreamsUni?.let { out["initial_max_streams_uni"] = it.toString() }
+        tp.maxIdleTimeoutMillis?.let { out["max_idle_timeout"] = it.toString() }
+        tp.maxUdpPayloadSize?.let { out["max_udp_payload_size"] = it.toString() }
+        tp.maxDatagramFrameSize?.let { out["max_datagram_frame_size"] = it.toString() }
+        tp.maxAckDelay?.let { out["max_ack_delay"] = it.toString() }
+        return out
     }
 
     private fun buildLocalTransportParameters(): TransportParameters =
@@ -397,6 +661,13 @@ class QuicConnection(
             maxDatagramFrameSize = config.maxDatagramFrameSize,
         )
 
+    /**
+     * Lock-split refactor (2026-05-08): caller must hold [streamsLock]
+     * because we mutate [streams], [peerMaxStreamsBidi]/Uni, and
+     * [sendConnectionFlowCredit]. Invoked from the TLS listener inside
+     * [QuicConnectionParser.feedDatagram] which acquires [streamsLock]
+     * around CRYPTO-frame handling.
+     */
     private fun applyPeerTransportParameters() {
         val raw = tls.peerTransportParameters ?: return
         val tp = TransportParameters.decode(raw)
@@ -425,6 +696,7 @@ class QuicConnection(
             return
         }
         peerTransportParameters = tp
+        qlogObserver.onTransportParametersSet("remote", peerTransportParametersSummary(tp))
         sendConnectionFlowCredit = tp.initialMaxData ?: 0L
         peerMaxStreamsBidi = tp.initialMaxStreamsBidi ?: 0L
         peerMaxStreamsUni = tp.initialMaxStreamsUni ?: 0L
@@ -444,13 +716,41 @@ class QuicConnection(
     }
 
     /**
-     * Single mutex protecting connection-wide mutable state: streams map,
-     * datagram queues, stream-id counters, status. The driver acquires this
-     * around its read/send loops; public API methods listed below acquire it
-     * before mutating. Internal-only methods (used only from inside the
-     * driver loops) do NOT lock — caller must hold the lock.
+     * Lock-split refactor (2026-05-08): split the previous single
+     * `lock` into two independent mutexes so the read loop, send
+     * loop, and app coroutines can mostly progress in parallel.
+     *
+     *   - [streamsLock] guards the streams registry, datagram queues,
+     *     stream-id counters, connection-level flow-control bookkeeping,
+     *     packet-number space + sentPackets retention + CRYPTO buffer
+     *     mutations at every encryption level. The writer's drain and
+     *     the parser's feed both take it.
+     *   - [lifecycleLock] guards [status] / [closeReason] /
+     *     [closeErrorCode] transitions.
+     *
+     * Per-stream and per-level buffer mutations serialize through
+     * `synchronized(this)` inside `SendBuffer` / `ReceiveBuffer` /
+     * `AckTracker` — those leaf locks are safe to take with or
+     * without an outer mutex held.
+     *
+     * Acquisition order to prevent deadlock:
+     * `lifecycleLock` → `streamsLock`. Never go the other way.
+     *
+     * The historical `lock` field is retained as an alias of
+     * [lifecycleLock] for source-compatibility with external callers
+     * (tests, harnesses, in-process bridges). New code MUST NOT use it
+     * — it no longer protects streams or level state.
      */
-    val lock: Mutex = Mutex()
+    val streamsLock: Mutex = Mutex()
+
+    val lifecycleLock: Mutex = Mutex()
+
+    @Deprecated(
+        "Use streamsLock or lifecycleLock as appropriate. Lock-split refactor 2026-05-08.",
+        replaceWith = ReplaceWith("streamsLock"),
+    )
+    val lock: Mutex
+        get() = lifecycleLock
 
     /**
      * Allocate a new client-initiated bidirectional stream. Locked.
@@ -460,22 +760,97 @@ class QuicConnection(
      * check capacity proactively if the caller wants to back-pressure rather
      * than throw.
      */
-    suspend fun openBidiStream(): QuicStream =
-        lock.withLock {
-            if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
-                throw QuicStreamLimitException(
-                    "peer-granted bidi stream cap reached " +
-                        "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
-                )
+    suspend fun openBidiStream(): QuicStream = streamsLock.withLock { openBidiStreamLocked() }
+
+    /**
+     * Atomically open one bidi stream per [items] entry under a single
+     * [streamsLock] hold and run [init] for each (stream, item) inside
+     * the lock. The send loop cannot interject between opens — when it
+     * next drains it sees ALL N streams' frames ready and packs them
+     * into coalesced packets instead of emitting one tiny packet per
+     * stream.
+     *
+     * **`init` runs under `streamsLock`.** It must not suspend
+     * (the type signature enforces this) and SHOULD be fast — any
+     * expensive work (encoding, allocation-heavy formatting) belongs
+     * outside the call so it doesn't extend the lock-hold time. The
+     * intended shape per caller:
+     *
+     *     val encoded = items.map { encode(it) }                   // outside
+     *     conn.openBidiStreamsBatch(encoded) { stream, payload ->  // under lock
+     *         stream.send.enqueue(payload)
+     *         stream.send.finish()
+     *         Handle(stream)
+     *     }
+     *
+     * This is the bug-resistant API for the prepareRequests pattern.
+     * The previous shape (caller manually wraps `streamsLock.withLock`
+     * around a loop of [openBidiStreamLocked]) regressed twice: once
+     * by holding the wrong lock, and once by skipping the wrapper
+     * entirely. Both shapes failed silently as "one STREAM per packet"
+     * under multiplex load, while the unit tests passed.
+     *
+     * Callers that just need a single stream should still use
+     * [openBidiStream]. [openBidiStreamLocked] remains public for the
+     * rare custom-batching scenarios that need finer control, but
+     * those callers should generally migrate to this API.
+     */
+    suspend fun <I, R> openBidiStreamsBatch(
+        items: List<I>,
+        init: (QuicStream, I) -> R,
+    ): List<R> {
+        if (items.isEmpty()) return emptyList()
+        val streamsBefore = if (writerDebugEnabled) streams.size else 0
+        val result =
+            streamsLock.withLock {
+                items.map { init(openBidiStreamLocked(), it) }
             }
-            val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
-            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
-            stream.receiveLimit = config.initialMaxStreamDataBidiLocal
-            streams[id] = stream
-            streamsList += stream
-            stream
+        if (writerDebugEnabled) {
+            System.err.println(
+                "[batch] openBidiStreamsBatch items=${items.size} returned=${result.size} " +
+                    "streamsList_before=$streamsBefore streamsList_after=${streams.size}",
+            )
         }
+        return result
+    }
+
+    /**
+     * The streamsLock-holding primitive used by [openBidiStream] and
+     * [openBidiStreamsBatch]. Public so callers that need a custom
+     * batching shape (e.g. mixed bidi+uni opens) can compose it under
+     * a manual [streamsLock] hold. Caller MUST hold [streamsLock].
+     */
+    fun openBidiStreamLocked(): QuicStream {
+        // Mutex.isLocked is the only check we have — kotlinx.coroutines
+        // Mutex doesn't expose ownership without an `owner` argument,
+        // and we don't pass one in production. So this catches the
+        // common bug — caller used the wrong lock or no lock — but
+        // not the rarer case of "caller held a DIFFERENT lock that
+        // happens to be locked too." The interop runner's multiplexing
+        // failure on 2026-05-06 was precisely this: prepareRequests
+        // held lifecycleLock (`conn.lock`) and called this fn, the
+        // send loop's drainOutbound interleaved between opens, and
+        // we emitted one STREAM per packet (1421/2000 files in 60s).
+        check(streamsLock.isLocked) {
+            "openBidiStreamLocked requires streamsLock to be held — caller " +
+                "must wrap with streamsLock.withLock { ... }. Without that, " +
+                "drainOutbound can race the streams mutation and emit one " +
+                "STREAM per packet under multiplex load."
+        }
+        if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
+            throw QuicStreamLimitException(
+                "peer-granted bidi stream cap reached " +
+                    "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
+            )
+        }
+        val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
+        val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
+        stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
+        stream.receiveLimit = config.initialMaxStreamDataBidiLocal
+        streams[id] = stream
+        streamsList += stream
+        return stream
+    }
 
     /**
      * Allocate a new client-initiated unidirectional (write-only) stream.
@@ -486,22 +861,57 @@ class QuicConnection(
      * [QuicStream.bestEffort]). Used for moq-lite group streams
      * carrying real-time Opus audio.
      */
-    suspend fun openUniStream(bestEffort: Boolean = false): QuicStream =
-        lock.withLock {
-            if (nextLocalUniIndex >= peerMaxStreamsUni) {
-                throw QuicStreamLimitException(
-                    "peer-granted uni stream cap reached " +
-                        "(used=$nextLocalUniIndex limit=$peerMaxStreamsUni)",
-                )
-            }
-            val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE, bestEffort = bestEffort)
-            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
-            stream.receiveLimit = 0L // can't receive
-            streams[id] = stream
-            streamsList += stream
-            stream
+    suspend fun openUniStream(bestEffort: Boolean = false): QuicStream = streamsLock.withLock { openUniStreamLocked(bestEffort) }
+
+    /**
+     * The streamsLock-holding primitive used by [openUniStream] and
+     * [openUniStreamsBatch]. Caller MUST hold [streamsLock].
+     */
+    fun openUniStreamLocked(bestEffort: Boolean = false): QuicStream {
+        check(streamsLock.isLocked) {
+            "openUniStreamLocked requires streamsLock to be held"
         }
+        if (nextLocalUniIndex >= peerMaxStreamsUni) {
+            throw QuicStreamLimitException(
+                "peer-granted uni stream cap reached " +
+                    "(used=$nextLocalUniIndex limit=$peerMaxStreamsUni)",
+            )
+        }
+        val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
+        val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE, bestEffort = bestEffort)
+        stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
+        stream.receiveLimit = 0L // can't receive
+        streams[id] = stream
+        streamsList += stream
+        return stream
+    }
+
+    /**
+     * Bug-resistant counterpart to [openBidiStreamsBatch] for uni
+     * streams. Atomically open one client-uni stream per [items]
+     * entry under a single [streamsLock] hold and run [init] for
+     * each (stream, item).
+     *
+     * **`init` runs under `streamsLock`** — same caveat as
+     * [openBidiStreamsBatch]: keep it fast, encode outside the call.
+     *
+     * Use this for moq audio-rooms and any other path that opens many
+     * uni streams in burst — without batching, each open releases the
+     * lock and the send loop can interject, emitting one stream per
+     * packet (the same shape that broke bidi multiplexing on
+     * 2026-05-06). [bestEffort] applies uniformly to every stream
+     * in the batch; mixed-mode batches need separate calls.
+     */
+    suspend fun <I, R> openUniStreamsBatch(
+        items: List<I>,
+        bestEffort: Boolean = false,
+        init: (QuicStream, I) -> R,
+    ): List<R> {
+        if (items.isEmpty()) return emptyList()
+        return streamsLock.withLock {
+            items.map { init(openUniStreamLocked(bestEffort), it) }
+        }
+    }
 
     /** Snapshot of peer-granted bidi cap. Reads do not need the lock — long writes are atomic on every supported platform. */
     fun peerMaxStreamsBidiSnapshot(): Long = peerMaxStreamsBidi
@@ -529,7 +939,7 @@ class QuicConnection(
      * See `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
      */
     suspend fun flowControlSnapshot(): QuicFlowControlSnapshot =
-        lock.withLock {
+        streamsLock.withLock {
             val tp = peerTransportParameters
             // Sum bytes the application has enqueued but the writer
             // hasn't yet handed to a STREAM frame. A non-zero value
@@ -568,17 +978,32 @@ class QuicConnection(
             )
         }
 
-    suspend fun pollIncomingPeerStream(): QuicStream? = lock.withLock { newPeerStreams.removeFirstOrNull() }
+    suspend fun pollIncomingPeerStream(): QuicStream? = streamsLock.withLock { newPeerStreams.removeFirstOrNull() }
 
     /**
      * Suspends until a peer-initiated stream is queued OR the connection
      * closes. Returns null on close. Replaces the older `pollIncomingPeerStream
      * + delay(5)` busy-loop — this version wakes within microseconds of the
      * parser appending a stream and parks the coroutine the rest of the time.
+     *
+     * **An H3 application MUST consume peer-initiated streams.** RFC 9114
+     * §6.2.1 mandates that the server opens at least three peer-initiated
+     * uni streams (CONTROL + QPACK_ENCODER + QPACK_DECODER). The parser
+     * routes their bytes into the per-[QuicStream] `incomingChannel`
+     * (capacity 64 chunks); if nothing accepts and reads them, the channel
+     * fills and the next inbound chunk trips the audit-4 #3 "slow consumer"
+     * tear-down at [QuicConnectionParser] (`INTERNAL_ERROR: stream …
+     * consumer overflowed`). Symptoms: under H3 multiplexing of many bidi
+     * request streams, the server's QPACK encoder issues a burst of
+     * dynamic-table inserts on its uni stream and the connection dies
+     * after ~5 s with zero requests completed. See
+     * [drainPeerInitiatedUniStreamsIntoBlackHole] for a one-line opt-in
+     * drainer that satisfies the contract when the H3 layer doesn't
+     * actually need the SETTINGS / QPACK bytes.
      */
     suspend fun awaitIncomingPeerStream(): QuicStream? {
         while (true) {
-            lock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
+            streamsLock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
             if (status == Status.CLOSED) return null
             // select between "wakeup" and "closed" so neither path can hang.
             val keepWaiting =
@@ -593,17 +1018,17 @@ class QuicConnection(
             if (!keepWaiting) {
                 // After a close-wake, drain one more time to surface any
                 // streams added between the last drain and the close.
-                lock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
+                streamsLock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
                 return null
             }
         }
     }
 
-    suspend fun streamById(id: Long): QuicStream? = lock.withLock { streams[id] }
+    suspend fun streamById(id: Long): QuicStream? = streamsLock.withLock { streams[id] }
 
-    suspend fun queueDatagram(payload: ByteArray) = lock.withLock { pendingDatagrams.addLast(payload) }
+    suspend fun queueDatagram(payload: ByteArray) = streamsLock.withLock { pendingDatagrams.addLast(payload) }
 
-    suspend fun pollIncomingDatagram(): ByteArray? = lock.withLock { incomingDatagrams.removeFirstOrNull() }
+    suspend fun pollIncomingDatagram(): ByteArray? = streamsLock.withLock { incomingDatagrams.removeFirstOrNull() }
 
     /**
      * Suspending counterpart of [pollIncomingDatagram]. Returns null only when
@@ -612,7 +1037,7 @@ class QuicConnection(
      */
     suspend fun awaitIncomingDatagram(): ByteArray? {
         while (true) {
-            lock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
+            streamsLock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
             if (status == Status.CLOSED) return null
             val keepWaiting =
                 select<Boolean> {
@@ -620,7 +1045,7 @@ class QuicConnection(
                     closedSignal.onReceiveCatching { false }
                 }
             if (!keepWaiting) {
-                lock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
+                streamsLock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
                 return null
             }
         }
@@ -631,12 +1056,15 @@ class QuicConnection(
         errorCode: Long,
         reason: String,
     ) {
-        lock.withLock {
+        var firedQlog = false
+        lifecycleLock.withLock {
             if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
             closeErrorCode = errorCode
             closeReason = reason
             status = Status.CLOSING
+            firedQlog = true
         }
+        if (firedQlog) qlogObserver.onConnectionClosed("local", errorCode, reason)
         // If a caller is suspended on awaitHandshake() and we're tearing down
         // before completion, fail the deferred so the caller throws instead
         // of hanging forever.
@@ -648,7 +1076,16 @@ class QuicConnection(
 
     /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
     internal fun markClosedExternally(reason: String) {
+        val wasClosed = status == Status.CLOSED
         if (status != Status.CLOSED) status = Status.CLOSED
+        if (!wasClosed) {
+            // "remote" covers both peer-initiated CONNECTION_CLOSE and
+            // local invariant violations (CID mismatch, frame decode
+            // failure) that the parser surfaces as markClosedExternally.
+            // The reason string is the discriminator the trace consumer
+            // reads.
+            qlogObserver.onConnectionClosed("remote", closeErrorCode, reason)
+        }
         if (!handshakeComplete) {
             signalHandshakeFailed(QuicConnectionClosedException("connection closed externally: $reason"))
         }
@@ -662,16 +1099,34 @@ class QuicConnection(
      * still `trySend(Unit)` into a never-consumed channel. All three channels
      * close idempotently, so calling this from both `close()` and
      * `markClosedExternally` is safe.
+     *
+     * Also closes every per-stream `incomingChannel` so application
+     * coroutines suspended on `stream.incoming.collect { … }` unblock with
+     * a clean Flow termination instead of hanging forever waiting for a
+     * FIN that will never come. Without this an interop run that drops
+     * the connection mid-response (e.g. quic-interop-runner's
+     * `multiplexing` case where 677 collectors were waiting for replies
+     * when the parser tripped INTERNAL_ERROR) leaves every per-stream
+     * collector pinned indefinitely. Closing the channel after the
+     * channel already has buffered chunks is safe — `consumeAsFlow`
+     * drains the buffer before terminating, so any bytes already
+     * delivered are surfaced to the collector before the Flow completes.
      */
     private fun closeAllSignals() {
         closedSignal.close()
         peerStreamSignal.close()
         incomingDatagramSignal.close()
+        // Iterate the snapshot list (safe: we never remove from it).
+        // closeIncoming is idempotent on the underlying Channel.close().
+        for (stream in streamsList) {
+            stream.closeIncoming()
+        }
     }
 
     /**
-     * Caller must hold [lock]. Used by [QuicConnectionParser] inside the
-     * driver's read loop, which already holds the connection lock.
+     * Caller must hold [streamsLock]. Used by [QuicConnectionParser] inside
+     * the driver's read loop, which already holds [streamsLock] around the
+     * stream-domain section of frame dispatch.
      */
     internal fun getOrCreatePeerStreamLocked(id: Long): QuicStream {
         streams[id]?.let { return it }
@@ -740,6 +1195,38 @@ class QuicConnection(
             EncryptionLevel.HANDSHAKE -> handshake
             EncryptionLevel.APPLICATION -> application
         }
+
+    /**
+     * RFC 9002 §6.2.4 PTO probe — spec-correct retransmit path. Move
+     * every byte currently sent-but-not-yet-ACK'd in the [level]'s
+     * CRYPTO send buffer back to its retransmit queue, so the next
+     * [com.vitorpamplona.quic.connection.drainOutbound] re-emits the
+     * same bytes (at the same offsets) inside a fresh CRYPTO frame on
+     * a new packet number.
+     *
+     * The driver calls this from its PTO branch when 1-RTT keys
+     * aren't yet installed — i.e. the handshake hasn't finished, so
+     * the only thing the peer could be missing is our ClientHello /
+     * ClientFinished. A bare PING is insufficient because if the
+     * server never saw our original Initial it has no DCID state to
+     * correlate a PING against (it'll be dropped). Retransmitting the
+     * CRYPTO actually advances the handshake.
+     *
+     * Idempotent: a second consecutive call is a no-op because the
+     * first call moved everything out of inFlight. Old `RecoveryToken.Crypto`
+     * entries in [LevelState.sentPackets] for the still-tracked
+     * original PNs remain harmless — when loss detection eventually
+     * declares them lost, [onTokensLost] re-runs `markLost` on the
+     * same offset/length range, which is itself idempotent (the bytes
+     * are already in retransmit or already ACK'd by then).
+     *
+     * Caller must hold [lock] (or call from inside an existing locked
+     * region — typically the driver's PTO branch under
+     * [QuicConnectionDriver.sendLoop]).
+     */
+    internal fun requeueAllInflightCrypto(level: EncryptionLevel) {
+        levelState(level).cryptoSend.requeueAllInflight()
+    }
 
     /** Caller must hold [lock]. Snapshot of streams for the driver's send loop. */
     internal fun streamsLocked(): Map<Long, QuicStream> = streams
@@ -951,6 +1438,17 @@ class QuicConnectionClosedException(
 
 /** Caller tried to open a stream beyond the peer's MAX_STREAMS allowance. */
 class QuicStreamLimitException(
+    message: String,
+) : RuntimeException(message)
+
+/**
+ * RFC 9000 §6: the server replied with a Version Negotiation packet but
+ * the supported_versions list does not contain any version the client can
+ * speak (today: only [com.vitorpamplona.quic.packet.QuicVersion.V1]).
+ * The handshake is unrecoverable — caller must treat the connection as
+ * permanently failed.
+ */
+class QuicVersionNegotiationException(
     message: String,
 ) : RuntimeException(message)
 

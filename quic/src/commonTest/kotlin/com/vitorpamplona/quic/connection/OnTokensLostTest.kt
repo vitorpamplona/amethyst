@@ -47,11 +47,11 @@ class OnTokensLostTest {
     fun ackToken_doesNotPopulateAnyPending() =
         runBlocking {
             val conn = newConn()
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.onTokensLost(listOf(RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = 0L)))
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertNull(conn.pendingMaxStreamsUni)
             assertNull(conn.pendingMaxStreamsBidi)
@@ -64,12 +64,12 @@ class OnTokensLostTest {
         runBlocking {
             val conn = newConn()
             // Simulate the writer having advertised a higher cap.
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.advertisedMaxStreamsUni = 150L
                 conn.onTokensLost(listOf(RecoveryToken.MaxStreamsUni(maxStreams = 150L)))
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertEquals(150L, conn.pendingMaxStreamsUni)
         }
@@ -82,12 +82,12 @@ class OnTokensLostTest {
             // the value carried by the lost token (150). The lost
             // frame is irrelevant — re-emitting 150 would not extend
             // the cap. neqo's fc.rs line 322 supersede check.
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.advertisedMaxStreamsUni = 200L
                 conn.onTokensLost(listOf(RecoveryToken.MaxStreamsUni(maxStreams = 150L)))
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertNull(conn.pendingMaxStreamsUni, "stale lost extension must not be re-emitted")
         }
@@ -96,12 +96,12 @@ class OnTokensLostTest {
     fun lostMaxStreamsBidi_matchingAdvertised_setsPending() =
         runBlocking {
             val conn = newConn()
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.advertisedMaxStreamsBidi = 200L
                 conn.onTokensLost(listOf(RecoveryToken.MaxStreamsBidi(maxStreams = 200L)))
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertEquals(200L, conn.pendingMaxStreamsBidi)
         }
@@ -110,12 +110,12 @@ class OnTokensLostTest {
     fun lostMaxData_matchingAdvertised_setsPending() =
         runBlocking {
             val conn = newConn()
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.advertisedMaxData = 1_000_000L
                 conn.onTokensLost(listOf(RecoveryToken.MaxData(maxData = 1_000_000L)))
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertEquals(1_000_000L, conn.pendingMaxData)
         }
@@ -124,12 +124,12 @@ class OnTokensLostTest {
     fun lostMaxData_supersededIsDropped() =
         runBlocking {
             val conn = newConn()
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.advertisedMaxData = 2_000_000L
                 conn.onTokensLost(listOf(RecoveryToken.MaxData(maxData = 1_000_000L)))
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertNull(conn.pendingMaxData)
         }
@@ -138,13 +138,13 @@ class OnTokensLostTest {
     fun lostMaxStreamData_unknownStream_dropped() =
         runBlocking {
             val conn = newConn()
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.onTokensLost(
                     listOf(RecoveryToken.MaxStreamData(streamId = 999L, maxData = 1024L)),
                 )
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             // No stream with id 999 exists ⇒ token is dropped silently.
             assertEquals(emptyMap<Long, Long>(), conn.pendingMaxStreamData)
@@ -154,7 +154,7 @@ class OnTokensLostTest {
     fun multipleLostTokens_dispatchAll() =
         runBlocking {
             val conn = newConn()
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.advertisedMaxStreamsUni = 150L
                 conn.advertisedMaxStreamsBidi = 200L
@@ -168,7 +168,7 @@ class OnTokensLostTest {
                     ),
                 )
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertEquals(150L, conn.pendingMaxStreamsUni)
             assertEquals(200L, conn.pendingMaxStreamsBidi)
@@ -183,7 +183,7 @@ class OnTokensLostTest {
             // most one value (the last setter wins; the supersede
             // check filters older losses).
             val conn = newConn()
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.advertisedMaxStreamsUni = 200L
                 // First lost packet had MaxStreamsUni(150) — stale, dropped.
@@ -193,7 +193,7 @@ class OnTokensLostTest {
                 conn.onTokensLost(listOf(RecoveryToken.MaxStreamsUni(maxStreams = 200L)))
                 assertEquals(200L, conn.pendingMaxStreamsUni)
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
         }
 }

@@ -41,3 +41,5 @@ include ':quic'
 include ':nestsClient'
 include ':desktopApp'
 include ':cli'
+include ':quic-interop'
+project(':quic-interop').projectDir = file('quic/interop')

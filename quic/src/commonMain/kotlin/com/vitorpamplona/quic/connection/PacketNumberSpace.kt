@@ -64,6 +64,20 @@ class PacketNumberSpaceState {
         if (nextPacketNumber > 0) nextPacketNumber--
     }
 
+    /**
+     * RFC 9000 §17.2.5.2: reset the Initial-level packet-number space
+     * after a Retry packet rolls our DCID. The new Initial keys are
+     * derived from a different secret, so the (PN, key) pair the AEAD
+     * nonce relies on is unique even with the PN going back to 0.
+     * Inbound state is reset because no Initial packet has been
+     * received yet on the new keys.
+     */
+    internal fun resetForRetry() {
+        nextPacketNumber = 0L
+        largestReceived = -1L
+        largestReceivedTime = 0L
+    }
+
     /** Note that an inbound packet was successfully decrypted. */
     fun observeInbound(
         packetNumber: Long,

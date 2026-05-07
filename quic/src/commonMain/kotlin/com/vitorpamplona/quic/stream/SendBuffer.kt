@@ -316,6 +316,54 @@ class SendBuffer(
     }
 
     /**
+     * Re-queue every byte range currently sent-but-not-yet-ACK'd for
+     * retransmission. The writer's next [takeChunk] drains the
+     * retransmit queue before any fresh bytes, at the original
+     * offsets — so the peer sees the same CRYPTO/STREAM bytes again
+     * with the same offset, only at a new packet number.
+     *
+     * Used by the RFC 9002 §6.2.4 PTO probe path: when the timer
+     * fires before the handshake completes, the client MUST
+     * retransmit the unacknowledged ClientHello (the CRYPTO bytes
+     * sitting in [inFlight] for the Initial level). A PING alone
+     * isn't enough — the peer may never have seen the original
+     * datagram and therefore has no state to correlate the PING
+     * against.
+     *
+     * Idempotent: ranges already in [retransmit] are not affected
+     * (only [inFlight] is walked); calling twice in a row is a no-op
+     * the second time because the first call moved everything out of
+     * [inFlight]. FIN bit is preserved per range — a lost FIN-bearing
+     * range will re-emit FIN.
+     *
+     * Best-effort buffers ([bestEffort] = true) drop the inflight
+     * ranges instead of retransmitting them, matching [markLost]'s
+     * semantics. The data buffer can compact as if those ranges had
+     * been ACK'd.
+     */
+    fun requeueAllInflight() {
+        synchronized(this) {
+            if (inFlight.isEmpty()) return
+            if (bestEffort) {
+                inFlight.clear()
+                advanceFlushedFloorIfPossible()
+                return
+            }
+            // Move every inflight range to the retransmit queue,
+            // preserving offset order (inFlight is sorted by offset
+            // ascending, so addLast preserves sort within retransmit
+            // for these new entries — though retransmit is a FIFO
+            // and doesn't strictly require sorted order, takeChunk
+            // pops front-first regardless).
+            for (r in inFlight) {
+                if (r.fin && !_finAcked) _finSent = false
+                retransmit.addLast(r)
+            }
+            inFlight.clear()
+        }
+    }
+
+    /**
      * Disposition for a range that overlapped a [markAcked] / [markLost]
      * range. ACK drops the range and latches `_finAcked` if the FIN
      * was covered. RETRANSMIT moves the range to the retransmit queue

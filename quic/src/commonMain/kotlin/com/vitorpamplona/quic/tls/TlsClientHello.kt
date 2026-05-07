@@ -92,6 +92,11 @@ fun buildQuicClientHello(
     quicTransportParams: ByteArray,
     additionalAlpn: List<ByteArray> = emptyList(),
     random: ByteArray = RandomInstance.bytes(32),
+    cipherSuites: IntArray =
+        intArrayOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
 ): TlsClientHello {
     val alpn = mutableListOf<ByteArray>()
     alpn += TlsConstants.ALPN_H3
@@ -107,5 +112,5 @@ fun buildQuicClientHello(
             TlsExtension(TlsConstants.EXT_ALPN, encodeAlpn(alpn)),
             TlsExtension(TlsConstants.EXT_QUIC_TRANSPORT_PARAMETERS, quicTransportParams),
         )
-    return TlsClientHello(random = random, extensions = exts)
+    return TlsClientHello(random = random, cipherSuites = cipherSuites, extensions = exts)
 }

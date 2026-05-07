@@ -35,10 +35,13 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * Owns the UDP socket and runs the read + send loops for a [QuicConnection].
  *
- * Synchronization: every public mutator on [QuicConnection] takes
- * `connection.lock`; the driver acquires the same lock around feed + drain.
- * That guarantees the read loop, send loop, and app coroutines never see a
- * mid-mutation state of the streams map / datagram queues / counters.
+ * Synchronization (post lock-split refactor 2026-05-08): the driver no
+ * longer takes a single connection-wide lock around feed/drain. Instead
+ * [feedDatagram] and [drainOutbound] internally acquire `streamsLock`
+ * for the precise critical sections they touch — leaving app
+ * coroutines (`openBidiStream`, etc.) free to run in parallel with the
+ * I/O loops. Per-stream and per-level buffers serialize through their
+ * leaf `synchronized(this)` blocks.
  *
  * The send loop is woken by a `Channel<Unit>(CONFLATED)` rather than a
  * polling timer — no idle CPU. App writes ([QuicConnection.queueDatagram]
@@ -99,7 +102,9 @@ class QuicConnectionDriver(
         try {
             while (connection.status != QuicConnection.Status.CLOSED) {
                 val datagram = socket.receive() ?: break
-                connection.lock.withLock {
+                // Phase 1 of the lock-split refactor: parser holds
+                // streamsLock for a single datagram-feed pass.
+                connection.streamsLock.withLock {
                     feedDatagram(connection, datagram, nowMillis())
                 }
                 // Inbound data may have produced new outbound (acks, crypto, etc.).
@@ -123,11 +128,16 @@ class QuicConnectionDriver(
         // floor (the same prior-shipping behavior, kept for
         // handshake-timeout safety on lossy paths).
         while (connection.status != QuicConnection.Status.CLOSED) {
-            connection.lock.withLock {
-                while (true) {
-                    val out = drainOutbound(connection, nowMillis()) ?: break
-                    socket.send(out)
-                }
+            // Phase 1 of the lock-split refactor: the writer holds
+            // streamsLock for the build, releases it for the actual
+            // socket.send() so a slow socket doesn't stall app
+            // coroutines (open/close streams, queue datagrams).
+            while (true) {
+                val out =
+                    connection.streamsLock.withLock {
+                        drainOutbound(connection, nowMillis())
+                    } ?: break
+                socket.send(out)
             }
             val ptoBaseMs =
                 if (connection.lossDetection.hasFirstRttSample) {
@@ -145,15 +155,7 @@ class QuicConnectionDriver(
                     Unit
                 }
             if (woke == null) {
-                // PTO fired. Set pendingPing so the writer emits a
-                // PING on the next drain (RFC 9002 §6.2.4 probe
-                // packet). The peer's ACK feeds loss detection +
-                // retransmit (steps 5–6).
-                connection.lock.withLock {
-                    connection.pendingPing = true
-                    connection.consecutivePtoCount =
-                        (connection.consecutivePtoCount + 1).coerceAtMost(6)
-                }
+                handlePtoFired(connection)
             }
         }
     }
@@ -223,3 +225,67 @@ class QuicConnectionDriver(
         private const val CLOSE_FLUSH_TIMEOUT_MILLIS = 250L
     }
 }
+
+/**
+ * Spec-correct response to a PTO timer firing (RFC 9002 §6.2.4). Pre-1-RTT
+ * the probe packet MUST be ack-eliciting at the encryption level with
+ * unacknowledged data, and SHOULD retransmit the lost data rather than
+ * emit a bare PING — so we requeue ALL inflight CRYPTO bytes at the
+ * highest active pre-application level (Initial or Handshake), and the
+ * next [drainOutbound] emits a CRYPTO frame at the original offset.
+ *
+ * `pendingPing` stays set as a fallback. `collectHandshakeLevelFrames`
+ * suppresses the PING when CRYPTO is in the same frame list, so we
+ * don't waste a frame on top of the retransmit. Post-1-RTT we keep
+ * the bare-PING behavior — STREAM loss detection drives retransmit
+ * from the ACK that the PING elicits.
+ *
+ * Why aioquic interop demands this: aioquic strictly rejects pre-
+ * handshake Initials that contain no CRYPTO frame
+ * (`CONNECTION_CLOSE 0x0 "Packet contains no CRYPTO frame"`). A
+ * bare-PING probe before the ClientHello is acknowledged is fatal.
+ *
+ * Extracted from [QuicConnectionDriver.sendLoop]'s PTO branch into a
+ * top-level helper so the unit test in
+ * [com.vitorpamplona.quic.connection.PtoCryptoRetransmitTest]
+ * can invoke the EXACT logic the live driver does, without standing
+ * up a UDP socket. Earlier shapes simulated the steps inline in the
+ * test, which let the driver-side wiring regress twice
+ * (commits c0d7b6031, then again in the lock-split refactor) without
+ * any test breaking.
+ *
+ * Concurrency: `pendingPing` and `consecutivePtoCount` are `@Volatile`.
+ * [QuicConnection.requeueAllInflightCrypto] delegates to
+ * [com.vitorpamplona.quic.stream.SendBuffer.requeueAllInflight] which
+ * is `synchronized(this)` internally, so it's safe to call without
+ * an external lock — even concurrent with the writer's `takeChunk`.
+ * If the parser concurrently runs `discardKeys` on the same level,
+ * `requeueAllInflight` operates on the buffer reference we captured
+ * (or the fresh one — both are valid) and is at worst a no-op.
+ */
+internal fun handlePtoFired(conn: QuicConnection) {
+    conn.pendingPing = true
+    if (conn.application.sendProtection == null) {
+        val level = highestPreApplicationLevel(conn)
+        if (level != null) {
+            conn.requeueAllInflightCrypto(level)
+        }
+    }
+    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
+}
+
+/**
+ * Highest encryption level for which `conn` currently holds send keys
+ * AND hasn't yet discarded them, given that 1-RTT keys are NOT
+ * installed. Returns null when the level state has been completely
+ * cleared (e.g. CLOSED after a CONNECTION_CLOSE was sent). Mirrors the
+ * private helper in [com.vitorpamplona.quic.connection.QuicConnectionWriter]
+ * — kept in lockstep so the driver's PTO branch and the writer's PING
+ * placement target the same level.
+ */
+private fun highestPreApplicationLevel(conn: QuicConnection): EncryptionLevel? =
+    when {
+        conn.handshake.sendProtection != null -> EncryptionLevel.HANDSHAKE
+        conn.initial.sendProtection != null && !conn.initial.keysDiscarded -> EncryptionLevel.INITIAL
+        else -> null
+    }

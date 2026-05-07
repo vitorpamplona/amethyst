@@ -37,8 +37,11 @@ import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.decodeFrames
+import com.vitorpamplona.quic.observability.qlogFrameName
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
+import com.vitorpamplona.quic.packet.QuicVersion
+import com.vitorpamplona.quic.packet.RetryPacket
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -51,6 +54,15 @@ import com.vitorpamplona.quic.tls.TlsClient
  * — typically Initial + Handshake from the server in the same datagram during
  * the handshake. We loop until the datagram is fully consumed or a packet
  * fails to parse (which we drop silently per RFC 9001 §5.5).
+ *
+ * Lock-split refactor (2026-05-08): caller must hold
+ * [QuicConnection.streamsLock]. The driver wraps its read loop in
+ * `streamsLock.withLock { feedDatagram(...) }`. Test harnesses that drive
+ * single-threaded packet flow (no concurrent app code) may invoke this
+ * directly without lock acquisition; the runtime invariants still hold
+ * because there's no contending thread. Phase 1 wraps the whole feed
+ * under streamsLock so frame-dispatch / stream creation / level state
+ * remains a single critical section.
  */
 fun feedDatagram(
     conn: QuicConnection,
@@ -62,6 +74,23 @@ fun feedDatagram(
         val first = datagram[offset].toInt() and 0xFF
         val isLong = (first and 0x80) != 0
         if (isLong) {
+            // RFC 9000 §17.2.1: a Version Negotiation packet has the form
+            // bit set but version=0. Detect it BEFORE peekHeader, which
+            // assumes a v1-shaped layout (token, length fields).
+            if (offset + 5 <= datagram.size) {
+                val version =
+                    ((datagram[offset + 1].toInt() and 0xFF) shl 24) or
+                        ((datagram[offset + 2].toInt() and 0xFF) shl 16) or
+                        ((datagram[offset + 3].toInt() and 0xFF) shl 8) or
+                        (datagram[offset + 4].toInt() and 0xFF)
+                if (version == QuicVersion.VERSION_NEGOTIATION) {
+                    feedVersionNegotiationPacket(conn, datagram, offset)
+                    // VN packets MUST be the only packet in their datagram
+                    // (RFC 9000 §17.2.1: no length field, body is rest of
+                    // datagram). Stop walking.
+                    return
+                }
+            }
             // Per RFC 9001 §5.5, drop ONLY the failing packet, not subsequent
             // coalesced ones. Use peekHeader to advance over a packet whose
             // payload we couldn't decrypt; only break the loop on a header
@@ -78,6 +107,66 @@ fun feedDatagram(
     }
 }
 
+/**
+ * RFC 9000 §17.2.1 / §6: parse a Version Negotiation packet and dispatch
+ * to [QuicConnection.applyVersionNegotiation].
+ *
+ * Wire layout:
+ *
+ *   first byte (form=1, unused 4 bits — server fills with random)
+ *   version    (4 bytes, fixed at 0x00000000)
+ *   dcid_len   (1 byte) + dcid (dcid_len bytes)
+ *   scid_len   (1 byte) + scid (scid_len bytes)
+ *   supported_versions: sequence of 32-bit big-endian version numbers,
+ *     consuming the rest of the UDP datagram.
+ *
+ * VN packets are NOT AEAD-protected — there's nothing to decrypt. We do
+ * a minimal sanity check (DCID matches our SCID) and then hand the
+ * version list off. Malformed packets are dropped silently per RFC 9000
+ * §17.2.1 ("an endpoint MUST NOT send … in response to a Version
+ * Negotiation packet").
+ */
+private fun feedVersionNegotiationPacket(
+    conn: QuicConnection,
+    datagram: ByteArray,
+    offset: Int,
+) {
+    // Layout fields above; bail early if any read would run past the
+    // end of the datagram (truncated VN — drop silently).
+    var pos = offset + 5
+    if (pos >= datagram.size) return
+    val dcidLen = datagram[pos].toInt() and 0xFF
+    pos += 1
+    if (dcidLen > 20 || pos + dcidLen > datagram.size) return
+    val dcid = datagram.copyOfRange(pos, pos + dcidLen)
+    pos += dcidLen
+    if (pos >= datagram.size) return
+    val scidLen = datagram[pos].toInt() and 0xFF
+    pos += 1
+    if (scidLen > 20 || pos + scidLen > datagram.size) return
+    pos += scidLen // SCID body — not validated; servers may pick anything.
+
+    // RFC 9000 §6.1: the VN packet's destination CID MUST equal the SCID
+    // the client put in its first Initial. Mismatch ⇒ probable spoof
+    // from an off-path attacker; drop without state change.
+    if (!dcid.contentEquals(conn.sourceConnectionId.bytes)) return
+
+    val versionsRegion = datagram.size - pos
+    if (versionsRegion <= 0 || versionsRegion % 4 != 0) return // malformed
+
+    val supportedVersions = ArrayList<Int>(versionsRegion / 4)
+    while (pos + 4 <= datagram.size) {
+        val v =
+            ((datagram[pos].toInt() and 0xFF) shl 24) or
+                ((datagram[pos + 1].toInt() and 0xFF) shl 16) or
+                ((datagram[pos + 2].toInt() and 0xFF) shl 8) or
+                (datagram[pos + 3].toInt() and 0xFF)
+        supportedVersions += v
+        pos += 4
+    }
+    conn.applyVersionNegotiation(supportedVersions)
+}
+
 private fun feedLongHeaderPacket(
     conn: QuicConnection,
     datagram: ByteArray,
@@ -85,14 +174,49 @@ private fun feedLongHeaderPacket(
     nowMillis: Long,
 ): Int? {
     val peeked = LongHeaderPacket.peekHeader(datagram, offset) ?: return null
+    // RFC 9000 §17.2.5 + RFC 9001 §5.8: Retry has no PN space, no AEAD
+    // payload protection, and cannot be coalesced with anything else
+    // (it consumes the rest of the datagram via peekHeader.totalLength).
+    // Branch out before the standard parse-and-decrypt path.
+    if (peeked.type == LongHeaderType.RETRY) {
+        val retryBytes = datagram.copyOfRange(offset, offset + peeked.totalLength)
+        val retryPacket = RetryPacket.parse(retryBytes)
+        if (retryPacket != null) {
+            // applyRetry returns false on bad-tag / second-Retry / pre-start —
+            // in all of those cases we silently drop without advancing state.
+            conn.applyRetry(retryPacket, retryBytes)
+        }
+        return peeked.totalLength
+    }
     val level =
         when (peeked.type) {
-            LongHeaderType.INITIAL -> EncryptionLevel.INITIAL
-            LongHeaderType.HANDSHAKE -> EncryptionLevel.HANDSHAKE
-            LongHeaderType.ZERO_RTT, LongHeaderType.RETRY -> return null // unsupported in client
+            LongHeaderType.INITIAL -> {
+                EncryptionLevel.INITIAL
+            }
+
+            LongHeaderType.HANDSHAKE -> {
+                EncryptionLevel.HANDSHAKE
+            }
+
+            LongHeaderType.ZERO_RTT, LongHeaderType.RETRY -> {
+                // Not supported by client; surface as a drop so qvis can
+                // see we ignored a packet rather than silently moving on.
+                conn.qlogObserver.onPacketDropped(
+                    "unsupported long-header type ${peeked.type}",
+                    peeked.totalLength,
+                )
+                return null
+            }
         }
     val state = conn.levelState(level)
-    val proto = state.receiveProtection ?: return null
+    val proto = state.receiveProtection
+    if (proto == null) {
+        conn.qlogObserver.onPacketDropped(
+            "no receive keys at level $level",
+            peeked.totalLength,
+        )
+        return null
+    }
     val parsed =
         LongHeaderPacket.parseAndDecrypt(
             bytes = datagram,
@@ -103,7 +227,14 @@ private fun feedLongHeaderPacket(
             hp = proto.hp,
             hpKey = proto.hpKey,
             largestReceivedInSpace = state.pnSpace.largestReceived,
-        ) ?: return null
+        )
+    if (parsed == null) {
+        conn.qlogObserver.onPacketDropped(
+            "AEAD auth failed or header parse failed at level $level",
+            peeked.totalLength,
+        )
+        return null
+    }
 
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
 
@@ -112,6 +243,14 @@ private fun feedLongHeaderPacket(
         conn.destinationConnectionId = parsed.packet.scid
     }
 
+    if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
+        conn.qlogObserver.onPacketReceived(
+            level = level,
+            packetNumber = parsed.packet.packetNumber,
+            sizeBytes = parsed.consumed,
+            frames = peekFrameNames(parsed.packet.payload),
+        )
+    }
     dispatchFrames(conn, level, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
     return parsed.consumed
 }
@@ -123,7 +262,14 @@ private fun feedShortHeaderPacket(
     nowMillis: Long,
 ) {
     val state = conn.levelState(EncryptionLevel.APPLICATION)
-    val proto = state.receiveProtection ?: return
+    val proto = state.receiveProtection
+    if (proto == null) {
+        conn.qlogObserver.onPacketDropped(
+            "no application receive keys",
+            datagram.size - offset,
+        )
+        return
+    }
     val parsed =
         ShortHeaderPacket.parseAndDecrypt(
             bytes = datagram,
@@ -135,10 +281,41 @@ private fun feedShortHeaderPacket(
             hp = proto.hp,
             hpKey = proto.hpKey,
             largestReceivedInSpace = state.pnSpace.largestReceived,
-        ) ?: return
+        )
+    if (parsed == null) {
+        conn.qlogObserver.onPacketDropped(
+            "AEAD auth failed or header parse failed at level APPLICATION",
+            datagram.size - offset,
+        )
+        return
+    }
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
+    if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
+        conn.qlogObserver.onPacketReceived(
+            level = EncryptionLevel.APPLICATION,
+            packetNumber = parsed.packet.packetNumber,
+            sizeBytes = datagram.size - offset,
+            frames = peekFrameNames(parsed.packet.payload),
+        )
+    }
     dispatchFrames(conn, EncryptionLevel.APPLICATION, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
 }
+
+/**
+ * Decode the payload's frames just to surface their qlog names. Reuses
+ * the same [com.vitorpamplona.quic.frame.decodeFrames] path as
+ * [dispatchFrames]; if it throws (malformed peer payload), we return
+ * an empty list — the dispatch path will catch the same exception
+ * and surface the close via `markClosedExternally`.
+ */
+private fun peekFrameNames(payload: ByteArray): List<String> =
+    try {
+        com.vitorpamplona.quic.frame
+            .decodeFrames(payload)
+            .map { qlogFrameName(it::class.simpleName ?: "frame") }
+    } catch (_: QuicCodecException) {
+        emptyList()
+    }
 
 private fun dispatchFrames(
     conn: QuicConnection,
@@ -224,6 +401,9 @@ private fun dispatchFrames(
                     // value still == advertised) lives inside onTokensLost.
                     for (lostPacket in lost) {
                         conn.onTokensLost(lostPacket.tokens)
+                    }
+                    if (lost.isNotEmpty()) {
+                        conn.qlogObserver.onLossDetected(level, lost.map { it.packetNumber })
                     }
                 }
             }

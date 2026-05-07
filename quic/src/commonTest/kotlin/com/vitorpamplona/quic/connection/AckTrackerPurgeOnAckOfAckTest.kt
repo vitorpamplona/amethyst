@@ -64,7 +64,7 @@ class AckTrackerPurgeOnAckOfAckTest {
 
             // Peer ACKs the packet that carried our outbound ACK
             // covering up to PN 4.
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.onTokensAcked(
                     listOf(
@@ -75,7 +75,7 @@ class AckTrackerPurgeOnAckOfAckTest {
                     ),
                 )
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             // Tracker is now empty: peer has confirmed receipt of our
             // ACK that covered everything up to PN 4. Re-advertising
@@ -96,7 +96,7 @@ class AckTrackerPurgeOnAckOfAckTest {
             }
 
             // Peer ACKs our Initial-level outbound ACK.
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.onTokensAcked(
                     listOf(
@@ -104,7 +104,7 @@ class AckTrackerPurgeOnAckOfAckTest {
                     ),
                 )
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             // Initial tracker drained; Application tracker untouched.
             assertTrue(conn.initial.ackTracker.isEmpty())
@@ -120,7 +120,7 @@ class AckTrackerPurgeOnAckOfAckTest {
             }
             // Peer ACKs our outbound ACK that covered up to PN 4 only;
             // the tracker's higher-PN ranges (5..9) must survive.
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.onTokensAcked(
                     listOf(
@@ -128,7 +128,7 @@ class AckTrackerPurgeOnAckOfAckTest {
                     ),
                 )
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
             assertFalse(conn.application.ackTracker.isEmpty())
             assertEquals(9L, conn.application.ackTracker.largestReceived())
@@ -145,7 +145,7 @@ class AckTrackerPurgeOnAckOfAckTest {
             for (pn in 0L..9L) {
                 conn.application.ackTracker.receivedPacket(pn, ackEliciting = true, receivedAtMillis = 1L)
             }
-            conn.lock.lock()
+            conn.streamsLock.lock()
             try {
                 conn.onTokensAcked(
                     listOf(
@@ -160,7 +160,7 @@ class AckTrackerPurgeOnAckOfAckTest {
                 )
                 assertTrue(conn.application.ackTracker.isEmpty())
             } finally {
-                conn.lock.unlock()
+                conn.streamsLock.unlock()
             }
         }
 }

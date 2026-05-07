@@ -46,11 +46,11 @@ class PendingFlowControlEmitTest {
     fun pendingMaxStreamsUni_drainEmitsFrameAndToken() =
         runBlocking {
             val client = handshakedClient()
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.pendingMaxStreamsUni = 150L
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
 
             val sizeBefore = client.application.sentPackets.size
@@ -79,11 +79,11 @@ class PendingFlowControlEmitTest {
     fun pendingMaxStreamsBidi_drainEmitsFrameAndToken(): Unit =
         runBlocking {
             val client = handshakedClient()
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.pendingMaxStreamsBidi = 200L
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             val sizeBefore = client.application.sentPackets.size
             runCatching { drainOutbound(client, nowMillis = 1L) }
@@ -103,11 +103,11 @@ class PendingFlowControlEmitTest {
     fun pendingMaxData_drainEmitsFrameAndToken(): Unit =
         runBlocking {
             val client = handshakedClient()
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.pendingMaxData = 5_000_000L
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             val sizeBefore = client.application.sentPackets.size
             runCatching { drainOutbound(client, nowMillis = 1L) }
@@ -127,12 +127,12 @@ class PendingFlowControlEmitTest {
     fun pendingMaxStreamData_perStreamDrain() =
         runBlocking {
             val client = handshakedClient()
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.pendingMaxStreamData[3L] = 1_024L
                 client.pendingMaxStreamData[7L] = 2_048L
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             val sizeBefore = client.application.sentPackets.size
             runCatching { drainOutbound(client, nowMillis = 1L) }
@@ -159,13 +159,13 @@ class PendingFlowControlEmitTest {
     fun multiplePending_drainEmitsAllInOnePacket(): Unit =
         runBlocking {
             val client = handshakedClient()
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.pendingMaxStreamsUni = 150L
                 client.pendingMaxStreamsBidi = 200L
                 client.pendingMaxData = 1_000_000L
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             val sizeBefore = client.application.sentPackets.size
             runCatching { drainOutbound(client, nowMillis = 1L) }
@@ -216,11 +216,11 @@ class PendingFlowControlEmitTest {
             // advertised cap. The writer drains it as-is — supersede check
             // is in step 6 (the setter side), not here.
             val client = handshakedClient()
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.pendingMaxStreamsUni = 50L
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             val sizeBefore = client.application.sentPackets.size
             runCatching { drainOutbound(client, nowMillis = 1L) }
@@ -242,11 +242,11 @@ class PendingFlowControlEmitTest {
     fun pendingClearedAcrossDrains() =
         runBlocking {
             val client = handshakedClient()
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.pendingMaxStreamsUni = 150L
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             // Drain once: pending consumed.
             runCatching { drainOutbound(client, nowMillis = 1L) }

@@ -70,6 +70,17 @@ class TlsClient(
     val fixedKeyPair: X25519KeyPair? = null,
     /** When non-null, used as the ClientHello random (for deterministic tests). */
     val fixedRandom: ByteArray? = null,
+    /**
+     * Cipher suites offered in the ClientHello, in preference order. The
+     * default offers AES-128-GCM first then ChaCha20-Poly1305. Override to
+     * force a specific negotiation (e.g. `chacha20`-only for the matching
+     * quic-interop-runner testcase).
+     */
+    val cipherSuites: IntArray =
+        intArrayOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
 ) {
     enum class State {
         INITIAL,
@@ -120,6 +131,12 @@ class TlsClient(
     private var sharedSecret: ByteArray? = null
     private var negotiatedCipherSuite: Int = -1
 
+    /** The 32-byte ClientHello random, available after [start]. Exposed so
+     *  observers (e.g. SSLKEYLOGFILE writer) can correlate secrets with
+     *  this connection. */
+    var clientRandom: ByteArray? = null
+        private set
+
     /** Begin the handshake by emitting a ClientHello at Initial level. */
     fun start() {
         check(state == State.INITIAL) { "TlsClient already started" }
@@ -127,14 +144,18 @@ class TlsClient(
 
         keySchedule.deriveEarly()
 
+        val random =
+            fixedRandom ?: com.vitorpamplona.quartz.utils.RandomInstance
+                .bytes(32)
+        clientRandom = random
+
         val ch =
             buildQuicClientHello(
                 serverName = serverName,
                 x25519PublicKey = keyPair!!.publicKey,
                 quicTransportParams = transportParameters,
-                random =
-                    fixedRandom ?: com.vitorpamplona.quartz.utils.RandomInstance
-                        .bytes(32),
+                random = random,
+                cipherSuites = cipherSuites,
             )
 
         val chBytes = ch.encode()

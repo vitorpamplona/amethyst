@@ -24,7 +24,18 @@ import com.vitorpamplona.quic.connection.recovery.SentPacket
 import com.vitorpamplona.quic.stream.ReceiveBuffer
 import com.vitorpamplona.quic.stream.SendBuffer
 
-/** Per-encryption-level state owned by [QuicConnection]. */
+/**
+ * Per-encryption-level state owned by [QuicConnection].
+ *
+ * Concurrency: [cryptoSend] / [cryptoReceive] use their internal
+ * [SendBuffer] / [ReceiveBuffer] `synchronized(this)` blocks for
+ * thread safety — the writer's `takeChunk`, the parser's `markAcked`,
+ * and PTO-driven `requeueAllInflight` are all serialized through
+ * those leaf locks. [sentPackets] is currently mutated by the writer
+ * (under [QuicConnection.streamsLock]) and read by the parser without
+ * synchronization; that race is pre-existing audit-tracked and not
+ * fixed by [LevelState] today.
+ */
 class LevelState {
     val pnSpace = PacketNumberSpaceState()
 
@@ -121,5 +132,80 @@ class LevelState {
         largestAckedPn = null
         largestAckedSentTimeMs = null
         keysDiscarded = true
+    }
+
+    /**
+     * RFC 9000 §6: reset every per-level field to a constructor-fresh
+     * state, then install [sendProtection] / [receiveProtection] keyed
+     * to the post-VN destination CID.
+     *
+     * Differs from [discardKeys] in that this re-arms the level for
+     * a fresh handshake — caller (
+     * [QuicConnection.applyVersionNegotiation]) re-enqueues the cached
+     * ClientHello onto [cryptoSend] immediately afterwards, so the
+     * next outbound drain emits a v1 Initial with PN=0 and the same
+     * TLS bytes the original Initial carried.
+     */
+    internal fun resetForVersionNegotiation(
+        sendProtection: PacketProtection,
+        receiveProtection: PacketProtection,
+    ) {
+        // pnSpace is val (lock-split refactor); reset its fields in place.
+        // The PacketNumberSpaceState.resetForRetry() name is historical but
+        // the semantics are right for VN too: zero out the PN counter +
+        // received-side state.
+        pnSpace.resetForRetry()
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = false
+        this.sendProtection = sendProtection
+        this.receiveProtection = receiveProtection
+    }
+
+    /**
+     * Reset the Initial-level state for a successful Retry.
+     *
+     * Differs from [resetForVersionNegotiation] in that the packet number
+     * namespace is **preserved**: per RFC 9001 §5.7 + RFC 9000 §17.2.5,
+     * the Initial PN space spans the original AND the post-Retry Initials.
+     * The client MUST NOT reuse a packet number across the boundary —
+     * the next Initial sent after Retry uses PN = (last-used) + 1.
+     *
+     * The runner's retry test specifically checks for this: a client that
+     * resets the PN gets "Client reset the packet number. Check failed
+     * for PN 0".
+     *
+     * Everything else resets to mirror VN semantics:
+     *  - cryptoSend cleared so the caller can re-enqueue the cached
+     *    ClientHello on top of fresh empty buffer state.
+     *  - sentPackets cleared because the pre-Retry Initial's loss-recovery
+     *    state references PNs the server will never ACK (the server
+     *    discarded that packet when it sent the Retry).
+     *  - keys re-derived from the new DCID and reinstalled.
+     *  - keysDiscarded latch reset (the pre-Retry keys are gone, but the
+     *    level itself is still alive with the new keys).
+     */
+    internal fun resetForRetry(
+        sendProtection: PacketProtection,
+        receiveProtection: PacketProtection,
+    ) {
+        // pnSpace is INTENTIONALLY preserved — see kdoc above.
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = false
+        this.sendProtection = sendProtection
+        this.receiveProtection = receiveProtection
     }
 }
