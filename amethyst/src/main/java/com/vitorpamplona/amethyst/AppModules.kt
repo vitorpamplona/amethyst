@@ -72,6 +72,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.safeCacheDir
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
@@ -446,6 +448,11 @@ class AppModules(
     // subscriptions, and NotificationRelayService.
     val notificationDispatcher = NotificationDispatcher(appContext, applicationIOScope)
 
+    // Local store for posts the user has scheduled to publish later. Backed by a
+    // single JSON file under the app's private filesDir; read by ScheduledPostWorker.
+    val scheduledPostStore =
+        ScheduledPostStore(File(appContext.filesDir, ScheduledPostStore.FILE_NAME))
+
     // Organizes cache clearing
     val trimmingService by
         lazy {
@@ -563,6 +570,12 @@ class AppModules(
 
         // starts observing LocalCache for notification-worthy events
         notificationDispatcher.start()
+
+        // Schedule the scheduled-posts worker (periodic + one-time catch-up).
+        // Runs independently of the always-on notification setting so scheduled
+        // posts still fire when always-on notifications are disabled.
+        ScheduledPostWorker.schedule(appContext)
+        ScheduledPostWorker.scheduleCatchUp(appContext)
 
         // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {

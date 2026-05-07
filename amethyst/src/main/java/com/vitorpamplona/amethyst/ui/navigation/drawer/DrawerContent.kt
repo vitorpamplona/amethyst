@@ -49,6 +49,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -97,6 +99,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
@@ -604,8 +607,82 @@ fun CatalogSection(
         ids.forEach { id ->
             NavBarCatalog[id]?.let { def ->
                 val tint = if (def.id == NavBarItem.PROFILE) primary else onBackground
-                CatalogNavigationRow(def, tint, accountViewModel, nav)
+                if (def.id == NavBarItem.SCHEDULED_POSTS) {
+                    ScheduledPostsNavigationRow(def, tint, accountViewModel, nav)
+                } else {
+                    CatalogNavigationRow(def, tint, accountViewModel, nav)
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ScheduledPostsNavigationRow(
+    def: NavBarItemDef,
+    tint: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val accountHex = accountViewModel.account.signer.pubKey
+    val allPosts by Amethyst.instance.scheduledPostStore.flow
+        .collectAsStateWithLifecycle()
+    val pendingCount by remember(accountHex) {
+        derivedStateOf {
+            allPosts.count {
+                it.accountPubkey == accountHex &&
+                    (
+                        it.status == ScheduledPostStatus.PENDING ||
+                            it.status == ScheduledPostStatus.PUBLISHING ||
+                            it.status == ScheduledPostStatus.FAILED
+                    )
+            }
+        }
+    }
+    IconRowWithBadge(
+        title = def.labelRes,
+        icon = def.icon,
+        tint = tint,
+        badgeCount = pendingCount,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav { def.resolveRoute(accountViewModel) }
+        },
+    )
+}
+
+@Composable
+private fun IconRowWithBadge(
+    title: Int,
+    icon: MaterialSymbol,
+    tint: Color,
+    badgeCount: Int,
+    onClick: () -> Unit,
+) {
+    val titleStr = stringRes(title)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClick = onClick,
+                    onClickLabel = titleStr,
+                ).padding(vertical = 15.dp, horizontal = 25.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = icon,
+            contentDescription = titleStr,
+            modifier = Size22ModifierWith4Padding,
+            tint = tint,
+        )
+        Text(
+            modifier = IconRowTextModifier,
+            text = titleStr,
+            fontSize = Font18SP,
+        )
+        if (badgeCount > 0) {
+            Badge { Text(badgeCount.toString()) }
         }
     }
 }
