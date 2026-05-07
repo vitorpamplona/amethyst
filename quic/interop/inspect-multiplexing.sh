@@ -40,6 +40,24 @@ tail -n 200 "$CASE_DIR/output.txt" 2>/dev/null \
     || echo "(no output.txt)"
 
 echo
+echo "=============== writer-side debug traces (DEBUG=1 build only) ==============="
+# Per-drain frame/budget stats from buildApplicationPacket. Empty
+# unless the image was built with `make build DEBUG=1`.
+WRITER_LINES=$(grep -c '\[writer' "$CASE_DIR/output.txt" 2>/dev/null || echo 0)
+if [[ "$WRITER_LINES" -gt 0 ]]; then
+    echo "($WRITER_LINES writer trace lines; first 30:)"
+    grep '\[writer' "$CASE_DIR/output.txt" | head -n 30
+    echo
+    echo "stream_frames histogram (writer-reported):"
+    grep -oE 'stream_frames=[0-9]+' "$CASE_DIR/output.txt" | sort | uniq -c | sort -rn
+    echo
+    echo "active histogram (active stream count at drain time):"
+    grep -oE 'active=[0-9]+' "$CASE_DIR/output.txt" | sort | uniq -c | sort -rn
+else
+    echo "(no [writer.* lines — run with DEBUG=1 image: cd quic/interop && make build DEBUG=1)"
+fi
+
+echo
 echo "=============== server stderr (last 100 lines) ==============="
 tail -n 100 "$CASE_DIR/server/stderr.log" 2>/dev/null \
     || echo "(no server/stderr.log)"
