@@ -41,15 +41,19 @@ echo "=============== writer-side debug traces (DEBUG=1 build only) ============
 WRITER_LINES=$(grep -cE '\[(writer|batch|interop)' "$CASE_DIR/output.txt" 2>/dev/null) || WRITER_LINES=0
 if [[ "$WRITER_LINES" -gt 0 ]]; then
     echo "($WRITER_LINES diagnostic lines; [batch] / [interop] entries first then first 30 [writer.app]:)"
-    grep -E '\[(batch|interop)' "$CASE_DIR/output.txt" | head -n 20
+    # Use `|| true` because grep returns 1 on no matches and the
+    # script runs under `set -euo pipefail` — otherwise an empty
+    # [batch]/[interop] subset (run from a build without those logs)
+    # would abort the whole script.
+    grep -E '\[(batch|interop)' "$CASE_DIR/output.txt" | head -n 20 || true
     echo "..."
-    grep '\[writer' "$CASE_DIR/output.txt" | head -n 30
+    grep '\[writer' "$CASE_DIR/output.txt" | head -n 30 || true
     echo
     echo "stream_frames histogram (writer-reported):"
-    grep -oE 'stream_frames=[0-9]+' "$CASE_DIR/output.txt" | sort | uniq -c | sort -rn
+    grep -oE 'stream_frames=[0-9]+' "$CASE_DIR/output.txt" | sort | uniq -c | sort -rn || true
     echo
     echo "active histogram (active stream count at drain time):"
-    grep -oE 'active=[0-9]+' "$CASE_DIR/output.txt" | sort | uniq -c | sort -rn
+    grep -oE 'active=[0-9]+' "$CASE_DIR/output.txt" | sort | uniq -c | sort -rn || true
 else
     echo "(no diagnostic lines yet — to enable, REBUILD the image with DEBUG=1:"
     echo "   DEBUG=1 ./quic/interop/run-matrix.sh -s aioquic -t multiplexing"
