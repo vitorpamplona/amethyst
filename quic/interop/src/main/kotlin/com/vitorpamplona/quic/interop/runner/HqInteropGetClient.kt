@@ -23,7 +23,6 @@ package com.vitorpamplona.quic.interop.runner
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.sync.withLock
 
 /**
  * HQ-interop (HTTP/0.9 over QUIC) GET client. quic-interop-runner convention
@@ -57,19 +56,14 @@ class HqInteropGetClient(
         @Suppress("UNUSED_PARAMETER") authority: String,
         paths: List<String>,
     ): List<RequestHandle> {
-        // Pre-format requests outside the lock — see Http3GetClient
-        // for the full story.
+        // Pre-format outside the lock — see Http3GetClient. Then
+        // openBidiStreamsBatch atomically opens all N streams under
+        // streamsLock so the writer's next drain coalesces them.
         val encoded = paths.map { "GET $it\r\n".encodeToByteArray() }
-        // streamsLock, NOT lifecycleLock (the deprecated `conn.lock`
-        // alias). Holding the wrong lock lets the send-loop drain
-        // between opens and emits one STREAM per packet.
-        return conn.streamsLock.withLock {
-            encoded.map { request ->
-                val stream = conn.openBidiStreamLocked()
-                stream.send.enqueue(request)
-                stream.send.finish()
-                HqRequestHandle(stream)
-            }
+        return conn.openBidiStreamsBatch(encoded) { stream, request ->
+            stream.send.enqueue(request)
+            stream.send.finish()
+            HqRequestHandle(stream)
         }
     }
 

@@ -116,6 +116,51 @@ class BatchedOpenLockContractTest {
         }
     }
 
+    @Test
+    fun `openBidiStreamsBatch is the bug-resistant API for the prepareRequests pattern`() {
+        runBlocking {
+            val client = handshakedClient()
+            // The new high-level API — caller can't hold the wrong
+            // lock because it doesn't take any. Encapsulates the
+            // streamsLock acquisition + per-item init under the lock.
+            val payloads = (0 until 64).map { "req-$it".encodeToByteArray() }
+            val streams =
+                client.openBidiStreamsBatch(payloads) { stream, payload ->
+                    stream.send.enqueue(payload)
+                    stream.send.finish()
+                    stream
+                }
+            assertEquals(64, streams.size)
+            assertEquals(64, streams.map { it.streamId }.toSet().size)
+        }
+    }
+
+    @Test
+    fun `openUniStreamLocked throws when streamsLock is not held`() {
+        runBlocking {
+            val client = handshakedClient()
+            assertFailsWith<IllegalStateException> {
+                client.openUniStreamLocked()
+            }
+        }
+    }
+
+    @Test
+    fun `openUniStreamsBatch holds streamsLock for the whole batch`() {
+        runBlocking {
+            val client = handshakedClient()
+            // moq audio-rooms shape: many uni streams in burst. Without
+            // the batched API, each open releases the lock and the
+            // send loop interjects (the same shape that broke bidi
+            // multiplexing on 2026-05-06).
+            val items = List(16) { it }
+            val streams =
+                client.openUniStreamsBatch(items) { stream, _ -> stream }
+            assertEquals(16, streams.size)
+            assertEquals(16, streams.map { it.streamId }.toSet().size)
+        }
+    }
+
     private fun handshakedClient(): QuicConnection =
         runBlocking {
             val client =

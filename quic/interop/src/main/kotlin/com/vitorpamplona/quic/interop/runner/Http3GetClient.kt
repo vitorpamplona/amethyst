@@ -33,7 +33,6 @@ import com.vitorpamplona.quic.qpack.QpackDecoder
 import com.vitorpamplona.quic.qpack.QpackEncoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.sync.withLock
 
 /** Common shape for the two interop GET clients (HTTP/3 and HQ-interop).
  *
@@ -165,25 +164,16 @@ class Http3GetClient(
         // non-trivial; doing it under streamsLock would stall the
         // send loop for the full encode time across every chunk.
         val encoded = paths.map { encodeRequest(authority, it) }
-        // CRITICAL: streamsLock — the lock the writer's drainOutbound
-        // takes. Holding lifecycleLock (the deprecated `conn.lock`
-        // alias) here did NOT block the send loop, so the writer
-        // interjected between every openBidiStreamLocked call and
-        // emitted ONE STREAM frame per packet. aioquic interop
-        // 2026-05-06 qlog: 2898 packets sent in 60s, each carrying
-        // exactly one stream frame; server processed streams strictly
-        // sequentially at ~1 RTT per stream → 1421/2000 files in 60s
-        // before timeout. Holding streamsLock blocks the drain so
-        // all N opens land before any drain runs, the writer then
-        // packs many STREAM frames into each datagram, and the
-        // server sees the burst on the wire.
-        return conn.streamsLock.withLock {
-            encoded.map { request ->
-                val stream = conn.openBidiStreamLocked()
-                stream.send.enqueue(request)
-                stream.send.finish()
-                Http3RequestHandle(stream)
-            }
+        // openBidiStreamsBatch holds streamsLock for the entire
+        // batch — the send loop can't interject between opens so
+        // the writer's next drain finds all N streams' frames ready
+        // and packs them into coalesced packets (vs. the regressed
+        // shape that emitted one STREAM per packet against aioquic
+        // on 2026-05-06).
+        return conn.openBidiStreamsBatch(encoded) { stream, request ->
+            stream.send.enqueue(request)
+            stream.send.finish()
+            Http3RequestHandle(stream)
         }
     }
 

@@ -23,25 +23,20 @@ package com.vitorpamplona.quic.connection
 import com.vitorpamplona.quic.connection.recovery.SentPacket
 import com.vitorpamplona.quic.stream.ReceiveBuffer
 import com.vitorpamplona.quic.stream.SendBuffer
-import kotlinx.coroutines.sync.Mutex
 
-/** Per-encryption-level state owned by [QuicConnection]. */
+/**
+ * Per-encryption-level state owned by [QuicConnection].
+ *
+ * Concurrency: [cryptoSend] / [cryptoReceive] use their internal
+ * [SendBuffer] / [ReceiveBuffer] `synchronized(this)` blocks for
+ * thread safety — the writer's `takeChunk`, the parser's `markAcked`,
+ * and PTO-driven `requeueAllInflight` are all serialized through
+ * those leaf locks. [sentPackets] is currently mutated by the writer
+ * (under [QuicConnection.streamsLock]) and read by the parser without
+ * synchronization; that race is pre-existing audit-tracked and not
+ * fixed by [LevelState] today.
+ */
 class LevelState {
-    /**
-     * Lock-split refactor (2026-05-08): per-level mutex protecting
-     * everything packet-protection / packet-number-space related at this
-     * encryption level. The writer acquires this around the encode +
-     * `sentPackets` record block; the parser acquires it around
-     * `pnSpace.observeInbound` + `ackTracker.receivedPacket` +
-     * `cryptoReceive.insert` + `sentPackets` reads on inbound ACK.
-     *
-     * Acquisition order: `QuicConnection.lifecycleLock` →
-     * `QuicConnection.streamsLock` → `LevelState.levelLock`.
-     * Per-stream `synchronized(this)` blocks inside SendBuffer/ReceiveBuffer
-     * remain at the leaf.
-     */
-    val levelLock: Mutex = Mutex()
-
     val pnSpace = PacketNumberSpaceState()
 
     var ackTracker =

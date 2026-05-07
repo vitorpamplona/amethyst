@@ -37,10 +37,11 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * Synchronization (post lock-split refactor 2026-05-08): the driver no
  * longer takes a single connection-wide lock around feed/drain. Instead
- * [feedDatagram] and [drainOutbound] internally acquire the appropriate
- * domain locks (`streamsLock` and the per-level `LevelState.levelLock`)
- * for the precise critical sections they touch — leaving app coroutines
- * (`openBidiStream`, etc.) free to run in parallel with the I/O loops.
+ * [feedDatagram] and [drainOutbound] internally acquire `streamsLock`
+ * for the precise critical sections they touch — leaving app
+ * coroutines (`openBidiStream`, etc.) free to run in parallel with the
+ * I/O loops. Per-stream and per-level buffers serialize through their
+ * leaf `synchronized(this)` blocks.
  *
  * The send loop is woken by a `Channel<Unit>(CONFLATED)` rather than a
  * polling timer — no idle CPU. App writes ([QuicConnection.queueDatagram]
@@ -253,20 +254,21 @@ class QuicConnectionDriver(
  * (commits c0d7b6031, then again in the lock-split refactor) without
  * any test breaking.
  *
- * `pendingPing` and `consecutivePtoCount` are `@Volatile` so we set
- * them outside any external lock. `requeueAllInflightCrypto` mutates
- * the level's `cryptoSend` buffer; we take `levelLock` for the
- * requeue so the writer's `takeChunk` can't observe a half-mutated
- * inflight queue mid-build.
+ * Concurrency: `pendingPing` and `consecutivePtoCount` are `@Volatile`.
+ * [QuicConnection.requeueAllInflightCrypto] delegates to
+ * [com.vitorpamplona.quic.stream.SendBuffer.requeueAllInflight] which
+ * is `synchronized(this)` internally, so it's safe to call without
+ * an external lock — even concurrent with the writer's `takeChunk`.
+ * If the parser concurrently runs `discardKeys` on the same level,
+ * `requeueAllInflight` operates on the buffer reference we captured
+ * (or the fresh one — both are valid) and is at worst a no-op.
  */
-internal suspend fun handlePtoFired(conn: QuicConnection) {
+internal fun handlePtoFired(conn: QuicConnection) {
     conn.pendingPing = true
     if (conn.application.sendProtection == null) {
         val level = highestPreApplicationLevel(conn)
         if (level != null) {
-            conn.levelState(level).levelLock.withLock {
-                conn.requeueAllInflightCrypto(level)
-            }
+            conn.requeueAllInflightCrypto(level)
         }
     }
     conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)

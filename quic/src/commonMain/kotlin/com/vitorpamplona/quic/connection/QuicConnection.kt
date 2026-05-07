@@ -717,22 +717,24 @@ class QuicConnection(
 
     /**
      * Lock-split refactor (2026-05-08): split the previous single
-     * `lock` into three independent mutexes so the read loop, send
+     * `lock` into two independent mutexes so the read loop, send
      * loop, and app coroutines can mostly progress in parallel.
      *
      *   - [streamsLock] guards the streams registry, datagram queues,
-     *     stream-id counters and connection-level flow-control bookkeeping.
-     *   - [LevelState.levelLock] (per encryption level) guards the
-     *     packet-number space, sentPackets retention, ackTracker and
-     *     CRYPTO buffers at that level.
-     *   - [lifecycleLock] guards [status]/[closeReason]/[closeErrorCode]
-     *     transitions.
+     *     stream-id counters, connection-level flow-control bookkeeping,
+     *     packet-number space + sentPackets retention + CRYPTO buffer
+     *     mutations at every encryption level. The writer's drain and
+     *     the parser's feed both take it.
+     *   - [lifecycleLock] guards [status] / [closeReason] /
+     *     [closeErrorCode] transitions.
+     *
+     * Per-stream and per-level buffer mutations serialize through
+     * `synchronized(this)` inside `SendBuffer` / `ReceiveBuffer` /
+     * `AckTracker` — those leaf locks are safe to take with or
+     * without an outer mutex held.
      *
      * Acquisition order to prevent deadlock:
-     * `lifecycleLock` → `streamsLock` → `LevelState.levelLock`.
-     * Per-stream synchronized blocks inside `SendBuffer`/`ReceiveBuffer`
-     * remain at the leaf — never acquire any of the above while holding
-     * a per-stream lock.
+     * `lifecycleLock` → `streamsLock`. Never go the other way.
      *
      * The historical `lock` field is retained as an alias of
      * [lifecycleLock] for source-compatibility with external callers
@@ -744,7 +746,7 @@ class QuicConnection(
     val lifecycleLock: Mutex = Mutex()
 
     @Deprecated(
-        "Use streamsLock / lifecycleLock / LevelState.levelLock as appropriate. Lock-split refactor 2026-05-08.",
+        "Use streamsLock or lifecycleLock as appropriate. Lock-split refactor 2026-05-08.",
         replaceWith = ReplaceWith("streamsLock"),
     )
     val lock: Mutex
@@ -761,11 +763,38 @@ class QuicConnection(
     suspend fun openBidiStream(): QuicStream = streamsLock.withLock { openBidiStreamLocked() }
 
     /**
-     * The streamsLock-holding part of [openBidiStream]. Public so
-     * batched-multiplex callers (prepareRequests) can acquire
-     * [streamsLock] ONCE and bracket multiple stream opens — without
-     * yielding to the send loop between opens. Caller MUST hold
-     * [streamsLock].
+     * Atomically open one bidi stream per [items] entry under a single
+     * [streamsLock] hold and run [init] for each (stream, item) inside
+     * the lock. The send loop cannot interject between opens — when it
+     * next drains it sees ALL N streams' frames ready and packs them
+     * into coalesced packets instead of emitting one tiny packet per
+     * stream.
+     *
+     * This is the bug-resistant API for the prepareRequests pattern.
+     * The previous shape (caller manually wraps `streamsLock.withLock`
+     * around a loop of [openBidiStreamLocked]) regressed twice: once
+     * by holding the wrong lock, and once by skipping the wrapper
+     * entirely. Both shapes failed silently as "one STREAM per packet"
+     * under multiplex load, while the unit tests passed.
+     *
+     * Callers that just need a single stream should still use
+     * [openBidiStream]. [openBidiStreamLocked] remains public for the
+     * rare custom-batching scenarios that need finer control, but
+     * those callers should generally migrate to this API.
+     */
+    suspend fun <I, R> openBidiStreamsBatch(
+        items: List<I>,
+        init: (QuicStream, I) -> R,
+    ): List<R> =
+        streamsLock.withLock {
+            items.map { init(openBidiStreamLocked(), it) }
+        }
+
+    /**
+     * The streamsLock-holding primitive used by [openBidiStream] and
+     * [openBidiStreamsBatch]. Public so callers that need a custom
+     * batching shape (e.g. mixed bidi+uni opens) can compose it under
+     * a manual [streamsLock] hold. Caller MUST hold [streamsLock].
      */
     fun openBidiStreamLocked(): QuicStream {
         // Mutex.isLocked is the only check we have — kotlinx.coroutines
@@ -808,21 +837,50 @@ class QuicConnection(
      * [QuicStream.bestEffort]). Used for moq-lite group streams
      * carrying real-time Opus audio.
      */
-    suspend fun openUniStream(bestEffort: Boolean = false): QuicStream =
+    suspend fun openUniStream(bestEffort: Boolean = false): QuicStream = streamsLock.withLock { openUniStreamLocked(bestEffort) }
+
+    /**
+     * The streamsLock-holding primitive used by [openUniStream] and
+     * [openUniStreamsBatch]. Caller MUST hold [streamsLock].
+     */
+    fun openUniStreamLocked(bestEffort: Boolean = false): QuicStream {
+        check(streamsLock.isLocked) {
+            "openUniStreamLocked requires streamsLock to be held"
+        }
+        if (nextLocalUniIndex >= peerMaxStreamsUni) {
+            throw QuicStreamLimitException(
+                "peer-granted uni stream cap reached " +
+                    "(used=$nextLocalUniIndex limit=$peerMaxStreamsUni)",
+            )
+        }
+        val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
+        val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE, bestEffort = bestEffort)
+        stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
+        stream.receiveLimit = 0L // can't receive
+        streams[id] = stream
+        streamsList += stream
+        return stream
+    }
+
+    /**
+     * Bug-resistant counterpart to [openBidiStreamsBatch] for uni
+     * streams. Atomically open one client-uni stream per [items]
+     * entry under a single [streamsLock] hold and run [init] for
+     * each (stream, item).
+     *
+     * Use this for moq audio-rooms and any other path that opens many
+     * uni streams in burst — without batching, each open releases the
+     * lock and the send loop can interject, emitting one stream per
+     * packet (the same shape that broke bidi multiplexing on
+     * 2026-05-06).
+     */
+    suspend fun <I, R> openUniStreamsBatch(
+        items: List<I>,
+        bestEffort: Boolean = false,
+        init: (QuicStream, I) -> R,
+    ): List<R> =
         streamsLock.withLock {
-            if (nextLocalUniIndex >= peerMaxStreamsUni) {
-                throw QuicStreamLimitException(
-                    "peer-granted uni stream cap reached " +
-                        "(used=$nextLocalUniIndex limit=$peerMaxStreamsUni)",
-                )
-            }
-            val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE, bestEffort = bestEffort)
-            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
-            stream.receiveLimit = 0L // can't receive
-            streams[id] = stream
-            streamsList += stream
-            stream
+            items.map { init(openUniStreamLocked(bestEffort), it) }
         }
 
     /** Snapshot of peer-granted bidi cap. Reads do not need the lock — long writes are atomic on every supported platform. */
