@@ -55,7 +55,14 @@ private const val EXIT_FAIL = 1
 private const val EXIT_UNSUPPORTED = 127
 
 private const val HANDSHAKE_TIMEOUT_SEC = 10L
-private const val TRANSFER_TIMEOUT_SEC = 30L
+
+// Multiplexing generates ~hundreds-to-thousands of small files; download
+// throughput on Mac+Rosetta is dominated by Docker filesystem overhead
+// per-write. 30s wasn't enough for the larger file counts; the qlog
+// against aioquic showed us still actively receiving STREAM frames at
+// t=31s when our local timeout fired. 60s gives more headroom without
+// inflating turnaround for the cases that actually complete fast.
+private const val TRANSFER_TIMEOUT_SEC = 60L
 
 fun main() {
     val role = System.getenv("ROLE") ?: "client"
