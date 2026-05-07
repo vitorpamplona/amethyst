@@ -48,6 +48,31 @@ else
 fi
 
 echo
+echo "=============== client diagnostic traces (DEBUG=1) ==============="
+# All [boot] / [interop] / [batch] / [writer.app] lines from the
+# runner's tee'd stdout, narrowed to the timeframe of THIS testcase.
+# The testcase's container restarts between tests so the lines
+# between two 'Running test case:' markers are this run's.
+if [[ -f "${RUN_DIR}.stdout.log" ]]; then
+    awk -v tc="$TC" '
+        $0 ~ "Running test case: " tc { in_tc = 1; next }
+        in_tc && /Running test case:/ { exit }
+        in_tc && /\[(boot|interop|batch|writer\.)/ { print }
+    ' "${RUN_DIR}.stdout.log" | head -n 50 || true
+    echo "..."
+    echo "stream_frames histogram (this testcase only):"
+    awk -v tc="$TC" '
+        $0 ~ "Running test case: " tc { in_tc = 1; next }
+        in_tc && /Running test case:/ { exit }
+        in_tc { print }
+    ' "${RUN_DIR}.stdout.log" \
+      | grep -oE 'stream_frames=[0-9]+' \
+      | sort | uniq -c | sort -rn || echo "(no stream_frames reports)"
+else
+    echo "(no .stdout.log — re-run with DEBUG=1)"
+fi
+
+echo
 echo "=============== file sizes generated for this testcase ==============="
 if [[ -f "${RUN_DIR}.stdout.log" ]]; then
     # 'Generated random file: NAME of size: N' lines printed before
