@@ -34,8 +34,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -53,6 +57,9 @@ class RelaySession(
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
+    /** NIP-77 negentropy state for this connection. */
+    private val negentropy = NegSessionRegistry(store, ::send)
+
     private fun addSubscription(
         subId: String,
         job: Job,
@@ -67,6 +74,7 @@ class RelaySession(
     fun cancelAllSubscriptions() {
         subscriptions.forEach { _, job -> job.cancel() }
         subscriptions.clear()
+        negentropy.clear()
     }
 
     fun send(message: Message) {
@@ -107,6 +115,9 @@ class RelaySession(
             is ReqCmd -> handleReq(cmd)
             is CloseCmd -> handleClose(cmd)
             is CountCmd -> handleCount(cmd)
+            is NegOpenCmd -> negentropy.open(cmd, policy)
+            is NegMsgCmd -> negentropy.msg(cmd)
+            is NegCloseCmd -> negentropy.close(cmd)
             else -> send(NoticeMessage("error: unsupported command ${cmd.label()}"))
         }
     }
@@ -178,7 +189,7 @@ class RelaySession(
                         },
                         onEose = { send(EoseMessage(cmd.subId)) },
                     )
-                } catch (_: kotlinx.coroutines.CancellationException) {
+                } catch (_: CancellationException) {
                     // Subscription was closed – this is expected.
                 }
             }

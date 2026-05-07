@@ -180,6 +180,14 @@ kotlin {
                 dependencies {
                     implementation(libs.kotlin.test)
                     implementation(libs.kotlinx.coroutines.test)
+
+                    // In-process Nostr relay (geode) so JVM/Android host
+                    // tests don't need network access or a Rust toolchain.
+                    // testFixtures (RelayClientTest base, fixtures,
+                    // collectUntilEose) are wired below at the top-level
+                    // `dependencies` block — the KMP source-set DSL
+                    // doesn't expose the `testFixtures(...)` consumer.
+                    implementation(project(":geode"))
                 }
             }
 
@@ -339,6 +347,15 @@ kotlin {
             dependsOn(linuxTest)
         }
     }
+}
+
+// testFixtures(...) consumer lives outside the KMP source-set DSL —
+// the KMP source-set `dependencies { }` block uses
+// `KotlinDependencyHandler`, which does not expose the
+// `testFixtures(...)` projection. The standard Gradle dependency
+// configuration name (`jvmAndroidTestImplementation`) does work here.
+dependencies {
+    "jvmAndroidTestImplementation"(testFixtures(project(":geode")))
 }
 
 mavenPublishing {
