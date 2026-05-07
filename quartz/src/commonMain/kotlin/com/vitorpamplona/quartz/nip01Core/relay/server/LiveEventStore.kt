@@ -22,12 +22,13 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.awaitCancellation
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * A reactive event store that combines historical data retrieval with live event streaming.
@@ -37,25 +38,40 @@ import kotlinx.coroutines.flow.onSubscription
  * End of Stored Events (EOSE), and then continues to stream matching new events as they
  * are inserted.
  *
+ * Live fanout from [submit] / [insert] to interested subscribers is index-driven via
+ * [FilterIndex]: each [query] registers its filters; on accepted ingest the index returns
+ * the (much smaller) candidate set and we deliver only to those whose filters actually
+ * match. This avoids the quadratic O(N_subscribers × N_filters_per_sub) per-event walk
+ * that a SharedFlow-based broadcast would do.
+ *
  * @property store The underlying persistent storage for events.
+ * @property ingest The group-commit writer pipeline. Accepted events fan out via the
+ *  index; rejected events do not.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class LiveEventStore(
     private val store: IEventStore,
     private val ingest: IngestQueue,
 ) {
-    private val newEventStream =
-        MutableSharedFlow<Event>(
-            replay = 0,
-            extraBufferCapacity = 100, // Optional: adjust for backpressure
-            onBufferOverflow = BufferOverflow.DROP_LATEST, // Default behavior
-        )
+    private val index = FilterIndex<LiveSubscription>()
+
+    /**
+     * One live REQ subscription. Carries the filters (for the
+     * post-index `match` re-check needed for negative constraints
+     * like `since` / `until` / `tagsAll`) and the delivery callback
+     * the index dispatches into. Identity-keyed inside [FilterIndex].
+     */
+    private class LiveSubscription(
+        val filters: List<Filter>,
+        val deliver: (Event) -> Unit,
+    )
 
     /**
      * Fire-and-forget enqueue: hand [event] to the [IngestQueue] and
      * fire [onComplete] once the writer's batch has a per-row
-     * decision. On `Accepted` the live stream is also emitted to so
-     * subscribers see the event. Suspends only when the ingest queue
-     * is full (backpressure).
+     * decision. On `Accepted` the live stream is also fanned out via
+     * [FilterIndex] so subscribers see the event. Suspends only when
+     * the ingest queue is full (backpressure).
      */
     suspend fun submit(
         event: Event,
@@ -63,7 +79,7 @@ class LiveEventStore(
     ) {
         ingest.submit(event) { outcome ->
             if (outcome is IEventStore.InsertOutcome.Accepted) {
-                newEventStream.tryEmit(event)
+                fanout(event)
             }
             onComplete(outcome)
         }
@@ -93,47 +109,86 @@ class LiveEventStore(
         done.await()
     }
 
+    /**
+     * Live fanout for an accepted event. The index returns a
+     * super-set; `Filter.match` enforces negative constraints. Each
+     * candidate's `deliver` is expected to be cheap (typically a
+     * `trySend` to a per-connection outbound queue) — this runs on
+     * the [IngestQueue] drain coroutine, so a slow sub blocks the
+     * batch writer.
+     */
+    private fun fanout(event: Event) {
+        for (sub in index.candidatesFor(event)) {
+            if (sub.filters.any { it.match(event) }) {
+                sub.deliver(event)
+            }
+        }
+    }
+
     suspend fun query(
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
-        // Order matters: register the live collector BEFORE replaying
-        // stored events and signalling EOSE. Otherwise an event emitted
-        // between EOSE and `collect` is lost because [newEventStream] has
-        // replay=0. The race is only occasionally visible for kinds the
-        // store persists (insert latency masks it) but fires reliably for
-        // ephemeral kinds (20000-29999) where insert is a no-op — and
-        // ephemeral events MUST still reach matching live subscribers per
-        // NIP-01.
+        // During the historical replay, record ids the store has
+        // emitted so the live path can dedupe. The index registers
+        // *before* the replay starts (otherwise an event accepted
+        // mid-replay would slip past the live path entirely — same
+        // race the previous SharedFlow-based implementation closed
+        // with `onSubscription`).
         //
-        // Side effect of registering the collector first: an event
-        // inserted *during* `store.query` will be both replayed by the
-        // store AND emitted to the live stream. We dedupe by tracking
-        // ids seen during the historical replay and skipping them on
-        // the live path. The set is dropped after EOSE so live-only
-        // events don't accumulate memory.
-        var inHistoricalPhase = true
-        var seenIds: HashSet<String>? = HashSet()
-        val historicalOnEach: (Event) -> Unit = { event ->
-            seenIds?.add(event.id)
-            onEach(event)
-        }
-        newEventStream
-            .onSubscription {
-                store.query(filters, historicalOnEach)
-                onEose()
-                // Free the dedupe set once we've crossed EOSE: from
-                // here on the live stream is the only source of
-                // events, so duplicates aren't possible.
-                inHistoricalPhase = false
-                seenIds = null
-            }.collect { newEvent ->
-                if (inHistoricalPhase && seenIds?.contains(newEvent.id) == true) return@collect
-                if (filters.any { it.match(newEvent) }) {
-                    onEach(newEvent)
+        // The set is read from the [IngestQueue] drain coroutine (in
+        // `deliver`, called synchronously from `fanout`) and written
+        // from this coroutine (the historical-replay closure below).
+        // It must be a persistent / immutable Set under an
+        // AtomicReference — wrapping a mutable HashSet would race
+        // because AtomicReference only protects the reference, not
+        // the set's internal state. Each `add` is a CAS-loop that
+        // publishes a new immutable Set; `deliver`'s `load()` always
+        // sees a fully-constructed snapshot.
+        //
+        // Once cleared to null after EOSE, `deliver` short-circuits
+        // and every live event is forwarded.
+        val seenIds = AtomicReference<Set<String>?>(emptySet())
+
+        val sub =
+            LiveSubscription(
+                filters = filters,
+                deliver = { event ->
+                    val seen = seenIds.load()
+                    if (seen != null && seen.contains(event.id)) return@LiveSubscription
+                    onEach(event)
+                },
+            )
+
+        index.register(filters, sub)
+        try {
+            store.query<Event>(filters) { event ->
+                // CAS-loop on an immutable Set. The historical
+                // replay is single-writer in steady state, so the
+                // CAS typically succeeds first try; the loop only
+                // matters if we lose a race on `seenIds.store(null)`
+                // (post-EOSE), in which case `current == null` and
+                // we exit cleanly.
+                while (true) {
+                    val current = seenIds.load() ?: break
+                    if (event.id in current) break
+                    if (seenIds.compareAndSet(current, current + event.id)) break
                 }
+                onEach(event)
             }
+            onEose()
+            // Drop the dedupe set so the live path stops paying for
+            // it. From this point the index drives delivery and
+            // duplicates are no longer possible.
+            seenIds.store(null)
+            // Suspend until the caller's coroutine is cancelled
+            // (e.g. NIP-01 CLOSE or connection drop). The `finally`
+            // unregisters from the index.
+            awaitCancellation()
+        } finally {
+            index.unregister(sub)
+        }
     }
 
     suspend fun count(filters: List<Filter>) = store.count(filters)
