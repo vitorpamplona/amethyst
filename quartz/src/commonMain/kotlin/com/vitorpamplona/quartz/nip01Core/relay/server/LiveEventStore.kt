@@ -96,4 +96,11 @@ class LiveEventStore(
     }
 
     suspend fun count(filters: List<Filter>) = store.count(filters)
+
+    /**
+     * One-shot snapshot query. Used by NIP-77 negentropy: the server
+     * needs the full set of event ids matching the filter at the
+     * moment the NEG-OPEN arrives, not a streamed/live result.
+     */
+    suspend fun snapshotQuery(filter: Filter): List<Event> = store.query(filter)
 }

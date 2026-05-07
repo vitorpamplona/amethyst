@@ -65,7 +65,7 @@ data class RelayConfig(
                         // Keep in sync with `RelayInfo.default()` —
                         // both lists must reflect the NIPs actually
                         // wired into the relay.
-                        ?: listOf("1", "9", "11", "40", "42", "45", "50", "62", "86"),
+                        ?: listOf("1", "9", "11", "40", "42", "45", "50", "62", "77", "86"),
                 privacy_policy = info.privacy_policy,
                 terms_of_service = info.terms_of_service,
                 relay_countries = info.relay_countries,
