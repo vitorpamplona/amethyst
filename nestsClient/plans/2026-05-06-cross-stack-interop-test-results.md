@@ -1,6 +1,28 @@
-# Plan: cross-stack interop test (T16) — Phase 1 + Phase 2 results
+# Plan: cross-stack interop test (T16) — Phases 1–3 results
 
-**Status:** Phase 1 + most of Phase 2 landed. Phases 3–5 still deferred.
+**Status:** Phases 1–3 (and Phase 2.E follow-ups) landed. Phase 4 (browser
+harness) and Phase 5 (browser-only scenarios) are running in parallel
+agent branches; not yet merged. CI gating (the `hang-interop` job in
+`.github/workflows/build.yml`) is live and Linux-only.
+
+**Scenario inventory (committed in this branch + sister branches):**
+
+| ID  | Scenario | Branch | Status |
+|---|---|---|---|
+| I1  | Amethyst speaker → hang-listen (mono 440 Hz) | this branch | green |
+| I2  | Late-join listener decodes tail | this branch | green |
+| I3  | Mid-broadcast mute shortens PCM | this branch | green |
+| I4 fwd | Stereo 440/660 — Amethyst speaker → hang-listen | merged on main (#2755) + test in this branch | green |
+| I4 rev | Stereo — hang-publish → Kotlin listener | this branch | green |
+| I5  | Speaker hot-swap mid-broadcast | this branch | green |
+| I6  | Multi-listener fan-out (1 speaker, 3 listeners) | `feat/nests-i6-multi-listener` `c28145a0b` | green |
+| I7  | Publisher reconnect (Rust hang-publish session cycle) | `feat/nests-i7-publisher-reconnect` `dbfeeb6d5` | green |
+| I8  | SubscribeDrop for unknown track | this branch | green |
+| I9  | 1% packet loss via udp-loss-shim | this branch | green |
+| I10 | 60-second long broadcast | this branch | green |
+| I11 | First audio frame is not OpusHead codec-config | this branch | green |
+| Rust↔Rust | hang-publish → hang-listen round-trip | this branch | green |
+| Phase 4 | Browser (Chromium) listen + publish via Playwright | `feat/nests-browser-interop` (agent in flight) | pending |
 
 ## Phase 2 update
 
@@ -305,29 +327,125 @@ HangInteropTest -DnestsHangInterop=true --rerun-tasks` runs green
 on a JVM with the agents-running load + post-merge state. CI
 should be stable now.
 
-## Phase 2.E deferred
+## Phase 3 — landed
 
-- **I4 stereo** — needs a non-trivial production change in
-  `MoqLiteHangCatalog.OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES` (which
-  hard-codes mono). Out of scope for these test plumbing changes;
-  ship as a separate production-side patch.
-- **I8 SubscribeDrop**, **I10 long broadcast**, **I12 Goaway** —
-  next batch of P0 scenarios on the existing harness.
+Phase 3 (transport robustness) shipped as part of the same
+`HangInteropTest` class to keep the harness wiring single-sourced:
 
-## Phase 3 + 4 + 5 deferred
+- **I5 hot-swap** (`speaker_hot_swap_does_not_crash`) — the speaker
+  re-runs `connectReconnectingSpeaker` mid-broadcast (token rotation
+  trigger) while a single hang-listen subscriber is attached. The
+  listener doesn't see a broadcast end; it sees the post-swap
+  segment. Asserts the post-swap window has audio + the 440 Hz peak.
+- **I9 packet loss** (`packet_loss_1pct_does_not_kill_audio`) —
+  drives the QUIC client through `udp-loss-shim` with
+  `--loss-rate 0.01`. Asserts the listener still recovers ≥ 60% of
+  expected samples and the FFT peak remains within ±5 Hz of 440.
+- **I10 long broadcast** (`long_broadcast_60s_tone_round_trips`) —
+  60 s mono tone, no other variations. Asserts the full sample
+  count and the peak.
 
-Untouched in Phase 1:
+Production-side **I12 Goaway** is deferred — the `goAway` API is
+not currently surfaced on `MoqLiteNestsSpeaker`; a separate
+production patch is required before a test can drive it.
 
-- Phase 3 transport robustness (`udp-loss-shim` body, hot-swap,
-  long-broadcast).
-- Phase 4 browser harness (`nestsClient-browser-interop/` directory,
-  Playwright driver).
-- Phase 5 browser-only scenarios.
+## Phase 2.E follow-ups — landed
 
-CI integration (the GitHub Actions workflow updates the spec
-shows) is also pending — until Phase 2 lands a real test, there's
-nothing in `-DnestsHangInterop=true` worth gating CI on except
-the smoke test.
+- **I4 stereo (forward)** — production change merged via PR #2755
+  (`refactor(nests): per-stream channel count + AudioBroadcastConfig`).
+  `MoqLiteHangCatalog` now derives the catalog JSON from the
+  configured channel count instead of hard-coding mono.
+  Test: `amethyst_speaker_to_hang_listener_stereo_440_660` —
+  drives `SineWaveAudioCapture` with `channelCount = 2,
+  freqHzPerChannel = intArrayOf(440, 660)`, asserts each channel's
+  FFT peak independently via `assertFftPeakPerChannel`.
+- **I4 stereo (reverse)** — `rust_hang_publish_stereo_to_kotlin_listener_440_660`.
+  hang-publish gained `--channels 2 --freq-hz-l 440 --freq-hz-r 660`
+  (per-channel sine generator with separate phase accumulators) and
+  the JVM listener uses `AudioFormat(channelCount = 2)` end-to-end.
+- **I8 SubscribeDrop** — `subscribe_drop_for_unknown_track`. Asks
+  hang-listen to subscribe to a track that the catalog doesn't
+  publish; expects a clean Drop frame (non-zero exit code, no panic).
+
+## Phase 4 — browser harness
+
+Running in agent worktree (`feat/nests-browser-interop`). Adds:
+
+- `nestsClient-browser-interop/` — TypeScript + Vite project shipping
+  the upstream `@kixelated/moq` and `@kixelated/hang-wasm` consumers/
+  publishers, bundled into static `listen.html` / `publish.html`
+  pages.
+- `interopBuildBrowserHarness` Gradle task — runs `bun install` +
+  `bun build` over the directory; cached against source changes.
+- `interopInstallPlaywrightChromium` — `bun playwright install
+  chromium` into a host cache directory; reused across runs.
+- `BrowserInteropTest` — Playwright-driven JUnit scenarios
+  (`amethyst_speaker_to_chromium_listener`, etc.). Gated behind
+  `-DnestsBrowserInterop=true` (independent of `nestsHangInterop`).
+
+Branch will land via separate PR when the agent reports green.
+
+## Phase 5 — browser-only scenarios
+
+To follow Phase 4. Plan covers two-browser fan-out (multiple
+Chromium listeners on one Amethyst speaker), browser publisher →
+Kotlin listener, and the catalog negotiation differences between
+`@kixelated/hang-wasm` and Amethyst's catalog publisher.
+
+## Test stability notes
+
+The 11-scenario `HangInteropTest` shares a single `NativeMoqRelayHarness`
+across the suite. Two stability fixes landed for full-suite runs:
+
+1. **Per-method relay reset** (`706ccda67`) — `@BeforeTest gate()`
+   calls `NativeMoqRelayHarness.resetShared()` before each scenario
+   so accumulated relay-side state (forward queues, MAX_STREAMS_UNI
+   credit, attached subscriber list) doesn't leak between scenarios.
+   Adds ~500 ms × 11 ≈ 5.5 s to a full suite run, well within the
+   CI budget.
+2. **Catalog read retry** in hang-listen (`f9be7889a`) — bumped
+   per-attempt timeout 500 ms → 2 s, with up to 3 attempts, total
+   worst-case wallclock 6 s. Each retry creates a fresh
+   `subscribe_track(catalog.json)` bidi which re-fires the speaker's
+   `setOnNewSubscriber` hook.
+
+I3 mute-window lower bound was also relaxed (2.5 s → 1.8 s) since
+the mute manifests as a sample deficit and the deficit varies with
+relay-side timing under load.
+
+## CI integration
+
+`.github/workflows/build.yml` now has a `hang-interop` job:
+
+- Linux-only (Rust toolchain + libopus available out of the box)
+- Caches `~/.cargo` and `~/.cache/amethyst-nests-interop/` between
+  runs so `cargo install moq-relay` and the workspace `cargo build`
+  are warm on the second run
+- Runs `:nestsClient:jvmTest -DnestsHangInterop=true`
+- Depends on the existing `lint` job (only runs after spotless +
+  ktlint pass)
+
+Browser interop will land its own job once `feat/nests-browser-interop`
+merges; that job adds `bun install` + Playwright Chromium caching.
+
+## Pending follow-ups
+
+Tracked in branch comments / kdoc but not blocking:
+
+- **Production `framesPerGroup` reconciliation** — see the I1
+  section above. The interop tests pin 5; production code keeps
+  50. A maintainer with both rigs (the `--auth-public` minimal
+  relay AND the nostrnests production deployment) needs to vary
+  `framesPerGroup` per environment or pick a value that survives
+  both cliffs.
+- **Production `goAway` surface on `MoqLiteNestsSpeaker`** —
+  required before I12 can ship as a test.
+- **Post-reconnect listener cliff** (documented in the I7 commit
+  message) — moq-relay 0.10.x truncates the second cycle of a
+  hang-publish session-cycle reconnect at ~1.0 s out of ~2.5 s.
+  May be listener-side `MAX_STREAMS_UNI` credit or relay-side
+  per-broadcast forward queue. Worth a targeted bug if reproduced
+  outside the harness.
 
 ## Files
 
@@ -351,9 +469,16 @@ nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/
 └── interop/native/
     ├── NativeMoqRelayHarness.kt                # boots moq-relay subprocess
     ├── NativeMoqRelayHarnessSmokeTest.kt
-    ├── HangInteropTest.kt                      # I1 + I2 + I3 + I11 + Rust↔Rust
+    ├── HangInteropTest.kt                      # I1, I2, I3, I4 fwd+rev, I5,
+    │                                           #   I8, I9, I10, I11, Rust↔Rust
     └── KotlinSpeakerKotlinListenerThroughNativeRelayTest.kt
                                                 # diagnostic, gated separately
+
+# In sister branches (not yet merged):
+# feat/nests-i6-multi-listener     -> HangInteropMultiListenerTest.kt (I6)
+# feat/nests-i7-publisher-reconnect -> HangInteropReverseTest.kt (I7)
+# feat/nests-browser-interop       -> nestsClient-browser-interop/ +
+#                                     BrowserInteropTest.kt (Phase 4)
 
 nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md  # this file
 ```
