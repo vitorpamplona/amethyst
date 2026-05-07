@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -33,6 +34,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySession
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
@@ -237,9 +239,79 @@ class Nip77NegentropyTest {
                 val response = client.nextMessage()
                 assertTrue(response is NegErrMessage, "expected NEG-ERR, got ${response::class.simpleName}")
                 assertEquals("ghost-sub", response.subId)
-                assertTrue(response.reason.contains("no negentropy session"))
+                // strfry-parity wording — clients in the wild string-match this.
+                assertEquals("closed: unknown subscription handle", response.reason)
             } finally {
                 client.close()
+            }
+        }
+
+    @Test
+    fun negOpenSnapshotOverflowReturnsStrFryNegErr() =
+        runBlocking {
+            // Tiny cap so the test is fast. Preload more events than the
+            // cap so NEG-OPEN must reject — strfry's parity behaviour for
+            // `relay__negentropy__maxSyncEvents`.
+            val capped = RelayHub(negentropySettings = NegentropySettings(maxSyncEvents = 5))
+            try {
+                val capUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7771/")
+                val events = makeEvents(20)
+                capped.getOrCreate(capUrl).preload(events)
+
+                val client = WireClient(capped, capUrl)
+                try {
+                    val session =
+                        NegentropySession(
+                            subId = "neg-overflow",
+                            filter = Filter(kinds = listOf(1)),
+                            localEvents = emptyList(),
+                        )
+                    client.send(OptimizedJsonMapper.toJson(session.open()))
+
+                    val response = client.nextMessage()
+                    assertTrue(response is NegErrMessage, "expected NEG-ERR, got ${response::class.simpleName}")
+                    assertEquals("neg-overflow", response.subId)
+                    // strfry-parity wording.
+                    assertEquals("blocked: too many query results", response.reason)
+                } finally {
+                    client.close()
+                }
+            } finally {
+                capped.close()
+            }
+        }
+
+    @Test
+    fun negOpenPerConnectionCapEmitsNotice() =
+        runBlocking {
+            // Cap = 2, so the third NEG-OPEN on one connection should
+            // be rejected with a NOTICE (matching strfry's wording).
+            val capped = RelayHub(negentropySettings = NegentropySettings(maxSessionsPerConnection = 2))
+            try {
+                val capUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7772/")
+                capped.getOrCreate(capUrl).preload(makeEvents(3))
+
+                val client = WireClient(capped, capUrl)
+                try {
+                    repeat(2) { i ->
+                        val s = NegentropySession("ok-$i", Filter(kinds = listOf(1)), localEvents = emptyList())
+                        client.send(OptimizedJsonMapper.toJson(s.open()))
+                        // Drain the NEG-MSG response so the next OPEN goes
+                        // through cleanly.
+                        client.nextMessage() as NegMsgMessage
+                    }
+
+                    // Third OPEN — should be rejected with a NOTICE.
+                    val third = NegentropySession("third", Filter(kinds = listOf(1)), localEvents = emptyList())
+                    client.send(OptimizedJsonMapper.toJson(third.open()))
+                    val response = client.nextMessage()
+                    assertTrue(response is NoticeMessage, "expected NOTICE, got ${response::class.simpleName}")
+                    assertEquals("too many concurrent NEG requests", response.message)
+                } finally {
+                    client.close()
+                }
+            } finally {
+                capped.close()
             }
         }
 

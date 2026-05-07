@@ -43,6 +43,7 @@ data class RelayConfig(
     val limits: LimitsSection = LimitsSection(),
     val authorization: AuthorizationSection = AuthorizationSection(),
     val admin: AdminSection = AdminSection(),
+    val negentropy: NegentropySection = NegentropySection(),
 ) {
     /**
      * Maps the `[info]` section into a [RelayInfo] used by the NIP-11
@@ -158,6 +159,34 @@ data class RelayConfig(
     data class LimitsSection(
         val max_ws_message_bytes: Int? = null,
         val max_ws_frame_bytes: Int? = null,
+    )
+
+    /**
+     * NIP-77 negentropy tuning. Defaults track strfry
+     * (`hoytech/strfry`) so a Geode relay accepts the same workload
+     * shape and exchanges the same NEG-MSG round-trip size as
+     * strfry — the de-facto reference implementation.
+     *
+     * - [frame_size_limit] mirrors strfry's hard-coded
+     *   `Negentropy ne(storage, 500'000)` in `RelayNegentropy.cpp`.
+     *   Hex-encoded that's ~1 MB on the wire per NEG-MSG; ensure
+     *   `[limits].max_ws_frame_bytes` (when set) is at least double
+     *   this or NEG-MSGs get truncated by the WS layer.
+     * - [max_sync_events] mirrors strfry's
+     *   `relay__negentropy__maxSyncEvents`. NEG-OPEN whose snapshot
+     *   exceeds this returns
+     *   `["NEG-ERR", "<subId>", "blocked: too many query results"]`.
+     * - [max_sessions_per_connection] caps concurrent NEG-OPEN
+     *   sessions held by a single connection. strfry shares its
+     *   200-cap with REQ subs via `relay__maxSubsPerConnection`;
+     *   Geode counts NEG independently for now (REQ has no cap yet).
+     *   Overflow returns NOTICE
+     *   `"too many concurrent NEG requests"` (matches strfry).
+     */
+    data class NegentropySection(
+        val frame_size_limit: Long = 500_000L,
+        val max_sync_events: Int = 1_000_000,
+        val max_sessions_per_connection: Int = 200,
     )
 
     data class AuthorizationSection(

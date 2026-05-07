@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -50,6 +51,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class RelayHub(
     private val defaultPolicy: () -> IRelayPolicy = { EmptyPolicy },
+    private val negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : WebsocketBuilder,
     AutoCloseable {
     private val relays = ConcurrentHashMap<NormalizedRelayUrl, Relay>()
@@ -60,7 +62,11 @@ class RelayHub(
     fun getOrCreate(url: NormalizedRelayUrl): Relay {
         check(!closed) { "RelayHub has been closed" }
         return relays.getOrPut(url) {
-            Relay(url = url, policyBuilder = defaultPolicy)
+            Relay(
+                url = url,
+                policyBuilder = defaultPolicy,
+                negentropySettings = negentropySettings,
+            )
         }
     }
 

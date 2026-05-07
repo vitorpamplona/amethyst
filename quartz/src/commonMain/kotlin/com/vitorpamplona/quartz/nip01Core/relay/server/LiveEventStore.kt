@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -161,4 +162,19 @@ class LiveEventStore(
         }
         return merged
     }
+
+    /**
+     * Lightweight snapshot for NIP-77 negentropy. Returns
+     * `(created_at, id)` pairs only — no Event materialisation —
+     * matching strfry's `MemoryView` footprint of ~40 B/entry.
+     *
+     * If [maxEntries] is non-null, the underlying store may return
+     * up to `maxEntries + 1` entries; the +1 sentinel lets the
+     * caller distinguish "exactly at cap" from "exceeds cap" without
+     * scanning past the cap.
+     */
+    suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int? = null,
+    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
 }

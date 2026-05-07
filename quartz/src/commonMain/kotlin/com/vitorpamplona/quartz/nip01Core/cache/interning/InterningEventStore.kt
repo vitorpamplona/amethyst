@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 
 /**
  * Decorator that canonicalises every [Event] returned by the inner
@@ -110,6 +111,11 @@ class InterningEventStore(
     override suspend fun count(filter: Filter): Int = inner.count(filter)
 
     override suspend fun count(filters: List<Filter>): Int = inner.count(filters)
+
+    override suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int?,
+    ): List<IdAndTime> = inner.snapshotIdsForNegentropy(filters, maxEntries)
 
     override suspend fun delete(filter: Filter) = inner.delete(filter)
 

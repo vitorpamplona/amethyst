@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPo
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import java.io.File
 
 /**
@@ -109,6 +110,12 @@ fun main(args: Array<String>) {
     }
 
     val stateFile = config.admin.state_file?.let { File(it) }
+    val negentropySettings =
+        NegentropySettings(
+            frameSizeLimit = config.negentropy.frame_size_limit,
+            maxSyncEvents = config.negentropy.max_sync_events,
+            maxSessionsPerConnection = config.negentropy.max_sessions_per_connection,
+        )
     val relay =
         Relay(
             advertisedUrl,
@@ -117,6 +124,7 @@ fun main(args: Array<String>) {
             policyBuilder,
             stateFile = stateFile,
             parallelVerify = parallelVerify,
+            negentropySettings = negentropySettings,
         )
     // Frame cap honors max_ws_frame_bytes when set; max_ws_message_bytes
     // is treated as the same cap (Ktor's WebSockets plugin only exposes

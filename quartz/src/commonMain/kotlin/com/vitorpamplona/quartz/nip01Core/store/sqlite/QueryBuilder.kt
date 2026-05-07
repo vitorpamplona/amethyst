@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
 import com.vitorpamplona.quartz.utils.EventFactory
 
@@ -171,6 +172,222 @@ class QueryBuilder(
             )
         }
     }
+
+    // -----------------------------------------------------------------
+    // NIP-77 negentropy snapshot path
+    //
+    // Projects only (id, created_at) — no content/tags/sig decode —
+    // so the relay can build a StorageVector without materialising
+    // full Event objects. ~40 B/entry instead of ~1 KB/entry.
+    // No ORDER BY: negentropy's seal() re-sorts. No limit injection:
+    // the per-session cap is enforced upstream as a count check.
+    // -----------------------------------------------------------------
+    fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        db: SQLiteConnection,
+        maxEntries: Int? = null,
+    ): List<IdAndTime> {
+        val inner =
+            if (filters.size == 1) {
+                toSnapshotIdsSql(filters.first(), hasher(db))
+            } else {
+                toSnapshotIdsSql(filters, hasher(db))
+            }
+        // Safety cap: wrap with `LIMIT maxEntries + 1` so we can
+        // detect overflow without scanning beyond the cap. The +1
+        // sentinel lets the caller distinguish "exactly capped" from
+        // "too many to fit". Matches strfry's `maxSyncEvents` guard.
+        val query =
+            if (maxEntries != null) {
+                QuerySpec(
+                    "SELECT id, created_at FROM (${inner.sql}) LIMIT ${maxEntries + 1}",
+                    inner.args,
+                )
+            } else {
+                inner
+            }
+        return db.runIdAndTimeQuery(query)
+    }
+
+    private fun toSnapshotIdsSql(
+        filter: Filter,
+        hasher: TagNameValueHasher,
+    ): QuerySpec {
+        val newFilter = filter.toFilterWithDTags()
+
+        // Simple path — no tag joins, no FTS — collapses to a single
+        // SELECT against event_headers.
+        if (newFilter.isSimpleQuery()) {
+            return makeSimpleIdsQuery(
+                ids = newFilter.ids,
+                authors = newFilter.authors,
+                kinds = newFilter.kinds,
+                dTags = newFilter.dTags,
+                since = newFilter.since,
+                until = newFilter.until,
+                limit = newFilter.limit,
+            )
+        }
+
+        // Search path — FTS join. Project id+created_at off
+        // event_headers via the FTS row_id linkage.
+        if (newFilter.isSimpleSearch()) {
+            return makeSimpleIdsSearch(
+                search = newFilter.search!!,
+                ids = newFilter.ids,
+                authors = newFilter.authors,
+                kinds = newFilter.kinds,
+                dTags = newFilter.dTags,
+                since = newFilter.since,
+                until = newFilter.until,
+                limit = newFilter.limit,
+            )
+        }
+
+        // Tag-join path — reuse the existing row_id subquery and
+        // join back to event_headers for the projection.
+        val rowIdSubquery = prepareRowIDSubQueries(filter, hasher)
+        return if (rowIdSubquery == null) {
+            QuerySpec("SELECT id, created_at FROM event_headers")
+        } else {
+            QuerySpec(
+                """
+                SELECT event_headers.id, event_headers.created_at FROM event_headers
+                INNER JOIN (
+                    ${rowIdSubquery.sql}
+                ) AS filtered
+                ON event_headers.row_id = filtered.row_id
+                """.trimIndent(),
+                rowIdSubquery.args,
+            )
+        }
+    }
+
+    private fun toSnapshotIdsSql(
+        filters: List<Filter>,
+        hasher: TagNameValueHasher,
+    ): QuerySpec {
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher)
+        return if (rowIdSubqueries == null) {
+            QuerySpec("SELECT id, created_at FROM event_headers")
+        } else {
+            QuerySpec(
+                """
+                SELECT DISTINCT event_headers.id, event_headers.created_at FROM event_headers
+                INNER JOIN (
+                    ${rowIdSubqueries.sql}
+                ) AS filtered
+                ON event_headers.row_id = filtered.row_id
+                """.trimIndent(),
+                rowIdSubqueries.args,
+            )
+        }
+    }
+
+    private fun makeSimpleIdsQuery(
+        ids: List<HexKey>? = null,
+        authors: List<HexKey>? = null,
+        kinds: List<Kind>? = null,
+        dTags: List<String>? = null,
+        since: Long? = null,
+        until: Long? = null,
+        limit: Int? = null,
+    ): QuerySpec {
+        val clause =
+            where {
+                ids?.let { equalsOrIn("id", it) }
+                kinds?.let { equalsOrIn("kind", it) }
+                authors?.let { equalsOrIn("pubkey", it) }
+                dTags?.let { equalsOrIn("d_tag", it) }
+                since?.let { greaterThanOrEquals("created_at", it) }
+                until?.let { lessThanOrEquals("created_at", it) }
+                if (dTags != null && kinds != null) {
+                    if (kinds.all { it.isAddressable() }) {
+                        raw("(kind >= 30000 AND kind < 40000)")
+                    }
+                }
+            }
+
+        val sql =
+            buildString {
+                append("SELECT id, created_at FROM event_headers")
+                if (clause.conditions.isNotEmpty()) {
+                    append("\nWHERE ")
+                    append(clause.conditions)
+                }
+                // Negentropy honors filter `limit` like REQ does
+                // (matches strfry's NostrFilterGroup behaviour).
+                // ORDER BY is required for LIMIT to be meaningful.
+                if (limit != null) {
+                    append("\nORDER BY created_at DESC")
+                    if (indexStrategy.useAndIndexIdOnOrderBy) {
+                        append(", id ASC")
+                    }
+                    append("\nLIMIT ")
+                    append(limit)
+                }
+            }
+
+        return QuerySpec(sql, clause.args)
+    }
+
+    private fun makeSimpleIdsSearch(
+        search: String,
+        ids: List<HexKey>? = null,
+        authors: List<HexKey>? = null,
+        kinds: List<Kind>? = null,
+        dTags: List<String>? = null,
+        since: Long? = null,
+        until: Long? = null,
+        limit: Int? = null,
+    ): QuerySpec {
+        val clause =
+            where {
+                ids?.let { equalsOrIn("event_headers.id", it) }
+                match(fts.tableName, search)
+                kinds?.let { equalsOrIn("event_headers.kind", it) }
+                authors?.let { equalsOrIn("event_headers.pubkey", it) }
+                dTags?.let { equalsOrIn("event_headers.d_tag", it) }
+                since?.let { greaterThanOrEquals("event_headers.created_at", it) }
+                until?.let { lessThanOrEquals("event_headers.created_at", it) }
+                if (dTags != null && kinds != null) {
+                    if (kinds.all { it.isAddressable() }) {
+                        raw("(event_headers.kind >= 30000 AND kind < 40000)")
+                    }
+                }
+            }
+
+        val sql =
+            buildString {
+                append("SELECT event_headers.id, event_headers.created_at FROM event_headers")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                if (clause.conditions.isNotEmpty()) {
+                    append("\nWHERE ${clause.conditions}")
+                }
+                if (limit != null) {
+                    append("\nORDER BY event_headers.created_at DESC")
+                    if (indexStrategy.useAndIndexIdOnOrderBy) {
+                        append(", event_headers.id ASC")
+                    }
+                    append("\nLIMIT ")
+                    append(limit)
+                }
+            }
+
+        return QuerySpec(sql, clause.args)
+    }
+
+    private fun SQLiteConnection.runIdAndTimeQuery(query: QuerySpec): List<IdAndTime> =
+        prepare(query.sql).use { stmt ->
+            query.args.forEachIndexed { index, arg ->
+                stmt.bindText(index + 1, arg)
+            }
+            val results = ArrayList<IdAndTime>()
+            while (stmt.step()) {
+                results.add(IdAndTime(stmt.getLong(1), stmt.getText(0)))
+            }
+            results
+        }
 
     private fun makeEverythingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC${if (indexStrategy.useAndIndexIdOnOrderBy) ", id ASC" else ""}"
 

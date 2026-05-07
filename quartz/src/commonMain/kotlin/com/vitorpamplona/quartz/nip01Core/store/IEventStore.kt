@@ -95,6 +95,38 @@ interface IEventStore : AutoCloseable {
 
     suspend fun count(filters: List<Filter>): Int
 
+    /**
+     * NIP-77 negentropy snapshot. Returns `(created_at, id)` pairs
+     * for every event matching [filters], with no content/tags/sig
+     * decode. Used by the server-side reconciliation path to build a
+     * `StorageVector` without materialising full [Event] objects —
+     * ~40 B/entry instead of ~1 KB/entry. Order is unspecified;
+     * negentropy's `seal()` re-sorts.
+     *
+     * If [maxEntries] is non-null, the implementation may return up
+     * to `maxEntries + 1` entries; the caller compares the result
+     * size to detect overflow (matching strfry's `maxSyncEvents`
+     * guard). The +1 sentinel lets the caller distinguish "exactly
+     * capped" from "too many to fit".
+     *
+     * Default implementation falls back to the full-decode path so
+     * non-SQLite stores stay correct; SQLite overrides with a direct
+     * `SELECT id, created_at` against the `query_by_created_at_id`
+     * index. Honors the same filter semantics as [query] including
+     * any `limit`.
+     */
+    suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int? = null,
+    ): List<IdAndTime> {
+        val all = query<Event>(filters).map { IdAndTime(it.createdAt, it.id) }
+        return if (maxEntries != null && all.size > maxEntries + 1) {
+            all.subList(0, maxEntries + 1)
+        } else {
+            all
+        }
+    }
+
     suspend fun delete(filter: Filter)
 
     suspend fun delete(filters: List<Filter>)
