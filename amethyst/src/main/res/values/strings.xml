@@ -428,6 +428,7 @@
     <string name="migrate_bookmarks_button">Move All to New Bookmarks</string>
     <string name="migrate_bookmarks_success">Bookmarks migrated successfully</string>
     <string name="drafts">Drafts</string>
+    <string name="scheduled_posts">Scheduled posts</string>
     <string name="polls">Polls</string>
     <string name="open_polls">Open</string>
     <string name="closed_polls">Closed</string>

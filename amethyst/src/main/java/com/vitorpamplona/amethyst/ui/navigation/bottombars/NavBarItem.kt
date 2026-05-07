@@ -44,6 +44,7 @@ enum class NavBarItem {
     BOOKMARKS,
     WEB_BOOKMARKS,
     DRAFTS,
+    SCHEDULED_POSTS,
     INTEREST_SETS,
     EMOJI_PACKS,
     WALLET,
@@ -141,6 +142,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.drafts,
                 icon = MaterialSymbols.Drafts,
                 resolveRoute = { Route.Drafts },
+            ),
+        NavBarItem.SCHEDULED_POSTS to
+            NavBarItemDef(
+                id = NavBarItem.SCHEDULED_POSTS,
+                labelRes = R.string.scheduled_posts,
+                icon = MaterialSymbols.Schedule,
+                resolveRoute = { Route.ScheduledPosts },
             ),
         NavBarItem.INTEREST_SETS to
             NavBarItemDef(
@@ -291,6 +299,7 @@ val DrawerYouItems: List<NavBarItem> =
         NavBarItem.BOOKMARKS,
         NavBarItem.WEB_BOOKMARKS,
         NavBarItem.DRAFTS,
+        NavBarItem.SCHEDULED_POSTS,
         NavBarItem.INTEREST_SETS,
         NavBarItem.EMOJI_PACKS,
         NavBarItem.WALLET,

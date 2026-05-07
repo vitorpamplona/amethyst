@@ -205,6 +205,8 @@ sealed class Route {
 
     @Serializable object Drafts : Route()
 
+    @Serializable object ScheduledPosts : Route()
+
     @Serializable object AllSettings : Route()
 
     @Serializable object AccountBackup : Route()

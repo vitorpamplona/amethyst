@@ -151,6 +151,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip43.RelayMembersSc
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.RequestToVanishScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsScreen
@@ -304,6 +305,7 @@ fun BuildNavigation(
         composableFromEnd<Route.PinnedNotes> { PinnedNotesScreen(accountViewModel, nav) }
         composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
         composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ScheduledPosts> { ScheduledPostsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }

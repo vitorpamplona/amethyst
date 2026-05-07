@@ -52,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -97,6 +99,9 @@ import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
 import com.vitorpamplona.amethyst.ui.note.creators.polls.PollOptionsField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
+import com.vitorpamplona.amethyst.ui.note.creators.scheduling.ScheduleAtButton
+import com.vitorpamplona.amethyst.ui.note.creators.scheduling.ScheduleAtPicker
+import com.vitorpamplona.amethyst.ui.note.creators.scheduling.roundUpToNextQuarterHour
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -404,6 +409,26 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                postViewModel.scheduledForSec?.let { current ->
+                    val alwaysOnEnabled by accountViewModel.account.settings.alwaysOnNotificationService
+                        .collectAsStateWithLifecycle()
+                    val savedAccounts by com.vitorpamplona.amethyst.LocalPreferences
+                        .accountsFlow()
+                        .collectAsStateWithLifecycle()
+                    val hasMultipleAccounts = (savedAccounts?.size ?: 0) > 1
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
+                    ) {
+                        ScheduleAtPicker(
+                            scheduledForSec = current,
+                            onChanged = { postViewModel.scheduledForSec = it },
+                            alwaysOnEnabled = alwaysOnEnabled,
+                            hasMultipleAccounts = hasMultipleAccounts,
+                        )
+                    }
+                }
+
                 if (postViewModel.wantsToAddGeoHash) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -654,6 +679,16 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
 
         ExpirationDateButton(postViewModel.wantsExpirationDate) {
             postViewModel.toggleExpirationDate()
+        }
+
+        ScheduleAtButton(postViewModel.scheduledForSec != null) {
+            postViewModel.scheduledForSec =
+                if (postViewModel.scheduledForSec != null) {
+                    null
+                } else {
+                    // Default to 1 hour from now, rounded up to the next 15-min slot
+                    roundUpToNextQuarterHour((System.currentTimeMillis() / 1000) + 60 * 60)
+                }
         }
 
         AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
