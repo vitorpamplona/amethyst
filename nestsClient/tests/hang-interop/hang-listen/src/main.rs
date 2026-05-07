@@ -166,46 +166,59 @@ async fn listen(
     tracing::info!(%path, "broadcast announced");
 
     // Subscribe to the catalog and read the first published
-    // version. The catalog hook in Amethyst's
-    // `MoqLiteNestsSpeaker` (`setOnNewSubscriber`) can race the
-    // SUBSCRIBE bidi mid-suite — under accumulated relay state
-    // the first try sometimes resolves with "cancelled" before
-    // the catalog frame arrives. Retry up to 3 times with a
-    // 2 s per-attempt timeout (6 s total worst case). Under
-    // concurrent load (multiple jvmTest workers contending for
-    // the relay) the first attempt's wire round-trip can
-    // exceed 500 ms; the longer per-attempt budget keeps the
-    // happy-path fast (resolves on the first attempt) while
-    // tolerating slow handshakes.
-    let info = {
-        let mut last_err: Option<anyhow::Error> = None;
-        let mut decoded: Option<hang::Catalog> = None;
-        for attempt in 0..3 {
-            let catalog_track = broadcast
-                .subscribe_track(&hang::Catalog::default_track())
-                .context("subscribe catalog")?;
-            let mut catalog = hang::CatalogConsumer::new(catalog_track);
-            match tokio::time::timeout(Duration::from_secs(2), catalog.next()).await {
-                Ok(Ok(Some(c))) => {
-                    decoded = Some(c);
-                    break;
+    // version. The naïve "subscribe → next() with timeout → on
+    // timeout resubscribe" pattern is broken on moq-rs 0.10.x:
+    //
+    //   - When the `TrackConsumer` is dropped, moq-rs's track
+    //     producer side observes `track.unused()` and aborts the
+    //     wire subscribe with `Error::Cancel`, which maps to
+    //     stream-reset code **0** (per `moq-lite/src/error.rs`).
+    //   - Code 0 is broadcast to any consumer that calls
+    //     `subscribe_track` for the SAME track name within the
+    //     race window — the new consumer's `.next()` resolves
+    //     immediately with `cancelled`, producing the cascade
+    //     `subscribe cancelled id=0 → subscribe error id=1 code=0
+    //     → subscribe_track failed: cancelled` we observed.
+    //
+    // Fix: hold ONE subscription open for the full retry budget.
+    // Inner timeouts on `.next()` poll for the first published
+    // group; an outer timeout caps the total wait. The track
+    // consumer stays alive across inner iterations, so moq-rs
+    // never sees `track.unused()` and never propagates `Cancel`.
+    //
+    // The Amethyst speaker's `onNewSubscriber` hook fires once
+    // per inbound SUBSCRIBE (see `MoqLiteNestsSpeaker.kt`'s
+    // `setOnNewSubscriber`). With one long-lived subscribe, we
+    // get one hook fire, and however long the speaker takes to
+    // respond — under accumulated relay state, packet-loss
+    // shim-induced re-transmits, or other test-side timing
+    // pressure — we still see the first published group as long
+    // as it arrives within the budget.
+    //
+    // Total budget: 10 s. Within every scenario's broadcast
+    // window (the shortest is `subscribe_drop_for_unknown_track`
+    // at 5 s, but that test asserts a SubscribeDrop and never
+    // reaches this path).
+    let catalog_track = broadcast
+        .subscribe_track(&hang::Catalog::default_track())
+        .context("subscribe catalog")?;
+    let mut catalog = hang::CatalogConsumer::new(catalog_track);
+    let info = match tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            match catalog.next().await {
+                Ok(Some(c)) => return Ok::<hang::Catalog, anyhow::Error>(c),
+                Ok(None) => {
+                    return Err(anyhow!("catalog ended before first publish"));
                 }
-                Ok(Ok(None)) => {
-                    last_err = Some(anyhow!("catalog ended before first publish"));
-                }
-                Ok(Err(e)) => {
-                    tracing::warn!(attempt, %e, "catalog read error; retrying");
-                    last_err = Some(anyhow::Error::new(e).context("read catalog"));
-                }
-                Err(_) => {
-                    tracing::warn!(attempt, "catalog read timed out; retrying");
-                    last_err = Some(anyhow!("catalog read timed out (attempt {attempt})"));
-                }
+                Err(e) => return Err(anyhow::Error::new(e).context("read catalog")),
             }
         }
-        decoded.ok_or_else(|| {
-            last_err.unwrap_or_else(|| anyhow!("catalog read failed after 3 attempts"))
-        })?
+    })
+    .await
+    {
+        Ok(Ok(c)) => c,
+        Ok(Err(e)) => return Err(e.context("catalog read")),
+        Err(_) => return Err(anyhow!("catalog read timed out after 10 s")),
     };
 
     // Pick the first Opus / Container::Legacy audio rendition.
