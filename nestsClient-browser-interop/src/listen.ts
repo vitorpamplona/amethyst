@@ -133,10 +133,21 @@ async function main() {
     const sampleRate = 48_000;
     const numberOfChannels = 1; // overwritten by catalog if available; default mono
     let warmed = 0;
+    // I14 instrumentation. `decoderOutputs` counts every successful
+    // `output()` callback (warmup frames included), `decoderErrors`
+    // counts every WebCodecs `error()` callback. A T8 regression that
+    // leaks `OpusHead` into a normal audio frame surfaces as either a
+    // non-zero error count (decoder rejects the bytes) or — if Chromium
+    // tolerates it — as the warmup window absorbing the stray frame
+    // and the FFT peak shifting. The error counter catches case 1
+    // deterministically; the FFT peak in I1 catches case 2.
+    let decoderOutputs = 0;
+    let decoderErrors = 0;
 
     const decoder = new AudioDecoder({
         output: (data: AudioData) => {
             warmed++;
+            decoderOutputs++;
             if (warmed <= 3) {
                 // Mirror @moq/watch's 3-frame WebCodecs warmup skip.
                 data.close();
@@ -167,7 +178,10 @@ async function main() {
             }
             data.close();
         },
-        error: (err) => console.error("[listen] AudioDecoder", err),
+        error: (err) => {
+            decoderErrors++;
+            console.error("[listen] AudioDecoder", err);
+        },
     });
 
     decoder.configure({
@@ -207,6 +221,8 @@ async function main() {
 
     status(`done, frames=${framesDecoded}`);
     (window as any).__framesDecoded = framesDecoded;
+    (window as any).__decoderOutputs = decoderOutputs;
+    (window as any).__decoderErrors = decoderErrors;
 
     // Flush any pending decoder output, then signal the WS server we're done.
     try {

@@ -49,6 +49,13 @@ test.describe("nests-browser-interop", () => {
         const meta = await page.evaluate(() => ({
             framesDecoded: (window as any).__framesDecoded,
             moqVersion: (window as any).__moqVersion,
+            // I14 instrumentation: total WebCodecs `output()` callbacks
+            // (warmup frames included) and total `error()` callbacks.
+            // A T8 regression that leaks `OpusHead` into a normal audio
+            // frame trips `decoderErrors` deterministically; the FFT
+            // peak in I1 catches the silent-tolerance variant.
+            decoderOutputs: (window as any).__decoderOutputs,
+            decoderErrors: (window as any).__decoderErrors,
         }));
         // Always print a summary line — Kotlin parses this for follow-up
         // assertions (e.g. moq-lite-03 ALPN echo for I15).
