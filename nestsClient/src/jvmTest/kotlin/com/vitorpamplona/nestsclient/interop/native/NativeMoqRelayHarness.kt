@@ -142,8 +142,9 @@ class NativeMoqRelayHarness private constructor(
 
         /** Monotonic counter used to disambiguate same-tag boots in one JVM. */
         private val bootSequence = AtomicInteger(0)
-        private val LOG_TIMESTAMP_FMT =
+        private val logTimestampFmt =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS")
+        private val tagSanitiser = Regex("[^A-Za-z0-9._-]")
 
         fun isEnabled(): Boolean = System.getProperty(ENABLE_PROPERTY) == "true"
 
@@ -253,7 +254,7 @@ class NativeMoqRelayHarness private constructor(
                 if (relayLogDir != null) {
                     relayLogDir.mkdirs()
                     val seq = bootSequence.incrementAndGet().toString().padStart(3, '0')
-                    val ts = LocalDateTime.now().format(LOG_TIMESTAMP_FMT)
+                    val ts = LocalDateTime.now().format(logTimestampFmt)
                     val tag = sanitiseTag(testTag ?: "boot")
                     File(relayLogDir, "$tag-$seq-$ts.log")
                 } else {
@@ -337,7 +338,7 @@ class NativeMoqRelayHarness private constructor(
          */
         private fun sanitiseTag(raw: String): String =
             raw
-                .replace(Regex("[^A-Za-z0-9._-]"), "_")
+                .replace(tagSanitiser, "_")
                 .take(80)
                 .ifBlank { "boot" }
 
@@ -457,7 +458,30 @@ private class ProcessOutputDrainer(
     fun start() {
         thread =
             Thread({
-                val writer = sinkFile?.bufferedWriter()
+                // Open the sink file inside the drain thread + tolerant
+                // of failure: if `bufferedWriter()` throws (parent dir
+                // gone, disk full, file-already-a-directory, …) the
+                // drainer must STILL pump the subprocess's
+                // stdout/stderr — otherwise the relay's pipe buffer
+                // fills (~64 KB on Linux) and the subprocess deadlocks
+                // on its next write. Per-test runs are unattended; a
+                // misconfigured log dir shouldn't take the whole
+                // suite down.
+                val writer: java.io.BufferedWriter? =
+                    if (sinkFile != null) {
+                        try {
+                            sinkFile.bufferedWriter()
+                        } catch (t: Throwable) {
+                            System.err.println(
+                                "NativeMoqRelayHarness-$name: failed to open trace log " +
+                                    "$sinkFile (${t::class.simpleName}: ${t.message}); " +
+                                    "continuing without per-test capture.",
+                            )
+                            null
+                        }
+                    } else {
+                        null
+                    }
                 try {
                     process.inputStream.bufferedReader().useLines { lines ->
                         for (line in lines) {
@@ -467,6 +491,11 @@ private class ProcessOutputDrainer(
                                 runCatching {
                                     writer.write(line)
                                     writer.newLine()
+                                    // Per-line flush so a hung-test
+                                    // post-mortem still has the latest
+                                    // line on disk. Tests don't run
+                                    // long enough for the syscall cost
+                                    // to matter (max ~1k lines/test).
                                     writer.flush()
                                 }
                             }

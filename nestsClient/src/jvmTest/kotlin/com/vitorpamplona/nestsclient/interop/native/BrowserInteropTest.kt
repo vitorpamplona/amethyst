@@ -463,11 +463,26 @@ class BrowserInteropTest {
      * session stays alive throughout (hot-swap is speaker-side only;
      * the listener's session is independent), and because the
      * speaker re-publishes the same broadcast suffix the page sees
-     * `Announce::Ended → Active` and stays subscribed.
+     * `Announce::Ended → Active`.
      *
-     * Mirror of the hang-tier `speaker_hot_swap_does_not_crash`.
-     * Asserts the FFT peak survives — group-sequence corruption
-     * across the swap (regression on T12) would shift it.
+     * **Soft assertion only.** Empirical post-`:quic`-merge sample
+     * counts vary 0–7.7 k samples (≤ 160 ms TOTAL) — Chromium's
+     * `@moq/lite` 0.2.x client doesn't re-attach across the
+     * `Active::Ended → Active` boundary, so any hard sample-count
+     * floor would fail-flake. T12 (group sequence carry across
+     * hot-swaps) is hard-asserted by the hang-tier counterpart
+     * `speaker_hot_swap_does_not_crash` in [HangInteropTest], which
+     * decodes the full post-swap window with the 440 Hz peak
+     * intact. The browser tier here only verifies:
+     *   - the harness boots and the publisher hot-swap completes
+     *     without crashing the test process,
+     *   - Chromium's WebCodecs `AudioDecoder` doesn't fire a
+     *     `decoderErrors > 0` event during the swap window.
+     *
+     * Tracked as the "browser hot-swap re-attach" deferred item in
+     * `nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md`.
+     * Promote to a hard floor once `@moq/lite` / `@moq/hang` gain
+     * a working subscribe-re-attach path.
      */
     @Test
     fun chromium_listener_speaker_hot_swap_does_not_crash() =
@@ -483,49 +498,7 @@ class BrowserInteropTest {
                 "decoderErrors=$errors during hot-swap — expected 0.\n" +
                     "playwright stdout:\n${out.stdout}",
             )
-            val pcm = readFloat32Pcm(out.pcmFile)
-            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
-            // SOFT-PASS — kept intentionally on this one scenario.
-            //
-            // Empirical post-`:quic`-merge sample counts vary from
-            // 0 to ~7.7 k samples (≤ 160 ms TOTAL) across sweeps,
-            // straddling the 4.8 k warmupSamples threshold. The
-            // browser path's hot-swap response is fundamentally
-            // unreliable: Chromium's `@moq/lite` 0.2.x client tears
-            // down its catalog/audio subscriptions when it sees
-            // `Announce::Ended → Active` in rapid succession
-            // (T+2.5 s + ~ms swap window) instead of re-attaching
-            // to the new broadcast cycle. ANY hard floor on
-            // `pcm.size` that excludes the regression mode
-            // ("swap crashed the WT session entirely") fail-flakes
-            // because the steady state itself sits at the warmup
-            // window edge.
-            //
-            // The hang-tier counterpart (`speaker_hot_swap_does_not_crash`
-            // in HangInteropTest) hard-asserts the full post-swap
-            // window decodes the 440 Hz peak — that's the place
-            // T12 (group sequence carry across hot-swaps)
-            // regressions are caught. The browser tier here only
-            // verifies the harness boots, the publisher hot-swaps
-            // without crashing the test process, and Chromium
-            // doesn't fire a decoder error.
-            //
-            // Tracked in
-            // `2026-05-06-cross-stack-interop-test-results.md`'s
-            // "browser hot-swap re-attach" deferred item. Resolution
-            // requires a fix in `@moq/lite` / `@moq/hang`'s subscribe
-            // re-attach path — out of scope for this branch.
-            if (pcm.size <= warmupSamples) {
-                System.err.println(
-                    "Browser hot-swap: captured ${pcm.size} samples (≤ warmupSamples). " +
-                        "Soft-pass per documented browser-side @moq/lite re-attach " +
-                        "limitation; T12 is asserted by the hang-tier counterpart.",
-                )
-                return@runBlocking
-            }
-            // If we DID get past warmup, still skip the FFT — the
-            // post-warmup window may be too short (60 ms typical) to
-            // resolve a 440 Hz peak with halfWindowHz=5.
+            // No PCM sample-count or FFT assertion — see kdoc.
         }
 
     /**
