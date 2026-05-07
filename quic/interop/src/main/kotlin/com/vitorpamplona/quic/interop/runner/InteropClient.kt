@@ -180,7 +180,7 @@ fun main() {
             //   ipv6                — same flow over an IPv6 socket;
             //                         JDK DatagramChannel.connect handles
             //                         the v6 address resolution natively.
-            "handshake", "chacha20", "handshakeloss",
+            "handshake", "chacha20",
             "transfer", "http3", "multiplexing",
             "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
             "retry", "ipv6",
@@ -213,6 +213,26 @@ fun main() {
                     // Cheap whitespace tokenization here just counts;
                     // runTransferTest re-parses into URI[] inside.
                     parallel = requests.split(Regex("\\s+")).count { it.isNotBlank() } > 1,
+                )
+            }
+
+            // The runner reuses TESTCASE_CLIENT=multiconnect for the
+            // handshakeloss + handshakecorruption tests (see
+            // testcases_quic.py:746). Each URL must be fetched on a fresh
+            // QUIC connection — the testcase verifies via tshark that
+            // the pcap contains _num_runs (50) distinct handshakes. We
+            // could not satisfy this through runTransferTest (one
+            // connection, many GETs); fixing required a separate per-
+            // URL connection loop.
+            "multiconnect" -> {
+                runMulticonnectTest(
+                    requests = requests,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogPath = keyLogPath,
+                    qlogDir = qlogDir,
                 )
             }
 
@@ -416,11 +436,46 @@ private fun runTransferTest(
                                         "expected_chunks=${(urls.size + MULTIPLEX_PARALLELISM - 1) / MULTIPLEX_PARALLELISM}",
                                 )
                             }
-                            urls.chunked(MULTIPLEX_PARALLELISM).forEachIndexed { chunkIdx, chunk ->
+                            // Pace stream creation against peer's MAX_STREAMS_BIDI budget.
+                            // Pre-fix this used a fixed [MULTIPLEX_PARALLELISM]=64
+                            // chunk, which exceeded quic-go's tighter
+                            // initial_max_streams_bidi=100 cap on the second chunk
+                            // (cumulative used=128 > limit=108-ish). Throws
+                            // QuicStreamLimitException, kills the test.
+                            // aioquic + picoquic advertise 128 so we never noticed.
+                            //
+                            // Now: each iteration takes the smaller of MULTIPLEX_PARALLELISM
+                            // and the live budget (peer cap minus what we've already
+                            // consumed). When budget=0, poll briefly waiting for the
+                            // peer's MAX_STREAMS_BIDI bump — the peer extends the
+                            // limit as our completed streams retire from their
+                            // bookkeeping.
+                            val totalUrls = urls.size
+                            var chunkIdx = 0
+                            var remaining = urls
+                            while (remaining.isNotEmpty()) {
+                                val budget =
+                                    (conn.peerMaxStreamsBidiSnapshot() - conn.localBidiStreamsUsedSnapshot())
+                                        .toInt()
+                                        .coerceAtLeast(0)
+                                if (budget == 0) {
+                                    // Brief idle while peer's MAX_STREAMS catches up. 50 ms is
+                                    // arbitrary but small enough that the matrix budget can
+                                    // absorb several rounds, large enough that we don't burn
+                                    // CPU spinning. If the test budget runs out before the peer
+                                    // bumps the cap, the outer withTimeoutOrNull surfaces it
+                                    // as transfer_timeout (clear signal vs a deadlock-looking
+                                    // hang).
+                                    delay(50)
+                                    continue
+                                }
+                                val take = minOf(MULTIPLEX_PARALLELISM, budget, remaining.size)
+                                val chunk = remaining.subList(0, take)
+                                remaining = remaining.subList(take, remaining.size)
                                 val chunkStartMs = nowMs()
                                 if (debug && chunkIdx < 3) {
                                     System.err.println(
-                                        "[interop] chunk=$chunkIdx size=${chunk.size} starting prepareRequests",
+                                        "[interop] chunk=$chunkIdx size=${chunk.size} budget=$budget starting prepareRequests",
                                     )
                                 }
                                 // Single lock-held batch open + enqueue.
@@ -450,9 +505,11 @@ private fun runTransferTest(
                                         "[interop] chunk=$chunkIdx size=${chunk.size} " +
                                             "enqueue=${enqueuedMs - chunkStartMs}ms " +
                                             "responses=${doneMs - enqueuedMs}ms " +
-                                            "cumulative=${doneMs - transferStartMs}ms",
+                                            "cumulative=${doneMs - transferStartMs}ms " +
+                                            "completed=${totalUrls - remaining.size}/$totalUrls",
                                     )
                                 }
+                                chunkIdx += 1
                             }
                             collected
                         } else {
@@ -483,6 +540,168 @@ private fun runTransferTest(
         EXIT_OK
     } else {
         System.err.println("transfer $outcome")
+        EXIT_FAIL
+    }
+}
+
+/**
+ * One QUIC connection per URL (handshakeloss / handshakecorruption).
+ *
+ * The runner's `multiconnect` testcase generates N small files (typ. 50 × 1 KB)
+ * and expects N independent handshakes in the pcap. Each iteration creates a
+ * fresh socket + connection + driver, performs a single HQ-interop GET,
+ * writes the body to /downloads, and closes. The whole loop runs serially —
+ * concurrency would only help under a much wider test budget than the runner
+ * gives us, and serial keeps the pcap easy to read.
+ *
+ * Per-iteration qlog files land at `$QLOGDIR/client-N.sqlog` so a failed run
+ * leaves a trace for the specific connection that failed; SSL-key-log lines
+ * accumulate in a single file (Wireshark de-dupes by client_random).
+ */
+private fun runMulticonnectTest(
+    requests: String,
+    downloadsDir: File,
+    cipherSuites: IntArray?,
+    offeredAlpns: List<Alpn>,
+    initialVersion: Int,
+    keyLogPath: String?,
+    qlogDir: File?,
+): Int {
+    val urls =
+        requests
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .map { runCatching { URI(it) }.getOrNull() }
+            .filter { it != null && it.host != null }
+            .map { it!! }
+    if (urls.isEmpty()) {
+        System.err.println("no parseable URL in REQUESTS")
+        return EXIT_FAIL
+    }
+
+    downloadsDir.mkdirs()
+    val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
+    qlogDir?.mkdirs()
+
+    System.err.println("[boot] multiconnect: urls=${urls.size}")
+
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val outcome =
+        runBlocking {
+            for ((idx, url) in urls.withIndex()) {
+                val host = url.host
+                val port = url.port.takeIf { it > 0 } ?: 443
+                val authority = if (port == 443) host else "$host:$port"
+
+                val socket =
+                    try {
+                        UdpSocket.connect(host, port)
+                    } catch (t: Throwable) {
+                        return@runBlocking "udp_failed[$idx]: ${t.message ?: t::class.simpleName}"
+                    }
+                val qlogWriter =
+                    qlogDir?.let { dir ->
+                        QlogWriter(file = File(dir, "client-$idx.sqlog"), odcidHex = "client$idx")
+                    }
+                val conn =
+                    QuicConnection(
+                        serverName = host,
+                        config =
+                            QuicConnectionConfig(
+                                // Same window sizing as runTransferTest;
+                                // multiconnect's per-conn payload is tiny but
+                                // matching keeps RTT-stall behavior identical
+                                // across testcases for easier triangulation.
+                                initialMaxData = 32L * 1024 * 1024,
+                                initialMaxStreamDataBidiLocal = 32L * 1024 * 1024,
+                                initialMaxStreamDataBidiRemote = 32L * 1024 * 1024,
+                                initialMaxStreamDataUni = 32L * 1024 * 1024,
+                            ),
+                        tlsCertificateValidator = PermissiveCertificateValidator(),
+                        alpnList = offeredAlpns.map { it.wireBytes },
+                        initialVersion = initialVersion,
+                        cipherSuites =
+                            cipherSuites
+                                ?: intArrayOf(
+                                    TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+                                    TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+                                ),
+                        extraSecretsListener = keyLogger?.listener,
+                        qlogObserver = qlogWriter ?: com.vitorpamplona.quic.observability.QlogObserver.NoOp,
+                    )
+                val driver = QuicConnectionDriver(conn, socket, scope)
+                driver.start()
+
+                val handshake =
+                    withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
+                        runCatching { conn.awaitHandshake() }
+                    }
+                if (handshake == null || handshake.isFailure) {
+                    runCatching { driver.close() }
+                    conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+                    runCatching { qlogWriter?.close() }
+                    return@runBlocking "handshake_failed[$idx]"
+                }
+
+                val negotiated =
+                    conn.tls.negotiatedAlpn
+                        ?.decodeToString()
+                        .orEmpty()
+                val client: GetClient =
+                    when (negotiated) {
+                        "h3" -> {
+                            Http3GetClient(conn, driver).also { it.init(scope) }
+                        }
+
+                        "hq-interop" -> {
+                            HqInteropGetClient(conn, driver)
+                        }
+
+                        else -> {
+                            System.err.println("[multiconnect:$idx] unrecognized ALPN '$negotiated'; defaulting to hq-interop")
+                            HqInteropGetClient(conn, driver)
+                        }
+                    }
+
+                val resp =
+                    withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                        client.get(authority, url.path)
+                    }
+
+                if (resp == null) {
+                    runCatching { driver.close() }
+                    conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+                    runCatching { qlogWriter?.close() }
+                    return@runBlocking "transfer_timeout[$idx]"
+                }
+                if (resp.status != 200) {
+                    System.err.println("[multiconnect:$idx] GET ${url.path} → status ${resp.status}")
+                    runCatching { driver.close() }
+                    conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+                    runCatching { qlogWriter?.close() }
+                    return@runBlocking "request_failed[$idx]"
+                }
+                val name = url.path.substringAfterLast('/').ifBlank { "index" }
+                File(downloadsDir, name).writeBytes(resp.body)
+
+                runCatching { driver.close() }
+                conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+                runCatching { qlogWriter?.close() }
+                // Tiny breather so the just-closed driver / socket release
+                // their resources before the next iteration grabs a new
+                // ephemeral UDP port. Without this, the kernel occasionally
+                // hands the same port back before the OS ARP cache has
+                // settled and the sim drops the first Initial.
+                delay(50)
+            }
+            "ok"
+        }
+    scope.cancel()
+
+    return if (outcome == "ok") {
+        EXIT_OK
+    } else {
+        System.err.println("multiconnect $outcome")
         EXIT_FAIL
     }
 }

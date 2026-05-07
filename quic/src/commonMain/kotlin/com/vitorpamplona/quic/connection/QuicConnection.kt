@@ -979,6 +979,26 @@ class QuicConnection(
     fun peerMaxStreamsUniSnapshot(): Long = peerMaxStreamsUni
 
     /**
+     * Number of client-initiated bidi streams we've allocated so far —
+     * the "consumed" side of the [peerMaxStreamsBidiSnapshot] budget.
+     * Increments on each [openBidiStreamLocked] call and never decreases
+     * (RFC 9000 §4.6: the limit is on cumulative IDs, not concurrent
+     * count).
+     *
+     * Multiplexing callers use this with [peerMaxStreamsBidiSnapshot] to
+     * compute the AVAILABLE budget at any moment (`max - used`) so they
+     * can pace stream creation against peer's MAX_STREAMS_BIDI bumps
+     * instead of throwing [QuicStreamLimitException] on the cap-tightest
+     * peer.
+     *
+     * Read without [streamsLock] — the field is mutated under
+     * `streamsLock`, but callers using this for back-pressure decisions
+     * tolerate a slightly-stale read (worst case: open one fewer stream
+     * than possible this round, get one more next round).
+     */
+    fun localBidiStreamsUsedSnapshot(): Long = nextLocalBidiIndex
+
+    /**
      * Coherent point-in-time snapshot of the connection's flow-control
      * accounting. Acquires [lock] internally so the fields are read
      * atomically with respect to the read / send / parse paths.
