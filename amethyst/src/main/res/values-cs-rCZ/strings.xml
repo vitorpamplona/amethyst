@@ -2463,17 +2463,9 @@
     <string name="schedule_post_always_on_prompt_continue">Přesto pokračovat</string>
     <string name="scheduled_posts_at_time">%1$s · za %2$s</string>
     <string name="scheduled_posts_at_time_past">%1$s · před %2$s</string>
-    <string name="scheduled_posts_day_today">Dnes</string>
     <string name="scheduled_posts_day_tomorrow">Zítra</string>
     <string name="scheduled_posts_logout_toast_zero">Odhlášeno</string>
     <string name="scheduled_posts_logout_toast">Odhlášeno · smazáno %1$d naplánovaných příspěvků</string>
-    <string name="scheduled_posts_send_now_title">Odeslat hned?</string>
-    <string name="scheduled_posts_send_now_message">Tento příspěvek bude okamžitě odeslán na relays. Původní plán bude zahozen.</string>
-    <string name="scheduled_posts_send_now_confirm">Odeslat</string>
-    <string name="scheduled_posts_delete_title">Smazat naplánovaný příspěvek?</string>
-    <string name="scheduled_posts_delete_message">Příspěvek nebude publikován. Tuto akci nelze vrátit zpět.</string>
-    <string name="scheduled_posts_delete_confirm">Smazat</string>
-    <string name="scheduled_posts_action_delete">Smazat</string>
     <string name="scheduled_posts_action_send_now">Odeslat hned</string>
     <string name="scheduled_posts_empty_title">Žádné naplánované příspěvky</string>
     <string name="scheduled_posts_empty_hint">Napište poznámku a klepněte na ikonu hodin pro naplánování na později.</string>

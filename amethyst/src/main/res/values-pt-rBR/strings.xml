@@ -2449,17 +2449,9 @@
     <string name="schedule_post_always_on_prompt_continue">Continuar mesmo assim</string>
     <string name="scheduled_posts_at_time">%1$s · em %2$s</string>
     <string name="scheduled_posts_at_time_past">%1$s · há %2$s</string>
-    <string name="scheduled_posts_day_today">Hoje</string>
     <string name="scheduled_posts_day_tomorrow">Amanhã</string>
     <string name="scheduled_posts_logout_toast_zero">Desconectado</string>
     <string name="scheduled_posts_logout_toast">Desconectado · %1$d post(s) agendado(s) excluído(s)</string>
-    <string name="scheduled_posts_send_now_title">Enviar agora?</string>
-    <string name="scheduled_posts_send_now_message">Este post será publicado em relays imediatamente. O agendamento original será descartado.</string>
-    <string name="scheduled_posts_send_now_confirm">Enviar</string>
-    <string name="scheduled_posts_delete_title">Excluir post agendado?</string>
-    <string name="scheduled_posts_delete_message">O post não será publicado. Isso não pode ser desfeito.</string>
-    <string name="scheduled_posts_delete_confirm">Excluir</string>
-    <string name="scheduled_posts_action_delete">Excluir</string>
     <string name="scheduled_posts_action_send_now">Enviar agora</string>
     <string name="scheduled_posts_empty_title">Sem posts agendados</string>
     <string name="scheduled_posts_empty_hint">Componha uma nota e toque no ícone do relógio para agendá-la.</string>

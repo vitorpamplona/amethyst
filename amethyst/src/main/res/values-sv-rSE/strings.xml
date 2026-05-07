@@ -2448,17 +2448,9 @@
     <string name="schedule_post_always_on_prompt_continue">Fortsätt ändå</string>
     <string name="scheduled_posts_at_time">%1$s · om %2$s</string>
     <string name="scheduled_posts_at_time_past">%1$s · för %2$s sedan</string>
-    <string name="scheduled_posts_day_today">Idag</string>
     <string name="scheduled_posts_day_tomorrow">Imorgon</string>
     <string name="scheduled_posts_logout_toast_zero">Utloggad</string>
     <string name="scheduled_posts_logout_toast">Utloggad · %1$d schemalagda inlägg raderade</string>
-    <string name="scheduled_posts_send_now_title">Skicka nu?</string>
-    <string name="scheduled_posts_send_now_message">Detta inlägg publiceras till relayer omedelbart. Det ursprungliga schemat ignoreras.</string>
-    <string name="scheduled_posts_send_now_confirm">Skicka</string>
-    <string name="scheduled_posts_delete_title">Radera schemalagt inlägg?</string>
-    <string name="scheduled_posts_delete_message">Inlägget publiceras inte. Detta kan inte ångras.</string>
-    <string name="scheduled_posts_delete_confirm">Radera</string>
-    <string name="scheduled_posts_action_delete">Radera</string>
     <string name="scheduled_posts_action_send_now">Skicka nu</string>
     <string name="scheduled_posts_empty_title">Inga schemalagda inlägg</string>
     <string name="scheduled_posts_empty_hint">Skriv en anteckning och tryck på klockikonen för att schemalägga den.</string>

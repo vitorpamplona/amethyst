@@ -2454,17 +2454,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="schedule_post_always_on_prompt_continue">Trotzdem fortfahren</string>
     <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
     <string name="scheduled_posts_at_time_past">%1$s · vor %2$s</string>
-    <string name="scheduled_posts_day_today">Heute</string>
     <string name="scheduled_posts_day_tomorrow">Morgen</string>
     <string name="scheduled_posts_logout_toast_zero">Abgemeldet</string>
     <string name="scheduled_posts_logout_toast">Abgemeldet · %1$d geplante(n) Beitrag/Beiträge gelöscht</string>
-    <string name="scheduled_posts_send_now_title">Jetzt senden?</string>
-    <string name="scheduled_posts_send_now_message">Dieser Beitrag wird sofort an Relays veröffentlicht. Der ursprüngliche Plan wird verworfen.</string>
-    <string name="scheduled_posts_send_now_confirm">Senden</string>
-    <string name="scheduled_posts_delete_title">Geplanten Beitrag löschen?</string>
-    <string name="scheduled_posts_delete_message">Der Beitrag wird nicht veröffentlicht. Dies kann nicht rückgängig gemacht werden.</string>
-    <string name="scheduled_posts_delete_confirm">Löschen</string>
-    <string name="scheduled_posts_action_delete">Löschen</string>
     <string name="scheduled_posts_action_send_now">Jetzt senden</string>
     <string name="scheduled_posts_empty_title">Keine geplanten Beiträge</string>
     <string name="scheduled_posts_empty_hint">Verfasse eine Notiz und tippe auf das Uhr-Symbol, um sie für später zu planen.</string>

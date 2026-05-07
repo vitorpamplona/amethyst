@@ -235,7 +235,7 @@ fun ScheduledPostsScreen(
                                 SwipeToDeleteWithConfirmation(
                                     modifier = Modifier.fillMaxWidth().animateContentSize(),
                                     onDelete = { viewModel.cancel(post.id) },
-                                    confirmLabelRes = R.string.scheduled_posts_action_delete,
+                                    confirmLabelRes = R.string.quick_action_delete,
                                 ) {
                                     ScheduledPostCardCollapsed(
                                         post = post,
@@ -452,7 +452,7 @@ private fun ScheduledPostCardExpandedPanel(
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
             ) {
-                Text(stringRes(R.string.scheduled_posts_action_delete))
+                Text(stringRes(R.string.quick_action_delete))
             }
         }
     }
@@ -628,7 +628,7 @@ private fun formatDayHeader(
     context: android.content.Context,
 ): String =
     when (day) {
-        today -> stringRes(context, R.string.scheduled_posts_day_today)
+        today -> stringRes(context, R.string.today)
         today.plusDays(1) -> stringRes(context, R.string.scheduled_posts_day_tomorrow)
         else -> day.format(fullDateFormatter)
     }

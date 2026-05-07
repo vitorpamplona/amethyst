@@ -451,7 +451,6 @@
     <string name="schedule_post_always_on_prompt_continue">Continue anyway</string>
     <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
     <string name="scheduled_posts_at_time_past">%1$s · %2$s ago</string>
-    <string name="scheduled_posts_day_today">Today</string>
     <string name="scheduled_posts_day_tomorrow">Tomorrow</string>
     <string name="scheduled_posts_logout_toast_zero">Logged out</string>
     <string name="scheduled_posts_logout_toast">Logged out · %1$d scheduled post(s) deleted</string>
@@ -460,13 +459,6 @@
     <string name="app_notification_scheduled_posts_channel_id" translatable="false">ScheduledPostsID</string>
     <string name="app_notification_scheduled_posts_channel_name">Scheduled posts</string>
     <string name="app_notification_scheduled_posts_channel_description">Notifications when a scheduled post is published or fails to publish.</string>
-    <string name="scheduled_posts_send_now_title">Send now?</string>
-    <string name="scheduled_posts_send_now_message">This post will publish to relays immediately. The original schedule will be discarded.</string>
-    <string name="scheduled_posts_send_now_confirm">Send</string>
-    <string name="scheduled_posts_delete_title">Delete scheduled post?</string>
-    <string name="scheduled_posts_delete_message">The post will not be published. This cannot be undone.</string>
-    <string name="scheduled_posts_delete_confirm">Delete</string>
-    <string name="scheduled_posts_action_delete">Delete</string>
     <string name="scheduled_posts_action_send_now">Send now</string>
     <string name="scheduled_posts_empty_title">No scheduled posts</string>
     <string name="scheduled_posts_empty_hint">Compose a note and tap the clock icon to schedule it for later.</string>
