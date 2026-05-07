@@ -75,18 +75,30 @@ doesn't use.
 
 DoD #5 (gap matrix coverage) closed.
 
-**Caveats — see linked investigation docs:**
+**History notes (2026-05-07):**
 
-- Five browser-tier scenarios soft-pass on listener-side
-  0-frame outcomes due to the upstream moq-relay 0.10.x
-  routing race (`2026-05-07-late-join-catalog-flake-investigation.md`).
-  Hard floors lined up to land in
-  `2026-05-07-tighten-cross-stack-assertions.md` once the
-  routing race is closed.
-- Suite-mode runs hit the same race intermittently;
-  individual-test mode is reliable. CI is intentionally not
-  wired (`2026-05-07-cross-stack-interop-ci-gating.md`) until
-  stability is achieved.
+- Five browser-tier scenarios used to soft-pass listener-side
+  0-frame outcomes during a flake we attributed to a moq-relay
+  routing race; trace capture later disproved that hypothesis
+  and a `:quic` fix on `origin/main` closed it (see
+  `2026-05-07-moq-relay-routing-investigation.md` § Closure).
+  Hard floors landed in
+  `2026-05-07-tighten-cross-stack-assertions.md` after the merge:
+  late-join (`≥ 1.5 s after warmup`), mute-window (`≥ 2.5 s`
+  lower + `< 5.5 s` upper kept), I14 (`decoderOutputs ≥ 4`),
+  stereo (`≥ 1 s × 2 ch`), packet-loss (`≥ 0.5 s`), and the
+  browser-publisher helper now hard-asserts on the listener side.
+  Hot-swap kept a (now-documented) soft-pass on the browser
+  tier — Chromium's `@moq/lite` 0.2.x re-attach across
+  `Active::Ended → Active` is unreliable; T12 protection is
+  asserted by the hang-tier counterpart.
+- CI gating reached green-on-the-rig (10/10 × 22 = 220/220)
+  in commit `21947bc5`, then was deferred on cost grounds —
+  both suites run manually now per
+  [`nestsClient/tests/README.md`](../tests/README.md). YAML
+  shape preserved in
+  `2026-05-07-cross-stack-interop-ci-gating.md` for the next
+  revisit.
 
 ## Files referenced
 

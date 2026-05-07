@@ -1,9 +1,35 @@
 # `late_join_listener_still_decodes_tail` catalog-cancelled flake investigation
 
-**Status: partially fixed (commit `8cc7cbd42` shipped; commits
-`00f6cba31` + `207057374` reverted as net-negative). Residual
-flake is upstream-territory in moq-relay 0.10.x. Action plan
-moved to `2026-05-07-moq-relay-routing-investigation.md`.**
+**Status: ✅ closed by merging `origin/main` (5 `:quic` commits, see
+`2026-05-07-moq-relay-routing-investigation.md` § Closure). 5/5
+sweep BUILD SUCCESSFUL, 55/55 tests pass post-merge. Pre-merge
+baseline on the same branch: 3 fail / 5 sweeps, all here.**
+
+## 2026-05-07 update: relay-side hypothesis disproven
+
+The "smoking gun" trace below (speaker logs an `ANNOUNCE inbound`
+but no `SUBSCRIBE inbound` for the failing broadcast) was
+**correct as a description of the symptom** but **wrong about the
+cause**. With the relay-side trace now captured (Step 1 of the
+routing-investigation plan), we can see:
+
+- The relay DID receive the listener's wire SUBSCRIBE
+  (`subscribed started` on conn{id=1}).
+- The relay DID open a peer-initiated bidi to the speaker and
+  encode `Subscribe { id:0, track:"catalog.json" }` onto it
+  (`subscribe started`, `encoding self=Subscribe` on conn{id=0}).
+- The speaker NEVER logs `SUBSCRIBE inbound id=0` — the bidi
+  doesn't reach `MoqLiteSession.handleInboundBidi`.
+
+The same speaker connection HAS handled an earlier peer-bidi (the
+relay's AnnounceInterest at T=0) correctly. So the failure isn't a
+permanent dead pump; it's a per-bidi loss that affects bidi #2
+some 40-60 % of the time when bidi #2 arrives ~2 s after bidi #1.
+
+Pivot: action moved from "investigate moq-relay" to "investigate
+`:quic` peer-bidi surfacing under delayed arrival" in the
+routing-investigation plan, which reframes the closure-roadmap
+Priority 1 actor accordingly.
 
 The flake also affects four browser-tier scenarios after the
 Browser I7 work landed:

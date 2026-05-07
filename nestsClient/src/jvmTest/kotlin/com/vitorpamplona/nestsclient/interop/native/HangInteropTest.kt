@@ -48,6 +48,8 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Rule
+import org.junit.rules.TestName
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -86,6 +88,15 @@ import kotlin.test.assertTrue
  * Gated by `-DnestsHangInterop=true`.
  */
 class HangInteropTest {
+    /**
+     * JUnit 4 rule that exposes the running test method's name. Used
+     * to tag the per-method moq-relay log file when trace capture is
+     * enabled (`-DnestsHangInteropTraceRelay=true`) — see
+     * `NativeMoqRelayHarness.RELAY_LOG_DIR_PROPERTY`.
+     */
+    @Rule @JvmField
+    val testName: TestName = TestName()
+
     @BeforeTest
     fun gate() {
         NativeMoqRelayHarness.assumeHangInterop()
@@ -97,7 +108,7 @@ class HangInteropTest {
         // that don't reproduce in isolation. Per-method reboot
         // costs ~500 ms (cargo binaries are cached) — acceptable
         // for the stability gain.
-        NativeMoqRelayHarness.resetShared()
+        NativeMoqRelayHarness.resetShared(testTag = testName.methodName)
     }
 
     /** I1: 5 s 440 Hz mono sine, asserted via FFT peak + ZCR. */

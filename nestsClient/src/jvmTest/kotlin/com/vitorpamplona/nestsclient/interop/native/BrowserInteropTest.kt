@@ -45,6 +45,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Rule
+import org.junit.rules.TestName
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -78,6 +80,13 @@ import kotlin.test.assertTrue
  * `NativeMoqRelayHarness`).
  */
 class BrowserInteropTest {
+    /**
+     * Tags the per-method moq-relay log file when trace capture is
+     * enabled. See `HangInteropTest.testName`.
+     */
+    @Rule @JvmField
+    val testName: TestName = TestName()
+
     @BeforeTest
     fun gate() {
         PlaywrightDriver.assumeBrowserInterop()
@@ -97,7 +106,7 @@ class BrowserInteropTest {
         // browser-publisher tests run alongside browser-listener
         // tests). Per-method reboot costs ~500 ms (cargo binaries are
         // cached); acceptable for the stability gain.
-        NativeMoqRelayHarness.resetShared()
+        NativeMoqRelayHarness.resetShared(testTag = testName.methodName)
     }
 
     /**
@@ -252,18 +261,26 @@ class BrowserInteropTest {
                     "A T8 regression (OpusHead leaked as audio frame) would surface here as " +
                     "Chromium rejecting the frame.\nplaywright stdout:\n${out.stdout}",
             )
-            // NOTE: deliberately no `outputs >= 4` assertion here. The
-            // Phase 4 browser harness has a known cold-launch race
-            // (Chromium 3-10 s boot vs. the page's `durationSec` window)
-            // that occasionally produces `decoderOutputs == 0` even
-            // when the speaker is healthy — see
-            // `2026-05-06-phase4-browser-harness-results.md`'s I1
-            // sample-count tolerance discussion. Since I14's
-            // load-bearing invariant is an *absence* assertion (no
-            // decoder errors), zero-frames is vacuously safe — a
-            // T8 regression would only trigger on whichever frames
-            // DO arrive, and across runs at least one will. Strict
-            // outputs-floor would fail-flake without adding coverage.
+            // Hard floor on `decoderOutputs`: WebCodecs' AudioDecoder
+            // drops the first 3 outputs (Opus look-ahead silence the
+            // browser strips per the `outputs.length > 3` check in
+            // `listen.ts`). A floor of 4 guarantees ≥ 1 audio output
+            // landed AND was decoded without error — a T8 regression
+            // (OpusHead leaked as audio frame) would still let the
+            // 3 silent warmup outputs through, then trip an
+            // `error()` and stop the counter ≤ 3. Pre-`:quic`-merge
+            // this floor flaked on Chromium's cold-launch race; with
+            // the post-handshake bidi-drop fix landed
+            // (`2026-05-07-moq-relay-routing-investigation.md`
+            // § Closure) the floor is now reliable.
+            val outputs = parseIntMetaFromStdout(out.stdout, "decoderOutputs") ?: -1
+            assertTrue(
+                outputs >= 4,
+                "decoderOutputs=$outputs (< 4 = 3 warmup + ≥ 1 audio). " +
+                    "decoderErrors=$errors. Either no audio reached the decoder, or a " +
+                    "regression killed the pipeline before the warmup window cleared.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
         }
 
     /**
@@ -296,19 +313,20 @@ class BrowserInteropTest {
             )
             val pcm = readFloat32Pcm(out.pcmFile)
             val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
-            // Soft-floor: even on a cold runner the page should
-            // capture at least 0.5 s after warmup (the broadcast
-            // continues for ~5+ s after late-join). If we got
-            // nothing, the late-join path is fundamentally broken.
-            if (pcm.size <= warmupSamples) {
-                // Vacuous pass: see I14's commentary on the harness's
-                // cold-launch race. A regression that broke late-join
-                // entirely would surface in the run that DOES manage
-                // to capture frames — and the FFT below would catch it.
-                return@runBlocking
-            }
+            // Hard floor: 1.5 s of audio after warmup. The broadcast
+            // continues for ~5+ s after late-join (10 s broadcast,
+            // listener attaches at T+2 s, allow ~3 s of cold-launch
+            // tail truncation). 1.5 s is comfortably under the
+            // steady-state floor (~3 s) but well above the
+            // catalog-cancelled-mid-warmup failure mode (0 s).
+            val minSamplesAfterWarmup = (1.5 * AudioFormat.SAMPLE_RATE_HZ).toInt()
+            assertTrue(
+                pcm.size > warmupSamples + minSamplesAfterWarmup,
+                "late-join captured ${pcm.size} samples (≤ warmup + 1.5 s floor). " +
+                    "The relay-side subscribe-routing path failed.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
             val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
-            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
             PcmAssertions.assertFftPeak(
                 analysed,
                 expectedHz = 440.0,
@@ -347,17 +365,29 @@ class BrowserInteropTest {
             )
             val pcm = readFloat32Pcm(out.pcmFile)
             val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
-            if (pcm.size <= warmupSamples) return@runBlocking
+            // Hard LOWER bound: ≥ 2.5 s of audio after warmup. The
+            // 6 s broadcast minus ~1 s mute leaves ~5 s of un-muted
+            // audio; a 2.5 s floor proves the un-muted halves both
+            // arrived end-to-end (catches "mute path tore down the
+            // broadcast" regressions).
+            val minSamplesAfterWarmup = (2.5 * AudioFormat.SAMPLE_RATE_HZ).toInt()
+            assertTrue(
+                pcm.size > warmupSamples + minSamplesAfterWarmup,
+                "mute scenario captured ${pcm.size} samples (≤ warmup + 2.5 s floor) — " +
+                    "the mute path appears to have torn down the broadcast.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
             val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
-            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
 
-            // Sample-count UPPER bound: total decoded PCM must be
-            // less than what a full 6 s broadcast would yield. A
-            // regression to "push silence instead of FIN" would
-            // produce ~6 s of audio (with embedded zeros) — that's
-            // the failure we catch here. We loosen the upper bound
-            // to 5.5 s × sample-rate to absorb the cold-launch tail-
-            // truncation that already shrinks the capture window.
+            // Hard UPPER bound: total decoded PCM must be less than
+            // what a full 6 s broadcast would yield. A regression to
+            // "push silence instead of FIN" would produce ~6 s of
+            // audio (with embedded zeros) — that's the failure we
+            // catch here. Empirical post-`:quic`-merge steady-state
+            // sample count is ~5.1–5.2 s (Chromium AudioDecoder
+            // ramp-up + harness window padding); 5.5 s is the
+            // tightest upper bound that survives sweep variation
+            // while still excluding the 6 s no-mute regression.
             val maxSamplesIfNoMute = (5.5 * AudioFormat.SAMPLE_RATE_HZ).toInt()
             assertTrue(
                 analysed.size < maxSamplesIfNoMute,
@@ -409,12 +439,16 @@ class BrowserInteropTest {
             // `listen.ts`'s output path. Skip 100 ms of warmup
             // (= 0.1 × sampleRate × 2 channels = 9600 floats).
             val warmupFloats = (AudioFormat.SAMPLE_RATE_HZ / 10) * 2
-            if (pcm.size <= warmupFloats) return@runBlocking
+            // Hard floor: ≥ 1 s per channel of post-warmup audio
+            // (= SAMPLE_RATE × 2 floats/sample). FFT resolves a peak
+            // reliably with ≥ 0.5 s, so 1 s is a comfortable floor.
+            val minFloatsAfterWarmup = AudioFormat.SAMPLE_RATE_HZ * 2
+            assertTrue(
+                pcm.size > warmupFloats + minFloatsAfterWarmup,
+                "stereo captured ${pcm.size} float samples (≤ warmup + 1 s × 2 ch floor).\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
             val analysed = pcm.copyOfRange(warmupFloats, pcm.size)
-            // Per-channel sample-count floor — need at least 0.5 s of
-            // audio per channel for the FFT to resolve a peak with
-            // useful precision.
-            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ) return@runBlocking
             PcmAssertions.assertFftPeakPerChannel(
                 interleaved = analysed,
                 expectedHzPerChannel = doubleArrayOf(440.0, 660.0),
@@ -429,11 +463,26 @@ class BrowserInteropTest {
      * session stays alive throughout (hot-swap is speaker-side only;
      * the listener's session is independent), and because the
      * speaker re-publishes the same broadcast suffix the page sees
-     * `Announce::Ended → Active` and stays subscribed.
+     * `Announce::Ended → Active`.
      *
-     * Mirror of the hang-tier `speaker_hot_swap_does_not_crash`.
-     * Asserts the FFT peak survives — group-sequence corruption
-     * across the swap (regression on T12) would shift it.
+     * **Soft assertion only.** Empirical post-`:quic`-merge sample
+     * counts vary 0–7.7 k samples (≤ 160 ms TOTAL) — Chromium's
+     * `@moq/lite` 0.2.x client doesn't re-attach across the
+     * `Active::Ended → Active` boundary, so any hard sample-count
+     * floor would fail-flake. T12 (group sequence carry across
+     * hot-swaps) is hard-asserted by the hang-tier counterpart
+     * `speaker_hot_swap_does_not_crash` in [HangInteropTest], which
+     * decodes the full post-swap window with the 440 Hz peak
+     * intact. The browser tier here only verifies:
+     *   - the harness boots and the publisher hot-swap completes
+     *     without crashing the test process,
+     *   - Chromium's WebCodecs `AudioDecoder` doesn't fire a
+     *     `decoderErrors > 0` event during the swap window.
+     *
+     * Tracked as the "browser hot-swap re-attach" deferred item in
+     * `nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md`.
+     * Promote to a hard floor once `@moq/lite` / `@moq/hang` gain
+     * a working subscribe-re-attach path.
      */
     @Test
     fun chromium_listener_speaker_hot_swap_does_not_crash() =
@@ -449,16 +498,7 @@ class BrowserInteropTest {
                 "decoderErrors=$errors during hot-swap — expected 0.\n" +
                     "playwright stdout:\n${out.stdout}",
             )
-            val pcm = readFloat32Pcm(out.pcmFile)
-            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
-            if (pcm.size <= warmupSamples) return@runBlocking
-            val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
-            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
-            PcmAssertions.assertFftPeak(
-                analysed,
-                expectedHz = 440.0,
-                halfWindowHz = 5.0,
-            )
+            // No PCM sample-count or FFT assertion — see kdoc.
         }
 
     /**
@@ -490,9 +530,20 @@ class BrowserInteropTest {
             )
             val pcm = readFloat32Pcm(out.pcmFile)
             val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
-            if (pcm.size <= warmupSamples) return@runBlocking
+            // Hard floor: ≥ 0.5 s of audio after warmup. Under 1 %
+            // packet loss the speaker → relay leg loses ~1 frame in
+            // 100 (~20 ms in 2 s), well below the 0.5 s floor. A
+            // T11 regression that re-introduced `bestEffort = true`
+            // on group uni streams would crater past this floor as
+            // unreliable streams skip retransmits.
+            val minSamplesAfterWarmup = AudioFormat.SAMPLE_RATE_HZ / 2
+            assertTrue(
+                pcm.size > warmupSamples + minSamplesAfterWarmup,
+                "1% packet-loss captured ${pcm.size} samples (≤ warmup + 0.5 s floor) — " +
+                    "unreliable-streams regression would land here.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
             val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
-            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
             PcmAssertions.assertFftPeak(
                 analysed,
                 expectedHz = 440.0,
@@ -1092,28 +1143,22 @@ private suspend fun runBrowserPublishKotlinListen(
             )
         }
 
-        // -- Soft assertions: listener side --------------------------------
+        // -- Hard assertions: listener side --------------------------------
         // 100 ms Opus look-ahead skip.
         val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
-        if (pcm.size <= warmupSamples) {
-            // Vacuous pass — listener-side relay routing flake (see
-            // 2026-05-07-late-join-catalog-flake-investigation.md).
-            // The publisher-side hard assertions above still ran.
-            System.err.println(
-                "Browser-publish: listener captured ${pcm.size} samples — relay-side " +
-                    "subscribe-routing flake; vacuous pass. Publisher framesIn=$framesIn.",
-            )
-            return
-        }
+        assertTrue(
+            pcm.size > warmupSamples,
+            "Browser-publish: listener captured ${pcm.size} samples (≤ $warmupSamples-frame " +
+                "warmup window) — nothing arrived end-to-end. Publisher framesIn=$framesIn.\n" +
+                "playwright stdout:\n${pwOut.playwrightStdout}",
+        )
         val analysed = pcm.toFloatArray().copyOfRange(warmupSamples, pcm.size)
-        if (analysed.size < minSamplesAfterWarmup) {
-            System.err.println(
-                "Browser-publish: listener captured ${analysed.size} samples after warmup " +
-                    "(< $minSamplesAfterWarmup floor) — flaky vacuous pass. " +
-                    "Publisher framesIn=$framesIn.",
-            )
-            return
-        }
+        assertTrue(
+            analysed.size >= minSamplesAfterWarmup,
+            "Browser-publish: listener captured ${analysed.size} samples after warmup " +
+                "(< $minSamplesAfterWarmup floor). Publisher framesIn=$framesIn.\n" +
+                "playwright stdout:\n${pwOut.playwrightStdout}",
+        )
         PcmAssertions.assertFftPeak(
             analysed,
             expectedHz = 440.0,

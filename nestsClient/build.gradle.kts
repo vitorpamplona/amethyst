@@ -227,6 +227,18 @@ tasks.withType<Test>().configureEach {
     val cargoBin = hangInteropCacheDir.dir("bin").asFile
     systemProperty("nestsHangInteropSidecarsDir", sidecarRelease.absolutePath)
     systemProperty("nestsHangInteropCargoBinDir", cargoBin.absolutePath)
+    // Per-method moq-relay trace log dir for the routing-race
+    // investigation (plan 2026-05-07-moq-relay-routing-investigation.md).
+    // Off by default; opt in via -DnestsHangInteropTraceRelay=true so a
+    // routine sweep doesn't generate ~MBs of trace per run.
+    if (System.getProperty("nestsHangInteropTraceRelay") == "true") {
+        val relayLogDir =
+            layout.buildDirectory
+                .dir("relay-logs")
+                .get()
+                .asFile
+        systemProperty("nestsHangInteropRelayLogDir", relayLogDir.absolutePath)
+    }
 }
 
 // ---- Cross-stack interop: BROWSER (Phase 4 of T16) --------------------------
