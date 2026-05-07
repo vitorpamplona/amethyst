@@ -145,14 +145,44 @@ class QuicConnectionDriver(
                     Unit
                 }
             if (woke == null) {
-                // PTO fired. Set pendingPing so the writer emits a
-                // PING on the next drain (RFC 9002 §6.2.4 probe
-                // packet). The peer's ACK feeds loss detection +
-                // retransmit (steps 5–6).
+                // PTO fired. RFC 9002 §6.2.4: the probe packet MUST
+                // be ack-eliciting at the encryption level with
+                // unacknowledged data, and SHOULD retransmit lost
+                // data rather than just emit a PING.
+                //
+                // Pre-1-RTT we have a concrete thing to retransmit:
+                // the unacknowledged ClientHello (at Initial) or
+                // ClientFinished (at Handshake). We requeue ALL
+                // currently-inflight CRYPTO bytes for the highest
+                // active pre-application level so the next drain's
+                // takeChunk emits a fresh CRYPTO frame at the
+                // original offset. The pendingPing flag stays set
+                // as a fallback — `collectHandshakeLevelFrames`
+                // skips the PING when a CRYPTO retransmit lands in
+                // the same frame list, so we don't waste a frame.
+                //
+                // Why this matters in interop: aioquic strictly
+                // rejects pre-handshake Initials that contain no
+                // CRYPTO frame (CONNECTION_CLOSE 0x0 "Packet
+                // contains no CRYPTO frame"). A bare-PING probe
+                // hits that immediately. With CRYPTO retransmit on
+                // PTO, the probe carries a re-emitted ClientHello
+                // and the server processes it normally.
+                //
+                // Post-handshake (1-RTT installed) we retain the
+                // bare-PING behavior; STREAM retransmit is driven
+                // by packet-number-threshold loss detection from
+                // the ACK that the PING elicits.
                 val newPtoCount =
                     connection.lock
                         .withLock {
                             connection.pendingPing = true
+                            if (connection.application.sendProtection == null) {
+                                val level = highestPreApplicationLevel(connection)
+                                if (level != null) {
+                                    connection.requeueAllInflightCrypto(level)
+                                }
+                            }
                             connection.consecutivePtoCount =
                                 (connection.consecutivePtoCount + 1).coerceAtMost(6)
                             connection.consecutivePtoCount
