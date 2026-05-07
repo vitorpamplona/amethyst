@@ -15,33 +15,32 @@ This roadmap takes the suite from "passes individually" to "passes
 in suite + CI" through three sequential plans. None should be
 parallelized — each unblocks the next.
 
-## Priority 1 — `2026-05-07-moq-relay-routing-investigation.md`
+## Priority 1 — `2026-05-07-moq-relay-routing-investigation.md` ✅ CLOSED
 
-> **Re-scoped 2026-05-07.** Trace capture (Step 1 of the routing
-> plan) disproved the "moq-relay 0.10.x routing race" hypothesis.
-> The actual fault is in **`:quic`**'s peer-bidi surfacing path:
-> the speaker's QUIC stack silently drops a peer-opened bidi that
-> arrives ~2 s after another bidi has been processed. The relay
-> forwards the upstream SUBSCRIBE correctly. See the
-> "Corrected diagnosis" section of the routing-investigation
-> plan for the full trace pair. So the actor here is whoever
-> owns `:quic` (different agent), not moq-rs upstream.
+> **Closed 2026-05-07** by merging `origin/main` (five `:quic`
+> commits: `2a4c07ae`, `d5c854be`, `b622d0c9`, `86a4727e`,
+> `31d19258`). The flake was a `:quic` packet-acceptance bug, not
+> a moq-relay routing race. Step 1 trace capture in this branch
+> first disproved the moq-relay-routing hypothesis (relay
+> correctly forwards the upstream SUBSCRIBE); the QUIC team's
+> separate work landed in main between the merge base and pickup
+> and incidentally closed the speaker-side post-handshake bidi
+> drop.
 
-**Why first.** The flake is the root cause of every soft-pass and
-the reason CI isn't wired. Without resolving it, downstream plans
-mask flake rather than catch regressions.
+**What landed.**
+- A 5-commit merge from `origin/main` carrying ALPN-list
+  threading, PTO STREAM retransmits, RFC 9001 §6 1-RTT key
+  update, multiconnect/multiplex pacing, and qlog flush.
+- Per-test moq-relay TRACE capture instrumentation
+  (commit `d7f87971`) — kept in place; useful for follow-up
+  regression triage.
+- Cross-stack trace artefacts preserved at
+  `nestsClient/plans/artefacts/2026-05-07-routing-race-disproven/`
+  for post-mortem reference.
 
-**What lands.**
-- Either a fix in `:quic`'s `WtPeerStreamDemux` /
-  `incomingBidiStreams` path that closes the bug,
-- Or, if the QUIC owner can't reproduce: the cross-stack
-  trace-capture artefacts (relay log + speaker NestTx log + JUnit
-  XML) handed off, with a written 60 % flake repro on
-  `late_join_listener_still_decodes_tail`.
-
-**Acceptance bar.** 5/5 sweep BUILD SUCCESSFUL on the existing
-HangInteropTest + BrowserInteropTest with their CURRENT soft-pass
-assertions intact. (The next step tightens those.)
+**Acceptance bar met.** 5/5 sweep BUILD SUCCESSFUL on
+HangInteropTest with their current soft-pass assertions intact.
+55/55 tests pass.
 
 ## Priority 2 — `2026-05-07-tighten-cross-stack-assertions.md`
 

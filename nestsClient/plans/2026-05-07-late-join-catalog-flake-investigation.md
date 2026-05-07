@@ -1,14 +1,9 @@
 # `late_join_listener_still_decodes_tail` catalog-cancelled flake investigation
 
-**Status: partially fixed (commit `8cc7cbd42` shipped; commits
-`00f6cba31` + `207057374` reverted as net-negative). Residual
-flake is NOT in moq-relay 0.10.x — confirmed by Step 1 trace
-capture in
-`2026-05-07-moq-relay-routing-investigation.md`. The relay
-correctly forwards the upstream SUBSCRIBE; the speaker-side QUIC
-stack silently drops the relay's peer-initiated bidi opened
-~2 s after the speaker connects. The fix lives in the `:quic`
-module's `WtPeerStreamDemux` / bidi-surfacing path.**
+**Status: ✅ closed by merging `origin/main` (5 `:quic` commits, see
+`2026-05-07-moq-relay-routing-investigation.md` § Closure). 5/5
+sweep BUILD SUCCESSFUL, 55/55 tests pass post-merge. Pre-merge
+baseline on the same branch: 3 fail / 5 sweeps, all here.**
 
 ## 2026-05-07 update: relay-side hypothesis disproven
 

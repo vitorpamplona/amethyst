@@ -1,13 +1,77 @@
 # Plan: investigate moq-relay 0.10.x per-broadcast subscribe-routing race
 
-**Status:** ❌ HYPOTHESIS DISPROVEN. Step 1 trace data shows the relay
-**does** forward upstream SUBSCRIBE correctly. The failure is on the
-**speaker side** — the speaker's QUIC connection silently drops a
-peer-initiated bidi opened by the relay ~2 s after speaker connect.
-The work continues but the actor changes — see "Corrected diagnosis"
-below. **The investigation moves to `:quic`** (or to whatever owns
-`incomingBidiStreams` plumbing), which is out of scope for this
-session per project guidance.
+**Status:** ✅ CLOSED. The flake was a `:quic` packet-acceptance bug,
+not a moq-relay routing race. Merging
+`origin/main` (5 commits: ALPN-list threading `2a4c07ae`, PTO STREAM
+retransmits `d5c854be`, 1-RTT key update `b622d0c9`,
+multiconnect/multiplex `86a4727e`, qlog flush `31d19258`) closes
+it. Post-merge sweep:
+**5/5 BUILD SUCCESSFUL, 55/55 tests pass** on
+`./gradlew :nestsClient:jvmTest --tests HangInteropTest
+-DnestsHangInterop=true -DnestsHangInteropTraceRelay=true --rerun-tasks`.
+
+The acceptance bar of the closure roadmap's Priority 1 is met.
+Priority 2 (`2026-05-07-tighten-cross-stack-assertions.md`) is now
+unblocked; Priority 3 (`2026-05-07-cross-stack-interop-ci-gating.md`)
+follows after that.
+
+## Closure (2026-05-07, post-merge)
+
+After the corrected diagnosis below pinned the actor on `:quic`,
+five `:quic` commits had landed on `origin/main` between the
+session's merge base and pickup. Merging them and re-running the
+5× sweep gives:
+
+```
+sweep 1: BUILD SUCCESSFUL in 5m 9s   (11/11 pass)
+sweep 2: BUILD SUCCESSFUL in 2m 51s  (11/11 pass)
+sweep 3: BUILD SUCCESSFUL in 2m 41s  (11/11 pass)
+sweep 4: BUILD SUCCESSFUL in 2m 35s  (11/11 pass)
+sweep 5: BUILD SUCCESSFUL in 2m 34s  (11/11 pass)
+```
+
+Pre-merge baseline on the same branch (commit `b2a42d9a`, same
+TRACE capture, same `--rerun-tasks` shape): **3 fail / 5 sweeps**
+(all `late_join_listener_still_decodes_tail`).
+
+Post-merge sample relay trace for the previously-failing scenario
+shows the speaker now responding to the upstream SUBSCRIBE in
+~1.5 ms:
+
+```
+20:14:17.460567  conn{id=0}  subscribe started catalog.json
+20:14:17.460585  conn{id=0}  encoding self=Subscribe …catalog.json
+20:14:17.462141  conn{id=0}  decoded result=SubscribeOk         ← 1.6 ms RTT
+20:14:17.462446  conn{id=0}  decoded result=Group seq=0
+```
+
+vs the pre-merge failing trace where the same span had 2.94 s of
+silence followed by Ended.
+
+Likely actors among the merged `:quic` commits:
+
+- `b622d0c9 feat(quic): RFC 9001 §6 1-RTT key update` — adds
+  `peekKeyPhase` + key-rotation tracking in
+  `QuicConnectionParser`. Pre-fix, every short-header packet whose
+  KEY_PHASE bit didn't match `currentReceiveKeyPhase` was silently
+  AEAD-failed and dropped. While quinn doesn't initiate key updates
+  by default, the parser path also touched the short-header
+  decoding side, plausibly fixing an adjacent off-by-one in
+  short-payload header protection (new test
+  `ShortPayloadHeaderProtectionTest.kt` lands alongside).
+- `d5c854be fix(quic): PTO retransmits handshake CRYPTO + STREAM`
+  — fixes our outbound PTO when the peer never ACKs anything.
+  Outbound-only fix, less likely to affect the inbound bidi-data
+  parsing side.
+- `2a4c07ae fix(quic): thread offered ALPN list through TlsClient
+  → ClientHello` — affects handshake; speaker connection had
+  already established before the failing bidi arrived, so unlikely
+  to be the actor.
+
+The empirical evidence is what counts: **5/5 sweep BUILD
+SUCCESSFUL post-merge.** Bisecting WHICH of the 5 commits closes
+it can be done if needed for the post-mortem; not necessary to
+proceed with the closure roadmap.
 
 ## Corrected diagnosis (2026-05-07, post-trace)
 
