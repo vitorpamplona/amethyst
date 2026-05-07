@@ -484,6 +484,8 @@ nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/
     ├── NativeMoqRelayHarnessSmokeTest.kt
     ├── HangInteropTest.kt                      # I1, I2, I3, I4 fwd+rev, I5,
     │                                           #   I8, I9, I10, I11, Rust↔Rust
+    ├── HangInteropReverseTest.kt               # I7 (Rust hang-publish reconnect → Kotlin listener)
+    ├── HangInteropMultiListenerTest.kt         # I6 (one speaker, three hang-listen subscribers)
     └── KotlinSpeakerKotlinListenerThroughNativeRelayTest.kt
                                                 # diagnostic, gated separately
 
