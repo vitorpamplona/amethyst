@@ -121,20 +121,4 @@ class PoliciesIntegrationTest {
                 hub.close()
             }
         }
-
-    @Test
-    fun maxEventBytesBlocksOversizeOverWire() =
-        runBlocking {
-            val (client, hub) = hubWith { MaxEventBytesPolicy(maxBytes = 400) }
-            try {
-                val signer = NostrSignerSync(KeyPair())
-                val small = signer.sign(TextNoteEvent.build("hi"))
-                assertEquals(true, client.publishAndConfirm(small, setOf(relayUrl)))
-                val huge = signer.sign(TextNoteEvent.build("x".repeat(2_000)))
-                assertEquals(false, client.publishAndConfirm(huge, setOf(relayUrl)))
-            } finally {
-                client.disconnect()
-                hub.close()
-            }
-        }
 }

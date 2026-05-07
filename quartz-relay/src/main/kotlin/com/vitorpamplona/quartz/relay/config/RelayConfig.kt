@@ -34,19 +34,13 @@ import java.io.File
  *
  * Every section is optional; values not set fall back to sensible
  * defaults (or, for fields also exposed on the CLI, the CLI value wins).
- *
- * Sections that are parsed but **not yet enforced** by the relay are
- * marked below; they're accepted so configs remain forward-compatible
- * once the matching policy is implemented (rate limits, NIP-05, etc.).
  */
 data class RelayConfig(
     val info: InfoSection = InfoSection(),
     val network: NetworkSection = NetworkSection(),
     val database: DatabaseSection = DatabaseSection(),
     val options: OptionsSection = OptionsSection(),
-    /** Parsed but not yet enforced. */
     val limits: LimitsSection = LimitsSection(),
-    /** Parsed but not yet enforced. */
     val authorization: AuthorizationSection = AuthorizationSection(),
 ) {
     /**
@@ -103,12 +97,6 @@ data class RelayConfig(
         val host: String = "0.0.0.0",
         val port: Int = 7447,
         val path: String = "/",
-        /**
-         * When set, the relay reads the client IP from this header
-         * (typically `X-Forwarded-For` behind a reverse proxy). Required
-         * once IP-based rate limits land.
-         */
-        val remote_ip_header: String? = null,
     )
 
     data class DatabaseSection(
@@ -123,18 +111,19 @@ data class RelayConfig(
         val reject_future_seconds: Int? = null,
         /** Require NIP-42 AUTH for REQ/EVENT/COUNT. */
         val require_auth: Boolean = false,
-        /** Drop events whose Schnorr signature does not verify. */
-        val verify_signatures: Boolean = false,
+        /**
+         * Drop events whose Schnorr signature does not verify. **Defaults
+         * to `true`**: any relay accepting traffic from real clients
+         * should verify signatures, and verifying-by-default closes the
+         * footgun of forgetting the flag. Set explicitly to `false` only
+         * for trusted-input scenarios (test fixtures, mirror replays).
+         */
+        val verify_signatures: Boolean = true,
     )
 
     data class LimitsSection(
-        val max_event_bytes: Int? = null,
         val max_ws_message_bytes: Int? = null,
         val max_ws_frame_bytes: Int? = null,
-        val messages_per_sec: Int? = null,
-        val subscriptions_per_min: Int? = null,
-        val max_subscriptions_per_session: Int? = null,
-        val max_filters_per_req: Int? = null,
     )
 
     data class AuthorizationSection(

@@ -29,9 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.relay.config.RelayConfig
 import com.vitorpamplona.quartz.relay.policies.KindAllowDenyPolicy
-import com.vitorpamplona.quartz.relay.policies.MaxEventBytesPolicy
 import com.vitorpamplona.quartz.relay.policies.PubkeyAllowDenyPolicy
-import com.vitorpamplona.quartz.relay.policies.RateLimitPolicy
 import com.vitorpamplona.quartz.relay.policies.RejectFutureEventsPolicy
 import java.io.File
 
@@ -48,10 +46,10 @@ import java.io.File
  *   2. TOML file passed via `--config <path>`
  *   3. Built-in defaults (host=0.0.0.0, port=7447, in-memory db, …)
  *
- * Sections currently parsed AND enforced: `[info]`, `[network]`,
- * `[database]`, `[options]`. Sections parsed but not yet enforced
- * (forward-compat for the rate-limit / authorization work):
- * `[limits]`, `[authorization]`.
+ * Every section is enforced: `[info]` populates the NIP-11 doc,
+ * `[network]` controls the bind, `[database]` chooses the SQLite path,
+ * `[options]` toggles AUTH/verify/future-skew, `[limits]` and
+ * `[authorization]` plug into the relay's policy stack.
  *
  * CLI flags:
  *   --config <file>    TOML config (see config.example.toml)
@@ -61,7 +59,9 @@ import java.io.File
  *   --info <file>      NIP-11 doc file (overrides [info] section)
  *   --db <file>        sqlite db path (overrides [database].file)
  *   --auth             require NIP-42 AUTH (sets options.require_auth = true)
- *   --verify           verify event signatures (sets options.verify_signatures = true)
+ *   --no-verify        DO NOT verify event signatures (off by default
+ *                      verify is on; use only for trusted-input
+ *                      scenarios like fixture replay).
  */
 fun main(args: Array<String>) {
     val a = parseArgs(args)
@@ -79,7 +79,10 @@ fun main(args: Array<String>) {
     val cliInfoFile = a.opt("--info")?.let { File(it) }
     val dbFile = a.opt("--db") ?: config.database.file?.takeUnless { config.database.in_memory }
     val requireAuth = a.flag("--auth") || config.options.require_auth
-    val verifySigs = a.flag("--verify") || config.options.verify_signatures
+    // Verify is on by default; only disable when the operator explicitly
+    // opts out (CLI `--no-verify` or `[options].verify_signatures = false`
+    // in the config).
+    val verifySigs = !a.flag("--no-verify") && config.options.verify_signatures
 
     // Advertised URL: explicit `info.relay_url` wins, then build from
     // host/port/path. 0.0.0.0 bind → 127.0.0.1 in the URL so NIP-42
@@ -97,8 +100,6 @@ fun main(args: Array<String>) {
     val policyBuilder: () -> IRelayPolicy = {
         composePolicy(config, advertisedUrl, requireAuth, verifySigs)
     }
-
-    warnUnenforcedSections(config)
 
     val relay = Relay(advertisedUrl, store, info, policyBuilder)
     // Frame cap honors max_ws_frame_bytes when set; max_ws_message_bytes
@@ -133,13 +134,9 @@ fun main(args: Array<String>) {
  * Builds the policy stack for one connection from the config.
  *
  * Order matters — cheap rejection paths run before expensive ones:
- *   1. Rate limit (per-session, fastest reject path)
- *   2. AUTH (drops everything if not authenticated)
- *   3. Future-timestamp + size-cap + allow/deny lists
- *   4. Signature verification (most expensive)
- *
- * The relay's `policyBuilder` factory is invoked per connection so
- * rate-limit token buckets are session-scoped (not global).
+ *   1. AUTH (drops everything if not authenticated)
+ *   2. Future-timestamp + allow/deny lists
+ *   3. Signature verification (most expensive — Schnorr verify)
  */
 private fun composePolicy(
     config: RelayConfig,
@@ -149,21 +146,12 @@ private fun composePolicy(
 ): IRelayPolicy {
     val pieces = mutableListOf<IRelayPolicy>()
 
-    val l = config.limits
-    if (l.messages_per_sec != null || l.subscriptions_per_min != null) {
-        pieces += RateLimitPolicy(l.messages_per_sec, l.subscriptions_per_min)
-    }
-
     if (requireAuth) {
         pieces += FullAuthPolicy(advertisedUrl)
     }
 
     config.options.reject_future_seconds?.let { secs ->
         pieces += RejectFutureEventsPolicy(secs)
-    }
-
-    l.max_event_bytes?.let { bytes ->
-        pieces += MaxEventBytesPolicy(bytes)
     }
 
     val auth = config.authorization
@@ -181,25 +169,6 @@ private fun composePolicy(
     return pieces.fold<IRelayPolicy, IRelayPolicy>(EmptyPolicy) { acc, p ->
         if (acc === EmptyPolicy) p else acc + p
     }
-}
-
-/**
- * Surface a warning for config sections we still don't enforce. As we
- * add policies the matching branch is removed here.
- */
-private fun warnUnenforcedSections(config: RelayConfig) {
-    val warnings = mutableListOf<String>()
-    val l = config.limits
-    if (l.max_subscriptions_per_session != null) {
-        warnings += "[limits].max_subscriptions_per_session is parsed but NOT YET ENFORCED."
-    }
-    if (l.max_filters_per_req != null) {
-        warnings += "[limits].max_filters_per_req is parsed but NOT YET ENFORCED."
-    }
-    if (config.network.remote_ip_header != null) {
-        warnings += "[network].remote_ip_header is parsed but NOT YET ENFORCED — IP-based limits are pending."
-    }
-    warnings.forEach { System.err.println("warning: $it") }
 }
 
 private class Args(

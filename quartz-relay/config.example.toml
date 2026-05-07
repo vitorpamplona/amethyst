@@ -25,10 +25,6 @@ contact = "admin@example.com"
 host = "0.0.0.0"
 port = 7447
 path = "/"
-# Set when behind a reverse proxy (nginx/Caddy/Cloudflare). Required
-# before any IP-based rate limit means anything. Parsed today, enforced
-# once rate limits land.
-# remote_ip_header = "X-Forwarded-For"
 
 [database]
 # True keeps an in-memory SQLite db (events vanish on restart). Useful
@@ -39,31 +35,23 @@ file = "/var/lib/quartz-relay/events.db"
 [options]
 # Drop events whose Schnorr signature does not verify. Strongly
 # recommended for any relay accepting traffic from real clients.
-verify_signatures = true
+# Verify Schnorr signatures on every EVENT. Default: true. Disable
+# only for trusted-input scenarios (test fixtures, mirror replays).
+# verify_signatures = true
+
 # Require clients to NIP-42 AUTH before REQ/EVENT/COUNT.
 require_auth = false
-# Reject events whose `created_at` is more than this many seconds in the
-# future. Parsed today, enforced once the matching policy lands.
+
+# Reject events whose `created_at` is more than this many seconds in
+# the future. Enforced by RejectFutureEventsPolicy.
 # reject_future_seconds = 1800
 
 [limits]
-# Maximum byte size of an EVENT (canonical NIP-01 JSON form).
-# Enforced by MaxEventBytesPolicy.
-# max_event_bytes = 131072
-
 # Maximum WebSocket frame size. Frames larger than this are dropped at
 # the WS layer. (max_ws_message_bytes maps to the same setting since
 # Ktor's WebSockets plugin only exposes per-frame caps.)
 # max_ws_message_bytes = 1048576
 # max_ws_frame_bytes = 1048576
-
-# Per-session token-bucket caps. Enforced by RateLimitPolicy.
-# messages_per_sec = 10
-# subscriptions_per_min = 60
-
-# Parsed but NOT YET ENFORCED.
-# max_subscriptions_per_session = 32
-# max_filters_per_req = 10
 
 [authorization]
 # Allow / deny lists. Allow is a permissive ceiling; deny still

@@ -20,15 +20,10 @@
  */
 package com.vitorpamplona.quartz.relay.policies
 
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 import com.vitorpamplona.quartz.relay.fixtures.SyntheticEvents
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -148,82 +143,6 @@ class PoliciesTest {
         assertRejected(p.accept(EventCmd(event(createdAt = now + 1))))
     }
 
-    // -- MaxEventBytesPolicy ------------------------------------------------
-
-    @Test
-    fun maxBytesAllowsSmallEvents() {
-        val small = event(content = "a")
-        val limit = OptimizedJsonMapper.toJson(small).length + 100
-        val p = MaxEventBytesPolicy(maxBytes = limit)
-        assertAccepted(p.accept(EventCmd(small)))
-    }
-
-    @Test
-    fun maxBytesRejectsOversizedEvents() {
-        val big = event(content = "x".repeat(2_000))
-        val p = MaxEventBytesPolicy(maxBytes = 500)
-        assertRejected(p.accept(EventCmd(big)), reasonContains = "exceeds limit")
-    }
-
-    // -- RateLimitPolicy ----------------------------------------------------
-
-    /** Helper that makes a clock we can advance in nanoseconds. */
-    private class FakeClock {
-        var nanos = 0L
-
-        fun read(): Long = nanos
-
-        fun advanceMillis(ms: Long) {
-            nanos += ms * 1_000_000L
-        }
-    }
-
-    @Test
-    fun rateLimitMessagesPerSecond() {
-        val clock = FakeClock()
-        val p = RateLimitPolicy(messagesPerSec = 3, nowNanos = clock::read)
-
-        // First three pass within the same instant.
-        repeat(3) { assertAccepted(p.accept(EventCmd(event()))) }
-        // Fourth is rate-limited.
-        assertRejected(p.accept(EventCmd(event())), reasonContains = "messages per second")
-
-        // After enough wall-time the bucket refills.
-        clock.advanceMillis(400) // 1s/3 = 333ms per token; 400ms gives at least 1 token
-        assertAccepted(p.accept(EventCmd(event())))
-    }
-
-    @Test
-    fun rateLimitSubscriptionsPerMinute() {
-        val clock = FakeClock()
-        val p = RateLimitPolicy(subscriptionsPerMin = 2, nowNanos = clock::read)
-        val req = ReqCmd("sub-1", listOf(Filter()))
-
-        assertAccepted(p.accept(req))
-        assertAccepted(p.accept(req))
-        assertRejected(p.accept(req), reasonContains = "subscriptions per minute")
-
-        // Refill after 30s for 2/min -> 1 token.
-        clock.advanceMillis(31_000)
-        assertAccepted(p.accept(req))
-    }
-
-    @Test
-    fun rateLimitCountAlsoCountsAsSubscription() {
-        val clock = FakeClock()
-        val p = RateLimitPolicy(subscriptionsPerMin = 1, nowNanos = clock::read)
-        val cnt = CountCmd("q1", listOf(Filter()))
-        assertAccepted(p.accept(cnt))
-        assertRejected(p.accept(cnt), reasonContains = "subscriptions per minute")
-    }
-
-    @Test
-    fun rateLimitDisabledWhenBothLimitsAreNull() {
-        val p = RateLimitPolicy()
-        repeat(1000) { assertAccepted(p.accept(EventCmd(event()))) }
-        repeat(1000) { assertAccepted(p.accept(ReqCmd("s", listOf(Filter())))) }
-    }
-
     // -- Stack composition --------------------------------------------------
 
     /**
@@ -249,16 +168,5 @@ class PoliciesTest {
             stack.accept(EventCmd(event(kind = 99, createdAt = now))),
             reasonContains = "not allowed",
         )
-    }
-
-    @Test
-    fun rateLimitConstructorRejectsInvalidValues() {
-        var threw = false
-        try {
-            RateLimitPolicy(messagesPerSec = 0)
-        } catch (_: IllegalArgumentException) {
-            threw = true
-        }
-        assertEquals(true, threw)
     }
 }

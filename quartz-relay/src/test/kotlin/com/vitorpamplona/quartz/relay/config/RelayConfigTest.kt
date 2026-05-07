@@ -35,8 +35,15 @@ class RelayConfigTest {
         assertEquals("/", c.network.path)
         assertEquals(true, c.database.in_memory)
         assertEquals(false, c.options.require_auth)
-        assertEquals(false, c.options.verify_signatures)
+        // Verify is on by default — operators have to opt out explicitly.
+        assertEquals(true, c.options.verify_signatures)
         assertTrue(c.authorization.pubkey_whitelist.isEmpty())
+    }
+
+    @Test
+    fun verifySignaturesCanBeExplicitlyDisabled() {
+        val c = RelayConfig.fromToml("[options]\nverify_signatures = false")
+        assertEquals(false, c.options.verify_signatures)
     }
 
     @Test
@@ -53,7 +60,6 @@ class RelayConfigTest {
             host = "127.0.0.1"
             port = 9988
             path = "/relay"
-            remote_ip_header = "X-Forwarded-For"
 
             [database]
             in_memory = false
@@ -65,9 +71,7 @@ class RelayConfigTest {
             reject_future_seconds = 1800
 
             [limits]
-            max_event_bytes = 131072
-            messages_per_sec = 10
-            max_filters_per_req = 12
+            max_ws_frame_bytes = 1048576
 
             [authorization]
             pubkey_blacklist = ["aaaa", "bbbb"]
@@ -83,7 +87,6 @@ class RelayConfigTest {
         assertEquals("127.0.0.1", c.network.host)
         assertEquals(9988, c.network.port)
         assertEquals("/relay", c.network.path)
-        assertEquals("X-Forwarded-For", c.network.remote_ip_header)
 
         assertEquals(false, c.database.in_memory)
         assertEquals("/var/lib/quartz-relay/events.db", c.database.file)
@@ -92,9 +95,7 @@ class RelayConfigTest {
         assertEquals(true, c.options.require_auth)
         assertEquals(1800, c.options.reject_future_seconds)
 
-        assertEquals(131072, c.limits.max_event_bytes)
-        assertEquals(10, c.limits.messages_per_sec)
-        assertEquals(12, c.limits.max_filters_per_req)
+        assertEquals(1_048_576, c.limits.max_ws_frame_bytes)
 
         assertEquals(listOf("aaaa", "bbbb"), c.authorization.pubkey_blacklist)
         assertEquals(listOf(4, 1059), c.authorization.kind_blacklist)
