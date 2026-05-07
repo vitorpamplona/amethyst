@@ -207,6 +207,8 @@ private class CountingNostrClient(
         onPublish()
     }
 
+    override fun pendingPublishRelaysFor(eventId: String): Set<NormalizedRelayUrl>? = null
+
     override fun addConnectionListener(listener: RelayConnectionListener) {}
 
     override fun removeConnectionListener(listener: RelayConnectionListener) {}
