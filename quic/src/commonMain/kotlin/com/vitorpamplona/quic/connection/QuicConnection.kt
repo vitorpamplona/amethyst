@@ -800,9 +800,18 @@ class QuicConnection(
         init: (QuicStream, I) -> R,
     ): List<R> {
         if (items.isEmpty()) return emptyList()
-        return streamsLock.withLock {
-            items.map { init(openBidiStreamLocked(), it) }
+        val streamsBefore = if (writerDebugEnabled) streams.size else 0
+        val result =
+            streamsLock.withLock {
+                items.map { init(openBidiStreamLocked(), it) }
+            }
+        if (writerDebugEnabled) {
+            System.err.println(
+                "[batch] openBidiStreamsBatch items=${items.size} returned=${result.size} " +
+                    "streamsList_before=$streamsBefore streamsList_after=${streams.size}",
+            )
         }
+        return result
     }
 
     /**

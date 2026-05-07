@@ -364,8 +364,20 @@ private fun runTransferTest(
                             // (responses dribble in over a long stretch).
                             val debug = System.getenv("QUIC_INTEROP_DEBUG") == "1"
                             val transferStartMs = nowMs()
+                            if (debug) {
+                                System.err.println(
+                                    "[interop] multiplex start: total_urls=${urls.size} " +
+                                        "MULTIPLEX_PARALLELISM=$MULTIPLEX_PARALLELISM " +
+                                        "expected_chunks=${(urls.size + MULTIPLEX_PARALLELISM - 1) / MULTIPLEX_PARALLELISM}",
+                                )
+                            }
                             urls.chunked(MULTIPLEX_PARALLELISM).forEachIndexed { chunkIdx, chunk ->
                                 val chunkStartMs = nowMs()
+                                if (debug && chunkIdx < 3) {
+                                    System.err.println(
+                                        "[interop] chunk=$chunkIdx size=${chunk.size} starting prepareRequests",
+                                    )
+                                }
                                 // Single lock-held batch open + enqueue.
                                 // Without this, openBidiStream's per-call
                                 // lock acquire / release lets the send loop
