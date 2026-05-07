@@ -24,6 +24,7 @@ import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import com.vitorpamplona.quic.observability.QlogObserver
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import com.vitorpamplona.quic.transport.UdpSocket
 import kotlinx.coroutines.CoroutineScope

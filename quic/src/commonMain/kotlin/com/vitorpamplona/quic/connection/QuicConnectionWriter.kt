@@ -42,6 +42,7 @@ import com.vitorpamplona.quic.observability.qlogFrameName
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderPlaintextPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.packet.ShortHeaderPlaintextPacket
 

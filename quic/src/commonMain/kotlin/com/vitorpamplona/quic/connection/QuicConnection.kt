@@ -25,6 +25,7 @@ import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
 import com.vitorpamplona.quic.crypto.bestAes128GcmAead
 import com.vitorpamplona.quic.observability.QlogObserver
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -74,6 +75,30 @@ class QuicConnection(
             .toEpochMilliseconds()
     },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
+    /**
+     * Optional second listener invoked after the connection's own
+     * key-installation listener. Used by the interop runner endpoint to
+     * dump SSLKEYLOG lines so Wireshark can decrypt captured pcaps.
+     * Default `null` keeps production callers unaffected.
+     */
+    val extraSecretsListener: TlsSecretsListener? = null,
+    /**
+     * TLS cipher suites to offer in the ClientHello. Override to e.g.
+     * `intArrayOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256)` for the
+     * `chacha20` interop testcase. Default matches [TlsClient]'s default.
+     */
+    val cipherSuites: IntArray =
+        intArrayOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
+    /**
+     * Version this connection puts in the FIRST Initial it sends. Defaults
+     * to [QuicVersion.V1]; the interop runner sets it to
+     * [QuicVersion.FORCE_VERSION_NEGOTIATION] for the `versionnegotiation`
+     * testcase, which drives the client through the RFC 9000 §6 VN flow.
+     */
+    val initialVersion: Int = QuicVersion.V1,
     /**
      * Optional qlog observer (draft-marx-qlog). Production callers
      * leave this at [QlogObserver.NoOp] (zero overhead). Interop /

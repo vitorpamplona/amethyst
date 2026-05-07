@@ -22,7 +22,6 @@ package com.vitorpamplona.quic.connection
 
 import com.vitorpamplona.quic.QuicCodecException
 import com.vitorpamplona.quic.connection.recovery.drainAckedSentPackets
-import com.vitorpamplona.quic.packet.RetryPacket
 import com.vitorpamplona.quic.frame.AckFrame
 import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
@@ -42,6 +41,7 @@ import com.vitorpamplona.quic.observability.qlogFrameName
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
 import com.vitorpamplona.quic.packet.QuicVersion
+import com.vitorpamplona.quic.packet.RetryPacket
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
