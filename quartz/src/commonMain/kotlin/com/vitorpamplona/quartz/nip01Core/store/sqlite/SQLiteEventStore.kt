@@ -201,6 +201,63 @@ class SQLiteEventStore(
         }
     }
 
+    /**
+     * Group-commit batch insert with per-row error isolation via
+     * SAVEPOINTs. Acquires the writer mutex once and wraps every
+     * inserts in a single outer transaction so the WAL append + sync
+     * cost is paid once for the whole batch.
+     *
+     * Per-row contract:
+     *  - Validation errors (expired) and per-row INSERT failures
+     *    (UNIQUE constraint, etc.) ROLLBACK only that row's savepoint;
+     *    other rows commit.
+     *  - Ephemeral kinds are accepted without writing — the live
+     *    stream still surfaces them; persistence is intentionally a
+     *    no-op per NIP-01.
+     *
+     * Outer-commit failure throws; the caller treats every entry as
+     * `Rejected` (this is what the IEventStore contract documents).
+     */
+    suspend fun batchInsertEvents(events: List<Event>): List<IEventStore.InsertOutcome> {
+        if (events.isEmpty()) return emptyList()
+        val outcomes = ArrayList<IEventStore.InsertOutcome>(events.size)
+        pool.useWriter { db ->
+            db.transaction {
+                events.forEachIndexed { i, event ->
+                    outcomes.add(insertWithSavepoint(event, i, this))
+                }
+            }
+        }
+        return outcomes
+    }
+
+    private fun insertWithSavepoint(
+        event: Event,
+        index: Int,
+        db: SQLiteConnection,
+    ): IEventStore.InsertOutcome {
+        if (event.isExpired()) {
+            return IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
+        }
+        if (event.kind.isEphemeral()) return IEventStore.InsertOutcome.Accepted
+
+        val sp = "ev$index"
+        db.execSQL("SAVEPOINT $sp")
+        return try {
+            innerInsertEvent(event, db)
+            db.execSQL("RELEASE SAVEPOINT $sp")
+            IEventStore.InsertOutcome.Accepted
+        } catch (e: Throwable) {
+            // Roll back just this row, then release the (now empty)
+            // savepoint frame so the next iteration's BEGIN works.
+            // Both calls are individually try/catch'd because a failed
+            // ROLLBACK shouldn't mask the original cause.
+            runCatching { db.execSQL("ROLLBACK TRANSACTION TO SAVEPOINT $sp") }
+            runCatching { db.execSQL("RELEASE SAVEPOINT $sp") }
+            IEventStore.InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+        }
+    }
+
     inner class Transaction(
         val db: SQLiteConnection,
     ) : IEventStore.ITransaction {

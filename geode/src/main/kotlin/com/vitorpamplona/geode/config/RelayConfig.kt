@@ -141,6 +141,18 @@ data class RelayConfig(
          * for trusted-input scenarios (test fixtures, mirror replays).
          */
         val verify_signatures: Boolean = true,
+        /**
+         * Run signature verification in parallel inside the IngestQueue
+         * (CPU fan-out across `Dispatchers.Default`) instead of serially
+         * on each connection's WebSocket pump. Tier-3 of the
+         * `event-ingestion-batching` plan. Wins scale with how many
+         * EVENTs a single connection sends back-to-back: ~CPU_COUNT×
+         * verify-step speed-up on burst publishes. Set false to keep
+         * the legacy in-policy verify path.
+         *
+         * Only takes effect when [verify_signatures] is also true.
+         */
+        val parallel_verify: Boolean = true,
     )
 
     data class LimitsSection(

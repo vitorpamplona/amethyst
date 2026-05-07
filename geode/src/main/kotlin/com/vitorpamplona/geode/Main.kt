@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
@@ -83,6 +84,12 @@ fun main(args: Array<String>) {
     // opts out (CLI `--no-verify` or `[options].verify_signatures = false`
     // in the config).
     val verifySigs = !a.flag("--no-verify") && config.options.verify_signatures
+    // Parallel verify is on whenever signature checking is on; the
+    // IngestQueue handles it instead of VerifyPolicy. Operators can
+    // force the legacy in-policy path with `--no-parallel-verify` or
+    // `[options].parallel_verify = false`.
+    val parallelVerify =
+        verifySigs && !a.flag("--no-parallel-verify") && config.options.parallel_verify
 
     // Advertised URL: explicit `info.relay_url` wins, then build from
     // host/port/path. 0.0.0.0 bind → 127.0.0.1 in the URL so NIP-42
@@ -98,11 +105,19 @@ fun main(args: Array<String>) {
     val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
 
     val policyBuilder: () -> IRelayPolicy = {
-        composePolicy(config, advertisedUrl, requireAuth, verifySigs)
+        composePolicy(config, advertisedUrl, requireAuth, verifySigs, parallelVerify)
     }
 
     val stateFile = config.admin.state_file?.let { File(it) }
-    val relay = Relay(advertisedUrl, store, info, policyBuilder, stateFile = stateFile)
+    val relay =
+        Relay(
+            advertisedUrl,
+            store,
+            info,
+            policyBuilder,
+            stateFile = stateFile,
+            parallelVerify = parallelVerify,
+        )
     // Frame cap honors max_ws_frame_bytes when set; max_ws_message_bytes
     // is treated as the same cap (Ktor's WebSockets plugin only exposes
     // a single per-frame limit; multi-frame messages remain unbounded).
@@ -151,6 +166,7 @@ private fun composePolicy(
     advertisedUrl: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
     requireAuth: Boolean,
     verifySigs: Boolean,
+    parallelVerify: Boolean,
 ): IRelayPolicy {
     val pieces = mutableListOf<IRelayPolicy>()
 
@@ -171,7 +187,11 @@ private fun composePolicy(
     }
 
     if (verifySigs) {
-        pieces += VerifyPolicy
+        // When parallel verify is on, the IngestQueue handles EVENT
+        // verification on the writer's CPU fan-out — but AUTH events
+        // bypass the queue, so we still need the policy chain to
+        // verify those. `VerifyAuthOnlyPolicy` does exactly that.
+        pieces += if (parallelVerify) VerifyAuthOnlyPolicy else VerifyPolicy
     }
 
     return pieces.fold<IRelayPolicy, IRelayPolicy>(EmptyPolicy) { acc, p ->

@@ -19,62 +19,119 @@ contention, not WS throughput).
 
 ## Constraints we must keep
 
-- **OK ordering**: NIP-01 requires the OK reply to follow its EVENT.
-  We cannot reply OK before the insert decision (the OK carries
-  accepted/rejected + reason).
-- **Durability semantics**: clients reasonably assume `OK true` means
-  "stored." Batching must not make us reply OK before fsync.
-- **Per-connection FIFO**: a publisher that sends three EVENTs in a
-  row expects three OKs in that order. Reordering across connections
-  is fine.
+- **OK pairs by event id, not by order**: the OK frame carries the
+  event id, so clients pair replies to publishes by id. OKs can be
+  emitted in any order — including reordered against the EVENT
+  stream, and against each other on the same connection. This frees
+  us to fan OKs out as soon as the writer has a per-row decision.
+- **OK semantics = accepted, not fsynced**: NIP-01 treats `OK true`
+  as "accepted by the relay," not "durably on disk." We can reply as
+  soon as SQLite returns success for the row (inside the open
+  transaction, before commit/fsync). Group commit can batch the
+  fsync without holding OKs back.
+- **Per-row decision still required**: the OK reason field is
+  per-event (duplicate, blocked, invalid sig, pow, etc.), so we
+  cannot fan out a single batch-level OK. Each row's OK must reflect
+  that row's outcome.
 
 ## Sketch
 
 ### Tier 1 — SQLite WAL + group commit (cheap win)
 
-Confirm `PRAGMA journal_mode=WAL` + `PRAGMA synchronous=NORMAL` on the
-event-store DB; group commits across the writer mutex's hold window.
-Today each insert is its own transaction. Wrap N inserts (or a 5 ms
-budget, whichever first) in a single transaction managed by the writer
-coroutine. On commit, fan back N OK replies.
+WAL is already on (`PRAGMA journal_mode=WAL`). The pool runs with
+`PRAGMA synchronous=OFF`, which is one notch more permissive than
+the originally-sketched `synchronous=NORMAL` — we keep it as-is
+because the project already accepted the OS-crash trade-off there.
 
-Implementation lives in quartz's `EventStore` / `SQLiteConnectionPool`,
-not geode — but geode owns the benchmark and validates the gain.
+Group commit is implemented via a new `IEventStore.batchInsert`:
+the SQLite override holds the writer mutex once and wraps N events
+in one `BEGIN IMMEDIATE … COMMIT`. Per-row error isolation uses
+SAVEPOINTs so one bad event (expired, duplicate id) doesn't roll
+back the good ones — just that row reports `Rejected`.
+
+OKs fire as soon as each row's outcome is known inside the writer
+batch, not waiting for fsync (per the OK-semantics constraint above).
+
+Implementation lives in `quartz/nip01Core/store/sqlite/SQLiteEventStore.batchInsertEvents`,
+exposed through `IEventStore.batchInsert` and consumed by the new
+`IngestQueue` (Tier 2 below).
 
 Expected: **~5–10× write throughput** on a fast SSD. SQLite group
 commit is well-trodden territory (nostr-rs-relay, strfry both do it).
 
 ### Tier 2 — pipelined OK over multiple in-flight EVENTs
 
-`RelaySession.receive` is currently single-flight: one EVENT in,
-process, OK out, next EVENT. Allow a connection to push N EVENTs
-concurrently, dispatch them to a per-connection ingest pipeline, and
-serialise OKs back in arrival order via a small commit log.
+`RelaySession.receive` was single-flight: one EVENT in, process, OK
+out, next EVENT. With Tier 2 the connection's pump posts to the
+shared `IngestQueue` and returns immediately — the WS pump moves
+straight to the next frame.
 
-A `Channel<EventCmd> with capacity = INGEST_PIPELINE_DEPTH` per
-connection, drained by a coroutine that batches into the group-commit
-above. OK responses are written to an `outQueue.send()` already — so
-the pipeline just needs to record arrival order and emit OKs in that
-order after each batch commits.
+`IngestQueue` (one per `NostrServer`) holds a bounded
+`Channel<Submission>` (capacity = 1024 per the `DEFAULT_CAPACITY`
+constant) drained by a single writer coroutine. The writer pulls
+the first item to start a batch then `tryReceive`-drains everything
+else queued (up to 64 — `DEFAULT_MAX_BATCH`), feeds the whole batch
+to `IEventStore.batchInsert`, and dispatches each row's
+`onComplete` callback as soon as the batch returns. The callback
+turns into the `OK` frame at the WS layer.
 
-Expected: hides the verify+insert latency behind another EVENT's
-parse, gets us closer to network-bound throughput.
+OKs are not order-preserving (per the constraints above). The
+writer coroutine starts lazily on first `submit` so subscription-
+only sessions don't pay for it and don't perturb `Dispatchers.Default`
+scheduling.
+
+Expected: hides verify+insert latency behind the next EVENT's parse,
+gets us closer to network-bound throughput.
 
 ### Tier 3 — eager Schnorr verify off the writer thread
 
-`VerifyPolicy` is in the policy stack and runs synchronously on
-`receive`. Move it into the ingest pipeline so verification of EVENT N+1
-runs concurrently with the SQLite commit of EVENT N. secp256k1 verify
-is parallelisable; the writer should never block on it.
+`VerifyPolicy` ran synchronously on `receive`, serialising verify
+on each connection's pump coroutine. With Tier 3, `IngestQueue`
+takes a `verify: ((Event) -> Boolean)?` hook; when set, the writer
+fan-outs a `coroutineScope { events.map { async(Default) { verify(it) } }.awaitAll() }`
+on each batch before opening the SQLite transaction. Failed
+verifies pre-mark `Rejected` and skip the insert.
+
+Wired through `NostrServer(parallelVerify = ...)` and
+`geode.Relay(parallelVerify = ...)`, controlled by
+`[options].parallel_verify` in the relay config (default `true`)
+and `--no-parallel-verify` on the CLI. Internal direct callers of
+`NostrServer` (tests, library users) are opt-in: the flag defaults
+to `false` to keep existing `VerifyPolicy`-in-chain semantics
+unchanged.
+
+`VerifyPolicy` was split into a parameterised
+`VerifyEventsAndAuthPolicy(verifyEvents)` with two singletons:
+
+- `VerifyPolicy` (default): verifies both `EVENT` and `AUTH`.
+- `VerifyAuthOnlyPolicy`: verifies `AUTH` only, used when the
+  `IngestQueue` is doing the EVENT verify.
+
+When `parallelVerify` is on, `composePolicy` swaps `VerifyPolicy`
+for `VerifyAuthOnlyPolicy` so EVENTs aren't verified twice while
+AUTH commands — which bypass the queue entirely — keep their
+signature check. Without this split, removing `VerifyPolicy` from
+the chain would let a forged AUTH event mark a pubkey as
+authenticated.
+
+Expected: ≈CPU_COUNT× verify-step speed-up on burst publishes
+from a single connection, where verify was previously serial on
+that pump.
 
 ## How to verify
 
-Add to `geode.perf.LoadBenchmark`:
+`geode.perf.LoadBenchmark` carries the perf tests:
 
-- `publishGroupCommitSingleClient` — same workload as the current
-  single-client benchmark, asserts >5000 EPS.
-- `publishPipelinedSingleClient` — sends 100 EVENTs without awaiting
-  intermediate OKs; measures end-to-end and OK-ordering correctness.
+- `publishGroupCommitSingleClient` — sequential publish-and-confirm
+  on one connection (the same shape as the original
+  `publishThroughputSingleClient`). Synchronous publishing means
+  batch size is always 1, so this case shows per-event SQLite tx
+  cost rather than the group-commit win — kept as a 500-EPS floor
+  to catch regressions from the rewrite.
+- `publishPipelinedSingleClient` — bursts 10 000 EVENTs back-to-
+  back without awaiting intermediate OKs; verifies end-to-end
+  throughput and that every event id receives exactly one OK (in
+  any order). This is where Tier 1 + Tier 2 both light up.
 
 Existing benchmarks stay as the regression floor.
 

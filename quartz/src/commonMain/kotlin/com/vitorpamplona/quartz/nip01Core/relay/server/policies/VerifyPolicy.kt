@@ -31,13 +31,24 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 
 /**
- * Allows all commands without authentication. This is the default policy.
+ * Verifies the Schnorr signature + id hash of every incoming
+ * `EVENT` and `AUTH` event. Other commands pass through.
+ *
+ * The default `VerifyPolicy` singleton verifies both. The
+ * [VerifyAuthOnlyPolicy] singleton skips the EVENT path — use it
+ * when the [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue]
+ * is doing parallel verify (Tier 3 of the event-ingestion plan)
+ * so EVENTs aren't verified twice. AUTH is still verified inline
+ * because the AUTH path bypasses the queue entirely; without it,
+ * a forged event could mark a pubkey as authenticated.
  */
-object VerifyPolicy : IRelayPolicy {
+open class VerifyEventsAndAuthPolicy(
+    private val verifyEvents: Boolean,
+) : IRelayPolicy {
     override fun onConnect(send: (Message) -> Unit) { }
 
     override fun accept(cmd: EventCmd) =
-        if (cmd.event.verify()) {
+        if (!verifyEvents || cmd.event.verify()) {
             PolicyResult.Accepted(cmd)
         } else {
             PolicyResult.Rejected("invalid: bad signature or id")
@@ -56,3 +67,18 @@ object VerifyPolicy : IRelayPolicy {
 
     override fun canSendToSession(event: Event) = true
 }
+
+/**
+ * Default verify policy — checks every EVENT and every AUTH. Use
+ * this when nothing else in the stack verifies signatures.
+ */
+object VerifyPolicy : VerifyEventsAndAuthPolicy(verifyEvents = true)
+
+/**
+ * Verify policy that skips the EVENT path. Use when the
+ * `IngestQueue` is configured with `parallelVerify`, so EVENTs are
+ * verified once on the writer's CPU fan-out instead of inline on
+ * the WebSocket pump. AUTH is still verified inline because that
+ * command never reaches the queue.
+ */
+object VerifyAuthOnlyPolicy : VerifyEventsAndAuthPolicy(verifyEvents = false)
