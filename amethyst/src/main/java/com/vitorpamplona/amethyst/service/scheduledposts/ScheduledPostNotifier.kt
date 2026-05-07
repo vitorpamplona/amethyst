@@ -39,6 +39,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * now guards against; the notification closes the loop.
  */
 object ScheduledPostNotifier {
+    // @Volatile so the channel reference is visible across the WorkManager IO
+    // thread pool — two workers firing in the same window can race on
+    // ensureChannel. createNotificationChannel itself is idempotent.
+    @Volatile
     private var channel: NotificationChannel? = null
     private const val SCHEDULED_POST_NOT_ID_BASE = 0x70000
 

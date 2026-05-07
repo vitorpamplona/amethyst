@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class PoolEventOutboxState(
     val event: Event,
-    var relaysRemaining: Set<NormalizedRelayUrl>,
+    @Volatile var relaysRemaining: Set<NormalizedRelayUrl>,
 ) {
     private var failures = mapOf<NormalizedRelayUrl, Tries>()
 

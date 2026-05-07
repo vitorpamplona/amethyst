@@ -31,6 +31,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
 class PoolEventOutbox {
+    // @Volatile so the polling path (INostrClient.pendingPublishRelaysFor)
+    // sees current state from threads that didn't write the map. Mutations
+    // still happen on NostrClient's IO scope; this only closes the
+    // visibility gap for cross-thread readers.
+    @Volatile
     private var eventOutbox = mapOf<HexKey, PoolEventOutboxState>()
     val relays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
