@@ -56,20 +56,22 @@ class HqInteropGetClient(
     override suspend fun prepareRequests(
         @Suppress("UNUSED_PARAMETER") authority: String,
         paths: List<String>,
-    ): List<RequestHandle> =
+    ): List<RequestHandle> {
+        // Pre-format requests outside the lock — see Http3GetClient
+        // for the full story.
+        val encoded = paths.map { "GET $it\r\n".encodeToByteArray() }
         // streamsLock, NOT lifecycleLock (the deprecated `conn.lock`
-        // alias) — see Http3GetClient.prepareRequests for the full
-        // story. tl;dr: holding the wrong lock lets the send-loop
-        // drain between opens and emits one STREAM per packet.
-        conn.streamsLock.withLock {
-            paths.map { path ->
+        // alias). Holding the wrong lock lets the send-loop drain
+        // between opens and emits one STREAM per packet.
+        return conn.streamsLock.withLock {
+            encoded.map { request ->
                 val stream = conn.openBidiStreamLocked()
-                val request = "GET $path\r\n".encodeToByteArray()
                 stream.send.enqueue(request)
                 stream.send.finish()
                 HqRequestHandle(stream)
             }
         }
+    }
 
     override suspend fun awaitResponse(handle: RequestHandle): GetResponse {
         val stream = (handle as HqRequestHandle).stream

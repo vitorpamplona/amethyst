@@ -158,7 +158,13 @@ class Http3GetClient(
     override suspend fun prepareRequests(
         authority: String,
         paths: List<String>,
-    ): List<RequestHandle> =
+    ): List<RequestHandle> {
+        // Pre-encode all requests OUTSIDE the lock so QPACK encoding
+        // (allocations, hashing, varint emit) doesn't extend the
+        // critical section. With 1999 paths the encoding cost is
+        // non-trivial; doing it under streamsLock would stall the
+        // send loop for the full encode time across every chunk.
+        val encoded = paths.map { encodeRequest(authority, it) }
         // CRITICAL: streamsLock — the lock the writer's drainOutbound
         // takes. Holding lifecycleLock (the deprecated `conn.lock`
         // alias) here did NOT block the send loop, so the writer
@@ -171,14 +177,15 @@ class Http3GetClient(
         // all N opens land before any drain runs, the writer then
         // packs many STREAM frames into each datagram, and the
         // server sees the burst on the wire.
-        conn.streamsLock.withLock {
-            paths.map { path ->
+        return conn.streamsLock.withLock {
+            encoded.map { request ->
                 val stream = conn.openBidiStreamLocked()
-                stream.send.enqueue(encodeRequest(authority, path))
+                stream.send.enqueue(request)
                 stream.send.finish()
                 Http3RequestHandle(stream)
             }
         }
+    }
 
     override suspend fun awaitResponse(handle: RequestHandle): GetResponse {
         val stream = (handle as Http3RequestHandle).stream

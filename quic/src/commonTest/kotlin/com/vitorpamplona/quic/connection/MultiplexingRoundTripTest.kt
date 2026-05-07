@@ -30,6 +30,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -94,7 +95,7 @@ class MultiplexingRoundTripTest {
             // is supposed to coalesce many streams' frames into one datagram
             // (MultiplexingCoalescingTest pins that contract); here we just
             // walk every emitted datagram until the client has nothing left.
-            val seenRequests = mutableMapOf<Long, ByteArray>()
+            val seenRequests = mutableMapOf<Long, MutableList<ByteArray>>()
             val seenFin = mutableSetOf<Long>()
             var totalDatagrams = 0
             while (true) {
@@ -104,13 +105,10 @@ class MultiplexingRoundTripTest {
                 val frames = pipe.decryptClientApplicationFrames(out) ?: break
                 for (frame in frames) {
                     if (frame is StreamFrame) {
-                        // Concatenate by offset (matrix reqs are tiny; offset
-                        // is always 0, but real flows might split — accept both).
-                        val existing = seenRequests[frame.streamId] ?: ByteArray(0)
-                        val merged = ByteArray(existing.size + frame.data.size)
-                        existing.copyInto(merged, 0)
-                        frame.data.copyInto(merged, existing.size)
-                        seenRequests[frame.streamId] = merged
+                        // Append to per-stream chunk list — joined once at the
+                        // end. Earlier shape merged eagerly per frame which is
+                        // O(N²) over byte count.
+                        seenRequests.getOrPut(frame.streamId) { mutableListOf() } += frame.data
                         if (frame.fin) seenFin += frame.streamId
                     }
                 }
@@ -128,10 +126,30 @@ class MultiplexingRoundTripTest {
                 "server saw FINs from only ${seenFin.size}/$n streams — client failed " +
                     "to deliver request FIN on every stream",
             )
+            // End-to-end coalescing contract: 64 streams × ~10-byte
+            // requests fit in a handful of datagrams. The aioquic
+            // 2026-05-06 regression hit when the writer emitted ONE
+            // STREAM per datagram (so 64 datagrams for this batch).
+            // Threshold of 12 leaves headroom for the writer's choice
+            // of when to coalesce + any per-drain ACK frames.
+            assertTrue(
+                totalDatagrams <= 12,
+                "expected ≤12 datagrams for 64 streams, got $totalDatagrams — " +
+                    "writer regressed to one-stream-per-datagram (the aioquic " +
+                    "interop 2026-05-06 multiplexing failure mode)",
+            )
             // Sanity-check the request payloads match what each stream sent.
             for ((i, stream) in streams.withIndex()) {
                 val expected = "req-$i"
-                val actual = seenRequests[stream.streamId]?.decodeToString()
+                val chunks = seenRequests[stream.streamId]
+                assertNotNull(chunks, "stream ${stream.streamId} (i=$i): no STREAM frames received")
+                val joined = ByteArray(chunks.sumOf { it.size })
+                var p = 0
+                for (c in chunks) {
+                    c.copyInto(joined, p)
+                    p += c.size
+                }
+                val actual = joined.decodeToString()
                 assertEquals(
                     expected,
                     actual,
