@@ -155,16 +155,25 @@ SUBSCRIBE arriving normally.
    replaces the create-drop-recreate retry shape with one
    subscribe held for the full 10 s read budget. Eliminates the
    moq-rs `Error::Cancel` cascade. **5/5 fail → ~2-3/5 pass.**
-3. **Speaker warmup bump 150 ms → 600 ms** (`00f6cba31`) — gives
+3. **Speaker warmup bump 150 ms → 600 ms** (`00f6cba31`) — gave
    the relay more time to register the speaker's broadcast in
-   its origin before the listener subscribes. **No measurable
-   improvement** — the failing test still shows the speaker
-   receives ANNOUNCE Please/Active but no SUBSCRIBE inbound.
+   its origin before the listener subscribed. **NET NEGATIVE,
+   reverted in `1ddf4967c`** — same failure pattern AND ate
+   into the listener's catalog-read window (5 s broadcast minus
+   600 ms warmup leaves ~4.4 s instead of 4.85 s).
 4. **hang-listen 250 ms post-`origin.announced()` sleep**
-   (`207057374`) — gives the relay time to fully prime its
-   per-broadcast upstream-subscribe pump after the broadcast
-   appears in its origin map but before the listener subscribes.
-   **No measurable improvement** — same failure mode persists.
+   (`207057374`) — gave the relay time to fully prime its
+   per-broadcast upstream-subscribe pump. **NET NEGATIVE,
+   reverted in `9b8b5692b`** — combined with #3 produced 0/5
+   sweep pass (worse than single-subscribe-fix-alone's 2/5)
+   because the cumulative ~850 ms of pre-subscribe delay
+   shrank the catalog-read window into the speaker tear-down
+   region.
+
+Lesson: the failure window for the broken-routing case is
+~3 seconds (until the speaker tears down at end of broadcast).
+ANY pre-subscribe delay shrinks the available retry budget on
+the listener side. Mitigations should NOT add delays.
 
 ## Smoking gun (from speaker stderr trace)
 
