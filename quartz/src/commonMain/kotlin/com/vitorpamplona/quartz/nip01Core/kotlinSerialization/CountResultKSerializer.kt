@@ -42,7 +42,7 @@ object CountResultKSerializer : KSerializer<CountResult> {
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("CountResult") {
             element<Int>("count")
-            element<Boolean>("pubkey")
+            element<Boolean>("approximate")
         }
 
     override fun serialize(
@@ -56,8 +56,8 @@ object CountResultKSerializer : KSerializer<CountResult> {
     fun serializeToElement(value: CountResult): JsonObject =
         buildJsonObject {
             put("count", value.count)
-            // Matches Jackson's CountResultSerializer which writes "pubkey" for approximate
-            put("pubkey", value.approximate)
+            // NIP-45: include "approximate" only when true.
+            if (value.approximate) put("approximate", true)
             value.hll?.let { put("hll", HyperLogLog.encode(it)) }
         }
 

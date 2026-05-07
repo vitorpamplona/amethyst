@@ -68,12 +68,10 @@ object MessageKSerializer : KSerializer<Message> {
                     }
 
                     is OkMessage -> {
+                        // NIP-01 wire format: ["OK", <event_id>, <true|false>, <message>]
                         add(JsonPrimitive(value.eventId))
-                        // Jackson writes success as a string, not boolean
-                        add(JsonPrimitive(value.success.toString()))
-                        if (value.message.isNotBlank()) {
-                            add(JsonPrimitive(value.message))
-                        }
+                        add(JsonPrimitive(value.success))
+                        add(JsonPrimitive(value.message))
                     }
 
                     is AuthMessage -> {
@@ -90,6 +88,8 @@ object MessageKSerializer : KSerializer<Message> {
                     }
 
                     is CountMessage -> {
+                        // NIP-45 wire format: ["COUNT", <query_id>, <count_result>]
+                        add(JsonPrimitive(value.queryId))
                         add(CountResultKSerializer.serializeToElement(value.result))
                     }
 
