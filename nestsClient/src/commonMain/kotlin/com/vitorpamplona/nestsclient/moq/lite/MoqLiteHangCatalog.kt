@@ -107,41 +107,26 @@ internal data class MoqLiteHangCatalog(
             }
 
         /**
-         * Cached canonical-shape catalog JSON bytes for the default
-         * Opus mono 48 kHz audio track ([MoqLiteNestsListener.AUDIO_TRACK]
-         * keyed under `audio.renditions["audio/data"]`). The catalog is
-         * a fixed string for the whole publisher lifetime — caching
-         * avoids re-running kotlinx.serialization on every
-         * [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker.startBroadcasting]
-         * call and every JWT-refresh hot-swap iteration in
-         * [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker].
-         *
-         * Hard-coded to track name `"audio/data"` because that's the
-         * only track Amethyst publishes today; if a future caller
-         * needs a different name, fall back to
-         * [opusMono48k] + [encodeJsonBytes].
-         */
-        val OPUS_MONO_48K_AUDIO_DATA_JSON_BYTES: ByteArray =
-            opusMono48k("audio/data").encodeJsonBytes()
-
-        /**
          * Canonical Amethyst speaker catalog: a single `legacy`-container
-         * Opus rendition under [audioTrackName], matching the encoder
-         * config in [com.vitorpamplona.nestsclient.audio.OpusEncoder]
-         * (48 kHz mono).
+         * Opus rendition under [audioTrackName] at 48 kHz with
+         * [numberOfChannels] (1 = mono, 2 = stereo L/R interleaved),
+         * matching the encoder config in
+         * [com.vitorpamplona.nestsclient.audio.OpusEncoder].
          *
          * The rendition map is keyed by the moq-lite track name a
          * subscriber should subscribe to for this rendition's frames —
          * for nests audio rooms that's the same string the publisher
          * publishes audio frames on
          * (`MoqLiteNestsListener.AUDIO_TRACK`).
-         *
-         * If [com.vitorpamplona.nestsclient.audio.OpusEncoder] becomes
-         * parameterised in the future, this factory should take the
-         * encoder's config rather than hard-coding 48 kHz mono.
          */
-        fun opusMono48k(audioTrackName: String): MoqLiteHangCatalog =
-            MoqLiteHangCatalog(
+        fun opus48k(
+            audioTrackName: String,
+            numberOfChannels: Int = 1,
+        ): MoqLiteHangCatalog {
+            require(numberOfChannels in 1..2) {
+                "opus48k supports mono (1) or stereo (2) only, got $numberOfChannels"
+            }
+            return MoqLiteHangCatalog(
                 audio =
                     Audio(
                         renditions =
@@ -151,12 +136,49 @@ internal data class MoqLiteHangCatalog(
                                         codec = "opus",
                                         container = Container(kind = "legacy"),
                                         sampleRate = 48_000,
-                                        numberOfChannels = 1,
+                                        numberOfChannels = numberOfChannels,
                                         jitter = OPUS_FRAME_DURATION_MS,
                                     ),
                             ),
                     ),
             )
+        }
+
+        /**
+         * Memoised JSON bytes for [opus48k]. The catalog is a fixed
+         * string for the whole publisher lifetime — caching avoids
+         * re-running kotlinx.serialization on every
+         * [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker.startBroadcasting]
+         * call and every JWT-refresh hot-swap iteration in
+         * [com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker].
+         *
+         * Keyed by `(trackName, numberOfChannels)` so adding a new shape
+         * (stereo, future bitrate variants) doesn't multiply the
+         * constant count. The cache is populated on first request per
+         * shape and never evicted — at most a handful of entries per
+         * process lifetime, all small.
+         *
+         * Thread-safety: the operation is idempotent — two threads
+         * computing the same shape land identical bytes — so a
+         * non-locking [HashMap] is acceptable in commonMain. Worst case
+         * the second writer overwrites with an equal value; cache
+         * readers always see at least one fully-published value
+         * because the JVM's default visibility for non-volatile object
+         * references is good enough for the "may compute twice"
+         * tolerance we have here.
+         */
+        private val cachedJsonBytes: HashMap<Pair<String, Int>, ByteArray> = HashMap()
+
+        fun opus48kJsonBytes(
+            audioTrackName: String,
+            numberOfChannels: Int = 1,
+        ): ByteArray {
+            val key = audioTrackName to numberOfChannels
+            cachedJsonBytes[key]?.let { return it }
+            val bytes = opus48k(audioTrackName, numberOfChannels).encodeJsonBytes()
+            cachedJsonBytes[key] = bytes
+            return bytes
+        }
 
         /**
          * Opus frame duration in milliseconds — 960 samples / 48 kHz =

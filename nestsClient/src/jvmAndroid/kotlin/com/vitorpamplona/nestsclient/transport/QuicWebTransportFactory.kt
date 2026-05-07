@@ -365,6 +365,10 @@ private class QuicBidiStreamAdapter(
         stream.send.finish()
         driver.wakeup()
     }
+
+    override fun setPriority(priority: Int) {
+        stream.priority = priority
+    }
 }
 
 private class QuicReadStreamAdapter(
@@ -391,6 +395,10 @@ private class QuicUniWriteStreamAdapter(
     override suspend fun finish() {
         stream.send.finish()
         driver.wakeup()
+    }
+
+    override fun setPriority(priority: Int) {
+        stream.priority = priority
     }
 }
 
@@ -431,4 +439,14 @@ private class StrippedWtBidiStreamAdapter(
                 ?: error("peer-initiated bidi stream has no finish — demux didn't wire one")
         finish()
     }
+
+    /**
+     * No-op: peer-initiated bidi streams arrive through the demux as a
+     * [com.vitorpamplona.quic.webtransport.StrippedWtStream] which exposes
+     * only `send`/`finish` closures, not the underlying [QuicStream]. The
+     * moq-lite priority use case targets locally-opened uni group streams
+     * only, so this path doesn't need to model priority — see the
+     * [WebTransportWriteStream.setPriority] contract.
+     */
+    override fun setPriority(priority: Int) = Unit
 }

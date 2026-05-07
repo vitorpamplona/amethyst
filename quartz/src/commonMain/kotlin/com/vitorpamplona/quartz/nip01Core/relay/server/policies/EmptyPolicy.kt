@@ -20,28 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
-
 /**
- * Allows all commands without authentication. This is the default policy.
+ * Allows all commands without authentication. The default policy.
+ *
+ * Singleton form of [PassThroughPolicy] for callers that want a
+ * shared no-op (saves an allocation and lets the relay shortcut
+ * `policy === EmptyPolicy` checks when composing stacks).
  */
-object EmptyPolicy : IRelayPolicy {
-    override fun onConnect(send: (Message) -> Unit) { }
-
-    override fun accept(cmd: EventCmd) = PolicyResult.Accepted(cmd)
-
-    override fun accept(cmd: ReqCmd) = PolicyResult.Accepted(cmd)
-
-    override fun accept(cmd: CountCmd) = PolicyResult.Accepted(cmd)
-
-    override fun accept(cmd: AuthCmd) = PolicyResult.Accepted(cmd)
-
-    override fun canSendToSession(event: Event) = true
-}
+object EmptyPolicy : PassThroughPolicy()

@@ -189,7 +189,7 @@ class RoomSpeakerCatalogTest {
 
     @Test
     fun stripPrefixRoundTripsCanonicalCatalog() {
-        // The catalog payload `MoqLiteHangCatalog.opusMono48k(...)` emits
+        // The catalog payload `MoqLiteHangCatalog.opus48k(...)` emits
         // (in `:nestsClient`) MUST round-trip through this parser — the
         // two classes target the same wire shape independently because
         // `:nestsClient` does not depend on `:commons` and vice versa.

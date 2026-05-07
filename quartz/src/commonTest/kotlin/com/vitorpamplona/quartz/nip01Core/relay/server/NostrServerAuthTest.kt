@@ -163,7 +163,7 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"true\""))
+            assertTrue(okMessages[0].contains(",true,"))
             assertTrue((session.policy as FullAuthPolicy).isAuthenticated())
             assertTrue(session.policy.authenticatedUsers.contains(pubkey))
 
@@ -184,7 +184,7 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"false\""))
+            assertTrue(okMessages[0].contains(",false,"))
             assertTrue(okMessages[0].contains("challenge"))
             assertFalse((session.policy as FullAuthPolicy).isAuthenticated())
 
@@ -209,7 +209,7 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"false\""))
+            assertTrue(okMessages[0].contains(",false,"))
             assertTrue(okMessages[0].contains("relay url"))
             assertFalse((session.policy as FullAuthPolicy).isAuthenticated())
 
@@ -238,7 +238,7 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"false\""))
+            assertTrue(okMessages[0].contains(",false,"))
             assertTrue(okMessages[0].contains("created_at"))
             assertFalse((session.policy as FullAuthPolicy).isAuthenticated())
 
@@ -307,8 +307,8 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
-            assertTrue(okMessages[0].contains("\"true\""))
-            assertTrue(okMessages[1].contains("\"true\""))
+            assertTrue(okMessages[0].contains(",true,"))
+            assertTrue(okMessages[1].contains(",true,"))
 
             val authedPubkeys = (session.policy as FullAuthPolicy).authenticatedUsers
             assertEquals(2, authedPubkeys.size)
@@ -334,7 +334,7 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"false\""))
+            assertTrue(okMessages[0].contains(",false,"))
             assertTrue(okMessages[0].contains("auth-required:"))
 
             server.close()
@@ -394,7 +394,7 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"true\""))
+            assertTrue(okMessages[0].contains(",true,"))
 
             // Now EVENT should work
             val event = testEvent()
@@ -402,7 +402,7 @@ class NostrServerAuthTest {
 
             val allOk = collector.rawMessagesContaining("OK")
             assertEquals(2, allOk.size)
-            assertTrue(allOk[1].contains("\"true\""))
+            assertTrue(allOk[1].contains(",true,"))
 
             // REQ should work
             session.receive("""["REQ","sub1",{"kinds":[1]}]""")
@@ -428,7 +428,7 @@ class NostrServerAuthTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"true\""))
+            assertTrue(okMessages[0].contains(",true,"))
 
             server.close()
         }
@@ -461,14 +461,14 @@ class NostrServerAuthTest {
             // Kind 1 should be accepted without auth
             val note = testEvent(hexId(1), kind = 1)
             session.receive("""["EVENT",${note.toJson()}]""")
-            assertTrue(collector.rawMessagesContaining("OK")[0].contains("\"true\""))
+            assertTrue(collector.rawMessagesContaining("OK")[0].contains(",true,"))
 
             // Kind 4 should be rejected without auth
             val dm = testEvent(hexId(2), kind = 4)
             session.receive("""["EVENT",${dm.toJson()}]""")
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
-            assertTrue(okMessages[1].contains("\"false\""))
+            assertTrue(okMessages[1].contains(",false,"))
             assertTrue(okMessages[1].contains("auth-required:"))
 
             server.close()
