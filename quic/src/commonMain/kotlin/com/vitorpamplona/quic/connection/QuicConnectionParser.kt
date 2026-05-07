@@ -301,26 +301,75 @@ private fun feedShortHeaderPacket(
         return
     }
 
-    val keysToUse: PacketProtection
+    // Build an ordered list of (keys, rotateOnSuccess) candidates and
+    // try AEAD against each in order. The list shape depends on whether
+    // the peer's KEY_PHASE bit matches our current phase:
+    //
+    //   match → [current keys] (no rotation possible)
+    //   mismatch → [previous keys (if any), next-phase keys (if derivable)]
+    //
+    // The mismatch path tries `previousReceiveProtection` FIRST because
+    // a reordered packet from before the last rotation is by far the
+    // common case (the reorder window is short, on the order of a few
+    // RTTs). If those keys decrypt the packet, we use them and don't
+    // commit. If they fail (genuine consecutive rotation — peer
+    // rotated AGAIN, KEY_PHASE wraps back to its prior value), we
+    // fall through to deriving next-phase keys against the
+    // already-rolled-forward `appReceiveSecret`. Two AEAD attempts on
+    // a mismatched-phase packet are OK; KEY_PHASE mismatch is rare
+    // (at most once per a-billion-packets in normal usage), and the
+    // failed first attempt is cheap (single AEAD seal-verify on a
+    // small payload).
+    //
+    // Pre-fix the parser routed every mismatch packet UNCONDITIONALLY
+    // through previousReceiveProtection if non-null, with no
+    // fallback. After two consecutive rotations the prior-keys path
+    // would always be the wrong keys, AEAD-fail, and the connection
+    // would silently wedge — `KeyUpdatePeerInitiatedTest`'s
+    // `twoConsecutiveRotationsCommitCorrectly` was disabled with a
+    // KNOWN-LIMITATION comment for this reason.
+    val parsed: ShortHeaderPacket.ParseResult?
     val rotateOnSuccess: PacketProtection?
-    when {
-        peek.keyPhase == conn.currentReceiveKeyPhase -> {
-            keysToUse = live
+    if (peek.keyPhase == conn.currentReceiveKeyPhase) {
+        parsed =
+            ShortHeaderPacket.parseAndDecrypt(
+                bytes = datagram,
+                offset = offset,
+                dcidLen = conn.sourceConnectionId.length,
+                aead = live.aead,
+                key = live.key,
+                iv = live.iv,
+                hp = live.hp,
+                hpKey = live.hpKey,
+                largestReceivedInSpace = state.pnSpace.largestReceived,
+            )
+        rotateOnSuccess = null
+    } else {
+        // Try previous-phase first (reorder path). null result here
+        // means the packet wasn't from before the last rotation —
+        // fall through to next-phase derivation.
+        val priorTry =
+            conn.previousReceiveProtection?.let { prev ->
+                ShortHeaderPacket.parseAndDecrypt(
+                    bytes = datagram,
+                    offset = offset,
+                    dcidLen = conn.sourceConnectionId.length,
+                    aead = prev.aead,
+                    key = prev.key,
+                    iv = prev.iv,
+                    hp = prev.hp,
+                    hpKey = prev.hpKey,
+                    largestReceivedInSpace = state.pnSpace.largestReceived,
+                )
+            }
+        if (priorTry != null) {
+            parsed = priorTry
             rotateOnSuccess = null
-        }
-
-        // Reordered packet from before our last rotation — try the
-        // retained previous keys. Reordering window is small but real
-        // for paths with non-trivial RTT.
-        conn.previousReceiveProtection != null -> {
-            keysToUse = conn.previousReceiveProtection!!
-            rotateOnSuccess = null
-        }
-
-        // Peer just rotated. Derive next-phase keys and prepare to commit
-        // if AEAD succeeds. Failure path is the same as a corrupted /
-        // unauthenticated packet — silent drop.
-        else -> {
+        } else {
+            // Peer rotated (possibly for a 2nd time). Derive next-phase
+            // keys against the rolled-forward `appReceiveSecret` and
+            // try AEAD. On success we commit the rotation; on failure
+            // it's a bona-fide corrupt / unauthenticated packet.
             val nextPhase = conn.deriveNextPhaseReceiveKeys()
             if (nextPhase == null) {
                 conn.qlogObserver.onPacketDropped(
@@ -329,23 +378,21 @@ private fun feedShortHeaderPacket(
                 )
                 return
             }
-            keysToUse = nextPhase
+            parsed =
+                ShortHeaderPacket.parseAndDecrypt(
+                    bytes = datagram,
+                    offset = offset,
+                    dcidLen = conn.sourceConnectionId.length,
+                    aead = nextPhase.aead,
+                    key = nextPhase.key,
+                    iv = nextPhase.iv,
+                    hp = nextPhase.hp,
+                    hpKey = nextPhase.hpKey,
+                    largestReceivedInSpace = state.pnSpace.largestReceived,
+                )
             rotateOnSuccess = nextPhase
         }
     }
-
-    val parsed =
-        ShortHeaderPacket.parseAndDecrypt(
-            bytes = datagram,
-            offset = offset,
-            dcidLen = conn.sourceConnectionId.length,
-            aead = keysToUse.aead,
-            key = keysToUse.key,
-            iv = keysToUse.iv,
-            hp = keysToUse.hp,
-            hpKey = keysToUse.hpKey,
-            largestReceivedInSpace = state.pnSpace.largestReceived,
-        )
     if (parsed == null) {
         conn.qlogObserver.onPacketDropped(
             "AEAD auth failed or header parse failed at level APPLICATION",

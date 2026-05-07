@@ -265,29 +265,45 @@ class KeyUpdatePeerInitiatedTest {
             assertEquals(QuicConnection.Status.CONNECTED, client.status)
         }
 
-    // KNOWN LIMITATION — consecutive rotations within the reorder window.
-    //
-    // The parser currently routes inbound packets whose KEY_PHASE bit
-    // does not match `currentReceiveKeyPhase` to
-    // `previousReceiveProtection` whenever those prior keys exist. After
-    // a single rotation that's correct (matches RFC 9001 §6.1's reorder-
-    // tolerance contract). But after a SECOND rotation by the peer the
-    // KEY_PHASE bit wraps back to the original value — and our parser
-    // misroutes those packets to the (now-wrong) prior keys, AEAD-fails,
-    // and silently drops them. The connection wedges.
-    //
-    // The standard fix is to gate `previousReceiveProtection` on a
-    // packet-number threshold (track the PN of the rotation-triggering
-    // packet; reroute to next-phase derivation once subsequent KEY_PHASE-
-    // mismatched packets exceed it). neqo and picoquic implement this;
-    // we don't yet. For audio-rooms' 3-hour session, ONE rotation is the
-    // realistic case (peers rotate sparingly), so the deeper fix is a
-    // follow-up rather than a blocker.
-    //
-    // No test asserts the broken behaviour — adding one would just pin
-    // the regression. When the protocol-level fix lands, a positive
-    // `consecutiveRotationsCommitCorrectly` test is the right addition
-    // here.
+    @Test
+    fun twoConsecutiveRotationsCommitCorrectly() =
+        runBlocking {
+            // Belt + braces: one rotation is the simple case; a second
+            // rotation must derive off the FIRST-rotation secret, not
+            // the original handshake secret, and the parser must NOT
+            // misroute the second-rotation packet to
+            // previousReceiveProtection (which would AEAD-fail and
+            // silently drop, wedging the connection — the
+            // KNOWN-LIMITATION pre-fix this test pins now closes).
+            //
+            // The parser fix is "try previous keys; on AEAD failure
+            // fall through to next-phase derivation" — neqo's
+            // approach. Two AEAD attempts on a mismatched-phase
+            // packet are cheap; KEY_PHASE mismatch is rare to begin
+            // with (at most once per a-billion-packets in normal
+            // usage).
+            val (client, pipe) = newConnectedClient()
+
+            pipe.rotateServerApplicationKeys()
+            feedDatagram(client, pipe.buildServerApplicationDatagram(listOf(PingFrame))!!, nowMillis = 0L)
+            assertEquals(true, client.currentReceiveKeyPhase, "first rotation must flip the bit")
+
+            pipe.rotateServerApplicationKeys()
+            feedDatagram(client, pipe.buildServerApplicationDatagram(listOf(PingFrame))!!, nowMillis = 0L)
+            assertEquals(
+                false,
+                client.currentReceiveKeyPhase,
+                "second rotation must flip the bit back to 0 — failure here means the parser " +
+                    "misrouted the second rotation through previousReceiveProtection (the prior " +
+                    "key-update bug) instead of falling through to next-phase derivation",
+            )
+            assertEquals(
+                false,
+                client.currentSendKeyPhase,
+                "send-side mirror must also have rolled forward through both rotations",
+            )
+            assertEquals(QuicConnection.Status.CONNECTED, client.status)
+        }
 
     /**
      * Read the unprotected KEY_PHASE bit out of a packet so the test

@@ -30,6 +30,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -182,6 +183,213 @@ class MoqLiteLossHarnessTest {
                 if (chunks != null) delivered += 1
             }
             assertEquals(groupCount, delivered, "lossRate=0 baseline must deliver every frame")
+        }
+
+    @Test
+    fun listenerToleratesPacketReorderingOnGroupStreams() =
+        runBlocking {
+            // Reorder injection — the network can deliver datagrams
+            // out of order even when none are dropped. moq-lite group
+            // streams MUST tolerate this: each stream is a self-
+            // contained Opus frame (offset 0 + FIN), so reorder at
+            // the datagram level just means the listener sees
+            // streams arrive in a different order than the relay
+            // sent them. Audio frames carry sequence numbers, so the
+            // application-level player handles late-arrivers via its
+            // own jitter buffer.
+            //
+            // Pin the contract: 100% delivery under arbitrary
+            // datagram-order permutation. This catches a class of
+            // regression where a parser invariant ("PN must
+            // increase") gets accidentally tightened to "STREAM IDs
+            // must arrive in order", which would silently break
+            // moq-lite under any real-world jitter.
+            val rng = Random(0xBAD5EEDL)
+            val groupCount = 50
+            val (client, pipe) = newConnectedClient()
+            val firstId = StreamId.build(StreamId.Kind.SERVER_UNI, 0L)
+            val streamIds = (0 until groupCount).map { firstId + 4L * it }
+            val payloads = streamIds.associateWith { id -> "frame-$id".encodeToByteArray() }
+
+            // Build all packets up-front; then shuffle the delivery
+            // order. Permutation drives reorder of:
+            //   - Stream IDs (peer-uni IDs are globally ordered;
+            //     the listener sees later IDs before earlier ones).
+            //   - QUIC packet numbers (each datagram carries a fresh
+            //     PN; reorder means the parser's PN-space tracking
+            //     observes non-monotonic largestReceived advances).
+            val packets =
+                streamIds.map { id ->
+                    pipe.buildServerApplicationDatagram(
+                        listOf(StreamFrame(streamId = id, offset = 0L, data = payloads[id]!!, fin = true)),
+                    )!!
+                }
+            val deliveryOrder = packets.indices.shuffled(rng)
+            for (idx in deliveryOrder) {
+                feedDatagram(client, packets[idx], nowMillis = 0L)
+            }
+
+            // Every stream must have surfaced its full payload
+            // despite arriving out of order.
+            for (id in streamIds) {
+                val s = client.streamById(id)!!
+                val chunks = withTimeoutOrNull(2_000L) { s.incoming.toList() }
+                assertNotNull(chunks, "stream $id must surface despite reorder")
+                val joined = ByteArray(chunks.sumOf { it.size })
+                var p = 0
+                for (c in chunks) {
+                    c.copyInto(joined, p)
+                    p += c.size
+                }
+                assertEquals(payloads[id]!!.decodeToString(), joined.decodeToString())
+            }
+            assertEquals(QuicConnection.Status.CONNECTED, client.status)
+        }
+
+    @Test
+    fun listenerSurvivesExtremeTwentyPercentLoss() =
+        runBlocking {
+            // Extreme-loss canary: 20% drop is far past the typical
+            // 1-5% range a healthy mobile network sees, but
+            // approaches what a degraded subway / elevator path
+            // delivers. moq-lite's contract here is "best-effort —
+            // gaps surface to audio decoder as silence." The QUIC
+            // contract is "the connection itself stays healthy."
+            //
+            // The audible-quality bar is the application's problem
+            // (jitter buffer, FEC). What this test pins is that the
+            // QUIC LAYER doesn't tear itself down under aggressive
+            // loss — flow-control accounting, ACK-tracker windows,
+            // and the retired-stream-id ring all stay consistent.
+            // A regression in any of those would either fire a
+            // protocol violation (CONNECTION_CLOSE) or wedge the
+            // peer into PTO mode.
+            val rng = Random(0xDEADBEEFL)
+            val groupCount = 200
+            val lossRate = 0.20
+            val (client, pipe) = newConnectedClient()
+            val firstId = StreamId.build(StreamId.Kind.SERVER_UNI, 0L)
+            val streamIds = (0 until groupCount).map { firstId + 4L * it }
+            val payloads = streamIds.associateWith { id -> "frame-$id".encodeToByteArray() }
+            val droppedIds = mutableSetOf<Long>()
+
+            for (id in streamIds) {
+                if (rng.nextDouble() < lossRate) {
+                    droppedIds += id
+                    continue
+                }
+                val packet =
+                    pipe.buildServerApplicationDatagram(
+                        listOf(StreamFrame(streamId = id, offset = 0L, data = payloads[id]!!, fin = true)),
+                    )!!
+                feedDatagram(client, packet, nowMillis = 0L)
+            }
+
+            val received = mutableListOf<Long>()
+            for (id in streamIds) {
+                if (id in droppedIds) continue
+                val s = client.streamById(id) ?: continue
+                if (withTimeoutOrNull(2_000L) { s.incoming.toList() } != null) {
+                    received += id
+                }
+            }
+            // Expected delivery is approximately (1 - lossRate) of the
+            // total. RNG variance gives ~5% tolerance band; we assert
+            // ≥ 60% to leave plenty of margin while still catching a
+            // catastrophic collapse (e.g. parser silently drops every
+            // packet after the first loss).
+            val floor = (groupCount * 0.6).toInt()
+            assertTrue(
+                received.size >= floor,
+                "listener received ${received.size} / $groupCount under 20% loss — floor $floor. " +
+                    "dropped=${droppedIds.size}",
+            )
+            assertEquals(
+                QuicConnection.Status.CONNECTED,
+                client.status,
+                "connection must stay CONNECTED through extreme loss",
+            )
+        }
+
+    @Test
+    fun reliableBidiStreamRecoversFromMidStreamPacketLoss() =
+        runBlocking {
+            // Reliable-stream loss harness — distinct from the moq-
+            // lite group-stream best-effort path above. RFC 9000
+            // STREAM frames carry full reliability semantics: a
+            // dropped packet must trigger retransmit on PTO, and
+            // the listener MUST eventually see the bytes contiguous
+            // and in order. This test pins that contract end-to-end
+            // by:
+            //   1. Server sends 4 STREAM frames on the same bidi
+            //      stream, each in its own datagram, covering a
+            //      monotonic offset range.
+            //   2. The middle two datagrams are dropped on first
+            //      delivery — simulating a transient mid-stream
+            //      loss.
+            //   3. Server retransmits the dropped ranges on the
+            //      same offsets (mimicking what RFC 9002
+            //      retransmit logic does on PTO).
+            //   4. Client must surface all 4 chunks contiguous,
+            //      in order, no gaps.
+            val (client, pipe) = newConnectedClient()
+            // Open a client-bidi stream so the server can write back.
+            val stream = client.openBidiStream()
+            val streamId = stream.streamId
+
+            val chunks =
+                listOf(
+                    "AAAA".encodeToByteArray(),
+                    "BBBB".encodeToByteArray(),
+                    "CCCC".encodeToByteArray(),
+                    "DDDD".encodeToByteArray(),
+                )
+            val offsets = LongArray(chunks.size)
+            var off = 0L
+            for ((i, c) in chunks.withIndex()) {
+                offsets[i] = off
+                off += c.size
+            }
+
+            // First-pass delivery: drop chunks[1] and chunks[2].
+            for (i in chunks.indices) {
+                if (i == 1 || i == 2) continue
+                val frame =
+                    StreamFrame(
+                        streamId = streamId,
+                        offset = offsets[i],
+                        data = chunks[i],
+                        fin = i == chunks.size - 1,
+                    )
+                feedDatagram(client, pipe.buildServerApplicationDatagram(listOf(frame))!!, nowMillis = 0L)
+            }
+            // Retransmit the dropped chunks on their original offsets.
+            for (i in listOf(1, 2)) {
+                val frame =
+                    StreamFrame(
+                        streamId = streamId,
+                        offset = offsets[i],
+                        data = chunks[i],
+                        fin = false,
+                    )
+                feedDatagram(client, pipe.buildServerApplicationDatagram(listOf(frame))!!, nowMillis = 0L)
+            }
+
+            val collected = withTimeoutOrNull(2_000L) { stream.incoming.toList() }
+            assertNotNull(collected, "stream must complete after retransmits fill the gaps")
+            val joined = ByteArray(collected.sumOf { it.size })
+            var p = 0
+            for (c in collected) {
+                c.copyInto(joined, p)
+                p += c.size
+            }
+            assertEquals(
+                "AAAABBBBCCCCDDDD",
+                joined.decodeToString(),
+                "reliable bidi stream must surface every byte in offset order even after " +
+                    "mid-stream packet loss + retransmit",
+            )
+            assertEquals(QuicConnection.Status.CONNECTED, client.status)
         }
 
     private fun newConnectedClient(): Pair<QuicConnection, InMemoryQuicPipe> =
