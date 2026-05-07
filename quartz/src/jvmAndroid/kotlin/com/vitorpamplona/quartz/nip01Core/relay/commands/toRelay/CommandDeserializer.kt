@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.quartz.nip01Core.jackson.EventDeserializer
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.ManualFilterDeserializer
@@ -52,9 +51,9 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     val filters = mutableListOf<Filter>()
 
                     while (jp.nextToken() != JsonToken.END_ARRAY) {
-                        val filterObj: ObjectNode = jp.codec.readTree(jp)
-                        val filter = ManualFilterDeserializer.fromJson(filterObj)
-                        filters.add(filter)
+                        // currentToken is now START_OBJECT for each filter;
+                        // the streaming parser consumes through END_OBJECT.
+                        filters.add(ManualFilterDeserializer.fromJson(jp))
                     }
 
                     ReqCmd(
@@ -68,9 +67,7 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     val filters = mutableListOf<Filter>()
 
                     while (jp.nextToken() != JsonToken.END_ARRAY) {
-                        val filterObj: ObjectNode = jp.codec.readTree(jp)
-                        val filter = ManualFilterDeserializer.fromJson(filterObj)
-                        filters.add(filter)
+                        filters.add(ManualFilterDeserializer.fromJson(jp))
                     }
 
                     CountCmd(
@@ -102,9 +99,8 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
 
                 NegOpenCmd.LABEL -> {
                     val subId = jp.nextTextValue()
-                    jp.nextToken()
-                    val filterObj: ObjectNode = jp.codec.readTree(jp)
-                    val filter = ManualFilterDeserializer.fromJson(filterObj)
+                    jp.nextToken() // advance to filter's START_OBJECT
+                    val filter = ManualFilterDeserializer.fromJson(jp)
                     val initialMessage = jp.nextTextValue()
 
                     NegOpenCmd(

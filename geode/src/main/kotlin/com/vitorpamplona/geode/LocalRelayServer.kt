@@ -32,8 +32,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.install
+import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
+import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.request.header
 import io.ktor.server.response.respondText
@@ -109,6 +111,16 @@ class LocalRelayServer(
      * RPC payload.
      */
     val maxAdminBodyBytes: Int = 1 shl 20,
+    /**
+     * Ktor CIO acceptor-thread count. `null` keeps Ktor's default.
+     * Lift on machines with many cores when targeting 10k+
+     * concurrent connections — see `[network]` config docs.
+     */
+    val connectionGroupSize: Int? = null,
+    /** Ktor CIO worker-thread count. `null` keeps Ktor's default. */
+    val workerGroupSize: Int? = null,
+    /** Ktor CIO call-handling thread count. `null` keeps Ktor's default. */
+    val callGroupSize: Int? = null,
 ) {
     private val infoHolder =
         object : Nip86Server.InfoHolder {
@@ -167,51 +179,78 @@ class LocalRelayServer(
      * [url] is safe to read on the very next line.
      */
     fun start(): LocalRelayServer {
+        // Snapshot the constructor-supplied overrides into locals so
+        // the `configure` lambda below can assign to its receiver
+        // without the names colliding with outer properties.
+        val connGrp = connectionGroupSize
+        val workGrp = workerGroupSize
+        val callGrp = callGroupSize
+        val bindHost = host
+        val bindPort = port
         val server =
-            embeddedServer(CIO, host = host, port = port) {
-                install(WebSockets) {
-                    maxFrameBytes?.let { maxFrameSize = it }
-                }
-                routing {
-                    // NIP-11: GET on the relay URL with Accept:
-                    // application/nostr+json returns the relay info doc.
-                    // We mount this *before* the webSocket route so Ktor
-                    // serves NIP-11 for plain HTTP GETs and only upgrades
-                    // to a WebSocket when the request is a WS upgrade.
-                    get(path) {
-                        val accept = call.request.header(HttpHeaders.Accept).orEmpty()
-                        if (accept.contains("application/nostr+json")) {
-                            call.response.headers.append("Access-Control-Allow-Origin", "*")
-                            call.respondText(
-                                relay.info.json,
-                                ContentType.parse("application/nostr+json"),
-                            )
-                        } else {
-                            call.respondText(
-                                "Use a Nostr client (NIP-01 WebSocket) or send Accept: application/nostr+json (NIP-11).",
-                                ContentType.Text.Plain,
-                                HttpStatusCode.UpgradeRequired,
-                            )
+            embeddedServer(
+                factory = CIO,
+                rootConfig =
+                    serverConfig {
+                        module {
+                            install(WebSockets) {
+                                maxFrameBytes?.let { maxFrameSize = it }
+                            }
+                            routing {
+                                // NIP-11: GET on the relay URL with Accept:
+                                // application/nostr+json returns the relay info doc.
+                                // We mount this *before* the webSocket route so Ktor
+                                // serves NIP-11 for plain HTTP GETs and only upgrades
+                                // to a WebSocket when the request is a WS upgrade.
+                                get(path) {
+                                    val accept = call.request.header(HttpHeaders.Accept).orEmpty()
+                                    if (accept.contains("application/nostr+json")) {
+                                        call.response.headers.append("Access-Control-Allow-Origin", "*")
+                                        call.respondText(
+                                            relay.info.json,
+                                            ContentType.parse("application/nostr+json"),
+                                        )
+                                    } else {
+                                        call.respondText(
+                                            "Use a Nostr client (NIP-01 WebSocket) or send Accept: application/nostr+json (NIP-11).",
+                                            ContentType.Text.Plain,
+                                            HttpStatusCode.UpgradeRequired,
+                                        )
+                                    }
+                                }
+                                // NIP-86: POST application/nostr+json+rpc with a NIP-98
+                                // signed Authorization header → JSON-RPC dispatch.
+                                post(path) {
+                                    nip86Route.handle(call)
+                                }
+                                webSocket(path) {
+                                    if (shuttingDown) {
+                                        // Just return — Ktor closes the WS for us.
+                                        return@webSocket
+                                    }
+                                    WebSocketSessionPump(this).pump(
+                                        server = relay.server,
+                                        registerSession = activeSessions::add,
+                                        unregisterSession = activeSessions::remove,
+                                    )
+                                }
+                            }
                         }
+                    },
+                configure = {
+                    connector {
+                        host = bindHost
+                        port = bindPort
                     }
-                    // NIP-86: POST application/nostr+json+rpc with a NIP-98
-                    // signed Authorization header → JSON-RPC dispatch.
-                    post(path) {
-                        nip86Route.handle(call)
-                    }
-                    webSocket(path) {
-                        if (shuttingDown) {
-                            // Just return — Ktor closes the WS for us.
-                            return@webSocket
-                        }
-                        WebSocketSessionPump(this).pump(
-                            server = relay.server,
-                            registerSession = activeSessions::add,
-                            unregisterSession = activeSessions::remove,
-                        )
-                    }
-                }
-            }
+                    // Keep Ktor defaults unless the operator overrode
+                    // them — Ktor's per-CPU sizing is sensible for
+                    // most deployments, and over-threading hurts L1/L2
+                    // locality at low connection counts.
+                    connGrp?.let { connectionGroupSize = it }
+                    workGrp?.let { workerGroupSize = it }
+                    callGrp?.let { callGroupSize = it }
+                },
+            )
         server.start(wait = false)
         engine = server.engine
         // Ktor 3.x made resolvedConnectors() suspend. We block here so
