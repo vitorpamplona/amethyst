@@ -139,13 +139,26 @@ class QuicConnectionDriver(
                     } ?: break
                 socket.send(out)
             }
-            val ptoBaseMs =
-                if (connection.lossDetection.hasFirstRttSample) {
-                    val maxAckDelayMs = connection.peerTransportParameters?.maxAckDelay ?: 0L
-                    connection.lossDetection.ptoBaseMs(maxAckDelayMs).coerceAtLeast(1L)
+            // Use the loss-detection's PTO calculation in BOTH the pre- and
+            // post-first-RTT-sample regimes. Pre-sample, smoothed_rtt =
+            // INITIAL_RTT_MS so ptoBaseMs returns
+            // INITIAL_RTT_MS * 3 + max_ack_delay (~300 ms with the 100 ms
+            // initial). max_ack_delay only applies to APPLICATION space per
+            // RFC 9002 §6.2.1; pre-handshake we pass 0. Earlier shape
+            // hardcoded 1000 ms here as a "handshake-timeout safety floor"
+            // — the cost was four PTO retransmits in ~30 s of loss
+            // recovery instead of the eight that 300 ms initial gives,
+            // pinching multiconnect handshake-loss tests at the tail.
+            val maxAckDelayMs =
+                if (connection.application.sendProtection != null) {
+                    connection.peerTransportParameters?.maxAckDelay ?: 0L
                 } else {
-                    1_000L
+                    0L
                 }
+            val ptoBaseMs =
+                connection.lossDetection
+                    .ptoBaseMs(maxAckDelayMs)
+                    .coerceAtLeast(1L)
             val backoff = (1L shl connection.consecutivePtoCount.coerceAtMost(6))
             val ptoMillis = (ptoBaseMs * backoff).coerceAtMost(60_000L)
             // Suspend until either: a wakeup arrives, or the PTO timer expires.
