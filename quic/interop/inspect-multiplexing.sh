@@ -30,6 +30,11 @@ fi
 echo "==> case dir: $CASE_DIR"
 
 echo
+echo "=============== file tree under case dir ==============="
+find "$CASE_DIR" -maxdepth 4 -type f -printf '%s\t%p\n' 2>/dev/null \
+    || find "$CASE_DIR" -maxdepth 4 -type f -exec ls -l {} + 2>/dev/null
+
+echo
 echo "=============== client/log.txt (tail) ==============="
 tail -n 200 "$CASE_DIR"/client/log.txt 2>/dev/null \
     || echo "(no client/log.txt)"
