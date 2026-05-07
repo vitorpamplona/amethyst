@@ -27,6 +27,20 @@ sourceSets {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    // Forward `-DrunLoadBenchmark=true` to the test JVM so the
+    // perf.LoadBenchmark tests opt in. Off by default — load tests
+    // are noisy and slow.
+    systemProperty("runLoadBenchmark", System.getProperty("runLoadBenchmark") ?: "false")
+    // Show println output from test JVM so the benchmark numbers are
+    // actually visible without grepping the report XML.
+    testLogging {
+        showStandardStreams =
+            (System.getProperty("runLoadBenchmark") == "true")
+        events("standard_out")
+    }
+}
+
 dependencies {
     api(project(":quartz"))
 

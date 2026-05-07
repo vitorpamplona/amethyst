@@ -473,7 +473,13 @@ class LocalRelayServer(
          * this many frames behind, we close their connection rather
          * than silently dropping further frames (which would corrupt
          * NIP-01 by missing EVENT/EOSE messages).
+         *
+         * Sized to hold fan-out for a connection holding several
+         * thousand subscriptions when one event matches all of them
+         * — the realistic upper bound for a relay client. At ~250B
+         * per frame this caps per-session memory at ~2 MiB before
+         * we drop the connection.
          */
-        const val SESSION_OUTGOING_BUFFER: Int = 1024
+        const val SESSION_OUTGOING_BUFFER: Int = 8192
     }
 }
