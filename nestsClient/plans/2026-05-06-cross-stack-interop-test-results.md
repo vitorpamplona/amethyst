@@ -476,6 +476,21 @@ Tracked in branch comments / kdoc but not blocking:
   May be listener-side `MAX_STREAMS_UNI` credit or relay-side
   per-broadcast forward queue. Worth a targeted bug if reproduced
   outside the harness.
+- **Browser hot-swap re-attach** — surfaced when
+  `2026-05-07-tighten-cross-stack-assertions.md` removed the
+  soft-pass on `chromium_listener_speaker_hot_swap_does_not_crash`.
+  Post-`:quic`-merge the test produces only ~100–160 ms of decoded
+  PCM (basically warmup-only) regardless of the 7 s broadcast
+  window. Hypothesis: Chromium's `@moq/lite` 0.2.x client tears
+  down its catalog/audio subscriptions when it sees
+  `Announce::Ended → Active` in rapid succession instead of
+  re-attaching to the new broadcast cycle. The hang-tier
+  counterpart hard-asserts the full post-swap window decodes
+  cleanly, so T12 protection is intact via the hang tier; the
+  browser tier currently only asserts the WT session survived
+  the swap (`pcm.size > warmupSamples`). Worth digging into the
+  `@moq/lite` client + `@moq/hang` `Container.Legacy.Consumer`
+  re-subscribe behaviour around `Active::reset` boundaries.
 
 ## Files
 
