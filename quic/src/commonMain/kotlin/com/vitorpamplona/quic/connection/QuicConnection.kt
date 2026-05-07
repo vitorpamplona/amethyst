@@ -147,32 +147,28 @@ class QuicConnection(
     val handshake = LevelState()
     val application = LevelState()
 
-    /**
-     * RFC 9000 §17.2.5.1: the Retry token the server handed us in a Retry
-     * packet, which we must echo verbatim in the Token field of every
-     * subsequent Initial we send. Null until [applyRetry] runs.
-     */
     @Volatile
-    var retryToken: ByteArray? = null
-        internal set
-
-    /**
-     * RFC 9000 §17.2.5.2: a client MUST NOT process more than one Retry
-     * packet per connection. Any subsequent Retry is silently dropped.
-     * Latched true by [applyRetry] on a successfully-verified Retry.
-     */
-    @Volatile
-    var retryConsumed: Boolean = false
-        internal set
-
     var handshakeComplete: Boolean = false
         private set
 
+    /**
+     * Lock-split refactor (2026-05-08): @Volatile because the writer/parser
+     * read this without acquiring [lifecycleLock] (the field is written
+     * once at handshake completion, then immutable).
+     */
+    @Volatile
     var peerTransportParameters: TransportParameters? = null
         private set
 
     enum class Status { HANDSHAKING, CONNECTED, CLOSING, CLOSED }
 
+    /**
+     * Lock-split refactor (2026-05-08): @Volatile so concurrent loops can
+     * read the status without a lock — coarse "are we still alive?" checks.
+     * Mutating transitions still go through [lifecycleLock] for atomicity
+     * with [closeReason]/[closeErrorCode] updates.
+     */
+    @Volatile
     var status: Status = Status.HANDSHAKING
         internal set
 
@@ -316,7 +312,11 @@ class QuicConnection(
      * emits a PING frame on the next drain. The PING elicits an
      * ACK from the peer; that ACK runs through loss detection and
      * declares any in-flight packets lost, triggering retransmit.
+     *
+     * Lock-split refactor (2026-05-08): @Volatile so the driver
+     * sets it without acquiring any mutex.
      */
+    @Volatile
     internal var pendingPing: Boolean = false
 
     /**
@@ -642,6 +642,13 @@ class QuicConnection(
             maxDatagramFrameSize = config.maxDatagramFrameSize,
         )
 
+    /**
+     * Lock-split refactor (2026-05-08): caller must hold [streamsLock]
+     * because we mutate [streams], [peerMaxStreamsBidi]/Uni, and
+     * [sendConnectionFlowCredit]. Invoked from the TLS listener inside
+     * [QuicConnectionParser.feedDatagram] which acquires [streamsLock]
+     * around CRYPTO-frame handling.
+     */
     private fun applyPeerTransportParameters() {
         val raw = tls.peerTransportParameters ?: return
         val tp = TransportParameters.decode(raw)
@@ -690,13 +697,39 @@ class QuicConnection(
     }
 
     /**
-     * Single mutex protecting connection-wide mutable state: streams map,
-     * datagram queues, stream-id counters, status. The driver acquires this
-     * around its read/send loops; public API methods listed below acquire it
-     * before mutating. Internal-only methods (used only from inside the
-     * driver loops) do NOT lock — caller must hold the lock.
+     * Lock-split refactor (2026-05-08): split the previous single
+     * `lock` into three independent mutexes so the read loop, send
+     * loop, and app coroutines can mostly progress in parallel.
+     *
+     *   - [streamsLock] guards the streams registry, datagram queues,
+     *     stream-id counters and connection-level flow-control bookkeeping.
+     *   - [LevelState.levelLock] (per encryption level) guards the
+     *     packet-number space, sentPackets retention, ackTracker and
+     *     CRYPTO buffers at that level.
+     *   - [lifecycleLock] guards [status]/[closeReason]/[closeErrorCode]
+     *     transitions.
+     *
+     * Acquisition order to prevent deadlock:
+     * `lifecycleLock` → `streamsLock` → `LevelState.levelLock`.
+     * Per-stream synchronized blocks inside `SendBuffer`/`ReceiveBuffer`
+     * remain at the leaf — never acquire any of the above while holding
+     * a per-stream lock.
+     *
+     * The historical `lock` field is retained as an alias of
+     * [lifecycleLock] for source-compatibility with external callers
+     * (tests, harnesses, in-process bridges). New code MUST NOT use it
+     * — it no longer protects streams or level state.
      */
-    val lock: Mutex = Mutex()
+    val streamsLock: Mutex = Mutex()
+
+    val lifecycleLock: Mutex = Mutex()
+
+    @Deprecated(
+        "Use streamsLock / lifecycleLock / LevelState.levelLock as appropriate. Lock-split refactor 2026-05-08.",
+        replaceWith = ReplaceWith("streamsLock"),
+    )
+    val lock: Mutex
+        get() = lifecycleLock
 
     /**
      * Allocate a new client-initiated bidirectional stream. Locked.
@@ -706,25 +739,21 @@ class QuicConnection(
      * check capacity proactively if the caller wants to back-pressure rather
      * than throw.
      */
-    suspend fun openBidiStream(): QuicStream = lock.withLock { openBidiStreamLocked() }
-
-    /**
-     * The connection-lock-holding part of [openBidiStream]. Public so
-     * batched-multiplex callers (interop multiplexing testcase, MoQ
-     * audio rooms emitting many group streams in quick succession) can
-     * acquire [lock] ONCE and bracket multiple stream opens — preventing
-     * the send loop from interjecting between opens and draining one
-     * stream's data per packet. Caller MUST hold [lock].
-     *
-     * The non-batched paths use [openBidiStream] which holds the lock
-     * for one call only.
-     */
-    fun openBidiStreamLocked(): QuicStream {
-        if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
-            throw QuicStreamLimitException(
-                "peer-granted bidi stream cap reached " +
-                    "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
-            )
+    suspend fun openBidiStream(): QuicStream =
+        streamsLock.withLock {
+            if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
+                throw QuicStreamLimitException(
+                    "peer-granted bidi stream cap reached " +
+                        "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
+                )
+            }
+            val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
+            val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
+            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
+            stream.receiveLimit = config.initialMaxStreamDataBidiLocal
+            streams[id] = stream
+            streamsList += stream
+            stream
         }
         val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
         val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
@@ -745,7 +774,7 @@ class QuicConnection(
      * carrying real-time Opus audio.
      */
     suspend fun openUniStream(bestEffort: Boolean = false): QuicStream =
-        lock.withLock {
+        streamsLock.withLock {
             if (nextLocalUniIndex >= peerMaxStreamsUni) {
                 throw QuicStreamLimitException(
                     "peer-granted uni stream cap reached " +
@@ -787,7 +816,7 @@ class QuicConnection(
      * See `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`.
      */
     suspend fun flowControlSnapshot(): QuicFlowControlSnapshot =
-        lock.withLock {
+        streamsLock.withLock {
             val tp = peerTransportParameters
             // Sum bytes the application has enqueued but the writer
             // hasn't yet handed to a STREAM frame. A non-zero value
@@ -826,7 +855,7 @@ class QuicConnection(
             )
         }
 
-    suspend fun pollIncomingPeerStream(): QuicStream? = lock.withLock { newPeerStreams.removeFirstOrNull() }
+    suspend fun pollIncomingPeerStream(): QuicStream? = streamsLock.withLock { newPeerStreams.removeFirstOrNull() }
 
     /**
      * Suspends until a peer-initiated stream is queued OR the connection
@@ -851,7 +880,7 @@ class QuicConnection(
      */
     suspend fun awaitIncomingPeerStream(): QuicStream? {
         while (true) {
-            lock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
+            streamsLock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
             if (status == Status.CLOSED) return null
             // select between "wakeup" and "closed" so neither path can hang.
             val keepWaiting =
@@ -866,17 +895,17 @@ class QuicConnection(
             if (!keepWaiting) {
                 // After a close-wake, drain one more time to surface any
                 // streams added between the last drain and the close.
-                lock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
+                streamsLock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
                 return null
             }
         }
     }
 
-    suspend fun streamById(id: Long): QuicStream? = lock.withLock { streams[id] }
+    suspend fun streamById(id: Long): QuicStream? = streamsLock.withLock { streams[id] }
 
-    suspend fun queueDatagram(payload: ByteArray) = lock.withLock { pendingDatagrams.addLast(payload) }
+    suspend fun queueDatagram(payload: ByteArray) = streamsLock.withLock { pendingDatagrams.addLast(payload) }
 
-    suspend fun pollIncomingDatagram(): ByteArray? = lock.withLock { incomingDatagrams.removeFirstOrNull() }
+    suspend fun pollIncomingDatagram(): ByteArray? = streamsLock.withLock { incomingDatagrams.removeFirstOrNull() }
 
     /**
      * Suspending counterpart of [pollIncomingDatagram]. Returns null only when
@@ -885,7 +914,7 @@ class QuicConnection(
      */
     suspend fun awaitIncomingDatagram(): ByteArray? {
         while (true) {
-            lock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
+            streamsLock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
             if (status == Status.CLOSED) return null
             val keepWaiting =
                 select<Boolean> {
@@ -893,7 +922,7 @@ class QuicConnection(
                     closedSignal.onReceiveCatching { false }
                 }
             if (!keepWaiting) {
-                lock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
+                streamsLock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
                 return null
             }
         }
@@ -904,8 +933,7 @@ class QuicConnection(
         errorCode: Long,
         reason: String,
     ) {
-        var firedQlog = false
-        lock.withLock {
+        lifecycleLock.withLock {
             if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
             closeErrorCode = errorCode
             closeReason = reason
@@ -972,8 +1000,9 @@ class QuicConnection(
     }
 
     /**
-     * Caller must hold [lock]. Used by [QuicConnectionParser] inside the
-     * driver's read loop, which already holds the connection lock.
+     * Caller must hold [streamsLock]. Used by [QuicConnectionParser] inside
+     * the driver's read loop, which already holds [streamsLock] around the
+     * stream-domain section of frame dispatch.
      */
     internal fun getOrCreatePeerStreamLocked(id: Long): QuicStream {
         streams[id]?.let { return it }

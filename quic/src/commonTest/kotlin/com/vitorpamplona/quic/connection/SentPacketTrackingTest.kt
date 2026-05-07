@@ -200,12 +200,12 @@ class SentPacketTrackingTest {
     /** Cross the half-window threshold (cap=4, two peer-uni streams ⇒ count >= cap-half=2). */
     private fun crossPeerUniHalfWindow(client: QuicConnection) =
         runBlocking {
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.getOrCreatePeerStreamLocked(StreamId.build(StreamId.Kind.SERVER_UNI, 0))
                 client.getOrCreatePeerStreamLocked(StreamId.build(StreamId.Kind.SERVER_UNI, 1))
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
         }
 }

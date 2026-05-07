@@ -23,11 +23,26 @@ package com.vitorpamplona.quic.connection
 import com.vitorpamplona.quic.connection.recovery.SentPacket
 import com.vitorpamplona.quic.stream.ReceiveBuffer
 import com.vitorpamplona.quic.stream.SendBuffer
+import kotlinx.coroutines.sync.Mutex
 
 /** Per-encryption-level state owned by [QuicConnection]. */
 class LevelState {
-    var pnSpace = PacketNumberSpaceState()
-        private set
+    /**
+     * Lock-split refactor (2026-05-08): per-level mutex protecting
+     * everything packet-protection / packet-number-space related at this
+     * encryption level. The writer acquires this around the encode +
+     * `sentPackets` record block; the parser acquires it around
+     * `pnSpace.observeInbound` + `ackTracker.receivedPacket` +
+     * `cryptoReceive.insert` + `sentPackets` reads on inbound ACK.
+     *
+     * Acquisition order: `QuicConnection.lifecycleLock` →
+     * `QuicConnection.streamsLock` → `LevelState.levelLock`.
+     * Per-stream `synchronized(this)` blocks inside SendBuffer/ReceiveBuffer
+     * remain at the leaf.
+     */
+    val levelLock: Mutex = Mutex()
+
+    val pnSpace = PacketNumberSpaceState()
 
     var ackTracker =
         com.vitorpamplona.quic.recovery
