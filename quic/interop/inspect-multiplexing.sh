@@ -20,10 +20,10 @@ if [[ -z "$RUN_DIR" ]]; then
 fi
 echo "==> run dir: $RUN_DIR"
 
-# Multiplexing case dir (server/client pair). Glob the only one matching.
-CASE_DIR="$(ls -1d "$RUN_DIR"/multiplexing/*amethyst* 2>/dev/null | head -n 1 || true)"
+# Layout: <run>/<server>_<client>/<testcase>/{client,server,sim}/
+CASE_DIR="$(ls -1d "$RUN_DIR"/*amethyst*/multiplexing 2>/dev/null | head -n 1 || true)"
 if [[ -z "$CASE_DIR" ]]; then
-    echo "no multiplexing/*amethyst* dir; tree under run:" >&2
+    echo "no <pair>/multiplexing dir; tree under run:" >&2
     find "$RUN_DIR" -maxdepth 3 -type d >&2
     exit 1
 fi
@@ -53,6 +53,7 @@ echo
 echo "=============== /downloads contents ==============="
 DL_DIR="$CASE_DIR/download"
 [[ -d "$DL_DIR" ]] || DL_DIR="$CASE_DIR/client/downloads"
+[[ -d "$DL_DIR" ]] || DL_DIR="$CASE_DIR/downloads"
 if [[ -d "$DL_DIR" ]]; then
     DOWNLOADED="$(find "$DL_DIR" -type f | wc -l | tr -d ' ')"
     echo "files downloaded: $DOWNLOADED"
