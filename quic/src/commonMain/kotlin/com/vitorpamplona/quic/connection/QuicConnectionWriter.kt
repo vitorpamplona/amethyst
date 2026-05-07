@@ -568,7 +568,13 @@ private fun buildApplicationPacket(
     nowMillis: Long,
 ): ByteArray? {
     val state = conn.application
-    val proto = state.sendProtection ?: return null
+    // Prefer 1-RTT keys when available; fall back to 0-RTT keys for the
+    // pre-handshake-confirmed window on a resumption connection. Once
+    // 1-RTT lands, [QuicConnection.zeroRttSendProtection] is cleared per
+    // RFC 9001 §4.10 — so the fallback only ever fires before
+    // ServerHello has been processed.
+    val use1Rtt = state.sendProtection != null
+    val proto = state.sendProtection ?: conn.zeroRttSendProtection ?: return null
     val frames = mutableListOf<Frame>()
     // Tokens collected in lock-step with [frames]: each retransmittable
     // frame contributes a [RecoveryToken] so the [SentPacket] recorded
@@ -580,32 +586,39 @@ private fun buildApplicationPacket(
     // tracked for loss-detection timing.
     val tokens = mutableListOf<RecoveryToken>()
 
-    state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { plainAck ->
-        // RFC 9000 §13.4.2: an endpoint that USES ECN on outbound
-        // packets (we set ECT(0) on every datagram via the socket's
-        // IP_TOS option) MUST report ECN counts in 1-RTT ACK frames so
-        // the peer can detect path congestion. We don't currently
-        // read inbound TOS bits — JDK's DatagramChannel doesn't expose
-        // them without JNI — so the counts are all-zero. The interop
-        // runner's `ecn` testcase only checks for the field's presence
-        // (`hasattr(p["quic"], "ack.ect0_count")`); strict peers that
-        // cross-validate counts would reject this, but aioquic /
-        // picoquic / quic-go all tolerate it. Initial / Handshake-space
-        // ACKs stay plain (ecnCounts=null) — the spec allows ECN counts
-        // there too, but interop implementations don't always handle
-        // them and we'd gain nothing.
-        val ackWithEcn =
-            AckFrame(
-                largestAcknowledged = plainAck.largestAcknowledged,
-                ackDelay = plainAck.ackDelay,
-                firstAckRange = plainAck.firstAckRange,
-                additionalRanges = plainAck.additionalRanges,
-                ecnCounts =
-                    com.vitorpamplona.quic.frame
-                        .AckEcnCounts(0L, 0L, 0L),
-            )
-        frames += ackWithEcn
-        tokens += RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = ackWithEcn.largestAcknowledged)
+    // RFC 9000 §17.2.3 — 0-RTT packets MUST NOT contain ACK frames. The
+    // server cannot ACK 0-RTT-level packets because it has no way to
+    // signal which encryption level the ACK targets without the
+    // application packet number space being established by 1-RTT keys.
+    // Skip ACK building when we're about to emit a 0-RTT packet.
+    if (use1Rtt) {
+        state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { plainAck ->
+            // RFC 9000 §13.4.2: an endpoint that USES ECN on outbound
+            // packets (we set ECT(0) on every datagram via the socket's
+            // IP_TOS option) MUST report ECN counts in 1-RTT ACK frames so
+            // the peer can detect path congestion. We don't currently
+            // read inbound TOS bits — JDK's DatagramChannel doesn't expose
+            // them without JNI — so the counts are all-zero. The interop
+            // runner's `ecn` testcase only checks for the field's presence
+            // (`hasattr(p["quic"], "ack.ect0_count")`); strict peers that
+            // cross-validate counts would reject this, but aioquic /
+            // picoquic / quic-go all tolerate it. Initial / Handshake-space
+            // ACKs stay plain (ecnCounts=null) — the spec allows ECN counts
+            // there too, but interop implementations don't always handle
+            // them and we'd gain nothing.
+            val ackWithEcn =
+                AckFrame(
+                    largestAcknowledged = plainAck.largestAcknowledged,
+                    ackDelay = plainAck.ackDelay,
+                    firstAckRange = plainAck.firstAckRange,
+                    additionalRanges = plainAck.additionalRanges,
+                    ecnCounts =
+                        com.vitorpamplona.quic.frame
+                            .AckEcnCounts(0L, 0L, 0L),
+                )
+            frames += ackWithEcn
+            tokens += RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = ackWithEcn.largestAcknowledged)
+        }
     }
 
     // Step 7: PTO probe. The driver sets `pendingPing` when its
@@ -763,20 +776,43 @@ private fun buildApplicationPacket(
     // change visible to the peer.
     val sizeBytes =
         runCatching {
-            ShortHeaderPacket.build(
-                ShortHeaderPlaintextPacket(
-                    conn.destinationConnectionId,
-                    pn,
-                    payload,
-                    keyPhase = conn.currentSendKeyPhase,
-                ),
-                proto.aead,
-                proto.key,
-                proto.iv,
-                proto.hp,
-                proto.hpKey,
-                largestAckedInSpace = -1L,
-            )
+            if (use1Rtt) {
+                ShortHeaderPacket.build(
+                    ShortHeaderPlaintextPacket(
+                        conn.destinationConnectionId,
+                        pn,
+                        payload,
+                        keyPhase = conn.currentSendKeyPhase,
+                    ),
+                    proto.aead,
+                    proto.key,
+                    proto.iv,
+                    proto.hp,
+                    proto.hpKey,
+                    largestAckedInSpace = -1L,
+                )
+            } else {
+                // 0-RTT — long header type=0x01. Same Application packet
+                // number space (RFC 9000 §17.2.3), same DCID/SCID. Token
+                // is empty (only Initial carries a token) — the
+                // LongHeaderPacket builder special-cases that.
+                LongHeaderPacket.build(
+                    LongHeaderPlaintextPacket(
+                        type = LongHeaderType.ZERO_RTT,
+                        version = conn.currentVersion,
+                        dcid = conn.destinationConnectionId,
+                        scid = conn.sourceConnectionId,
+                        packetNumber = pn,
+                        payload = payload,
+                    ),
+                    proto.aead,
+                    proto.key,
+                    proto.iv,
+                    proto.hp,
+                    proto.hpKey,
+                    largestAckedInSpace = -1L,
+                )
+            }
         }
     state.sentPackets[pn] =
         SentPacket(

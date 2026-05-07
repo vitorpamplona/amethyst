@@ -610,6 +610,30 @@ class QuicConnection(
             PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp)
         initial.receiveProtection =
             PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp)
+
+        // Resumption + 0-RTT: pre-load flow-control limits from the
+        // remembered transport parameters so streams opened BEFORE the
+        // new connection's ServerHello arrives have credit to push 0-RTT
+        // STREAM frames on the wire. RFC 9001 §7.4.1 explicitly allows
+        // (in fact requires) the client to use REMEMBERED transport
+        // params for this purpose, while skipping the CID-bound ones
+        // (initial_source_connection_id etc.) which would mismatch the
+        // fresh CIDs we just generated. Server's real new params arrive
+        // in EncryptedExtensions and the existing
+        // [applyPeerTransportParameters] hook then overwrites these
+        // pre-loaded values.
+        if (resumption?.peerTransportParameters != null) {
+            try {
+                val tp = TransportParameters.decode(resumption.peerTransportParameters)
+                sendConnectionFlowCredit = tp.initialMaxData ?: 0L
+                peerMaxStreamsBidi = tp.initialMaxStreamsBidi ?: 0L
+                peerMaxStreamsUni = tp.initialMaxStreamsUni ?: 0L
+            } catch (_: Throwable) {
+                // Bad cached params shouldn't block the connection; we
+                // just won't be able to send 0-RTT data. Server's
+                // real params arrive on EE either way.
+            }
+        }
     }
 
     /** Begin the handshake — emits ClientHello into Initial CRYPTO. */

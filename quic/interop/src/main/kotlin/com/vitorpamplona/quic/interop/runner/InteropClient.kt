@@ -34,6 +34,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -275,7 +276,27 @@ fun main() {
             // the PSK already authenticated us). Different shape from
             // multiconnect (which never resumes) so it has its own
             // dispatch.
-            "resumption" -> {
+            "resumption", "zerortt" -> {
+                // zerortt extends resumption — the runner's testcase
+                // verifies the pcap shows >0 bytes in 0-RTT packets and
+                // ≤50% of total client-direction bytes in 1-RTT. Same
+                // 2-connection shape: connection 1 captures the ticket,
+                // connection 2 resumes. The 0-RTT path activates when
+                // the captured ticket has maxEarlyDataSize > 0 (set
+                // by the issuing server's NewSessionTicket early_data
+                // extension).
+                //
+                // Difference between the two testcases is the URL split:
+                //
+                //  - resumption: split URLs in half across the two
+                //    connections so the runner sees 2 distinct
+                //    handshakes both transferring data.
+                //  - zerortt: connection 1 fetches NOTHING (just hold
+                //    the conn open long enough to receive the
+                //    NewSessionTicket), connection 2 fetches ALL URLs
+                //    via 0-RTT. This keeps iter 0's 1-RTT byte count at
+                //    ~zero so the runner's 50% cap on 1-RTT bytes
+                //    stays comfortably under the limit.
                 runResumptionTest(
                     requests = requests,
                     downloadsDir = downloadsDir,
@@ -284,6 +305,7 @@ fun main() {
                     initialVersion = initialVersion,
                     keyLogPath = keyLogPath,
                     qlogDir = qlogDir,
+                    zerortt = (testcase == "zerortt"),
                 )
             }
 
@@ -681,6 +703,8 @@ private fun runResumptionTest(
     initialVersion: Int,
     keyLogPath: String?,
     qlogDir: File?,
+    /** When true, route ALL URLs to the second (resumed) connection's 0-RTT path. */
+    zerortt: Boolean = false,
 ): Int {
     val urls =
         requests
@@ -698,11 +722,26 @@ private fun runResumptionTest(
     qlogDir?.mkdirs()
     val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
 
-    // Split request list in half: first half on the full-handshake
-    // connection, second half on the resumed PSK connection.
-    val splitAt = urls.size / 2
-    val firstUrls = urls.subList(0, splitAt.coerceAtLeast(1))
-    val secondUrls = urls.subList(splitAt.coerceAtLeast(1), urls.size)
+    // resumption: split URLs in half across the two connections.
+    // zerortt: connection 1 fetches nothing (just gets the
+    // NewSessionTicket), connection 2 fetches all URLs via 0-RTT to
+    // keep the 1-RTT byte count from iter 0 GETs out of the runner's
+    // 1-RTT cap.
+    val firstUrls: List<URI>
+    val secondUrls: List<URI>
+    if (zerortt) {
+        firstUrls = emptyList()
+        secondUrls = urls
+    } else {
+        val splitAt = urls.size / 2
+        firstUrls = urls.subList(0, splitAt.coerceAtLeast(1))
+        secondUrls = urls.subList(splitAt.coerceAtLeast(1), urls.size)
+    }
+
+    // For the zerortt no-data iter 0 we still need a host/port to
+    // connect to — borrow the first URL purely for its authority.
+    val firstUrlsForConnection = if (firstUrls.isEmpty()) urls.subList(0, 1) else firstUrls
+    val firstUrlsForGet = firstUrls
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val outcome =
@@ -712,7 +751,8 @@ private fun runResumptionTest(
             val outcome1 =
                 runOneResumptionConnection(
                     iterIdx = 0,
-                    urls = firstUrls,
+                    urls = firstUrlsForConnection,
+                    fetchUrls = firstUrlsForGet,
                     downloadsDir = downloadsDir,
                     cipherSuites = cipherSuites,
                     offeredAlpns = offeredAlpns,
@@ -736,6 +776,7 @@ private fun runResumptionTest(
                 runOneResumptionConnection(
                     iterIdx = 1,
                     urls = secondUrls,
+                    fetchUrls = secondUrls,
                     downloadsDir = downloadsDir,
                     cipherSuites = cipherSuites,
                     offeredAlpns = offeredAlpns,
@@ -761,7 +802,15 @@ private fun runResumptionTest(
 
 private suspend fun runOneResumptionConnection(
     iterIdx: Int,
+    /** URLs whose authority drives socket connect — must be non-empty. */
     urls: List<URI>,
+    /**
+     * URLs to actually fetch. Distinct from [urls] for the zerortt
+     * iter 0 case where we want to establish a connection (using the
+     * first URL's authority) but not GET anything — the iter exists
+     * solely to receive a NewSessionTicket the next iter can resume on.
+     */
+    fetchUrls: List<URI>,
     downloadsDir: File,
     cipherSuites: IntArray?,
     offeredAlpns: List<Alpn>,
@@ -814,6 +863,40 @@ private suspend fun runOneResumptionConnection(
     val driver = QuicConnectionDriver(conn, socket, scope)
     driver.start()
 
+    // 0-RTT path: when this iteration is on a resumed connection AND the
+    // resumption ticket allowed early data, open the bidi streams and
+    // enqueue the GET requests BEFORE awaiting the handshake. The
+    // writer will pick them up using the 0-RTT keys derived in
+    // onEarlyDataKeysReady (long-header type=0x01) and ship them
+    // alongside (or right after) the ClientHello in the first
+    // datagram. RFC 9001 §4.6 / RFC 8446 §4.2.10 — the server may
+    // accept or reject 0-RTT; if rejected the data is silently lost
+    // on the server side and we'd need to re-send post-handshake. For
+    // the runner's 0-RTT testcase against a server that accepts, we
+    // get away without the rebuild — the server processes the
+    // requests and replies in 1-RTT after handshake.
+    val zeroRttPlanned = resumption != null && resumption.maxEarlyDataSize > 0 && fetchUrls.isNotEmpty()
+    val pre0RttHandles =
+        if (zeroRttPlanned) {
+            // ALPN isn't yet renegotiated for THIS connection (we're
+            // pre-handshake), so use the cached ALPN from the prior
+            // connection — RFC 9001 §4.6 requires the same ALPN when
+            // sending 0-RTT data.
+            val cachedAlpn = resumption!!.negotiatedAlpn?.decodeToString().orEmpty()
+            // Pre-handshake stream open works because QuicConnection.init
+            // pre-loaded peerMaxStreamsBidi from the resumption state.
+            val handles =
+                conn.openBidiStreamsBatch(fetchUrls.map { "GET ${it.path}\r\n".encodeToByteArray() }) { stream, request ->
+                    stream.send.enqueue(request)
+                    stream.send.finish()
+                    stream
+                }
+            driver.wakeup()
+            cachedAlpn to handles
+        } else {
+            null
+        }
+
     val handshake =
         withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
             runCatching { conn.awaitHandshake() }
@@ -846,23 +929,55 @@ private suspend fun runOneResumptionConnection(
         }
 
     var anyFailed = false
-    for (url in urls) {
-        val resp =
-            withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
-                client.get(authority, url.path)
+    if (pre0RttHandles != null) {
+        // 0-RTT path: streams already opened and GETs already enqueued
+        // pre-handshake. Just collect the responses on each stream.
+        // Server may have accepted the 0-RTT data (responses come back)
+        // or rejected it; rejection means data was dropped server-side
+        // and we'd have to resend in 1-RTT, which is real work and not
+        // wired here. For the runner's zerortt testcase against picoquic
+        // (which accepts), this path is sufficient.
+        val (_, handles) = pre0RttHandles
+        for ((url, stream) in fetchUrls.zip(handles)) {
+            val body =
+                withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                    val chunks = stream.incoming.toList()
+                    val total = chunks.sumOf { it.size }
+                    val buf = ByteArray(total)
+                    var off = 0
+                    for (c in chunks) {
+                        c.copyInto(buf, off)
+                        off += c.size
+                    }
+                    buf
+                }
+            if (body == null || body.isEmpty()) {
+                anyFailed = true
+                System.err.println("[resumption:$iterIdx] 0RTT GET ${url.path} → empty/timeout")
+                continue
             }
-        if (resp == null) {
-            anyFailed = true
-            System.err.println("[resumption:$iterIdx] GET ${url.path} → timeout")
-            break
+            val name = url.path.substringAfterLast('/').ifBlank { "index" }
+            File(downloadsDir, name).writeBytes(body)
         }
-        if (resp.status != 200) {
-            System.err.println("[resumption:$iterIdx] GET ${url.path} → status ${resp.status}")
-            anyFailed = true
-            continue
+    } else {
+        for (url in fetchUrls) {
+            val resp =
+                withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                    client.get(authority, url.path)
+                }
+            if (resp == null) {
+                anyFailed = true
+                System.err.println("[resumption:$iterIdx] GET ${url.path} → timeout")
+                break
+            }
+            if (resp.status != 200) {
+                System.err.println("[resumption:$iterIdx] GET ${url.path} → status ${resp.status}")
+                anyFailed = true
+                continue
+            }
+            val name = url.path.substringAfterLast('/').ifBlank { "index" }
+            File(downloadsDir, name).writeBytes(resp.body)
         }
-        val name = url.path.substringAfterLast('/').ifBlank { "index" }
-        File(downloadsDir, name).writeBytes(resp.body)
     }
 
     // Give the server a chance to send its NewSessionTicket — picoquic
