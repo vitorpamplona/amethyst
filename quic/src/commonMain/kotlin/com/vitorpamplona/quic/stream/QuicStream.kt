@@ -114,6 +114,64 @@ class QuicStream(
         get() = send.finSent && receive.finReceived
 
     /**
+     * True once both directions are *fully* settled and the stream may be
+     * removed from the connection's tracking lists (see
+     * `QuicConnection.retireFullyDoneStreamsLocked`). This is strictly
+     * stronger than [isClosed]: the latter only requires the FIN bits to
+     * have been observed, not that the peer has acknowledged our FIN /
+     * RESET (send side) nor that the application has drained the buffered
+     * receive bytes (receive side).
+     *
+     * Lifetime contract:
+     *  - SEND side done: peer has ACK'd our FIN ([SendBuffer.finAcked]) OR
+     *    we ABORTed the stream and the peer ACK'd our RESET_STREAM
+     *    ([resetAcked]). For [Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL]
+     *    there is no send side, so this leg is trivially done.
+     *  - RECEIVE side done: peer FIN'd ([ReceiveBuffer.finReceived]) AND
+     *    every byte has been delivered from the receive buffer to the
+     *    application's incoming Channel ([ReceiveBuffer.isFullyRead]).
+     *    Once both hold, the parser has already invoked [closeIncoming]
+     *    so any application coroutine still draining the buffered
+     *    [incoming] flow will terminate naturally — the QuicStream object
+     *    can outlive its membership in the connection's `streamsList`.
+     *    For [Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE] there is no
+     *    receive side, so this leg is trivially done.
+     *
+     * The motivation is the moq-lite audio-rooms path: each Opus frame is
+     * forwarded as a fresh peer-uni stream by the relay. A 3-hour session
+     * at ~50 frames/sec churns ~540 000 streams. Without retirement,
+     * `streamsList` and the `streams` map grow monotonically — the
+     * `nestsClient/plans/2026-04-26-moq-lite-gap.md` soak target wants
+     * memory flat past handshake-stable. Stream retirement is the only
+     * QUIC-level fix that keeps the tracker bounded for that workload.
+     *
+     * Read this from any thread under the connection's `streamsLock` — the
+     * underlying flags are `@Volatile` and the buffers' synchronized
+     * blocks publish their state atomically.
+     */
+    val isFullyRetired: Boolean
+        get() {
+            val sendSettled =
+                when (direction) {
+                    Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL -> true
+
+                    Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE,
+                    Direction.BIDIRECTIONAL,
+                    -> send.finAcked || resetAcked
+                }
+            if (!sendSettled) return false
+            val recvSettled =
+                when (direction) {
+                    Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE -> true
+
+                    Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL,
+                    Direction.BIDIRECTIONAL,
+                    -> receive.finReceived && receive.isFullyRead()
+                }
+            return recvSettled
+        }
+
+    /**
      * Pushes [data] toward the consumer. Returns false if the bounded channel
      * was full; the caller (parser) is expected to escalate to a connection-
      * level error in that case (audit-4 #3 — silent data loss is unacceptable

@@ -301,14 +301,54 @@ class QuicConnection(
     /**
      * Round-4 perf #10: parallel insertion-ordered list of streams so the
      * writer's round-robin scan can index by position without
-     * `streams.entries.toList()` allocating per drain. Streams are only ever
-     * added (no removal in the current model), so the two stay in sync as
-     * long as `getOrCreatePeerStreamLocked` and `openBidi/UniStream` append
-     * to both.
+     * `streams.entries.toList()` allocating per drain. Mutated in lockstep
+     * with [streams] under [streamsLock]:
+     *  - [openBidiStreamLocked] / [openUniStreamLocked] /
+     *    [getOrCreatePeerStreamLocked] append.
+     *  - [retireFullyDoneStreamsLocked] removes entries whose stream has
+     *    flipped [QuicStream.isFullyRetired] = true. The retire pass
+     *    folds the receive-side high-water mark into
+     *    [retiredStreamsRecvBytes] so the writer's MAX_DATA accounting
+     *    in `appendFlowControlUpdates` doesn't regress when a retired
+     *    stream's `receive.contiguousEnd()` drops out of the iteration.
+     *
+     * Without retirement, the moq-lite audio-rooms path leaks one
+     * QuicStream per Opus frame for the lifetime of the session — the
+     * stream-cliff investigation in
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`
+     * pegs steady-state churn at ~50 streams/sec, so a 3-hour room
+     * accumulates ~540 000 entries before retirement was wired.
      */
     private val streamsList = mutableListOf<QuicStream>()
     private var nextLocalBidiIndex: Long = 0L
     private var nextLocalUniIndex: Long = 0L
+
+    /**
+     * Cumulative `receive.contiguousEnd()` from streams that have been
+     * removed by [retireFullyDoneStreamsLocked]. Folded into the writer's
+     * `totalRecvAdvanced` accumulator so MAX_DATA continues to advertise
+     * the *connection-lifetime* receive high-water mark even after the
+     * contributing streams have been dropped from [streamsList]. Without
+     * this, retiring N streams that each delivered K bytes would silently
+     * regress the advertised connection-level credit by N*K, eventually
+     * starving the peer once `advertisedMaxData` was tripped past.
+     *
+     * Caller of any read/write must hold [streamsLock].
+     */
+    internal var retiredStreamsRecvBytes: Long = 0L
+        private set
+
+    /**
+     * Cumulative count of streams ever removed by
+     * [retireFullyDoneStreamsLocked]. Diagnostic-only; tests that drive
+     * stream churn use this to assert retirement actually fired (rather
+     * than relying on `streamsList.size` alone, which can shrink because
+     * a soak loop happened to drain the same workload it just enqueued).
+     *
+     * Caller of any read/write must hold [streamsLock].
+     */
+    internal var retiredStreamsCount: Long = 0L
+        private set
 
     /**
      * Peer-advertised concurrent bidirectional stream cap. Initialised from
@@ -1685,10 +1725,74 @@ class QuicConnection(
     /**
      * Insertion-ordered list view used by the writer's round-robin scan.
      * Stays in sync with [streams] because the only mutation paths
-     * (openBidi/UniStream, getOrCreatePeerStreamLocked) append to both. No
-     * remove path exists today; if/when one is added it MUST update both.
+     * (openBidi/UniStream, getOrCreatePeerStreamLocked,
+     * retireFullyDoneStreamsLocked) update both.
      */
     internal fun streamsListLocked(): List<QuicStream> = streamsList
+
+    /**
+     * Walk [streamsList] once and remove every stream whose
+     * [QuicStream.isFullyRetired] flag is true. Drops the entry from both
+     * [streamsList] and [streams]. Receive-side high-water marks fold
+     * into [retiredStreamsRecvBytes] so the writer's connection-level
+     * MAX_DATA accounting continues to see the lifetime total.
+     *
+     * Returns the number of streams removed in this pass.
+     *
+     * Caller MUST hold [streamsLock]. The writer drains under
+     * `streamsLock`, so calling this from the top of `buildApplicationPacket`
+     * is the natural place — it runs once per send pass, sees the latest
+     * FIN/RESET ACK state from the parser's just-finished processing, and
+     * the iteration order matches the writer's per-pass round-robin
+     * (so the rotation cursor doesn't accidentally point at a hole).
+     *
+     * Why retirement is safe even though the QUIC spec requires the peer
+     * to deliver retransmits if its ACK never reached us:
+     *  - SEND side waits for `finAcked` / `resetAcked`, i.e. the peer has
+     *    already confirmed receipt of our FIN. After that point the peer
+     *    will not re-send anything on the stream.
+     *  - RECEIVE side waits for the parser to have pushed every byte to
+     *    the application's incoming Channel ([ReceiveBuffer.isFullyRead]).
+     *    Subsequent retransmits from the peer (rare — peer only retransmits
+     *    if its own loss-detection fires) would land on a fresh stream
+     *    object created by [getOrCreatePeerStreamLocked], deliver
+     *    duplicate bytes, and re-fire FIN to a closed channel; the moq-lite
+     *    listener treats duplicates as no-ops, so the failure mode is "a
+     *    bit of wasted CPU" rather than "wrong audio". The alternative
+     *    (retain every stream forever) is a hard memory leak in soak.
+     */
+    internal fun retireFullyDoneStreamsLocked(): Int {
+        if (streamsList.isEmpty()) return 0
+        var removed = 0
+        val it = streamsList.iterator()
+        while (it.hasNext()) {
+            val stream = it.next()
+            if (!stream.isFullyRetired) continue
+            // Fold the per-stream receive high-water into the cumulative
+            // counter BEFORE we drop it — once we lose the reference the
+            // writer can no longer reconstruct the contribution.
+            retiredStreamsRecvBytes += stream.receive.contiguousEnd()
+            // Defence-in-depth: ensure the application-side incoming
+            // channel is closed even if the parser somehow missed the
+            // closeIncoming call (e.g. a stream that finished via
+            // resetAcked never having received any STREAM frame at all).
+            // closeIncoming is idempotent.
+            stream.closeIncoming()
+            streams.remove(stream.streamId)
+            it.remove()
+            removed++
+        }
+        if (removed > 0) {
+            retiredStreamsCount += removed.toLong()
+            // The writer's round-robin cursor is a position in
+            // [streamsList], so a removal that crossed the cursor would
+            // make the next drain pass skip a tier. Reset to 0 — the
+            // round-robin is just a fairness hint, not a semantic
+            // requirement.
+            streamRoundRobinStart = 0
+        }
+        return removed
+    }
 
     /** Caller must hold [lock]. Pending datagram queue for the driver's send loop. */
     internal fun pendingDatagramsLocked(): ArrayDeque<ByteArray> = pendingDatagrams

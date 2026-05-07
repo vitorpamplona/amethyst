@@ -65,6 +65,30 @@ class QuicConnectionDriver(
     private var sendJob: Job? = null
 
     /**
+     * Test-only handle on the driver's [SupervisorJob]. Used by the
+     * session-lifecycle leak test in
+     * [com.vitorpamplona.quic.connection.QuicConnectionDriverLifecycleTest]
+     * to assert that a closed driver reports `isCompleted = true` once
+     * its read/send loops have unwound — the inverse of "the driver
+     * leaked a coroutine past close()".
+     *
+     * Production code MUST NOT touch this — the driver lifecycle is
+     * managed end-to-end by [start] / [close].
+     */
+    internal val driverJob: Job get() = job
+
+    /**
+     * Test-only handle on the in-flight teardown coroutine. Returns null
+     * before [close] has been called; once close runs, the returned Job
+     * lets the test `join()` until teardown is complete (cancel + socket
+     * close + read/send join). Pre-existing close() returned immediately
+     * and provided no synchronous "teardown is done" signal — tests had
+     * to poll `connection.status == CLOSED` and trust that the rest of
+     * the cleanup eventually settled.
+     */
+    internal val closeTeardownJob: Job? get() = closeJob
+
+    /**
      * Round-5 concurrency #5: close() guard. A second concurrent invocation
      * (e.g. session close + read-loop death close racing) used to launch a
      * parallel teardown that called scope.cancel() and socket.close() while
