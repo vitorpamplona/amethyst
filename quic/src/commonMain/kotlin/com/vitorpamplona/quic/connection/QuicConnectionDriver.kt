@@ -154,12 +154,43 @@ class QuicConnectionDriver(
                     Unit
                 }
             if (woke == null) {
-                // PTO fired. Set pendingPing so the writer emits a
-                // PING on the next drain (RFC 9002 §6.2.4 probe
-                // packet). The peer's ACK feeds loss detection +
-                // retransmit (steps 5–6). Both fields are @Volatile;
-                // no lock required.
+                // PTO fired. RFC 9002 §6.2.4: the probe packet MUST
+                // be ack-eliciting at the encryption level with
+                // unacknowledged data, and SHOULD retransmit lost
+                // data rather than just emit a PING.
+                //
+                // Pre-1-RTT we have a concrete thing to retransmit:
+                // the unacknowledged ClientHello (at Initial) or
+                // ClientFinished (at Handshake). Requeue ALL
+                // currently-inflight CRYPTO bytes for the highest
+                // active pre-application level so the next drain's
+                // takeChunk emits a fresh CRYPTO frame at the
+                // original offset. pendingPing stays set as a
+                // fallback only — `collectHandshakeLevelFrames`
+                // skips the PING when CRYPTO is in the same frame
+                // list. aioquic strictly rejects pre-handshake
+                // Initials with no CRYPTO frame ("Packet contains
+                // no CRYPTO frame"), so a bare-PING probe is fatal.
+                //
+                // Post-handshake (1-RTT installed) we keep the
+                // bare-PING behavior; STREAM retransmit is driven
+                // by ACK-driven packet-threshold loss detection.
+                //
+                // pendingPing + consecutivePtoCount are @Volatile.
+                // requeueAllInflightCrypto mutates the level's
+                // cryptoSend buffer; the writer reads it under
+                // levelLock during drainOutbound, so we take that
+                // lock for the requeue to avoid racing the writer's
+                // takeChunk with our requeue mid-build.
                 connection.pendingPing = true
+                if (connection.application.sendProtection == null) {
+                    val level = highestPreApplicationLevel(connection)
+                    if (level != null) {
+                        connection.levelState(level).levelLock.withLock {
+                            connection.requeueAllInflightCrypto(level)
+                        }
+                    }
+                }
                 connection.consecutivePtoCount =
                     (connection.consecutivePtoCount + 1).coerceAtMost(6)
             }
