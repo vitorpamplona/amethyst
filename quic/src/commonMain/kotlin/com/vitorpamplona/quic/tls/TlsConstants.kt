@@ -54,6 +54,8 @@ object TlsConstants {
     const val EXT_SIGNATURE_ALGORITHMS: Int = 13
     const val EXT_ALPN: Int = 16
     const val EXT_SUPPORTED_VERSIONS: Int = 43
+    const val EXT_PRE_SHARED_KEY: Int = 41
+    const val EXT_EARLY_DATA: Int = 42
     const val EXT_PSK_KEY_EXCHANGE_MODES: Int = 45
     const val EXT_KEY_SHARE: Int = 51
 

@@ -106,6 +106,35 @@ class QuicConnection(
      * produces a `client.sqlog` consumable by qvis.
      */
     val qlogObserver: QlogObserver = QlogObserver.NoOp,
+    /**
+     * Resumption state from a prior connection — when non-null, this
+     * connection's ClientHello will offer a `pre_shared_key` extension
+     * referencing the cached ticket, and the key schedule will seed
+     * the early secret from the cached PSK rather than zeros (RFC 8446
+     * §7.1). On a successful PSK negotiation the server skips
+     * Certificate / CertificateVerify and we save a round-trip plus
+     * ~1 KB of cert bytes.
+     *
+     * Caller produces this from [onResumptionTicket] on a previous
+     * connection. The interop runner's `resumption` testcase exercises
+     * exactly this: connection 1 receives a NewSessionTicket and
+     * stashes the state, connection 2 reuses it.
+     */
+    val resumption: com.vitorpamplona.quic.tls.TlsResumptionState? = null,
+    /**
+     * Hook invoked when the server issues a NewSessionTicket. The TLS
+     * layer derives the per-ticket PSK and surfaces a fully-formed
+     * [com.vitorpamplona.quic.tls.TlsResumptionState]; the QUIC
+     * connection passes it through here so the application can stash it
+     * (e.g. in a per-host resumption cache) for a future reconnect.
+     *
+     * Default no-op so existing callers compile unchanged. Servers
+     * routinely issue 1-2 tickets per connection — the callback may
+     * fire more than once, and the application is free to keep all of
+     * them (a small per-host LRU is the typical shape) or just the
+     * latest.
+     */
+    val onResumptionTicket: ((com.vitorpamplona.quic.tls.TlsResumptionState) -> Unit)? = null,
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
     var destinationConnectionId: ConnectionId = ConnectionId.random(8)
@@ -500,6 +529,11 @@ class QuicConnection(
                 handshakeDoneSignal.complete(Unit)
                 extraSecretsListener?.onHandshakeComplete()
             }
+
+            override fun onNewSessionTicket(state: com.vitorpamplona.quic.tls.TlsResumptionState) {
+                onResumptionTicket?.invoke(state)
+                extraSecretsListener?.onNewSessionTicket(state)
+            }
         }
 
     private val handshakeDoneSignal = CompletableDeferred<Unit>()
@@ -525,6 +559,7 @@ class QuicConnection(
             certificateValidator = tlsCertificateValidator,
             offeredAlpns = alpnList,
             cipherSuites = cipherSuites,
+            resumption = resumption,
         )
 
     init {

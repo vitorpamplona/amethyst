@@ -268,6 +268,25 @@ fun main() {
                 )
             }
 
+            // resumption: two sequential connections — the second
+            // resumes via PSK from the NewSessionTicket the first
+            // captured. Runner verifies the second handshake's pcap
+            // doesn't carry a Certificate (server skipped it because
+            // the PSK already authenticated us). Different shape from
+            // multiconnect (which never resumes) so it has its own
+            // dispatch.
+            "resumption" -> {
+                runResumptionTest(
+                    requests = requests,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogPath = keyLogPath,
+                    qlogDir = qlogDir,
+                )
+            }
+
             // keyupdate: same transfer flow but the client initiates a
             // RFC 9001 §6 1-RTT key update once the handshake is
             // confirmed. Runner verifies pcap shows BOTH client and
@@ -638,6 +657,223 @@ private fun runTransferTest(
         System.err.println("transfer $outcome")
         EXIT_FAIL
     }
+}
+
+/**
+ * Two QUIC connections, second resumed via PSK (resumption testcase).
+ *
+ * The runner's `resumption` testcase verifies the pcap contains exactly
+ * 2 handshakes — the first carrying the server's Certificate, the second
+ * NOT. We split the request URLs in half, fetch the first half on a
+ * fresh connection (capturing the NewSessionTicket the server issues
+ * post-handshake), then open a second connection with the cached
+ * [TlsResumptionState]; the second handshake is PSK-bound so the server
+ * skips Certificate / CertificateVerify entirely.
+ *
+ * Per-iteration qlog files at `$QLOGDIR/client-N.sqlog` so a stuck
+ * connection leaves a focused trace.
+ */
+private fun runResumptionTest(
+    requests: String,
+    downloadsDir: File,
+    cipherSuites: IntArray?,
+    offeredAlpns: List<Alpn>,
+    initialVersion: Int,
+    keyLogPath: String?,
+    qlogDir: File?,
+): Int {
+    val urls =
+        requests
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .map { runCatching { URI(it) }.getOrNull() }
+            .filter { it != null && it.host != null }
+            .map { it!! }
+    if (urls.size < 2) {
+        System.err.println("resumption needs at least 2 URLs (got ${urls.size})")
+        return EXIT_FAIL
+    }
+
+    downloadsDir.mkdirs()
+    qlogDir?.mkdirs()
+    val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
+
+    // Split request list in half: first half on the full-handshake
+    // connection, second half on the resumed PSK connection.
+    val splitAt = urls.size / 2
+    val firstUrls = urls.subList(0, splitAt.coerceAtLeast(1))
+    val secondUrls = urls.subList(splitAt.coerceAtLeast(1), urls.size)
+
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val outcome =
+        runBlocking {
+            // Connection 1 — full handshake, capture session ticket.
+            var capturedTicket: com.vitorpamplona.quic.tls.TlsResumptionState? = null
+            val outcome1 =
+                runOneResumptionConnection(
+                    iterIdx = 0,
+                    urls = firstUrls,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogger = keyLogger,
+                    qlogDir = qlogDir,
+                    scope = scope,
+                    resumption = null,
+                    onTicket = { capturedTicket = it },
+                )
+            if (outcome1 != "ok") return@runBlocking "resumption[0] $outcome1"
+            if (capturedTicket == null) return@runBlocking "resumption[0] no_ticket"
+
+            // Brief pause so the server fully tears down its connection
+            // state before we try to resume — picoquic in particular
+            // races the close-flush against the next ClientHello.
+            delay(50)
+
+            // Connection 2 — PSK-resumed handshake.
+            val outcome2 =
+                runOneResumptionConnection(
+                    iterIdx = 1,
+                    urls = secondUrls,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogger = keyLogger,
+                    qlogDir = qlogDir,
+                    scope = scope,
+                    resumption = capturedTicket,
+                    onTicket = { /* could refresh, but the test is done */ },
+                )
+            if (outcome2 != "ok") return@runBlocking "resumption[1] $outcome2"
+            "ok"
+        }
+    scope.cancel()
+
+    return if (outcome == "ok") {
+        EXIT_OK
+    } else {
+        System.err.println("resumption $outcome")
+        EXIT_FAIL
+    }
+}
+
+private suspend fun runOneResumptionConnection(
+    iterIdx: Int,
+    urls: List<URI>,
+    downloadsDir: File,
+    cipherSuites: IntArray?,
+    offeredAlpns: List<Alpn>,
+    initialVersion: Int,
+    keyLogger: SslKeyLogger?,
+    qlogDir: File?,
+    scope: CoroutineScope,
+    resumption: com.vitorpamplona.quic.tls.TlsResumptionState?,
+    onTicket: (com.vitorpamplona.quic.tls.TlsResumptionState) -> Unit,
+): String {
+    val first = urls[0]
+    val host = first.host
+    val port = first.port.takeIf { it > 0 } ?: 443
+    val authority = if (port == 443) host else "$host:$port"
+
+    val socket =
+        try {
+            UdpSocket.connect(host, port)
+        } catch (t: Throwable) {
+            return "udp_failed: ${t.message ?: t::class.simpleName}"
+        }
+    val qlogWriter =
+        qlogDir?.let { dir ->
+            QlogWriter(file = File(dir, "client-$iterIdx.sqlog"), odcidHex = "client$iterIdx")
+        }
+    val conn =
+        QuicConnection(
+            serverName = host,
+            config =
+                QuicConnectionConfig(
+                    initialMaxData = 32L * 1024 * 1024,
+                    initialMaxStreamDataBidiLocal = 32L * 1024 * 1024,
+                    initialMaxStreamDataBidiRemote = 32L * 1024 * 1024,
+                    initialMaxStreamDataUni = 32L * 1024 * 1024,
+                ),
+            tlsCertificateValidator = PermissiveCertificateValidator(),
+            alpnList = offeredAlpns.map { it.wireBytes },
+            initialVersion = initialVersion,
+            cipherSuites =
+                cipherSuites
+                    ?: intArrayOf(
+                        TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+                        TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+                    ),
+            extraSecretsListener = keyLogger?.listener,
+            qlogObserver = qlogWriter ?: com.vitorpamplona.quic.observability.QlogObserver.NoOp,
+            resumption = resumption,
+            onResumptionTicket = onTicket,
+        )
+    val driver = QuicConnectionDriver(conn, socket, scope)
+    driver.start()
+
+    val handshake =
+        withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
+            runCatching { conn.awaitHandshake() }
+        }
+    if (handshake == null || handshake.isFailure) {
+        runCatching { driver.close() }
+        conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+        runCatching { qlogWriter?.close() }
+        return "handshake_failed"
+    }
+
+    val negotiated =
+        conn.tls.negotiatedAlpn
+            ?.decodeToString()
+            .orEmpty()
+    val client: GetClient =
+        when (negotiated) {
+            "h3" -> {
+                Http3GetClient(conn, driver).also { it.init(scope) }
+            }
+
+            "hq-interop" -> {
+                HqInteropGetClient(conn, driver)
+            }
+
+            else -> {
+                System.err.println("[resumption:$iterIdx] unrecognized ALPN '$negotiated'; defaulting to hq-interop")
+                HqInteropGetClient(conn, driver)
+            }
+        }
+
+    var anyFailed = false
+    for (url in urls) {
+        val resp =
+            withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                client.get(authority, url.path)
+            }
+        if (resp == null) {
+            anyFailed = true
+            System.err.println("[resumption:$iterIdx] GET ${url.path} → timeout")
+            break
+        }
+        if (resp.status != 200) {
+            System.err.println("[resumption:$iterIdx] GET ${url.path} → status ${resp.status}")
+            anyFailed = true
+            continue
+        }
+        val name = url.path.substringAfterLast('/').ifBlank { "index" }
+        File(downloadsDir, name).writeBytes(resp.body)
+    }
+
+    // Give the server a chance to send its NewSessionTicket — picoquic
+    // in particular emits the ticket a few hundred ms post-handshake,
+    // sometimes alongside the response stream's FIN.
+    delay(200)
+
+    runCatching { driver.close() }
+    conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+    runCatching { qlogWriter?.close() }
+    return if (anyFailed) "request_failed" else "ok"
 }
 
 /**

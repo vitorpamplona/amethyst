@@ -81,6 +81,32 @@ class TlsClient(
             TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
             TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
         ),
+    /**
+     * Wall-clock provider for the NewSessionTicket [issuedAtMillis] stamp.
+     * Tests inject a fixed clock; production uses System.currentTimeMillis().
+     * Stored at issue-time only — the obfuscated_ticket_age the next
+     * connection emits is `(now_at_resume - issuedAtMillis + ticketAgeAdd)
+     * mod 2^32`, so a slightly stale clock skew is harmless (the server
+     * de-obfuscates and only cares about its own tracked age window).
+     */
+    val nowMillisSource: () -> Long = { System.currentTimeMillis() },
+    /**
+     * If non-null, this connection resumes a prior session via PSK rather
+     * than running a full handshake. The TLS layer:
+     *  - Seeds the early secret from [TlsResumptionState.psk] instead of
+     *    zeros (RFC 8446 §7.1).
+     *  - Adds `pre_shared_key` as the last ClientHello extension, with
+     *    the cached ticket as the identity and a binder computed over
+     *    the partial ClientHello.
+     *  - Tolerates the server skipping Certificate / CertificateVerify
+     *    when it accepts the PSK (server only sends them on full
+     *    handshakes).
+     *
+     * Caller's responsibility to ensure the resumption state is fresh
+     * (within `ticket_lifetime` seconds of issue) and bound to a cipher
+     * suite this client offers.
+     */
+    val resumption: TlsResumptionState? = null,
 ) {
     enum class State {
         INITIAL,
@@ -131,6 +157,15 @@ class TlsClient(
     private var sharedSecret: ByteArray? = null
     private var negotiatedCipherSuite: Int = -1
 
+    /**
+     * True after ServerHello carries a `pre_shared_key` extension with the
+     * `selected_identity` we offered. When set, the state machine accepts
+     * Finished immediately after EncryptedExtensions (no Certificate /
+     * CertificateVerify path) and the application-traffic secrets are
+     * computed off the PSK-seeded early secret rather than zeros.
+     */
+    private var pskAccepted: Boolean = false
+
     /** The 32-byte ClientHello random, available after [start]. Exposed so
      *  observers (e.g. SSLKEYLOGFILE writer) can correlate secrets with
      *  this connection. */
@@ -142,24 +177,72 @@ class TlsClient(
         check(state == State.INITIAL) { "TlsClient already started" }
         keyPair = fixedKeyPair ?: X25519.generateKeyPair()
 
-        keySchedule.deriveEarly()
+        // Seed the early secret. Resumption path uses the cached PSK as
+        // IKM (RFC 8446 §7.1) so the binder for the pre_shared_key
+        // extension can be derived from the same early secret the server
+        // will use to validate it. Non-resumption path uses zero IKM.
+        if (resumption != null) {
+            keySchedule.deriveEarlyFromPsk(resumption.psk)
+        } else {
+            keySchedule.deriveEarly()
+        }
 
         val random =
             fixedRandom ?: com.vitorpamplona.quartz.utils.RandomInstance
                 .bytes(32)
         clientRandom = random
 
-        val ch =
-            buildQuicClientHello(
-                serverName = serverName,
-                x25519PublicKey = keyPair!!.publicKey,
-                quicTransportParams = transportParameters,
-                alpns = offeredAlpns,
-                random = random,
-                cipherSuites = cipherSuites,
-            )
+        val chBytes =
+            if (resumption != null) {
+                // Resumption ClientHello carries pre_shared_key (last
+                // extension per spec) with binder bound to the partial CH
+                // hash. obfuscated_ticket_age = (current_age + ticket_age_add)
+                // mod 2^32. We use the local clock — server's de-obfuscation
+                // only cares about its own tracked age window.
+                val ageMillis = (nowMillisSource() - resumption.issuedAtMillis).coerceAtLeast(0L)
+                val obfuscatedAge = (ageMillis + resumption.ticketAgeAdd) and 0xFFFFFFFFL
+                val binderFinishedKey = pskBinderFinishedKey(keySchedule.earlySecret!!)
+                buildResumptionClientHelloBytes(
+                    serverName = serverName,
+                    x25519PublicKey = keyPair!!.publicKey,
+                    quicTransportParams = transportParameters,
+                    alpns = offeredAlpns,
+                    random = random,
+                    cipherSuites = cipherSuites,
+                    ticket = resumption.ticket,
+                    obfuscatedTicketAge = obfuscatedAge,
+                    binderFinishedKey = binderFinishedKey,
+                    transcriptHashOfPartialCh = { partial ->
+                        // Hash a one-shot copy of the running transcript
+                        // would-be-state: an empty TlsRunningSha256 fed
+                        // partial-CH-bytes is identical to running the
+                        // shared transcript "as if" we'd appended
+                        // partial-CH and snapshotted.
+                        val h = TlsRunningSha256()
+                        h.update(partial)
+                        h.snapshot()
+                    },
+                    binderHmac = { key, data ->
+                        val mac =
+                            com.vitorpamplona.quartz.utils.mac
+                                .MacInstance("HmacSHA256", key)
+                        mac.update(data)
+                        mac.doFinal()
+                    },
+                )
+            } else {
+                val ch =
+                    buildQuicClientHello(
+                        serverName = serverName,
+                        x25519PublicKey = keyPair!!.publicKey,
+                        quicTransportParams = transportParameters,
+                        alpns = offeredAlpns,
+                        random = random,
+                        cipherSuites = cipherSuites,
+                    )
+                ch.encode()
+            }
 
-        val chBytes = ch.encode()
         transcript.append(chBytes)
         outboundQueues[Level.INITIAL]!!.addLast(chBytes)
         state = State.WAITING_SERVER_HELLO
@@ -235,6 +318,36 @@ class TlsClient(
                 }
                 negotiatedCipherSuite = cipher
                 serverKeyShare = sh.serverKeyShareX25519
+
+                // RFC 8446 §4.2.11 — server signals PSK acceptance with a
+                // pre_shared_key extension carrying selected_identity (uint16).
+                // We only ever offer one identity, so anything other than 0
+                // is a protocol violation.
+                val pskExt = sh.extensions.firstOrNull { it.type == TlsConstants.EXT_PRE_SHARED_KEY }
+                if (resumption != null) {
+                    if (pskExt == null) {
+                        // We offered PSK but server picked full-handshake.
+                        // Plumbing for the fallback path (clear early secret,
+                        // re-run binder-less ClientHello transcript) is real
+                        // work; for now hard-fail. In production we'd want
+                        // to handle gracefully — for the runner's resumption
+                        // testcase the server MUST accept or the test fails
+                        // anyway, so this gate isn't load-bearing.
+                        throw QuicCodecException(
+                            "server rejected PSK; full-handshake fallback not implemented",
+                        )
+                    }
+                    val r = QuicReader(pskExt.data)
+                    val selectedIdentity = r.readUint16()
+                    if (selectedIdentity != 0) {
+                        throw QuicCodecException(
+                            "server selected PSK identity $selectedIdentity but we only offered 0",
+                        )
+                    }
+                    pskAccepted = true
+                } else if (pskExt != null) {
+                    throw QuicCodecException("server picked PSK we never offered")
+                }
                 transcript.append(msg)
 
                 val privKey = keyPair!!.privateKey
@@ -282,16 +395,26 @@ class TlsClient(
                     }
 
                     TlsConstants.HS_FINISHED -> {
-                        // Audit-4 #3: we never offer a `pre_shared_key`
-                        // extension, so a server MUST send Certificate +
-                        // CertificateVerify. A Finished here means a
-                        // misbehaving server (or an MITM that stripped the
-                        // cert messages). Hard-fail rather than completing
-                        // a handshake with no peer authentication.
-                        throw QuicCodecException(
-                            "server skipped Certificate/CertificateVerify but we never offered PSK " +
-                                "(unauthenticated handshake refused)",
-                        )
+                        if (!pskAccepted) {
+                            // Audit-4 #3: we never offered (or never had
+                            // accepted) a `pre_shared_key` extension, so a
+                            // server MUST send Certificate +
+                            // CertificateVerify. A Finished here means a
+                            // misbehaving server (or an MITM that stripped
+                            // the cert messages). Hard-fail rather than
+                            // completing a handshake with no peer
+                            // authentication.
+                            throw QuicCodecException(
+                                "server skipped Certificate/CertificateVerify but we never offered PSK " +
+                                    "(unauthenticated handshake refused)",
+                            )
+                        }
+                        // Resumption path: server accepted our PSK so it
+                        // skips Certificate / CertificateVerify (the PSK
+                        // itself authenticates the server through the
+                        // earlier full handshake that issued the ticket).
+                        // Process Finished directly.
+                        handleServerFinished(msg, bodyReader, len)
                     }
 
                     else -> {
@@ -327,6 +450,25 @@ class TlsClient(
                     TlsConstants.HS_NEW_SESSION_TICKET -> {
                         // Don't append to transcript — NewSessionTicket is not
                         // part of the handshake transcript per RFC 8446 §4.4.1.
+                        // Parse the ticket, derive a PSK from it +
+                        // resumption_master_secret, and surface a
+                        // [TlsResumptionState] to the listener so the QUIC
+                        // layer can stash it for the next connection.
+                        val rms = keySchedule.resumptionMasterSecret
+                        if (rms != null) {
+                            val ticket = parseNewSessionTicketBody(bodyReader)
+                            val psk = resumptionPsk(rms, ticket.nonce)
+                            secretsListener.onNewSessionTicket(
+                                TlsResumptionState(
+                                    ticket = ticket.ticket,
+                                    psk = psk,
+                                    cipherSuite = currentCipherSuite(),
+                                    ticketAgeAdd = ticket.ticketAgeAdd,
+                                    ticketLifetimeSec = ticket.ticketLifetimeSec,
+                                    issuedAtMillis = nowMillisSource(),
+                                ),
+                            )
+                        }
                     }
 
                     TlsConstants.HS_KEY_UPDATE -> {
@@ -377,6 +519,12 @@ class TlsClient(
         transcript.append(cfBytes)
         outboundQueues[Level.HANDSHAKE]!!.addLast(cfBytes)
 
+        // Derive resumption_master_secret AFTER appending client Finished —
+        // RFC 8446 §7.1 binds it to H(CH..client_Finished). Future
+        // NewSessionTicket frames will derive their PSKs off this secret
+        // plus the server-supplied ticket_nonce.
+        keySchedule.deriveResumption(transcript.snapshot())
+
         state = State.SENT_CLIENT_FINISHED
         secretsListener.onHandshakeComplete()
     }
@@ -402,7 +550,56 @@ interface TlsSecretsListener {
     )
 
     fun onHandshakeComplete()
+
+    /**
+     * Server issued a NewSessionTicket. The TLS layer hands off a
+     * ready-to-use [TlsResumptionState] capturing everything the next
+     * connection needs for PSK-based resumption: the opaque ticket, the
+     * derived PSK, the cipher suite the secret was bound to, and the
+     * obfuscation parameters. The QUIC layer's only job is to stash this
+     * somewhere the next [TlsClient] construction can read it from.
+     *
+     * Default no-op so existing callers (which don't care about
+     * resumption) compile unchanged. Multiple invocations are possible
+     * — RFC 8446 lets servers issue several tickets per connection. The
+     * caller may keep all of them or just the latest; for the
+     * quic-interop-runner `resumption` testcase keeping the latest
+     * suffices.
+     */
+    fun onNewSessionTicket(state: TlsResumptionState) = Unit
 }
+
+/**
+ * Self-contained state needed to resume a TLS 1.3 session via PSK on the
+ * next connection. Produced by the TLS layer when a NewSessionTicket
+ * arrives; consumed by a fresh [TlsClient] via its `resumption`
+ * constructor argument.
+ *
+ * Why store all this rather than just the ticket: the PSK derivation
+ * binds to a specific cipher suite (32-byte hash for our SHA-256 suites)
+ * so we can't re-derive on the fly without that suite, and the
+ * obfuscation arithmetic on the next connection needs both
+ * [ticketAgeAdd] and [issuedAtMillis] to compute the obfuscated_ticket_age
+ * the server expects.
+ */
+data class TlsResumptionState(
+    /** Opaque ticket bytes echoed verbatim as the PSK identity on the next connection. */
+    val ticket: ByteArray,
+    /** PSK derived from `resumption_master_secret` + `ticket_nonce` per RFC 8446 §4.6.1. */
+    val psk: ByteArray,
+    /**
+     * Cipher suite this PSK is bound to. The next connection MUST offer
+     * (at least) this suite or the server will fall back to a full
+     * handshake.
+     */
+    val cipherSuite: Int,
+    /** Server-supplied obfuscation factor (RFC 8446 §4.6.1) — added to the elapsed-since-issue ticket age. */
+    val ticketAgeAdd: Long,
+    /** Server-supplied lifetime hint in seconds. Tickets expire after this; the client SHOULD discard. */
+    val ticketLifetimeSec: Long,
+    /** Wall-clock millis when the ticket was issued (server time, but we use ours — the obfuscation makes the absolute clock irrelevant). */
+    val issuedAtMillis: Long,
+)
 
 /** Pluggable certificate validator. Decoupled so we can stub it in tests. */
 interface CertificateValidator {

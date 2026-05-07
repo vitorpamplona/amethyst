@@ -119,3 +119,75 @@ fun buildQuicClientHello(
         )
     return TlsClientHello(random = random, cipherSuites = cipherSuites, extensions = exts)
 }
+
+/**
+ * Build a resumption ClientHello (PSK-bound) and return the encoded bytes
+ * with the binder field already substituted in.
+ *
+ * Layout differs from [buildQuicClientHello] in two ways:
+ *  - The pre_shared_key extension MUST be the LAST extension per
+ *    RFC 8446 §4.2.11. Reorder the list accordingly.
+ *  - The binder is HMAC-finished_key over the partial ClientHello
+ *    (everything BEFORE the binders field). Two-pass: encode with
+ *    binder=zeros, hash partial CH, compute binder, splice it in.
+ *
+ * The caller provides:
+ *  - [resumption]: ticket + obfuscation factor + cipher suite from the
+ *    prior connection's NewSessionTicket.
+ *  - [binderFinishedKey]: derived from `early_secret` via
+ *    [pskBinderFinishedKey] (the QUIC layer's responsibility).
+ *  - [transcriptHashOfPartialCh]: a function (bytesUpToBinder) -> ByteArray
+ *    that hashes the partial ClientHello using the negotiated suite's
+ *    hash. We don't know the hash inside this function (no transcript
+ *    state); the caller injects it.
+ *
+ * Returns the FULL encoded handshake message bytes (handshake header
+ * included) ready to feed into a CRYPTO frame. Caller appends to its
+ * own transcript.
+ */
+fun buildResumptionClientHelloBytes(
+    serverName: String,
+    x25519PublicKey: ByteArray,
+    quicTransportParams: ByteArray,
+    alpns: List<ByteArray>,
+    random: ByteArray,
+    cipherSuites: IntArray,
+    ticket: ByteArray,
+    obfuscatedTicketAge: Long,
+    binderFinishedKey: ByteArray,
+    transcriptHashOfPartialCh: (ByteArray) -> ByteArray,
+    binderHmac: (key: ByteArray, data: ByteArray) -> ByteArray,
+): ByteArray {
+    val exts =
+        listOf(
+            TlsExtension(TlsConstants.EXT_SERVER_NAME, encodeServerNameExtension(serverName)),
+            TlsExtension(TlsConstants.EXT_SUPPORTED_VERSIONS, encodeSupportedVersionsExtensionClient()),
+            TlsExtension(TlsConstants.EXT_SUPPORTED_GROUPS, encodeSupportedGroupsX25519()),
+            TlsExtension(TlsConstants.EXT_SIGNATURE_ALGORITHMS, encodeSignatureAlgorithms()),
+            TlsExtension(TlsConstants.EXT_KEY_SHARE, encodeKeyShareClientX25519(x25519PublicKey)),
+            TlsExtension(TlsConstants.EXT_PSK_KEY_EXCHANGE_MODES, encodePskKeyExchangeModesDhe()),
+            TlsExtension(TlsConstants.EXT_ALPN, encodeAlpn(alpns)),
+            TlsExtension(TlsConstants.EXT_QUIC_TRANSPORT_PARAMETERS, quicTransportParams),
+            // pre_shared_key MUST be last (RFC 8446 §4.2.11).
+            TlsExtension(
+                TlsConstants.EXT_PRE_SHARED_KEY,
+                encodePreSharedKeyPlaceholder(ticket, obfuscatedTicketAge),
+            ),
+        )
+    val ch = TlsClientHello(random = random, cipherSuites = cipherSuites, extensions = exts)
+    val withPlaceholder = ch.encode()
+    // PartialClientHello = encoded bytes minus the trailing binders block
+    // (uint16 outer length + uint8 inner length + 32 binder bytes for one
+    // SHA-256 PSK).
+    val partialCh = withPlaceholder.copyOfRange(0, withPlaceholder.size - BINDERS_TRAILING_BYTES)
+    val transcriptHash = transcriptHashOfPartialCh(partialCh)
+    val binder = binderHmac(binderFinishedKey, transcriptHash)
+    require(binder.size == BINDER_BYTES) {
+        "binder size ${binder.size} != expected $BINDER_BYTES"
+    }
+    // Splice the binder bytes into the placeholder zeros: the binder
+    // sits at the very end of the encoded message, after the
+    // 3-byte trailer (uint16 outer + uint8 inner length).
+    binder.copyInto(withPlaceholder, withPlaceholder.size - BINDER_BYTES)
+    return withPlaceholder
+}
