@@ -39,19 +39,21 @@ import kotlinx.coroutines.flow.toList
  */
 class HqInteropGetClient(
     private val conn: QuicConnection,
-    private val driver: QuicConnectionDriver,
+    @Suppress("UNUSED_PARAMETER") private val driver: QuicConnectionDriver,
 ) : GetClient {
-    override suspend fun get(
+    override suspend fun prepareRequest(
         @Suppress("UNUSED_PARAMETER") authority: String,
         path: String,
-    ): GetResponse {
+    ): RequestHandle {
         val stream = conn.openBidiStream()
         val request = "GET $path\r\n".encodeToByteArray()
         stream.send.enqueue(request)
         stream.send.finish()
-        // Nudge the send loop — see Http3GetClient.get for rationale.
-        driver.wakeup()
+        return HqRequestHandle(stream)
+    }
 
+    override suspend fun awaitResponse(handle: RequestHandle): GetResponse {
+        val stream = (handle as HqRequestHandle).stream
         val chunks = stream.incoming.toList()
         val total = chunks.sumOf { it.size }
         val body = ByteArray(total)
@@ -63,3 +65,7 @@ class HqInteropGetClient(
         return GetResponse(status = if (body.isEmpty()) 0 else 200, body = body)
     }
 }
+
+private class HqRequestHandle(
+    val stream: com.vitorpamplona.quic.stream.QuicStream,
+) : RequestHandle

@@ -34,13 +34,38 @@ import com.vitorpamplona.quic.qpack.QpackEncoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
 
-/** Common shape for the two interop GET clients (HTTP/3 and HQ-interop). */
+/** Common shape for the two interop GET clients (HTTP/3 and HQ-interop).
+ *
+ *  The interface is split into two phases so the parallel multiplexing
+ *  path can BATCH enqueues (synchronous, serial) and SINGLE-wakeup the
+ *  send loop, vs. waking on every individual request which produces
+ *  one tiny packet per stream instead of coalesced packets per drain. */
 interface GetClient {
+    /** Open a stream + enqueue the request bytes + FIN. Does NOT wake the
+     *  send loop — caller is responsible for batching wakes. Returns an
+     *  opaque handle the caller passes to [awaitResponse]. */
+    suspend fun prepareRequest(
+        authority: String,
+        path: String,
+    ): RequestHandle
+
+    /** Suspend until the server FINs the response stream associated with
+     *  [handle]. Returns the assembled response. */
+    suspend fun awaitResponse(handle: RequestHandle): GetResponse
+
+    /** Convenience shortcut for the sequential / single-request paths. */
     suspend fun get(
         authority: String,
         path: String,
-    ): GetResponse
+    ): GetResponse {
+        val h = prepareRequest(authority, path)
+        return awaitResponse(h)
+    }
 }
+
+/** Opaque handle returned by [GetClient.prepareRequest]. Implementations
+ *  cast it back to their internal stream representation. */
+interface RequestHandle
 
 data class GetResponse(
     val status: Int,
@@ -102,23 +127,18 @@ class Http3GetClient(
         conn.drainPeerInitiatedUniStreamsIntoBlackHole(scope)
     }
 
-    /**
-     * Issue a GET on a fresh bidi stream and return the parsed response.
-     * Suspends until the server FINs the response stream.
-     */
-    override suspend fun get(
+    override suspend fun prepareRequest(
         authority: String,
         path: String,
-    ): GetResponse {
+    ): RequestHandle {
         val stream = conn.openBidiStream()
         stream.send.enqueue(encodeRequest(authority, path))
         stream.send.finish()
-        // Nudge the send loop. Without this it suspends until PTO (~1s)
-        // or until an inbound packet arrives. For the multiplexing path
-        // this was the dominant throughput bottleneck — chunks of 64
-        // requests sat idle for ~1s each waiting to be drained.
-        driver.wakeup()
+        return Http3RequestHandle(stream)
+    }
 
+    override suspend fun awaitResponse(handle: RequestHandle): GetResponse {
+        val stream = (handle as Http3RequestHandle).stream
         val reader = Http3FrameReader()
         var status = 0
         val body = mutableListOf<ByteArray>()
@@ -145,6 +165,10 @@ class Http3GetClient(
         return GetResponse(status = status, body = concat(body))
     }
 }
+
+private class Http3RequestHandle(
+    val stream: com.vitorpamplona.quic.stream.QuicStream,
+) : RequestHandle
 
 /**
  * Serialize a GET request as a single HEADERS frame ready to be enqueued

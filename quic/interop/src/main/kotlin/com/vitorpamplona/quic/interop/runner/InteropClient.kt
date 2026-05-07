@@ -320,26 +320,47 @@ private fun runTransferTest(
                             // dispatcher thrashes context-switching.
                             //
                             // Bound concurrency: process in chunks of
-                            // [MULTIPLEX_PARALLELISM]. Each chunk is fully
-                            // parallel on the wire (what the runner's
-                            // tshark check verifies — streams overlap in
-                            // time within a chunk), and the connection
-                            // lock only ever has ~64 live waiters instead
-                            // of ~1999. Throughput predicted to jump from
-                            // 23 to ~600+ streams/sec.
+                            // [MULTIPLEX_PARALLELISM]. Each chunk is
+                            // batched in two phases:
+                            //   1. SERIAL prepareRequest for every URL
+                            //      in the chunk — opens the bidi
+                            //      stream, encodes the request, FINs.
+                            //      Synchronous; no async / no per-call
+                            //      wakeup.
+                            //   2. SINGLE driver.wakeup() so the send
+                            //      loop drains all 64 enqueued requests
+                            //      in coalesced packets (multi-stream
+                            //      framing per drain) instead of one
+                            //      tiny packet per stream.
+                            //   3. PARALLEL await — one async per
+                            //      stream collects its response with
+                            //      a per-stream timeout so a hung
+                            //      stream surfaces as status=0 instead
+                            //      of blocking its peers.
                             //
-                            // Per-stream timeout still wraps each get() so
-                            // a single hung stream surfaces as status=0
-                            // instead of blocking its chunk's await.
+                            // Earlier shape (per-call wakeup inside
+                            // client.get()) produced ~23 streams/sec
+                            // because each individual enqueue tripped
+                            // the send loop, which then drained alone
+                            // (the other 63 coroutines hadn't queued
+                            // yet on the dispatcher). Result: one
+                            // ~80-byte packet per stream instead of
+                            // ~10 streams/packet. Coalescing recovered
+                            // by batching enqueues + single wake.
                             val collected = mutableListOf<Pair<URI, GetResponse>>()
                             urls.chunked(MULTIPLEX_PARALLELISM).forEach { chunk ->
+                                val prepared =
+                                    chunk.map { url ->
+                                        url to client.prepareRequest(authority, url.path)
+                                    }
+                                driver.wakeup()
                                 coroutineScope {
                                     val deferreds =
-                                        chunk.map { url ->
+                                        prepared.map { (url, handle) ->
                                             async {
                                                 val resp =
                                                     withTimeoutOrNull(PER_STREAM_TIMEOUT_SEC * 1_000L) {
-                                                        client.get(authority, url.path)
+                                                        client.awaitResponse(handle)
                                                     }
                                                 url to (resp ?: GetResponse(status = 0, body = ByteArray(0)))
                                             }
