@@ -1,9 +1,14 @@
 # Live broadcast: indexed filter matching for fanout
 
+> **Status (2026-05-07):** Phase 1 (relay server) and Phase 2 (Amethyst client
+> `LocalCache.observables`) are implemented. Phase 3 (per-projection dispatch
+> from `ObservableEventStore.changes`) is left as future work — see "What's
+> next" below.
+
 ## Problem
 
 Every accepted EVENT runs through `LiveEventStore.newEventStream`
-(`quartz/nip01Core/relay/server/LiveEventStore.kt:43`) — a
+(`quartz/nip01Core/relay/server/LiveEventStore.kt`) — a
 `MutableSharedFlow<Event>` that every active subscription collects.
 Each subscriber's collector then calls:
 
@@ -17,62 +22,104 @@ calls per EVENT — and each `Filter.match` itself walks `kinds`,
 `authors`, tag prefixes, since/until, etc. At 2k EPS ingest that's
 ~30M comparisons/sec.
 
-Two specific cost shapes:
+The same shape recurs in two more places:
 
-1. **Filters that almost never match.** Most subscriptions are scoped
-   to a small author list. Today every published EVENT walks every
-   such subscription to learn that. A `HashMap<HexKey, MutableList<Sub>>`
-   keyed by author would cut this to O(1) average for the dominant case.
-2. **Pseudo-broadcast filters** (`{kinds: [1]}` with no other
-   constraint) match almost everything. There's no avoiding the
-   per-subscriber notification, but at least the index lookup is
-   cheap.
+1. **`LocalCache.observables`** in `amethyst/.../LocalCache.kt` —
+   a `ConcurrentHashMap<Observable, Observable>` of feed observers.
+   `refreshNewNoteObservers` iterates every observer for every
+   accepted event; each observer's `new()` runs `filter.match`.
+2. **`EventStoreProjection`** under `quartz/.../cache/projection/` —
+   each projection collects every `StoreChange.Insert` from
+   `ObservableEventStore.changes` and runs its own filter list.
 
-`LoadBenchmark.fanoutLatency` already measures this — current
-results are not yet noted in tree, but back-of-envelope says fanout
-becomes the dominant cost above ~2k subscribers.
+All three follow the pattern "many filter-bearing observers, one
+incoming event — find which observers match". Today that's a per-event
+walk over N observers; with an inverted index it becomes a few hash
+lookups followed by `Filter.match` only on the (small) candidate set.
 
-## Sketch
+## Solution
 
-A new `LiveBroadcastIndex` inside `LiveEventStore`:
+### `FilterIndex<S>`
+
+`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/filters/FilterIndex.kt`
+is a generic, KMP-friendly inverted index parameterised by the
+subscriber type. It lives next to `Filter.kt`, not under `relay/server/`,
+because it isn't relay-specific.
+
+API:
 
 ```kotlin
-private val byAuthor = ConcurrentHashMap<HexKey, MutableSet<Subscription>>()
-private val byKind   = ConcurrentHashMap<Int, MutableSet<Subscription>>()
-private val byTag    = ConcurrentHashMap<TagKey, MutableSet<Subscription>>()
-private val unindexed = CopyOnWriteArraySet<Subscription>()  // subs with no
-                                                             // narrowing field
+class FilterIndex<S : Any> {
+    fun register(filter: Filter, subscriber: S)
+    fun register(filters: List<Filter>, subscriber: S)
+    fun registerUnindexed(subscriber: S)            // predicate-only callers
+    fun unregister(subscriber: S)
+    fun candidatesFor(event: Event): Set<S>          // index lookup
+    fun forEach(action: (S) -> Unit)                 // full iteration (delete paths)
+    fun size(): Int
+    fun isEmpty(): Boolean
+}
 ```
 
-Each `RelaySession.handleReq` registers its `Subscription` (a tuple of
-filters + the existing `EventMessage` send callback) into whichever
-buckets each filter narrows on. A filter with `kinds=[1] and
-authors=[a,b]` registers into `byKind[1]` AND `byAuthor[a]`,
-`byAuthor[b]` — broadcast unions the resulting candidate sets.
+State is held in a single `AtomicReference<State<S>>` (BanStore-style)
+so reads in the hot path are wait-free. Writes copy-on-write; that's
+fine because writes are subscription-rate (rare) while reads are
+event-rate (frequent).
 
-On EVENT arrival:
+Indexing strategy: each filter contributes entries to **one**
+dimension — the most selective indexable field. Picking one dimension
+instead of all of them avoids over-counting subscribers in
+`candidatesFor` and minimises bucket churn:
 
-1. Build the candidate set: union of `byAuthor[event.pubkey]`,
-   `byKind[event.kind]`, every `byTag[(letter, value)]` for the
-   event's single-letter tags, plus `unindexed`.
-2. Run the existing `Filter.match` on each candidate to handle
-   negative constraints (`since`, `until`, `limit` already-reached,
-   composite predicates).
-3. Send.
+1. `ids` (most selective; an id matches one event).
+2. `authors`.
+3. The first single-letter tag in `tags` (then `tagsAll`).
+4. `kinds`.
+5. None of the above → registered into the unindexed pool.
 
-Expected: **>10× speedup** on fanout for realistic subscriptions.
-Worst case (all filters in `unindexed`) degrades to current behaviour.
+Multi-filter registrations OR the per-filter selections together,
+which mirrors `filters.any { it.match(...) }`. Negative constraints
+(`since` / `until` / `tagsAll` / saturated `limit`) stay in
+`Filter.match` — the index produces a super-set, callers post-filter.
 
-## Where it lives
+### Phase 1: `LiveEventStore`
 
-`quartz/nip01Core/relay/server/LiveBroadcastIndex.kt` — protocol-level,
-reusable by any relay embed. `RelaySession.handleReq` registers/
-unregisters; `LiveEventStore.insert` calls
-`index.candidatesFor(event)`.
+`LiveEventStore.kt` no longer uses a `MutableSharedFlow`. Instead:
 
-## How to verify
+- One `FilterIndex<LiveSubscription>` shared across all REQs.
+- `insert()` calls `index.candidatesFor(event)` then runs
+  `Filter.match` on each candidate. Synchronous delivery —
+  callers (the relay's `RelaySession`) keep the `deliver` callback
+  cheap (queue-to-outbound).
+- `query()` registers the subscription into the index *before* the
+  historical replay starts (closes the same race the previous
+  `onSubscription` handoff closed), runs the replay, signals EOSE,
+  then `awaitCancellation()`. Live events arrive via index dispatch
+  during the suspend; `finally { index.unregister(sub) }` cleans up.
+- Dedupe set during the historical phase is held in an
+  `AtomicReference<HashSet<String>?>` so the live-dispatch coroutine
+  sees the post-EOSE handoff promptly.
 
-Add `geode.perf.LoadBenchmark.fanoutScaling`:
+### Phase 2: `LocalCache.observables`
+
+`amethyst/.../LocalCache.kt` swapped its
+`ConcurrentHashMap<Observable, Observable>` for a
+`FilterIndex<Observable>`. `observeNotes` / `observeEvents` /
+`observeNewEvents(filter: Filter)` now `register(filter, observer)`;
+the predicate-only `observeNewEvents(predicate)` overload uses
+`registerUnindexed` because the index can't introspect an opaque
+predicate. Dispatch:
+
+- `refreshNewNoteObservers` iterates `observables.candidatesFor(event)`
+  instead of every observer.
+- `refreshDeletedNoteObservers` still uses `observables.forEach { ... }`
+  — the index doesn't help on the delete path because every observer
+  might hold the deleted note in its result set, and there's no
+  event-shape to consult.
+
+### How to verify
+
+`geode.perf.LoadBenchmark.fanoutScaling` (to be added):
 
 - N connections, each subscribes to `{authors: [pk_i], kinds: [1]}`.
 - Publish 10k EVENTs from a producer connection; each event matches
@@ -82,19 +129,47 @@ Add `geode.perf.LoadBenchmark.fanoutScaling`:
 Without the index, p99 grows roughly linearly with N. With the
 index, p99 should be flat up to a much higher N.
 
+For the LocalCache side, a similar benchmark would publish events
+matching one of M observers and measure dispatch cost as M grows.
+
 ## Risks
 
 - **Subscription churn**: re-subscribing on every page (the way some
   client features work) means many index insert/remove operations.
-  `ConcurrentHashMap` value-set operations need to be lock-free or
-  finely locked; benchmark this path explicitly.
+  COW on a single `AtomicReference` makes each write a full inner-map
+  copy; benchmark this path on a busy account to confirm the constants
+  stay reasonable.
 - **Tag explosion**: an EVENT with many `e`/`p` tags hits many tag
-  buckets. Cap candidate-set union work or short-circuit when the
-  union saturates.
+  buckets. The single-dimension-per-filter selection caps how many
+  buckets contribute candidates per event — registering on the
+  *most* selective dimension means tag-keyed filters typically pick
+  one specific tag value, so an event's tag walk only finds filters
+  registered under that exact `(letter, value)`.
 - **Memory**: the index is a per-bucket set of subscription handles.
-  At 5k subs × average 3 narrowing fields, ~15k entries — negligible.
-- **Correctness fence**: the index must see new subscriptions before
-  the next EVENT broadcast. Today `RelaySession.handleReq` writes its
-  `Job` into a `LargeCache` then launches the collector. Order of
-  operations needs to be revisited so the index is updated atomically
-  with the collector being ready.
+  At 5k subs × average 1 dimension × a handful of values per filter,
+  ~10k–20k entries — negligible.
+- **Correctness fence**: `register` happens before historical replay
+  on the relay side, and inside the `callbackFlow`'s `register` /
+  `awaitClose { unregister }` pair on the client side. Events
+  arriving mid-historical are deduped via `seenIds` (relay) or are a
+  non-issue because the client `observe*` flow seeds via `init()`
+  before any new event can fire.
+- **Filters with no narrowing field** (e.g. `{since: X}`) fall into
+  the unindexed pool and behave like today — every event reaches
+  them. That's the worst case; it's not worse than the pre-index
+  baseline.
+- **AddressableEvent / replaceable v2 path**: an observer holding v1
+  whose filter doesn't match v2 won't be in `candidatesFor(v2)`.
+  Today such an observer wouldn't update its membership either
+  (`filter.match(v2) == false` short-circuits before the
+  re-emit branch). Pre-existing behaviour preserved.
+
+## What's next (Phase 3)
+
+`ObservableEventStore.changes` is still a `SharedFlow<StoreChange>`
+that every projection collects. To use the index there, the dispatcher
+between `_changes.emit` and the per-projection collectors would consult
+a `FilterIndex<EventStoreProjection<*>>`-style index and only deliver
+to interested projections. Doable, but the SharedFlow contract is
+public; replacing it is a larger refactor than Phase 1/2 and the ROI
+is lower (per-projection apply is already small). Treat as a follow-up.
