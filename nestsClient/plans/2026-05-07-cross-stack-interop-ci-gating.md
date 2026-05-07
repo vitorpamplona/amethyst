@@ -73,13 +73,13 @@ browser-interop:
     - uses: actions/cache@v4
       with:
         path: |
-          nestsClient-browser-interop/node_modules
-          nestsClient-browser-interop/dist
-        key: ${{ runner.os }}-bun-${{ hashFiles('nestsClient-browser-interop/package.json', 'nestsClient-browser-interop/bun.lock') }}
+          nestsClient/tests/browser-interop/node_modules
+          nestsClient/tests/browser-interop/dist
+        key: ${{ runner.os }}-bun-${{ hashFiles('nestsClient/tests/browser-interop/package.json', 'nestsClient/tests/browser-interop/bun.lock') }}
     - uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ hashFiles('nestsClient-browser-interop/package.json') }}
+        key: ${{ runner.os }}-playwright-${{ hashFiles('nestsClient/tests/browser-interop/package.json') }}
     - name: Run browser cross-stack interop suite
       run: |
         ./gradlew :nestsClient:jvmTest \
@@ -92,8 +92,8 @@ browser-interop:
         name: Browser Interop Test Reports
         path: |
           nestsClient/build/reports/tests/jvmTest/
-          nestsClient-browser-interop/test-results/
-          nestsClient-browser-interop/playwright-report/
+          nestsClient/tests/browser-interop/test-results/
+          nestsClient/tests/browser-interop/playwright-report/
 ```
 
 Same `git show b94737de7 -- .github/workflows/build.yml` reverse

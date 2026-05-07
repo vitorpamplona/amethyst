@@ -6,7 +6,7 @@ the spec at `nestsClient/plans/2026-05-06-phase4-browser-harness.md`.
 
 ## Where it landed
 
-- New top-level `nestsClient-browser-interop/` workspace:
+- New top-level `nestsClient/tests/browser-interop/` workspace:
   - `package.json` pins `@moq/lite@0.2.2`, `@moq/hang@0.2.4`,
     `@moq/watch@0.2.10`, `@moq/publish@0.2.6`, `@playwright/test@1.56.1`.
   - `REV` documents the pinned versions next to the

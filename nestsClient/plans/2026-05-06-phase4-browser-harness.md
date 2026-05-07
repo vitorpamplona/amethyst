@@ -65,7 +65,7 @@ Phase 1 — no Docker, no second relay, no fake auth sidecar.
             ▼                       ▼                                 ▼
  ┌──────────────────────┐   ┌──────────────────┐         ┌─────────────────────────────┐
  │ NativeMoqRelayHarness│   │ Kotlin in-proc   │         │ Browser harness             │
- │ (existing — Phase 1) │   │ speaker / listener│        │ nestsClient-browser-interop/│
+ │ (existing — Phase 1) │   │ speaker / listener│        │ nestsClient/tests/browser-interop/│
  │ moq-relay subprocess │   │ via               │         │  - bun static + WS server   │
  │ 127.0.0.1:<rand>     │   │ connectNestsSpeaker        │  - listen.html + listen.ts  │
  │ --auth-public ""     │   │ connectNestsListener       │  - publish.html+publish.ts  │
@@ -79,13 +79,13 @@ Phase 1 — no Docker, no second relay, no fake auth sidecar.
 
 ## Components
 
-### 1. `nestsClient-browser-interop/` — bun + Playwright workspace
+### 1. `nestsClient/tests/browser-interop/` — bun + Playwright workspace
 
 New top-level directory, mirrors the parent plan's
 specification. Contents:
 
 ```
-nestsClient-browser-interop/
+nestsClient/tests/browser-interop/
 ├── package.json
 ├── tsconfig.json
 ├── bun.lockb                           # pinned via REV file
@@ -103,7 +103,7 @@ nestsClient-browser-interop/
 
 Pin all `@moq/*` deps to the same versions `nostrnests/nests`
 ships in `NestsUI-v2/package.json`. Document the rev in
-`nestsClient-browser-interop/REV` (parallel to
+`nestsClient/tests/browser-interop/REV` (parallel to
 `nestsClient/tests/hang-interop/REV`).
 
 ### 2. `listen.ts` — browser listener
@@ -168,14 +168,14 @@ the relay's auto-generated cert without parsing).
 val interopBuildBrowserHarness by tasks.registering(Exec::class) {
     description = "bun install && bun build for the browser interop harness"
     group = "interop"
-    workingDir = file("nestsClient-browser-interop")
+    workingDir = file("nestsClient/tests/browser-interop")
     commandLine("bash", "-c", "bun install && bun build src/listen.ts src/publish.ts src/pcm-tap-worklet.ts --outdir dist --target browser")
     inputs.files(
-        fileTree("nestsClient-browser-interop") {
+        fileTree("nestsClient/tests/browser-interop") {
             include("package.json", "bun.lockb", "src/**/*")
         }
     )
-    outputs.dir("nestsClient-browser-interop/dist")
+    outputs.dir("nestsClient/tests/browser-interop/dist")
 }
 ```
 
@@ -185,7 +185,7 @@ A second task installs Playwright's Chromium:
 val interopInstallPlaywrightChromium by tasks.registering(Exec::class) {
     description = "Install Playwright Chromium + dependencies"
     group = "interop"
-    workingDir = file("nestsClient-browser-interop")
+    workingDir = file("nestsClient/tests/browser-interop")
     commandLine("bash", "-c", "npx playwright install --with-deps chromium")
     onlyIf {
         // Skip if Chromium binary exists in the cache
@@ -205,7 +205,7 @@ tasks.withType<Test>().configureEach {
     }
     systemProperty(
         "nestsBrowserInteropHarnessDir",
-        file("nestsClient-browser-interop").absolutePath,
+        file("nestsClient/tests/browser-interop").absolutePath,
     )
     System.getProperty("nestsBrowserInterop")?.let {
         systemProperty("nestsBrowserInterop", it)
@@ -288,7 +288,7 @@ Total: ~1.5 days.
 
 ### Phase 4.A — bun harness scaffold (~3 hr)
 
-1. `bun init` in `nestsClient-browser-interop/`. Pin `@moq/lite`,
+1. `bun init` in `nestsClient/tests/browser-interop/`. Pin `@moq/lite`,
    `@moq/watch`, `@moq/publish`, `@moq/hang` to the versions
    `nostrnests/nests` `NestsUI-v2/package.json` ships at the
    time of implementation. Document in `REV`.
@@ -351,7 +351,7 @@ method).
 
 13. Add `browser-interop` job to `.github/workflows/build.yml`
     parallel to `hang-interop`. Cache
-    `nestsClient-browser-interop/node_modules` and
+    `nestsClient/tests/browser-interop/node_modules` and
     `~/.cache/ms-playwright` on the bun.lockb hash.
 14. Run `./gradlew :nestsClient:jvmTest -DnestsBrowserInterop=true`
     on Linux runners. macOS / Windows would double the matrix
@@ -373,7 +373,7 @@ method).
 
 ## Definition of done
 
-1. `nestsClient-browser-interop/` directory complete with
+1. `nestsClient/tests/browser-interop/` directory complete with
    bun + Playwright + sources building cleanly via
    `interopBuildBrowserHarness`.
 2. P0 scenarios green: I1 forward, I2, I3, I13, I14 (and I4

@@ -232,7 +232,7 @@ tasks.withType<Test>().configureEach {
 // ---- Cross-stack interop: BROWSER (Phase 4 of T16) --------------------------
 //
 // Adds the bun + Playwright + headless Chromium harness at
-// `nestsClient-browser-interop/`. Mirrors the hang-interop wiring above
+// `nestsClient/tests/browser-interop/`. Mirrors the hang-interop wiring above
 // but with bun/npx subprocesses instead of cargo. Opt-in via
 // `-DnestsBrowserInterop=true`. See:
 //   nestsClient/plans/2026-05-06-phase4-browser-harness.md
@@ -249,7 +249,7 @@ tasks.withType<Test>().configureEach {
 // paths the agents/host runner ship with.
 
 val browserInteropDir =
-    rootProject.layout.projectDirectory.dir("nestsClient-browser-interop")
+    rootProject.layout.projectDirectory.dir("nestsClient/tests/browser-interop")
 
 // `bun` lives at `/root/.bun/bin/bun` on the agent runner. CI may put it
 // elsewhere; allow override via env / system property. Falls back to

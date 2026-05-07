@@ -52,7 +52,7 @@ internal object PlaywrightDriver {
     const val ENABLE_PROPERTY = "nestsBrowserInterop"
 
     /**
-     * Forwarded by Gradle: absolute path to `nestsClient-browser-interop/`.
+     * Forwarded by Gradle: absolute path to `nestsClient/tests/browser-interop/`.
      */
     const val HARNESS_DIR_PROPERTY = "nestsBrowserInteropHarnessDir"
 

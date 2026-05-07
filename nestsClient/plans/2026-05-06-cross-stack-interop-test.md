@@ -196,10 +196,10 @@ Behaviour: standard tokio UDP relay. For each datagram received,
 
 ### Browser harness (bun + Playwright)
 
-New module at `nestsClient-browser-interop/`.
+New module at `nestsClient/tests/browser-interop/`.
 
 ```
-nestsClient-browser-interop/
+nestsClient/tests/browser-interop/
 ├── package.json
 ├── tsconfig.json
 ├── src/
@@ -225,7 +225,7 @@ nestsClient-browser-interop/
 ```
 
 Pin to the same npm versions that `nostrnests/nests` `NestsUI-v2/package.json`
-ships. Document the rev in `nestsClient-browser-interop/REV`.
+ships. Document the rev in `nestsClient/tests/browser-interop/REV`.
 
 #### `listen.ts`
 Mirrors NostrNests' `transport/moq-transport.ts` `Watch.Broadcast`
@@ -552,7 +552,7 @@ Total: ~5 days. P0 deliverable (1+2+4) is **3 days**.
 
 ### Phase 4 — Browser harness (1.5 days)
 
-15. Bootstrap `nestsClient-browser-interop/`: bun init, install
+15. Bootstrap `nestsClient/tests/browser-interop/`: bun init, install
     `@moq/lite` `@moq/watch` `@moq/publish` `@moq/hang` at pinned
     versions matching `nostrnests/nests` `NestsUI-v2`. Document rev.
 16. Write `listen.ts` + `pcm-tap-worklet.ts` + `listen.html`. Mirror
@@ -618,8 +618,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cache/ms-playwright
-            nestsClient-browser-interop/node_modules
-          key: ${{ runner.os }}-browser-${{ hashFiles('nestsClient-browser-interop/bun.lockb', 'nestsClient/tests/hang-interop/Cargo.lock') }}
+            nestsClient/tests/browser-interop/node_modules
+          key: ${{ runner.os }}-browser-${{ hashFiles('nestsClient/tests/browser-interop/bun.lockb', 'nestsClient/tests/hang-interop/Cargo.lock') }}
       - run: ./gradlew :nestsClient:jvmTest -DnestsBrowserInterop=true
 ```
 
@@ -664,7 +664,7 @@ Acceptable for PR-level CI.
    committed at `nestsClient/plans/2026-05-06-cross-stack-interop-test-gap-matrix.md`.
 6. Both `-DnestsHangInterop=true` and `-DnestsBrowserInterop=true`
    in the default PR-level GitHub Actions config.
-7. `nestsClient/tests/hang-interop/REV` and `nestsClient-browser-interop/REV`
+7. `nestsClient/tests/hang-interop/REV` and `nestsClient/tests/browser-interop/REV`
    document the pinned upstream revs.
 8. New plan filed at
    `nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md`

@@ -331,7 +331,7 @@ tests stay green.
 - **5.1 / spatial audio.** Catalog field is `numberOfChannels`,
   but the audio pipeline assumes interleaved planar — beyond
   stereo would need a separate plan.
-- **Browser side I4.** `nestsClient-browser-interop/` doesn't
+- **Browser side I4.** `nestsClient/tests/browser-interop/` doesn't
   exist yet (Phase 4 of the parent plan); when it lands the
   same I4 shape ports straight to a `BrowserInteropTest`.
 - **Per-channel mute.** The existing `setMuted(true)` mutes the

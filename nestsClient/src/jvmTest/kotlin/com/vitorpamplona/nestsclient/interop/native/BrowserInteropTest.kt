@@ -138,7 +138,7 @@ class BrowserInteropTest {
      * `Container.Consumer`", but two constraints reshape this here:
      *
      *   1. `@moq/hang` 0.2.4 (the published version pinned in
-     *      `nestsClient-browser-interop/package.json`) does not export
+     *      `nestsClient/tests/browser-interop/package.json`) does not export
      *      the high-level `Container.Consumer` / `Format` API. Phase 4
      *      uses `Container.Legacy.Consumer` directly — same data path
      *      `@moq/watch` uses internally for `container.kind = "legacy"`.

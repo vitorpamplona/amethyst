@@ -379,7 +379,7 @@ adds an explicit goaway frame, the test would slot in here.
 
 Running in agent worktree (`feat/nests-browser-interop`). Adds:
 
-- `nestsClient-browser-interop/` — TypeScript + Vite project shipping
+- `nestsClient/tests/browser-interop/` — TypeScript + Vite project shipping
   the upstream `@kixelated/moq` and `@kixelated/hang-wasm` consumers/
   publishers, bundled into static `listen.html` / `publish.html`
   pages.
@@ -492,7 +492,7 @@ nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/
 # In sister branches (not yet merged):
 # feat/nests-i6-multi-listener     -> HangInteropMultiListenerTest.kt (I6)
 # feat/nests-i7-publisher-reconnect -> HangInteropReverseTest.kt (I7)
-# feat/nests-browser-interop       -> nestsClient-browser-interop/ +
+# feat/nests-browser-interop       -> nestsClient/tests/browser-interop/ +
 #                                     BrowserInteropTest.kt (Phase 4)
 
 nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md  # this file
