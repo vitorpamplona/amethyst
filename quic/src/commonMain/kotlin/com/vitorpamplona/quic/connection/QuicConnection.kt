@@ -770,6 +770,19 @@ class QuicConnection(
      * into coalesced packets instead of emitting one tiny packet per
      * stream.
      *
+     * **`init` runs under `streamsLock`.** It must not suspend
+     * (the type signature enforces this) and SHOULD be fast — any
+     * expensive work (encoding, allocation-heavy formatting) belongs
+     * outside the call so it doesn't extend the lock-hold time. The
+     * intended shape per caller:
+     *
+     *     val encoded = items.map { encode(it) }                   // outside
+     *     conn.openBidiStreamsBatch(encoded) { stream, payload ->  // under lock
+     *         stream.send.enqueue(payload)
+     *         stream.send.finish()
+     *         Handle(stream)
+     *     }
+     *
      * This is the bug-resistant API for the prepareRequests pattern.
      * The previous shape (caller manually wraps `streamsLock.withLock`
      * around a loop of [openBidiStreamLocked]) regressed twice: once
@@ -785,10 +798,12 @@ class QuicConnection(
     suspend fun <I, R> openBidiStreamsBatch(
         items: List<I>,
         init: (QuicStream, I) -> R,
-    ): List<R> =
-        streamsLock.withLock {
+    ): List<R> {
+        if (items.isEmpty()) return emptyList()
+        return streamsLock.withLock {
             items.map { init(openBidiStreamLocked(), it) }
         }
+    }
 
     /**
      * The streamsLock-holding primitive used by [openBidiStream] and
@@ -868,20 +883,26 @@ class QuicConnection(
      * entry under a single [streamsLock] hold and run [init] for
      * each (stream, item).
      *
+     * **`init` runs under `streamsLock`** — same caveat as
+     * [openBidiStreamsBatch]: keep it fast, encode outside the call.
+     *
      * Use this for moq audio-rooms and any other path that opens many
      * uni streams in burst — without batching, each open releases the
      * lock and the send loop can interject, emitting one stream per
      * packet (the same shape that broke bidi multiplexing on
-     * 2026-05-06).
+     * 2026-05-06). [bestEffort] applies uniformly to every stream
+     * in the batch; mixed-mode batches need separate calls.
      */
     suspend fun <I, R> openUniStreamsBatch(
         items: List<I>,
         bestEffort: Boolean = false,
         init: (QuicStream, I) -> R,
-    ): List<R> =
-        streamsLock.withLock {
+    ): List<R> {
+        if (items.isEmpty()) return emptyList()
+        return streamsLock.withLock {
             items.map { init(openUniStreamLocked(bestEffort), it) }
         }
+    }
 
     /** Snapshot of peer-granted bidi cap. Reads do not need the lock — long writes are atomic on every supported platform. */
     fun peerMaxStreamsBidiSnapshot(): Long = peerMaxStreamsBidi

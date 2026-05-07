@@ -28,6 +28,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * Lock contract for batched stream opens — the production pattern used by
@@ -117,21 +118,43 @@ class BatchedOpenLockContractTest {
     }
 
     @Test
-    fun `openBidiStreamsBatch is the bug-resistant API for the prepareRequests pattern`() {
+    fun `openBidiStreamsBatch holds streamsLock for the entire batch`() {
         runBlocking {
             val client = handshakedClient()
-            // The new high-level API — caller can't hold the wrong
-            // lock because it doesn't take any. Encapsulates the
-            // streamsLock acquisition + per-item init under the lock.
+            // Verify the API actually holds streamsLock during init —
+            // the whole point of the function. A regression that
+            // released the lock between opens (the 2026-05-06 bug
+            // shape) would let isLocked drop to false inside init.
             val payloads = (0 until 64).map { "req-$it".encodeToByteArray() }
+            var lockedAtSomePoint = false
             val streams =
                 client.openBidiStreamsBatch(payloads) { stream, payload ->
+                    if (client.streamsLock.isLocked) lockedAtSomePoint = true
                     stream.send.enqueue(payload)
                     stream.send.finish()
                     stream
                 }
             assertEquals(64, streams.size)
             assertEquals(64, streams.map { it.streamId }.toSet().size)
+            assertTrue(
+                lockedAtSomePoint,
+                "streamsLock must be held while init runs — without that, " +
+                    "the send loop interleaves between opens",
+            )
+        }
+    }
+
+    @Test
+    fun `openBidiStreamsBatch with empty list does not throw`() {
+        runBlocking {
+            val client = handshakedClient()
+            // Empty-batch short-circuit: no items, no lock acquisition,
+            // no per-item init call. Returns empty list cleanly.
+            val result: List<Unit> =
+                client.openBidiStreamsBatch(emptyList<Int>()) { _, _ ->
+                    error("init must not run for empty batch")
+                }
+            assertEquals(0, result.size)
         }
     }
 
@@ -146,7 +169,7 @@ class BatchedOpenLockContractTest {
     }
 
     @Test
-    fun `openUniStreamsBatch holds streamsLock for the whole batch`() {
+    fun `openUniStreamsBatch holds streamsLock for the entire batch`() {
         runBlocking {
             val client = handshakedClient()
             // moq audio-rooms shape: many uni streams in burst. Without
@@ -154,10 +177,15 @@ class BatchedOpenLockContractTest {
             // send loop interjects (the same shape that broke bidi
             // multiplexing on 2026-05-06).
             val items = List(16) { it }
+            var lockedAtSomePoint = false
             val streams =
-                client.openUniStreamsBatch(items) { stream, _ -> stream }
+                client.openUniStreamsBatch(items) { stream, _ ->
+                    if (client.streamsLock.isLocked) lockedAtSomePoint = true
+                    stream
+                }
             assertEquals(16, streams.size)
             assertEquals(16, streams.map { it.streamId }.toSet().size)
+            assertTrue(lockedAtSomePoint, "streamsLock must be held while init runs")
         }
     }
 
