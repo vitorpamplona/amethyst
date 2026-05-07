@@ -759,7 +759,21 @@ private class HangListenOutput(
  */
 private suspend fun runSpeakerToHangListen(
     speakerSeconds: Int,
-    listenerLateJoinDelayMs: Long = 150L,
+    // Default warmup before listener spawns. Bumped from 150 ms to
+    // 600 ms because moq-relay 0.10.x has a per-broadcast announce →
+    // subscribe-pump setup race: speaker.startBroadcasting() returns
+    // as soon as `session.publish()` registers the local publisher
+    // state, but the relay's upstream-subscribe machinery (used to
+    // forward listener SUBSCRIBE → speaker) is set up asynchronously
+    // when the relay first sees the speaker's broadcast in its origin.
+    // Under 150 ms the listener occasionally subscribes before the
+    // relay's per-broadcast state is primed; the SUBSCRIBE is silently
+    // not forwarded to the speaker, the catalog read times out, and
+    // hang-listen exits non-zero. 600 ms closes the race in observed
+    // sweep runs without measurably extending suite wallclock — the
+    // typical scenario asserts the steady-state, not the join latency.
+    // See `2026-05-07-late-join-catalog-flake-investigation.md`.
+    listenerLateJoinDelayMs: Long = 600L,
     muteWindowMs: ClosedRange<Long>? = null,
     captureFirstFrame: Boolean,
     /**
