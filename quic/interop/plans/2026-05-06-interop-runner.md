@@ -129,22 +129,61 @@ After `acfe815e1`'s multi-ALPN offer, predictions:
 - quic-go: handshake / chacha20 / transfer / http3 should green (server picks `hq-interop` for non-h3 tests).
 - aioquic: still 4/5; multiplexing held back by channel-saturation bug.
 
-## Overnight agents in flight (2026-05-07)
+## Phase 4 — landed 2026-05-07 (overnight agents)
 
-- **Agent A — `versionnegotiation`**: configurable initial QUIC version on
-  `QuicConnectionWriter` + VN-packet parser dispatch + retry-with-V1
-  state machine on `QuicConnection`. Adds the testcase to dispatch.
-- **Agent B — qlog observer infrastructure**: `QlogObserver` interface in
-  `:quic`, NoOp default, JSON-NDJSON `QlogWriter` in `:quic-interop`, hooks
-  at packet-sent/received/dropped, key-updated, conn-started/closed,
-  loss-detected, PTO-fired, transport-params, ALPN, version. Reads
-  `$QLOGDIR` env var the runner already sets.
-- **Agent C — multiplexing channel-saturation**: most likely root cause is
-  that `Http3GetClient` doesn't consume the server's incoming uni
-  streams (control + QPACK encoder + QPACK decoder); their per-stream
-  channels fill, parser tears down with INTERNAL_ERROR. Agent verifies
-  hypothesis, implements the spec-correct fix (consume + drain peer uni
-  streams), adds regression test.
+All three agents merged onto the branch with three rounds of fixup
+(each agent's worktree was based on `main`, not the branch HEAD, so
+they clobbered each other's changes during merge):
+
+- **Agent A — VN-handling defense in `:quic`**: configurable
+  `initialVersion` on `QuicConnection`, `applyVersionNegotiation`
+  state machine, `vnConsumed` latch, downgrade defenses. *NOTE*: the
+  runner does not have a `versionnegotiation` testcase (it has `v2`,
+  which tests QUIC v2 — we're v1-only). Code stays as defensive
+  support for any server that throws a VN at us, but unused by the
+  matrix.
+- **Agent B — qlog observer**: `QlogObserver` interface in `:quic`
+  with NoOp default + 12 event hooks (packet-sent/received/dropped,
+  key-updated, conn-started/closed, loss-detected, PTO-fired,
+  transport-params, ALPN, version). `QlogWriter` (Jackson-backed
+  JSON-NDJSON) in `:quic-interop`. `InteropClient` reads `$QLOGDIR`
+  the runner already sets and writes `client.sqlog` per testcase.
+  Drag straight into qvis.quictools.info to see the trace.
+- **Agent C — peer-uni-stream drainer**: `drainPeerInitiatedUniStreamsIntoBlackHole`
+  helper on `QuicConnection`, wired into `Http3GetClient.init(scope)`.
+  Fixes the multiplexing channel-saturation symptom (server's uni
+  streams accumulated bytes in 64-chunk per-stream channels until
+  parser tore down with INTERNAL_ERROR ~4.5s into a multi-stream run).
+
+## Open issues for tomorrow
+
+- **`retry` test fails** against both aioquic and picoquic. `applyRetry`
+  + token threading + ClientHello caching all look correct on inspection.
+  Need qlog output (now available) to diagnose. Run `retry` against
+  picoquic, drag `client.sqlog` into qvis, look for: `packet_received`
+  with type=retry, `packet_sent` with non-empty token, server's
+  reaction.
+- **`v2` testcase** — server demands QUIC v2; we're v1-only, so this
+  correctly fails. Real fix is implementing v2 (RFC 9369) which is
+  out of scope for now.
+- **Run `retry` + `multiplexing` against quic-go**, picoquic, aioquic
+  with the new fixes. Predictions:
+  - aioquic / picoquic: multiplexing should now green; retry
+    diagnostic surfaces as qlog.
+  - quic-go: previously 0/7 (probably tested mid-flight); should
+    now be much closer to picoquic/aioquic results.
+
+## Concurrency
+
+`run-matrix.sh` is NOT safe to run in parallel. The runner's
+docker-compose.yml hardcodes `container_name: sim/server/client` —
+Docker enforces those globally. Use a sequential loop:
+
+```
+for peer in aioquic picoquic quic-go; do
+    quic/interop/run-matrix.sh -s $peer -t handshake,chacha20,...
+done
+```
 
 ## Explicitly unsupported testcases (return 127, runner skips)
 
