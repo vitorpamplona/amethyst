@@ -134,12 +134,31 @@ class QuicConnection(
         internal set
 
     /**
+     * RFC 9000 §17.2.5.1: the Retry token the server handed us in a Retry
+     * packet, which we must echo verbatim in the Token field of every
+     * subsequent Initial we send. Null until [applyRetry] runs.
+     */
+    @Volatile
+    var retryToken: ByteArray? = null
+        internal set
+
+    /**
+     * RFC 9000 §17.2.5.2: a client MUST NOT process more than one Retry
+     * packet per connection. Any subsequent Retry is silently dropped.
+     * Latched true by [applyRetry] on a successfully-verified Retry.
+     */
+    @Volatile
+    var retryConsumed: Boolean = false
+        internal set
+
+    /**
      * Cached ClientHello bytes captured by [start]. Re-enqueued onto the
      * fresh Initial-level [LevelState.cryptoSend] when
-     * [applyVersionNegotiation] resets the encryption level so the new
-     * Initial datagram still carries a valid TLS handshake. Without this
-     * the reset wipes the bytes that [TlsClient] already enqueued and the
-     * post-VN Initial would carry an empty CRYPTO frame.
+     * [applyVersionNegotiation] or [applyRetry] resets the encryption
+     * level so the new Initial datagram still carries a valid TLS handshake.
+     * Without this the reset wipes the bytes that [TlsClient] already
+     * enqueued and the post-VN/post-Retry Initial would carry an empty
+     * CRYPTO frame.
      */
     private var originalClientHello: ByteArray? = null
 
@@ -739,21 +758,21 @@ class QuicConnection(
      * check capacity proactively if the caller wants to back-pressure rather
      * than throw.
      */
-    suspend fun openBidiStream(): QuicStream =
-        streamsLock.withLock {
-            if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
-                throw QuicStreamLimitException(
-                    "peer-granted bidi stream cap reached " +
-                        "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
-                )
-            }
-            val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
-            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
-            stream.receiveLimit = config.initialMaxStreamDataBidiLocal
-            streams[id] = stream
-            streamsList += stream
-            stream
+    suspend fun openBidiStream(): QuicStream = streamsLock.withLock { openBidiStreamLocked() }
+
+    /**
+     * The streamsLock-holding part of [openBidiStream]. Public so
+     * batched-multiplex callers (prepareRequests) can acquire
+     * [streamsLock] ONCE and bracket multiple stream opens — without
+     * yielding to the send loop between opens. Caller MUST hold
+     * [streamsLock].
+     */
+    fun openBidiStreamLocked(): QuicStream {
+        if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
+            throw QuicStreamLimitException(
+                "peer-granted bidi stream cap reached " +
+                    "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
+            )
         }
         val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
         val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
@@ -933,6 +952,7 @@ class QuicConnection(
         errorCode: Long,
         reason: String,
     ) {
+        var firedQlog = false
         lifecycleLock.withLock {
             if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
             closeErrorCode = errorCode

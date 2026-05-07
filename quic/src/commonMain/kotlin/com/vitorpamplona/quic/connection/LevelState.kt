@@ -155,7 +155,11 @@ class LevelState {
         sendProtection: PacketProtection,
         receiveProtection: PacketProtection,
     ) {
-        pnSpace = PacketNumberSpaceState()
+        // pnSpace is val (lock-split refactor); reset its fields in place.
+        // The PacketNumberSpaceState.resetForRetry() name is historical but
+        // the semantics are right for VN too: zero out the PN counter +
+        // received-side state.
+        pnSpace.resetForRetry()
         ackTracker =
             com.vitorpamplona.quic.recovery
                 .AckTracker()
