@@ -52,6 +52,8 @@ import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import org.junit.Rule
+import org.junit.rules.TestName
 
 /**
  * Phase 4 (T16) — browser-side cross-stack interop scenarios.
@@ -78,6 +80,13 @@ import kotlin.test.assertTrue
  * `NativeMoqRelayHarness`).
  */
 class BrowserInteropTest {
+    /**
+     * Tags the per-method moq-relay log file when trace capture is
+     * enabled. See `HangInteropTest.testName`.
+     */
+    @Rule @JvmField
+    val testName: TestName = TestName()
+
     @BeforeTest
     fun gate() {
         PlaywrightDriver.assumeBrowserInterop()
@@ -97,7 +106,7 @@ class BrowserInteropTest {
         // browser-publisher tests run alongside browser-listener
         // tests). Per-method reboot costs ~500 ms (cargo binaries are
         // cached); acceptable for the stability gain.
-        NativeMoqRelayHarness.resetShared()
+        NativeMoqRelayHarness.resetShared(testTag = testName.methodName)
     }
 
     /**

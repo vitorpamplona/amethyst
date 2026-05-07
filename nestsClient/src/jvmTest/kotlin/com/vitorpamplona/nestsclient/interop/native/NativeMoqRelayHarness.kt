@@ -26,8 +26,11 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -59,6 +62,13 @@ class NativeMoqRelayHarness private constructor(
     private val relayPort: Int,
     private val sidecarsDir: Path,
     private val cargoBinDir: Path,
+    /**
+     * File the relay's combined stdout/stderr was tee'd to for this
+     * boot, when trace-log capture was enabled. Useful for tests that
+     * want to attach the per-method relay log to a failure assertion.
+     * `null` when the per-method log dir wasn't configured.
+     */
+    val relayLogFile: Path?,
 ) : AutoCloseable {
     private var stopped = false
 
@@ -107,8 +117,33 @@ class NativeMoqRelayHarness private constructor(
          */
         const val CARGO_BIN_DIR_PROPERTY = "nestsHangInteropCargoBinDir"
 
+        /**
+         * Optional dir where each relay subprocess boot writes its
+         * combined stdout/stderr to a file. Forwarded by
+         * `:nestsClient`'s test task to
+         * `nestsClient/build/relay-logs/`. When set, the relay also
+         * runs with `RUST_LOG=moq_relay=trace,moq_lite=trace` so the
+         * captured file contains the per-broadcast subscribe-routing
+         * trace investigated in
+         * `nestsClient/plans/2026-05-07-moq-relay-routing-investigation.md`.
+         *
+         * One file per relay boot; `resetShared(testTag = "<name>")`
+         * tags filenames so a sweep produces
+         * `<name>-<seq>-<timestamp>.log` and a failed run is easy to
+         * locate by test method name. Without the property, the relay
+         * runs with `--log-level info` and no per-boot file is
+         * produced — keeps the harness's existing behaviour for
+         * non-investigatory runs.
+         */
+        const val RELAY_LOG_DIR_PROPERTY = "nestsHangInteropRelayLogDir"
+
         private const val PORT_READY_TIMEOUT_MS = 30_000L
         private const val PORT_PROBE_INTERVAL_MS = 200L
+
+        /** Monotonic counter used to disambiguate same-tag boots in one JVM. */
+        private val bootSequence = AtomicInteger(0)
+        private val LOG_TIMESTAMP_FMT =
+            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS")
 
         fun isEnabled(): Boolean = System.getProperty(ENABLE_PROPERTY) == "true"
 
@@ -139,12 +174,18 @@ class NativeMoqRelayHarness private constructor(
          * Bring the relay up if not already running; reuses the same
          * subprocess across test classes within one JVM run. Mirrors
          * the singleton pattern in [com.vitorpamplona.nestsclient.interop.NostrNestsHarness].
+         *
+         * If a relay log dir is configured (see [RELAY_LOG_DIR_PROPERTY])
+         * and no shared relay exists yet, the boot is tagged with
+         * [testTag]; otherwise the existing relay is reused regardless
+         * of tag. Use [resetShared] to force a fresh boot with a
+         * specific tag.
          */
-        fun shared(): NativeMoqRelayHarness {
+        fun shared(testTag: String? = null): NativeMoqRelayHarness {
             shared?.let { return it }
             synchronized(sharedLock) {
                 shared?.let { return it }
-                val instance = doStart()
+                val instance = doStart(testTag)
                 Runtime.getRuntime().addShutdownHook(
                     Thread({ runCatching { instance.close() } }, "NativeMoqRelayHarness-shutdown"),
                 )
@@ -169,16 +210,27 @@ class NativeMoqRelayHarness private constructor(
          * are paid). At 11 scenarios × 500 ms that's ~5.5 s added
          * to the suite wallclock — acceptable trade for stability.
          */
-        fun resetShared() {
+        fun resetShared(testTag: String? = null) {
             synchronized(sharedLock) {
                 shared?.let {
                     runCatching { it.close() }
                 }
                 shared = null
             }
+            // Pre-warm so the next caller observes the relay already up
+            // tagged with this test method's name. Without this, the
+            // first call to shared() after resetShared() picks up the
+            // tag of whoever wins the race — usually the test body
+            // calling `shared()`, which is fine, but a concurrent
+            // listener-side helper may race in first under suite
+            // mode. Pre-warming is cheap (~500 ms cargo cache hit)
+            // and keeps the per-method log filename stable.
+            if (testTag != null && System.getProperty(RELAY_LOG_DIR_PROPERTY) != null) {
+                shared(testTag)
+            }
         }
 
-        private fun doStart(): NativeMoqRelayHarness {
+        private fun doStart(testTag: String?): NativeMoqRelayHarness {
             check(isEnabled()) {
                 "NativeMoqRelayHarness.shared() called without -D$ENABLE_PROPERTY=true."
             }
@@ -196,6 +248,25 @@ class NativeMoqRelayHarness private constructor(
             }
 
             val port = reservePort()
+            val relayLogDir = System.getProperty(RELAY_LOG_DIR_PROPERTY)?.let { File(it) }
+            val relayLogFile: File? =
+                if (relayLogDir != null) {
+                    relayLogDir.mkdirs()
+                    val seq = bootSequence.incrementAndGet().toString().padStart(3, '0')
+                    val ts = LocalDateTime.now().format(LOG_TIMESTAMP_FMT)
+                    val tag = sanitiseTag(testTag ?: "boot")
+                    File(relayLogDir, "$tag-$seq-$ts.log")
+                } else {
+                    null
+                }
+            // Keep `--log-level info` as the baseline; the relay's
+            // tracing_subscriber EnvFilter honours `RUST_LOG`, which
+            // we set to trace on `moq_relay` + `moq_lite` only when
+            // capture is enabled. That gives us the per-broadcast
+            // subscribe-routing trace investigated in plan
+            // `2026-05-07-moq-relay-routing-investigation.md` while
+            // keeping quinn/h3/tls noise at info — full-tree trace
+            // is ~100s of MB per test, way more than needed.
             val pb =
                 ProcessBuilder(
                     moqRelay.toString(),
@@ -219,9 +290,14 @@ class NativeMoqRelayHarness private constructor(
                     "--log-level",
                     "info",
                 ).redirectErrorStream(true)
+            if (relayLogFile != null) {
+                pb.environment()["RUST_LOG"] =
+                    "info,moq_relay=trace,moq_lite=trace,moq_native=debug"
+            }
 
             val process = pb.start()
-            val drainer = ProcessOutputDrainer(process, "moq-relay").also { it.start() }
+            val drainer =
+                ProcessOutputDrainer(process, "moq-relay", relayLogFile).also { it.start() }
 
             try {
                 // moq-relay logs `addr=… listening` on bind. Wait for
@@ -251,8 +327,19 @@ class NativeMoqRelayHarness private constructor(
                 relayPort = port,
                 sidecarsDir = sidecarsDir,
                 cargoBinDir = cargoBinDir,
+                relayLogFile = relayLogFile?.toPath(),
             )
         }
+
+        /**
+         * Strip filesystem-unfriendly characters from a JUnit test
+         * method name so it can be used directly in a log filename.
+         */
+        private fun sanitiseTag(raw: String): String =
+            raw
+                .replace(Regex("[^A-Za-z0-9._-]"), "_")
+                .take(80)
+                .ifBlank { "boot" }
 
         private fun requireDirProperty(name: String): Path {
             val raw = System.getProperty(name)
@@ -350,6 +437,16 @@ class NativeMoqRelayHarness private constructor(
 private class ProcessOutputDrainer(
     private val process: Process,
     private val name: String,
+    /**
+     * Optional sink for the full subprocess output. When non-null,
+     * every line is also written here verbatim — used by the
+     * routing-race investigation (see plan
+     * `2026-05-07-moq-relay-routing-investigation.md`) to keep the
+     * trace-level log around for post-hoc analysis. The in-memory
+     * ring is kept regardless so `tail()` still feeds failure
+     * messages.
+     */
+    private val sinkFile: File? = null,
 ) {
     private val ring = ConcurrentLinkedQueue<String>()
     private val maxLines = 64
@@ -360,12 +457,24 @@ private class ProcessOutputDrainer(
     fun start() {
         thread =
             Thread({
-                process.inputStream.bufferedReader().useLines { lines ->
-                    for (line in lines) {
-                        ring.add(line)
-                        while (ring.size > maxLines) ring.poll()
-                        lock.withLock { newLineCond.signalAll() }
+                val writer = sinkFile?.bufferedWriter()
+                try {
+                    process.inputStream.bufferedReader().useLines { lines ->
+                        for (line in lines) {
+                            ring.add(line)
+                            while (ring.size > maxLines) ring.poll()
+                            if (writer != null) {
+                                runCatching {
+                                    writer.write(line)
+                                    writer.newLine()
+                                    writer.flush()
+                                }
+                            }
+                            lock.withLock { newLineCond.signalAll() }
+                        }
                     }
+                } finally {
+                    runCatching { writer?.close() }
                 }
             }, "NativeMoqRelayHarness-$name").apply {
                 isDaemon = true

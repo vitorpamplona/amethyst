@@ -1,6 +1,29 @@
 # Plan: investigate moq-relay 0.10.x per-broadcast subscribe-routing race
 
-**Status:** specced — pickup ready.
+**Status:** Step 1 instrumentation landed; sweep + analysis in progress.
+
+## Progress log (2026-05-07)
+
+- Step 1 instrumentation landed. `NativeMoqRelayHarness` now accepts an
+  optional `testTag` and writes the relay subprocess's combined
+  stdout/stderr to
+  `nestsClient/build/relay-logs/<methodName>-<seq>-<ts>.log` whenever
+  `-DnestsHangInteropTraceRelay=true` is set. The subprocess runs with
+  `RUST_LOG=info,moq_relay=trace,moq_lite=trace,moq_native=debug` so
+  the per-broadcast subscribe-routing path is observable; quinn /
+  rustls / h3 stay at info to keep the file < ~10 MB per scenario.
+  `HangInteropTest` and `BrowserInteropTest` now expose a JUnit 4
+  `TestName` rule and pass the method name into `resetShared` so each
+  scenario's per-method log is easy to locate by name.
+- Step 4 ruled out — `cargo info moq-relay` confirms `0.10.25` is the
+  current `crates.io` release; no newer minor exists. The plan's
+  Step 4 path (next minor on crates.io) does not apply. The fallback
+  is a `cargo install --git https://github.com/moq-dev/moq.git --rev
+  <main-head>` against `bdda6bd19a37ccdf7f7b66f3d760d8892ea8db59`
+  (main HEAD as of investigation) — moq-relay-v0.10.25 tag matches
+  the published crate, so post-0.10.25 work lives only on `main`.
+  Also note the upstream moved from `kixelated/moq` to `moq-dev/moq`;
+  REV's `KIXELATED_MOQ_GIT_REV` predates the move.
 
 **Owns:** the residual flake that affects four T16 scenarios:
 `late_join_listener_still_decodes_tail`,
