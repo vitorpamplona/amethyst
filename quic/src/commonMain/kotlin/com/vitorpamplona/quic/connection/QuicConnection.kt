@@ -24,7 +24,7 @@ import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
 import com.vitorpamplona.quic.crypto.bestAes128GcmAead
-import com.vitorpamplona.quic.packet.QuicVersion
+import com.vitorpamplona.quic.observability.QlogObserver
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -75,34 +75,12 @@ class QuicConnection(
     },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
     /**
-     * Optional second listener invoked after the connection's own
-     * key-installation listener. Used by the interop runner endpoint to
-     * dump SSLKEYLOG lines so Wireshark can decrypt captured pcaps.
-     * Default `null` keeps production callers unaffected.
+     * Optional qlog observer (draft-marx-qlog). Production callers
+     * leave this at [QlogObserver.NoOp] (zero overhead). Interop /
+     * test runners attach a JSON-NDJSON writer so a failed run
+     * produces a `client.sqlog` consumable by qvis.
      */
-    val extraSecretsListener: TlsSecretsListener? = null,
-    /**
-     * TLS cipher suites to offer in the ClientHello. Override to e.g.
-     * `intArrayOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256)` for the
-     * `chacha20` interop testcase. Default matches [TlsClient]'s default.
-     */
-    val cipherSuites: IntArray =
-        intArrayOf(
-            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
-            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
-        ),
-    /**
-     * Version this connection puts in the FIRST Initial it sends. Defaults
-     * to [QuicVersion.V1]; the interop runner sets it to
-     * [QuicVersion.FORCE_VERSION_NEGOTIATION] for the `versionnegotiation`
-     * testcase, which drives the client through the RFC 9000 §6 VN flow.
-     *
-     * On a successful Version Negotiation (server replies with a list of
-     * versions it supports including v1), [applyVersionNegotiation] resets
-     * [currentVersion] to v1 and the writer's subsequent Initial packets
-     * carry v1 in the long-header version field.
-     */
-    val initialVersion: Int = QuicVersion.V1,
+    val qlogObserver: QlogObserver = QlogObserver.NoOp,
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
     var destinationConnectionId: ConnectionId = ConnectionId.random(8)
@@ -396,7 +374,8 @@ class QuicConnection(
             ) {
                 handshake.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 handshake.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
-                extraSecretsListener?.onHandshakeKeysReady(cipherSuite, clientSecret, serverSecret)
+                qlogObserver.onKeyUpdated("client", EncryptionLevel.HANDSHAKE)
+                qlogObserver.onKeyUpdated("server", EncryptionLevel.HANDSHAKE)
             }
 
             override fun onApplicationKeysReady(
@@ -406,13 +385,15 @@ class QuicConnection(
             ) {
                 application.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 application.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
-                extraSecretsListener?.onApplicationKeysReady(cipherSuite, clientSecret, serverSecret)
+                qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
+                qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
             }
 
             override fun onHandshakeComplete() {
                 handshakeComplete = true
                 if (status == Status.HANDSHAKING) status = Status.CONNECTED
                 applyPeerTransportParameters()
+                tls.negotiatedAlpn?.let { qlogObserver.onAlpnNegotiated(it.decodeToString()) }
                 handshakeDoneSignal.complete(Unit)
                 extraSecretsListener?.onHandshakeComplete()
             }
@@ -458,6 +439,18 @@ class QuicConnection(
 
     /** Begin the handshake — emits ClientHello into Initial CRYPTO. */
     fun start() {
+        // qlog: emit connection_started + initial transport_parameters_set
+        // before any wire traffic so the trace makes chronological sense
+        // when handed to qvis.
+        qlogObserver.onConnectionStarted(
+            serverName = serverName,
+            dcid = destinationConnectionId.bytes,
+            scid = sourceConnectionId.bytes,
+        )
+        qlogObserver.onTransportParametersSet("local", localTransportParametersSummary())
+        // RFC 9000 §6: we're not doing version negotiation, so the
+        // chosen version is unconditional.
+        qlogObserver.onVersionInformation("v1", emptyList())
         tls.start()
         // Drain ClientHello bytes into the Initial-level CRYPTO send buffer.
         // Cache the bytes so [applyVersionNegotiation] can re-enqueue them
@@ -574,6 +567,35 @@ class QuicConnection(
         return true
     }
 
+    private fun localTransportParametersSummary(): Map<String, String> {
+        val out = LinkedHashMap<String, String>(8)
+        out["initial_max_data"] = config.initialMaxData.toString()
+        out["initial_max_stream_data_bidi_local"] = config.initialMaxStreamDataBidiLocal.toString()
+        out["initial_max_stream_data_bidi_remote"] = config.initialMaxStreamDataBidiRemote.toString()
+        out["initial_max_stream_data_uni"] = config.initialMaxStreamDataUni.toString()
+        out["initial_max_streams_bidi"] = config.initialMaxStreamsBidi.toString()
+        out["initial_max_streams_uni"] = config.initialMaxStreamsUni.toString()
+        out["max_idle_timeout"] = config.maxIdleTimeoutMillis.toString()
+        out["max_udp_payload_size"] = config.maxUdpPayloadSize.toString()
+        out["max_datagram_frame_size"] = config.maxDatagramFrameSize.toString()
+        return out
+    }
+
+    private fun peerTransportParametersSummary(tp: TransportParameters): Map<String, String> {
+        val out = LinkedHashMap<String, String>(10)
+        tp.initialMaxData?.let { out["initial_max_data"] = it.toString() }
+        tp.initialMaxStreamDataBidiLocal?.let { out["initial_max_stream_data_bidi_local"] = it.toString() }
+        tp.initialMaxStreamDataBidiRemote?.let { out["initial_max_stream_data_bidi_remote"] = it.toString() }
+        tp.initialMaxStreamDataUni?.let { out["initial_max_stream_data_uni"] = it.toString() }
+        tp.initialMaxStreamsBidi?.let { out["initial_max_streams_bidi"] = it.toString() }
+        tp.initialMaxStreamsUni?.let { out["initial_max_streams_uni"] = it.toString() }
+        tp.maxIdleTimeoutMillis?.let { out["max_idle_timeout"] = it.toString() }
+        tp.maxUdpPayloadSize?.let { out["max_udp_payload_size"] = it.toString() }
+        tp.maxDatagramFrameSize?.let { out["max_datagram_frame_size"] = it.toString() }
+        tp.maxAckDelay?.let { out["max_ack_delay"] = it.toString() }
+        return out
+    }
+
     private fun buildLocalTransportParameters(): TransportParameters =
         TransportParameters(
             initialMaxData = config.initialMaxData,
@@ -619,6 +641,7 @@ class QuicConnection(
             return
         }
         peerTransportParameters = tp
+        qlogObserver.onTransportParametersSet("remote", peerTransportParametersSummary(tp))
         sendConnectionFlowCredit = tp.initialMaxData ?: 0L
         peerMaxStreamsBidi = tp.initialMaxStreamsBidi ?: 0L
         peerMaxStreamsUni = tp.initialMaxStreamsUni ?: 0L
@@ -840,12 +863,15 @@ class QuicConnection(
         errorCode: Long,
         reason: String,
     ) {
+        var firedQlog = false
         lock.withLock {
             if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
             closeErrorCode = errorCode
             closeReason = reason
             status = Status.CLOSING
+            firedQlog = true
         }
+        if (firedQlog) qlogObserver.onConnectionClosed("local", errorCode, reason)
         // If a caller is suspended on awaitHandshake() and we're tearing down
         // before completion, fail the deferred so the caller throws instead
         // of hanging forever.
@@ -857,7 +883,16 @@ class QuicConnection(
 
     /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
     internal fun markClosedExternally(reason: String) {
+        val wasClosed = status == Status.CLOSED
         if (status != Status.CLOSED) status = Status.CLOSED
+        if (!wasClosed) {
+            // "remote" covers both peer-initiated CONNECTION_CLOSE and
+            // local invariant violations (CID mismatch, frame decode
+            // failure) that the parser surfaces as markClosedExternally.
+            // The reason string is the discriminator the trace consumer
+            // reads.
+            qlogObserver.onConnectionClosed("remote", closeErrorCode, reason)
+        }
         if (!handshakeComplete) {
             signalHandshakeFailed(QuicConnectionClosedException("connection closed externally: $reason"))
         }
