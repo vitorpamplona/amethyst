@@ -19,12 +19,14 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.testrelay.SyntheticEvents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,15 +40,26 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
     @Test
     fun testDownloadFromRelayReturnsMetadataEvents() =
         runBlocking {
+            // Each event needs a unique pubkey so replaceable kind 0 doesn't
+            // collapse them all to one row.
+            val corpus =
+                (1..1000).map {
+                    SyntheticEvents.fakeEvent(
+                        idSeed = it,
+                        kind = MetadataEvent.KIND,
+                        pubKey = SyntheticEvents.hexId(it),
+                    )
+                }
+            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(corpus)
+
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val events = mutableListOf<Event>()
 
-            // nos.lol returns only 500 events per req
             val totalFound =
                 client.fetchAllPages(
-                    relay = "wss://nos.lol",
+                    relay = "ws://127.0.0.1:7770/",
                     filters =
                         listOf(
                             Filter(
@@ -61,27 +74,45 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
             client.disconnect()
             delay(500)
             appScope.cancel()
+            relayHub.close()
 
-            assertEquals(1000, totalFound, "Expected 1000 events from wss://nos.lol")
-            assertEquals(1000, events.size, "Events list should be 1000 events")
+            assertEquals(1000, totalFound)
+            assertEquals(1000, events.size)
             events.forEach { event ->
-                assertEquals(MetadataEvent.KIND, event.kind, "All events should be kind ${MetadataEvent.KIND}")
+                assertEquals(MetadataEvent.KIND, event.kind)
             }
         }
 
     @Test
     fun testDownloadFromRelayReturnsMetadataAndContactListEvents() =
         runBlocking {
+            val metadata =
+                (1..1000).map {
+                    SyntheticEvents.fakeEvent(
+                        idSeed = it,
+                        kind = MetadataEvent.KIND,
+                        pubKey = SyntheticEvents.hexId(it),
+                    )
+                }
+            val contacts =
+                (1..1500).map {
+                    SyntheticEvents.fakeEvent(
+                        idSeed = 100_000 + it,
+                        kind = ContactListEvent.KIND,
+                        pubKey = SyntheticEvents.hexId(100_000 + it),
+                    )
+                }
+            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(metadata + contacts)
+
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val metadataEvents = mutableListOf<Event>()
             val contactListEvents = mutableListOf<Event>()
 
-            // nos.lol returns only 500 events per req
             val totalFound =
                 client.fetchAllPages(
-                    relay = "wss://nos.lol",
+                    relay = "ws://127.0.0.1:7770/",
                     filters =
                         listOf(
                             Filter(
@@ -105,15 +136,10 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
             client.disconnect()
             delay(500)
             appScope.cancel()
+            relayHub.close()
 
-            assertEquals(2500, totalFound, "Expected 1000 events from wss://nos.lol")
-            assertEquals(1000, metadataEvents.size, "Events list should be 1000 events")
-            assertEquals(1500, contactListEvents.size, "Events list should be 1000 events")
-            metadataEvents.forEach { event ->
-                assertEquals(MetadataEvent.KIND, event.kind, "All events should be kind ${MetadataEvent.KIND}")
-            }
-            contactListEvents.forEach { event ->
-                assertEquals(ContactListEvent.KIND, event.kind, "All events should be kind ${ContactListEvent.KIND}")
-            }
+            assertEquals(2500, totalFound)
+            assertEquals(1000, metadataEvents.size)
+            assertEquals(1500, contactListEvents.size)
         }
 }

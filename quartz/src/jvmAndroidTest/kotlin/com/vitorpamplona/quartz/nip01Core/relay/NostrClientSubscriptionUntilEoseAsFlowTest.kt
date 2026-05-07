@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.testrelay.SyntheticEvents
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,12 +49,15 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
     @Test
     fun testNostrClientSubscriptionUntilEoseAsFlow() =
         runTest {
+            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
+                SyntheticEvents.batch(20, kind = MetadataEvent.KIND),
+            )
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val flow =
                 client.fetchAsFlow(
-                    relay = "wss://nos.lol",
+                    relay = "ws://127.0.0.1:7770/",
                     filter =
                         Filter(
                             kinds = listOf(MetadataEvent.KIND),
@@ -79,6 +83,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
 
             client.disconnect()
             appScope.cancel()
+            relayHub.close()
 
             assertEquals(10, feedStates.size)
         }
@@ -87,12 +92,15 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
     @Test
     fun testNostrClientSubscriptionUntilEoseAsFlowDebouncing() =
         runTest {
+            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
+                SyntheticEvents.batch(20, kind = MetadataEvent.KIND),
+            )
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val flow =
                 client.fetchAsFlow(
-                    relay = "wss://nos.lol",
+                    relay = "ws://127.0.0.1:7770/",
                     filter =
                         Filter(
                             kinds = listOf(MetadataEvent.KIND),
@@ -118,6 +126,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
 
             client.disconnect()
             appScope.cancel()
+            relayHub.close()
 
             assertEquals(10, feedStates.size)
         }

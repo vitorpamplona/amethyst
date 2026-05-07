@@ -19,6 +19,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
@@ -35,23 +37,39 @@ class NostrClientFirstEventTest : BaseNostrClientTest() {
     @Test
     fun testDownloadFirstEvent() =
         runBlocking {
+            val pubKey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
+            val relayUrl = "ws://127.0.0.1:7770/"
+
+            val seed =
+                Event(
+                    id = "a".repeat(64),
+                    pubKey = pubKey,
+                    createdAt = 1000L,
+                    kind = MetadataEvent.KIND,
+                    tags = emptyArray(),
+                    content = """{"name":"vitor"}""",
+                    sig = "b".repeat(128),
+                )
+            relayHub.getOrCreate(relayUrl).preload(seed)
+
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val event =
                 client.fetchFirst(
-                    relay = "wss://nos.lol",
+                    relay = relayUrl,
                     filter =
                         Filter(
                             kinds = listOf(MetadataEvent.KIND),
-                            authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                            authors = listOf(pubKey),
                         ),
                 )
 
             client.disconnect()
             appScope.cancel()
+            relayHub.close()
 
             assertEquals(MetadataEvent.KIND, event?.kind)
-            assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", event?.pubKey)
+            assertEquals(pubKey, event?.pubKey)
         }
 }

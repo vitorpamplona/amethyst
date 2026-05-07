@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.testrelay.SyntheticEvents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,6 +42,11 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
     @Test
     fun testEoseAfter100Events() =
         runBlocking {
+            val relayUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/")
+            relayHub
+                .getOrCreate(relayUrl)
+                .preload(SyntheticEvents.batch(150, kind = MetadataEvent.KIND))
+
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
@@ -69,7 +75,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
 
             val filters =
                 mapOf(
-                    RelayUrlNormalizer.normalize("wss://nos.lol") to
+                    relayUrl to
                         listOf(
                             Filter(
                                 kinds = listOf(MetadataEvent.KIND),
@@ -93,6 +99,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
             client.disconnect()
 
             appScope.cancel()
+            relayHub.close()
 
             assertEquals(101, events.size)
             assertEquals(true, events.take(100).all { it.length == 64 })

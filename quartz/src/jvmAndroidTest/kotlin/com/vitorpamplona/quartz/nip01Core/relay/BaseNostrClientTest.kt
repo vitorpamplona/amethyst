@@ -20,35 +20,21 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
+import com.vitorpamplona.quartz.testrelay.TestRelayHub
 
-class DefaultContentTypeInterceptor(
-    private val userAgentHeader: String,
-) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest: Request = chain.request()
-        val requestWithUserAgent: Request =
-            originalRequest
-                .newBuilder()
-                .header("User-Agent", userAgentHeader)
-                .build()
-        return chain.proceed(requestWithUserAgent)
-    }
-}
-
+/**
+ * Base for tests that drive a real `NostrClient` against an in-process Nostr
+ * relay. Each subclass instance gets its own [TestRelayHub] so tests can
+ * preload events and assert deterministic counts without hitting the
+ * network or relying on production relays.
+ *
+ * To replace with the previous behaviour (real OkHttp WebSocket against
+ * `wss://nos.lol`), instantiate `BasicOkHttpWebSocket.Builder` directly in
+ * the specific test that needs it.
+ */
 open class BaseNostrClientTest {
-    companion object {
-        val rootClient =
-            OkHttpClient
-                .Builder()
-                .followRedirects(true)
-                .followSslRedirects(true)
-                .addInterceptor(DefaultContentTypeInterceptor("Amethyst/v1.05"))
-                .build()
-        val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
-    }
+    val relayHub: TestRelayHub = TestRelayHub()
+
+    /** Plug into `NostrClient(socketBuilder, scope)`. */
+    val socketBuilder get() = relayHub
 }

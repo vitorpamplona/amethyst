@@ -180,6 +180,10 @@ kotlin {
                 dependencies {
                     implementation(libs.kotlin.test)
                     implementation(libs.kotlinx.coroutines.test)
+
+                    // In-process Nostr relay so JVM/Android host tests don't
+                    // need network access or a Rust toolchain.
+                    implementation(project(":quartz-test-relay"))
                 }
             }
 

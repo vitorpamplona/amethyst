@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.testrelay.SyntheticEvents
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,26 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
     @Test
     fun testRepeatSubEvents() =
         runBlocking {
+            // Each replaceable kind needs unique pubkeys.
+            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
+                (1..150).map {
+                    SyntheticEvents.fakeEvent(
+                        idSeed = it,
+                        kind = MetadataEvent.KIND,
+                        pubKey = SyntheticEvents.hexId(it),
+                    )
+                },
+            )
+            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
+                (1..50).map {
+                    SyntheticEvents.fakeEvent(
+                        idSeed = 100_000 + it,
+                        kind = AdvertisedRelayListEvent.KIND,
+                        pubKey = SyntheticEvents.hexId(100_000 + it),
+                    )
+                },
+            )
+
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
@@ -82,7 +103,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             val filters =
                 mapOf(
-                    RelayUrlNormalizer.normalize("wss://nos.lol") to
+                    RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/") to
                         listOf(
                             Filter(
                                 kinds = listOf(MetadataEvent.KIND),
@@ -93,7 +114,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             val filtersShouldIgnore =
                 mapOf(
-                    RelayUrlNormalizer.normalize("wss://nos.lol") to
+                    RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/") to
                         listOf(
                             Filter(
                                 kinds = listOf(AdvertisedRelayListEvent.KIND),
@@ -104,7 +125,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             val filtersShouldSendAfterEOSE =
                 mapOf(
-                    RelayUrlNormalizer.normalize("wss://nos.lol") to
+                    RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/") to
                         listOf(
                             Filter(
                                 kinds = listOf(AdvertisedRelayListEvent.KIND),
@@ -143,6 +164,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
             client.disconnect()
 
             appScope.cancel()
+            relayHub.close()
 
             // The relay may return up to limit events before EOSE; some relays return
             // one extra past the requested limit, so don't assert on the exact count.

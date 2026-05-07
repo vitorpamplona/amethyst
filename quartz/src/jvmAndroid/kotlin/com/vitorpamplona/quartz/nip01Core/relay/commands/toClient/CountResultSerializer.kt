@@ -30,9 +30,12 @@ class CountResultSerializer : StdSerializer<CountResult>(CountResult::class.java
         gen: JsonGenerator,
         provider: SerializerProvider,
     ) {
+        // NIP-45 result object: { "count": <int>, "approximate": <bool>? }.
         gen.writeStartObject()
         gen.writeNumberField("count", result.count)
-        gen.writeBooleanField("pubkey", result.approximate)
+        if (result.approximate) {
+            gen.writeBooleanField("approximate", true)
+        }
         gen.writeEndObject()
     }
 }

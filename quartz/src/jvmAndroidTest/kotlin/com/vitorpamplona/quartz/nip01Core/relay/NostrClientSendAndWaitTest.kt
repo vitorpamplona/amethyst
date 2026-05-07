@@ -44,22 +44,26 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
 
             val event = randomSigner.sign(TextNoteEvent.build("Hello World"))
 
-            val resultDamus =
+            val relayA = "ws://127.0.0.1:7771/".normalizeRelayUrl()
+            val relayB = "ws://127.0.0.1:7772/".normalizeRelayUrl()
+
+            val resultA =
                 client.publishAndConfirm(
                     event = event,
-                    relayList = setOf("wss://nostr.bitcoiner.social".normalizeRelayUrl()),
+                    relayList = setOf(relayA),
                 )
 
-            val resultNos =
+            val resultB =
                 client.publishAndConfirm(
                     event = event,
-                    relayList = setOf("wss://nos.lol".normalizeRelayUrl()),
+                    relayList = setOf(relayB),
                 )
 
             client.disconnect()
             appScope.cancel()
+            relayHub.close()
 
-            assertEquals(true, resultDamus)
-            assertEquals(true, resultNos)
+            assertEquals(true, resultA)
+            assertEquals(true, resultB)
         }
 }

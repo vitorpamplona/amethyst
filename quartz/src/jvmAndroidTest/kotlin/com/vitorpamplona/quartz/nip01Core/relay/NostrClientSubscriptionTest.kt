@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.testrelay.SyntheticEvents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +41,9 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
     @Test
     fun testNostrClientSubscription() =
         runBlocking {
+            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
+                SyntheticEvents.batch(150, kind = MetadataEvent.KIND),
+            )
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
@@ -50,7 +54,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
                 StaticSubscription(
                     client,
                     mapOf(
-                        RelayUrlNormalizer.normalize("wss://nos.lol") to
+                        RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/") to
                             listOf(
                                 Filter(
                                     kinds = listOf(MetadataEvent.KIND),
@@ -76,6 +80,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
 
             client.disconnect()
             appScope.cancel()
+            relayHub.close()
 
             assertEquals(100, events.size)
         }
