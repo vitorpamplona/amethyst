@@ -22,6 +22,7 @@ package com.vitorpamplona.geode.perf
 
 import com.vitorpamplona.geode.LocalRelayServer
 import com.vitorpamplona.geode.Relay
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
@@ -40,6 +41,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicLongArray
 import kotlin.test.Test
 import kotlin.time.measureTime
 
@@ -441,6 +443,168 @@ class LoadBenchmark {
                                 "fanoutLastMs=${"%.1f".format(lastFanoutMs)} " +
                                 "received=${received.get()}/$subs",
                         )
+                    } finally {
+                        subClient.disconnect()
+                        pubClient.disconnect()
+                        scope.cancel()
+                    }
+                }
+            }
+        }
+
+    /**
+     * Selective fanout: each event matches exactly ONE of N
+     * subscribers. Stresses the inverted-index path in
+     * `FilterIndex` / `LiveEventStore`: without an index, the relay
+     * walks all N subscribers per event and runs `Filter.match` to
+     * find the one true match; with the index, an author-keyed
+     * lookup returns the single subscriber directly.
+     *
+     * Different from [fanoutLatency], which tests broadcast fanout
+     * (one event reaches every subscriber). Here per-event work is
+     * lookup-bound rather than delivery-bound, so latency should be
+     * roughly **flat** in N once the index is wired up — that's the
+     * shape change the index is meant to deliver.
+     *
+     * Configurable via system properties:
+     *  - `fanoutScalingSubs`: comma-separated list of N values
+     *    (default `100,1000,5000`).
+     *  - `fanoutScalingEvents`: total events per N (default scales
+     *    inversely with N to keep test wall time bounded — at 5000
+     *    subs the OkHttp WebSocket dispatcher on the test client
+     *    starts serializing inbound EVENT frames at high throughput,
+     *    which inflates measured latency without telling us anything
+     *    about the index itself).
+     */
+    @Test
+    fun fanoutScaling() =
+        benchmark("fanout scaling") {
+            val subSweep =
+                System
+                    .getProperty("fanoutScalingSubs")
+                    ?.split(",")
+                    ?.mapNotNull { it.trim().toIntOrNull() }
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: listOf(100, 1_000, 5_000)
+            for (subs in subSweep) {
+                runBenchmarkServer { server, http ->
+                    val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+                    val subClient = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
+                    val pubClient = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
+                    try {
+                        val relayUrl = server.url.normalizeRelayUrl()
+
+                        // One keypair per subscriber. Each subscriber
+                        // filters on its own author so the relay can
+                        // route an event to exactly one sub via the
+                        // FilterIndex's byAuthor bucket.
+                        val keys = List(subs) { KeyPair() }
+                        val pubkeys = keys.map { it.pubKey.toHexKey() }
+
+                        // Per-subscriber arrival timestamp. We
+                        // overwrite per round; the publish path waits
+                        // until the slot is non-zero before moving on.
+                        val arrivalNs = AtomicLongArray(subs)
+                        val received = AtomicLong()
+                        val eosed = AtomicLong()
+
+                        repeat(subs) { i ->
+                            subClient.subscribe(
+                                "scale-$i",
+                                mapOf(
+                                    relayUrl to
+                                        listOf(
+                                            Filter(
+                                                authors = listOf(pubkeys[i]),
+                                                kinds = listOf(1),
+                                            ),
+                                        ),
+                                ),
+                                object : SubscriptionListener {
+                                    override fun onEvent(
+                                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                                        isLive: Boolean,
+                                        relay: NormalizedRelayUrl,
+                                        forFilters: List<Filter>?,
+                                    ) {
+                                        arrivalNs.set(i, System.nanoTime())
+                                        received.incrementAndGet()
+                                    }
+
+                                    override fun onEose(
+                                        relay: NormalizedRelayUrl,
+                                        forFilters: List<Filter>?,
+                                    ) {
+                                        eosed.incrementAndGet()
+                                    }
+                                },
+                            )
+                        }
+
+                        runBlocking {
+                            withTimeout(120_000) {
+                                while (eosed.get() < subs) kotlinx.coroutines.delay(100)
+                            }
+                        }
+
+                        // Events round-robin over the N pubkeys. Per
+                        // the plan we'd like 10k everywhere, but
+                        // [WebSocketSessionPump.MAX_OUTGOING_BUFFER]
+                        // (8192 frames) on the relay's per-session
+                        // outbound queue trips when the subClient's
+                        // single-WS read pipeline can't drain
+                        // (subs + events) frames fast enough. That's
+                        // a test-infra ceiling, not the index's. We
+                        // back off events at high N so the latency
+                        // numbers reflect dispatch cost rather than
+                        // backpressure-driven connection teardown.
+                        // Override with -DfanoutScalingEvents=N to
+                        // force a value (caller's responsibility to
+                        // stay below the pump cap).
+                        val totalEvents =
+                            System
+                                .getProperty("fanoutScalingEvents")
+                                ?.toIntOrNull()
+                                ?: when {
+                                    subs <= 200 -> 2_000
+                                    subs <= 1_000 -> 2_000
+                                    subs <= 2_000 -> 1_000
+                                    else -> 1_000
+                                }
+                        println("$subs subs ready; publishing $totalEvents events round-robin...")
+
+                        val latenciesMs = DoubleArray(totalEvents)
+
+                        runBlocking {
+                            val start = System.nanoTime()
+                            for (i in 0 until totalEvents) {
+                                val target = i % subs
+                                val signer = NostrSignerSync(keys[target])
+                                val event = signer.sign(TextNoteEvent.build("scale-$i"))
+                                arrivalNs.set(target, 0)
+                                val pubStart = System.nanoTime()
+                                pubClient.publishAndConfirm(event, setOf(relayUrl))
+                                withTimeout(30_000) {
+                                    while (arrivalNs.get(target) == 0L) kotlinx.coroutines.delay(1)
+                                }
+                                latenciesMs[i] = (arrivalNs.get(target) - pubStart) / 1_000_000.0
+                            }
+                            val totalMs = (System.nanoTime() - start) / 1_000_000.0
+
+                            val sorted = latenciesMs.copyOf().also { it.sort() }
+                            val p50 = sorted[sorted.size / 2]
+                            val p99 = sorted[(sorted.size * 99) / 100]
+                            val p999 = sorted[(sorted.size * 999) / 1000]
+                            val mean = sorted.average()
+                            println(
+                                "subs=$subs events=$totalEvents totalMs=${"%.0f".format(totalMs)} " +
+                                    "meanMs=${"%.2f".format(mean)} " +
+                                    "p50Ms=${"%.2f".format(p50)} " +
+                                    "p99Ms=${"%.2f".format(p99)} " +
+                                    "p999Ms=${"%.2f".format(p999)} " +
+                                    "received=${received.get()}/$totalEvents",
+                            )
+                        }
                     } finally {
                         subClient.disconnect()
                         pubClient.disconnect()
