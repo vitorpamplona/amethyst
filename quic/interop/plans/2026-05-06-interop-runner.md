@@ -155,23 +155,43 @@ they clobbered each other's changes during merge):
   streams accumulated bytes in 64-chunk per-stream channels until
   parser tore down with INTERNAL_ERROR ~4.5s into a multi-stream run).
 
-## Open issues for tomorrow
+## Phase 5 — landed 2026-05-07 (post-overnight bug-hunt)
 
-- **`retry` test fails** against both aioquic and picoquic. `applyRetry`
-  + token threading + ClientHello caching all look correct on inspection.
-  Need qlog output (now available) to diagnose. Run `retry` against
-  picoquic, drag `client.sqlog` into qvis, look for: `packet_received`
-  with type=retry, `packet_sent` with non-empty token, server's
-  reaction.
-- **`v2` testcase** — server demands QUIC v2; we're v1-only, so this
-  correctly fails. Real fix is implementing v2 (RFC 9369) which is
-  out of scope for now.
-- **Run `retry` + `multiplexing` against quic-go**, picoquic, aioquic
-  with the new fixes. Predictions:
-  - aioquic / picoquic: multiplexing should now green; retry
-    diagnostic surfaces as qlog.
-  - quic-go: previously 0/7 (probably tested mid-flight); should
-    now be much closer to picoquic/aioquic results.
+The full overnight session pulled hard on the bugs the matrix exposed.
+qlog turned out to be the unblocking tool — every fix in this phase
+came from staring at a `client.sqlog` and matching it against the RFC
+pages it referenced.
+
+| Commit | Diagnosis pattern |
+|---|---|
+| `bd9d717df` | `IOException: Stream closed` from QlogWriter mid-test → observer threw into the send loop, killed connections that had already completed transfer. |
+| `99a1a91de` | qlog stops at t=400ms, no inbound packets → per-event `writer.flush()` stalled the connection lock on macOS Docker filesystem virtualization. |
+| `c0d7b6031` | aioquic `CONNECTION_CLOSE: Packet contains no CRYPTO frame` after PTO probe → our PTO emitted bare PING, not CRYPTO retransmit. Restored agent 2's wiring lost in the qlog merge. |
+| `17b80270d` | runner's retry verdict `Client reset the packet number. Check failed for PN 0` → `applyRetry` reset Initial PN to 0; RFC 9001 §5.7 says PN namespace continues across Retry. New `LevelState.resetForRetry` helper. |
+| `9a74d1d5d` | multiplexing qlog showed STREAM frames still arriving at t=31s when local timeout fired → bumped `TRANSFER_TIMEOUT_SEC` 30→60. Doesn't fix throughput, just lets the test budget match the workload. |
+| `32ccbd2b2` | `coroutineScope { urls.map { async }.map { it.await() } }` blocks on slowest hung stream → per-stream `withTimeoutOrNull` so a single bad stream surfaces as status=0 instead of hanging the matrix. |
+
+After all of these, expectation is aioquic / picoquic ≥6/7 (M
+might still be flaky). retry green via qlog-driven debugging is
+the marquee result.
+
+## Still open
+
+- **`v2`** — server demands QUIC v2 (RFC 9369). We're v1-only.
+  Implementing v2 is its own project (different Initial-secret
+  derivation, different transport-parameter encoding, different
+  long-header type bits — not just a version-number swap).
+- **Multiplexing throughput on Mac+Rosetta** — the timeout bump
+  unblocks tests that were finishing in time. The deeper fix is
+  per-stream backpressure (parser suspends when channel near
+  capacity instead of tearing down or dropping). See `:quic`'s
+  `Audit-4 #3` decision: prefer fail-fast over silent-drop on
+  per-stream channel saturation. Needs a re-think for
+  multi-stream-heavy workloads.
+- **Server role** — entire stack is client-only. Implementing the
+  server side would unlock `handshakeloss` against aioquic
+  (currently `?` because aioquic-server doesn't support it), and
+  would make us a self-validating peer.
 
 ## Concurrency
 
