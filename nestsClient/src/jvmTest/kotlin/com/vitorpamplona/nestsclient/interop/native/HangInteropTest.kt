@@ -48,6 +48,8 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Rule
+import org.junit.rules.TestName
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -58,8 +60,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.junit.Rule
-import org.junit.rules.TestName
 
 /**
  * Cross-stack interop scenarios driving the reference `kixelated/moq`

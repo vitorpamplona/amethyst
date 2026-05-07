@@ -1,6 +1,165 @@
 # Plan: investigate moq-relay 0.10.x per-broadcast subscribe-routing race
 
-**Status:** Step 1 instrumentation landed; sweep + analysis in progress.
+**Status:** ❌ HYPOTHESIS DISPROVEN. Step 1 trace data shows the relay
+**does** forward upstream SUBSCRIBE correctly. The failure is on the
+**speaker side** — the speaker's QUIC connection silently drops a
+peer-initiated bidi opened by the relay ~2 s after speaker connect.
+The work continues but the actor changes — see "Corrected diagnosis"
+below. **The investigation moves to `:quic`** (or to whatever owns
+`incomingBidiStreams` plumbing), which is out of scope for this
+session per project guidance.
+
+## Corrected diagnosis (2026-05-07, post-trace)
+
+5× sweep on `claude/t16-nestsclient-closure-1zBIc` (rustc 1.95,
+moq-relay 0.10.25, `-DnestsHangInteropTraceRelay=true`) →
+**3 failures / 5 sweeps**, all in
+`late_join_listener_still_decodes_tail`. Sweeps 1, 2, 3 failed;
+sweeps 4, 5 passed.
+
+For one of the failing runs (sweep 1, broadcast suffix
+`6d60532f…`), the relay's full trace + the speaker-side
+`Log.d("NestTx")` lines in JUnit `<system-err>` confirm:
+
+```
+relay log (conn{id=0} = relay↔speaker, conn{id=1} = relay↔listener)
+─────────────────────────────────────────────────────────────────
+18:34:52.085  conn{id=0}  session accepted   (speaker connects)
+18:34:52.085  conn{id=0}  encoding AnnounceInterest    (relay → speaker bidi #1)
+18:34:52.092  conn{id=0}  decoded Active suffix=6d60…  (speaker replied to AI)
+18:34:54.151  conn{id=1}  session accepted   (listener connects, T+2.07 s)
+18:34:54.152  conn{id=1}  decoded Subscribe id=0 catalog.json
+18:34:54.152  conn{id=1}  subscribed started …catalog.json
+18:34:54.152  conn{id=0}  subscribe started id=0 …catalog.json   ← upstream
+18:34:54.152  conn{id=0}  encoding Subscribe …catalog.json       ← bidi #2
+18:34:57.095  conn{id=0}  decoded Ended suffix=6d60…             ← 2.94 s of silence
+                                                                    then speaker tears down
+18:34:57.095  conn{id=1}  subscribed cancelled id=0
+18:34:57.096  conn{id=0}  subscribe cancelled id=0
+
+speaker NestTx log (matching window)
+─────────────────────────────────────────────────────────────────
+18:34:52.092  ANNOUNCE inbound prefix='' → emitted Active suffix='6d60…'
+18:34:52.111  send returning false — no inboundSubs (count=1)
+18:34:53.111  send returning false — no inboundSubs (count=51)
+18:34:54.111  send returning false — no inboundSubs (count=101)
+18:34:55.111  send returning false — no inboundSubs (count=151)
+18:34:56.111  send returning false — no inboundSubs (count=201)
+18:34:57.092  send returning false — no inboundSubs (count=250)
+                                                  ↑ NO `SUBSCRIBE inbound` LOG.
+```
+
+The relay opens **bidi #2** (peer-initiated bidi from relay TO
+speaker) at 18:34:54.152 and writes a complete `Subscribe { id:0,
+track:"catalog.json" }` message to it. The wire send succeeds (no
+relay-side error). The speaker's `MoqLiteSession.handleInboundBidi`
+never logs `SUBSCRIBE inbound id=0 broadcast=…6d60…` — meaning the
+bidi never reaches the moq-lite session's bidi pump's
+`launch { handleInboundBidi(bidi) }` body. It is silently lost
+between the speaker's QUIC stack and the application layer.
+
+The same speaker connection HAS handled bidi #1 (the relay's
+AnnounceInterest at 18:34:52.085) correctly — see the
+`ANNOUNCE inbound prefix=''` log at 18:34:52.092. So the speaker's
+`pumpInboundBidis` is NOT permanently dead; it stops surfacing
+peer-opened bidis sometime between T=0 and T+2 s, intermittently.
+
+For comparison, sweep 4's identical scenario (which passed) shows
+the relay's bidi #2 → speaker SubscribeOk round-trip in ~1.94 ms:
+
+```
+18:42:44.954530  conn{id=0}  encoding Subscribe …catalog.json
+18:42:44.956465  conn{id=0}  decoded SubscribeOk
+```
+
+So the speaker CAN handle the late-join SUBSCRIBE bidi. It just
+sometimes loses it. The 60 % flake rate matches what the prior
+investigation observed.
+
+## Why the prior investigation pointed at moq-relay
+
+The prior plan's "smoking gun" trace observed
+`ANNOUNCE inbound … emitted Active suffix='<x>'` followed by
+**no** further `SUBSCRIBE inbound` for the failing broadcast on
+the speaker side, and concluded the relay must have failed to
+forward the SUBSCRIBE upstream. That conclusion was correct given
+only the speaker-side trace; what we now have — the relay-side
+trace from Step 1 capture — shows the relay DID forward, so the
+gap is between the wire and the speaker's app code.
+
+The route is therefore not `Origin::announced()` →
+`broadcast.subscribe_track(...)` (relay-side) but
+`QUIC bidi acceptance` → `WtPeerStreamDemux.readyStreams` →
+`QuicWebTransportSession.incomingBidiStreams()` →
+`MoqLiteSession.pumpInboundBidis` → `handleInboundBidi`
+(speaker-side). One link in that chain drops the second bidi about
+40-60 % of the time.
+
+## What to investigate next (out of scope here)
+
+The next agent picking this up should look at:
+
+1. **`:quic` module's `WtPeerStreamDemux`** — the
+   `readyStreams = Channel<StrippedWtStream>(Channel.UNLIMITED)`
+   and its `consumeAsFlow()` consumer. `consumeAsFlow` is
+   single-collector; we already verified only `pumpInboundBidis`
+   collects on the speaker side (no `pumpUniStreams` runs on a
+   pure publisher), so the single-consumer constraint isn't
+   violated, but a peer-bidi that wins the "is this the WT bidi
+   prefix or a control stream" classification race might be
+   misrouted to a different sink.
+2. **WT_BIDI_STREAM prefix stripping under flow control pressure.**
+   `emitStripped` (`WtPeerStreamDemux.kt:292-327`) fires
+   `readyStreams.trySend(...)`. The path that PREBUFFERS bytes
+   between connection acceptance and prefix recognition is the
+   most likely place a long-tail bidi gets lost — there's an
+   `ArrayDeque<ByteArray> pending` per stream that gets flushed
+   into the data Flow only after the prefix is identified.
+3. **Concurrent uni-stream openings during the warmup window.**
+   The audio publisher's `send()` returns false fast when
+   `inboundSubs.isEmpty()` (no uni stream opened), so the speaker
+   shouldn't be opening 50 fps of uni streams pre-listener. But
+   the audio publisher DOES eventually call
+   `endGroup()` on a per-group cadence (every 100 ms at
+   framesPerGroup=5/50fps); confirm `endGroup()` is a no-op when
+   there's no current group. The trace shows it firing 50 times
+   between T=0 and T+5 s.
+
+This rules out **any** test-side mitigation that changes the
+moq-relay version, the speaker warmup duration, or the
+listener-side subscribe shape — the fault is below moq-lite, in
+the QUIC stack's bidi accept path.
+
+## Implications for the closure roadmap
+
+- **Priority 1 of the closure roadmap is misnamed.** It's not
+  a moq-relay routing race; it's a `:quic` peer-bidi
+  surfacing race. The CI gating (Priority 3) still can't be
+  re-enabled until this is fixed, but the fix is in `:quic`,
+  not in test code or moq-rs.
+- **Priority 2 (tighten cross-stack assertions) is still
+  blocked** by the same flake — replacing soft-passes with hard
+  floors makes 60 % of sweeps red, same as today.
+- **Step 4 of THIS plan (bump moq-relay version) is moot.**
+  The bug isn't in moq-relay 0.10.x; it's in our QUIC stack's
+  bidi accept under a 2 s warmup. Bumping moq-relay would not
+  change this. (Also confirmed: 0.10.25 IS the latest crates.io
+  release; main HEAD `bdda6bd1` does not modify
+  `recv_subscribe`'s synchronous lookup either.)
+
+## Trace artefact locations
+
+- Per-test relay trace logs:
+  `nestsClient/build/relay-logs-sweep-{1..5}/<methodName>-<seq>-<ts>.log`
+  (kept on the branch for the next pickup; small enough to commit
+  if needed).
+- Per-test JUnit XML with speaker `<system-err>`:
+  `nestsClient/build/sweep-logs/results-{1..5}/`.
+- Per-sweep gradle log (build + first 50 lines of test output):
+  `nestsClient/build/sweep-logs/sweep-{1..5}.log`.
+- Cross-reference helper:
+  `nestsClient/build/sweep-logs/analyze-sweep.sh` (matches by
+  test method name).
 
 ## Progress log (2026-05-07)
 

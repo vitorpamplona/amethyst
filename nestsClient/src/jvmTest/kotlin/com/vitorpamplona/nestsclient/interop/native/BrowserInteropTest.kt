@@ -45,6 +45,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Rule
+import org.junit.rules.TestName
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -52,8 +54,6 @@ import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
-import org.junit.Rule
-import org.junit.rules.TestName
 
 /**
  * Phase 4 (T16) — browser-side cross-stack interop scenarios.

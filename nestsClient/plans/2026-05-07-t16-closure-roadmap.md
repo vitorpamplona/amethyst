@@ -17,16 +17,27 @@ parallelized — each unblocks the next.
 
 ## Priority 1 — `2026-05-07-moq-relay-routing-investigation.md`
 
-**Why first.** The race is the root cause of every soft-pass and
+> **Re-scoped 2026-05-07.** Trace capture (Step 1 of the routing
+> plan) disproved the "moq-relay 0.10.x routing race" hypothesis.
+> The actual fault is in **`:quic`**'s peer-bidi surfacing path:
+> the speaker's QUIC stack silently drops a peer-opened bidi that
+> arrives ~2 s after another bidi has been processed. The relay
+> forwards the upstream SUBSCRIBE correctly. See the
+> "Corrected diagnosis" section of the routing-investigation
+> plan for the full trace pair. So the actor here is whoever
+> owns `:quic` (different agent), not moq-rs upstream.
+
+**Why first.** The flake is the root cause of every soft-pass and
 the reason CI isn't wired. Without resolving it, downstream plans
 mask flake rather than catch regressions.
 
 **What lands.**
-- Either an upstream moq-relay version bump that closes the bug,
-  OR a documented relay configuration tweak that does.
-- Or, if neither: a filed `kixelated/moq` issue with reproducer +
-  trace pair, plus a documented decision to keep CI unwired until
-  upstream resolves.
+- Either a fix in `:quic`'s `WtPeerStreamDemux` /
+  `incomingBidiStreams` path that closes the bug,
+- Or, if the QUIC owner can't reproduce: the cross-stack
+  trace-capture artefacts (relay log + speaker NestTx log + JUnit
+  XML) handed off, with a written 60 % flake repro on
+  `late_join_listener_still_decodes_tail`.
 
 **Acceptance bar.** 5/5 sweep BUILD SUCCESSFUL on the existing
 HangInteropTest + BrowserInteropTest with their CURRENT soft-pass
