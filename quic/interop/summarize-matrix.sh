@@ -67,6 +67,9 @@ infer_status_from_artifacts() {
 # and the working dir we were invoked from.
 SEARCH_FILES=()
 while IFS= read -r f; do SEARCH_FILES+=("$f"); done < <(
+    # run-matrix.sh tees the runner's stdout to <RUN_DIR>.stdout.log —
+    # check that first since it has the authoritative status lines.
+    [[ -f "${RUN_DIR}.stdout.log" ]] && echo "${RUN_DIR}.stdout.log"
     find "$PAIR_DIR" -maxdepth 3 -name 'output.txt' -type f 2>/dev/null
     find "$RUN_DIR" -maxdepth 1 -name '*.log' -type f 2>/dev/null
     find "$RUNNER_LOGS" -maxdepth 1 -name 'run-*.log' -type f 2>/dev/null

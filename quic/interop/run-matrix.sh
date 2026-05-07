@@ -142,8 +142,15 @@ if [ "${VERBOSE:-0}" = "1" ]; then
     exec "$RUNNER_DIR/.venv/bin/python" run.py \
         -d -i amethyst --log-dir "$RUN_LOG_DIR" "$@"
 else
+    # Tee unfiltered stdout to a sibling file so summarize-matrix.sh
+    # can find the 'Test: X took Y, status:' lines later — the runner
+    # only writes those to its own stdout, not into per-testcase
+    # output.txt. Sibling rather than inside RUN_LOG_DIR because
+    # run.py refuses to start if its --log-dir already exists.
+    RUNNER_STDOUT="${RUN_LOG_DIR}.stdout.log"
     "$RUNNER_DIR/.venv/bin/python" run.py \
         -d -i amethyst --log-dir "$RUN_LOG_DIR" "$@" 2>&1 \
+        | tee "$RUNNER_STDOUT" \
         | grep -Ev \
             -e '^(client|server|sim) +\| +(Setting up routes|Actual changes:|tx-[a-z0-9-]+:|Endpoint'\''s IPv[46] address is)' \
             -e '^ Container [a-z]+  +(Recreate|Recreated|Stopping|Stopped|Starting|Started)( [0-9.]+s)?$' \
