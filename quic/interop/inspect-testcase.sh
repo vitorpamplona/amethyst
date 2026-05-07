@@ -20,12 +20,11 @@ RUNNER_LOGS="${REPO_ROOT}/../quic-interop-runner/logs"
 
 # Most recent run dir that has the named testcase.
 RUN_DIR=""
+# Filter to actual directories — zsh's glob also matches the
+# sibling .stdout.log files that run-matrix.sh tees, which start
+# with the same 'run-' prefix and would resolve as not-a-dir.
 for d in $(ls -1dt "$RUNNER_LOGS"/run-* 2>/dev/null); do
-    if [[ -d "$d"/*amethyst*/"$TC" ]] 2>/dev/null; then
-        RUN_DIR="$d"
-        break
-    fi
-    # Fallback for shells that don't expand the glob in the test:
+    [[ -d "$d" ]] || continue
     if ls -d "$d"/*amethyst*/"$TC" >/dev/null 2>&1; then
         RUN_DIR="$d"
         break
