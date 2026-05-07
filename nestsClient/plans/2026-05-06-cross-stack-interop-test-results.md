@@ -440,25 +440,30 @@ relay-side timing under load.
 
 ## CI integration
 
-**Wired** as of 2026-05-07 (commit `21947bc5`). Both
-`hang-interop` and `browser-interop` jobs in
-`.github/workflows/build.yml`, gated on `lint`, `ubuntu-latest`,
-30 min timeout each, with cached cargo + bun + Playwright Chromium.
+**Manual-run only** (deferred from CI on cost grounds). Both
+suites are kept green and locally invokable; developer-facing
+docs at [`nestsClient/tests/README.md`](../tests/README.md)
+cover when/how/prerequisites.
 
-Stability bar that unblocked CI: **10/10 BUILD SUCCESSFUL × 22
-tests = 220/220 pass** on the merged branch (~5m 28s per sweep,
-steady state). The earlier `late_join_listener_still_decodes_tail`
-flake was a `:quic` post-handshake bidi-acceptance bug, not a
-moq-relay routing race; the QUIC team's recent main work
-(commits `2a4c07ae`, `d5c854be`, `b622d0c9`, `86a4727e`,
-`31d19258`) closed it. See
-`2026-05-07-moq-relay-routing-investigation.md` § Closure for
-the trace evidence and
-`2026-05-07-t16-closure-roadmap.md` for the rolled-up status.
+Brief history:
 
-The 2-week post-merge CI green-rate watch is on the maintainer
-who lands this: ≥ 95 % required per the plan's stability gate;
-otherwise pull both jobs and reopen the routing investigation.
+- 2026-05-07: 10/10 sweep × 22 tests = 220/220 hard-pass
+  established a working stability bar after the `:quic`
+  post-handshake bidi-drop fix landed via `origin/main` (commits
+  `2a4c07ae`, `d5c854be`, `b622d0c9`, `86a4727e`, `31d19258`).
+- Commit `21947bc5` re-added the `hang-interop` +
+  `browser-interop` jobs to `.github/workflows/build.yml`.
+- Maintainer review then deferred CI gating on cost grounds
+  (cold cache ~10 min hang, ~13 min browser; most PRs don't
+  touch audio / MoQ / QUIC). Both jobs were removed; the YAML
+  shape stays preserved in the closed-but-deferred plan
+  [`2026-05-07-cross-stack-interop-ci-gating.md`](2026-05-07-cross-stack-interop-ci-gating.md)
+  for re-evaluation if the cost calculus changes.
+
+The trace-capture instrumentation
+(`-DnestsHangInteropTraceRelay=true`) added during the routing
+investigation stays in place — useful when triaging a future
+flake.
 
 ## Pending follow-ups
 

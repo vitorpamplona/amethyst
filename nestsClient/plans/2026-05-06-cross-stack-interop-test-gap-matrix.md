@@ -92,9 +92,13 @@ DoD #5 (gap matrix coverage) closed.
   tier — Chromium's `@moq/lite` 0.2.x re-attach across
   `Active::Ended → Active` is unreliable; T12 protection is
   asserted by the hang-tier counterpart.
-- CI gating wired in
-  `2026-05-07-cross-stack-interop-ci-gating.md` after a 10/10
-  sweep × 22 tests = 220/220 pass stability bar.
+- CI gating reached green-on-the-rig (10/10 × 22 = 220/220)
+  in commit `21947bc5`, then was deferred on cost grounds —
+  both suites run manually now per
+  [`nestsClient/tests/README.md`](../tests/README.md). YAML
+  shape preserved in
+  `2026-05-07-cross-stack-interop-ci-gating.md` for the next
+  revisit.
 
 ## Files referenced
 

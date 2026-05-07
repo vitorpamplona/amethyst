@@ -1,18 +1,25 @@
 # Plan: wire CI gating for the cross-stack interop suite
 
-**Status:** ✅ CLOSED 2026-05-07. Both jobs wired in commit
-`21947bc5` (path-tweaked from the original removed shape per
-the `nestsClient/tests/browser-interop/` move). Stability-bar
-sweep: **10/10 BUILD SUCCESSFUL × 22 tests = 220/220 pass.**
-Acceptance bar from the roadmap met.
+**Status:** ⏸ DEFERRED 2026-05-07.
+The infrastructure to wire CI is ready — both jobs landed in
+commit `21947bc5` and a 10/10 stability sweep × 22 tests =
+220/220 passed on the agent rig. A maintainer review then
+judged the wallclock cost too high for the change-pattern and
+removed the jobs (cold cache: ~10 min hang, ~13 min browser;
+most PRs don't touch audio / MoQ / QUIC).
+
+The suites are now run manually before merging changes that
+touch the relevant code paths. Developer-facing docs:
+[`../tests/README.md`](../tests/README.md). This plan stays
+in the tree for the next time someone wants to revisit CI
+gating — the YAML shapes below are the exact reverse-merge
+target, and the stability bar (10/10 sweep) has already been
+demonstrated on this branch.
 
 **Depended on:**
 - `2026-05-07-moq-relay-routing-investigation.md` closed (✅)
 - `2026-05-07-tighten-cross-stack-assertions.md` closed (✅)
 - 10/10 sweep stability verified (✅)
-
-This is the FINAL step of the T16 closure. With stable hard-pass
-suites, CI gating becomes safe and meaningful.
 
 ## What's needed
 

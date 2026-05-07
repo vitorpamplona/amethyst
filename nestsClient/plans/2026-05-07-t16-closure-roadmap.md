@@ -67,22 +67,23 @@ HangInteropTest with their current soft-pass assertions intact.
 
 **Acceptance bar met.** 5/5 sweep with hard assertions.
 
-## Priority 3 — `2026-05-07-cross-stack-interop-ci-gating.md` ✅ CLOSED
+## Priority 3 — `2026-05-07-cross-stack-interop-ci-gating.md` ⏸ DEFERRED (manual run only)
 
-> **Closed 2026-05-07** by commit `21947bc5`. Both
-> `hang-interop` and `browser-interop` jobs landed in
-> `.github/workflows/build.yml`, gated on `lint`,
-> `ubuntu-latest`, 30 min timeout, with cached cargo + bun +
-> Playwright Chromium. Path-tweaked from the original removed
-> shape because the browser harness moved from
-> `nestsClient-browser-interop/` to
-> `nestsClient/tests/browser-interop/` (commit `bd7b166f`).
-
-**Acceptance bar met.** 10/10 sweep BUILD SUCCESSFUL × 22 tests
-= **220/220 pass** (~5m 28s steady state per sweep on the agent
-rig). The first 2 weeks of post-merge CI runs still need a
-maintainer to monitor flake rate (per the plan's "≥ 95% green
-rate" gate); pull the jobs again if it falls below.
+> **Briefly wired then reverted, 2026-05-07.** Commit `21947bc5`
+> re-added both jobs to `build.yml`; verification gave 10/10
+> sweep × 22 tests = 220/220 hard-pass on the agent rig. A
+> subsequent maintainer review judged the cold-cache cost
+> (~10 min hang, ~13 min browser) too high for the change-pattern
+> (most PRs don't touch audio / MoQ / QUIC) and removed the jobs.
+>
+> The suites stay green locally and are intended to run before
+> merging any change that touches the audio / moq-lite / `:quic`
+> stack. Documentation: [`nestsClient/tests/README.md`](../tests/README.md)
+> covers when/how/prerequisites/debugging.
+>
+> The CI-gating plan is kept around in case the wallclock cost
+> calculus changes (e.g., a much faster runner, or a smaller
+> opt-in subset of the suite that runs in <2 min).
 
 ## Independent track — `2026-05-07-framespergroup-production-rerun.md`
 
