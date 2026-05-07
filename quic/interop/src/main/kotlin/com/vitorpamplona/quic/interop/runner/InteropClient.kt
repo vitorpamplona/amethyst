@@ -198,7 +198,21 @@ fun main() {
                     initialVersion = initialVersion,
                     keyLogPath = keyLogPath,
                     qlogDir = qlogDir,
-                    parallel = (testcase == "multiplexing"),
+                    // The runner reuses TESTCASE_CLIENT=transfer for the
+                    // multiplexing testcase — discrimination is by URL
+                    // count, not testcase name. We were checking
+                    // testcase == "multiplexing" which is NEVER true
+                    // (we'd see TESTCASE=multiplexing only on a
+                    // hypothetical client where the runner explicitly
+                    // sets it). Symptom: 60s timeout with 1421/2000
+                    // files at 1 stream / RTT — exactly the serial
+                    // client.get(...) path. Confirmed via the boot log:
+                    //   [boot] TESTCASE=transfer; transfer mode:
+                    //   parallel=false urls=1999
+                    //
+                    // Cheap whitespace tokenization here just counts;
+                    // runTransferTest re-parses into URI[] inside.
+                    parallel = requests.split(Regex("\\s+")).count { it.isNotBlank() } > 1,
                 )
             }
 
