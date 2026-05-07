@@ -83,6 +83,12 @@ private const val PER_STREAM_TIMEOUT_SEC = 20L
 private const val MULTIPLEX_PARALLELISM = 64
 
 fun main() {
+    // Single env-var check, propagated to library code that opts into
+    // verbose tracing only when this is set.
+    if (System.getenv("QUIC_INTEROP_DEBUG") == "1") {
+        com.vitorpamplona.quic.connection.writerDebugEnabled = true
+    }
+
     val role = System.getenv("ROLE") ?: "client"
     if (role != "client") {
         System.err.println("server role not implemented")

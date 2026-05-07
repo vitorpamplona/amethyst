@@ -10,6 +10,11 @@ IMAGE     ?= amethyst-quic-interop:latest
 REPO_ROOT := $(shell git rev-parse --show-toplevel)
 DIST_DIR  := build/install/quic-interop
 
+# Build-time toggle: `make build DEBUG=1` bakes QUIC_INTEROP_DEBUG=1 into
+# the image so the InteropClient + writer emit per-drain diagnostics to
+# stderr. Off by default — production matrix runs stay silent.
+DEBUG     ?= 0
+
 .PHONY: build dist docker image-name clean
 
 build: docker
@@ -18,7 +23,7 @@ dist:
 	cd $(REPO_ROOT) && ./gradlew :quic-interop:installDist
 
 docker: dist
-	cd $(REPO_ROOT) && docker build -t $(IMAGE) -f quic/interop/Dockerfile .
+	cd $(REPO_ROOT) && docker build -t $(IMAGE) --build-arg DEBUG=$(DEBUG) -f quic/interop/Dockerfile .
 
 image-name:
 	@echo $(IMAGE)

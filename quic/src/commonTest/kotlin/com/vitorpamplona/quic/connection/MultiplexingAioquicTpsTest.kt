@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quic.connection
 
-import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.tls.InProcessTlsServer
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test

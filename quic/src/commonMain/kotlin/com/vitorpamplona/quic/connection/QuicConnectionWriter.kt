@@ -705,6 +705,25 @@ private fun buildApplicationPacket(
     }
 
     if (frames.isEmpty()) return null
+
+    // Diagnostic: gated by QUIC_INTEROP_DEBUG=1 so prod is silent. Tells
+    // us exactly what state the writer was in when it built this packet.
+    // Hunting the multiplexing-on-the-wire bug where MultiplexingCoalescing
+    // Test passes (~9 streams/packet) but the live driver emits 1 STREAM
+    // per packet against aioquic.
+    if (com.vitorpamplona.quic.connection.writerDebugEnabled) {
+        val streamFrameCount = frames.count { it is StreamFrame }
+        val totalFrames = frames.size
+        val streamsViewSize = conn.streamsListLocked().size
+        val activeSize = conn.streamsListLocked().count { !it.isClosed }
+        System.err.println(
+            "[writer.app] frames=$totalFrames stream_frames=$streamFrameCount " +
+                "streamsView=$streamsViewSize active=$activeSize " +
+                "packetBudget_remaining=${1100 - (frames.filterIsInstance<StreamFrame>().sumOf { it.data.size + 32 })} " +
+                "connBudget_initial=${(conn.sendConnectionFlowCredit - conn.sendConnectionFlowConsumed).coerceAtLeast(0L)}",
+        )
+    }
+
     val payload = encodeFrames(frames)
     val pn = state.pnSpace.allocateOutbound()
     // Retain the packet for RFC 9002 loss detection BEFORE the encrypt
