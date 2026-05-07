@@ -166,7 +166,7 @@ fun ConfirmDeleteBackground(
         if (!settled) {
             Color(0xFFFF1744)
         } else {
-            MaterialTheme.colorScheme.surfaceVariant
+            Color.Transparent
         },
         label = "ConfirmDeleteBackground",
     )

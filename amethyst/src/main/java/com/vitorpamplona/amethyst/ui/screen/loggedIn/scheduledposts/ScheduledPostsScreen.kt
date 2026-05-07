@@ -71,7 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -267,7 +267,8 @@ private fun Modifier.urgentEdge(enabled: Boolean): Modifier {
         remember(gradientStart, gradientEnd) {
             Brush.verticalGradient(listOf(gradientStart, gradientEnd))
         }
-    return this.drawBehind {
+    return this.drawWithContent {
+        drawContent()
         drawRect(
             brush = brush,
             topLeft = Offset(0f, 8.dp.toPx()),
@@ -318,6 +319,7 @@ private fun ScheduledPostCardCollapsed(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
                 .urgentEdge(!isFailed && post.publishAtSec - nowSec in 1..URGENT_THRESHOLD_SEC),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(1.dp, borderColor),
