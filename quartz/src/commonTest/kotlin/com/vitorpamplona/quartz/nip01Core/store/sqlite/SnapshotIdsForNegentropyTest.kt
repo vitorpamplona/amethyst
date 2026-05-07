@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Verifies the NIP-77 negentropy id-and-time projection against the
@@ -92,9 +91,11 @@ class SnapshotIdsForNegentropyTest : BaseDBTest() {
             // cap = 10; we have 30 rows, so the result must be 11
             // (cap + 1 sentinel) — matches strfry's `maxSyncEvents`
             // overflow-detection idiom.
+            // cap=10 with 30 rows → result must be the +1 sentinel
+            // (11 rows). Caller compares `size > cap` to detect
+            // overflow — matches strfry's `maxSyncEvents` idiom.
             val capped = db.snapshotIdsForNegentropy(listOf(filter), maxEntries = 10)
             assertEquals(11, capped.size)
-            assertTrue(capped.size > 10, "caller relies on size > cap as overflow signal")
 
             // cap >= total: returns the whole set unchanged.
             val whole = db.snapshotIdsForNegentropy(listOf(filter), maxEntries = 100)

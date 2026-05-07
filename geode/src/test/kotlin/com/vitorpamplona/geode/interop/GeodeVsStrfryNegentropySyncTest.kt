@@ -20,129 +20,100 @@
  */
 package com.vitorpamplona.geode.interop
 
-import com.vitorpamplona.geode.LocalRelayServer
-import com.vitorpamplona.geode.Relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import java.io.File
 import java.net.ServerSocket
+import java.net.Socket
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Reciprocal interop test: a Geode client driving NIP-77 against a
- * real `strfry` instance.
+ * Reciprocal interop test: Geode's NIP-77 client driving a real
+ * `strfry` instance.
  *
- * **Opt-in.** Skipped unless the `STRFRY_BIN` environment variable
- * (or `-Dstrfry.bin=…` system property) points at a `strfry` binary.
- * When unset the test prints a `[skip]` line and returns. Mirrors the
- * way `LoadBenchmark` handles its own opt-in:
+ * **Opt-in.** Skipped unless `STRFRY_BIN` env var (or
+ * `-Dstrfry.bin=...`) points at a `strfry` binary. When unset, the
+ * test prints a `[skip]` line and returns. Mirrors the gate
+ * `LoadBenchmark` uses for `-DrunLoadBenchmark`:
  *
  *   STRFRY_BIN=/usr/local/bin/strfry ./gradlew :geode:test \
  *       --tests "*GeodeVsStrfryNegentropySyncTest*"
  *
  * The strfry process is booted on a free loopback port with a fresh
- * temp LMDB dir. We feed events into it via the Nostr `EVENT` wire
- * (no need for `strfry import`), then run [InteropSyncDriver] against
- * it. Strfry's `RelayNegentropy.cpp` answers the same NIP-77 wire we
- * test against Geode — if both pass we have byte-shape interop, not
- * just "passes our own tests".
+ * temp LMDB dir. We feed events into it via the NIP-01 EVENT wire
+ * (no `strfry import`), then run [InteropSyncDriver] against it.
+ * Strfry's `RelayNegentropy.cpp` answers the same NIP-77 wire we test
+ * against Geode — passing both is byte-shape interop, not just
+ * "passes our own tests".
  */
 class GeodeVsStrfryNegentropySyncTest {
     private val strfryBin: String? =
         System.getenv("STRFRY_BIN") ?: System.getProperty("strfry.bin")
     private val enabled = strfryBin != null
 
-    private lateinit var geodeRelay: Relay
-    private lateinit var geodeServer: LocalRelayServer
-    private lateinit var scope: CoroutineScope
-    private lateinit var client: NostrClient
     private lateinit var strfryDir: File
     private var strfryProcess: Process? = null
-    private var strfryUrl: String? = null
-    private val httpClient = OkHttpClient.Builder().build()
-
-    @BeforeTest
-    fun setup() {
-        if (!enabled) return
-        geodeRelay = Relay(url = "ws://127.0.0.1:7771/".normalizeRelayUrl())
-        geodeServer = LocalRelayServer(geodeRelay, host = "127.0.0.1", port = 0).start()
-        scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-        client = NostrClient(BasicOkHttpWebSocket.Builder { _ -> httpClient }, scope)
-    }
+    private val httpClient by lazy { OkHttpClient.Builder().build() }
 
     @AfterTest
     fun teardown() {
-        if (!enabled) return
         strfryProcess?.destroy()
         strfryProcess?.waitFor()
         if (::strfryDir.isInitialized) strfryDir.deleteRecursively()
-        client.disconnect()
-        scope.cancel()
-        geodeServer.stop()
-        geodeRelay.close()
     }
 
     /**
-     * Boots a strfry instance in a temp directory on a free port.
-     * Writes a minimal config, starts the relay subprocess, and spins
-     * until the WebSocket port is accepting connections.
+     * Boots a strfry instance in a temp LMDB dir on a free port.
+     * Writes the smallest config strfry accepts, starts the
+     * subprocess, and polls until the WebSocket port is reachable.
+     *
+     * The config is intentionally minimal — strfry's defaults
+     * (negentropy on, sane limits) are what we want to test against.
+     * Adding speculative config keys risks failing on schema drift.
      */
     private fun startStrfry(): String {
         val port = ServerSocket(0).use { it.localPort }
         strfryDir = createTempDirectory(prefix = "strfry-interop-").toFile()
         val configFile = File(strfryDir, "strfry.conf")
-        // Minimal strfry config — bind, db dir, NIP-77 enabled. Strfry
-        // uses libconfig's hcl-ish syntax; this snippet is the smallest
-        // that boots a relay accepting NEG-OPEN/REQ/EVENT.
         configFile.writeText(
             """
             db = "${strfryDir.absolutePath}/strfry-db"
             relay {
                 bind = "127.0.0.1"
                 port = $port
-                nofiles = 1024000
-                negentropy {
-                    enabled = true
-                    maxSyncEvents = 1000000
-                }
             }
             """.trimIndent(),
         )
         File(strfryDir, "strfry-db").mkdirs()
-        val pb =
+        strfryProcess =
             ProcessBuilder(strfryBin, "--config", configFile.absolutePath, "relay")
                 .redirectErrorStream(true)
                 .redirectOutput(File(strfryDir, "strfry.log"))
-        strfryProcess = pb.start()
+                .start()
 
-        // Wait for strfry to start accepting connections — give up
-        // after a few seconds. Strfry typically binds in <500 ms.
         val deadline = System.currentTimeMillis() + 5_000
         while (System.currentTimeMillis() < deadline) {
             runCatching {
-                java.net.Socket("127.0.0.1", port).close()
-                strfryUrl = "ws://127.0.0.1:$port/"
-                return strfryUrl!!
+                Socket("127.0.0.1", port).close()
+                return "ws://127.0.0.1:$port/"
             }
             Thread.sleep(100)
         }
@@ -161,37 +132,33 @@ class GeodeVsStrfryNegentropySyncTest {
     }
 
     /**
-     * Push an event directly into a relay over a one-shot WebSocket.
-     * Used for both Geode (via `geodeRelay.preload`) and strfry
-     * (via this method) so the corpus is byte-identical on both sides.
+     * Push every event in [events] to the relay at [wsUrl] over a
+     * one-shot WebSocket, waiting for an `OK` response per event.
+     *
+     * Used to seed strfry from the same `Event` objects Geode's
+     * `Relay.preload` accepts — that way both sides start from a
+     * byte-identical corpus.
      */
-    private fun publishToStrfry(
+    private suspend fun publishToStrfry(
         wsUrl: String,
         events: List<Event>,
     ) {
-        val ok =
-            java.util.concurrent.atomic
-                .AtomicInteger()
-        val target = events.size
-        val incoming = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+        val incoming = Channel<String>(UNLIMITED)
         val ws =
             httpClient.newWebSocket(
-                okhttp3.Request
-                    .Builder()
-                    .url(wsUrl.replace("ws://", "http://"))
-                    .build(),
-                object : okhttp3.WebSocketListener() {
+                Request.Builder().url(wsUrl.replace("ws://", "http://")).build(),
+                object : WebSocketListener() {
                     override fun onMessage(
-                        webSocket: okhttp3.WebSocket,
+                        webSocket: WebSocket,
                         text: String,
                     ) {
                         incoming.trySend(text)
                     }
 
                     override fun onFailure(
-                        webSocket: okhttp3.WebSocket,
+                        webSocket: WebSocket,
                         t: Throwable,
-                        response: okhttp3.Response?,
+                        response: Response?,
                     ) {
                         incoming.close(t)
                     }
@@ -199,16 +166,14 @@ class GeodeVsStrfryNegentropySyncTest {
             )
         try {
             for (e in events) {
-                val cmd = """["EVENT",${OptimizedJsonMapper.toJson(e)}]"""
-                check(ws.send(cmd)) { "publish to strfry failed" }
+                check(ws.send("""["EVENT",${OptimizedJsonMapper.toJson(e)}]""")) {
+                    "publish to strfry failed"
+                }
             }
-            // Drain OK responses.
-            runBlocking {
-                kotlinx.coroutines.withTimeout(30_000) {
-                    while (ok.get() < target) {
-                        val raw = incoming.receive()
-                        if (raw.startsWith("[\"OK\"")) ok.incrementAndGet()
-                    }
+            var oks = 0
+            withTimeout(30_000) {
+                while (oks < events.size) {
+                    if (incoming.receive().startsWith("[\"OK\"")) oks++
                 }
             }
         } finally {
@@ -225,86 +190,31 @@ class GeodeVsStrfryNegentropySyncTest {
             }
             val strfryWs = startStrfry()
 
-            // Same overlap shape as the Geode-vs-Geode test so the two
-            // results are directly comparable: A=[0..14], B=[5..19].
+            // Same overlap shape as GeodeVsGeodeNegentropySyncTest so
+            // results are directly comparable: A=[0..14], local=[5..19].
             val all = makeEvents(20)
             val strfryEvents = all.subList(0, 15)
-            val geodeEvents = all.subList(5, 20)
+            val localEvents = all.subList(5, 20)
 
             publishToStrfry(strfryWs, strfryEvents)
-            geodeRelay.preload(geodeEvents)
 
             val filter = Filter(kinds = listOf(1))
 
-            // Drive the negentropy reconciliation from Geode's
-            // perspective against strfry. This is the wire we care
-            // about: our client-side `NegentropySession` (kmp-negentropy)
-            // talking to strfry's server-side `Negentropy ne(storage,
-            // 500'000)`. Symmetric difference must match the Geode-vs-
-            // Geode case.
-            val res = InteropSyncDriver(httpClient).reconcile(strfryWs, filter, geodeEvents)
+            // The wire we care about: kmp-negentropy (client) talking
+            // to strfry's `Negentropy ne(storage, 500'000)` (server).
+            // Symmetric difference must match the Geode-vs-Geode case.
+            val res = InteropSyncDriver(httpClient).negotiate(strfryWs, filter, localEvents)
             assertNull(res.error, "Geode↔strfry NEG must not error: ${res.error}")
             assertEquals(
                 strfryEvents.subList(0, 5).map { it.id }.toSet(),
                 res.needIds,
-                "Geode should NEED [0..4] from strfry",
+                "client should NEED [0..4] from strfry",
             )
             assertEquals(
-                geodeEvents.subList(10, 15).map { it.id }.toSet(),
+                localEvents.subList(10, 15).map { it.id }.toSet(),
                 res.haveIds,
-                "Geode should announce HAVE for [15..19]",
+                "client should announce HAVE for [15..19]",
             )
-
-            // Spot-check the wire-level health: round count is bounded.
             assertTrue(res.rounds <= 16, "expected ≤16 NEG-MSG rounds, got ${res.rounds}")
-        }
-
-    @Test
-    fun strfryDrivesGeodeAsServer() =
-        runBlocking {
-            if (!enabled) {
-                println("[skip] strfryDrivesGeodeAsServer — set STRFRY_BIN=/path/to/strfry to enable")
-                return@runBlocking
-            }
-            // Reverse direction: the server under test is *Geode*.
-            // We use kmp-negentropy as the client driver — same role
-            // strfry's own client takes when running `strfry sync
-            // ws://geode`. We don't actually shell out to `strfry sync`
-            // here (its CLI doesn't expose the corpus split we want
-            // to test); the wire-level equivalence is what matters,
-            // and InteropSyncDriver uses the same NIP-77 protocol that
-            // strfry's client speaks.
-            startStrfry() // unused — we just need to confirm the binary boots
-            val all = makeEvents(20)
-            val geodeEvents = all.subList(0, 15)
-            val driverEvents = all.subList(5, 20)
-            geodeRelay.preload(geodeEvents)
-
-            val res =
-                InteropSyncDriver(httpClient).reconcile(
-                    wsUrl = geodeServer.url,
-                    filter = Filter(kinds = listOf(1)),
-                    localEvents = driverEvents,
-                )
-            assertNull(res.error)
-            assertEquals(
-                geodeEvents.subList(0, 5).map { it.id }.toSet(),
-                res.needIds,
-            )
-            assertEquals(
-                driverEvents.subList(10, 15).map { it.id }.toSet(),
-                res.haveIds,
-            )
-
-            // Cross-check with REQ that Geode actually has what we
-            // think it has.
-            val onGeode =
-                client
-                    .fetchAll(
-                        relay = geodeServer.url.normalizeRelayUrl(),
-                        filter = Filter(kinds = listOf(1)),
-                    ).map { it.id }
-                    .toSet()
-            assertEquals(geodeEvents.map { it.id }.toSet(), onGeode)
         }
 }

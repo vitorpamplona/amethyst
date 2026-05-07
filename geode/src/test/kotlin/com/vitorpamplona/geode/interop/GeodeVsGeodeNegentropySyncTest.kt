@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -112,25 +113,7 @@ class GeodeVsGeodeNegentropySyncTest {
         }
     }
 
-    /**
-     * One-way reconciliation from `srcRelay` ⇒ `dstRelay`'s perspective
-     * (the destination is the side initiating the sync, mirroring
-     * `strfry sync <other>` semantics where the calling instance pulls
-     * from the remote).
-     *
-     * Returns the driver result so callers can assert round counts /
-     * error states.
-     */
-    private fun pullSync(
-        sourceWsUrl: String,
-        destLocalEvents: List<Event>,
-        filter: Filter,
-    ): InteropSyncDriver.Result =
-        InteropSyncDriver(httpClient).reconcile(
-            wsUrl = sourceWsUrl,
-            filter = filter,
-            localEvents = destLocalEvents,
-        )
+    private val driver by lazy { InteropSyncDriver(httpClient) }
 
     @Test
     fun bidirectionalSyncConvergesTwoRelays() =
@@ -145,71 +128,59 @@ class GeodeVsGeodeNegentropySyncTest {
             relayB.preload(bEvents)
 
             val filter = Filter(kinds = listOf(1))
+            val urlA = serverA.url.normalizeRelayUrl()
+            val urlB = serverB.url.normalizeRelayUrl()
 
-            // --- B pulls from A ---
-            val pullAtoB = pullSync(serverA.url, bEvents, filter)
-            assertNull(pullAtoB.error, "A→B reconciliation must not error")
+            // B negotiates the symmetric difference with A.
+            val diff = driver.negotiate(serverA.url, filter, bEvents)
+            assertNull(diff.error, "negotiation must not error: ${diff.error}")
             // From B's perspective: needs A-only, has B-only.
             assertEquals(
                 aEvents.subList(0, 5).map { it.id }.toSet(),
-                pullAtoB.needIds,
+                diff.needIds,
                 "B should NEED [0..4] from A",
             )
             assertEquals(
                 bEvents.subList(10, 15).map { it.id }.toSet(),
-                pullAtoB.haveIds,
+                diff.haveIds,
                 "B should announce HAVE for [15..19]",
             )
 
             // Close the loop: fetch needs from A, push haves to A.
             val needFromA =
-                client.fetchAll(
-                    relay = serverA.url.normalizeRelayUrl(),
-                    filter = Filter(ids = pullAtoB.needIds.toList()),
-                )
-            for (e in needFromA) relayB.preload(e)
+                client.fetchAll(relay = urlA, filter = Filter(ids = diff.needIds.toList()))
+            relayB.preload(needFromA)
 
-            for (id in pullAtoB.haveIds) {
-                val ev = bEvents.first { it.id == id }
-                client.publishAndConfirm(ev, setOf(serverA.url.normalizeRelayUrl()))
+            for (id in diff.haveIds) {
+                client.publishAndConfirm(bEvents.first { it.id == id }, setOf(urlA))
             }
 
             // --- Verify convergence ---
-            val expectedAll = all.map { it.id }.toSet()
-            val onA = relaySnapshotIds(serverA.url, filter)
-            val onB = relaySnapshotIds(serverB.url, filter)
-            assertEquals(expectedAll, onA, "Relay A should hold every event after sync")
-            assertEquals(expectedAll, onB, "Relay B should hold every event after sync")
+            val expected = all.map { it.id }.toSet()
+            assertEquals(expected, idsOnRelay(urlA, filter), "Relay A should hold every event")
+            assertEquals(expected, idsOnRelay(urlB, filter), "Relay B should hold every event")
         }
 
     @Test
     fun negentropyConvergesInBoundedRoundsOnSmallCorpus() =
         runBlocking {
             val all = makeEvents(200)
-            val aEvents = all.subList(0, 150)
+            relayA.preload(all.subList(0, 150))
             val bEvents = all.subList(50, 200)
-            relayA.preload(aEvents)
             relayB.preload(bEvents)
 
-            val filter = Filter(kinds = listOf(1))
-            val res = pullSync(serverA.url, bEvents, filter)
+            val res = driver.negotiate(serverA.url, Filter(kinds = listOf(1)), bEvents)
             assertNull(res.error)
             assertEquals(50, res.needIds.size, "B should need [0..49]")
             assertEquals(50, res.haveIds.size, "B should have [150..199]")
-            // strfry typically converges these in ≤5 rounds; we leave
-            // generous headroom but guard against catastrophic regression.
+            // strfry typically converges these in ≤5 rounds; ≤16 is
+            // generous headroom that still catches regressions.
             assertTrue(res.rounds <= 16, "expected ≤16 NEG-MSG rounds, got ${res.rounds}")
         }
 
-    /** Pulls every id matching [filter] from a relay via REQ. */
-    private suspend fun relaySnapshotIds(
-        wsUrl: String,
+    /** Every event id matching [filter] visible on the relay at [url] via REQ. */
+    private suspend fun idsOnRelay(
+        url: NormalizedRelayUrl,
         filter: Filter,
-    ): Set<HexKey> =
-        client
-            .fetchAll(
-                relay = wsUrl.normalizeRelayUrl(),
-                filter = filter,
-            ).map { it.id }
-            .toSet()
+    ): Set<HexKey> = client.fetchAll(relay = url, filter = filter).map { it.id }.toSet()
 }

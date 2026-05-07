@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySession
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -41,27 +40,27 @@ import kotlin.test.fail
 
 /**
  * Equivalent of strfry's `test/syncTest.pl` driver for our interop
- * tests. Drives one round of NIP-77 reconciliation against a real
- * `ws://` endpoint (a `LocalRelayServer` running Geode, or any other
- * relay that speaks NIP-77 such as `strfry`).
+ * tests. Drives one round of NIP-77 *negotiation* (NEG-OPEN /
+ * NEG-MSG / NEG-CLOSE) against a real `ws://` endpoint — a Geode
+ * `LocalRelayServer`, a strfry process, or any other NIP-77 relay.
  *
  * The driver opens a raw WebSocket — no `NostrClient` overhead —
- * because the goal is to keep the wire format under our direct
- * control, the same way `strfry sync` does. That way we exercise the
- * server's NEG-OPEN / NEG-MSG / NEG-CLOSE handling with no client-
- * side framing or filter-management indirection.
+ * to keep the wire format under direct control, the same way
+ * `strfry sync` does. That way we exercise the server's NEG-OPEN /
+ * NEG-MSG / NEG-CLOSE handling with no client-side framing or
+ * filter-management indirection.
  *
- * Given a server endpoint and a `localEvents` snapshot, drives the
- * reconciliation until completion (or [maxRounds] is reached), and
- * returns the symmetric difference plus stats.
+ * Note: this driver only computes the symmetric difference. The
+ * actual *sync* (REQ for `needIds`, EVENT for `haveIds`) is the
+ * caller's job; that's a NIP-01 follow-up, not part of NIP-77.
  */
 class InteropSyncDriver(
     private val httpClient: OkHttpClient = OkHttpClient.Builder().build(),
 ) {
     /**
-     * Reconciles `localEvents` against the relay at [wsUrl] under
-     * [filter]. Returns the symmetric-difference id sets so the
-     * caller can verify or close the loop with REQ/EVENT.
+     * Negotiates the symmetric difference between `localEvents` and
+     * the relay at [wsUrl] under [filter]. Returns the id sets so
+     * the caller can close the loop with REQ / EVENT.
      *
      * @param wsUrl the source relay's `ws://…` URL.
      * @param filter NEG-OPEN filter — usually the broadest filter the
@@ -72,12 +71,12 @@ class InteropSyncDriver(
      *   here so the relay's configured cap (500_000 by default) is
      *   what governs framing — same shape as `strfry sync`.
      * @param timeoutMs hard timeout on a single NEG-MSG round trip.
-     * @param maxRounds upper bound on round trips. Strfry's typical
-     *   converge in ≤5 rounds for 100 k corpora; 64 is a generous
+     * @param maxRounds upper bound on round trips. Strfry typically
+     *   converges in ≤5 rounds for 100 k corpora; 64 is a generous
      *   safety net that catches pathological splits without hanging
      *   tests forever.
      */
-    fun reconcile(
+    suspend fun negotiate(
         wsUrl: String,
         filter: Filter,
         localEvents: List<Event>,
@@ -128,10 +127,7 @@ class InteropSyncDriver(
             val needIds = mutableSetOf<HexKey>()
             var rounds = 0
             while (rounds < maxRounds) {
-                val raw =
-                    runBlocking {
-                        withTimeout(timeoutMs) { incoming.receive() }
-                    }
+                val raw = withTimeout(timeoutMs) { incoming.receive() }
                 val msg = OptimizedJsonMapper.fromJsonToMessage(raw)
                 rounds++
                 when (msg) {
