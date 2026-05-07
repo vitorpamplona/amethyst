@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -40,40 +41,58 @@ import kotlinx.coroutines.launch
  *    drained by a single coroutine, preserving message order per the
  *    [WebSocketListener] contract.
  *  - Server-side `send` callbacks → [WebSocketListener.onMessage].
+ *
+ * Reconnect-after-disconnect is supported: each [connect] creates a
+ * fresh scope + drain channel so a previous [disconnect] (which
+ * cancels both) doesn't leave a dead drainer behind.
  */
 class InProcessWebSocket(
     private val relay: Relay,
     private val out: WebSocketListener,
 ) : WebSocket {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val incoming = Channel<String>(UNLIMITED)
+    private var scope: CoroutineScope? = null
+    private var incoming: Channel<String>? = null
+    private var drainJob: Job? = null
     private var session: RelaySession? = null
 
     override fun needsReconnect(): Boolean = session == null
 
     override fun connect() {
         if (session != null) return
+        val newScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val newIncoming = Channel<String>(UNLIMITED)
         val s = relay.server.connect { json -> out.onMessage(json) }
+
+        scope = newScope
+        incoming = newIncoming
         session = s
-        out.onOpen(0, false)
-        scope.launch {
-            for (msg in incoming) {
-                s.receive(msg)
+        drainJob =
+            newScope.launch {
+                for (msg in newIncoming) {
+                    s.receive(msg)
+                }
             }
-        }
+
+        out.onOpen(0, false)
     }
 
     override fun disconnect() {
         val s = session ?: return
         session = null
-        incoming.close()
-        scope.cancel()
+        incoming?.close()
+        incoming = null
+        drainJob = null
+        scope?.cancel()
+        scope = null
         s.close()
         out.onClosed(1000, "client disconnect")
     }
 
     override fun send(msg: String): Boolean {
-        if (session == null) return false
-        return incoming.trySend(msg).isSuccess
+        // Capture the current channel reference: we want to fail
+        // (return false) if the socket was disconnected, even if a
+        // racing thread is mid-`connect()`.
+        val ch = incoming ?: return false
+        return ch.trySend(msg).isSuccess
     }
 }

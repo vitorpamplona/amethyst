@@ -51,6 +51,20 @@ class Nip98AuthVerifier(
     /** Allowed clock skew in seconds. NIP-98 says 60. */
     private val toleranceSeconds: Long = 60,
 ) {
+    /**
+     * Recently-accepted event ids → expiry epoch second. Bounded to
+     * [MAX_REPLAY_ENTRIES] (LRU eviction); each entry expires after
+     * `2 × toleranceSeconds` (twice the accepted window so a token
+     * can't be reused by an attacker who buffers across the boundary).
+     *
+     * `synchronized` access is sufficient — the table is small (~hundreds
+     * of entries at most) and admin RPC traffic is low-rate.
+     */
+    private val seenEventIds: LinkedHashMap<String, Long> =
+        object : LinkedHashMap<String, Long>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: Map.Entry<String, Long>?): Boolean = size > MAX_REPLAY_ENTRIES
+        }
+
     @OptIn(ExperimentalEncodingApi::class)
     fun verify(
         authorizationHeader: String?,
@@ -81,7 +95,8 @@ class Nip98AuthVerifier(
         }
         if (!event.verify()) return Result.Malformed("bad event signature or id")
 
-        val skew = abs(event.createdAt - now())
+        val nowSec = now()
+        val skew = abs(event.createdAt - nowSec)
         if (skew > toleranceSeconds) {
             return Result.Malformed("created_at is ${skew}s away from now (max ${toleranceSeconds}s)")
         }
@@ -110,6 +125,20 @@ class Nip98AuthVerifier(
             }
         }
 
+        // Replay check — done LAST so we don't burn a one-shot id on a
+        // request that would otherwise have failed signature/url/etc.
+        val expiry = nowSec + 2 * toleranceSeconds
+        synchronized(seenEventIds) {
+            // Evict expired entries while we hold the lock.
+            val it = seenEventIds.entries.iterator()
+            while (it.hasNext()) {
+                if (it.next().value <= nowSec) it.remove() else break
+            }
+            if (seenEventIds.put(event.id, expiry) != null) {
+                return Result.Malformed("replay: this NIP-98 token has already been used")
+            }
+        }
+
         return Result.Verified(event.pubKey)
     }
 
@@ -127,5 +156,13 @@ class Nip98AuthVerifier(
 
     companion object {
         const val SCHEME = "Nostr "
+
+        /**
+         * Cap on the in-memory replay-cache size. With a 60s tolerance
+         * an attacker would need to push >MAX/120 verified requests per
+         * second (one new id per ~120 ms) to evict legitimate entries.
+         * 1024 is generous for an admin endpoint.
+         */
+        const val MAX_REPLAY_ENTRIES = 1024
     }
 }

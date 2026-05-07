@@ -43,10 +43,11 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
-import io.ktor.utils.io.toByteArray
+import io.ktor.utils.io.readAvailable
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 
@@ -89,6 +90,29 @@ class LocalRelayServer(
      * gated by NIP-98 HTTP-Auth membership in this set.
      */
     val adminPubkeys: Set<HexKey> = emptySet(),
+    /**
+     * Canonical public URL the relay is reachable at, e.g.
+     * `https://relay.example.com/`. NIP-98 admin requests must sign
+     * the **same** URL string they're sending to. When the relay sits
+     * behind TLS termination or a reverse proxy, the `Host` header
+     * the relay sees does not match what the client signs, so the
+     * verifier must compare against this configured value.
+     *
+     * `null` (the default) falls back to the request's `Host` header
+     * with `http://` — fine for local-loopback unit tests, **NOT
+     * SAFE** in a public deployment because an attacker can spoof
+     * `Host` and bind their signature to any URL.
+     */
+    val publicUrl: String? = null,
+    /**
+     * Maximum body size accepted on the NIP-86 POST endpoint, in
+     * bytes. Bounded *before* auth verification because we read the
+     * body to compute its sha256 for NIP-98's payload binding —
+     * unbounded reads would let an unauthenticated attacker stream
+     * gigabytes and OOM the relay. 1 MiB easily fits any plausible
+     * RPC payload.
+     */
+    val maxAdminBodyBytes: Int = 1 shl 20,
 ) {
     /**
      * Bridges the relay's mutable [RelayInfo] to [Nip86Server.InfoHolder]
@@ -109,6 +133,16 @@ class LocalRelayServer(
     private val adminAllowList: Set<HexKey> = adminPubkeys.mapTo(HashSet()) { it.lowercase() }
     private var engine: CIOApplicationEngine? = null
     private var resolvedPort: Int = -1
+
+    /**
+     * Set when [stop] begins. Once true, the WebSocket handler refuses
+     * new upgrades — Ktor's `engine.stop` will eventually do this too,
+     * but Ktor's grace window means new connections can land between
+     * `notifyShutdown` and the actual port-close, missing the NOTICE
+     * we just sent to existing clients.
+     */
+    @Volatile
+    private var shuttingDown: Boolean = false
 
     /**
      * Active client sessions, registered when their WebSocket handler
@@ -166,20 +200,61 @@ class LocalRelayServer(
                         handleNip86(call)
                     }
                     webSocket(path) {
+                        if (shuttingDown) {
+                            // Just return — Ktor closes the WS for us.
+                            // We can't `close(reason)` here because the
+                            // CIO engine's outgoing channel may already
+                            // be torn down during shutdown.
+                            return@webSocket
+                        }
+                        // Per-session outbound queue. The relay's
+                        // `connect` callback runs on whatever thread
+                        // produced the message — it can't suspend, so
+                        // we hand off to a dedicated writer coroutine
+                        // that does suspend on `outgoing.send` and thus
+                        // applies real backpressure on slow clients.
+                        // When the queue fills, that's a slow consumer
+                        // — drop the connection cleanly so subscribers
+                        // don't silently miss EVENT/EOSE.
+                        val outQueue =
+                            kotlinx.coroutines.channels
+                                .Channel<String>(capacity = SESSION_OUTGOING_BUFFER)
+                        val writerJob =
+                            launch {
+                                try {
+                                    for (json in outQueue) {
+                                        outgoing.send(Frame.Text(json))
+                                    }
+                                } catch (_: kotlinx.coroutines.channels.ClosedSendChannelException) {
+                                    // socket closed — let the handler's
+                                    // finally block run normal teardown
+                                }
+                            }
+                        var droppedForBackpressure = false
                         val session =
                             relay.server.connect { json ->
-                                // ktor-websockets schedules outgoing frames on its own
-                                // dispatcher; trySend never blocks the relay thread.
-                                outgoing.trySend(Frame.Text(json))
+                                val res = outQueue.trySend(json)
+                                if (!res.isSuccess && !res.isClosed) {
+                                    // Buffer is full → slow client.
+                                    // Mark + close the queue; the
+                                    // writer drains, then we let the
+                                    // outer handler's finally close
+                                    // the WS session.
+                                    droppedForBackpressure = true
+                                    outQueue.close()
+                                }
                             }
                         activeSessions.add(session)
                         try {
                             incoming.consumeEach { frame ->
+                                if (droppedForBackpressure) return@consumeEach
                                 if (frame is Frame.Text) {
                                     session.receive(frame.readText())
                                 }
                             }
                         } finally {
+                            outQueue.close()
+                            writerJob.cancel()
                             activeSessions.remove(session)
                             session.close()
                         }
@@ -223,6 +298,11 @@ class LocalRelayServer(
         timeoutMillis: Long = 10_000,
     ) {
         val e = engine ?: return
+        // Order: (1) refuse new connections so they don't slip in and
+        // miss the NOTICE; (2) NOTICE every existing session so
+        // well-behaved clients reconnect later; (3) hand off to Ktor
+        // for the grace + timeout dance.
+        shuttingDown = true
         notifyShutdown()
         e.stop(gracePeriodMillis, timeoutMillis)
         engine = null
@@ -251,15 +331,30 @@ class LocalRelayServer(
             return
         }
 
-        val body = call.receiveChannel().toByteArray()
+        // Cap the body BEFORE we read it. We have to read the bytes
+        // (NIP-98 payload-hash binds them), but unauthenticated
+        // attackers shouldn't be able to stream gigabytes here.
+        val declared = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+        if (declared != null && declared > maxAdminBodyBytes) {
+            call.respondText(
+                "request body exceeds $maxAdminBodyBytes-byte cap",
+                ContentType.Text.Plain,
+                HttpStatusCode.PayloadTooLarge,
+            )
+            return
+        }
+        val body = readBoundedBody(call, maxAdminBodyBytes) ?: return
+
         val authHeader = call.request.header(HttpHeaders.Authorization)
-        // NIP-86 spec: the URL the client signed must be the relay's
-        // canonical http(s) URL, not the WS one. We reconstruct it from
-        // the request so the comparison is symmetric whether the
-        // operator runs the relay behind a reverse proxy or directly.
+        // The URL the client signed must match the relay's CANONICAL
+        // public URL — not whatever `Host` header reaches us. An
+        // attacker can spoof `Host`, and behind TLS termination the
+        // verifier would compare against the wrong scheme. Operators
+        // configure [publicUrl] explicitly. The Host fallback is for
+        // local loopback unit tests only and is documented as unsafe.
         val signedUrl =
-            "http://" +
-                (call.request.header(HttpHeaders.Host) ?: "$host:$resolvedPort") + path
+            publicUrl
+                ?: ("http://" + (call.request.header(HttpHeaders.Host) ?: "$host:$resolvedPort") + path)
         val verification = nip98.verify(authHeader, method = "POST", url = signedUrl, body = body)
 
         val pubkey =
@@ -310,11 +405,53 @@ class LocalRelayServer(
             }
 
         val response: Nip86Response = nip86.dispatch(req)
+
+        // Audit log: structured single line so an operator can grep
+        // "nip86" / pubkey / method without a logging framework
+        // dependency. Keep it best-effort — System.err is already what
+        // the rest of Main.kt uses, and a missing log line shouldn't
+        // fail the response.
+        runCatching {
+            System.err.println(
+                "nip86 audit pubkey=$pubkey method=${req.method} ok=${response.error == null}" +
+                    (response.error?.let { " error=$it" } ?: ""),
+            )
+        }
+
         call.respondText(
             JsonMapper.toJson(response),
             ContentType.parse("application/nostr+json+rpc"),
             HttpStatusCode.OK,
         )
+    }
+
+    /**
+     * Reads up to [maxBytes] bytes from the request body and returns
+     * them. If the stream produces more than [maxBytes] (i.e. a
+     * lying or absent `Content-Length`), responds 413 and returns
+     * `null` — caller stops handling.
+     */
+    private suspend fun readBoundedBody(
+        call: io.ktor.server.application.ApplicationCall,
+        maxBytes: Int,
+    ): ByteArray? {
+        val ch = call.receiveChannel()
+        val buf = ByteArray(maxBytes + 1)
+        var pos = 0
+        while (pos <= maxBytes) {
+            val read = ch.readAvailable(buf, pos, buf.size - pos)
+            if (read <= 0) break
+            pos += read
+        }
+        if (pos > maxBytes) {
+            call.respondText(
+                "request body exceeds $maxBytes-byte cap",
+                ContentType.Text.Plain,
+                HttpStatusCode.PayloadTooLarge,
+            )
+            return null
+        }
+        return buf.copyOfRange(0, pos)
     }
 
     /**
@@ -328,5 +465,15 @@ class LocalRelayServer(
         activeSessions.forEach { session ->
             runCatching { session.send(notice) }
         }
+    }
+
+    companion object {
+        /**
+         * Per-session outbound buffer size. When a slow client falls
+         * this many frames behind, we close their connection rather
+         * than silently dropping further frames (which would corrupt
+         * NIP-01 by missing EVENT/EOSE messages).
+         */
+        const val SESSION_OUTGOING_BUFFER: Int = 1024
     }
 }

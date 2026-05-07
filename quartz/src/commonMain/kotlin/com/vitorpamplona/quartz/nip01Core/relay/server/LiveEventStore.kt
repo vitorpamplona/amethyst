@@ -65,11 +65,30 @@ class LiveEventStore(
         // ephemeral kinds (20000-29999) where insert is a no-op — and
         // ephemeral events MUST still reach matching live subscribers per
         // NIP-01.
+        //
+        // Side effect of registering the collector first: an event
+        // inserted *during* `store.query` will be both replayed by the
+        // store AND emitted to the live stream. We dedupe by tracking
+        // ids seen during the historical replay and skipping them on
+        // the live path. The set is dropped after EOSE so live-only
+        // events don't accumulate memory.
+        var inHistoricalPhase = true
+        var seenIds: HashSet<String>? = HashSet()
+        val historicalOnEach: (Event) -> Unit = { event ->
+            seenIds?.add(event.id)
+            onEach(event)
+        }
         newEventStream
             .onSubscription {
-                store.query(filters, onEach)
+                store.query(filters, historicalOnEach)
                 onEose()
+                // Free the dedupe set once we've crossed EOSE: from
+                // here on the live stream is the only source of
+                // events, so duplicates aren't possible.
+                inHistoricalPhase = false
+                seenIds = null
             }.collect { newEvent ->
+                if (inHistoricalPhase && seenIds?.contains(newEvent.id) == true) return@collect
                 if (filters.any { it.match(newEvent) }) {
                     onEach(newEvent)
                 }

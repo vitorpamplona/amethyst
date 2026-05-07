@@ -101,7 +101,8 @@ fun main(args: Array<String>) {
         composePolicy(config, advertisedUrl, requireAuth, verifySigs)
     }
 
-    val relay = Relay(advertisedUrl, store, info, policyBuilder)
+    val stateFile = config.admin.state_file?.let { File(it) }
+    val relay = Relay(advertisedUrl, store, info, policyBuilder, stateFile = stateFile)
     // Frame cap honors max_ws_frame_bytes when set; max_ws_message_bytes
     // is treated as the same cap (Ktor's WebSockets plugin only exposes
     // a single per-frame limit; multi-frame messages remain unbounded).
@@ -115,12 +116,15 @@ fun main(args: Array<String>) {
             path = path,
             maxFrameBytes = frameLimit,
             adminPubkeys = config.admin.pubkeys.toSet(),
+            publicUrl = config.admin.public_url,
         ).start()
 
     Runtime.getRuntime().addShutdownHook(
         Thread {
-            server.stop()
-            relay.close()
+            // Each step wrapped so a throw in `server.stop()` doesn't
+            // skip `relay.close()` (which closes the SQLite store).
+            runCatching { server.stop() }
+            runCatching { relay.close() }
         },
     )
 
@@ -188,13 +192,23 @@ private fun parseArgs(args: Array<String>): Args {
     while (i < args.size) {
         val a = args[i]
         if (a.startsWith("--")) {
-            val next = args.getOrNull(i + 1)
-            if (next != null && !next.startsWith("--")) {
-                opts[a] = next
-                i += 2
-            } else {
-                flags += a
+            // Support both `--key value` and `--key=value`. Splitting
+            // on the first `=` lets operators paste config values that
+            // happen to contain `=` (e.g. NIP-11 contact emails) by
+            // using the space-separated form.
+            val eq = a.indexOf('=')
+            if (eq > 0) {
+                opts[a.substring(0, eq)] = a.substring(eq + 1)
                 i += 1
+            } else {
+                val next = args.getOrNull(i + 1)
+                if (next != null && !next.startsWith("--")) {
+                    opts[a] = next
+                    i += 2
+                } else {
+                    flags += a
+                    i += 1
+                }
             }
         } else {
             i += 1

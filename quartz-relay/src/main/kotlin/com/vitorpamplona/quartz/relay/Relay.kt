@@ -32,7 +32,11 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.relay.admin.BanStore
 import com.vitorpamplona.quartz.relay.admin.DynamicBanPolicy
+import com.vitorpamplona.quartz.relay.persistence.BannedEntry
+import com.vitorpamplona.quartz.relay.persistence.RelayPersistedState
+import com.vitorpamplona.quartz.relay.persistence.RelayStateStore
 import kotlinx.coroutines.SupervisorJob
+import java.io.File
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -57,20 +61,40 @@ class Relay(
     info: RelayInfo = RelayInfo.default(url),
     policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
+    /**
+     * Optional path for the operator-state JSON snapshot. When set,
+     * the file is loaded at boot to seed [info] and [banStore], and
+     * rewritten atomically on every NIP-86 mutation and
+     * [updateInfo] call so admin actions survive restarts.
+     *
+     * Convention: place next to the SQLite event-store file
+     * (e.g. `events.db` → `events.db.admin.json`). `null` keeps
+     * everything in memory only — fine for tests.
+     */
+    stateFile: File? = null,
 ) : AutoCloseable {
+    private val stateStore: RelayStateStore? = stateFile?.let { RelayStateStore(it) }
+
     /**
      * NIP-11 doc. Mutable so NIP-86 admin RPCs (`changerelayname`,
      * `changerelaydescription`, `changerelayicon`) can swap the doc
      * atomically. Readers (the NIP-11 GET endpoint) re-read on every
      * request so changes are visible immediately, no restart needed.
+     *
+     * If a [RelayStateStore] is configured and the snapshot exists,
+     * the persisted info doc takes precedence over the constructor
+     * default — operators expect their last `changerelayname` to
+     * survive a restart.
      */
     @Volatile
-    var info: RelayInfo = info
+    var info: RelayInfo =
+        stateStore?.load()?.info?.let { RelayInfo(it) } ?: info
         private set
 
     /** Mutates the live NIP-11 doc. Called by [admin.Nip86Server]. */
     fun updateInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
         info = RelayInfo(transform(info.document))
+        snapshot()
     }
 
     /**
@@ -78,7 +102,48 @@ class Relay(
      * [admin.Nip86Server] mutate this; the policy stack consults it on
      * every accept call via [DynamicBanPolicy].
      */
-    val banStore: BanStore = BanStore()
+    val banStore: BanStore = BanStore(onMutation = { snapshot() })
+
+    init {
+        // Seed the in-memory ban state from disk *without* triggering
+        // [snapshot] on every entry — the snapshot is exactly what we
+        // just loaded.
+        stateStore?.load()?.let { snap ->
+            banStore.seedFromSnapshot(
+                bannedPubkeys = snap.bannedPubkeys.map { it.key to it.reason },
+                allowedPubkeys = snap.allowedPubkeys.map { it.key to it.reason },
+                bannedEvents = snap.bannedEvents.map { it.key to it.reason },
+                allowedKinds = snap.allowedKinds,
+                disallowedKinds = snap.disallowedKinds,
+            )
+        }
+    }
+
+    /**
+     * Writes the current state (NIP-11 doc + ban lists) to disk.
+     * No-op when no `stateFile` was configured.
+     *
+     * Best-effort: any I/O failure is logged to stderr and swallowed
+     * so an unwritable disk doesn't take the relay down. Operators
+     * monitor for missing snapshots out-of-band.
+     */
+    fun snapshot() {
+        val s = stateStore ?: return
+        runCatching {
+            s.save(
+                RelayPersistedState(
+                    info = info.document,
+                    bannedPubkeys = banStore.listBannedPubkeys().map { (k, r) -> BannedEntry(k, r) },
+                    allowedPubkeys = banStore.listAllowedPubkeys().map { (k, r) -> BannedEntry(k, r) },
+                    bannedEvents = banStore.listBannedEvents().map { (k, r) -> BannedEntry(k, r) },
+                    allowedKinds = banStore.listAllowedKinds(),
+                    disallowedKinds = banStore.listDisallowedKinds(),
+                ),
+            )
+        }.onFailure {
+            System.err.println("warning: failed to write relay state file: ${it.message}")
+        }
+    }
 
     val server =
         NostrServer(

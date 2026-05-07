@@ -53,10 +53,15 @@ class RelayHub(
     AutoCloseable {
     private val relays = ConcurrentHashMap<NormalizedRelayUrl, Relay>()
 
-    fun getOrCreate(url: NormalizedRelayUrl): Relay =
-        relays.getOrPut(url) {
+    @Volatile
+    private var closed = false
+
+    fun getOrCreate(url: NormalizedRelayUrl): Relay {
+        check(!closed) { "RelayHub has been closed" }
+        return relays.getOrPut(url) {
             Relay(url = url, policyBuilder = defaultPolicy)
         }
+    }
 
     fun getOrCreate(url: String): Relay = getOrCreate(RelayUrlNormalizer.normalize(url))
 
@@ -69,8 +74,15 @@ class RelayHub(
         out: WebSocketListener,
     ): WebSocket = InProcessWebSocket(getOrCreate(url), out)
 
+    /**
+     * Idempotent. Sets the closed flag first so concurrent
+     * `getOrCreate` calls fail-fast — otherwise a relay created
+     * between iteration and clear would leak (its store would never
+     * be closed).
+     */
     override fun close() {
-        relays.values.forEach { it.close() }
+        closed = true
+        relays.values.forEach { runCatching { it.close() } }
         relays.clear()
     }
 }

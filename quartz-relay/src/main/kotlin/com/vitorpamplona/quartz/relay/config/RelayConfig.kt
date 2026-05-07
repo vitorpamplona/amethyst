@@ -62,7 +62,10 @@ data class RelayConfig(
                 version = info.version ?: "1.08.0",
                 supported_nips =
                     info.supported_nips?.map(Int::toString)
-                        ?: listOf("1", "9", "11", "40", "42", "45", "50", "62"),
+                        // Keep in sync with `RelayInfo.default()` —
+                        // both lists must reflect the NIPs actually
+                        // wired into the relay.
+                        ?: listOf("1", "9", "11", "40", "42", "45", "50", "62", "86"),
                 privacy_policy = info.privacy_policy,
                 terms_of_service = info.terms_of_service,
                 relay_countries = info.relay_countries,
@@ -140,9 +143,26 @@ data class RelayConfig(
      * that accepts JSON-RPC admin requests authenticated via NIP-98
      * HTTP-Auth. Only requests signed by one of these pubkeys are
      * dispatched.
+     *
+     * [public_url] is the canonical URL the relay is reachable at,
+     * e.g. `https://relay.example.com/`. NIP-98's URL binding compares
+     * the signed `u` tag against this — without it, an attacker can
+     * spoof the `Host` header to bind their signature to any URL.
+     * Required when running behind TLS termination or a reverse proxy.
      */
     data class AdminSection(
         val pubkeys: List<String> = emptyList(),
+        val public_url: String? = null,
+        /**
+         * Path for the JSON snapshot that persists NIP-86 admin state
+         * (ban lists + the live NIP-11 doc) across restarts. When
+         * unset, admin state is in-memory only.
+         *
+         * Convention: place next to the SQLite event-store file —
+         * e.g. `[database].file = "/var/lib/quartz-relay/events.db"`
+         * pairs with `[admin].state_file = "/var/lib/quartz-relay/events.db.admin.json"`.
+         */
+        val state_file: String? = null,
     )
 
     companion object {

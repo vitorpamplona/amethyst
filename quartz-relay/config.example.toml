@@ -68,3 +68,15 @@ require_auth = false
 # the listed pubkeys can run admin RPCs (banpubkey / banevent /
 # changerelayname / …). Empty (the default) disables the endpoint.
 # pubkeys = ["abcdef...64hex..."]
+#
+# Canonical URL the relay is reachable at, e.g. behind a reverse proxy.
+# NIP-98 binds requests to this URL via the `u` tag. **Required** in
+# any production deployment — without it, an attacker can spoof the
+# Host header to bypass URL binding.
+# public_url = "https://relay.example.com/"
+
+# Path for the JSON snapshot that persists NIP-86 admin state (ban
+# lists + the live NIP-11 doc) across restarts. When unset, admin
+# state is in-memory only and forgotten on every restart. Convention
+# is to place this next to the SQLite event-store file.
+# state_file = "/var/lib/quartz-relay/events.db.admin.json"

@@ -106,12 +106,14 @@ class Nip86Server(
 
                 Nip86Method.BAN_PUBKEY -> {
                     val (pk, reason) = req.params.stringPair() ?: return malformed("expected [pubkey, reason?]")
+                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
                     banStore.banPubkey(pk, reason)
                     result(JsonPrimitive(true))
                 }
 
                 Nip86Method.UNBAN_PUBKEY -> {
                     val (pk, _) = req.params.stringPair() ?: return malformed("expected [pubkey]")
+                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
                     banStore.unbanPubkey(pk)
                     result(JsonPrimitive(true))
                 }
@@ -127,12 +129,14 @@ class Nip86Server(
 
                 Nip86Method.ALLOW_PUBKEY -> {
                     val (pk, reason) = req.params.stringPair() ?: return malformed("expected [pubkey, reason?]")
+                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
                     banStore.allowPubkey(pk, reason)
                     result(JsonPrimitive(true))
                 }
 
                 Nip86Method.UNALLOW_PUBKEY -> {
                     val (pk, _) = req.params.stringPair() ?: return malformed("expected [pubkey]")
+                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
                     banStore.unallowPubkey(pk)
                     result(JsonPrimitive(true))
                 }
@@ -148,6 +152,7 @@ class Nip86Server(
 
                 Nip86Method.BAN_EVENT -> {
                     val (id, reason) = req.params.stringPair() ?: return malformed("expected [event_id, reason?]")
+                    if (!isHex64(id)) return malformed("event_id must be 64-char hex")
                     banStore.banEvent(id, reason)
                     // Also remove the event from the store if it's there.
                     store?.delete(Filter(ids = listOf(id)))
@@ -156,6 +161,7 @@ class Nip86Server(
 
                 Nip86Method.ALLOW_EVENT -> {
                     val (id, _) = req.params.stringPair() ?: return malformed("expected [event_id]")
+                    if (!isHex64(id)) return malformed("event_id must be 64-char hex")
                     banStore.allowEvent(id)
                     result(JsonPrimitive(true))
                 }
@@ -208,6 +214,10 @@ class Nip86Server(
                 }
             }
         }.getOrElse { e ->
+            // CancellationException must propagate so structured
+            // concurrency works — swallowing it would let a parent
+            // cancellation be reported as a benign RPC error.
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Nip86Response(error = "internal: ${e.message ?: e::class.simpleName}")
         }
 
@@ -270,3 +280,7 @@ private fun JsonArray.firstInt(): Int? =
     }.getOrNull()
 
 private fun JsonPrimitive.contentOrNull(): String? = if (this == JsonNull) null else content
+
+private val HEX64 = Regex("[0-9a-fA-F]{64}")
+
+private fun isHex64(s: String): Boolean = HEX64.matches(s)
