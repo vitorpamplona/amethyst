@@ -29,6 +29,37 @@ if [[ -z "$PAIR_DIR" ]]; then
     exit 1
 fi
 
+# Some runner versions don't write status to per-testcase output.txt.
+# Fall back to inferring from artifacts (qlog connection_closed events,
+# pcap presence, etc.). We tag these with [inf] in the result column.
+infer_status_from_artifacts() {
+    local tc_dir="$1"
+    local tc="$2"
+    # Did the connection formally close with an error?
+    local qlog
+    qlog=$(ls -1 "$tc_dir"/client/qlog/*.sqlog "$tc_dir"/client/qlog/*.qlog 2>/dev/null | head -n 1 || true)
+    if [[ -n "$qlog" ]]; then
+        # Did the server close us with an error code?
+        local cc
+        cc=$(grep '"name":"transport:connection_closed"' "$qlog" 2>/dev/null | tail -n 1)
+        if [[ -n "$cc" ]]; then
+            local reason
+            reason=$(echo "$cc" | sed -nE 's/.*"reason":"([^"]+)".*/\1/p')
+            echo "FAILED: $reason"
+            return
+        fi
+        # No close → did we get >0 packets received? If so, infer
+        # something happened. Status is genuinely uncertain.
+        local rx
+        rx=$(grep -c '"name":"transport:packet_received"' "$qlog" 2>/dev/null || echo 0)
+        if [[ "$rx" -gt 0 ]]; then
+            echo "RAN ($rx pkts rx; no formal close)"
+            return
+        fi
+    fi
+    echo "UNKNOWN (no qlog)"
+}
+
 # The "Test: X took Y, status: TestResult.Z" line is written by run.py
 # to its own stdout, not into the per-testcase output.txt. Search a few
 # likely locations: the per-testcase output.txt (in case the runner
@@ -68,6 +99,8 @@ for tc_dir in "$PAIR_DIR"/*/; do
         esac
         printf "%-22s %s %-13s %-10s\n" "$tc" "$marker" "$status" "$time"
     else
-        printf "%-22s %s %s\n" "$tc" "·" "(no status line found in $(printf '%s ' "${SEARCH_FILES[@]##*/}" | head -c 60))"
+        # Fall back to artifact inspection.
+        inferred=$(infer_status_from_artifacts "$tc_dir" "$tc")
+        printf "%-22s %s [inf] %s\n" "$tc" "·" "$inferred"
     fi
 done
