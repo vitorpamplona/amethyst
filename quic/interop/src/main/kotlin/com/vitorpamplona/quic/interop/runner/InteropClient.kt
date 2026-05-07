@@ -89,16 +89,20 @@ fun main() {
             else -> null
         }
 
-    // ALPN per quic-interop-runner convention. Most testcases use
-    // `hq-interop` (HTTP/0.9 over QUIC, no H3/QPACK). Only the `http3` and
-    // `multiplexing` testcases use `h3`. quic-go-qns enforces this strictly
-    // (CRYPTO_ERROR 0x178 / TLS no_application_protocol on mismatch);
-    // aioquic and picoquic accept either. Match the per-test convention
-    // so we work everywhere.
-    val alpn =
+    // ALPN selection. Different servers configure different ALPNs PER
+    // testcase, with no consistent convention:
+    //   - quic-go-qns         — strictly hq-interop for non-http3 tests
+    //   - aioquic-qns         — accepts either
+    //   - picoquic-qns        — strictly h3 for ALL testcases
+    //
+    // Solution: offer BOTH `h3` and `hq-interop` in the ClientHello. TLS
+    // ALPN negotiation lets the server pick whichever matches its config.
+    // For testcases that REQUIRE H3 framing (http3, multiplexing) we
+    // restrict to h3 so any server that picks hq-interop fails fast.
+    val offeredAlpns =
         when (testcase) {
-            "http3", "multiplexing" -> Alpn.H3
-            else -> Alpn.HQ_INTEROP
+            "http3", "multiplexing" -> listOf(Alpn.H3)
+            else -> listOf(Alpn.HQ_INTEROP, Alpn.H3)
         }
 
     val code =
@@ -133,7 +137,7 @@ fun main() {
                     requests = requests,
                     downloadsDir = downloadsDir,
                     cipherSuites = cipherSuites,
-                    alpn = alpn,
+                    offeredAlpns = offeredAlpns,
                     keyLogPath = keyLogPath,
                     parallel = (testcase == "multiplexing"),
                 )
@@ -163,7 +167,7 @@ private fun runTransferTest(
     requests: String,
     downloadsDir: File,
     cipherSuites: IntArray?,
-    alpn: Alpn,
+    offeredAlpns: List<Alpn>,
     keyLogPath: String?,
     parallel: Boolean,
 ): Int {
@@ -199,7 +203,7 @@ private fun runTransferTest(
                     serverName = host,
                     config = QuicConnectionConfig(),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
-                    alpnList = listOf(alpn.wireBytes),
+                    alpnList = offeredAlpns.map { it.wireBytes },
                     cipherSuites =
                         cipherSuites
                             ?: intArrayOf(
@@ -221,10 +225,27 @@ private fun runTransferTest(
                 return@runBlocking "handshake_failed"
             }
 
+            // Dispatch the GET client by what the server actually picked.
+            // If the server didn't pick or picked something unrecognized,
+            // fall back to HQ-interop (simpler, more permissive).
+            val negotiated =
+                conn.tls.negotiatedAlpn
+                    ?.decodeToString()
+                    .orEmpty()
             val client: GetClient =
-                when (alpn) {
-                    Alpn.H3 -> Http3GetClient(conn).also { it.init() }
-                    Alpn.HQ_INTEROP -> HqInteropGetClient(conn)
+                when (negotiated) {
+                    "h3" -> {
+                        Http3GetClient(conn).also { it.init() }
+                    }
+
+                    "hq-interop" -> {
+                        HqInteropGetClient(conn)
+                    }
+
+                    else -> {
+                        System.err.println("unrecognized negotiated ALPN '$negotiated'; defaulting to hq-interop")
+                        HqInteropGetClient(conn)
+                    }
                 }
 
             val authority = if (port == 443) host else "$host:$port"
