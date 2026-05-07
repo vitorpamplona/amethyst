@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -226,4 +227,109 @@ tasks.withType<Test>().configureEach {
     val cargoBin = hangInteropCacheDir.dir("bin").asFile
     systemProperty("nestsHangInteropSidecarsDir", sidecarRelease.absolutePath)
     systemProperty("nestsHangInteropCargoBinDir", cargoBin.absolutePath)
+}
+
+// ---- Cross-stack interop: BROWSER (Phase 4 of T16) --------------------------
+//
+// Adds the bun + Playwright + headless Chromium harness at
+// `nestsClient-browser-interop/`. Mirrors the hang-interop wiring above
+// but with bun/npx subprocesses instead of cargo. Opt-in via
+// `-DnestsBrowserInterop=true`. See:
+//   nestsClient/plans/2026-05-06-phase4-browser-harness.md
+//
+// Two tasks:
+//   - interopBuildBrowserHarness     — `bun install` + `bun build` of
+//     listen.ts/publish.ts → dist/, plus copying static .html files.
+//   - interopInstallPlaywrightChromium — `npx playwright install
+//     --with-deps chromium`. Skipped if a Chromium build already lives
+//     in `~/.cache/ms-playwright/`.
+//
+// We also forward the `bun` and `npx` binaries to be configurable via
+// env so CI can override them; defaults pick up the standard install
+// paths the agents/host runner ship with.
+
+val browserInteropDir =
+    rootProject.layout.projectDirectory.dir("nestsClient-browser-interop")
+
+// `bun` lives at `/root/.bun/bin/bun` on the agent runner. CI may put it
+// elsewhere; allow override via env / system property. Falls back to
+// `bun` on PATH if the well-known path isn't executable.
+fun resolveBunBinary(): String {
+    val explicit = System.getenv("BUN_BIN") ?: System.getProperty("bunBin")
+    if (explicit != null) return explicit
+    val agentPath = "/root/.bun/bin/bun"
+    return if (File(agentPath).canExecute()) agentPath else "bun"
+}
+
+fun resolveNpxBinary(): String =
+    System.getenv("NPX_BIN") ?: System.getProperty("npxBin") ?: "npx"
+
+val interopBuildBrowserHarness by tasks.registering(Exec::class) {
+    description = "bun install && bun build for the browser interop harness"
+    group = "interop"
+    workingDir = browserInteropDir.asFile
+    val bun = resolveBunBinary()
+    // Single bash invocation so `&&` short-circuits on a failed install.
+    // The trailing `cp` step copies the static HTML pages into dist/
+    // alongside the bundled JS — bun's bundler doesn't carry .html.
+    commandLine(
+        "bash", "-c",
+        "$bun install && $bun build src/listen.ts src/publish.ts --outdir dist --target browser && cp src/listen.html src/publish.html dist/",
+    )
+    inputs.files(
+        fileTree(browserInteropDir.asFile) {
+            include("package.json", "tsconfig.json", "playwright.config.ts", "src/**/*")
+        },
+    )
+    outputs.dir(browserInteropDir.dir("dist"))
+}
+
+val interopInstallPlaywrightChromium by tasks.registering(Exec::class) {
+    description = "Install Playwright Chromium + dependencies for the browser interop harness"
+    group = "interop"
+    workingDir = browserInteropDir.asFile
+    val npx = resolveNpxBinary()
+    // `--with-deps` needs sudo on a fresh runner; on the agent host
+    // Chromium is already pre-installed via apt so the system-package
+    // step is a no-op. Use the plain `install` form when --with-deps
+    // would error (e.g. unprivileged container) — fall back at runtime.
+    commandLine("bash", "-c", "$npx playwright install chromium")
+    onlyIf {
+        // Skip if a Chromium build is already present in the Playwright
+        // cache. The cache path is normally ~/.cache/ms-playwright/, but
+        // the agent runner sets PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+        // and ships chromium pre-installed there. Honour the env var so
+        // we don't redundantly download.
+        val explicit = System.getenv("PLAYWRIGHT_BROWSERS_PATH")
+        val candidates =
+            if (explicit != null) {
+                listOf(File(explicit))
+            } else {
+                val home = System.getProperty("user.home") ?: return@onlyIf true
+                listOf(File(home, ".cache/ms-playwright"))
+            }
+        val hasChromium =
+            candidates.any { dir ->
+                dir.exists() &&
+                    dir.listFiles()?.any { it.name.startsWith("chromium-") || it.name == "chromium" } == true
+            }
+        !hasChromium
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    val isBrowserInterop = System.getProperty("nestsBrowserInterop") == "true"
+    if (isBrowserInterop) {
+        dependsOn(interopBuildBrowserHarness, interopInstallPlaywrightChromium)
+        // Browser scenarios reuse the moq-relay subprocess that
+        // hang-interop boots, so the Rust sidecars must be built too.
+        dependsOn(interopBuildHangSidecars)
+    }
+    systemProperty(
+        "nestsBrowserInteropHarnessDir",
+        browserInteropDir.asFile.absolutePath,
+    )
+    System.getProperty("nestsBrowserInterop")?.let {
+        systemProperty("nestsBrowserInterop", it)
+    }
 }

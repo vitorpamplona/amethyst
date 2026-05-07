@@ -155,12 +155,14 @@ class NativeMoqRelayHarness private constructor(
 
         /**
          * Tear down the current shared relay subprocess and start a
-         * fresh one. Used as a JUnit `@Before` hook by tests that
-         * need clean per-method relay state — under accumulated
-         * cross-test broadcasts / connections the relay's per-
-         * subscriber forward queues drift, manifesting as
-         * intermittent catalog-cancel and sample-count flakes that
-         * don't reproduce in isolation.
+         * fresh one. Used as a JUnit `@BeforeTest` hook by
+         * `HangInteropTest` and `BrowserInteropTest` so each scenario
+         * runs against a relay that started ~500 ms before the test
+         * body — under accumulated cross-test broadcasts /
+         * connections the relay's per-subscriber forward queues +
+         * announce tables drift, manifesting as intermittent
+         * catalog-cancel and sample-count flakes that don't reproduce
+         * in isolation.
          *
          * Cost: ~500 ms per call (cargo binaries are cached, only
          * the subprocess boot + UDP bind + first client handshake
