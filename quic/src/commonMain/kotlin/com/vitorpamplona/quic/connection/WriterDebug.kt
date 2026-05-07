@@ -39,4 +39,4 @@ var writerDebugEnabled: Boolean = false
  * docker layer cache didn't serve a stale jar). Bump when adding new
  * trace lines to make them traceable from the wire run.
  */
-const val WRITER_DEBUG_BUILD_ID: String = "2026-05-07-batch-log-v1"
+const val WRITER_DEBUG_BUILD_ID: String = "2026-05-07-parallel-branch-v1"

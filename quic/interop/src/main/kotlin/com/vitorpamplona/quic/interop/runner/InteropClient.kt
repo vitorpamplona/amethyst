@@ -90,7 +90,9 @@ fun main() {
         com.vitorpamplona.quic.connection.writerDebugEnabled = true
         System.err.println(
             "[boot] DEBUG=1; writerDebugEnabled=true; build_id=" +
-                "${com.vitorpamplona.quic.connection.WRITER_DEBUG_BUILD_ID}",
+                "${com.vitorpamplona.quic.connection.WRITER_DEBUG_BUILD_ID}; " +
+                "TESTCASE=${System.getenv("TESTCASE") ?: "(unset)"}; " +
+                "ROLE=${System.getenv("ROLE") ?: "(unset)"}",
         )
     } else {
         System.err.println("[boot] DEBUG=${debugEnv ?: "(unset)"} writerDebugEnabled=false")
@@ -320,6 +322,10 @@ private fun runTransferTest(
                 }
 
             val authority = if (port == 443) host else "$host:$port"
+            // Unconditional one-shot log so we can confirm which branch
+            // runs even when DEBUG=0 — this is a control-flow boundary,
+            // not a hot-path trace.
+            System.err.println("[boot] transfer mode: parallel=$parallel urls=${urls.size}")
             val outcome =
                 withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
                     val responses =
