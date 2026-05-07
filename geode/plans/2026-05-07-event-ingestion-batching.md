@@ -38,56 +38,89 @@ contention, not WS throughput).
 
 ### Tier 1 — SQLite WAL + group commit (cheap win)
 
-Confirm `PRAGMA journal_mode=WAL` + `PRAGMA synchronous=NORMAL` on the
-event-store DB; group commits across the writer mutex's hold window.
-Today each insert is its own transaction. Wrap N inserts (or a 5 ms
-budget, whichever first) in a single transaction managed by the writer
-coroutine.
+WAL is already on (`PRAGMA journal_mode=WAL`). The pool runs with
+`PRAGMA synchronous=OFF`, which is one notch more permissive than
+the originally-sketched `synchronous=NORMAL` — we keep it as-is
+because the project already accepted the OS-crash trade-off there.
 
-Because OK reflects acceptance not durability, each row can fan an OK
-as soon as the per-row INSERT statement returns inside the
-transaction — we do not need to wait for the batch's commit. The
-fsync is hidden from the publisher latency budget entirely.
+Group commit is implemented via a new `IEventStore.batchInsert`:
+the SQLite override holds the writer mutex once and wraps N events
+in one `BEGIN IMMEDIATE … COMMIT`. Per-row error isolation uses
+SAVEPOINTs so one bad event (expired, duplicate id) doesn't roll
+back the good ones — just that row reports `Rejected`.
 
-Implementation lives in quartz's `EventStore` / `SQLiteConnectionPool`,
-not geode — but geode owns the benchmark and validates the gain.
+OKs fire as soon as each row's outcome is known inside the writer
+batch, not waiting for fsync (per the OK-semantics constraint above).
+
+Implementation lives in `quartz/nip01Core/store/sqlite/SQLiteEventStore.batchInsertEvents`,
+exposed through `IEventStore.batchInsert` and consumed by the new
+`IngestQueue` (Tier 2 below).
 
 Expected: **~5–10× write throughput** on a fast SSD. SQLite group
 commit is well-trodden territory (nostr-rs-relay, strfry both do it).
 
 ### Tier 2 — pipelined OK over multiple in-flight EVENTs
 
-`RelaySession.receive` is currently single-flight: one EVENT in,
-process, OK out, next EVENT. Allow a connection to push N EVENTs
-concurrently and dispatch them to a per-connection ingest pipeline.
+`RelaySession.receive` was single-flight: one EVENT in, process, OK
+out, next EVENT. With Tier 2 the connection's pump posts to the
+shared `IngestQueue` and returns immediately — the WS pump moves
+straight to the next frame.
 
-A `Channel<EventCmd>` with capacity = `INGEST_PIPELINE_DEPTH` per
-connection, drained by a coroutine that feeds the group-commit writer
-above. OKs go straight to `outQueue.send()` the moment each row
-returns from INSERT — no ordering bookkeeping needed, since the OK
-frame already carries the event id and the spec doesn't require
-order. A pipelined publisher keying on event id will pair replies
-correctly.
+`IngestQueue` (one per `NostrServer`) holds a bounded
+`Channel<Submission>` (capacity = 1024 per the `DEFAULT_CAPACITY`
+constant) drained by a single writer coroutine. The writer pulls
+the first item to start a batch then `tryReceive`-drains everything
+else queued (up to 64 — `DEFAULT_MAX_BATCH`), feeds the whole batch
+to `IEventStore.batchInsert`, and dispatches each row's
+`onComplete` callback as soon as the batch returns. The callback
+turns into the `OK` frame at the WS layer.
+
+OKs are not order-preserving (per the constraints above). The
+writer coroutine starts lazily on first `submit` so subscription-
+only sessions don't pay for it and don't perturb `Dispatchers.Default`
+scheduling.
 
 Expected: hides verify+insert latency behind the next EVENT's parse,
 gets us closer to network-bound throughput.
 
 ### Tier 3 — eager Schnorr verify off the writer thread
 
-`VerifyPolicy` is in the policy stack and runs synchronously on
-`receive`. Move it into the ingest pipeline so verification of EVENT N+1
-runs concurrently with the SQLite commit of EVENT N. secp256k1 verify
-is parallelisable; the writer should never block on it.
+`VerifyPolicy` ran synchronously on `receive`, serialising verify
+on each connection's pump coroutine. With Tier 3, `IngestQueue`
+takes a `verify: ((Event) -> Boolean)?` hook; when set, the writer
+fan-outs a `coroutineScope { events.map { async(Default) { verify(it) } }.awaitAll() }`
+on each batch before opening the SQLite transaction. Failed
+verifies pre-mark `Rejected` and skip the insert.
+
+Wired through `NostrServer(parallelVerify = ...)` and
+`geode.Relay(parallelVerify = ...)`, controlled by
+`[options].parallel_verify` in the relay config (default `true`)
+and `--no-parallel-verify` on the CLI. Operators that flip it on
+must omit `VerifyPolicy` from their policy chain — `Main.kt` does
+this automatically; `composePolicy` is told to skip the
+`VerifyPolicy` piece when `parallelVerify` is true. Internal
+direct callers of `NostrServer` (tests, library users) are
+opt-in: the flag defaults to `false` to keep existing
+`VerifyPolicy`-in-chain semantics unchanged.
+
+Expected: ≈CPU_COUNT× verify-step speed-up on burst publishes
+from a single connection, where verify was previously serial on
+that pump.
 
 ## How to verify
 
-Add to `geode.perf.LoadBenchmark`:
+`geode.perf.LoadBenchmark` carries the perf tests:
 
-- `publishGroupCommitSingleClient` — same workload as the current
-  single-client benchmark, asserts >5000 EPS.
-- `publishPipelinedSingleClient` — sends 100 EVENTs without awaiting
-  intermediate OKs; measures end-to-end throughput and verifies that
-  every event id receives exactly one OK (in any order).
+- `publishGroupCommitSingleClient` — sequential publish-and-confirm
+  on one connection (the same shape as the original
+  `publishThroughputSingleClient`). Synchronous publishing means
+  batch size is always 1, so this case shows per-event SQLite tx
+  cost rather than the group-commit win — kept as a 500-EPS floor
+  to catch regressions from the rewrite.
+- `publishPipelinedSingleClient` — bursts 10 000 EVENTs back-to-
+  back without awaiting intermediate OKs; verifies end-to-end
+  throughput and that every event id receives exactly one OK (in
+  any order). This is where Tier 1 + Tier 2 both light up.
 
 Existing benchmarks stay as the regression floor.
 

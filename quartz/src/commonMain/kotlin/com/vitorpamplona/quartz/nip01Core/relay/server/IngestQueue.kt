@@ -24,9 +24,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
@@ -73,6 +77,25 @@ class IngestQueue(
     parentContext: CoroutineContext,
     private val maxBatch: Int = DEFAULT_MAX_BATCH,
     capacity: Int = DEFAULT_CAPACITY,
+    /**
+     * Optional pre-insert validator. When set, the writer runs each
+     * batch through this hook in parallel before opening the SQLite
+     * transaction. Events that return `false` skip the insert and are
+     * reported as Rejected with [verifyRejectionReason].
+     *
+     * The intended use is Schnorr signature verification: an event's
+     * `verify()` is CPU-bound and parallelisable, so spreading a
+     * batch's verifies across [Dispatchers.Default] threads is
+     * straight throughput. Hook fires off the WS pump so a single
+     * publisher streaming many EVENTs doesn't serialise verify on
+     * one connection's read coroutine.
+     *
+     * Default `null` skips this stage — callers that already verify
+     * inside their `IRelayPolicy` chain should leave it null to avoid
+     * double-verify.
+     */
+    private val verify: ((Event) -> Boolean)? = null,
+    private val verifyRejectionReason: String = "invalid: bad signature or id",
 ) : AutoCloseable {
     /**
      * One outstanding ingest request: the event to insert plus the
@@ -130,7 +153,6 @@ class IngestQueue(
 
     private suspend fun drainLoop() {
         val batch = ArrayList<Submission>(maxBatch)
-        val events = ArrayList<Event>(maxBatch)
         try {
             while (true) {
                 // Block for the first item — anything else would be a
@@ -142,36 +164,88 @@ class IngestQueue(
                     val next = incoming.tryReceive().getOrNull() ?: break
                     batch.add(next)
                 }
-                events.clear()
-                for (sub in batch) events.add(sub.event)
 
-                val outcomes =
-                    try {
-                        store.batchInsert(events)
-                    } catch (e: Throwable) {
-                        Log.w("IngestQueue") { "batchInsert failed for ${batch.size} events: ${e.message}" }
-                        val reason = e.message ?: e::class.simpleName ?: "insert failed"
-                        List(batch.size) { IEventStore.InsertOutcome.Rejected(reason) }
-                    }
-
-                for (i in batch.indices) {
-                    val sub = batch[i]
-                    val outcome =
-                        outcomes.getOrNull(i)
-                            ?: IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
-                    try {
-                        sub.onComplete(outcome)
-                    } catch (e: Throwable) {
-                        // A misbehaving callback must not poison the
-                        // writer loop; the outcome is delivered
-                        // best-effort.
-                        Log.w("IngestQueue") { "onComplete threw: ${e.message}" }
-                    }
-                }
+                processBatch(batch)
                 batch.clear()
             }
         } catch (_: kotlinx.coroutines.channels.ClosedReceiveChannelException) {
             // Normal shutdown via close().
+        }
+    }
+
+    private suspend fun processBatch(batch: List<Submission>) {
+        // Tier 3: parallel pre-insert verify. Each batch entry that
+        // fails verification is pre-marked Rejected and excluded from
+        // the SQLite transaction. The remaining (verified) events go
+        // through batchInsert in original order; we re-stitch outcomes
+        // back to the full batch by index.
+        val verifyResults: BooleanArray? =
+            verify?.let { hook ->
+                coroutineScope {
+                    batch
+                        .map { sub -> async(Dispatchers.Default) { hook(sub.event) } }
+                        .awaitAll()
+                        .toBooleanArray()
+                }
+            }
+
+        val toInsert: List<Event>
+        val insertIndices: IntArray
+        if (verifyResults == null) {
+            toInsert = batch.map { it.event }
+            insertIndices = IntArray(batch.size) { it }
+        } else {
+            val accepted = ArrayList<Event>(batch.size)
+            val mapping = ArrayList<Int>(batch.size)
+            for (i in batch.indices) {
+                if (verifyResults[i]) {
+                    accepted.add(batch[i].event)
+                    mapping.add(i)
+                }
+            }
+            toInsert = accepted
+            insertIndices = mapping.toIntArray()
+        }
+
+        val insertOutcomes: List<IEventStore.InsertOutcome> =
+            if (toInsert.isEmpty()) {
+                emptyList()
+            } else {
+                try {
+                    store.batchInsert(toInsert)
+                } catch (e: Throwable) {
+                    Log.w("IngestQueue") { "batchInsert failed for ${toInsert.size} events: ${e.message}" }
+                    val reason = e.message ?: e::class.simpleName ?: "insert failed"
+                    List(toInsert.size) { IEventStore.InsertOutcome.Rejected(reason) }
+                }
+            }
+
+        // Build a per-batch-index outcome array.
+        val finalOutcomes = arrayOfNulls<IEventStore.InsertOutcome>(batch.size)
+        for (j in insertIndices.indices) {
+            finalOutcomes[insertIndices[j]] = insertOutcomes.getOrNull(j)
+                ?: IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
+        }
+        if (verifyResults != null) {
+            for (i in batch.indices) {
+                if (!verifyResults[i]) {
+                    finalOutcomes[i] = IEventStore.InsertOutcome.Rejected(verifyRejectionReason)
+                }
+            }
+        }
+
+        for (i in batch.indices) {
+            val sub = batch[i]
+            val outcome =
+                finalOutcomes[i]
+                    ?: IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
+            try {
+                sub.onComplete(outcome)
+            } catch (e: Throwable) {
+                // A misbehaving callback must not poison the writer
+                // loop; the outcome is delivered best-effort.
+                Log.w("IngestQueue") { "onComplete threw: ${e.message}" }
+            }
         }
     }
 

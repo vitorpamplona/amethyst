@@ -73,6 +73,17 @@ class Relay(
      * everything in memory only — fine for tests.
      */
     stateFile: File? = null,
+    /**
+     * Run Schnorr signature verification in parallel inside the
+     * [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue]
+     * instead of serially in the policy chain. Enables the Tier-3
+     * win in `geode/plans/2026-05-07-event-ingestion-batching.md`.
+     *
+     * When set, callers MUST omit `VerifyPolicy` from [policyBuilder]
+     * — having both verifies the same event twice for no benefit.
+     * `Main.kt` skips `VerifyPolicy` when this flag is on.
+     */
+    parallelVerify: Boolean = false,
 ) : AutoCloseable {
     private val stateStore: RelayStateStore? = stateFile?.let { RelayStateStore(it) }
 
@@ -158,6 +169,7 @@ class Relay(
                 if (user === EmptyPolicy) BanListPolicy(banStore) else user + BanListPolicy(banStore)
             },
             parentContext,
+            parallelVerify = parallelVerify,
         )
 
     /**

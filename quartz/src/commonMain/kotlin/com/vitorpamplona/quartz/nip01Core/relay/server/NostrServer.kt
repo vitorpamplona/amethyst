@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -36,11 +38,18 @@ import kotlin.coroutines.CoroutineContext
  *
  * @param store The [IEventStore] backing this relay.
  * @param policyBuilder Controls requirements for relay commands.
+ * @param parallelVerify When `true`, Schnorr verification runs in
+ *   parallel inside the [IngestQueue] (one async per event, dispatched
+ *   on `Dispatchers.Default`) rather than serially on the WS pump
+ *   coroutine inside [VerifyPolicy]. Callers that flip this on should
+ *   *omit* `VerifyPolicy` from their [policyBuilder] chain to avoid
+ *   double-verifying.
  */
 class NostrServer(
     private val store: IEventStore,
     private val policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
     private val parentContext: CoroutineContext = SupervisorJob(),
+    parallelVerify: Boolean = false,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
@@ -52,7 +61,12 @@ class NostrServer(
      * publishes into a single SQLite transaction. See [IngestQueue]
      * for the OK ordering and durability semantics.
      */
-    private val ingest = IngestQueue(store, parentContext)
+    private val ingest =
+        IngestQueue(
+            store = store,
+            parentContext = parentContext,
+            verify = if (parallelVerify) ::verifyEvent else null,
+        )
 
     private val subStore = LiveEventStore(store, ingest)
 
@@ -114,4 +128,11 @@ class NostrServer(
      */
     @Deprecated("Use close() instead", replaceWith = ReplaceWith("close()"))
     fun shutdown() = close()
+
+    private companion object {
+        // Function reference (`Event::verify`) wrapper so the
+        // ingest hook keeps a single instance per server rather
+        // than allocating a fresh lambda on every call site.
+        private fun verifyEvent(event: Event): Boolean = event.verify()
+    }
 }

@@ -364,6 +364,52 @@ class LoadBenchmark {
         }
 
     /**
+     * Same workload as [publishThroughputSingleClient] (sequential
+     * publish-and-confirm on one connection) — kept as a regression
+     * floor for the group-commit code path. Synchronous publishes
+     * never coalesce in the writer (batch size is always 1), so the
+     * EPS here measures per-event SQLite tx cost. The pipelined win
+     * shows up in [publishPipelinedSingleClient].
+     */
+    @Test
+    fun publishGroupCommitSingleClient() =
+        benchmark("publish group-commit single client") {
+            runBenchmarkServer { server, http ->
+                val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+                val client = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
+                try {
+                    val signer = NostrSignerSync(KeyPair())
+                    val relayUrl = server.url.normalizeRelayUrl()
+
+                    val n = 10_000
+                    var ok = 0
+                    val elapsed =
+                        measureTime {
+                            runBlocking {
+                                repeat(n) { i ->
+                                    val event = signer.sign(TextNoteEvent.build("group-commit $i"))
+                                    if (client.publishAndConfirm(event, setOf(relayUrl))) ok++
+                                }
+                            }
+                        }
+                    val eps = (n * 1000.0) / elapsed.inWholeMilliseconds
+                    println(
+                        "events=$n ok=$ok elapsedMs=${elapsed.inWholeMilliseconds} eps=${"%.0f".format(eps)}",
+                    )
+                    check(ok == n) { "expected all $n events accepted, got $ok" }
+                    // Floor: the pre-batching baseline was ~760 EPS
+                    // single-client (see plan). Anything below 500
+                    // means the group-commit / ingest-queue rewrite
+                    // regressed the synchronous path.
+                    check(eps > 500) { "synchronous EPS $eps fell below the 500 floor" }
+                } finally {
+                    client.disconnect()
+                    scope.cancel()
+                }
+            }
+        }
+
+    /**
      * One publisher, N subscribers. Publishes one EVENT and measures
      * fan-out latency: time from publish to last subscriber receiving.
      */
