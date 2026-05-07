@@ -48,27 +48,47 @@ fi
 
 echo
 echo "=============== client diagnostic traces (DEBUG=1) ==============="
-# All [boot] / [interop] / [batch] / [writer.app] lines from the
-# runner's tee'd stdout, narrowed to the timeframe of THIS testcase.
-# The testcase's container restarts between tests so the lines
-# between two 'Running test case:' markers are this run's.
-if [[ -f "${RUN_DIR}.stdout.log" ]]; then
-    awk -v tc="$TC" '
-        $0 ~ "Running test case: " tc { in_tc = 1; next }
-        in_tc && /Running test case:/ { exit }
-        in_tc && /\[(boot|interop|batch|writer\.)/ { print }
-    ' "${RUN_DIR}.stdout.log" | head -n 50 || true
-    echo "..."
-    echo "stream_frames histogram (this testcase only):"
-    awk -v tc="$TC" '
-        $0 ~ "Running test case: " tc { in_tc = 1; next }
-        in_tc && /Running test case:/ { exit }
-        in_tc { print }
-    ' "${RUN_DIR}.stdout.log" \
-      | grep -oE 'stream_frames=[0-9]+' \
-      | sort | uniq -c | sort -rn || echo "(no stream_frames reports)"
-else
-    echo "(no .stdout.log — re-run with DEBUG=1)"
+# Three places to look, in priority order:
+#   1. Per-testcase client output (testcases that write to file)
+#   2. Per-testcase output.txt (some runner versions)
+#   3. The runner's tee'd .stdout.log narrowed to this testcase's
+#      window — but only works for short tests, since matrix runs
+#      restart containers and longer tests' stderr can be lost
+#      when the container is killed mid-test.
+CLIENT_TRACES=()
+[[ -f "$TC_DIR/client/output.txt" ]] && CLIENT_TRACES+=("$TC_DIR/client/output.txt")
+[[ -f "$TC_DIR/output.txt" ]] && CLIENT_TRACES+=("$TC_DIR/output.txt")
+[[ -f "${RUN_DIR}.stdout.log" ]] && CLIENT_TRACES+=("${RUN_DIR}.stdout.log")
+
+found=0
+for f in "${CLIENT_TRACES[@]}"; do
+    n=$(grep -cE '\[(boot|interop|batch|writer\.)' "$f" 2>/dev/null || echo 0)
+    if [[ "$n" -gt 0 ]]; then
+        echo "(found $n diagnostic lines in $f)"
+        if [[ "$f" == *.stdout.log ]]; then
+            # Narrow to this testcase's window.
+            awk -v tc="$TC" '
+                $0 ~ "Running test case: " tc { in_tc = 1; next }
+                in_tc && /Running test case:/ { exit }
+                in_tc && /\[(boot|interop|batch|writer\.)/ { print }
+            ' "$f" | head -n 50 || true
+        else
+            grep -E '\[(boot|interop|batch|writer\.)' "$f" | head -n 50 || true
+        fi
+        found=1
+        break
+    fi
+done
+
+if [[ "$found" -eq 0 ]]; then
+    echo "(no diagnostic lines for this testcase)"
+    echo
+    echo "Possible causes:"
+    echo "  - The image was built without DEBUG=1: use 'DEBUG=1 ./run-matrix.sh ...'"
+    echo "  - The container was killed mid-test before flushing stderr"
+    echo "  - This testcase ran in a matrix and only the FIRST testcase's"
+    echo "    traces were captured. Run this single testcase in isolation:"
+    echo "    DEBUG=1 ./quic/interop/run-matrix.sh -s <peer> -t $TC"
 fi
 
 echo
