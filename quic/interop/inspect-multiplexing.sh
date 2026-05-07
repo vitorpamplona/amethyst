@@ -34,7 +34,11 @@ echo "=============== writer-side debug traces (DEBUG=1 build only) ============
 # smoking-gun section for "writer is iterating N active streams but
 # emits only 1 STREAM frame per packet". Empty unless the image was
 # built with `make build DEBUG=1`.
-WRITER_LINES=$(grep -c '\[writer' "$CASE_DIR/output.txt" 2>/dev/null || echo 0)
+#
+# `grep -c` exits 1 on no matches AND prints "0", so a naive
+# `grep -c ... || echo 0` doubles up. Suppress the exit code
+# instead.
+WRITER_LINES=$(grep -c '\[writer' "$CASE_DIR/output.txt" 2>/dev/null) || WRITER_LINES=0
 if [[ "$WRITER_LINES" -gt 0 ]]; then
     echo "($WRITER_LINES writer trace lines; first 30:)"
     grep '\[writer' "$CASE_DIR/output.txt" | head -n 30
@@ -45,7 +49,9 @@ if [[ "$WRITER_LINES" -gt 0 ]]; then
     echo "active histogram (active stream count at drain time):"
     grep -oE 'active=[0-9]+' "$CASE_DIR/output.txt" | sort | uniq -c | sort -rn
 else
-    echo "(no [writer.* lines — rebuild image with: cd quic/interop && make build DEBUG=1)"
+    echo "(no [writer.* lines yet — to enable, REBUILD the image with DEBUG=1:"
+    echo "   cd quic/interop && make build DEBUG=1"
+    echo " then re-run the matrix and re-run this script)"
 fi
 
 echo
