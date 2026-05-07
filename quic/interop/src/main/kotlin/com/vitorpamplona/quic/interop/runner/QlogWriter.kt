@@ -301,9 +301,16 @@ class QlogWriter(
             try {
                 writer.write(line)
                 writer.write("\n")
-                // Flush every line so a hard-killed process still leaves a
-                // partial-but-parseable trace.
-                writer.flush()
+                // Deliberately NOT flushing per event: this method runs
+                // inside conn.lock.withLock { drainOutbound(...) } on the
+                // hot send path. On macOS Docker Desktop the filesystem
+                // is virtualized and per-event flush is multi-millisecond.
+                // Every flush stalls the connection lock, blocks the
+                // receive loop, and the connection silently dies
+                // mid-handshake. close() does the only flush we need
+                // for normal completion. A hard-killed JVM loses recent
+                // events but that's an acceptable trade — the alternative
+                // is the connection never completing in the first place.
             } catch (_: java.io.IOException) {
                 // Stream closed under us. Latch closed so subsequent emits
                 // skip the lock and return immediately.
