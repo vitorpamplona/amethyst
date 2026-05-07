@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
-import com.vitorpamplona.quartz.testrelay.TestRelayHub
+import com.vitorpamplona.quartz.relay.RelayHub
 
 /**
  * Base for tests that drive a real `NostrClient` against an in-process Nostr
- * relay. Each subclass instance gets its own [TestRelayHub] so tests can
+ * relay. Each subclass instance gets its own [RelayHub] so tests can
  * preload events and assert deterministic counts without hitting the
  * network or relying on production relays.
  *
@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.testrelay.TestRelayHub
  * the specific test that needs it.
  */
 open class BaseNostrClientTest {
-    val relayHub: TestRelayHub = TestRelayHub()
+    val relayHub: RelayHub = RelayHub()
 
     /** Plug into `NostrClient(socketBuilder, scope)`. */
     val socketBuilder get() = relayHub

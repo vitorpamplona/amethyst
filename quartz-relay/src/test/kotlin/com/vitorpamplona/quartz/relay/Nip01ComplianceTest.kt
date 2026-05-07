@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.testrelay
+package com.vitorpamplona.quartz.relay
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.relay.fixtures.SyntheticEvents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,7 +63,7 @@ import kotlin.test.assertTrue
  * `socketBuilder` and the relay URL would change.
  */
 class Nip01ComplianceTest {
-    private lateinit var hub: TestRelayHub
+    private lateinit var hub: RelayHub
     private lateinit var scope: CoroutineScope
     private lateinit var client: NostrClient
 
@@ -70,7 +71,7 @@ class Nip01ComplianceTest {
 
     @BeforeTest
     fun setup() {
-        hub = TestRelayHub()
+        hub = RelayHub()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         client = NostrClient(hub, scope)
     }

@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.testrelay.SyntheticEvents
+import com.vitorpamplona.quartz.relay.fixtures.SyntheticEvents
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

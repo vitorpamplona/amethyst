@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.testrelay.SyntheticEvents
+import com.vitorpamplona.quartz.relay.fixtures.SyntheticEvents
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

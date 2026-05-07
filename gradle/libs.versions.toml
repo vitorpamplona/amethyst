@@ -81,6 +81,7 @@ kotlinTest = "2.3.21"
 core = "1.7.0"
 mavenPublish = "0.36.0"
 sqlite = "2.6.2"
+ktor = "3.4.1"
 
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
@@ -175,6 +176,9 @@ negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", versi
 net-thauvin-erik-urlencoder-lib = { module = "net.thauvin.erik.urlencoder:urlencoder-lib", version.ref = "netUrlencoderLibVersion" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
+ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
+ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
+ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }

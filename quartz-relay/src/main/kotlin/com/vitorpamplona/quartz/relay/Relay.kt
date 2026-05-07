@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.testrelay
+package com.vitorpamplona.quartz.relay
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -33,15 +33,25 @@ import kotlinx.coroutines.SupervisorJob
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A self-contained, in-memory Nostr relay scoped to a single URL. Wraps a
- * [NostrServer] over an [EventStore] backed by an in-memory SQLite database.
+ * A self-contained Nostr relay scoped to a single URL. Wraps a [NostrServer]
+ * over an [EventStore] (defaults to an in-memory SQLite database).
  *
- * Use [TestRelayHub] to register relays under URLs the production
- * [com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient] can subscribe to.
+ * Speaks NIP-01 (REQ/EVENT/EOSE/CLOSE), NIP-11 (relay info via [info]),
+ * NIP-42 (AUTH — supply [policyBuilder] = `{ FullAuthPolicy(url) }` or
+ * stack one with [com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy.plus]),
+ * NIP-45 (COUNT) and NIP-50 (search via the SQLite FTS index).
+ *
+ * Two transports:
+ *   - [InProcessWebSocket] / [RelayHub] — no socket, fastest path, ideal
+ *     for unit tests inside one JVM.
+ *   - [LocalRelayServer] — Ktor `embeddedServer` listening on a real port.
+ *     Use when external clients need to connect (`cli`, instrumented tests,
+ *     standalone deployment).
  */
-class TestRelay(
+class Relay(
     val url: NormalizedRelayUrl,
     val store: IEventStore = EventStore(dbName = null, relay = url),
+    val info: RelayInfo = RelayInfo.default(url),
     policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
 ) : AutoCloseable {

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.testrelay
+package com.vitorpamplona.quartz.relay
 
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
@@ -32,7 +32,7 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.launch
 
 /**
- * In-memory implementation of [WebSocket] that talks to a [TestRelay] without
+ * In-memory implementation of [WebSocket] that talks to a [Relay] without
  * touching the network. Each instance opens one [RelaySession] on
  * [connect] and routes:
  *
@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
  *  - Server-side `send` callbacks → [WebSocketListener.onMessage].
  */
 class InProcessWebSocket(
-    private val relay: TestRelay,
+    private val relay: Relay,
     private val out: WebSocketListener,
 ) : WebSocket {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())

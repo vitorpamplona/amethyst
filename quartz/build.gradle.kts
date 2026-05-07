@@ -182,8 +182,10 @@ kotlin {
                     implementation(libs.kotlinx.coroutines.test)
 
                     // In-process Nostr relay so JVM/Android host tests don't
-                    // need network access or a Rust toolchain.
-                    implementation(project(":quartz-test-relay"))
+                    // need network access or a Rust toolchain. The
+                    // `relay.fixtures` package carries the test-only event
+                    // generators and corpus loader.
+                    implementation(project(":quartz-relay"))
                 }
             }
 
