@@ -165,30 +165,6 @@ async fn listen(
     let broadcast = broadcast.ok_or_else(|| anyhow!("broadcast unannounced: {path}"))?;
     tracing::info!(%path, "broadcast announced");
 
-    // Give the relay 250 ms to fully prime its per-broadcast
-    // upstream-subscribe pump before we subscribe. moq-rs 0.10.x's
-    // `Origin::announced()` returns as soon as the broadcast lands
-    // in the relay's origin map — which is BEFORE the relay's
-    // upstream subscribe-pump (the machinery that forwards a
-    // downstream listener's SUBSCRIBE to the speaker) is fully
-    // alive. Speaker-side stderr from a failing run shows the
-    // ANNOUNCE Please/Active handshake completes but no subsequent
-    // SUBSCRIBE inbound for the entire 10 s catalog-read window —
-    // the relay accepts the listener's SUBSCRIBE but silently
-    // drops it because the upstream pump isn't ready yet.
-    //
-    // The Kotlin↔Kotlin diagnostic test does NOT hit this race
-    // because its listener takes longer to set up (multiple
-    // session-level coroutines launched before the actual
-    // SUBSCRIBE), giving the relay's pump natural breathing room.
-    // Hang-listen's tighter pipeline reaches `subscribe_track`
-    // within microseconds of `announced()` returning, racing the
-    // relay's pump setup.
-    //
-    // 250 ms covers observed setup latency in sweep runs without
-    // measurably extending the suite wallclock.
-    tokio::time::sleep(Duration::from_millis(250)).await;
-
     // Subscribe to the catalog and read the first published
     // version. The naïve "subscribe → next() with timeout → on
     // timeout resubscribe" pattern is broken on moq-rs 0.10.x:
