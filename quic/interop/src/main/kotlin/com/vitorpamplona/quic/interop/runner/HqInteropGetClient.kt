@@ -21,6 +21,7 @@
 package com.vitorpamplona.quic.interop.runner
 
 import com.vitorpamplona.quic.connection.QuicConnection
+import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import kotlinx.coroutines.flow.toList
 
 /**
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.toList
  */
 class HqInteropGetClient(
     private val conn: QuicConnection,
+    private val driver: QuicConnectionDriver,
 ) : GetClient {
     override suspend fun get(
         @Suppress("UNUSED_PARAMETER") authority: String,
@@ -47,6 +49,8 @@ class HqInteropGetClient(
         val request = "GET $path\r\n".encodeToByteArray()
         stream.send.enqueue(request)
         stream.send.finish()
+        // Nudge the send loop — see Http3GetClient.get for rationale.
+        driver.wakeup()
 
         val chunks = stream.incoming.toList()
         val total = chunks.sumOf { it.size }

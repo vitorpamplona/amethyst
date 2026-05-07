@@ -22,6 +22,7 @@ package com.vitorpamplona.quic.interop.runner
 
 import com.vitorpamplona.quic.QuicWriter
 import com.vitorpamplona.quic.connection.QuicConnection
+import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import com.vitorpamplona.quic.connection.drainPeerInitiatedUniStreamsIntoBlackHole
 import com.vitorpamplona.quic.http3.Http3Frame
 import com.vitorpamplona.quic.http3.Http3FrameReader
@@ -60,6 +61,7 @@ data class GetResponse(
  */
 class Http3GetClient(
     private val conn: QuicConnection,
+    private val driver: QuicConnectionDriver,
 ) : GetClient {
     suspend fun init(scope: CoroutineScope) {
         // Control stream: type-0x00 prefix followed by a SETTINGS frame
@@ -111,6 +113,11 @@ class Http3GetClient(
         val stream = conn.openBidiStream()
         stream.send.enqueue(encodeRequest(authority, path))
         stream.send.finish()
+        // Nudge the send loop. Without this it suspends until PTO (~1s)
+        // or until an inbound packet arrives. For the multiplexing path
+        // this was the dominant throughput bottleneck — chunks of 64
+        // requests sat idle for ~1s each waiting to be drained.
+        driver.wakeup()
 
         val reader = Http3FrameReader()
         var status = 0

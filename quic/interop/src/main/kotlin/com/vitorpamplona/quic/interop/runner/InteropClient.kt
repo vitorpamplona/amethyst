@@ -291,16 +291,16 @@ private fun runTransferTest(
             val client: GetClient =
                 when (negotiated) {
                     "h3" -> {
-                        Http3GetClient(conn).also { it.init(scope) }
+                        Http3GetClient(conn, driver).also { it.init(scope) }
                     }
 
                     "hq-interop" -> {
-                        HqInteropGetClient(conn)
+                        HqInteropGetClient(conn, driver)
                     }
 
                     else -> {
                         System.err.println("unrecognized negotiated ALPN '$negotiated'; defaulting to hq-interop")
-                        HqInteropGetClient(conn)
+                        HqInteropGetClient(conn, driver)
                     }
                 }
 
