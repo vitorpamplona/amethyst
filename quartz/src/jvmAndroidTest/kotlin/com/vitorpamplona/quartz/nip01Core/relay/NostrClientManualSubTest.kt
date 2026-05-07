@@ -19,18 +19,14 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
@@ -38,17 +34,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientManualSubTest : BaseNostrClientTest() {
+class NostrClientManualSubTest : RelayClientTest() {
     @Test
     fun testEoseAfter100Events() =
         runBlocking {
-            val relayUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/")
-            relayHub
-                .getOrCreate(relayUrl)
-                .preload(SyntheticEvents.batch(150, kind = MetadataEvent.KIND))
-
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            defaultRelay.preload(SyntheticEvents.batch(150, kind = MetadataEvent.KIND))
 
             val resultChannel = Channel<String>(UNLIMITED)
             val events = mutableListOf<String>()
@@ -73,18 +63,11 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
                     }
                 }
 
-            val filters =
-                mapOf(
-                    relayUrl to
-                        listOf(
-                            Filter(
-                                kinds = listOf(MetadataEvent.KIND),
-                                limit = 100,
-                            ),
-                        ),
-                )
-
-            client.subscribe(mySubId, filters, listener)
+            client.subscribe(
+                mySubId,
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(MetadataEvent.KIND), limit = 100))),
+                listener,
+            )
 
             withTimeoutOrNull(10000) {
                 while (events.size < 101) {
@@ -94,12 +77,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
             }
 
             resultChannel.close()
-
             client.unsubscribe(mySubId)
-            client.disconnect()
-
-            appScope.cancel()
-            relayHub.close()
 
             assertEquals(101, events.size)
             assertEquals(true, events.take(100).all { it.length == 64 })

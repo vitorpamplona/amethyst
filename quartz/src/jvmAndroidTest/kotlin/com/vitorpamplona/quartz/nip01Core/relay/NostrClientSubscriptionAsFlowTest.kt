@@ -19,19 +19,16 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -39,7 +36,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
+class NostrClientSubscriptionAsFlowTest : RelayClientTest() {
     fun List<Event>.printDates(): String {
         val starting = this[0].createdAt
         return joinToString { (it.createdAt - starting).toString() }
@@ -49,20 +46,12 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
     @Test
     fun testNostrClientSubscriptionAsFlow() =
         runTest {
-            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
-                SyntheticEvents.batch(20, kind = MetadataEvent.KIND),
-            )
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            defaultRelay.preload(SyntheticEvents.batch(20, kind = MetadataEvent.KIND))
 
             val flow =
                 client.subscribeAsFlow(
-                    relay = "ws://127.0.0.1:7770/",
-                    filter =
-                        Filter(
-                            kinds = listOf(MetadataEvent.KIND),
-                            limit = 10,
-                        ),
+                    relay = defaultRelayUrl,
+                    filter = Filter(kinds = listOf(MetadataEvent.KIND), limit = 10),
                 )
 
             var feedStates = listOf<Event>()
@@ -79,11 +68,7 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
                 advanceUntilIdle()
             }
 
-            job.cancel() // Cancel the collection job
-
-            client.disconnect()
-            appScope.cancel()
-            relayHub.close()
+            job.cancel()
 
             assertEquals(10, feedStates.size)
         }
@@ -92,20 +77,12 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
     @Test
     fun testNostrClientSubscriptionAsFlowDebouncing() =
         runTest {
-            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
-                SyntheticEvents.batch(20, kind = MetadataEvent.KIND),
-            )
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            defaultRelay.preload(SyntheticEvents.batch(20, kind = MetadataEvent.KIND))
 
             val flow =
                 client.subscribeAsFlow(
-                    relay = "ws://127.0.0.1:7770/",
-                    filter =
-                        Filter(
-                            kinds = listOf(MetadataEvent.KIND),
-                            limit = 10,
-                        ),
+                    relay = defaultRelayUrl,
+                    filter = Filter(kinds = listOf(MetadataEvent.KIND), limit = 10),
                 )
 
             var feedStates = listOf<Event>()
@@ -117,16 +94,11 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
                     }
                 }
 
-            // Advance the test dispatcher to ensure emissions are processed
             while (feedStates.size < 10) {
                 advanceUntilIdle()
             }
 
-            job.cancel() // Cancel the collection job
-
-            client.disconnect()
-            appScope.cancel()
-            relayHub.close()
+            job.cancel()
 
             assertEquals(10, feedStates.size)
         }

@@ -19,22 +19,18 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
@@ -44,12 +40,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientRepeatSubTest : BaseNostrClientTest() {
+class NostrClientRepeatSubTest : RelayClientTest() {
     @Test
     fun testRepeatSubEvents() =
         runBlocking {
             // Each replaceable kind needs unique pubkeys.
-            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
+            defaultRelay.preload(
                 (1..150).map {
                     SyntheticEvents.fakeEvent(
                         idSeed = it,
@@ -58,7 +54,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                     )
                 },
             )
-            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(
+            defaultRelay.preload(
                 (1..50).map {
                     SyntheticEvents.fakeEvent(
                         idSeed = 100_000 + it,
@@ -67,9 +63,6 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                     )
                 },
             )
-
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
 
             val resultChannel = Channel<String>(UNLIMITED)
             val events = mutableListOf<String>()
@@ -101,38 +94,11 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             client.addConnectionListener(listener)
 
-            val filters =
-                mapOf(
-                    RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/") to
-                        listOf(
-                            Filter(
-                                kinds = listOf(MetadataEvent.KIND),
-                                limit = 100,
-                            ),
-                        ),
-                )
-
+            val filters = mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(MetadataEvent.KIND), limit = 100)))
             val filtersShouldIgnore =
-                mapOf(
-                    RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/") to
-                        listOf(
-                            Filter(
-                                kinds = listOf(AdvertisedRelayListEvent.KIND),
-                                limit = 500,
-                            ),
-                        ),
-                )
-
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 500)))
             val filtersShouldSendAfterEOSE =
-                mapOf(
-                    RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/") to
-                        listOf(
-                            Filter(
-                                kinds = listOf(AdvertisedRelayListEvent.KIND),
-                                limit = 10,
-                            ),
-                        ),
-                )
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 10)))
 
             coroutineScope {
                 launch {
@@ -161,30 +127,18 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             client.unsubscribe(mySubId)
             client.removeConnectionListener(listener)
-            client.disconnect()
-
-            appScope.cancel()
-            relayHub.close()
 
             // The relay may return up to limit events before EOSE; some relays return
             // one extra past the requested limit, so don't assert on the exact count.
-            // First sub: <= 100 metadata events, then EOSE.
-            // Second sub: <= 10 advertised relay list events, then EOSE.
             val firstEose = events.indexOf("EOSE")
             val lastEose = events.lastIndexOf("EOSE")
 
-            // both EOSEs must be present and distinct
             assertEquals(true, firstEose >= 0)
             assertEquals(true, lastEose > firstEose)
-            // last entry is the second EOSE (loop stops on it)
             assertEquals(events.size - 1, lastEose)
-            // first sub stays within its limit (allow +1 for relay quirks)
             assertEquals(true, firstEose in 1..101)
-            // second sub stays within its limit (allow +1 for relay quirks)
             assertEquals(true, (lastEose - firstEose - 1) in 1..11)
-            // everything before the first EOSE is an event id
             assertEquals(true, events.take(firstEose).all { it.length == 64 })
-            // everything between the two EOSEs is an event id
             assertEquals(true, events.subList(firstEose + 1, lastEose).all { it.length == 64 })
         }
 }

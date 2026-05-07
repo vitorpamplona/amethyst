@@ -21,26 +21,22 @@
 package com.vitorpamplona.geode
 
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.RelayClientTest
+import com.vitorpamplona.geode.testing.collectUntilEose
+import com.vitorpamplona.geode.testing.collectUntilEoseMulti
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -62,29 +58,9 @@ import kotlin.test.assertTrue
  * spec-compliant relay (nostr-rs-relay, strfry, khatru, …) — only the
  * `socketBuilder` and the relay URL would change.
  */
-class Nip01ComplianceTest {
-    private lateinit var hub: RelayHub
-    private lateinit var scope: CoroutineScope
-    private lateinit var client: NostrClient
-
-    private val relayUrl: NormalizedRelayUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/")
-
-    @BeforeTest
-    fun setup() {
-        hub = RelayHub()
-        scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-        client = NostrClient(hub, scope)
-    }
-
-    @AfterTest
-    fun teardown() {
-        client.disconnect()
-        scope.cancel()
-        hub.close()
-    }
-
+class Nip01ComplianceTest : RelayClientTest() {
     private suspend fun preload(vararg events: Event) {
-        hub.getOrCreate(relayUrl).preload(*events)
+        defaultRelay.preload(*events)
     }
 
     private fun fakeEvent(
@@ -108,7 +84,7 @@ class Nip01ComplianceTest {
                 fakeEvent(3, kind = 1),
             )
 
-            val (events, eose) = collectUntilEose(Filter(kinds = listOf(1)))
+            val (events, eose) = client.collectUntilEose(defaultRelayUrl, Filter(kinds = listOf(1)))
 
             assertEquals(2, events.size)
             assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)), events.map { it.id }.toSet())
@@ -126,7 +102,7 @@ class Nip01ComplianceTest {
                 fakeEvent(4, kind = 1, createdAt = 400),
             )
 
-            val (events, _) = collectUntilEose(Filter(kinds = listOf(1), limit = 2))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(kinds = listOf(1), limit = 2))
 
             assertEquals(2, events.size)
             assertEquals(400L, events[0].createdAt)
@@ -145,7 +121,7 @@ class Nip01ComplianceTest {
                 fakeEvent(3, kind = 1, pubKey = alice),
             )
 
-            val (events, _) = collectUntilEose(Filter(authors = listOf(alice)))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(authors = listOf(alice)))
 
             assertEquals(2, events.size)
             assertTrue(events.all { it.pubKey == alice })
@@ -157,7 +133,7 @@ class Nip01ComplianceTest {
         runBlocking {
             preload(fakeEvent(1), fakeEvent(2), fakeEvent(3))
 
-            val (events, _) = collectUntilEose(Filter(ids = listOf(SyntheticEvents.hexId(2))))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(ids = listOf(SyntheticEvents.hexId(2))))
 
             assertEquals(1, events.size)
             assertEquals(SyntheticEvents.hexId(2), events[0].id)
@@ -174,7 +150,7 @@ class Nip01ComplianceTest {
                 fakeEvent(4, createdAt = 400),
             )
 
-            val (events, _) = collectUntilEose(Filter(since = 150L, until = 350L))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(since = 150L, until = 350L))
 
             assertEquals(setOf(200L, 300L), events.map { it.createdAt }.toSet())
         }
@@ -190,7 +166,7 @@ class Nip01ComplianceTest {
                 fakeEvent(3, tags = arrayOf(arrayOf("e", target), arrayOf("p", SyntheticEvents.hexId(8)))),
             )
 
-            val (events, _) = collectUntilEose(Filter(tags = mapOf("e" to listOf(target))))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(tags = mapOf("e" to listOf(target))))
 
             assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)), events.map { it.id }.toSet())
         }
@@ -206,7 +182,7 @@ class Nip01ComplianceTest {
                 fakeEvent(3, tags = arrayOf(arrayOf("p", targetPubkey), arrayOf("e", SyntheticEvents.hexId(99)))),
             )
 
-            val (events, _) = collectUntilEose(Filter(tags = mapOf("p" to listOf(targetPubkey))))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(tags = mapOf("p" to listOf(targetPubkey))))
 
             assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)), events.map { it.id }.toSet())
         }
@@ -221,7 +197,7 @@ class Nip01ComplianceTest {
                 fakeEvent(3, tags = arrayOf(arrayOf("t", "nostr"), arrayOf("t", "kotlin"))),
             )
 
-            val (events, _) = collectUntilEose(Filter(tags = mapOf("t" to listOf("nostr"))))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(tags = mapOf("t" to listOf("nostr"))))
 
             assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)), events.map { it.id }.toSet())
         }
@@ -241,7 +217,7 @@ class Nip01ComplianceTest {
                 fakeEvent(3, tags = arrayOf(arrayOf("e", SyntheticEvents.hexId(999)))),
             )
 
-            val (events, _) = collectUntilEose(Filter(tags = mapOf("e" to listOf(a, b))))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(tags = mapOf("e" to listOf(a, b))))
 
             assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(2)), events.map { it.id }.toSet())
         }
@@ -262,7 +238,8 @@ class Nip01ComplianceTest {
             )
 
             val (events, _) =
-                collectUntilEoseMulti(
+                client.collectUntilEoseMulti(
+                    defaultRelayUrl,
                     listOf(
                         Filter(kinds = listOf(1)),
                         Filter(kinds = listOf(7)),
@@ -294,7 +271,7 @@ class Nip01ComplianceTest {
 
             client.subscribe(
                 "sub-A",
-                mapOf(relayUrl to listOf(Filter(kinds = listOf(1)))),
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(1)))),
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
@@ -315,7 +292,7 @@ class Nip01ComplianceTest {
             )
             client.subscribe(
                 "sub-B",
-                mapOf(relayUrl to listOf(Filter(kinds = listOf(4)))),
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(4)))),
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
@@ -362,7 +339,7 @@ class Nip01ComplianceTest {
                 fakeEvent(2, kind = 0, pubKey = pubkey, createdAt = 200, content = "new"),
             )
 
-            val (events, _) = collectUntilEose(Filter(kinds = listOf(0), authors = listOf(pubkey)))
+            val (events, _) = client.collectUntilEose(defaultRelayUrl, Filter(kinds = listOf(0), authors = listOf(pubkey)))
 
             assertEquals(1, events.size)
             assertEquals("new", events[0].content)
@@ -383,7 +360,11 @@ class Nip01ComplianceTest {
             val v3 = signer.sign(LongTextNoteEvent.build("list-b", "title", dTag = "list-b", createdAt = 100))
             preload(v1, v2, v3)
 
-            val (events, _) = collectUntilEose(Filter(kinds = listOf(LongTextNoteEvent.KIND), authors = listOf(signer.pubKey)))
+            val (events, _) =
+                client.collectUntilEose(
+                    defaultRelayUrl,
+                    Filter(kinds = listOf(LongTextNoteEvent.KIND), authors = listOf(signer.pubKey)),
+                )
 
             assertEquals(2, events.size)
             assertEquals(setOf("new", "list-b"), events.map { it.content }.toSet())
@@ -399,7 +380,7 @@ class Nip01ComplianceTest {
             val gotEose = Channel<Unit>(UNLIMITED)
             client.subscribe(
                 "live-1",
-                mapOf(relayUrl to listOf(Filter(kinds = listOf(1)))),
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(1)))),
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
@@ -423,7 +404,7 @@ class Nip01ComplianceTest {
 
             // Inject an event through the wire path (not preload — that bypasses
             // the live broadcast that subscriptions feed off of).
-            hub.getOrCreate(relayUrl).publish(fakeEvent(99, kind = 1, content = "live"))
+            defaultRelay.publish(fakeEvent(99, kind = 1, content = "live"))
 
             val received = withTimeout(5000) { ch.receive() }
             assertEquals("live", received.content)
@@ -438,7 +419,7 @@ class Nip01ComplianceTest {
             val gotEose = Channel<Unit>(UNLIMITED)
             client.subscribe(
                 "live-2",
-                mapOf(relayUrl to listOf(Filter(kinds = listOf(1)))),
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(1)))),
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
@@ -459,7 +440,7 @@ class Nip01ComplianceTest {
             )
             withTimeout(5000) { gotEose.receive() }
 
-            hub.getOrCreate(relayUrl).publish(fakeEvent(98, kind = 4, content = "off-topic"))
+            defaultRelay.publish(fakeEvent(98, kind = 4, content = "off-topic"))
 
             val seen = withTimeoutOrNull(500) { ch.receive() }
             assertNull(seen, "kind 4 should not match a kind-1 subscription")
@@ -479,7 +460,7 @@ class Nip01ComplianceTest {
             val gotEose = Channel<Unit>(UNLIMITED)
             client.subscribe(
                 "eph-1",
-                mapOf(relayUrl to listOf(Filter(kinds = listOf(20_001)))),
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(20_001)))),
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
@@ -500,7 +481,7 @@ class Nip01ComplianceTest {
             )
             withTimeout(5000) { gotEose.receive() }
 
-            hub.getOrCreate(relayUrl).publish(fakeEvent(70, kind = 20_001, content = "ephemeral-payload"))
+            defaultRelay.publish(fakeEvent(70, kind = 20_001, content = "ephemeral-payload"))
 
             val received = withTimeout(5000) { ch.receive() }
             assertEquals("ephemeral-payload", received.content)
@@ -516,10 +497,10 @@ class Nip01ComplianceTest {
     fun ephemeralEventIsNotStoredAndDoesNotShowOnFollowupReq() =
         runBlocking {
             // Publish ephemeral first — no live subscriber listening.
-            hub.getOrCreate(relayUrl).publish(fakeEvent(71, kind = 20_002, content = "vanish"))
+            defaultRelay.publish(fakeEvent(71, kind = 20_002, content = "vanish"))
 
             // Late subscriber: should see EOSE with no events.
-            val (events, eose) = collectUntilEose(Filter(kinds = listOf(20_002)))
+            val (events, eose) = client.collectUntilEose(defaultRelayUrl, Filter(kinds = listOf(20_002)))
             assertTrue(eose, "EOSE must fire for an ephemeral kind even if zero events match")
             assertEquals(0, events.size, "Ephemeral events must not be persisted")
         }
@@ -570,93 +551,4 @@ class Nip01ComplianceTest {
             assertEquals("from-a", received[relayA])
             assertEquals("from-b", received[relayB])
         }
-
-    // -- Helpers ------------------------------------------------------------
-
-    /** Subscribes synchronously and returns the events received before EOSE. */
-    private suspend fun collectUntilEose(filter: Filter): Pair<List<Event>, Boolean> {
-        val ch = Channel<Either>(UNLIMITED)
-        val subId = "sub-${System.nanoTime()}"
-        client.subscribe(
-            subId,
-            mapOf(relayUrl to listOf(filter)),
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    ch.trySend(Either.Ev(event))
-                }
-
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    ch.trySend(Either.Eose)
-                }
-            },
-        )
-
-        val events = mutableListOf<Event>()
-        var eose = false
-        withTimeout(5000) {
-            while (!eose) {
-                when (val msg = ch.receive()) {
-                    is Either.Ev -> events += msg.event
-                    Either.Eose -> eose = true
-                }
-            }
-        }
-        client.unsubscribe(subId)
-        return events to eose
-    }
-
-    /** Variant of [collectUntilEose] that subscribes with multiple filters. */
-    private suspend fun collectUntilEoseMulti(filters: List<Filter>): Pair<List<Event>, Boolean> {
-        val ch = Channel<Either>(UNLIMITED)
-        val subId = "sub-${System.nanoTime()}"
-        client.subscribe(
-            subId,
-            mapOf(relayUrl to filters),
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    ch.trySend(Either.Ev(event))
-                }
-
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    ch.trySend(Either.Eose)
-                }
-            },
-        )
-        val events = mutableListOf<Event>()
-        var eose = false
-        withTimeout(5000) {
-            while (!eose) {
-                when (val msg = ch.receive()) {
-                    is Either.Ev -> events += msg.event
-                    Either.Eose -> eose = true
-                }
-            }
-        }
-        client.unsubscribe(subId)
-        return events to eose
-    }
-
-    private sealed interface Either {
-        data class Ev(
-            val event: Event,
-        ) : Either
-
-        object Eose : Either
-    }
 }

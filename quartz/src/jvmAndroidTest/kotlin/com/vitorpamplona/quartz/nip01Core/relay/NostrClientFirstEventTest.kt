@@ -20,25 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientFirstEventTest : BaseNostrClientTest() {
+class NostrClientFirstEventTest : RelayClientTest() {
     @Test
     fun testDownloadFirstEvent() =
         runBlocking {
             val pubKey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
-            val relayUrl = "ws://127.0.0.1:7770/"
 
             val seed =
                 Event(
@@ -50,24 +45,13 @@ class NostrClientFirstEventTest : BaseNostrClientTest() {
                     content = """{"name":"vitor"}""",
                     sig = "b".repeat(128),
                 )
-            relayHub.getOrCreate(relayUrl).preload(seed)
-
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            defaultRelay.preload(seed)
 
             val event =
                 client.fetchFirst(
-                    relay = relayUrl,
-                    filter =
-                        Filter(
-                            kinds = listOf(MetadataEvent.KIND),
-                            authors = listOf(pubKey),
-                        ),
+                    relay = defaultRelayUrl,
+                    filter = Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(pubKey)),
                 )
-
-            client.disconnect()
-            appScope.cancel()
-            relayHub.close()
 
             assertEquals(MetadataEvent.KIND, event?.kind)
             assertEquals(pubKey, event?.pubKey)

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
     alias(libs.plugins.serialization)
     application
+    `java-test-fixtures`
 }
 
 application {
@@ -24,6 +25,15 @@ sourceSets {
     }
     test {
         kotlin.srcDir("src/test/kotlin")
+    }
+    // The `java-test-fixtures` plugin auto-creates a `testFixtures`
+    // source set; we just point it at our Kotlin layout so the
+    // `geode.fixtures` (synthetic events) and `geode.testing`
+    // (RelayClientTest, collectUntilEose) packages don't ship in
+    // production jars but are still usable by every consumer's test
+    // source via `testImplementation(testFixtures(project(":geode")))`.
+    named("testFixtures") {
+        kotlin.srcDir("src/testFixtures/kotlin")
     }
 }
 
@@ -62,6 +72,13 @@ dependencies {
     // layout of nostr-rs-relay's config.toml so existing operators can
     // port their configs nearly verbatim.
     implementation(libs.fourkoma)
+
+    // testFixtures: code in src/testFixtures/kotlin (RelayClientTest +
+    // synthetic event builders). Not shipped in the production jar but
+    // exposed to consumers via testImplementation(testFixtures(...)).
+    testFixturesApi(project(":quartz"))
+    testFixturesApi(libs.junit)
+    testFixturesImplementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)

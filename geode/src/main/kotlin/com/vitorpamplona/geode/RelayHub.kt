@@ -86,4 +86,16 @@ class RelayHub(
         relays.values.forEach { runCatching { it.close() } }
         relays.clear()
     }
+
+    companion object {
+        /**
+         * Default URL for tests that only need one relay. The URL itself
+         * has no semantic meaning — it's just a stable key into the hub
+         * — but it normalises through [RelayUrlNormalizer] (loopback) so
+         * the production [com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer]
+         * accepts it. Prefer this over typing `"ws://127.0.0.1:7770/"`
+         * everywhere.
+         */
+        val DEFAULT_URL: NormalizedRelayUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/")
+    }
 }

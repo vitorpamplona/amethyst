@@ -21,22 +21,17 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
+class NostrClientReqBypassingRelayLimitsTest : RelayClientTest() {
     @Test
     fun testDownloadFromRelayReturnsMetadataEvents() =
         runBlocking {
@@ -50,31 +45,17 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
                         pubKey = SyntheticEvents.hexId(it),
                     )
                 }
-            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(corpus)
-
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            defaultRelay.preload(corpus)
 
             val events = mutableListOf<Event>()
 
             val totalFound =
                 client.fetchAllPages(
-                    relay = "ws://127.0.0.1:7770/",
-                    filters =
-                        listOf(
-                            Filter(
-                                kinds = listOf(MetadataEvent.KIND),
-                                limit = 1000,
-                            ),
-                        ),
+                    relay = defaultRelayUrl,
+                    filters = listOf(Filter(kinds = listOf(MetadataEvent.KIND), limit = 1000)),
                 ) { event ->
                     events.add(event)
                 }
-
-            client.disconnect()
-            delay(500)
-            appScope.cancel()
-            relayHub.close()
 
             assertEquals(1000, totalFound)
             assertEquals(1000, events.size)
@@ -102,27 +83,18 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
                         pubKey = SyntheticEvents.hexId(100_000 + it),
                     )
                 }
-            relayHub.getOrCreate("ws://127.0.0.1:7770/").preload(metadata + contacts)
-
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            defaultRelay.preload(metadata + contacts)
 
             val metadataEvents = mutableListOf<Event>()
             val contactListEvents = mutableListOf<Event>()
 
             val totalFound =
                 client.fetchAllPages(
-                    relay = "ws://127.0.0.1:7770/",
+                    relay = defaultRelayUrl,
                     filters =
                         listOf(
-                            Filter(
-                                kinds = listOf(MetadataEvent.KIND),
-                                limit = 1000,
-                            ),
-                            Filter(
-                                kinds = listOf(ContactListEvent.KIND),
-                                limit = 1500,
-                            ),
+                            Filter(kinds = listOf(MetadataEvent.KIND), limit = 1000),
+                            Filter(kinds = listOf(ContactListEvent.KIND), limit = 1500),
                         ),
                 ) { event ->
                     if (event.kind == MetadataEvent.KIND) {
@@ -132,11 +104,6 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
                         contactListEvents.add(event)
                     }
                 }
-
-            client.disconnect()
-            delay(500)
-            appScope.cancel()
-            relayHub.close()
 
             assertEquals(2500, totalFound)
             assertEquals(1000, metadataEvents.size)
