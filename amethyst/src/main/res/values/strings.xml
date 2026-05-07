@@ -442,6 +442,19 @@
     <string name="schedule_post_warning_title">Always-on notifications disabled</string>
     <string name="schedule_post_warning_single">Scheduled posts may not publish until you next reopen the app. Enable always-on in Settings → UI Preferences for reliable background scheduling.</string>
     <string name="schedule_post_warning_multi">Scheduled posts may not publish until you reopen the app. Other accounts\' scheduled posts won\'t fire while this account is active. Enable always-on in Settings → UI Preferences for reliable background scheduling.</string>
+    <string name="schedule_post_preset_in_one_hour">In 1 hour</string>
+    <string name="schedule_post_preset_tomorrow_morning">Tomorrow 9 AM</string>
+    <string name="schedule_post_preset_next_monday_morning">Next Monday 9 AM</string>
+    <string name="schedule_post_always_on_prompt_title">Enable always-on notifications?</string>
+    <string name="schedule_post_always_on_prompt_message">Scheduled posts publish reliably only when always-on notifications are enabled. Otherwise, they may not fire until you next reopen the app.</string>
+    <string name="schedule_post_always_on_prompt_open_settings">Open settings</string>
+    <string name="schedule_post_always_on_prompt_continue">Continue anyway</string>
+    <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
+    <string name="scheduled_posts_at_time_past">%1$s · %2$s ago</string>
+    <string name="scheduled_posts_day_today">Today</string>
+    <string name="scheduled_posts_day_tomorrow">Tomorrow</string>
+    <string name="scheduled_posts_logout_toast_zero">Logged out</string>
+    <string name="scheduled_posts_logout_toast">Logged out · %1$d scheduled post(s) deleted</string>
     <string name="scheduled_posts_send_now_title">Send now?</string>
     <string name="scheduled_posts_send_now_message">This post will publish to relays immediately. The original schedule will be discarded.</string>
     <string name="scheduled_posts_send_now_confirm">Send</string>
@@ -458,6 +471,7 @@
     <string name="scheduled_posts_status_failed">Failed</string>
     <string name="scheduled_posts_status_sent">Sent</string>
     <string name="scheduled_posts_status_cancelled">Cancelled</string>
+    <string name="scheduled_posts_logout_warning">You have %1$d scheduled post(s) that haven\'t been published yet. Logging out will permanently delete them.</string>
     <string name="polls">Polls</string>
     <string name="open_polls">Open</string>
     <string name="closed_polls">Closed</string>

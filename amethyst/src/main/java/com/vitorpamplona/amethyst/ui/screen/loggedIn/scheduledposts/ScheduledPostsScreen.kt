@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,11 +42,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
+import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -69,8 +74,13 @@ import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import kotlinx.coroutines.delay
+import java.text.DateFormat
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ScheduledPostsScreen(
     accountViewModel: AccountViewModel,
@@ -82,10 +92,19 @@ fun ScheduledPostsScreen(
             ScheduledPostsViewModel.create(accountPubkey)
         }
     val posts by viewModel.posts.collectAsStateWithLifecycle()
+    val groups by viewModel.groupedPosts.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var pendingPublishId by remember { mutableStateOf<String?>(null) }
-    var pendingCancelId by remember { mutableStateOf<String?>(null) }
+
+    // Tick once per minute so relative-time strings ("publishes in 2h 13m")
+    // refresh on a long-open list instead of being frozen at first composition.
+    val nowSec by produceState(initialValue = System.currentTimeMillis() / 1000) {
+        while (true) {
+            delay(60_000)
+            value = System.currentTimeMillis() / 1000
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -102,15 +121,25 @@ fun ScheduledPostsScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(posts, key = { it.id }) { post ->
-                    ScheduledPostRow(
-                        post = post,
-                        onPublishNow = { pendingPublishId = post.id },
-                        onCancel = { pendingCancelId = post.id },
-                    )
+                groups.forEach { group ->
+                    stickyHeader(key = "header-${group.day}") {
+                        DayHeader(group.day, context)
+                    }
+                    items(group.posts, key = { it.id }) { post ->
+                        SwipeToDeleteWithConfirmation(
+                            modifier = Modifier.fillMaxWidth().animateContentSize(),
+                            onDelete = { viewModel.cancel(post.id) },
+                        ) {
+                            ScheduledPostRow(
+                                post = post,
+                                nowSec = nowSec,
+                                onPublishNow = { pendingPublishId = post.id },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -129,27 +158,13 @@ fun ScheduledPostsScreen(
             onDismiss = { pendingPublishId = null },
         )
     }
-
-    pendingCancelId?.let { id ->
-        ConfirmDialog(
-            title = stringRes(R.string.scheduled_posts_delete_title),
-            message = stringRes(R.string.scheduled_posts_delete_message),
-            confirmLabel = stringRes(R.string.scheduled_posts_delete_confirm),
-            destructive = true,
-            onConfirm = {
-                viewModel.cancel(id)
-                pendingCancelId = null
-            },
-            onDismiss = { pendingCancelId = null },
-        )
-    }
 }
 
 @Composable
 private fun ScheduledPostRow(
     post: ScheduledPost,
+    nowSec: Long,
     onPublishNow: () -> Unit,
-    onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
     val preview = remember(post) { extractPreview(post) }
@@ -168,7 +183,7 @@ private fun ScheduledPostRow(
             ) {
                 StatusChip(post.status)
                 Text(
-                    text = formatPublishMoment(post.publishAtSec, context),
+                    text = formatAtTime(post.publishAtSec, nowSec, context),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
@@ -196,14 +211,6 @@ private fun ScheduledPostRow(
                 horizontalArrangement = Arrangement.End,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                IconButton(onClick = onCancel) {
-                    Icon(
-                        symbol = MaterialSymbols.Delete,
-                        contentDescription = stringRes(R.string.scheduled_posts_action_delete),
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
                 IconButton(onClick = onPublishNow) {
                     Icon(
                         symbol = MaterialSymbols.AutoMirrored.Send,
@@ -214,6 +221,25 @@ private fun ScheduledPostRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DayHeader(
+    day: LocalDate,
+    context: android.content.Context,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = formatDayHeader(day, context),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
     }
 }
 
@@ -302,14 +328,41 @@ private fun extractPreview(post: ScheduledPost): String =
             .trim()
     }.getOrDefault("")
 
-private fun formatPublishMoment(
+private fun formatAtTime(
     publishAtSec: Long,
+    nowSec: Long,
     context: android.content.Context,
 ): String {
-    val nowSec = System.currentTimeMillis() / 1000
+    val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT)
+    val absolute = timeFormat.format(Date(publishAtSec * 1000))
     return if (publishAtSec > nowSec) {
-        stringRes(context, R.string.schedule_post_publishes_in, timeAheadNoDot(publishAtSec, context))
+        stringRes(context, R.string.scheduled_posts_at_time, absolute, timeAheadNoDot(publishAtSec, context))
     } else {
-        stringRes(context, R.string.schedule_post_was_due, timeAgoNoDot(publishAtSec, context).trim())
+        stringRes(context, R.string.scheduled_posts_at_time_past, absolute, timeAgoNoDot(publishAtSec, context).trim())
+    }
+}
+
+private fun formatDayHeader(
+    day: LocalDate,
+    context: android.content.Context,
+): String {
+    val today = LocalDate.now(ZoneId.systemDefault())
+    return when (day) {
+        today -> {
+            stringRes(context, R.string.scheduled_posts_day_today)
+        }
+
+        today.plusDays(1) -> {
+            stringRes(context, R.string.scheduled_posts_day_tomorrow)
+        }
+
+        else -> {
+            val fullFormat = DateFormat.getDateInstance(DateFormat.FULL)
+            fullFormat.format(
+                Date.from(
+                    day.atStartOfDay(ZoneId.systemDefault()).toInstant(),
+                ),
+            )
+        }
     }
 }

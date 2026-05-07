@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.note.creators.scheduling
 
 import android.text.format.DateFormat
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +30,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
@@ -62,9 +66,13 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.time.temporal.TemporalAdjusters
 
 /**
  * Two-stage date + time picker for scheduling a post for future publication.
@@ -143,6 +151,8 @@ fun ScheduleAtPicker(
         if (!alwaysOnEnabled) {
             ReliabilityWarning(hasMultipleAccounts = hasMultipleAccounts)
         }
+
+        PresetChips(onPick = onChanged)
 
         OutlinedCard(
             onClick = { showDatePicker = true },
@@ -247,6 +257,52 @@ private fun ReliabilityWarning(hasMultipleAccounts: Boolean) {
             )
         }
     }
+}
+
+@Composable
+private fun PresetChips(onPick: (Long) -> Unit) {
+    val scroll = rememberScrollState()
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scroll)
+                .padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AssistChip(
+            onClick = { onPick(roundUpToNextQuarterHour(presetInOneHour())) },
+            label = { Text(stringRes(R.string.schedule_post_preset_in_one_hour)) },
+        )
+        AssistChip(
+            onClick = { onPick(roundUpToNextQuarterHour(presetTomorrowMorning())) },
+            label = { Text(stringRes(R.string.schedule_post_preset_tomorrow_morning)) },
+        )
+        AssistChip(
+            onClick = { onPick(roundUpToNextQuarterHour(presetNextMondayMorning())) },
+            label = { Text(stringRes(R.string.schedule_post_preset_next_monday_morning)) },
+        )
+    }
+}
+
+private fun presetInOneHour(): Long = (System.currentTimeMillis() / 1000) + 3600
+
+private fun presetTomorrowMorning(): Long {
+    val zone = ZoneId.systemDefault()
+    val tomorrow9am = LocalDate.now(zone).plusDays(1).atTime(LocalTime.of(9, 0))
+    return tomorrow9am.atZone(zone).toEpochSecond()
+}
+
+private fun presetNextMondayMorning(): Long {
+    val zone = ZoneId.systemDefault()
+    // Always step at least one day forward — if today is Monday, return next Monday.
+    val target =
+        LocalDate
+            .now(zone)
+            .plusDays(1)
+            .with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY))
+            .atTime(LocalTime.of(9, 0))
+    return target.atZone(zone).toEpochSecond()
 }
 
 /**

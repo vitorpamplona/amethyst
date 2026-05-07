@@ -33,6 +33,7 @@ import java.io.File
 
 class ScheduledPostStore(
     private val storageFile: File,
+    private val nowSec: () -> Long = { System.currentTimeMillis() / 1000 },
 ) {
     private val mapper =
         jacksonObjectMapper()
@@ -57,7 +58,8 @@ class ScheduledPostStore(
     suspend fun cancel(id: String): Boolean =
         mutex.withLock {
             ensureLoaded()
-            val updated = mutate(id) { it.copy(status = ScheduledPostStatus.CANCELLED) }
+            val now = nowSec()
+            val updated = mutate(id) { it.copy(status = ScheduledPostStatus.CANCELLED, terminatedAtSec = now) }
             if (updated) persist()
             updated
         }
@@ -104,7 +106,8 @@ class ScheduledPostStore(
     suspend fun markSent(id: String) =
         mutex.withLock {
             ensureLoaded()
-            if (mutate(id) { it.copy(status = ScheduledPostStatus.SENT, lastError = null) }) persist()
+            val now = nowSec()
+            if (mutate(id) { it.copy(status = ScheduledPostStatus.SENT, lastError = null, terminatedAtSec = now) }) persist()
         }
 
     suspend fun markFailed(
@@ -135,10 +138,26 @@ class ScheduledPostStore(
                         publishAtSec = nowSec,
                         status = ScheduledPostStatus.PENDING,
                         lastError = null,
+                        terminatedAtSec = null,
                     )
                 }
             if (updated) persist()
             updated
+        }
+
+    /**
+     * Remove every row owned by [accountPubkey]. Used when the user deletes
+     * an account — the account's signed events should not linger. Returns the
+     * number of rows removed; persists once if any rows matched.
+     */
+    suspend fun removeForAccount(accountPubkey: String): Int =
+        mutex.withLock {
+            ensureLoaded()
+            val before = posts.size
+            val removed = posts.removeAll { it.accountPubkey == accountPubkey }
+            val count = before - posts.size
+            if (removed) persist()
+            count
         }
 
     /**
@@ -187,7 +206,28 @@ class ScheduledPostStore(
                 mutableListOf()
             }
         loaded = true
+        val purged = purgeStale(nowSec())
         _flow.value = posts.toList()
+        if (purged) persist()
+    }
+
+    /**
+     * Drop SENT rows older than [SENT_RETENTION_SEC] and CANCELLED rows older
+     * than [CANCELLED_RETENTION_SEC]. Returns true if any row was removed.
+     * FAILED rows are kept indefinitely so the user can still see and retry them;
+     * PENDING / PUBLISHING rows are never purged.
+     */
+    private fun purgeStale(now: Long): Boolean {
+        val before = posts.size
+        posts.removeAll { post ->
+            val age = now - (post.terminatedAtSec ?: post.lastAttemptAtSec ?: post.createdAtSec)
+            when (post.status) {
+                ScheduledPostStatus.SENT -> age > SENT_RETENTION_SEC
+                ScheduledPostStatus.CANCELLED -> age > CANCELLED_RETENTION_SEC
+                else -> false
+            }
+        }
+        return posts.size < before
     }
 
     /**
@@ -224,5 +264,7 @@ class ScheduledPostStore(
     companion object {
         private const val TAG = "ScheduledPostStore"
         const val FILE_NAME = "scheduled_posts.json"
+        private const val SENT_RETENTION_SEC = 7L * 24 * 3600
+        private const val CANCELLED_RETENTION_SEC = 30L * 24 * 3600
     }
 }

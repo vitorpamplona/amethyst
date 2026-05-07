@@ -32,6 +32,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+
+/** A day-bucket of posts for the scheduled-posts list screen. */
+data class ScheduledPostDayGroup(
+    val day: LocalDate,
+    val posts: List<ScheduledPost>,
+)
 
 /**
  * Drives the "Scheduled posts" screen for a single account. Filters the global
@@ -56,6 +65,24 @@ class ScheduledPostsViewModel(
                 all
                     .filter { it.accountPubkey == accountPubkey && it.status in activeStatuses }
                     .sortedBy { it.publishAtSec }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
+
+    /**
+     * Posts grouped by local-day, sorted ascending. The UI uses this as the
+     * source for sticky-header sections.
+     */
+    val groupedPosts: StateFlow<List<ScheduledPostDayGroup>> =
+        posts
+            .map { sorted ->
+                val zone = ZoneId.systemDefault()
+                sorted
+                    .groupBy { Instant.ofEpochSecond(it.publishAtSec).atZone(zone).toLocalDate() }
+                    .map { (day, list) -> ScheduledPostDayGroup(day, list) }
+                    .sortedBy { it.day }
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

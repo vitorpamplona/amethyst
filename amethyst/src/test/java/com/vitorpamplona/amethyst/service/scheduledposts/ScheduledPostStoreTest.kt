@@ -46,6 +46,8 @@ class ScheduledPostStoreTest {
 
     private fun newStore() = ScheduledPostStore(file)
 
+    private fun newStore(now: () -> Long) = ScheduledPostStore(file, now)
+
     private fun samplePost(
         id: String = "id-1",
         publishAtSec: Long = 1_000,
@@ -323,6 +325,196 @@ class ScheduledPostStoreTest {
             // Triggering any read method causes ensureLoaded() to seed the flow
             store.list()
             assertEquals(1, store.flow.value.size)
+        }
+
+    @Test
+    fun removeForAccount_removes_all_matching_rows_and_returns_count() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(id = "a1", accountPubkey = "pk-a"))
+            store.add(samplePost(id = "a2", accountPubkey = "pk-a"))
+            store.add(samplePost(id = "b1", accountPubkey = "pk-b"))
+
+            val removed = store.removeForAccount("pk-a")
+
+            assertEquals(2, removed)
+            val remaining = store.list()
+            assertEquals(1, remaining.size)
+            assertEquals("b1", remaining[0].id)
+        }
+
+    @Test
+    fun removeForAccount_no_match_returns_zero_and_does_not_persist() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(accountPubkey = "pk-a"))
+            val bytesBefore = file.readBytes()
+
+            val removed = store.removeForAccount("pk-other")
+
+            assertEquals(0, removed)
+            assertEquals(1, store.list().size)
+            assertTrue("file should not be rewritten on no-op", bytesBefore.contentEquals(file.readBytes()))
+        }
+
+    @Test
+    fun removeForAccount_persists_to_disk() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(id = "a1", accountPubkey = "pk-a"))
+            store.add(samplePost(id = "b1", accountPubkey = "pk-b"))
+
+            store.removeForAccount("pk-a")
+
+            val reloaded = newStore().list()
+            assertEquals(1, reloaded.size)
+            assertEquals("b1", reloaded[0].id)
+        }
+
+    @Test
+    fun removeForAccount_purges_terminal_states_too() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(id = "p1", accountPubkey = "pk-a"))
+            store.add(samplePost(id = "p2", accountPubkey = "pk-a"))
+            store.markSent("p1")
+            store.cancel("p2")
+
+            val removed = store.removeForAccount("pk-a")
+
+            assertEquals(2, removed)
+            assertEquals(0, store.list().size)
+        }
+
+    @Test
+    fun cancel_stamps_terminatedAtSec() =
+        runTest {
+            val clock = 1_700_000_000L
+            val store = newStore { clock }
+            store.add(samplePost(id = "x"))
+
+            store.cancel("x")
+
+            assertEquals(clock, store.list().single().terminatedAtSec)
+        }
+
+    @Test
+    fun markSent_stamps_terminatedAtSec() =
+        runTest {
+            val clock = 1_700_000_000L
+            val store = newStore { clock }
+            store.add(samplePost(id = "x", publishAtSec = clock))
+            store.claimDuePosts(clock)
+
+            store.markSent("x")
+
+            assertEquals(clock, store.list().single().terminatedAtSec)
+        }
+
+    @Test
+    fun publishNow_clears_terminatedAtSec() =
+        runTest {
+            val clock = 1_700_000_000L
+            val store = newStore { clock }
+            store.add(samplePost(id = "x"))
+            store.cancel("x") // stamps terminatedAtSec
+
+            store.publishNow("x", nowSec = clock + 5)
+
+            assertNull(store.list().single().terminatedAtSec)
+        }
+
+    @Test
+    fun ensureLoaded_purges_sent_older_than_seven_days() =
+        runTest {
+            val createTime = 1_700_000_000L
+            newStore { createTime }.also { it.add(samplePost(id = "old-sent", publishAtSec = createTime)) }
+            newStore { createTime }.also {
+                it.claimDuePosts(createTime)
+                it.markSent("old-sent")
+            }
+
+            val eightDaysLater = createTime + 8L * 24 * 3600
+            val reloaded = newStore { eightDaysLater }
+            assertEquals(0, reloaded.list().size)
+        }
+
+    @Test
+    fun ensureLoaded_keeps_recent_sent() =
+        runTest {
+            val createTime = 1_700_000_000L
+            newStore { createTime }.also { it.add(samplePost(id = "fresh", publishAtSec = createTime)) }
+            newStore { createTime }.also {
+                it.claimDuePosts(createTime)
+                it.markSent("fresh")
+            }
+
+            val sixDaysLater = createTime + 6L * 24 * 3600
+            val reloaded = newStore { sixDaysLater }
+            assertEquals(1, reloaded.list().size)
+            assertEquals(ScheduledPostStatus.SENT, reloaded.list().single().status)
+        }
+
+    @Test
+    fun ensureLoaded_purges_cancelled_older_than_thirty_days() =
+        runTest {
+            val createTime = 1_700_000_000L
+            newStore { createTime }.also {
+                it.add(samplePost(id = "old-cancel"))
+                it.cancel("old-cancel")
+            }
+
+            val thirtyOneDaysLater = createTime + 31L * 24 * 3600
+            val reloaded = newStore { thirtyOneDaysLater }
+            assertEquals(0, reloaded.list().size)
+        }
+
+    @Test
+    fun ensureLoaded_keeps_recent_cancelled() =
+        runTest {
+            val createTime = 1_700_000_000L
+            newStore { createTime }.also {
+                it.add(samplePost(id = "recent-cancel"))
+                it.cancel("recent-cancel")
+            }
+
+            val twentyDaysLater = createTime + 20L * 24 * 3600
+            val reloaded = newStore { twentyDaysLater }
+            assertEquals(1, reloaded.list().size)
+            assertEquals(ScheduledPostStatus.CANCELLED, reloaded.list().single().status)
+        }
+
+    @Test
+    fun ensureLoaded_keeps_failed_indefinitely() =
+        runTest {
+            val createTime = 1_700_000_000L
+            newStore { createTime }.also { it.add(samplePost(id = "fail", publishAtSec = createTime)) }
+            newStore { createTime }.also {
+                it.claimDuePosts(createTime)
+                it.markFailed("fail", "boom")
+            }
+
+            val ninetyDaysLater = createTime + 90L * 24 * 3600
+            val reloaded = newStore { ninetyDaysLater }
+            assertEquals(1, reloaded.list().size)
+            assertEquals(ScheduledPostStatus.FAILED, reloaded.list().single().status)
+        }
+
+    @Test
+    fun ensureLoaded_persists_purge_to_disk() =
+        runTest {
+            val createTime = 1_700_000_000L
+            newStore { createTime }.also { it.add(samplePost(id = "old", publishAtSec = createTime)) }
+            newStore { createTime }.also {
+                it.claimDuePosts(createTime)
+                it.markSent("old")
+            }
+            val sizeBefore = file.length()
+
+            val eightDaysLater = createTime + 8L * 24 * 3600
+            newStore { eightDaysLater }.list() // triggers ensureLoaded + purge + persist
+
+            assertTrue("file should shrink after purge", file.length() < sizeBefore)
         }
 
     @Test

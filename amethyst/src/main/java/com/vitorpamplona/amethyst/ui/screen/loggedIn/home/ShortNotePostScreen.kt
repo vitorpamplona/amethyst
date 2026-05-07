@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
@@ -48,12 +49,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -81,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -599,12 +605,63 @@ private fun NewPostScreenBody(
             onDismiss = postViewModel::dismissAiResult,
         )
 
-        BottomRowActions(postViewModel)
+        val alwaysOnEnabled by accountViewModel.account.settings.alwaysOnNotificationService
+            .collectAsStateWithLifecycle()
+        var showAlwaysOnPrompt by remember { mutableStateOf(false) }
+
+        BottomRowActions(
+            postViewModel = postViewModel,
+            onScheduleClicked = {
+                if (postViewModel.scheduledForSec != null) {
+                    postViewModel.scheduledForSec = null
+                } else if (!alwaysOnEnabled) {
+                    showAlwaysOnPrompt = true
+                } else {
+                    postViewModel.scheduledForSec =
+                        roundUpToNextQuarterHour((System.currentTimeMillis() / 1000) + 60 * 60)
+                }
+            },
+        )
+
+        if (showAlwaysOnPrompt) {
+            AlertDialog(
+                onDismissRequest = { showAlwaysOnPrompt = false },
+                title = { Text(stringRes(R.string.schedule_post_always_on_prompt_title)) },
+                text = { Text(stringRes(R.string.schedule_post_always_on_prompt_message)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showAlwaysOnPrompt = false
+                        nav.nav(Route.Settings)
+                    }) {
+                        Text(stringRes(R.string.schedule_post_always_on_prompt_open_settings))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showAlwaysOnPrompt = false
+                        postViewModel.scheduledForSec =
+                            roundUpToNextQuarterHour((System.currentTimeMillis() / 1000) + 60 * 60)
+                    }) {
+                        Text(stringRes(R.string.schedule_post_always_on_prompt_continue))
+                    }
+                },
+            )
+        }
     }
 }
 
 @Composable
-private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
+private fun BottomRowActions(
+    postViewModel: ShortNotePostViewModel,
+    onScheduleClicked: () -> Unit = {
+        postViewModel.scheduledForSec =
+            if (postViewModel.scheduledForSec != null) {
+                null
+            } else {
+                roundUpToNextQuarterHour((System.currentTimeMillis() / 1000) + 60 * 60)
+            }
+    },
+) {
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -681,15 +738,7 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             postViewModel.toggleExpirationDate()
         }
 
-        ScheduleAtButton(postViewModel.scheduledForSec != null) {
-            postViewModel.scheduledForSec =
-                if (postViewModel.scheduledForSec != null) {
-                    null
-                } else {
-                    // Default to 1 hour from now, rounded up to the next 15-min slot
-                    roundUpToNextQuarterHour((System.currentTimeMillis() / 1000) + 60 * 60)
-                }
-        }
+        ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
 
         AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
             postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash

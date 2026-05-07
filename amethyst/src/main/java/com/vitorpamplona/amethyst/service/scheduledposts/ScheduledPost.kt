@@ -40,6 +40,8 @@ data class ScheduledPost(
     val lastAttemptAtSec: Long? = null,
     val attemptCount: Int = 0,
     val lastError: String? = null,
+    // Set when the row enters a terminal state (SENT/CANCELLED). Drives retention.
+    val terminatedAtSec: Long? = null,
 )
 
 data class ScheduledPostFile(

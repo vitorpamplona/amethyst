@@ -46,11 +46,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -58,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
@@ -261,16 +264,55 @@ private fun LogoutButton(
     accountSessionManager: AccountSessionManager,
 ) {
     var logoutDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     if (logoutDialog) {
+        val accountHex = remember(acc) { decodePublicKeyAsHexOrNull(acc.npub) }
+        val allPosts by Amethyst.instance.scheduledPostStore.flow
+            .collectAsStateWithLifecycle()
+        val unpublishedCount by remember(accountHex) {
+            derivedStateOf {
+                if (accountHex == null) {
+                    0
+                } else {
+                    allPosts.count {
+                        it.accountPubkey == accountHex &&
+                            (
+                                it.status == ScheduledPostStatus.PENDING ||
+                                    it.status == ScheduledPostStatus.PUBLISHING ||
+                                    it.status == ScheduledPostStatus.FAILED
+                            )
+                    }
+                }
+            }
+        }
         AlertDialog(
             title = { Text(text = stringRes(R.string.log_out)) },
-            text = { Text(text = stringRes(R.string.are_you_sure_you_want_to_log_out)) },
+            text = {
+                if (unpublishedCount > 0) {
+                    Text(text = stringRes(R.string.scheduled_posts_logout_warning, unpublishedCount))
+                } else {
+                    Text(text = stringRes(R.string.are_you_sure_you_want_to_log_out))
+                }
+            },
             onDismissRequest = { logoutDialog = false },
             confirmButton = {
                 TextButton(
                     onClick = {
+                        // Snapshot the count *now* so the user-facing Toast matches what
+                        // the dialog displayed, even if the store mutates between this
+                        // tap and the cleanup completing.
+                        val confirmedCount = unpublishedCount
                         logoutDialog = false
                         accountSessionManager.logOff(acc)
+                        val toastMessage =
+                            if (confirmedCount > 0) {
+                                stringRes(context, R.string.scheduled_posts_logout_toast, confirmedCount)
+                            } else {
+                                stringRes(context, R.string.scheduled_posts_logout_toast_zero)
+                            }
+                        android.widget.Toast
+                            .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)
+                            .show()
                     },
                 ) {
                     Text(text = stringRes(R.string.log_out))
