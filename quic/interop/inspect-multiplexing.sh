@@ -35,46 +35,42 @@ find "$CASE_DIR" -maxdepth 4 -type f -printf '%s\t%p\n' 2>/dev/null \
     || find "$CASE_DIR" -maxdepth 4 -type f -exec ls -l {} + 2>/dev/null
 
 echo
-echo "=============== client/log.txt (tail) ==============="
-tail -n 200 "$CASE_DIR"/client/log.txt 2>/dev/null \
-    || echo "(no client/log.txt)"
+echo "=============== output.txt (runner stdout — last 200 lines) ==============="
+tail -n 200 "$CASE_DIR/output.txt" 2>/dev/null \
+    || echo "(no output.txt)"
 
 echo
-echo "=============== server/log.txt (tail) ==============="
-tail -n 200 "$CASE_DIR"/server/log.txt 2>/dev/null \
-    || echo "(no server/log.txt)"
+echo "=============== server stderr (last 100 lines) ==============="
+tail -n 100 "$CASE_DIR/server/stderr.log" 2>/dev/null \
+    || echo "(no server/stderr.log)"
 
-echo
-echo "=============== client qlog (tail of last 100 events) ==============="
-QLOG="$(ls -1 "$CASE_DIR"/client/*.sqlog "$CASE_DIR"/client/*.qlog 2>/dev/null | head -n 1 || true)"
+# Find the qlog. The runner mounts QLOGDIR=/logs/qlog so we land at
+# client/qlog/<odcid>.sqlog inside the case dir.
+QLOG="$(ls -1 "$CASE_DIR"/client/qlog/*.sqlog \
+        "$CASE_DIR"/client/qlog/*.qlog \
+        "$CASE_DIR"/client/*.sqlog \
+        "$CASE_DIR"/client/*.qlog 2>/dev/null | head -n 1 || true)"
+
 if [[ -n "$QLOG" ]]; then
-    echo "(file: $QLOG)"
-    tail -n 100 "$QLOG"
-else
-    echo "(no qlog under $CASE_DIR/client)"
-fi
-
-echo
-echo "=============== /downloads contents ==============="
-DL_DIR="$CASE_DIR/download"
-[[ -d "$DL_DIR" ]] || DL_DIR="$CASE_DIR/client/downloads"
-[[ -d "$DL_DIR" ]] || DL_DIR="$CASE_DIR/downloads"
-if [[ -d "$DL_DIR" ]]; then
-    DOWNLOADED="$(find "$DL_DIR" -type f | wc -l | tr -d ' ')"
-    echo "files downloaded: $DOWNLOADED"
-    echo "first 5:"
-    find "$DL_DIR" -type f | head -n 5
-    echo "last 5:"
-    find "$DL_DIR" -type f | tail -n 5
-else
-    echo "(no downloads dir found; checked $CASE_DIR/download and $CASE_DIR/client/downloads)"
-fi
-
-echo
-echo "=============== qlog event-type histogram ==============="
-if [[ -n "${QLOG:-}" ]]; then
-    # Each NDJSON line carries `"name":"transport:packet_sent"` etc.
-    # Histogram the names so you see "many packet_dropped" or "lots of
-    # ack_received but stream_state_updated tapered off".
+    echo
+    echo "=============== qlog event-type histogram ==============="
+    echo "(file: $QLOG, $(wc -l <"$QLOG" | tr -d ' ') lines)"
     grep -oE '"name":"[^"]+"' "$QLOG" | sort | uniq -c | sort -rn | head -n 20
+
+    echo
+    echo "=============== last 5 packet_received events ==============="
+    grep '"name":"transport:packet_received"' "$QLOG" | tail -n 5
+
+    echo
+    echo "=============== last 5 packet_sent events ==============="
+    grep '"name":"transport:packet_sent"' "$QLOG" | tail -n 5
+
+    echo
+    echo "=============== connection_closed events ==============="
+    grep '"name":"transport:connection_closed"' "$QLOG" || echo "(none — connection didn't formally close)"
+
+    echo
+    echo "=============== packet_dropped events (last 10) ==============="
+    grep '"name":"transport:packet_dropped"' "$QLOG" | tail -n 10 \
+        || echo "(none)"
 fi
