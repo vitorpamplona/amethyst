@@ -451,6 +451,101 @@ class LoadBenchmark {
         }
 
     /**
+     * One publisher fires N EVENTs back-to-back without awaiting
+     * intermediate OKs, then collects all OKs by event id. This is
+     * the workload that exercises Tier 2 (per-connection ingest
+     * pipeline) + Tier 1 (group commit) together — multiple events
+     * are in flight on the same connection, so the writer can batch.
+     *
+     * Verifies the relaxed OK contract: every event id receives
+     * exactly one OK frame, in any order.
+     */
+    @Test
+    fun publishPipelinedSingleClient() =
+        benchmark("publish pipelined single client") {
+            runBenchmarkServer { server, http ->
+                val n = 10_000
+                val signer = NostrSignerSync(KeyPair())
+                val events =
+                    runBlocking {
+                        (0 until n).map { i ->
+                            signer.sign(TextNoteEvent.build("pipe $i"))
+                        }
+                    }
+                val ids = events.mapTo(HashSet()) { it.id }
+
+                val httpUrl =
+                    okhttp3.Request
+                        .Builder()
+                        .url(server.url.replace("ws://", "http://"))
+                        .build()
+                val okSeen = AtomicLong()
+                val okFailures = AtomicLong()
+                val unknownIds = AtomicLong()
+                val seenIds =
+                    java.util.concurrent.ConcurrentHashMap
+                        .newKeySet<String>()
+                val done = java.util.concurrent.CountDownLatch(1)
+
+                val ws =
+                    http.newWebSocket(
+                        httpUrl,
+                        object : okhttp3.WebSocketListener() {
+                            override fun onMessage(
+                                webSocket: okhttp3.WebSocket,
+                                text: String,
+                            ) {
+                                if (!text.startsWith("[\"OK\"")) return
+                                // ["OK","<id>",true|false,"<reason>"] —
+                                // a tiny string scan is enough for a
+                                // bench. Index 6 is past `["OK","`.
+                                val idStart = 7
+                                val idEnd = text.indexOf('"', idStart)
+                                if (idEnd <= idStart) return
+                                val id = text.substring(idStart, idEnd)
+                                if (!ids.contains(id)) {
+                                    unknownIds.incrementAndGet()
+                                    return
+                                }
+                                if (!seenIds.add(id)) return
+                                if (text.contains(",true,")) {
+                                    okSeen.incrementAndGet()
+                                } else {
+                                    okFailures.incrementAndGet()
+                                }
+                                if (okSeen.get() + okFailures.get() == n.toLong()) done.countDown()
+                            }
+                        },
+                    )
+
+                val elapsed =
+                    measureTime {
+                        // Burst-send: queue every EVENT to OkHttp's
+                        // outbound buffer without any await, then
+                        // wait for the corresponding OK frames.
+                        for (event in events) {
+                            ws.send("""["EVENT",${event.toJson()}]""")
+                        }
+                        check(done.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
+                            "timed out waiting for OKs: ok=${okSeen.get()} rej=${okFailures.get()} unknown=${unknownIds.get()}"
+                        }
+                    }
+                val eps = (n * 1000.0) / elapsed.inWholeMilliseconds
+                println(
+                    "events=$n ok=${okSeen.get()} rejected=${okFailures.get()} " +
+                        "unknownIds=${unknownIds.get()} elapsedMs=${elapsed.inWholeMilliseconds} eps=${"%.0f".format(eps)}",
+                )
+                check(okSeen.get() == n.toLong()) {
+                    "expected $n accepted OKs, got ${okSeen.get()} (rejected ${okFailures.get()})"
+                }
+                check(seenIds.size == n) {
+                    "expected $n unique OK ids, got ${seenIds.size} — duplicate or missing OKs"
+                }
+                ws.cancel()
+            }
+        }
+
+    /**
      * Many concurrent publishers, each on their own WebSocket. Tells
      * us whether the SQLite single-writer bottleneck is the floor or
      * if there's contention upstream.

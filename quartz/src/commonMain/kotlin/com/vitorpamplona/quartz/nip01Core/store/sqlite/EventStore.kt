@@ -43,6 +43,8 @@ class EventStore(
 
     override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = store.transaction(body)
 
+    override suspend fun batchInsert(events: List<Event>) = store.batchInsertEvents(events)
+
     override suspend fun <T : Event> query(filter: Filter) = store.query<T>(filter)
 
     override suspend fun <T : Event> query(filters: List<Filter>) = store.query<T>(filters)

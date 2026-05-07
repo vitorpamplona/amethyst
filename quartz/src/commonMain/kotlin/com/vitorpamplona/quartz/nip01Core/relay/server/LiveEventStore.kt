@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.onSubscription
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.onSubscription
  */
 class LiveEventStore(
     private val store: IEventStore,
+    private val ingest: IngestQueue,
 ) {
     private val newEventStream =
         MutableSharedFlow<Event>(
@@ -47,9 +49,47 @@ class LiveEventStore(
             onBufferOverflow = BufferOverflow.DROP_LATEST, // Default behavior
         )
 
+    /**
+     * Fire-and-forget enqueue: hand [event] to the [IngestQueue] and
+     * fire [onComplete] once the writer's batch has a per-row
+     * decision. On `Accepted` the live stream is also emitted to so
+     * subscribers see the event. Suspends only when the ingest queue
+     * is full (backpressure).
+     */
+    suspend fun submit(
+        event: Event,
+        onComplete: (IEventStore.InsertOutcome) -> Unit,
+    ) {
+        ingest.submit(event) { outcome ->
+            if (outcome is IEventStore.InsertOutcome.Accepted) {
+                newEventStream.tryEmit(event)
+            }
+            onComplete(outcome)
+        }
+    }
+
+    /**
+     * Suspending insert kept for callers that don't care about
+     * pipelining (tests, scripted paths). Routes through the same
+     * [IngestQueue] as [submit] so the batch write path is exercised
+     * even by tests that prefer a sequential `insert` API.
+     * Throws on rejection so callers can `try` around it the way the
+     * old API did.
+     */
     suspend fun insert(event: Event) {
-        store.insert(event)
-        newEventStream.tryEmit(event)
+        val done = CompletableDeferred<Unit>()
+        submit(event) { outcome ->
+            when (outcome) {
+                IEventStore.InsertOutcome.Accepted -> {
+                    done.complete(Unit)
+                }
+
+                is IEventStore.InsertOutcome.Rejected -> {
+                    done.completeExceptionally(IllegalStateException(outcome.reason))
+                }
+            }
+        }
+        done.await()
     }
 
     suspend fun query(

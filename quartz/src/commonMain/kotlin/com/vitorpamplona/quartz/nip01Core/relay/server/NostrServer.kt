@@ -42,10 +42,19 @@ class NostrServer(
     private val policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
     private val parentContext: CoroutineContext = SupervisorJob(),
 ) : AutoCloseable {
-    private val subStore = LiveEventStore(store)
-
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
+
+    /**
+     * Group-commit writer shared across every connected session.
+     * Sessions hand off EVENT publishes here instead of awaiting
+     * [IEventStore.insert] inline; the queue coalesces back-to-back
+     * publishes into a single SQLite transaction. See [IngestQueue]
+     * for the OK ordering and durability semantics.
+     */
+    private val ingest = IngestQueue(store, parentContext)
+
+    private val subStore = LiveEventStore(store, ingest)
 
     /** Active client sessions keyed by an opaque connection id. */
     private val connections = LargeCache<Int, RelaySession>()
@@ -95,6 +104,7 @@ class NostrServer(
     override fun close() {
         connections.forEach { _, session -> session.cancelAllSubscriptions() }
         connections.clear()
+        ingest.close()
         scope.cancel()
         store.close()
     }
