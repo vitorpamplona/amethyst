@@ -178,6 +178,20 @@ fun encodePreSharedKeyPlaceholder(
     return w.toByteArray()
 }
 
+/**
+ * Encode the `early_data` extension body. In a ClientHello the body is
+ * empty (the extension's mere presence signals "I'm sending 0-RTT
+ * data"). In a NewSessionTicket the body is `uint32 max_early_data_size`.
+ * In an EncryptedExtensions message the body is empty (server's
+ * acceptance signal). We only emit the empty form (ClientHello side).
+ *
+ * RFC 8446 §4.2.10. Trailing position requirement: it goes WITH the
+ * pre_shared_key extension in the ClientHello extensions list — we put
+ * it just before pre_shared_key for symmetry with what aioquic / picoquic
+ * emit.
+ */
+fun encodeEarlyDataEmpty(): ByteArray = ByteArray(0)
+
 /** RFC 8446 §4.2.11.2 — SHA-256 binder size for our cipher suites. */
 const val BINDER_BYTES: Int = 32
 

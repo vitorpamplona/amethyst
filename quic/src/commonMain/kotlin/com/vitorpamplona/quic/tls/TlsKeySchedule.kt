@@ -60,6 +60,15 @@ class TlsKeySchedule(
         private set
 
     /**
+     * RFC 8446 §7.1 — `client_early_traffic_secret`, derived from the
+     * early secret + transcript-up-to-and-including-ClientHello. Used to
+     * encrypt 0-RTT packets the client sends before ServerHello arrives.
+     * Only non-null on resumption-with-early-data connections.
+     */
+    var clientEarlyTrafficSecret: ByteArray? = null
+        private set
+
+    /**
      * RFC 8446 §7.1 resumption master secret. Derived AFTER client Finished
      * is sent (transcript = CH..client.Finished). Used as the input keying
      * material for the [resumptionPsk] computation when the server later
@@ -97,6 +106,22 @@ class TlsKeySchedule(
     fun deriveEarlyFromPsk(psk: ByteArray) {
         val zeros = ByteArray(32)
         earlySecret = HKDF.extract(psk, zeros)
+    }
+
+    /**
+     * Derive the client early-data traffic secret. RFC 8446 §7.1:
+     *
+     *   client_early_traffic_secret = Derive-Secret(Early Secret,
+     *       "c e traffic", H(ClientHello))
+     *
+     * Caller passes the post-ClientHello transcript hash explicitly so
+     * the schedule doesn't have to track which transcript snapshot is
+     * needed (this is the binder-substituted ClientHello, exactly the
+     * bytes the server will hash on its side).
+     */
+    fun deriveEarlyTraffic(transcriptAfterClientHello: ByteArray) {
+        val es = earlySecret ?: error("call deriveEarlyFromPsk first")
+        clientEarlyTrafficSecret = deriveSecret(es, "c e traffic", transcriptAfterClientHello)
     }
 
     /** Step 2: derive Handshake Secret using ECDHE shared secret. */
