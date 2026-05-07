@@ -103,4 +103,22 @@ class LiveEventStore(
      * moment the NEG-OPEN arrives, not a streamed/live result.
      */
     suspend fun snapshotQuery(filter: Filter): List<Event> = store.query(filter)
+
+    /**
+     * Multi-filter snapshot. Unions the per-filter results and
+     * deduplicates by event id so an event matching N filters is
+     * yielded once. Used by NIP-77 NEG-OPEN when the policy stack
+     * rewrote the single incoming filter into several.
+     */
+    suspend fun snapshotQuery(filters: List<Filter>): List<Event> {
+        if (filters.size == 1) return snapshotQuery(filters[0])
+        val seen = HashSet<String>()
+        val merged = ArrayList<Event>()
+        for (f in filters) {
+            for (e in store.query<Event>(f)) {
+                if (seen.add(e.id)) merged += e
+            }
+        }
+        return merged
+    }
 }

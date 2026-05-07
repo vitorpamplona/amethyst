@@ -35,12 +35,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
-import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
-import com.vitorpamplona.quartz.nip77Negentropy.NegentropyServerSession
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -58,13 +57,8 @@ class RelaySession(
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
-    /**
-     * NIP-77 negentropy reconciliation sessions, keyed by NEG-OPEN
-     * subId. Plain hash map here (not [LargeCache]) because it's
-     * mutated only from the single-threaded `receive()` path —
-     * RelaySession.receive is serialised by the WebSocket handler.
-     */
-    private val negSessions = HashMap<String, NegentropyServerSession>()
+    /** NIP-77 negentropy state for this connection. */
+    private val negentropy = NegSessionRegistry(store, ::send)
 
     private fun addSubscription(
         subId: String,
@@ -80,7 +74,7 @@ class RelaySession(
     fun cancelAllSubscriptions() {
         subscriptions.forEach { _, job -> job.cancel() }
         subscriptions.clear()
-        negSessions.clear()
+        negentropy.clear()
     }
 
     fun send(message: Message) {
@@ -121,9 +115,9 @@ class RelaySession(
             is ReqCmd -> handleReq(cmd)
             is CloseCmd -> handleClose(cmd)
             is CountCmd -> handleCount(cmd)
-            is NegOpenCmd -> handleNegOpen(cmd)
-            is NegMsgCmd -> handleNegMsg(cmd)
-            is NegCloseCmd -> handleNegClose(cmd)
+            is NegOpenCmd -> negentropy.open(cmd, policy)
+            is NegMsgCmd -> negentropy.msg(cmd)
+            is NegCloseCmd -> negentropy.close(cmd)
             else -> send(NoticeMessage("error: unsupported command ${cmd.label()}"))
         }
     }
@@ -195,7 +189,7 @@ class RelaySession(
                         },
                         onEose = { send(EoseMessage(cmd.subId)) },
                     )
-                } catch (_: kotlinx.coroutines.CancellationException) {
+                } catch (_: CancellationException) {
                     // Subscription was closed – this is expected.
                 }
             }
@@ -209,82 +203,6 @@ class RelaySession(
         if (!cancelled) {
             send(ClosedMessage(cmd.subId, "error: no such subscription"))
         }
-    }
-
-    // -- NIP-77: NEG-OPEN -----------------------------------------------------
-
-    /**
-     * Open a negentropy reconciliation session. The relay snapshots its
-     * matching events at this instant — concurrent inserts during the
-     * sync are not surfaced; clients re-open if they want fresh state.
-     *
-     * Access control reuses the REQ policy hook: a relay that requires
-     * AUTH or has kind/pubkey allow-deny lists applies the same rules
-     * to NEG-OPEN as it does to subscription REQs.
-     */
-    private suspend fun handleNegOpen(cmd: NegOpenCmd) {
-        // Run the same access controls as REQ would.
-        val asReq = ReqCmd(cmd.subId, listOf(cmd.filter))
-        val gate = policy.accept(asReq)
-        if (gate is PolicyResult.Rejected) {
-            send(NegErrMessage(cmd.subId, gate.reason))
-            return
-        }
-        val filters = (gate as PolicyResult.Accepted).cmd.filters
-
-        // Drop any prior session at this subId (NIP-77: same-subId
-        // OPEN replaces).
-        negSessions.remove(cmd.subId)
-
-        val events =
-            if (filters.size == 1) {
-                store.snapshotQuery(filters[0])
-            } else {
-                // Multiple filters: union the snapshots and dedupe by id.
-                val seen = HashSet<String>()
-                val merged = mutableListOf<com.vitorpamplona.quartz.nip01Core.core.Event>()
-                for (f in filters) {
-                    for (e in store.snapshotQuery(f)) {
-                        if (seen.add(e.id)) merged += e
-                    }
-                }
-                merged
-            }
-
-        val neg = NegentropyServerSession(cmd.subId, events)
-        negSessions[cmd.subId] = neg
-
-        try {
-            val response = neg.processMessage(cmd.initialMessage)
-            if (response != null) send(response)
-        } catch (e: Exception) {
-            negSessions.remove(cmd.subId)
-            send(NegErrMessage(cmd.subId, "error: ${e.message ?: e::class.simpleName}"))
-        }
-    }
-
-    // -- NIP-77: NEG-MSG ------------------------------------------------------
-    private fun handleNegMsg(cmd: NegMsgCmd) {
-        val neg = negSessions[cmd.subId]
-        if (neg == null) {
-            send(NegErrMessage(cmd.subId, "error: no negentropy session for ${cmd.subId}"))
-            return
-        }
-        try {
-            val response = neg.processMessage(cmd.message)
-            if (response != null) send(response)
-        } catch (e: Exception) {
-            negSessions.remove(cmd.subId)
-            send(NegErrMessage(cmd.subId, "error: ${e.message ?: e::class.simpleName}"))
-        }
-    }
-
-    // -- NIP-77: NEG-CLOSE ----------------------------------------------------
-    private fun handleNegClose(cmd: NegCloseCmd) {
-        // Spec: clients send NEG-CLOSE to free server-side state.
-        // Silent no-op if the session is unknown — there's no authoritative
-        // error response in NIP-77 for an unknown close.
-        negSessions.remove(cmd.subId)
     }
 
     init {

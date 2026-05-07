@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Method
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response
 import com.vitorpamplona.quartz.relay.RelayInfo
+import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -101,112 +103,71 @@ class Nip86Server(
         runCatching {
             when (req.method) {
                 Nip86Method.SUPPORTED_METHODS -> {
-                    result(buildJsonArray { supportedMethods.forEach { add(JsonPrimitive(it)) } })
+                    ok(buildJsonArray { supportedMethods.forEach { add(JsonPrimitive(it)) } })
                 }
 
                 Nip86Method.BAN_PUBKEY -> {
-                    val (pk, reason) = req.params.stringPair() ?: return malformed("expected [pubkey, reason?]")
-                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
-                    banStore.banPubkey(pk, reason)
-                    result(JsonPrimitive(true))
+                    withHexAndReason(req, "pubkey") { pk, reason -> banStore.banPubkey(pk, reason) }
                 }
 
                 Nip86Method.UNBAN_PUBKEY -> {
-                    val (pk, _) = req.params.stringPair() ?: return malformed("expected [pubkey]")
-                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
-                    banStore.unbanPubkey(pk)
-                    result(JsonPrimitive(true))
+                    withHex(req, "pubkey") { pk -> banStore.unbanPubkey(pk) }
                 }
 
                 Nip86Method.LIST_BANNED_PUBKEYS -> {
-                    result(
-                        banStore
-                            .listBannedPubkeys()
-                            .map { (pk, r) -> BannedPubkey(pk, r) }
-                            .toJsonArray(BannedPubkey.serializer()),
-                    )
+                    ok(banStore.listBannedPubkeys().map { (pk, r) -> BannedPubkey(pk, r) }.toJsonArray(BannedPubkey.serializer()))
                 }
 
                 Nip86Method.ALLOW_PUBKEY -> {
-                    val (pk, reason) = req.params.stringPair() ?: return malformed("expected [pubkey, reason?]")
-                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
-                    banStore.allowPubkey(pk, reason)
-                    result(JsonPrimitive(true))
+                    withHexAndReason(req, "pubkey") { pk, reason -> banStore.allowPubkey(pk, reason) }
                 }
 
                 Nip86Method.UNALLOW_PUBKEY -> {
-                    val (pk, _) = req.params.stringPair() ?: return malformed("expected [pubkey]")
-                    if (!isHex64(pk)) return malformed("pubkey must be 64-char hex")
-                    banStore.unallowPubkey(pk)
-                    result(JsonPrimitive(true))
+                    withHex(req, "pubkey") { pk -> banStore.unallowPubkey(pk) }
                 }
 
                 Nip86Method.LIST_ALLOWED_PUBKEYS -> {
-                    result(
-                        banStore
-                            .listAllowedPubkeys()
-                            .map { (pk, r) -> AllowedPubkey(pk, r) }
-                            .toJsonArray(AllowedPubkey.serializer()),
-                    )
+                    ok(banStore.listAllowedPubkeys().map { (pk, r) -> AllowedPubkey(pk, r) }.toJsonArray(AllowedPubkey.serializer()))
                 }
 
                 Nip86Method.BAN_EVENT -> {
-                    val (id, reason) = req.params.stringPair() ?: return malformed("expected [event_id, reason?]")
-                    if (!isHex64(id)) return malformed("event_id must be 64-char hex")
-                    banStore.banEvent(id, reason)
-                    // Also remove the event from the store if it's there.
-                    store?.delete(Filter(ids = listOf(id)))
-                    result(JsonPrimitive(true))
+                    withHexAndReason(req, "event_id") { id, reason ->
+                        banStore.banEvent(id, reason)
+                        // Also remove the event from the store if present.
+                        store?.delete(Filter(ids = listOf(id)))
+                    }
                 }
 
                 Nip86Method.ALLOW_EVENT -> {
-                    val (id, _) = req.params.stringPair() ?: return malformed("expected [event_id]")
-                    if (!isHex64(id)) return malformed("event_id must be 64-char hex")
-                    banStore.allowEvent(id)
-                    result(JsonPrimitive(true))
+                    withHex(req, "event_id") { id -> banStore.allowEvent(id) }
                 }
 
                 Nip86Method.LIST_BANNED_EVENTS -> {
-                    result(
-                        banStore
-                            .listBannedEvents()
-                            .map { (id, r) -> BannedEvent(id, r) }
-                            .toJsonArray(BannedEvent.serializer()),
-                    )
+                    ok(banStore.listBannedEvents().map { (id, r) -> BannedEvent(id, r) }.toJsonArray(BannedEvent.serializer()))
                 }
 
                 Nip86Method.ALLOW_KIND -> {
-                    val k = req.params.firstInt() ?: return malformed("expected [kind]")
-                    banStore.allowKind(k)
-                    result(JsonPrimitive(true))
+                    withInt(req, "kind") { k -> banStore.allowKind(k) }
                 }
 
                 Nip86Method.DISALLOW_KIND -> {
-                    val k = req.params.firstInt() ?: return malformed("expected [kind]")
-                    banStore.disallowKind(k)
-                    result(JsonPrimitive(true))
+                    withInt(req, "kind") { k -> banStore.disallowKind(k) }
                 }
 
                 Nip86Method.LIST_ALLOWED_KINDS -> {
-                    result(buildJsonArray { banStore.listAllowedKinds().forEach { add(JsonPrimitive(it)) } })
+                    ok(buildJsonArray { banStore.listAllowedKinds().forEach { add(JsonPrimitive(it)) } })
                 }
 
                 Nip86Method.CHANGE_RELAY_NAME -> {
-                    val name = req.params.firstString() ?: return malformed("expected [name]")
-                    rewriteInfo { it.copy(name = name) }
-                    result(JsonPrimitive(true))
+                    withString(req, "name") { name -> rewriteInfo { it.copy(name = name) } }
                 }
 
                 Nip86Method.CHANGE_RELAY_DESCRIPTION -> {
-                    val desc = req.params.firstString() ?: return malformed("expected [description]")
-                    rewriteInfo { it.copy(description = desc) }
-                    result(JsonPrimitive(true))
+                    withString(req, "description") { desc -> rewriteInfo { it.copy(description = desc) } }
                 }
 
                 Nip86Method.CHANGE_RELAY_ICON -> {
-                    val icon = req.params.firstString() ?: return malformed("expected [icon_url]")
-                    rewriteInfo { it.copy(icon = icon) }
-                    result(JsonPrimitive(true))
+                    withString(req, "icon_url") { icon -> rewriteInfo { it.copy(icon = icon) } }
                 }
 
                 else -> {
@@ -217,50 +178,63 @@ class Nip86Server(
             // CancellationException must propagate so structured
             // concurrency works — swallowing it would let a parent
             // cancellation be reported as a benign RPC error.
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is CancellationException) throw e
             Nip86Response(error = "internal: ${e.message ?: e::class.simpleName}")
         }
+
+    private inline fun withHex(
+        req: Nip86Request,
+        label: String,
+        action: (String) -> Unit,
+    ): Nip86Response {
+        val (value, _) = req.params.stringPair() ?: return malformed("expected [$label]")
+        if (!Hex.isHex64(value)) return malformed("$label must be 64-char hex")
+        action(value)
+        return okTrue
+    }
+
+    private suspend inline fun withHexAndReason(
+        req: Nip86Request,
+        label: String,
+        action: suspend (String, String?) -> Unit,
+    ): Nip86Response {
+        val (value, reason) = req.params.stringPair() ?: return malformed("expected [$label, reason?]")
+        if (!Hex.isHex64(value)) return malformed("$label must be 64-char hex")
+        action(value, reason)
+        return okTrue
+    }
+
+    private inline fun withInt(
+        req: Nip86Request,
+        label: String,
+        action: (Int) -> Unit,
+    ): Nip86Response {
+        val v = req.params.firstInt() ?: return malformed("expected [$label]")
+        action(v)
+        return okTrue
+    }
+
+    private inline fun withString(
+        req: Nip86Request,
+        label: String,
+        action: (String) -> Unit,
+    ): Nip86Response {
+        val v = req.params.firstString() ?: return malformed("expected [$label]")
+        action(v)
+        return okTrue
+    }
 
     private fun rewriteInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
         val current = infoHolder.get().document
         infoHolder.set(RelayInfo(transform(current)))
     }
-
-    /** [Nip11RelayInformation] is not a `data class`; do a manual field-by-field copy. */
-    private fun Nip11RelayInformation.copy(
-        name: String? = this.name,
-        description: String? = this.description,
-        icon: String? = this.icon,
-    ) = Nip11RelayInformation(
-        id = this.id,
-        name = name,
-        description = description,
-        icon = icon,
-        pubkey = this.pubkey,
-        self = this.self,
-        contact = this.contact,
-        supported_nips = this.supported_nips,
-        supported_nip_extensions = this.supported_nip_extensions,
-        software = this.software,
-        version = this.version,
-        limitation = this.limitation,
-        relay_countries = this.relay_countries,
-        language_tags = this.language_tags,
-        tags = this.tags,
-        posting_policy = this.posting_policy,
-        privacy_policy = this.privacy_policy,
-        terms_of_service = this.terms_of_service,
-        payments_url = this.payments_url,
-        retention = this.retention,
-        fees = this.fees,
-        nip50 = this.nip50,
-        supported_grasps = this.supported_grasps,
-    )
 }
 
 private fun malformed(reason: String) = Nip86Response(error = "invalid params: $reason")
 
-private fun result(j: JsonElement) = Nip86Response(result = j, error = null)
+private fun ok(j: JsonElement) = Nip86Response(result = j, error = null)
+
+private val okTrue = ok(JsonPrimitive(true))
 
 private val rpcJson = Json { encodeDefaults = false }
 
@@ -280,7 +254,3 @@ private fun JsonArray.firstInt(): Int? =
     }.getOrNull()
 
 private fun JsonPrimitive.contentOrNull(): String? = if (this == JsonNull) null else content
-
-private val HEX64 = Regex("[0-9a-fA-F]{64}")
-
-private fun isHex64(s: String): Boolean = HEX64.matches(s)

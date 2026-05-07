@@ -38,21 +38,42 @@ data class RelayInfo(
     val json: String by lazy { JsonMapper.toJson(document) }
 
     companion object {
+        const val NAME = "quartz-relay"
+        const val DESCRIPTION = "Embedded Nostr relay from the Amethyst quartz library."
+        const val SOFTWARE = "https://github.com/vitorpamplona/amethyst/tree/main/quartz-relay"
+        const val VERSION = "1.08.0"
+
+        /**
+         * NIPs this relay implements out of the box. Single source of
+         * truth — both [default] and [com.vitorpamplona.quartz.relay.config.RelayConfig.resolveInfo]
+         * consult this list. Add a NIP here when its handler is wired
+         * into [com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession]
+         * (or in this module's policy stack).
+         *
+         * Currently:
+         *  -  1 NIP-01 basic
+         *  -  9 NIP-09 deletion (DeletionRequestModule)
+         *  - 11 NIP-11 this doc
+         *  - 40 NIP-40 expiration (ExpirationModule)
+         *  - 42 NIP-42 AUTH (when policy enables)
+         *  - 45 NIP-45 COUNT
+         *  - 50 NIP-50 search (SQLite FTS)
+         *  - 62 NIP-62 right to vanish
+         *  - 77 NIP-77 negentropy reconciliation
+         *  - 86 NIP-86 relay management API (when admin pubkeys configured)
+         */
+        val SUPPORTED_NIPS: List<String> =
+            listOf("1", "9", "11", "40", "42", "45", "50", "62", "77", "86")
+
         /** Pre-built default for `Relay(url = ...)` — advertises the supported NIPs. */
         fun default(url: NormalizedRelayUrl): RelayInfo =
             RelayInfo(
                 Nip11RelayInformation(
-                    name = "quartz-relay",
-                    description = "Embedded Nostr relay from the Amethyst quartz library.",
-                    software = "https://github.com/vitorpamplona/amethyst/tree/main/quartz-relay",
-                    version = "1.08.0",
-                    // Currently implemented: NIP-01 (basic), NIP-09 (deletion via
-                    // DeletionRequestModule), NIP-11 (this doc), NIP-40 (expiration
-                    // via ExpirationModule), NIP-42 (AUTH — when policy enables),
-                    // NIP-45 (COUNT), NIP-50 (search via FTS), NIP-62 (right to vanish),
-                    // NIP-77 (negentropy reconciliation), NIP-86 (relay management API
-                    // — when admin pubkeys are configured).
-                    supported_nips = listOf("1", "9", "11", "40", "42", "45", "50", "62", "77", "86"),
+                    name = NAME,
+                    description = DESCRIPTION,
+                    software = SOFTWARE,
+                    version = VERSION,
+                    supported_nips = SUPPORTED_NIPS,
                 ),
             )
 

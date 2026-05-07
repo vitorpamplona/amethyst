@@ -51,21 +51,16 @@ data class RelayConfig(
     fun resolveInfo(advertisedUrl: NormalizedRelayUrl): RelayInfo =
         RelayInfo(
             Nip11RelayInformation(
-                name = info.name ?: "quartz-relay",
-                description = info.description ?: "Embedded Nostr relay from the Amethyst quartz library.",
+                name = info.name ?: RelayInfo.NAME,
+                description = info.description ?: RelayInfo.DESCRIPTION,
                 pubkey = info.pubkey,
                 contact = info.contact,
                 icon = info.icon,
-                software =
-                    info.software
-                        ?: "https://github.com/vitorpamplona/amethyst/tree/main/quartz-relay",
-                version = info.version ?: "1.08.0",
+                software = info.software ?: RelayInfo.SOFTWARE,
+                version = info.version ?: RelayInfo.VERSION,
                 supported_nips =
                     info.supported_nips?.map(Int::toString)
-                        // Keep in sync with `RelayInfo.default()` —
-                        // both lists must reflect the NIPs actually
-                        // wired into the relay.
-                        ?: listOf("1", "9", "11", "40", "42", "45", "50", "62", "77", "86"),
+                        ?: RelayInfo.SUPPORTED_NIPS,
                 privacy_policy = info.privacy_policy,
                 terms_of_service = info.terms_of_service,
                 relay_countries = info.relay_countries,
