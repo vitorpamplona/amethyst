@@ -34,7 +34,7 @@ rootProject.name = "Amethyst"
 include ':amethyst'
 include ':benchmark'
 include ':quartz'
-include ':quartz-relay'
+include ':geode'
 include ':commons'
 include ':ammolite'
 include ':quic'

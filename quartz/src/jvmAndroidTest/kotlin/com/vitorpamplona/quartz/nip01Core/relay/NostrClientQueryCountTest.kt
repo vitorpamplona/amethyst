@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
+import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
-import com.vitorpamplona.quartz.relay.fixtures.SyntheticEvents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

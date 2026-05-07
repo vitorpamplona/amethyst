@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
-import com.vitorpamplona.quartz.relay.RelayHub
+import com.vitorpamplona.geode.RelayHub
 
 /**
  * Base for tests that drive a real `NostrClient` against an in-process Nostr
