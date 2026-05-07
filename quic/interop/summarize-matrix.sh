@@ -2,7 +2,11 @@
 # Summarize per-testcase results for the most recent matrix run.
 # Useful when run-matrix.sh terminated early — the per-testcase
 # output.txt files have status lines we can extract.
-set -uo pipefail
+set -o pipefail
+# NOT set -u: bash 3.2 (macOS default) treats `${arr[@]}` on an
+# empty array as an unbound-variable error, which we hit on runs
+# that have no log files (the artifact-inspection path is still
+# valid).
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 RUNNER_LOGS="${REPO_ROOT}/../quic-interop-runner/logs"
@@ -65,15 +69,26 @@ infer_status_from_artifacts() {
 # likely locations: the per-testcase output.txt (in case the runner
 # version we're using writes there), the run dir, the runner-logs root,
 # and the working dir we were invoked from.
+# Build list of files to grep, in priority order. Bash 3.2 (macOS
+# default) chokes on multiline process-substitution with comments,
+# so we just push to an array imperatively.
 SEARCH_FILES=()
-while IFS= read -r f; do SEARCH_FILES+=("$f"); done < <(
-    # run-matrix.sh tees the runner's stdout to <RUN_DIR>.stdout.log —
-    # check that first since it has the authoritative status lines.
-    [[ -f "${RUN_DIR}.stdout.log" ]] && echo "${RUN_DIR}.stdout.log"
-    find "$PAIR_DIR" -maxdepth 3 -name 'output.txt' -type f 2>/dev/null
-    find "$RUN_DIR" -maxdepth 1 -name '*.log' -type f 2>/dev/null
-    find "$RUNNER_LOGS" -maxdepth 1 -name 'run-*.log' -type f 2>/dev/null
-)
+# 1. run-matrix.sh tees the runner stdout to a sibling .stdout.log
+#    file — that has the authoritative "Test: X took Y, status:" lines.
+if [[ -f "${RUN_DIR}.stdout.log" ]]; then
+    SEARCH_FILES+=("${RUN_DIR}.stdout.log")
+fi
+# 2. Per-testcase output.txt — older runner versions wrote status here.
+while IFS= read -r f; do
+    SEARCH_FILES+=("$f")
+done < <(find "$PAIR_DIR" -maxdepth 3 -name 'output.txt' -type f 2>/dev/null)
+# 3. Run-dir / runner-logs *.log — catch-all.
+while IFS= read -r f; do
+    SEARCH_FILES+=("$f")
+done < <(find "$RUN_DIR" -maxdepth 1 -name '*.log' -type f 2>/dev/null)
+while IFS= read -r f; do
+    SEARCH_FILES+=("$f")
+done < <(find "$RUNNER_LOGS" -maxdepth 1 -name 'run-*.log' -type f 2>/dev/null)
 
 printf "%-22s %-15s %-10s\n" "TESTCASE" "RESULT" "TIME"
 printf "%-22s %-15s %-10s\n" "----------------------" "---------------" "----------"
