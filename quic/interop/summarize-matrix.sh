@@ -29,18 +29,37 @@ if [[ -z "$PAIR_DIR" ]]; then
     exit 1
 fi
 
+# The "Test: X took Y, status: TestResult.Z" line is written by run.py
+# to its own stdout, not into the per-testcase output.txt. Search a few
+# likely locations: the per-testcase output.txt (in case the runner
+# version we're using writes there), the run dir, the runner-logs root,
+# and the working dir we were invoked from.
+SEARCH_FILES=()
+while IFS= read -r f; do SEARCH_FILES+=("$f"); done < <(
+    find "$PAIR_DIR" -maxdepth 3 -name 'output.txt' -type f 2>/dev/null
+    find "$RUN_DIR" -maxdepth 1 -name '*.log' -type f 2>/dev/null
+    find "$RUNNER_LOGS" -maxdepth 1 -name 'run-*.log' -type f 2>/dev/null
+)
+
 printf "%-22s %-15s %-10s\n" "TESTCASE" "RESULT" "TIME"
 printf "%-22s %-15s %-10s\n" "----------------------" "---------------" "----------"
 for tc_dir in "$PAIR_DIR"/*/; do
     tc=$(basename "$tc_dir")
-    out="$tc_dir/output.txt"
-    [[ -f "$out" ]] || continue
-    # Last "Test: ... status: TestResult.X" line for this testcase.
-    line=$(grep -E "^Test: $tc took" "$out" | tail -n 1)
+    # Search every candidate file for a status line matching this
+    # testcase. Allow optional leading timestamp from the runner's
+    # logging format (`2026-05-07 12:34:56,789 Test: ...`).
+    line=""
+    for f in "${SEARCH_FILES[@]}"; do
+        [[ -f "$f" ]] || continue
+        match=$(grep -E "Test: $tc took [0-9.]+s, status: TestResult\." "$f" 2>/dev/null | tail -n 1)
+        if [[ -n "$match" ]]; then
+            line="$match"
+            break
+        fi
+    done
     if [[ -n "$line" ]]; then
         status=$(echo "$line" | sed -nE 's/.*TestResult\.([A-Z_]+).*/\1/p')
         time=$(echo "$line" | sed -nE 's/.*took ([0-9.]+s).*/\1/p')
-        # Color: green=succeeded, yellow=unsupported, red=failed.
         case "$status" in
             SUCCEEDED) marker="✓" ;;
             UNSUPPORTED) marker="?" ;;
@@ -49,6 +68,6 @@ for tc_dir in "$PAIR_DIR"/*/; do
         esac
         printf "%-22s %s %-13s %-10s\n" "$tc" "$marker" "$status" "$time"
     else
-        printf "%-22s %s %-13s\n" "$tc" "·" "(no status — terminated mid-test)"
+        printf "%-22s %s %s\n" "$tc" "·" "(no status line found in $(printf '%s ' "${SEARCH_FILES[@]##*/}" | head -c 60))"
     fi
 done
