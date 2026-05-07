@@ -31,6 +31,7 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.jackson.module.kotlin)
+    implementation(libs.kotlinx.serialization.json)
 
     // Bundled SQLite driver — Relay's default in-memory EventStore creates
     // an in-memory DB at runtime.

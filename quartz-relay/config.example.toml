@@ -60,3 +60,11 @@ require_auth = false
 # pubkey_blacklist = []
 # kind_whitelist = [0, 1, 3, 7, 1059, 30023]
 # kind_blacklist = [4]
+
+[admin]
+# NIP-86 relay management API. When `pubkeys` is non-empty, the relay
+# accepts HTTP POST application/nostr+json+rpc on the same URL,
+# authenticated with NIP-98 HTTP-Auth. Only events signed by one of
+# the listed pubkeys can run admin RPCs (banpubkey / banevent /
+# changerelayname / …). Empty (the default) disables the endpoint.
+# pubkeys = ["abcdef...64hex..."]

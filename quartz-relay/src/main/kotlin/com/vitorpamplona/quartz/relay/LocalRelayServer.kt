@@ -20,8 +20,14 @@
  */
 package com.vitorpamplona.quartz.relay
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
+import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
+import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response
+import com.vitorpamplona.quartz.relay.admin.Nip86Server
+import com.vitorpamplona.quartz.relay.admin.Nip98AuthVerifier
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -30,11 +36,14 @@ import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.request.header
+import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
+import io.ktor.utils.io.toByteArray
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.coroutines.channels.consumeEach
@@ -72,7 +81,32 @@ class LocalRelayServer(
      * uses Ktor's default (~1 MiB).
      */
     val maxFrameBytes: Long? = null,
+    /**
+     * Pubkeys allowed to call NIP-86 admin RPCs. Empty (the default)
+     * disables the admin endpoint entirely — POSTs return 403.
+     * Otherwise: HTTP POSTs to [path] with `Content-Type:
+     * application/nostr+json+rpc` are dispatched to [Nip86Server],
+     * gated by NIP-98 HTTP-Auth membership in this set.
+     */
+    val adminPubkeys: Set<HexKey> = emptySet(),
 ) {
+    /**
+     * Bridges the relay's mutable [RelayInfo] to [Nip86Server.InfoHolder]
+     * so admin RPCs can rewrite the NIP-11 doc atomically.
+     */
+    private val infoHolder =
+        object : Nip86Server.InfoHolder {
+            override fun get() = relay.info
+
+            override fun set(info: RelayInfo) {
+                relay.updateInfo { info.document }
+            }
+        }
+
+    private val nip86 = Nip86Server(banStore = relay.banStore, infoHolder = infoHolder, store = relay.store)
+    private val nip98 = Nip98AuthVerifier()
+
+    private val adminAllowList: Set<HexKey> = adminPubkeys.mapTo(HashSet()) { it.lowercase() }
     private var engine: CIOApplicationEngine? = null
     private var resolvedPort: Int = -1
 
@@ -125,6 +159,11 @@ class LocalRelayServer(
                                 HttpStatusCode.UpgradeRequired,
                             )
                         }
+                    }
+                    // NIP-86: POST application/nostr+json+rpc with a NIP-98
+                    // signed Authorization header → JSON-RPC dispatch.
+                    post(path) {
+                        handleNip86(call)
                     }
                     webSocket(path) {
                         val session =
@@ -188,6 +227,94 @@ class LocalRelayServer(
         e.stop(gracePeriodMillis, timeoutMillis)
         engine = null
         resolvedPort = -1
+    }
+
+    /**
+     * Handles a NIP-86 admin RPC request:
+     *  1. 403 if no admin pubkey list is configured (endpoint disabled).
+     *  2. 401 if the NIP-98 Authorization header is missing/invalid.
+     *  3. 403 if the verified pubkey isn't in [adminAllowList].
+     *  4. 400 if the body isn't a valid Nip86Request.
+     *  5. 200 with a Nip86Response JSON body otherwise.
+     *
+     * `application/nostr+json+rpc` is the wire content type prescribed
+     * by NIP-86; we send it on responses and accept any body on the
+     * request (the auth event's payload-hash already binds the body).
+     */
+    private suspend fun handleNip86(call: io.ktor.server.application.ApplicationCall) {
+        if (adminAllowList.isEmpty()) {
+            call.respondText(
+                "NIP-86 management API is not enabled on this relay.",
+                ContentType.Text.Plain,
+                HttpStatusCode.Forbidden,
+            )
+            return
+        }
+
+        val body = call.receiveChannel().toByteArray()
+        val authHeader = call.request.header(HttpHeaders.Authorization)
+        // NIP-86 spec: the URL the client signed must be the relay's
+        // canonical http(s) URL, not the WS one. We reconstruct it from
+        // the request so the comparison is symmetric whether the
+        // operator runs the relay behind a reverse proxy or directly.
+        val signedUrl =
+            "http://" +
+                (call.request.header(HttpHeaders.Host) ?: "$host:$resolvedPort") + path
+        val verification = nip98.verify(authHeader, method = "POST", url = signedUrl, body = body)
+
+        val pubkey =
+            when (verification) {
+                is Nip98AuthVerifier.Result.Verified -> {
+                    verification.pubkey
+                }
+
+                Nip98AuthVerifier.Result.Missing -> {
+                    call.response.headers.append(HttpHeaders.WWWAuthenticate, Nip98AuthVerifier.SCHEME.trim())
+                    call.respondText(
+                        "missing Authorization header (NIP-98)",
+                        ContentType.Text.Plain,
+                        HttpStatusCode.Unauthorized,
+                    )
+                    return
+                }
+
+                is Nip98AuthVerifier.Result.Malformed -> {
+                    call.respondText(
+                        "invalid NIP-98 Authorization: ${verification.reason}",
+                        ContentType.Text.Plain,
+                        HttpStatusCode.Unauthorized,
+                    )
+                    return
+                }
+            }
+
+        if (pubkey.lowercase() !in adminAllowList) {
+            call.respondText(
+                "pubkey is not on the admin list",
+                ContentType.Text.Plain,
+                HttpStatusCode.Forbidden,
+            )
+            return
+        }
+
+        val req =
+            try {
+                JsonMapper.fromJson<Nip86Request>(body.decodeToString())
+            } catch (e: Exception) {
+                call.respondText(
+                    "invalid Nip86Request: ${e.message ?: e::class.simpleName}",
+                    ContentType.Text.Plain,
+                    HttpStatusCode.BadRequest,
+                )
+                return
+            }
+
+        val response: Nip86Response = nip86.dispatch(req)
+        call.respondText(
+            JsonMapper.toJson(response),
+            ContentType.parse("application/nostr+json+rpc"),
+            HttpStatusCode.OK,
+        )
     }
 
     /**

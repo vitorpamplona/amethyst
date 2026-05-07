@@ -42,6 +42,7 @@ data class RelayConfig(
     val options: OptionsSection = OptionsSection(),
     val limits: LimitsSection = LimitsSection(),
     val authorization: AuthorizationSection = AuthorizationSection(),
+    val admin: AdminSection = AdminSection(),
 ) {
     /**
      * Maps the `[info]` section into a [RelayInfo] used by the NIP-11
@@ -131,6 +132,17 @@ data class RelayConfig(
         val pubkey_blacklist: List<String> = emptyList(),
         val kind_whitelist: List<Int> = emptyList(),
         val kind_blacklist: List<Int> = emptyList(),
+    )
+
+    /**
+     * NIP-86 relay management API. When [pubkeys] is non-empty,
+     * `LocalRelayServer` exposes a POST endpoint at the relay path
+     * that accepts JSON-RPC admin requests authenticated via NIP-98
+     * HTTP-Auth. Only requests signed by one of these pubkeys are
+     * dispatched.
+     */
+    data class AdminSection(
+        val pubkeys: List<String> = emptyList(),
     )
 
     companion object {

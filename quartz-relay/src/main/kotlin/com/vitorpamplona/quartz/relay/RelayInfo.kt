@@ -49,8 +49,9 @@ data class RelayInfo(
                     // Currently implemented: NIP-01 (basic), NIP-09 (deletion via
                     // DeletionRequestModule), NIP-11 (this doc), NIP-40 (expiration
                     // via ExpirationModule), NIP-42 (AUTH — when policy enables),
-                    // NIP-45 (COUNT), NIP-50 (search via FTS), NIP-62 (right to vanish).
-                    supported_nips = listOf("1", "9", "11", "40", "42", "45", "50", "62"),
+                    // NIP-45 (COUNT), NIP-50 (search via FTS), NIP-62 (right to vanish),
+                    // NIP-86 (relay management API — when admin pubkeys are configured).
+                    supported_nips = listOf("1", "9", "11", "40", "42", "45", "50", "62", "86"),
                 ),
             )
 

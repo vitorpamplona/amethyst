@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.relay.admin.BanStore
+import com.vitorpamplona.quartz.relay.admin.DynamicBanPolicy
 import kotlinx.coroutines.SupervisorJob
 import kotlin.coroutines.CoroutineContext
 
@@ -51,11 +54,45 @@ import kotlin.coroutines.CoroutineContext
 class Relay(
     val url: NormalizedRelayUrl,
     val store: IEventStore = EventStore(dbName = null, relay = url),
-    val info: RelayInfo = RelayInfo.default(url),
+    info: RelayInfo = RelayInfo.default(url),
     policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
 ) : AutoCloseable {
-    val server = NostrServer(store, policyBuilder, parentContext)
+    /**
+     * NIP-11 doc. Mutable so NIP-86 admin RPCs (`changerelayname`,
+     * `changerelaydescription`, `changerelayicon`) can swap the doc
+     * atomically. Readers (the NIP-11 GET endpoint) re-read on every
+     * request so changes are visible immediately, no restart needed.
+     */
+    @Volatile
+    var info: RelayInfo = info
+        private set
+
+    /** Mutates the live NIP-11 doc. Called by [admin.Nip86Server]. */
+    fun updateInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
+        info = RelayInfo(transform(info.document))
+    }
+
+    /**
+     * Runtime-mutable ban / allow lists. NIP-86 RPC handlers in
+     * [admin.Nip86Server] mutate this; the policy stack consults it on
+     * every accept call via [DynamicBanPolicy].
+     */
+    val banStore: BanStore = BanStore()
+
+    val server =
+        NostrServer(
+            store,
+            // Always prepend a DynamicBanPolicy so NIP-86 admin actions
+            // bite. When the operator-supplied builder returns
+            // [EmptyPolicy] we use the dynamic policy alone; otherwise
+            // we stack them so both layers must accept.
+            policyBuilder = {
+                val user = policyBuilder()
+                if (user === EmptyPolicy) DynamicBanPolicy(banStore) else user + DynamicBanPolicy(banStore)
+            },
+            parentContext,
+        )
 
     /**
      * Inserts events directly into the underlying store, bypassing the wire protocol.

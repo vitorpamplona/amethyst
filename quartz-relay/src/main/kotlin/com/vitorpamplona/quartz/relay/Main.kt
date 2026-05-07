@@ -114,6 +114,7 @@ fun main(args: Array<String>) {
             port = port,
             path = path,
             maxFrameBytes = frameLimit,
+            adminPubkeys = config.admin.pubkeys.toSet(),
         ).start()
 
     Runtime.getRuntime().addShutdownHook(
