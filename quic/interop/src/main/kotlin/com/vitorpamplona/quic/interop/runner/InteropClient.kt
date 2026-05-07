@@ -268,6 +268,46 @@ fun main() {
                 )
             }
 
+            // resumption: two sequential connections — the second
+            // resumes via PSK from the NewSessionTicket the first
+            // captured. Runner verifies the second handshake's pcap
+            // doesn't carry a Certificate (server skipped it because
+            // the PSK already authenticated us). Different shape from
+            // multiconnect (which never resumes) so it has its own
+            // dispatch.
+            "resumption", "zerortt" -> {
+                // zerortt extends resumption — the runner's testcase
+                // verifies the pcap shows >0 bytes in 0-RTT packets and
+                // ≤50% of total client-direction bytes in 1-RTT. Same
+                // 2-connection shape: connection 1 captures the ticket,
+                // connection 2 resumes. The 0-RTT path activates when
+                // the captured ticket has maxEarlyDataSize > 0 (set
+                // by the issuing server's NewSessionTicket early_data
+                // extension).
+                //
+                // Difference between the two testcases is the URL split:
+                //
+                //  - resumption: split URLs in half across the two
+                //    connections so the runner sees 2 distinct
+                //    handshakes both transferring data.
+                //  - zerortt: connection 1 fetches NOTHING (just hold
+                //    the conn open long enough to receive the
+                //    NewSessionTicket), connection 2 fetches ALL URLs
+                //    via 0-RTT. This keeps iter 0's 1-RTT byte count at
+                //    ~zero so the runner's 50% cap on 1-RTT bytes
+                //    stays comfortably under the limit.
+                runResumptionTest(
+                    requests = requests,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogPath = keyLogPath,
+                    qlogDir = qlogDir,
+                    zerortt = (testcase == "zerortt"),
+                )
+            }
+
             // keyupdate: same transfer flow but the client initiates a
             // RFC 9001 §6 1-RTT key update once the handshake is
             // confirmed. Runner verifies pcap shows BOTH client and
@@ -638,6 +678,328 @@ private fun runTransferTest(
         System.err.println("transfer $outcome")
         EXIT_FAIL
     }
+}
+
+/**
+ * Two QUIC connections, second resumed via PSK (resumption testcase).
+ *
+ * The runner's `resumption` testcase verifies the pcap contains exactly
+ * 2 handshakes — the first carrying the server's Certificate, the second
+ * NOT. We split the request URLs in half, fetch the first half on a
+ * fresh connection (capturing the NewSessionTicket the server issues
+ * post-handshake), then open a second connection with the cached
+ * [TlsResumptionState]; the second handshake is PSK-bound so the server
+ * skips Certificate / CertificateVerify entirely.
+ *
+ * Per-iteration qlog files at `$QLOGDIR/client-N.sqlog` so a stuck
+ * connection leaves a focused trace.
+ */
+private fun runResumptionTest(
+    requests: String,
+    downloadsDir: File,
+    cipherSuites: IntArray?,
+    offeredAlpns: List<Alpn>,
+    initialVersion: Int,
+    keyLogPath: String?,
+    qlogDir: File?,
+    /** When true, route ALL URLs to the second (resumed) connection's 0-RTT path. */
+    zerortt: Boolean = false,
+): Int {
+    val urls =
+        requests
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .map { runCatching { URI(it) }.getOrNull() }
+            .filter { it != null && it.host != null }
+            .map { it!! }
+    if (urls.size < 2) {
+        System.err.println("resumption needs at least 2 URLs (got ${urls.size})")
+        return EXIT_FAIL
+    }
+
+    downloadsDir.mkdirs()
+    qlogDir?.mkdirs()
+    val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
+
+    // resumption: split URLs in half across the two connections.
+    // zerortt: connection 1 fetches nothing (just gets the
+    // NewSessionTicket), connection 2 fetches all URLs via 0-RTT to
+    // keep the 1-RTT byte count from iter 0 GETs out of the runner's
+    // 1-RTT cap.
+    val firstUrls: List<URI>
+    val secondUrls: List<URI>
+    if (zerortt) {
+        firstUrls = emptyList()
+        secondUrls = urls
+    } else {
+        val splitAt = urls.size / 2
+        firstUrls = urls.subList(0, splitAt.coerceAtLeast(1))
+        secondUrls = urls.subList(splitAt.coerceAtLeast(1), urls.size)
+    }
+
+    // For the zerortt no-data iter 0 we still need a host/port to
+    // connect to — borrow the first URL purely for its authority.
+    val firstUrlsForConnection = if (firstUrls.isEmpty()) urls.subList(0, 1) else firstUrls
+    val firstUrlsForGet = firstUrls
+
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val outcome =
+        runBlocking {
+            // Connection 1 — full handshake, capture session ticket.
+            var capturedTicket: com.vitorpamplona.quic.tls.TlsResumptionState? = null
+            val outcome1 =
+                runOneResumptionConnection(
+                    iterIdx = 0,
+                    urls = firstUrlsForConnection,
+                    fetchUrls = firstUrlsForGet,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogger = keyLogger,
+                    qlogDir = qlogDir,
+                    scope = scope,
+                    resumption = null,
+                    onTicket = { capturedTicket = it },
+                )
+            if (outcome1 != "ok") return@runBlocking "resumption[0] $outcome1"
+            if (capturedTicket == null) return@runBlocking "resumption[0] no_ticket"
+
+            // Brief pause so the server fully tears down its connection
+            // state before we try to resume — picoquic in particular
+            // races the close-flush against the next ClientHello.
+            delay(50)
+
+            // Connection 2 — PSK-resumed handshake.
+            val outcome2 =
+                runOneResumptionConnection(
+                    iterIdx = 1,
+                    urls = secondUrls,
+                    fetchUrls = secondUrls,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogger = keyLogger,
+                    qlogDir = qlogDir,
+                    scope = scope,
+                    resumption = capturedTicket,
+                    onTicket = { /* could refresh, but the test is done */ },
+                )
+            if (outcome2 != "ok") return@runBlocking "resumption[1] $outcome2"
+            "ok"
+        }
+    scope.cancel()
+
+    return if (outcome == "ok") {
+        EXIT_OK
+    } else {
+        System.err.println("resumption $outcome")
+        EXIT_FAIL
+    }
+}
+
+private suspend fun runOneResumptionConnection(
+    iterIdx: Int,
+    /** URLs whose authority drives socket connect — must be non-empty. */
+    urls: List<URI>,
+    /**
+     * URLs to actually fetch. Distinct from [urls] for the zerortt
+     * iter 0 case where we want to establish a connection (using the
+     * first URL's authority) but not GET anything — the iter exists
+     * solely to receive a NewSessionTicket the next iter can resume on.
+     */
+    fetchUrls: List<URI>,
+    downloadsDir: File,
+    cipherSuites: IntArray?,
+    offeredAlpns: List<Alpn>,
+    initialVersion: Int,
+    keyLogger: SslKeyLogger?,
+    qlogDir: File?,
+    scope: CoroutineScope,
+    resumption: com.vitorpamplona.quic.tls.TlsResumptionState?,
+    onTicket: (com.vitorpamplona.quic.tls.TlsResumptionState) -> Unit,
+): String {
+    val first = urls[0]
+    val host = first.host
+    val port = first.port.takeIf { it > 0 } ?: 443
+    val authority = if (port == 443) host else "$host:$port"
+
+    val socket =
+        try {
+            UdpSocket.connect(host, port)
+        } catch (t: Throwable) {
+            return "udp_failed: ${t.message ?: t::class.simpleName}"
+        }
+    val qlogWriter =
+        qlogDir?.let { dir ->
+            QlogWriter(file = File(dir, "client-$iterIdx.sqlog"), odcidHex = "client$iterIdx")
+        }
+    val conn =
+        QuicConnection(
+            serverName = host,
+            config =
+                QuicConnectionConfig(
+                    initialMaxData = 32L * 1024 * 1024,
+                    initialMaxStreamDataBidiLocal = 32L * 1024 * 1024,
+                    initialMaxStreamDataBidiRemote = 32L * 1024 * 1024,
+                    initialMaxStreamDataUni = 32L * 1024 * 1024,
+                ),
+            tlsCertificateValidator = PermissiveCertificateValidator(),
+            alpnList = offeredAlpns.map { it.wireBytes },
+            initialVersion = initialVersion,
+            cipherSuites =
+                cipherSuites
+                    ?: intArrayOf(
+                        TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+                        TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+                    ),
+            extraSecretsListener = keyLogger?.listener,
+            qlogObserver = qlogWriter ?: com.vitorpamplona.quic.observability.QlogObserver.NoOp,
+            resumption = resumption,
+            onResumptionTicket = onTicket,
+        )
+    val driver = QuicConnectionDriver(conn, socket, scope)
+    driver.start()
+
+    // 0-RTT path: when this iteration is on a resumed connection AND the
+    // resumption ticket allowed early data, open the bidi streams and
+    // enqueue the GET requests BEFORE awaiting the handshake. The
+    // writer will pick them up using the 0-RTT keys derived in
+    // onEarlyDataKeysReady (long-header type=0x01) and ship them
+    // alongside (or right after) the ClientHello in the first
+    // datagram. RFC 9001 §4.6 / RFC 8446 §4.2.10 — the server may
+    // accept or reject 0-RTT; if rejected the data is silently lost
+    // on the server side and we'd need to re-send post-handshake. For
+    // the runner's 0-RTT testcase against a server that accepts, we
+    // get away without the rebuild — the server processes the
+    // requests and replies in 1-RTT after handshake.
+    val zeroRttPlanned = resumption != null && resumption.maxEarlyDataSize > 0 && fetchUrls.isNotEmpty()
+    // ALPN isn't yet renegotiated for THIS connection (we're
+    // pre-handshake), so use the cached ALPN from the prior
+    // connection. RFC 9001 §4.6 requires the same ALPN when sending
+    // 0-RTT data; the wire format MUST match it. aioquic's h3 server
+    // accepts 0-RTT at the TLS layer but silently drops bidi streams
+    // whose payload isn't a valid HEADERS frame, so we must
+    // pre-instantiate the right GetClient (h3 → Http3GetClient with
+    // its three uni control streams + HEADERS-framed bidi requests;
+    // hq-interop → raw "GET /\r\n").
+    val cachedAlpn = resumption?.negotiatedAlpn?.decodeToString().orEmpty()
+    val pre0RttClient: GetClient? =
+        if (zeroRttPlanned) {
+            when (cachedAlpn) {
+                "h3" -> Http3GetClient(conn, driver).also { it.init(scope) }
+                else -> HqInteropGetClient(conn, driver)
+            }
+        } else {
+            null
+        }
+    val pre0RttHandles =
+        if (pre0RttClient != null) {
+            // Pre-handshake stream open works because QuicConnection.init
+            // pre-loaded peerMaxStreamsBidi from the resumption state.
+            // prepareRequests opens N bidi streams under a single
+            // streamsLock hold so the writer's first 0-RTT drain
+            // coalesces them into one (or few) packets.
+            val handles = pre0RttClient.prepareRequests(authority, fetchUrls.map { it.path })
+            driver.wakeup()
+            handles
+        } else {
+            null
+        }
+
+    val handshake =
+        withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
+            runCatching { conn.awaitHandshake() }
+        }
+    if (handshake == null || handshake.isFailure) {
+        runCatching { driver.close() }
+        conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+        runCatching { qlogWriter?.close() }
+        return "handshake_failed"
+    }
+
+    val negotiated =
+        conn.tls.negotiatedAlpn
+            ?.decodeToString()
+            .orEmpty()
+    // Reuse the pre-handshake client when 0-RTT was attempted —
+    // its uni control streams (h3 SETTINGS + qpack streams) are
+    // already opened and either survived 0-RTT or got requeued
+    // by QuicConnection.onApplicationKeysReady's rejection path
+    // when the server skipped the early_data extension.
+    val client: GetClient =
+        pre0RttClient ?: when (negotiated) {
+            "h3" -> {
+                Http3GetClient(conn, driver).also { it.init(scope) }
+            }
+
+            "hq-interop" -> {
+                HqInteropGetClient(conn, driver)
+            }
+
+            else -> {
+                System.err.println("[resumption:$iterIdx] unrecognized ALPN '$negotiated'; defaulting to hq-interop")
+                HqInteropGetClient(conn, driver)
+            }
+        }
+
+    var anyFailed = false
+    if (pre0RttHandles != null) {
+        // 0-RTT path: streams already opened and requests already
+        // enqueued pre-handshake. Just collect the responses via the
+        // ALPN-matching client. If the server rejected 0-RTT at the
+        // TLS layer, QuicConnection.onApplicationKeysReady has already
+        // requeued the stream data through the 1-RTT keys — same
+        // handles, same response collection.
+        for ((url, handle) in fetchUrls.zip(pre0RttHandles)) {
+            val resp =
+                withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                    client.awaitResponse(handle)
+                }
+            if (resp == null || resp.body.isEmpty()) {
+                anyFailed = true
+                System.err.println("[resumption:$iterIdx] 0RTT GET ${url.path} → empty/timeout")
+                continue
+            }
+            if (resp.status != 200 && resp.status != 0) {
+                System.err.println("[resumption:$iterIdx] 0RTT GET ${url.path} → status ${resp.status}")
+                anyFailed = true
+                continue
+            }
+            val name = url.path.substringAfterLast('/').ifBlank { "index" }
+            File(downloadsDir, name).writeBytes(resp.body)
+        }
+    } else {
+        for (url in fetchUrls) {
+            val resp =
+                withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                    client.get(authority, url.path)
+                }
+            if (resp == null) {
+                anyFailed = true
+                System.err.println("[resumption:$iterIdx] GET ${url.path} → timeout")
+                break
+            }
+            if (resp.status != 200) {
+                System.err.println("[resumption:$iterIdx] GET ${url.path} → status ${resp.status}")
+                anyFailed = true
+                continue
+            }
+            val name = url.path.substringAfterLast('/').ifBlank { "index" }
+            File(downloadsDir, name).writeBytes(resp.body)
+        }
+    }
+
+    // Give the server a chance to send its NewSessionTicket — picoquic
+    // in particular emits the ticket a few hundred ms post-handshake,
+    // sometimes alongside the response stream's FIN.
+    delay(200)
+
+    runCatching { driver.close() }
+    conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+    runCatching { qlogWriter?.close() }
+    return if (anyFailed) "request_failed" else "ok"
 }
 
 /**

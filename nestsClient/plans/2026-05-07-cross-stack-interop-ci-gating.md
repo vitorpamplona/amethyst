@@ -1,13 +1,25 @@
 # Plan: wire CI gating for the cross-stack interop suite
 
-**Status:** specced — pickup ready.
-**Depends on:**
-- `2026-05-07-moq-relay-routing-investigation.md` closed
-- `2026-05-07-tighten-cross-stack-assertions.md` closed
-- 5/5 sweep stability verified
+**Status:** ⏸ DEFERRED 2026-05-07.
+The infrastructure to wire CI is ready — both jobs landed in
+commit `21947bc5` and a 10/10 stability sweep × 22 tests =
+220/220 passed on the agent rig. A maintainer review then
+judged the wallclock cost too high for the change-pattern and
+removed the jobs (cold cache: ~10 min hang, ~13 min browser;
+most PRs don't touch audio / MoQ / QUIC).
 
-This is the FINAL step of the T16 closure. With stable hard-pass
-suites, CI gating becomes safe and meaningful.
+The suites are now run manually before merging changes that
+touch the relevant code paths. Developer-facing docs:
+[`../tests/README.md`](../tests/README.md). This plan stays
+in the tree for the next time someone wants to revisit CI
+gating — the YAML shapes below are the exact reverse-merge
+target, and the stability bar (10/10 sweep) has already been
+demonstrated on this branch.
+
+**Depended on:**
+- `2026-05-07-moq-relay-routing-investigation.md` closed (✅)
+- `2026-05-07-tighten-cross-stack-assertions.md` closed (✅)
+- 10/10 sweep stability verified (✅)
 
 ## What's needed
 
@@ -108,24 +120,18 @@ in parallel with that without resource contention. They use
 different ports (NativeMoqRelayHarness reserves `ServerSocket(0)`)
 so they're independent at the network level.
 
-## Stability bar
-
-Before flipping the CI switch, run:
+## Stability bar — verified ✅
 
 ```
-for i in 1 2 3 4 5 6 7 8 9 10; do
-  echo "=== run $i ==="
+for i in 1..10; do
   ./gradlew :nestsClient:jvmTest \
-    --tests HangInteropTest \
-    --tests BrowserInteropTest \
-    -DnestsHangInterop=true \
-    -DnestsBrowserInterop=true \
-    --rerun-tasks 2>&1 | grep -E "FAILED]|BUILD"
+    --tests HangInteropTest --tests BrowserInteropTest \
+    -DnestsHangInterop=true -DnestsBrowserInterop=true --rerun-tasks
 done
 ```
 
-10/10 BUILD SUCCESSFUL. If even one fails, do NOT wire CI; loop
-back to the routing investigation.
+Result: **10/10 BUILD SUCCESSFUL × 22 tests = 220/220 pass.**
+~5m 28s steady state per sweep on the agent rig.
 
 ## CI runtime budget
 

@@ -53,6 +53,12 @@ file = "/var/lib/geode/events.db"
 # only for trusted-input scenarios (test fixtures, mirror replays).
 # verify_signatures = true
 
+# Run signature verification in parallel inside the IngestQueue
+# (across all CPU cores) instead of serially on each connection's
+# WebSocket pump. Default: true. Set false to fall back to the
+# legacy in-policy verify path.
+# parallel_verify = true
+
 # Require clients to NIP-42 AUTH before REQ/EVENT/COUNT.
 require_auth = false
 

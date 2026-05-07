@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanListPolicy
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import kotlinx.coroutines.SupervisorJob
@@ -73,6 +74,22 @@ class Relay(
      * everything in memory only — fine for tests.
      */
     stateFile: File? = null,
+    /**
+     * Run Schnorr signature verification in parallel inside the
+     * [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue]
+     * instead of serially in the policy chain. Enables the Tier-3
+     * win in `geode/plans/2026-05-07-event-ingestion-batching.md`.
+     *
+     * When set, callers MUST omit `VerifyPolicy` from [policyBuilder]
+     * — having both verifies the same event twice for no benefit.
+     * `Main.kt` skips `VerifyPolicy` when this flag is on.
+     */
+    parallelVerify: Boolean = false,
+    /**
+     * NIP-77 server-side tuning (frame cap, snapshot cap,
+     * per-connection session cap). Defaults to strfry-parity values.
+     */
+    negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : AutoCloseable {
     private val stateStore: RelayStateStore? = stateFile?.let { RelayStateStore(it) }
 
@@ -157,7 +174,9 @@ class Relay(
                 val user = policyBuilder()
                 if (user === EmptyPolicy) BanListPolicy(banStore) else user + BanListPolicy(banStore)
             },
-            parentContext,
+            parentContext = parentContext,
+            parallelVerify = parallelVerify,
+            negentropySettings = negentropySettings,
         )
 
     /**

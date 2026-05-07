@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip77Negentropy
 import com.vitorpamplona.negentropy.Negentropy
 import com.vitorpamplona.negentropy.storage.StorageVector
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
@@ -31,26 +32,63 @@ import com.vitorpamplona.quartz.utils.Hex
  * Used when acting as a relay (or relay-relay sync) to respond to
  * incoming NEG-OPEN and NEG-MSG from a client.
  *
+ * The constructor takes [IdAndTime] entries (just `created_at` and the
+ * 32-byte event id) to keep the per-session footprint at ~40 B/entry —
+ * matching strfry's `MemoryView` path. A [List]<Event> overload is
+ * kept for callers (and tests) that already hold full events.
+ *
  * Usage:
- * 1. On NEG-OPEN: create a [NegentropyServerSession] with the matching local events
+ * 1. On NEG-OPEN: create a [NegentropyServerSession] with the matching local entries
  * 2. Call [processMessage] with the initial hex message from NEG-OPEN
  * 3. Send back the resulting [NegMsgMessage]
  * 4. On subsequent NEG-MSG: call [processMessage] again and send the response
+ *
+ * @param frameSizeLimit max bytes per NEG-MSG response (raw payload,
+ *   before hex). Default `500_000` matches strfry's hard-coded
+ *   `Negentropy ne(storage, 500'000)` so a single round-trip carries
+ *   the same payload as strfry's reconciliation.
  */
 class NegentropyServerSession(
     val subId: String,
-    localEvents: List<Event>,
-    frameSizeLimit: Long = 0,
+    localEntries: List<IdAndTime>,
+    frameSizeLimit: Long = DEFAULT_FRAME_SIZE_LIMIT,
 ) {
     private val storage = StorageVector()
     private val negentropy: Negentropy
 
     init {
-        for (event in localEvents) {
-            storage.insert(event.createdAt, event.id)
+        for (entry in localEntries) {
+            storage.insert(entry.createdAt, entry.id)
         }
         storage.seal()
         negentropy = Negentropy(storage, frameSizeLimit)
+    }
+
+    companion object {
+        /**
+         * strfry parity: `Negentropy ne(storage, 500'000)` in
+         * `RelayNegentropy.cpp`. Hex-encoded that's ~1 MB on the wire
+         * per NEG-MSG, the de-facto sync round-trip size.
+         */
+        const val DEFAULT_FRAME_SIZE_LIMIT: Long = 500_000L
+
+        /**
+         * Convenience for callers that hold full [Event] objects
+         * (mostly tests + relay-relay sync paths). Production server
+         * code should call the [IdAndTime] constructor directly via
+         * `IEventStore.snapshotIdsForNegentropy` to avoid the full
+         * Event materialisation that this projection collapses.
+         */
+        fun fromEvents(
+            subId: String,
+            localEvents: List<Event>,
+            frameSizeLimit: Long = DEFAULT_FRAME_SIZE_LIMIT,
+        ): NegentropyServerSession =
+            NegentropyServerSession(
+                subId = subId,
+                localEntries = localEvents.map { IdAndTime(it.createdAt, it.id) },
+                frameSizeLimit = frameSizeLimit,
+            )
     }
 
     fun processMessage(hexMessage: String): NegMsgMessage? {

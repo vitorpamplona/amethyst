@@ -285,7 +285,7 @@ class NegentropySessionTest {
         val openCmd = clientSession.open()
 
         // Server processes via NegentropyServerSession
-        val serverSession = NegentropyServerSession("sub1", serverEvents)
+        val serverSession = NegentropyServerSession.fromEvents("sub1", serverEvents)
         val response = serverSession.processMessage(openCmd.initialMessage)
 
         assertNotNull(response)

@@ -366,6 +366,52 @@ class LoadBenchmark {
         }
 
     /**
+     * Same workload as [publishThroughputSingleClient] (sequential
+     * publish-and-confirm on one connection) — kept as a regression
+     * floor for the group-commit code path. Synchronous publishes
+     * never coalesce in the writer (batch size is always 1), so the
+     * EPS here measures per-event SQLite tx cost. The pipelined win
+     * shows up in [publishPipelinedSingleClient].
+     */
+    @Test
+    fun publishGroupCommitSingleClient() =
+        benchmark("publish group-commit single client") {
+            runBenchmarkServer { server, http ->
+                val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+                val client = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
+                try {
+                    val signer = NostrSignerSync(KeyPair())
+                    val relayUrl = server.url.normalizeRelayUrl()
+
+                    val n = 10_000
+                    var ok = 0
+                    val elapsed =
+                        measureTime {
+                            runBlocking {
+                                repeat(n) { i ->
+                                    val event = signer.sign(TextNoteEvent.build("group-commit $i"))
+                                    if (client.publishAndConfirm(event, setOf(relayUrl))) ok++
+                                }
+                            }
+                        }
+                    val eps = (n * 1000.0) / elapsed.inWholeMilliseconds
+                    println(
+                        "events=$n ok=$ok elapsedMs=${elapsed.inWholeMilliseconds} eps=${"%.0f".format(eps)}",
+                    )
+                    check(ok == n) { "expected all $n events accepted, got $ok" }
+                    // Floor: the pre-batching baseline was ~760 EPS
+                    // single-client (see plan). Anything below 500
+                    // means the group-commit / ingest-queue rewrite
+                    // regressed the synchronous path.
+                    check(eps > 500) { "synchronous EPS $eps fell below the 500 floor" }
+                } finally {
+                    client.disconnect()
+                    scope.cancel()
+                }
+            }
+        }
+
+    /**
      * One publisher, N subscribers. Publishes one EVENT and measures
      * fan-out latency: time from publish to last subscriber receiving.
      */
@@ -611,6 +657,101 @@ class LoadBenchmark {
                         scope.cancel()
                     }
                 }
+            }
+        }
+
+    /**
+     * One publisher fires N EVENTs back-to-back without awaiting
+     * intermediate OKs, then collects all OKs by event id. This is
+     * the workload that exercises Tier 2 (per-connection ingest
+     * pipeline) + Tier 1 (group commit) together — multiple events
+     * are in flight on the same connection, so the writer can batch.
+     *
+     * Verifies the relaxed OK contract: every event id receives
+     * exactly one OK frame, in any order.
+     */
+    @Test
+    fun publishPipelinedSingleClient() =
+        benchmark("publish pipelined single client") {
+            runBenchmarkServer { server, http ->
+                val n = 10_000
+                val signer = NostrSignerSync(KeyPair())
+                val events =
+                    runBlocking {
+                        (0 until n).map { i ->
+                            signer.sign(TextNoteEvent.build("pipe $i"))
+                        }
+                    }
+                val ids = events.mapTo(HashSet()) { it.id }
+
+                val httpUrl =
+                    okhttp3.Request
+                        .Builder()
+                        .url(server.url.replace("ws://", "http://"))
+                        .build()
+                val okSeen = AtomicLong()
+                val okFailures = AtomicLong()
+                val unknownIds = AtomicLong()
+                val seenIds =
+                    java.util.concurrent.ConcurrentHashMap
+                        .newKeySet<String>()
+                val done = java.util.concurrent.CountDownLatch(1)
+
+                val ws =
+                    http.newWebSocket(
+                        httpUrl,
+                        object : okhttp3.WebSocketListener() {
+                            override fun onMessage(
+                                webSocket: okhttp3.WebSocket,
+                                text: String,
+                            ) {
+                                if (!text.startsWith("[\"OK\"")) return
+                                // ["OK","<id>",true|false,"<reason>"] —
+                                // a tiny string scan is enough for a
+                                // bench. Index 6 is past `["OK","`.
+                                val idStart = 7
+                                val idEnd = text.indexOf('"', idStart)
+                                if (idEnd <= idStart) return
+                                val id = text.substring(idStart, idEnd)
+                                if (!ids.contains(id)) {
+                                    unknownIds.incrementAndGet()
+                                    return
+                                }
+                                if (!seenIds.add(id)) return
+                                if (text.contains(",true,")) {
+                                    okSeen.incrementAndGet()
+                                } else {
+                                    okFailures.incrementAndGet()
+                                }
+                                if (okSeen.get() + okFailures.get() == n.toLong()) done.countDown()
+                            }
+                        },
+                    )
+
+                val elapsed =
+                    measureTime {
+                        // Burst-send: queue every EVENT to OkHttp's
+                        // outbound buffer without any await, then
+                        // wait for the corresponding OK frames.
+                        for (event in events) {
+                            ws.send("""["EVENT",${event.toJson()}]""")
+                        }
+                        check(done.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
+                            "timed out waiting for OKs: ok=${okSeen.get()} rej=${okFailures.get()} unknown=${unknownIds.get()}"
+                        }
+                    }
+                val eps = (n * 1000.0) / elapsed.inWholeMilliseconds
+                println(
+                    "events=$n ok=${okSeen.get()} rejected=${okFailures.get()} " +
+                        "unknownIds=${unknownIds.get()} elapsedMs=${elapsed.inWholeMilliseconds} eps=${"%.0f".format(eps)}",
+                )
+                check(okSeen.get() == n.toLong()) {
+                    "expected $n accepted OKs, got ${okSeen.get()} (rejected ${okFailures.get()})"
+                }
+                check(seenIds.size == n) {
+                    "expected $n unique OK ids, got ${seenIds.size} — duplicate or missing OKs"
+                }
+                ws.cancel()
             }
         }
 

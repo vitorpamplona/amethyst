@@ -106,6 +106,35 @@ class QuicConnection(
      * produces a `client.sqlog` consumable by qvis.
      */
     val qlogObserver: QlogObserver = QlogObserver.NoOp,
+    /**
+     * Resumption state from a prior connection — when non-null, this
+     * connection's ClientHello will offer a `pre_shared_key` extension
+     * referencing the cached ticket, and the key schedule will seed
+     * the early secret from the cached PSK rather than zeros (RFC 8446
+     * §7.1). On a successful PSK negotiation the server skips
+     * Certificate / CertificateVerify and we save a round-trip plus
+     * ~1 KB of cert bytes.
+     *
+     * Caller produces this from [onResumptionTicket] on a previous
+     * connection. The interop runner's `resumption` testcase exercises
+     * exactly this: connection 1 receives a NewSessionTicket and
+     * stashes the state, connection 2 reuses it.
+     */
+    val resumption: com.vitorpamplona.quic.tls.TlsResumptionState? = null,
+    /**
+     * Hook invoked when the server issues a NewSessionTicket. The TLS
+     * layer derives the per-ticket PSK and surfaces a fully-formed
+     * [com.vitorpamplona.quic.tls.TlsResumptionState]; the QUIC
+     * connection passes it through here so the application can stash it
+     * (e.g. in a per-host resumption cache) for a future reconnect.
+     *
+     * Default no-op so existing callers compile unchanged. Servers
+     * routinely issue 1-2 tickets per connection — the callback may
+     * fire more than once, and the application is free to keep all of
+     * them (a small per-host LRU is the typical shape) or just the
+     * latest.
+     */
+    val onResumptionTicket: ((com.vitorpamplona.quic.tls.TlsResumptionState) -> Unit)? = null,
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
     var destinationConnectionId: ConnectionId = ConnectionId.random(8)
@@ -215,6 +244,26 @@ class QuicConnection(
 
     @Volatile
     internal var previousReceiveProtection: PacketProtection? = null
+
+    /**
+     * RFC 9001 §4.10 — 0-RTT send-side packet protection. Installed when
+     * the TLS layer derives `client_early_traffic_secret` (right after
+     * a resumption ClientHello with the early_data extension goes out)
+     * and cleared when 1-RTT keys arrive (the protocol forbids using
+     * 0-RTT keys after that point — the next outbound packet must use
+     * 1-RTT and a short header).
+     *
+     * When non-null AND [application]'s 1-RTT [LevelState.sendProtection]
+     * is null, the writer builds outbound application data as long-
+     * header 0-RTT packets (type 0x01) using these keys; the packet
+     * number space is shared with 1-RTT (RFC 9000 §17.2.3).
+     *
+     * Receive side is symmetric on the server only — the server never
+     * sends 0-RTT packets to the client, so we never need a 0-RTT
+     * receive protection slot.
+     */
+    @Volatile
+    internal var zeroRttSendProtection: PacketProtection? = null
 
     @Volatile
     var handshakeComplete: Boolean = false
@@ -472,13 +521,57 @@ class QuicConnection(
                 qlogObserver.onKeyUpdated("server", EncryptionLevel.HANDSHAKE)
             }
 
+            override fun onEarlyDataKeysReady(
+                cipherSuite: Int,
+                clientEarlySecret: ByteArray,
+            ) {
+                // Resumption + 0-RTT path: install 0-RTT packet
+                // protection so the writer can encrypt outbound
+                // application data with early-data keys until 1-RTT
+                // keys arrive. Cleared in onApplicationKeysReady (RFC
+                // 9001 §4.10 forbids using 0-RTT keys once 1-RTT is
+                // available).
+                zeroRttSendProtection = packetProtectionFromSecret(cipherSuite, clientEarlySecret)
+                qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
+            }
+
             override fun onApplicationKeysReady(
                 cipherSuite: Int,
                 clientSecret: ByteArray,
                 serverSecret: ByteArray,
             ) {
+                // RFC 9001 §4.10 — 0-RTT rejection fallback. If we
+                // offered 0-RTT but the server's EncryptedExtensions
+                // didn't echo the early_data extension, any application
+                // data we already shipped under early-data keys was
+                // silently dropped server-side. Re-queue it so the
+                // writer replays it under the about-to-be-installed
+                // 1-RTT keys. Must run BEFORE we install the 1-RTT
+                // sendProtection — once the writer sees 1-RTT keys
+                // available it'll start drainOutbound under short
+                // headers; we want any pending retransmits to flow
+                // through that path with the original byte content.
+                //
+                // requeueAllInflightStreamData walks streamsList under
+                // the assumption the caller holds streamsLock — which
+                // we do here because the parser path that fired this
+                // listener (handleServerFinished → onApplicationKeysReady)
+                // runs inside streamsLock.withLock { feedDatagram(...) }
+                // in the read loop.
+                val rejected0Rtt =
+                    resumption != null &&
+                        resumption.maxEarlyDataSize > 0 &&
+                        !tls.earlyDataAccepted
+                if (rejected0Rtt) {
+                    requeueAllInflightStreamData()
+                    application.cryptoSend.requeueAllInflight()
+                    application.sentPackets.clear()
+                }
                 application.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 application.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
+                // Drop 0-RTT keys — the writer must use 1-RTT short
+                // headers from here on (RFC 9001 §4.10).
+                zeroRttSendProtection = null
                 // Stash the live secrets + cipher suite so we can derive
                 // next-phase keys via HKDF-Expand-Label("quic ku") on demand
                 // when the peer initiates a key update (RFC 9001 §6). Only
@@ -499,6 +592,11 @@ class QuicConnection(
                 tls.negotiatedAlpn?.let { qlogObserver.onAlpnNegotiated(it.decodeToString()) }
                 handshakeDoneSignal.complete(Unit)
                 extraSecretsListener?.onHandshakeComplete()
+            }
+
+            override fun onNewSessionTicket(state: com.vitorpamplona.quic.tls.TlsResumptionState) {
+                onResumptionTicket?.invoke(state)
+                extraSecretsListener?.onNewSessionTicket(state)
             }
         }
 
@@ -525,6 +623,7 @@ class QuicConnection(
             certificateValidator = tlsCertificateValidator,
             offeredAlpns = alpnList,
             cipherSuites = cipherSuites,
+            resumption = resumption,
         )
 
     init {
@@ -538,6 +637,30 @@ class QuicConnection(
             PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp)
         initial.receiveProtection =
             PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp)
+
+        // Resumption + 0-RTT: pre-load flow-control limits from the
+        // remembered transport parameters so streams opened BEFORE the
+        // new connection's ServerHello arrives have credit to push 0-RTT
+        // STREAM frames on the wire. RFC 9001 §7.4.1 explicitly allows
+        // (in fact requires) the client to use REMEMBERED transport
+        // params for this purpose, while skipping the CID-bound ones
+        // (initial_source_connection_id etc.) which would mismatch the
+        // fresh CIDs we just generated. Server's real new params arrive
+        // in EncryptedExtensions and the existing
+        // [applyPeerTransportParameters] hook then overwrites these
+        // pre-loaded values.
+        if (resumption?.peerTransportParameters != null) {
+            try {
+                val tp = TransportParameters.decode(resumption.peerTransportParameters)
+                sendConnectionFlowCredit = tp.initialMaxData ?: 0L
+                peerMaxStreamsBidi = tp.initialMaxStreamsBidi ?: 0L
+                peerMaxStreamsUni = tp.initialMaxStreamsUni ?: 0L
+            } catch (_: Throwable) {
+                // Bad cached params shouldn't block the connection; we
+                // just won't be able to send 0-RTT data. Server's
+                // real params arrive on EE either way.
+            }
+        }
     }
 
     /** Begin the handshake — emits ClientHello into Initial CRYPTO. */

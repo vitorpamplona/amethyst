@@ -153,3 +153,49 @@ data class TlsFinished(
         ): TlsFinished = TlsFinished(r.readBytes(length))
     }
 }
+
+/**
+ * Parsed NewSessionTicket message body (RFC 8446 §4.6.1). Wire layout:
+ *
+ *   uint32 ticket_lifetime;
+ *   uint32 ticket_age_add;
+ *   opaque ticket_nonce<0..255>;
+ *   opaque ticket<1..2^16-1>;
+ *   Extension extensions<0..2^16-2>;
+ *
+ * The QUIC layer derives the per-ticket PSK from
+ * [com.vitorpamplona.quic.tls.resumptionPsk] using `resumption_master_secret`
+ * + [nonce] and stashes the [ticket] verbatim as the identity for the
+ * pre_shared_key extension on a future resumed connection.
+ *
+ * Extensions are decoded but not yet acted on. The two interesting ones for
+ * a 0-RTT-capable client would be `early_data` (signals the server is
+ * willing to accept 0-RTT data with this PSK) and (in HTTP/3) `max_early_data`;
+ * we surface raw extensions for callers that want to inspect them.
+ */
+data class TlsNewSessionTicket(
+    val ticketLifetimeSec: Long,
+    val ticketAgeAdd: Long,
+    val nonce: ByteArray,
+    val ticket: ByteArray,
+    val extensions: List<TlsExtension>,
+)
+
+/**
+ * Parse a NewSessionTicket body (the bytes after the 4-byte handshake
+ * header has already been consumed by the caller's framing loop).
+ */
+fun parseNewSessionTicketBody(r: QuicReader): TlsNewSessionTicket {
+    val lifetime = r.readUint32().toLong() and 0xFFFFFFFFL
+    val ageAdd = r.readUint32().toLong() and 0xFFFFFFFFL
+    val nonce = r.readTlsOpaque1()
+    val ticket = r.readTlsOpaque2()
+    val extensions = TlsExtension.decodeList(r)
+    return TlsNewSessionTicket(
+        ticketLifetimeSec = lifetime,
+        ticketAgeAdd = ageAdd,
+        nonce = nonce,
+        ticket = ticket,
+        extensions = extensions,
+    )
+}

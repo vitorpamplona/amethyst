@@ -34,14 +34,17 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
 
 /**
@@ -54,11 +57,12 @@ class RelaySession(
     private val scope: CoroutineScope,
     private val onSend: (String) -> Unit,
     private val onClose: (RelaySession) -> Unit,
+    negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
     /** NIP-77 negentropy state for this connection. */
-    private val negentropy = NegSessionRegistry(store, ::send)
+    private val negentropy = NegSessionRegistry(store, ::send, negentropySettings)
 
     private fun addSubscription(
         subId: String,
@@ -129,11 +133,29 @@ class RelaySession(
             return
         }
 
+        // Fire-and-forget: hand the event to the group-commit writer
+        // and continue reading from the WebSocket without waiting on
+        // SQLite. The OK frame is sent from the writer's callback,
+        // possibly out of arrival order — NIP-01 pairs OKs to events
+        // by id, so reordering is fine.
         try {
-            store.insert(cmd.event)
-            send(OkMessage(cmd.event.id, true, ""))
-        } catch (e: Exception) {
-            send(OkMessage(cmd.event.id, false, e.message ?: e::class.simpleName ?: "unkown error"))
+            store.submit(cmd.event) { outcome ->
+                when (outcome) {
+                    IEventStore.InsertOutcome.Accepted -> {
+                        send(OkMessage(cmd.event.id, true, ""))
+                    }
+
+                    is IEventStore.InsertOutcome.Rejected -> {
+                        send(OkMessage(cmd.event.id, false, outcome.reason))
+                    }
+                }
+            }
+        } catch (_: ClosedSendChannelException) {
+            // Server is shutting down — the queue is closed. Reply
+            // with a transient failure so a client re-trying against
+            // the next instance gets a sane signal; the WS itself is
+            // about to be torn down by the server-stop path.
+            send(OkMessage(cmd.event.id, false, "error: relay shutting down"))
         }
     }
 

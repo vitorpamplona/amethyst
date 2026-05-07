@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -36,16 +38,20 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * End of Stored Events (EOSE), and then continues to stream matching new events as they
  * are inserted.
  *
- * Live fanout from `insert` to interested subscribers is index-driven via [FilterIndex]:
- * each [query] registers its filters; [insert] looks up the candidate set and only delivers
- * to those whose filters actually match. This avoids the quadratic
- * O(N_subscribers × N_filters_per_sub) per-event walk that a naïve broadcast would do.
+ * Live fanout from [submit] / [insert] to interested subscribers is index-driven via
+ * [FilterIndex]: each [query] registers its filters; on accepted ingest the index returns
+ * the (much smaller) candidate set and we deliver only to those whose filters actually
+ * match. This avoids the quadratic O(N_subscribers × N_filters_per_sub) per-event walk
+ * that a SharedFlow-based broadcast would do.
  *
  * @property store The underlying persistent storage for events.
+ * @property ingest The group-commit writer pipeline. Accepted events fan out via the
+ *  index; rejected events do not.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class LiveEventStore(
     private val store: IEventStore,
+    private val ingest: IngestQueue,
 ) {
     private val index = FilterIndex<LiveSubscription>()
 
@@ -60,12 +66,58 @@ class LiveEventStore(
         val deliver: (Event) -> Unit,
     )
 
+    /**
+     * Fire-and-forget enqueue: hand [event] to the [IngestQueue] and
+     * fire [onComplete] once the writer's batch has a per-row
+     * decision. On `Accepted` the live stream is also fanned out via
+     * [FilterIndex] so subscribers see the event. Suspends only when
+     * the ingest queue is full (backpressure).
+     */
+    suspend fun submit(
+        event: Event,
+        onComplete: (IEventStore.InsertOutcome) -> Unit,
+    ) {
+        ingest.submit(event) { outcome ->
+            if (outcome is IEventStore.InsertOutcome.Accepted) {
+                fanout(event)
+            }
+            onComplete(outcome)
+        }
+    }
+
+    /**
+     * Suspending insert kept for callers that don't care about
+     * pipelining (tests, scripted paths). Routes through the same
+     * [IngestQueue] as [submit] so the batch write path is exercised
+     * even by tests that prefer a sequential `insert` API.
+     * Throws on rejection so callers can `try` around it the way the
+     * old API did.
+     */
     suspend fun insert(event: Event) {
-        store.insert(event)
-        // Live fanout. The index returns a super-set; `match` enforces
-        // negative constraints. Synchronous delivery — callers are
-        // expected to keep `deliver` cheap (typically a `tryEmit` to
-        // a per-connection outbound queue).
+        val done = CompletableDeferred<Unit>()
+        submit(event) { outcome ->
+            when (outcome) {
+                IEventStore.InsertOutcome.Accepted -> {
+                    done.complete(Unit)
+                }
+
+                is IEventStore.InsertOutcome.Rejected -> {
+                    done.completeExceptionally(IllegalStateException(outcome.reason))
+                }
+            }
+        }
+        done.await()
+    }
+
+    /**
+     * Live fanout for an accepted event. The index returns a
+     * super-set; `Filter.match` enforces negative constraints. Each
+     * candidate's `deliver` is expected to be cheap (typically a
+     * `trySend` to a per-connection outbound queue) — this runs on
+     * the [IngestQueue] drain coroutine, so a slow sub blocks the
+     * batch writer.
+     */
+    private fun fanout(event: Event) {
         for (sub in index.candidatesFor(event)) {
             if (sub.filters.any { it.match(event) }) {
                 sub.deliver(event)
@@ -85,8 +137,8 @@ class LiveEventStore(
         // race the previous SharedFlow-based implementation closed
         // with `onSubscription`).
         //
-        // The set is read from the publisher's coroutine (in
-        // `deliver`, called synchronously from `insert`) and written
+        // The set is read from the [IngestQueue] drain coroutine (in
+        // `deliver`, called synchronously from `fanout`) and written
         // from this coroutine (the historical-replay closure below).
         // It must be a persistent / immutable Set under an
         // AtomicReference — wrapping a mutable HashSet would race
@@ -165,4 +217,19 @@ class LiveEventStore(
         }
         return merged
     }
+
+    /**
+     * Lightweight snapshot for NIP-77 negentropy. Returns
+     * `(created_at, id)` pairs only — no Event materialisation —
+     * matching strfry's `MemoryView` footprint of ~40 B/entry.
+     *
+     * If [maxEntries] is non-null, the underlying store may return
+     * up to `maxEntries + 1` entries; the +1 sentinel lets the
+     * caller distinguish "exactly at cap" from "exceeds cap" without
+     * scanning past the cap.
+     */
+    suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int? = null,
+    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
 }
