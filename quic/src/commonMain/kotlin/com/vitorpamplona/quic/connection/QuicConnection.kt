@@ -579,7 +579,11 @@ class QuicConnection(
         destinationConnectionId = retryPacket.scid
         val proto = InitialSecrets.derive(destinationConnectionId.bytes)
         val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
-        initial.resetForVersionNegotiation(
+        // Use resetForRetry, NOT resetForVersionNegotiation: RFC 9001 §5.7
+        // requires the Initial PN namespace to continue across the Retry
+        // boundary. Resetting PN to 0 caused the runner to flag
+        // "Client reset the packet number. Check failed for PN 0".
+        initial.resetForRetry(
             sendProtection =
                 PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp),
             receiveProtection =

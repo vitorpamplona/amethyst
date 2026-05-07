@@ -142,8 +142,14 @@ class RetryHandlingTest {
         assertContentEquals(retryToken, client.retryToken)
         assertTrue(client.retryConsumed)
 
-        // Initial PN space reset — next allocation is 0 again.
-        assertEquals(0L, client.initial.pnSpace.nextPacketNumber)
+        // RFC 9001 §5.7 + RFC 9000 §17.2.5: the Initial PN namespace
+        // CONTINUES across the Retry boundary. The first ClientHello at
+        // PN=0 already consumed PN=0 (it was sent on the wire even though
+        // the server discarded it in favor of replying with Retry). The
+        // post-Retry Initial uses PN=1, not PN=0. The runner's retry
+        // testcase explicitly checks this — a client that resets PN to 0
+        // gets "Client reset the packet number. Check failed for PN 0".
+        assertEquals(1L, client.initial.pnSpace.nextPacketNumber)
         assertEquals(-1L, client.initial.pnSpace.largestReceived)
 
         // Next drain produces the retried Initial: token in header, ClientHello
@@ -179,7 +185,10 @@ class RetryHandlingTest {
                 largestReceivedInSpace = -1L,
             )
         assertNotNull(parsed, "retried Initial must decrypt under keys derived from new DCID")
-        assertEquals(0L, parsed.packet.packetNumber, "retried Initial PN must be 0 (RFC 9000 §17.2.5.2)")
+        // RFC 9001 §5.7: Initial PN namespace continues across Retry. The
+        // pre-Retry Initial in this test already consumed PN=0, so the
+        // retried Initial uses PN=1.
+        assertEquals(1L, parsed.packet.packetNumber, "retried Initial PN continues from pre-Retry counter (RFC 9001 §5.7)")
         // Decoded payload starts with at least one CRYPTO frame (frame type 0x06).
         val frames =
             com.vitorpamplona.quic.frame

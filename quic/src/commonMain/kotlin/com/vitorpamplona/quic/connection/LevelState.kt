@@ -153,4 +153,45 @@ class LevelState {
         this.sendProtection = sendProtection
         this.receiveProtection = receiveProtection
     }
+
+    /**
+     * Reset the Initial-level state for a successful Retry.
+     *
+     * Differs from [resetForVersionNegotiation] in that the packet number
+     * namespace is **preserved**: per RFC 9001 §5.7 + RFC 9000 §17.2.5,
+     * the Initial PN space spans the original AND the post-Retry Initials.
+     * The client MUST NOT reuse a packet number across the boundary —
+     * the next Initial sent after Retry uses PN = (last-used) + 1.
+     *
+     * The runner's retry test specifically checks for this: a client that
+     * resets the PN gets "Client reset the packet number. Check failed
+     * for PN 0".
+     *
+     * Everything else resets to mirror VN semantics:
+     *  - cryptoSend cleared so the caller can re-enqueue the cached
+     *    ClientHello on top of fresh empty buffer state.
+     *  - sentPackets cleared because the pre-Retry Initial's loss-recovery
+     *    state references PNs the server will never ACK (the server
+     *    discarded that packet when it sent the Retry).
+     *  - keys re-derived from the new DCID and reinstalled.
+     *  - keysDiscarded latch reset (the pre-Retry keys are gone, but the
+     *    level itself is still alive with the new keys).
+     */
+    internal fun resetForRetry(
+        sendProtection: PacketProtection,
+        receiveProtection: PacketProtection,
+    ) {
+        // pnSpace is INTENTIONALLY preserved — see kdoc above.
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = false
+        this.sendProtection = sendProtection
+        this.receiveProtection = receiveProtection
+    }
 }
