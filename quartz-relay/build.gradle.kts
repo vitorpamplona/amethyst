@@ -42,6 +42,11 @@ dependencies {
     api(libs.ktor.server.cio)
     api(libs.ktor.server.websockets)
 
+    // TOML parsing for the operator config file. Mirrors the section
+    // layout of nostr-rs-relay's config.toml so existing operators can
+    // port their configs nearly verbatim.
+    implementation(libs.fourkoma)
+
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.secp256k1.kmp.jni.jvm)

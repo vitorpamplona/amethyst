@@ -27,40 +27,65 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.relay.config.RelayConfig
 import java.io.File
 
 /**
- * Standalone entry point. Run with `./gradlew :quartz-relay:run` (when the
- * application plugin is configured) or `java -cp ... Main`.
+ * Standalone entry point.
  *
- * Usage:
- *   --host <addr>      bind address (default 0.0.0.0)
- *   --port <n>         tcp port (default 7447, 0 to autobind)
- *   --path <p>         ws path (default /)
- *   --info <file>      NIP-11 doc file (default: built-in)
- *   --db <file>        sqlite db path (default: in-memory)
- *   --auth             require NIP-42 AUTH for REQ/EVENT/COUNT
- *   --verify           verify event signatures (recommended for any
- *                      relay accepting traffic from real clients)
+ * Run with:
+ *   ./gradlew :quartz-relay:run --args="--config /etc/quartz-relay.toml"
+ * or
+ *   java -cp ... com.vitorpamplona.quartz.relay.MainKt --port 7447 --verify
+ *
+ * Configuration precedence (highest to lowest):
+ *   1. CLI flags (`--host`, `--port`, …)
+ *   2. TOML file passed via `--config <path>`
+ *   3. Built-in defaults (host=0.0.0.0, port=7447, in-memory db, …)
+ *
+ * Sections currently parsed AND enforced: `[info]`, `[network]`,
+ * `[database]`, `[options]`. Sections parsed but not yet enforced
+ * (forward-compat for the rate-limit / authorization work):
+ * `[limits]`, `[authorization]`.
+ *
+ * CLI flags:
+ *   --config <file>    TOML config (see config.example.toml)
+ *   --host <addr>      bind address (default from config or 0.0.0.0)
+ *   --port <n>         tcp port (default from config or 7447, 0 to autobind)
+ *   --path <p>         ws path (default from config or /)
+ *   --info <file>      NIP-11 doc file (overrides [info] section)
+ *   --db <file>        sqlite db path (overrides [database].file)
+ *   --auth             require NIP-42 AUTH (sets options.require_auth = true)
+ *   --verify           verify event signatures (sets options.verify_signatures = true)
  */
 fun main(args: Array<String>) {
     val a = parseArgs(args)
-    val host = a.opt("--host") ?: "0.0.0.0"
-    val port = a.opt("--port")?.toInt() ?: 7447
-    val path = a.opt("--path") ?: "/"
-    val infoFile = a.opt("--info")?.let { File(it) }
-    val dbFile = a.opt("--db")
-    val requireAuth = a.flag("--auth")
-    val verifySigs = a.flag("--verify")
 
-    val urlStr = "ws://$host:$port$path"
-    // For binding 0.0.0.0 we still want to scope the relay to a "public" url
-    // shape for NIP-42 challenge validation; use the host the operator
-    // exposes (--info usually carries the public URL). Fall back to
-    // 127.0.0.1 so localhost smoke tests work.
-    val advertisedUrl = (if (host == "0.0.0.0") "ws://127.0.0.1:$port$path" else urlStr).normalizeRelayUrl()
+    val config: RelayConfig =
+        a
+            .opt("--config")
+            ?.let { RelayConfig.fromFile(File(it)) }
+            ?: RelayConfig()
 
-    val info = infoFile?.let { RelayInfo.fromFile(it) } ?: RelayInfo.default(advertisedUrl)
+    val host = a.opt("--host") ?: config.network.host
+    val port = a.opt("--port")?.toInt() ?: config.network.port
+    val path = a.opt("--path") ?: config.network.path
+
+    val cliInfoFile = a.opt("--info")?.let { File(it) }
+    val dbFile = a.opt("--db") ?: config.database.file?.takeUnless { config.database.in_memory }
+    val requireAuth = a.flag("--auth") || config.options.require_auth
+    val verifySigs = a.flag("--verify") || config.options.verify_signatures
+
+    // Advertised URL: explicit `info.relay_url` wins, then build from
+    // host/port/path. 0.0.0.0 bind → 127.0.0.1 in the URL so NIP-42
+    // challenges are well-formed.
+    val advertisedHost = if (host == "0.0.0.0") "127.0.0.1" else host
+    val advertisedUrl =
+        (config.info.relay_url ?: "ws://$advertisedHost:$port$path").normalizeRelayUrl()
+
+    val info =
+        cliInfoFile?.let { RelayInfo.fromFile(it) }
+            ?: config.resolveInfo(advertisedUrl)
 
     val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
 
@@ -71,6 +96,8 @@ fun main(args: Array<String>) {
             requireAuth -> { -> FullAuthPolicy(advertisedUrl) }
             else -> { -> EmptyPolicy }
         }
+
+    warnUnenforcedSections(config)
 
     val relay = Relay(advertisedUrl, store, info, policyBuilder)
     val server = LocalRelayServer(relay, host = host, port = port, path = path).start()
@@ -83,10 +110,41 @@ fun main(args: Array<String>) {
     )
 
     println("quartz-relay listening on ${server.url}")
-    println("NIP-11 info doc: curl -H 'Accept: application/nostr+json' http://$host:$port$path")
+    println("NIP-11 info doc: curl -H 'Accept: application/nostr+json' http://$advertisedHost:$port$path")
 
     // Park the main thread; shutdown hook handles teardown.
     Thread.currentThread().join()
+}
+
+/** Surface a warning when the operator has set sections we don't yet enforce. */
+private fun warnUnenforcedSections(config: RelayConfig) {
+    val warnings = mutableListOf<String>()
+    val l = config.limits
+    if (l.max_event_bytes != null ||
+        l.max_ws_message_bytes != null ||
+        l.max_ws_frame_bytes != null ||
+        l.messages_per_sec != null ||
+        l.subscriptions_per_min != null ||
+        l.max_subscriptions_per_session != null ||
+        l.max_filters_per_req != null
+    ) {
+        warnings += "[limits] section is parsed but NOT YET ENFORCED — rate limits / message size caps are pending."
+    }
+    val auth = config.authorization
+    if (auth.pubkey_whitelist.isNotEmpty() ||
+        auth.pubkey_blacklist.isNotEmpty() ||
+        auth.kind_whitelist.isNotEmpty() ||
+        auth.kind_blacklist.isNotEmpty()
+    ) {
+        warnings += "[authorization] section is parsed but NOT YET ENFORCED — pubkey/kind allow-deny lists are pending."
+    }
+    if (config.options.reject_future_seconds != null) {
+        warnings += "[options].reject_future_seconds is parsed but NOT YET ENFORCED."
+    }
+    if (config.network.remote_ip_header != null) {
+        warnings += "[network].remote_ip_header is parsed but NOT YET ENFORCED — IP-based limits are pending."
+    }
+    warnings.forEach { System.err.println("warning: $it") }
 }
 
 private class Args(

@@ -1,0 +1,66 @@
+# Example config for quartz-relay. Section layout mirrors
+# nostr-rs-relay's config.toml so existing operators can port across.
+#
+# Run with:
+#   ./gradlew :quartz-relay:run --args="--config /etc/quartz-relay.toml"
+#
+# CLI flags override individual values: e.g. `--port 8888` wins over
+# `[network].port`.
+
+[info]
+# The wss:// URL clients use to reach this relay (mandatory for NIP-42
+# AUTH challenges). If not set, the relay synthesises one from the
+# [network] section.
+relay_url = "wss://relay.example.com/"
+name = "Example Quartz Relay"
+description = "A quartz-relay deployment."
+contact = "admin@example.com"
+# Operator pubkey (NIP-11). Optional.
+# pubkey = "..."
+# Override the supported NIPs advertised on the NIP-11 endpoint. If
+# omitted, the relay advertises the NIPs it actually implements.
+# supported_nips = [1, 9, 11, 40, 42, 45, 50, 62]
+
+[network]
+host = "0.0.0.0"
+port = 7447
+path = "/"
+# Set when behind a reverse proxy (nginx/Caddy/Cloudflare). Required
+# before any IP-based rate limit means anything. Parsed today, enforced
+# once rate limits land.
+# remote_ip_header = "X-Forwarded-For"
+
+[database]
+# True keeps an in-memory SQLite db (events vanish on restart). Useful
+# for tests; set false + `file = "..."` for persistent storage.
+in_memory = false
+file = "/var/lib/quartz-relay/events.db"
+
+[options]
+# Drop events whose Schnorr signature does not verify. Strongly
+# recommended for any relay accepting traffic from real clients.
+verify_signatures = true
+# Require clients to NIP-42 AUTH before REQ/EVENT/COUNT.
+require_auth = false
+# Reject events whose `created_at` is more than this many seconds in the
+# future. Parsed today, enforced once the matching policy lands.
+# reject_future_seconds = 1800
+
+# --- Sections below are parsed today but NOT YET ENFORCED. They are
+# accepted for forward compatibility — the matching enforcement code is
+# tracked separately. The relay logs a warning for each used section. ---
+
+[limits]
+# max_event_bytes = 131072
+# max_ws_message_bytes = 1048576
+# max_ws_frame_bytes = 1048576
+# messages_per_sec = 10
+# subscriptions_per_min = 60
+# max_subscriptions_per_session = 32
+# max_filters_per_req = 10
+
+[authorization]
+# pubkey_whitelist = []
+# pubkey_blacklist = []
+# kind_whitelist = []
+# kind_blacklist = []
