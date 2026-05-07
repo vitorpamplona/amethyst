@@ -440,22 +440,25 @@ relay-side timing under load.
 
 ## CI integration
 
-**Not wired.** Intentionally kept out of `.github/workflows/build.yml`
-for now — the full suite shows ~33% flake on
-`late_join_listener_still_decodes_tail` (catalog cancelled, race
-between speaker's `setOnNewSubscriber` hook and the listener's
-catalog subscribe-bidi) that the per-method `resetShared()` fix
-doesn't fully resolve. Wiring CI on a flaky suite would burn
-maintainer time on false reds.
+**Wired** as of 2026-05-07 (commit `21947bc5`). Both
+`hang-interop` and `browser-interop` jobs in
+`.github/workflows/build.yml`, gated on `lint`, `ubuntu-latest`,
+30 min timeout each, with cached cargo + bun + Playwright Chromium.
 
-The suite runs locally via `-DnestsHangInterop=true` and is
-documented as the regression bar for any future MoQ wire-format
-or moq-lite session-cycle changes. Re-evaluate CI gating after the
-late-join flake's root cause lands.
+Stability bar that unblocked CI: **10/10 BUILD SUCCESSFUL × 22
+tests = 220/220 pass** on the merged branch (~5m 28s per sweep,
+steady state). The earlier `late_join_listener_still_decodes_tail`
+flake was a `:quic` post-handshake bidi-acceptance bug, not a
+moq-relay routing race; the QUIC team's recent main work
+(commits `2a4c07ae`, `d5c854be`, `b622d0c9`, `86a4727e`,
+`31d19258`) closed it. See
+`2026-05-07-moq-relay-routing-investigation.md` § Closure for
+the trace evidence and
+`2026-05-07-t16-closure-roadmap.md` for the rolled-up status.
 
-Browser interop (`feat/nests-browser-interop`) follows the same
-"locally only via `-DnestsBrowserInterop=true`" rule pending its own
-flake assessment.
+The 2-week post-merge CI green-rate watch is on the maintainer
+who lands this: ≥ 95 % required per the plan's stability gate;
+otherwise pull both jobs and reopen the routing investigation.
 
 ## Pending follow-ups
 

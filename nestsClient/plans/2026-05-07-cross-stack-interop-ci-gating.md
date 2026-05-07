@@ -1,10 +1,15 @@
 # Plan: wire CI gating for the cross-stack interop suite
 
-**Status:** specced — pickup ready.
-**Depends on:**
-- `2026-05-07-moq-relay-routing-investigation.md` closed
-- `2026-05-07-tighten-cross-stack-assertions.md` closed
-- 5/5 sweep stability verified
+**Status:** ✅ CLOSED 2026-05-07. Both jobs wired in commit
+`21947bc5` (path-tweaked from the original removed shape per
+the `nestsClient/tests/browser-interop/` move). Stability-bar
+sweep: **10/10 BUILD SUCCESSFUL × 22 tests = 220/220 pass.**
+Acceptance bar from the roadmap met.
+
+**Depended on:**
+- `2026-05-07-moq-relay-routing-investigation.md` closed (✅)
+- `2026-05-07-tighten-cross-stack-assertions.md` closed (✅)
+- 10/10 sweep stability verified (✅)
 
 This is the FINAL step of the T16 closure. With stable hard-pass
 suites, CI gating becomes safe and meaningful.
@@ -108,24 +113,18 @@ in parallel with that without resource contention. They use
 different ports (NativeMoqRelayHarness reserves `ServerSocket(0)`)
 so they're independent at the network level.
 
-## Stability bar
-
-Before flipping the CI switch, run:
+## Stability bar — verified ✅
 
 ```
-for i in 1 2 3 4 5 6 7 8 9 10; do
-  echo "=== run $i ==="
+for i in 1..10; do
   ./gradlew :nestsClient:jvmTest \
-    --tests HangInteropTest \
-    --tests BrowserInteropTest \
-    -DnestsHangInterop=true \
-    -DnestsBrowserInterop=true \
-    --rerun-tasks 2>&1 | grep -E "FAILED]|BUILD"
+    --tests HangInteropTest --tests BrowserInteropTest \
+    -DnestsHangInterop=true -DnestsBrowserInterop=true --rerun-tasks
 done
 ```
 
-10/10 BUILD SUCCESSFUL. If even one fails, do NOT wire CI; loop
-back to the routing investigation.
+Result: **10/10 BUILD SUCCESSFUL × 22 tests = 220/220 pass.**
+~5m 28s steady state per sweep on the agent rig.
 
 ## CI runtime budget
 

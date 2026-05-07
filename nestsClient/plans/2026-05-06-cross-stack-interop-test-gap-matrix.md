@@ -85,12 +85,16 @@ DoD #5 (gap matrix coverage) closed.
   Hard floors landed in
   `2026-05-07-tighten-cross-stack-assertions.md` after the merge:
   late-join (`≥ 1.5 s after warmup`), mute-window (`≥ 2.5 s`
-  lower + tightened `< 5.0 s` upper), I14 (`decoderOutputs ≥ 4`),
-  stereo / hot-swap / packet-loss (`≥ 0.5–1 s`), and the
+  lower + `< 5.5 s` upper kept), I14 (`decoderOutputs ≥ 4`),
+  stereo (`≥ 1 s × 2 ch`), packet-loss (`≥ 0.5 s`), and the
   browser-publisher helper now hard-asserts on the listener side.
-- Suite-mode runs are stable post-merge (5/5 sweeps green on
-  `HangInteropTest` × hardened `BrowserInteropTest`). CI gating
-  follow-up: `2026-05-07-cross-stack-interop-ci-gating.md`.
+  Hot-swap kept a (now-documented) soft-pass on the browser
+  tier — Chromium's `@moq/lite` 0.2.x re-attach across
+  `Active::Ended → Active` is unreliable; T12 protection is
+  asserted by the hang-tier counterpart.
+- CI gating wired in
+  `2026-05-07-cross-stack-interop-ci-gating.md` after a 10/10
+  sweep × 22 tests = 220/220 pass stability bar.
 
 ## Files referenced
 

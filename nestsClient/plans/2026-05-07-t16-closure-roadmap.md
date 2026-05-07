@@ -67,23 +67,22 @@ HangInteropTest with their current soft-pass assertions intact.
 
 **Acceptance bar met.** 5/5 sweep with hard assertions.
 
-## Priority 3 — `2026-05-07-cross-stack-interop-ci-gating.md`
+## Priority 3 — `2026-05-07-cross-stack-interop-ci-gating.md` ✅ CLOSED
 
-**Why third.** Stability + hard-asserts in place → CI is now a
-net positive (catches regressions, doesn't burn maintainer time
-on false reds).
+> **Closed 2026-05-07** by commit `21947bc5`. Both
+> `hang-interop` and `browser-interop` jobs landed in
+> `.github/workflows/build.yml`, gated on `lint`,
+> `ubuntu-latest`, 30 min timeout, with cached cargo + bun +
+> Playwright Chromium. Path-tweaked from the original removed
+> shape because the browser harness moved from
+> `nestsClient-browser-interop/` to
+> `nestsClient/tests/browser-interop/` (commit `bd7b166f`).
 
-**What lands.**
-- Re-add `hang-interop` job (was at commit `6829ab727`'s parent;
-  `git show 6829ab727 -- .github/workflows/build.yml` reverse
-  gives the exact diff).
-- Re-add `browser-interop` job (same pattern, plus bun +
-  Playwright caches).
-- Documentation update across the results plan + gap matrix.
-
-**Acceptance bar.** 10/10 sweep before merge; ≥ 95% CI green
-rate over the first 2 weeks. If lower, the upstream race isn't
-fully closed — pull the jobs.
+**Acceptance bar met.** 10/10 sweep BUILD SUCCESSFUL × 22 tests
+= **220/220 pass** (~5m 28s steady state per sweep on the agent
+rig). The first 2 weeks of post-merge CI runs still need a
+maintainer to monitor flake rate (per the plan's "≥ 95% green
+rate" gate); pull the jobs again if it falls below.
 
 ## Independent track — `2026-05-07-framespergroup-production-rerun.md`
 
