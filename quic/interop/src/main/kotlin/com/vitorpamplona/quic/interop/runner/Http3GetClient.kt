@@ -22,6 +22,7 @@ package com.vitorpamplona.quic.interop.runner
 
 import com.vitorpamplona.quic.QuicWriter
 import com.vitorpamplona.quic.connection.QuicConnection
+import com.vitorpamplona.quic.connection.drainPeerInitiatedUniStreamsIntoBlackHole
 import com.vitorpamplona.quic.http3.Http3Frame
 import com.vitorpamplona.quic.http3.Http3FrameReader
 import com.vitorpamplona.quic.http3.Http3FrameType
@@ -29,6 +30,7 @@ import com.vitorpamplona.quic.http3.Http3Settings
 import com.vitorpamplona.quic.http3.Http3StreamType
 import com.vitorpamplona.quic.qpack.QpackDecoder
 import com.vitorpamplona.quic.qpack.QpackEncoder
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
 
 /** Common shape for the two interop GET clients (HTTP/3 and HQ-interop). */
@@ -59,7 +61,7 @@ data class GetResponse(
 class Http3GetClient(
     private val conn: QuicConnection,
 ) : GetClient {
-    suspend fun init() {
+    suspend fun init(scope: CoroutineScope) {
         // Control stream: type-0x00 prefix followed by a SETTINGS frame
         // (empty body is legal — RFC 9114 §7.2.4).
         val control = conn.openUniStream()
@@ -81,6 +83,16 @@ class Http3GetClient(
         val w3 = QuicWriter()
         w3.writeVarint(Http3StreamType.QPACK_DECODER)
         qpackDec.send.enqueue(w3.toByteArray())
+
+        // RFC 9114 §6.2: the server opens its own three uni streams
+        // (control, qpack encoder, qpack decoder). Their bytes accumulate
+        // in per-stream `incomingChannel`s (capacity 64); without an
+        // active consumer the channel saturates and `:quic` tears down
+        // the connection with INTERNAL_ERROR. We don't actually use the
+        // dynamic table or care about the server's settings, so drain
+        // and discard. Without this, multiplexing testcase fails after
+        // ~4.5s with "consumer overflowed" tear-down.
+        conn.drainPeerInitiatedUniStreamsIntoBlackHole(scope)
     }
 
     /**

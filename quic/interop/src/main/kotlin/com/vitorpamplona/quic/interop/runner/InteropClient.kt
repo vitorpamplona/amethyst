@@ -89,6 +89,16 @@ fun main() {
             else -> null
         }
 
+    // For the versionnegotiation testcase the runner expects us to send
+    // an Initial advertising a version the server doesn't support, then
+    // honor its VN response by retrying with v1. agent A's
+    // QuicVersion.FORCE_VERSION_NEGOTIATION drives that flow.
+    val initialVersion =
+        when (testcase) {
+            "versionnegotiation" -> com.vitorpamplona.quic.packet.QuicVersion.FORCE_VERSION_NEGOTIATION
+            else -> com.vitorpamplona.quic.packet.QuicVersion.V1
+        }
+
     // ALPN selection. Different servers configure different ALPNs PER
     // testcase, with no consistent convention:
     //   - quic-go-qns         — strictly hq-interop for non-http3 tests
@@ -131,13 +141,14 @@ fun main() {
             "handshake", "chacha20", "handshakeloss",
             "transfer", "http3", "multiplexing",
             "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
-            "retry", "ipv6",
+            "retry", "ipv6", "versionnegotiation",
             -> {
                 runTransferTest(
                     requests = requests,
                     downloadsDir = downloadsDir,
                     cipherSuites = cipherSuites,
                     offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
                     keyLogPath = keyLogPath,
                     parallel = (testcase == "multiplexing"),
                 )
@@ -168,6 +179,7 @@ private fun runTransferTest(
     downloadsDir: File,
     cipherSuites: IntArray?,
     offeredAlpns: List<Alpn>,
+    initialVersion: Int,
     keyLogPath: String?,
     parallel: Boolean,
 ): Int {
@@ -204,6 +216,7 @@ private fun runTransferTest(
                     config = QuicConnectionConfig(),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
                     alpnList = offeredAlpns.map { it.wireBytes },
+                    initialVersion = initialVersion,
                     cipherSuites =
                         cipherSuites
                             ?: intArrayOf(
@@ -235,7 +248,7 @@ private fun runTransferTest(
             val client: GetClient =
                 when (negotiated) {
                     "h3" -> {
-                        Http3GetClient(conn).also { it.init() }
+                        Http3GetClient(conn).also { it.init(scope) }
                     }
 
                     "hq-interop" -> {
