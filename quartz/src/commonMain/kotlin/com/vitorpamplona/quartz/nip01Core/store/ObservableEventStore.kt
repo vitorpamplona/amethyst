@@ -189,6 +189,11 @@ class ObservableEventStore(
 
     override suspend fun count(filters: List<Filter>): Int = inner.count(filters)
 
+    override suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int?,
+    ): List<IdAndTime> = inner.snapshotIdsForNegentropy(filters, maxEntries)
+
     override suspend fun delete(filter: Filter) {
         inner.delete(filter)
         _changes.emit(StoreChange.DeleteByFilter(listOf(filter)))

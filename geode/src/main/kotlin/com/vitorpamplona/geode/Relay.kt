@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanListPolicy
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import kotlinx.coroutines.SupervisorJob
@@ -84,6 +85,11 @@ class Relay(
      * `Main.kt` skips `VerifyPolicy` when this flag is on.
      */
     parallelVerify: Boolean = false,
+    /**
+     * NIP-77 server-side tuning (frame cap, snapshot cap,
+     * per-connection session cap). Defaults to strfry-parity values.
+     */
+    negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : AutoCloseable {
     private val stateStore: RelayStateStore? = stateFile?.let { RelayStateStore(it) }
 
@@ -168,8 +174,9 @@ class Relay(
                 val user = policyBuilder()
                 if (user === EmptyPolicy) BanListPolicy(banStore) else user + BanListPolicy(banStore)
             },
-            parentContext,
+            parentContext = parentContext,
             parallelVerify = parallelVerify,
+            negentropySettings = negentropySettings,
         )
 
     /**

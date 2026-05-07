@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
@@ -56,11 +57,12 @@ class RelaySession(
     private val scope: CoroutineScope,
     private val onSend: (String) -> Unit,
     private val onClose: (RelaySession) -> Unit,
+    negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
     /** NIP-77 negentropy state for this connection. */
-    private val negentropy = NegSessionRegistry(store, ::send)
+    private val negentropy = NegSessionRegistry(store, ::send, negentropySettings)
 
     private fun addSubscription(
         subId: String,

@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.EventFactory
 
@@ -314,6 +315,11 @@ class SQLiteEventStore(
     suspend fun count(filter: Filter): Int = pool.useReader { queryBuilder.count(filter, it) }
 
     suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters, it) }
+
+    suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int? = null,
+    ): List<IdAndTime> = pool.useReader { queryBuilder.snapshotIdsForNegentropy(filters, it, maxEntries) }
 
     suspend fun delete(filter: Filter) = pool.useWriter { queryBuilder.delete(filter, it) }
 
