@@ -78,22 +78,26 @@ class LiveEventStore(
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
-        // During the historical replay, mark ids the store has
+        // During the historical replay, record ids the store has
         // emitted so the live path can dedupe. The index registers
         // *before* the replay starts (otherwise an event accepted
         // mid-replay would slip past the live path entirely — same
         // race the previous SharedFlow-based implementation closed
-        // with `onSubscription`). Anything the store and the live
-        // path both observe gets dropped here on the live side.
+        // with `onSubscription`).
         //
-        // Held in an AtomicReference because the live-dispatch
-        // coroutine (which calls `deliver` from `insert`) needs to
-        // see the post-EOSE handoff promptly. Once cleared to null,
-        // the dedupe check short-circuits and every live event is
-        // forwarded. The set itself is mutated only from the
-        // historical-replay closure below, which runs on the same
-        // coroutine that owns `query` — no cross-thread mutation.
-        val seenIds = AtomicReference<HashSet<String>?>(HashSet())
+        // The set is read from the publisher's coroutine (in
+        // `deliver`, called synchronously from `insert`) and written
+        // from this coroutine (the historical-replay closure below).
+        // It must be a persistent / immutable Set under an
+        // AtomicReference — wrapping a mutable HashSet would race
+        // because AtomicReference only protects the reference, not
+        // the set's internal state. Each `add` is a CAS-loop that
+        // publishes a new immutable Set; `deliver`'s `load()` always
+        // sees a fully-constructed snapshot.
+        //
+        // Once cleared to null after EOSE, `deliver` short-circuits
+        // and every live event is forwarded.
+        val seenIds = AtomicReference<Set<String>?>(emptySet())
 
         val sub =
             LiveSubscription(
@@ -108,7 +112,17 @@ class LiveEventStore(
         index.register(filters, sub)
         try {
             store.query<Event>(filters) { event ->
-                seenIds.load()?.add(event.id)
+                // CAS-loop on an immutable Set. The historical
+                // replay is single-writer in steady state, so the
+                // CAS typically succeeds first try; the loop only
+                // matters if we lose a race on `seenIds.store(null)`
+                // (post-EOSE), in which case `current == null` and
+                // we exit cleanly.
+                while (true) {
+                    val current = seenIds.load() ?: break
+                    if (event.id in current) break
+                    if (seenIds.compareAndSet(current, current + event.id)) break
+                }
                 onEach(event)
             }
             onEose()

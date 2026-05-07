@@ -500,6 +500,7 @@ class LoadBenchmark {
                         // FilterIndex's byAuthor bucket.
                         val keys = List(subs) { KeyPair() }
                         val pubkeys = keys.map { it.pubKey.toHexKey() }
+                        val signers = keys.map { NostrSignerSync(it) }
 
                         // Per-subscriber arrival timestamp. We
                         // overwrite per round; the publish path waits
@@ -579,8 +580,7 @@ class LoadBenchmark {
                             val start = System.nanoTime()
                             for (i in 0 until totalEvents) {
                                 val target = i % subs
-                                val signer = NostrSignerSync(keys[target])
-                                val event = signer.sign(TextNoteEvent.build("scale-$i"))
+                                val event = signers[target].sign(TextNoteEvent.build("scale-$i"))
                                 arrivalNs.set(target, 0)
                                 val pubStart = System.nanoTime()
                                 pubClient.publishAndConfirm(event, setOf(relayUrl))

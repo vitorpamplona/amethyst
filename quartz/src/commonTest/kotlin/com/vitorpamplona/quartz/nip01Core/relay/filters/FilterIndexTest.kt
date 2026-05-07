@@ -234,6 +234,62 @@ class FilterIndexTest {
     }
 
     @Test
+    fun tagsAllFilterMatchesEventsCarryingAllTagValues() {
+        // tagsAll keys the index on the first single-letter entry
+        // exactly like `tags`. Events that match the index lookup
+        // still have to pass `Filter.match` for the AND-of-values
+        // semantics — the index is a super-set.
+        val index = FilterIndex<Sub>()
+        val s = Sub("s")
+        index.register(Filter(tagsAll = mapOf("p" to listOf(pTag1))), s)
+
+        assertTrue(s in index.candidatesFor(event(tags = arrayOf(arrayOf("p", pTag1)))))
+        assertFalse(s in index.candidatesFor(event(tags = arrayOf(arrayOf("p", pTag2)))))
+    }
+
+    @Test
+    fun multiCharTagKeyFallsThroughToKindThenUnindexed() {
+        // The index only buckets single-letter tag keys (NIP-12).
+        // A filter with only multi-char tag keys should fall through
+        // to the next dimension.
+        val index = FilterIndex<Sub>()
+        val withKind = Sub("withKind")
+        val withoutKind = Sub("withoutKind")
+
+        index.register(Filter(tags = mapOf("alt" to listOf("foo")), kinds = listOf(7)), withKind)
+        index.register(Filter(tags = mapOf("alt" to listOf("foo"))), withoutKind)
+
+        // withKind goes to KindKey(7); withoutKind to Unindexed.
+        assertTrue(withKind in index.candidatesFor(event(kind = 7)))
+        assertFalse(withKind in index.candidatesFor(event(kind = 1)))
+        assertTrue(withoutKind in index.candidatesFor(event(kind = 1)))
+        assertTrue(withoutKind in index.candidatesFor(event(kind = 7)))
+    }
+
+    @Test
+    fun reRegisterAddsAdditionalKeysWithoutDuplicating() {
+        // Calling register twice on the same subscriber unions the
+        // bucket assignments — useful when an observer wants to
+        // listen on multiple narrowing dimensions accumulated over
+        // time. The bucket sets must dedupe so the subscriber
+        // appears once in `candidatesFor`.
+        val index = FilterIndex<Sub>()
+        val s = Sub("s")
+        index.register(Filter(authors = listOf(authorA)), s)
+        index.register(Filter(kinds = listOf(7)), s)
+
+        // Author hit + kind hit = same subscriber, returned once.
+        val cands = index.candidatesFor(event(pubkey = authorA, kind = 7))
+        assertEquals(1, cands.size)
+        assertTrue(s in cands)
+
+        // Unregister cleans both dimensions.
+        index.unregister(s)
+        assertTrue(index.candidatesFor(event(pubkey = authorA)).isEmpty())
+        assertTrue(index.candidatesFor(event(kind = 7)).isEmpty())
+    }
+
+    @Test
     fun registerThenUnregisterLeavesNoStaleBuckets() {
         // Churn test — repeatedly add and remove a subscriber and
         // verify the index ends up empty (no leaked bucket entries).
