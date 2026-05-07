@@ -25,6 +25,92 @@
   Also note the upstream moved from `kixelated/moq` to `moq-dev/moq`;
   REV's `KIXELATED_MOQ_GIT_REV` predates the move.
 
+### Source-level analysis (moq-rs 0.10.25 + main HEAD)
+
+Working through `moq-relay/src/connection.rs`, `moq-lite/src/lite/publisher.rs`,
+`moq-relay/src/cluster.rs` and `moq-lite/src/model/{origin,broadcast}.rs`
+the routing path is:
+
+1. Speaker connects → relay's `subscriber.start_announce` runs
+   (`moq-lite/src/lite/subscriber.rs:198-227`). It creates the
+   `BroadcastDynamic` with `dynamic = 1` BEFORE calling
+   `cluster.publisher.publish_broadcast(...)`. publish_broadcast
+   pushes to the `primary` origin.
+2. `cluster.run_combined()` (`moq-relay/src/cluster.rs:199-215`) is
+   a tokio shovel that loops on `primary.announced()` /
+   `secondary.announced()` and calls `combined.publish_broadcast(...)`.
+   This is the only place primary→combined gets fanned in, and
+   `tokio::select!` doesn't run in the same task as start_announce,
+   so there's a scheduling gap between primary publish and combined
+   publish.
+3. Listener connects → relay's `publisher.run_announces` reads from
+   `combined.consume_only(...)` and forwards announces over the wire.
+4. Listener subscribes → relay's `publisher.recv_subscribe`
+   (`moq-lite/src/lite/publisher.rs:217-250`) runs
+   `self.origin.consume_broadcast(&subscribe.broadcast)`
+   **synchronously** against combined. If the broadcast is in
+   combined's tree, returns Some; otherwise None → `Error::NotFound`
+   (wire code 13).
+
+Even on main HEAD `bdda6bd1` the `consume_broadcast` lookup is
+synchronous (`moq-lite/src/lite/publisher.rs:243-250`). Commit
+`8d4a175` only renamed it to `get_broadcast` — same semantics.
+Commit `bea9b3a` introduced `OriginConsumer::wait_for_broadcast`
+as an async alternative AND added a TODO at
+`moq-relay/src/web.rs:325`: "switch to `announced_broadcast`
+(bounded by the fetch deadline) so freshly-connected subscribers
+don't get a spurious 404 before the broadcast has gossiped." That
+is upstream's own acknowledgement that the relay's subscribe path
+inherits the gossip race, but the fix has not been applied to
+`recv_subscribe` (the path this investigation cares about).
+
+### Failure-mode hypotheses (post-source-read)
+
+- **H1 (gossip race):** still the leading candidate, but with a
+  more specific mechanism. The Speaker→Relay primary publish and
+  the Relay→Listener combined publish are in different async
+  tasks; `consume_broadcast` is synchronous. The listener receives
+  the wire ANNOUNCE only AFTER `combined.publish_broadcast(...)`,
+  so by the time the listener-issued SUBSCRIBE arrives at the
+  relay's `recv_subscribe`, combined SHOULD contain the broadcast.
+  But the smoking-gun trace shows the speaker-side never logs the
+  upstream SUBSCRIBE for the failing path — i.e. either (a) the
+  listener-side ANNOUNCE→SUBSCRIBE wire ordering is being broken
+  by something between the relay's combined update and the wire
+  emit, or (b) `consume_broadcast` returns None despite combined
+  knowing about the broadcast. The trace from Step 1 should
+  disambiguate.
+
+- **H1b (`subscribe_track` Cancel due to `dynamic == 0`):**
+  `BroadcastConsumer::subscribe_track` returns `Error::NotFound`
+  (mapped to wire code 13) if the underlying state's
+  `dynamic == 0` (`moq-lite/src/model/broadcast.rs:300-302`).
+  start_announce increments `dynamic` BEFORE publish_broadcast,
+  so the combined consumer's clone-of-clone-of-broadcast SHOULD
+  always observe `dynamic >= 1`. But it relies on `BroadcastConsumer`
+  / `BroadcastProducer` sharing the same `state: conducer::Producer`
+  cell; if the broadcast got `Clone`d through combined's
+  `publish_broadcast`'s `broadcast.clone()` call into a position
+  where the state is shared, dynamic stays correct. (Confirmed —
+  `BroadcastConsumer::Clone` shares state.) So this isn't the
+  cause.
+
+- **H1c (run_combined backlog):** the cluster's run_combined loop
+  is a SINGLE-CONSUMER pump from primary.announced(); if the loop
+  is parked on a slow combined publish (rare; publish_broadcast is
+  effectively a tree insert), a follow-up announce sits in the
+  primary queue. But the listener doesn't observe the announce
+  via combined until the pump runs — so this doesn't cause a
+  spurious subscribe-without-announce. It only delays the
+  listener's announce notification.
+
+The trace from Step 1 is needed to pick between H1, H1c, and a
+bug we haven't surfaced yet. **Step 4 will not yield a fix** —
+verified by reading post-0.10.25 commits on main; no fix to
+`recv_subscribe`'s synchronous lookup has landed. The most
+viable upstream fix would be to switch `recv_subscribe` to
+`origin.wait_for_broadcast(path).await` with a bounded deadline.
+
 **Owns:** the residual flake that affects four T16 scenarios:
 `late_join_listener_still_decodes_tail`,
 `packet_loss_1pct_does_not_kill_audio`,
