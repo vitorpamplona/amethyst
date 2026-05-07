@@ -1,6 +1,17 @@
 # Plan: cross-stack interop test (T16)
 
-**Status:** 📋 Spec — ready to implement.
+**Status:** ✅ Implemented and merged. See:
+- `2026-05-06-cross-stack-interop-test-results.md` for the scenario
+  inventory + per-scenario status
+- `2026-05-06-cross-stack-interop-test-gap-matrix.md` for the
+  T-series wire-fix → asserting-scenario mapping (DoD #5)
+- `2026-05-07-t16-closure-roadmap.md` for the next-steps roadmap
+  (residual upstream relay flake → tighten assertions → wire CI)
+
+The spec text below is preserved for archaeology; some scenarios
+were re-shaped during implementation (I12 GOAWAY is N/A in
+moq-lite-03; I13's `framesPerGroup = 50` got pinned to 5 due to the
+local relay's per-stream byte cliff).
 
 **Origin:** audit of `claude/debug-audio-dropout-n0g6Z` against the audio
 path verified all wire fixes (T1–T14) by inspection, but the existing
@@ -90,7 +101,7 @@ git rev. Cached.
   rev. Use the same rev as the production `nostrnests/nests` Docker
   image's `moq-relay` build, if discoverable; otherwise pin to the
   latest commit on `main` at implementation time and document it in a
-  `cli/hang-interop/REV` file.
+  `nestsClient/tests/hang-interop/REV` file.
 - Build: `cargo build --release -p moq-relay --manifest-path <pinned/checkout>/Cargo.toml`.
 - Cache key: pinned rev sha. First run: ~30 s cold build. Warm: < 1 s.
 - Config (rendered to a temp file at test setup):
@@ -140,10 +151,10 @@ self-signed cert without populating the system trust store.
 
 ### Rust hang sidecar binaries
 
-New cargo workspace at `cli/hang-interop/` in this repo.
+New cargo workspace at `nestsClient/tests/hang-interop/` in this repo.
 
 ```toml
-# cli/hang-interop/Cargo.toml
+# nestsClient/tests/hang-interop/Cargo.toml
 [workspace]
 members = ["hang-listen", "hang-publish", "udp-loss-shim"]
 
@@ -157,7 +168,7 @@ anyhow      = "1"
 
 Three binaries:
 
-#### `hang-listen` — `cli/hang-interop/hang-listen/src/main.rs`
+#### `hang-listen` — `nestsClient/tests/hang-interop/hang-listen/src/main.rs`
 Args: `--relay-url <https://...>` `--jwt <token>` `--broadcast <path>` `--duration <secs>` `--output-pcm <path-or-->`.
 Behaviour:
 1. Connect to relay via `web-transport-quinn` with WT-Available-Protocols
@@ -176,7 +187,7 @@ Output format: little-endian Float32 PCM, no header. One channel for
 mono, interleaved L/R for stereo (controlled by catalog's
 `numberOfChannels`). The Gradle test reads this file or pipe.
 
-#### `hang-publish` — `cli/hang-interop/hang-publish/src/main.rs`
+#### `hang-publish` — `nestsClient/tests/hang-interop/hang-publish/src/main.rs`
 Args: `--relay-url <...>` `--jwt <token>` `--broadcast <path>` `--freq-hz <int>` `--duration <secs>` `--channels <1|2>`.
 Behaviour:
 1. Connect, open session, claim broadcast under given path.
@@ -189,17 +200,17 @@ Behaviour:
    opus_packet`, push into groups of 5 frames, FIN per group.
 4. Run for `duration` seconds, then send `Announce::Ended` and exit.
 
-#### `udp-loss-shim` — `cli/hang-interop/udp-loss-shim/src/main.rs`
+#### `udp-loss-shim` — `nestsClient/tests/hang-interop/udp-loss-shim/src/main.rs`
 Args: `--listen 127.0.0.1:<port>` `--upstream 127.0.0.1:<port>` `--loss-rate <0..1>`.
 Behaviour: standard tokio UDP relay. For each datagram received,
 `if rng.gen::<f32>() < loss_rate { drop }` else forward. Used for I9.
 
 ### Browser harness (bun + Playwright)
 
-New module at `nestsClient-browser-interop/`.
+New module at `nestsClient/tests/browser-interop/`.
 
 ```
-nestsClient-browser-interop/
+nestsClient/tests/browser-interop/
 ├── package.json
 ├── tsconfig.json
 ├── src/
@@ -225,7 +236,7 @@ nestsClient-browser-interop/
 ```
 
 Pin to the same npm versions that `nostrnests/nests` `NestsUI-v2/package.json`
-ships. Document the rev in `nestsClient-browser-interop/REV`.
+ships. Document the rev in `nestsClient/tests/browser-interop/REV`.
 
 #### `listen.ts`
 Mirrors NostrNests' `transport/moq-transport.ts` `Watch.Broadcast`
@@ -503,15 +514,15 @@ Total: ~5 days. P0 deliverable (1+2+4) is **3 days**.
 
 ### Phase 1 — Native moq-relay + Rust sidecars (1 day)
 
-1. Pick `kixelated/moq` rev. Clone to `cli/hang-interop/.cache/moq` or
+1. Pick `kixelated/moq` rev. Clone to `nestsClient/tests/hang-interop/.cache/moq` or
    reference via `git` Cargo source. Document rev in
-   `cli/hang-interop/REV`.
-2. Write `cli/hang-interop/Cargo.toml` workspace + the three binary
+   `nestsClient/tests/hang-interop/REV`.
+2. Write `nestsClient/tests/hang-interop/Cargo.toml` workspace + the three binary
    crates (`hang-listen`, `hang-publish`, `udp-loss-shim`). Verify
    `cargo build --release` succeeds end-to-end.
 3. Add Gradle task `interopBuildHangSidecars` (in
    `nestsClient/build.gradle.kts`) that:
-   - Runs `cargo build --release` in `cli/hang-interop/`.
+   - Runs `cargo build --release` in `nestsClient/tests/hang-interop/`.
    - Exposes binary paths to JVM tests via `tasks.test { systemProperty(...) }`.
    - Caches based on `Cargo.lock` hash.
 4. Write `NativeMoqRelayHarness.kt` (subprocess management, JWT mint,
@@ -552,7 +563,7 @@ Total: ~5 days. P0 deliverable (1+2+4) is **3 days**.
 
 ### Phase 4 — Browser harness (1.5 days)
 
-15. Bootstrap `nestsClient-browser-interop/`: bun init, install
+15. Bootstrap `nestsClient/tests/browser-interop/`: bun init, install
     `@moq/lite` `@moq/watch` `@moq/publish` `@moq/hang` at pinned
     versions matching `nostrnests/nests` `NestsUI-v2`. Document rev.
 16. Write `listen.ts` + `pcm-tap-worklet.ts` + `listen.html`. Mirror
@@ -603,8 +614,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            cli/hang-interop/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('cli/hang-interop/Cargo.lock') }}
+            nestsClient/tests/hang-interop/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('nestsClient/tests/hang-interop/Cargo.lock') }}
       - run: ./gradlew :nestsClient:jvmTest -DnestsHangInterop=true
 
   browser-interop:
@@ -618,8 +629,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cache/ms-playwright
-            nestsClient-browser-interop/node_modules
-          key: ${{ runner.os }}-browser-${{ hashFiles('nestsClient-browser-interop/bun.lockb', 'cli/hang-interop/Cargo.lock') }}
+            nestsClient/tests/browser-interop/node_modules
+          key: ${{ runner.os }}-browser-${{ hashFiles('nestsClient/tests/browser-interop/bun.lockb', 'nestsClient/tests/hang-interop/Cargo.lock') }}
       - run: ./gradlew :nestsClient:jvmTest -DnestsBrowserInterop=true
 ```
 
@@ -640,7 +651,7 @@ Acceptable for PR-level CI.
 
 | Risk | Mitigation |
 |---|---|
-| `kixelated/moq` HEAD breaks pin | Pin git rev in `cli/hang-interop/Cargo.toml` + REV file. Bump deliberately. |
+| `kixelated/moq` HEAD breaks pin | Pin git rev in `nestsClient/tests/hang-interop/Cargo.toml` + REV file. Bump deliberately. |
 | moq-relay config schema changes between revs | Pin rev. Document `relay.toml` fields used. Smoke test: boot relay, assert known broadcast lookup works, in `@BeforeAll`. |
 | Self-signed cert + Chromium WebTransport rejection | Use `--ignore-certificate-errors-spki-list` (preferred) or `--ignore-certificate-errors` for test-only Chromium instance. |
 | JVM Opus encoder/decoder availability | If `:nestsClient` JVM target lacks Opus, vendor `audiopus` JNI or write a small wrapper. Reuse `MediaCodecOpusEncoder`/`Decoder` if a JVM `MediaCodec` polyfill exists; otherwise pure-Java `concentus` library is a fallback. Decide at Phase 1. |
@@ -664,7 +675,7 @@ Acceptable for PR-level CI.
    committed at `nestsClient/plans/2026-05-06-cross-stack-interop-test-gap-matrix.md`.
 6. Both `-DnestsHangInterop=true` and `-DnestsBrowserInterop=true`
    in the default PR-level GitHub Actions config.
-7. `cli/hang-interop/REV` and `nestsClient-browser-interop/REV`
+7. `nestsClient/tests/hang-interop/REV` and `nestsClient/tests/browser-interop/REV`
    document the pinned upstream revs.
 8. New plan filed at
    `nestsClient/plans/2026-05-06-cross-stack-interop-test-results.md`
