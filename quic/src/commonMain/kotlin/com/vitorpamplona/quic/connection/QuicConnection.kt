@@ -1481,6 +1481,81 @@ class QuicConnection(
         qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
     }
 
+    /**
+     * RFC 9001 §6.1 — initiate a 1-RTT key update from our side. Derive
+     * next-phase send keys (and pre-derive next-phase receive keys, for
+     * the inevitable response from the peer) using HKDF-Expand-Label
+     * "quic ku", install both as live, flip the phase fields. The next
+     * outbound packet carries `KEY_PHASE = 1` and the peer is expected
+     * to mirror back in the same phase.
+     *
+     * RFC 9001 §6.5 says an endpoint MUST NOT initiate a key update
+     * before the handshake is confirmed (HANDSHAKE_DONE received). The
+     * caller is responsible for that check; this method just performs
+     * the rotation. §6.4 also forbids initiating a second update before
+     * the current one has been confirmed (peer responds in matching
+     * phase) — same caller contract.
+     *
+     * Header-protection key is unchanged (RFC 9001 §6.1: HP key is NOT
+     * rotated when keys are updated).
+     *
+     * Returns true if rotation succeeded; false if app keys aren't yet
+     * installed (handshake hasn't completed) or the cipher suite isn't
+     * cached. The interop runner's keyupdate testcase requires the
+     * client to send packets in phase 1 — without this method we'd
+     * only echo peer-initiated rotations and the test fails with
+     * "Expected to see packets sent with key phase 1 from both client
+     * and server".
+     */
+    fun initiateKeyUpdate(): Boolean {
+        val cs = appCipherSuite.takeIf { it != 0 } ?: return false
+        val curRx = appReceiveSecret ?: return false
+        val curTx = appSendSecret ?: return false
+        val liveRx = application.receiveProtection ?: return false
+        val liveSend = application.sendProtection ?: return false
+
+        // Derive next-phase secrets and protections for both directions
+        // up front. We MUST roll both sides because the peer responds in
+        // the new phase — if our receive state is still at the old phase
+        // when their response lands, the receive-side commit path will
+        // re-derive the SAME keys we just installed (idempotent but
+        // wasteful) and then promote them, ending up with our previous
+        // receive keys orphaned in [previousReceiveProtection].
+        val nextRxSecret =
+            com.vitorpamplona.quic.crypto.HKDF
+                .expandLabel(curRx, "quic ku", ByteArray(0), curRx.size)
+        val nextTxSecret =
+            com.vitorpamplona.quic.crypto.HKDF
+                .expandLabel(curTx, "quic ku", ByteArray(0), curTx.size)
+        val freshRx = packetProtectionFromSecret(cs, nextRxSecret)
+        val freshTx = packetProtectionFromSecret(cs, nextTxSecret)
+
+        previousReceiveProtection = liveRx
+        application.receiveProtection =
+            com.vitorpamplona.quic.connection.PacketProtection(
+                aead = freshRx.aead,
+                key = freshRx.key,
+                iv = freshRx.iv,
+                hp = liveRx.hp,
+                hpKey = liveRx.hpKey,
+            )
+        application.sendProtection =
+            com.vitorpamplona.quic.connection.PacketProtection(
+                aead = freshTx.aead,
+                key = freshTx.key,
+                iv = freshTx.iv,
+                hp = liveSend.hp,
+                hpKey = liveSend.hpKey,
+            )
+        appReceiveSecret = nextRxSecret
+        appSendSecret = nextTxSecret
+        currentReceiveKeyPhase = !currentReceiveKeyPhase
+        currentSendKeyPhase = !currentSendKeyPhase
+        qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
+        qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
+        return true
+    }
+
     /** Caller must hold [lock]. Snapshot of streams for the driver's send loop. */
     internal fun streamsLocked(): Map<Long, QuicStream> = streams
 

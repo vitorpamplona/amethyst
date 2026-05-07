@@ -96,6 +96,29 @@ data class RelayConfig(
         val host: String = "0.0.0.0",
         val port: Int = 7447,
         val path: String = "/",
+        /**
+         * Ktor CIO acceptor-thread count. `null` (default) keeps Ktor's
+         * default sizing — fine up to a few thousand concurrent
+         * connections. On big-VM deployments targeting 10k+
+         * connections, lift this to roughly half the available cores
+         * so the acceptor doesn't starve workers.
+         */
+        val connection_group_size: Int? = null,
+        /**
+         * Ktor CIO worker-thread count (handles socket I/O). `null`
+         * keeps Ktor's default. Each connection's WebSocket read/write
+         * is dispatched onto this pool; for many idle long-lived
+         * connections the pool can stay small, but 10k+ connections
+         * benefit from sizing this to the full CPU count.
+         */
+        val worker_group_size: Int? = null,
+        /**
+         * Ktor CIO call-handling thread count. `null` keeps Ktor's
+         * default. Sized higher than [worker_group_size] because each
+         * call (incl. WebSocket upgrade) may suspend on I/O — at
+         * 10k+ connections, ~4× cores is a reasonable starting point.
+         */
+        val call_group_size: Int? = null,
     )
 
     data class DatabaseSection(

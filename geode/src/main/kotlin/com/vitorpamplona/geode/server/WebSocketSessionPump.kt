@@ -29,6 +29,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Per-WebSocket pump that owns the bounded outbound queue and the
@@ -44,15 +45,39 @@ import kotlinx.coroutines.launch
  *   3. `finally`-style teardown closes the queue, cancels the
  *      writer, unregisters the session, and closes it.
  *
- * Slow-client policy: when [outQueue] fills, [SESSION_OUTGOING_BUFFER]
- * frames behind, the connection is dropped rather than silently
- * losing EVENT/EOSE — silent drop would corrupt NIP-01.
+ * Slow-client policy: once the outbound backlog reaches
+ * [MAX_OUTGOING_BUFFER] frames, the connection is dropped rather
+ * than silently losing EVENT/EOSE — silent drop would corrupt
+ * NIP-01.
+ *
+ * Memory model: the outbound queue is `Channel.UNLIMITED`, which in
+ * kotlinx.coroutines allocates segments lazily — an idle connection
+ * pays only a small head-segment cost. The cap is enforced via
+ * [outstanding] rather than the channel's own capacity so we don't
+ * reserve a fixed-size buffer up-front for every connection. At
+ * 5 000+ idle connections this matters: an 8 192-slot fixed buffer
+ * per connection would otherwise dominate JVM heap usage even
+ * though the vast majority of connections never fan out.
  */
 internal class WebSocketSessionPump(
     private val ws: DefaultWebSocketServerSession,
 ) {
-    private val outQueue = Channel<String>(capacity = SESSION_OUTGOING_BUFFER)
-    private var droppedForBackpressure = false
+    /**
+     * Unbounded channel — bounded by [outstanding] above, not by the
+     * channel's own capacity. See class kdoc for memory rationale.
+     */
+    private val outQueue = Channel<String>(capacity = Channel.UNLIMITED)
+
+    /**
+     * Number of frames queued but not yet written to the socket.
+     * Producer increments before [Channel.trySend]; writer decrements
+     * after the frame is handed to Ktor. When this would cross
+     * [MAX_OUTGOING_BUFFER] we treat the client as slow and close
+     * the queue.
+     */
+    private val outstanding = AtomicInteger(0)
+
+    @Volatile private var droppedForBackpressure = false
 
     suspend fun pump(
         server: NostrServer,
@@ -64,6 +89,7 @@ internal class WebSocketSessionPump(
                 try {
                     for (json in outQueue) {
                         ws.outgoing.send(Frame.Text(json))
+                        outstanding.decrementAndGet()
                     }
                 } catch (_: ClosedSendChannelException) {
                     // socket closed — outer handler runs normal teardown.
@@ -71,13 +97,22 @@ internal class WebSocketSessionPump(
             }
         val session =
             server.connect { json ->
-                val res = outQueue.trySend(json)
-                if (!res.isSuccess && !res.isClosed) {
-                    // Buffer is full → slow client. Mark + close the
-                    // queue; the writer drains, then the outer handler
-                    // closes the WS session.
+                // The channel itself is UNLIMITED, so trySend can't
+                // report "full". Enforce the cap explicitly: increment
+                // first, refuse if we'd cross the bound, otherwise
+                // enqueue.
+                val depth = outstanding.incrementAndGet()
+                if (depth > MAX_OUTGOING_BUFFER) {
+                    outstanding.decrementAndGet()
                     droppedForBackpressure = true
                     outQueue.close()
+                    return@connect
+                }
+                val res = outQueue.trySend(json)
+                if (!res.isSuccess) {
+                    // Channel was closed concurrently (e.g. teardown).
+                    // Roll back the counter; nothing more to do.
+                    outstanding.decrementAndGet()
                 }
             }
         registerSession(session)
@@ -98,17 +133,19 @@ internal class WebSocketSessionPump(
 
     companion object {
         /**
-         * Per-session outbound buffer size. When a slow client falls
+         * Per-session outbound backlog cap. When a slow client falls
          * this many frames behind, we close their connection rather
          * than silently dropping further frames (which would corrupt
          * NIP-01 by missing EVENT/EOSE messages).
          *
          * Sized to hold fan-out for a connection holding several
          * thousand subscriptions when one event matches all of them
-         * — the realistic upper bound for a relay client. At ~250B
-         * per frame this caps per-session memory at ~2 MiB before
-         * we drop the connection.
+         * — the realistic upper bound for a relay client. At ~250 B
+         * per frame this caps per-session worst-case memory at
+         * ~2 MiB before we drop the connection. Idle connections
+         * pay only the small head-segment cost of an unlimited
+         * channel (≈ a few hundred bytes), not the full cap.
          */
-        const val SESSION_OUTGOING_BUFFER: Int = 8192
+        const val MAX_OUTGOING_BUFFER: Int = 8192
     }
 }

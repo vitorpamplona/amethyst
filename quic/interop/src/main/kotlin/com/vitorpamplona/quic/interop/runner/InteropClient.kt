@@ -209,10 +209,33 @@ fun main() {
             //   ipv6                — same flow over an IPv6 socket;
             //                         JDK DatagramChannel.connect handles
             //                         the v6 address resolution natively.
+            //   ecn                 — runner verifies ECN-CE counts in
+            //                         the pcap. Client just does a 100KB
+            //                         transfer; the IP-layer ECT codepoint
+            //                         is set by the sim and we don't
+            //                         need to do anything special.
+            //   amplificationlimit  — runner verifies server obeys 3x
+            //                         amplification limit. Pure server
+            //                         check — client does a normal
+            //                         transfer (the runner sets
+            //                         TESTCASE_CLIENT=transfer).
+            //   blackhole           — sim drops ALL packets for several
+            //                         seconds mid-transfer; client must
+            //                         resume after blackhole ends. Our
+            //                         PTO + retransmit handles this; the
+            //                         runner sets TESTCASE_CLIENT=transfer.
+            //   keyupdate           — server initiates a 1-RTT key update
+            //                         mid-transfer (KEY_PHASE bit flips).
+            //                         Our RFC 9001 §6 receive-side key
+            //                         update lands the rotation; runner
+            //                         verifies the pcap shows packets
+            //                         in both phases. Server-side test
+            //                         from our perspective.
             "handshake", "chacha20",
             "transfer", "http3", "multiplexing",
             "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
             "retry", "ipv6",
+            "ecn", "amplificationlimit", "blackhole",
             // NOTE: the runner does NOT have a `versionnegotiation` testcase
             // (its Available list excludes it). The :quic VN-handling code
             // (applyVersionNegotiation, FORCE_VERSION_NEGOTIATION constant)
@@ -242,6 +265,28 @@ fun main() {
                     // Cheap whitespace tokenization here just counts;
                     // runTransferTest re-parses into URI[] inside.
                     parallel = requests.split(Regex("\\s+")).count { it.isNotBlank() } > 1,
+                )
+            }
+
+            // keyupdate: same transfer flow but the client initiates a
+            // RFC 9001 §6 1-RTT key update once the handshake is
+            // confirmed. Runner verifies pcap shows BOTH client and
+            // server emitting packets in phase 1 — without our side
+            // initiating, aioquic's plain-transfer server doesn't
+            // rotate spontaneously and the test fails with "Expected
+            // to see packets sent with key phase 1 from both client
+            // and server".
+            "keyupdate" -> {
+                runTransferTest(
+                    requests = requests,
+                    downloadsDir = downloadsDir,
+                    cipherSuites = cipherSuites,
+                    offeredAlpns = offeredAlpns,
+                    initialVersion = initialVersion,
+                    keyLogPath = keyLogPath,
+                    qlogDir = qlogDir,
+                    parallel = requests.split(Regex("\\s+")).count { it.isNotBlank() } > 1,
+                    initiateKeyUpdate = true,
                 )
             }
 
@@ -294,6 +339,7 @@ private fun runTransferTest(
     keyLogPath: String?,
     qlogDir: File?,
     parallel: Boolean,
+    initiateKeyUpdate: Boolean = false,
 ): Int {
     val urls =
         requests
@@ -407,6 +453,27 @@ private fun runTransferTest(
             // runs even when DEBUG=0 — this is a control-flow boundary,
             // not a hot-path trace.
             System.err.println("[boot] transfer mode: parallel=$parallel urls=${urls.size}")
+
+            // RFC 9001 §6 keyupdate testcase: the runner verifies the pcap
+            // shows packets in BOTH key phases from BOTH sides. Without
+            // initiating from our side, only the server's natural rotation
+            // (if any) would show — aioquic's transfer-server doesn't
+            // initiate, so we'd see only phase 0. Initiate after the
+            // handshake is confirmed (HANDSHAKE_DONE → status=CONNECTED,
+            // RFC 9001 §6.5 prerequisite) but BEFORE we send the GET so the
+            // request itself is in phase 1 — the server's response then
+            // mirrors phase 1, satisfying the runner's check. Brief poll
+            // for status because awaitHandshake returns on TLS-done
+            // (1-RTT keys derived) which is one ack ahead of HANDSHAKE_DONE
+            // arriving.
+            if (initiateKeyUpdate) {
+                withTimeoutOrNull(2_000L) {
+                    while (conn.status != QuicConnection.Status.CONNECTED) delay(10)
+                }
+                conn.initiateKeyUpdate()
+                System.err.println("[boot] keyupdate: client initiated rotation to phase 1")
+            }
+
             val outcome =
                 withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
                     val responses =

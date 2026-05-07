@@ -1,5 +1,14 @@
 # Connection scaling: pushing past 2 000
 
+> **Status (2026-05-07):** Sketches A and B shipped on
+> `claude/connection-scaling-plan-YVjc8`. Sketch C landed as a smaller
+> slice in Quartz — the streaming-filter cut — once the audit showed
+> the rest of the plan's premise was overstated. Verification
+> benchmarks (`connectionsHeldOpen10k`, `connectionsHeldOpenWithFanout`)
+> are wired up but only run under `-DrunLoadBenchmark=true`. Remaining
+> open work, including fan-out de-duplication, is now tracked in
+> [`live-broadcast-fanout-index.md`](./2026-05-07-live-broadcast-fanout-index.md).
+
 ## Problem
 
 Current measurement (`LoadBenchmark.connectionsHeldOpen`): **~2 000
@@ -25,69 +34,169 @@ the channel array, even though most connections never fan out.
 
 ## Sketch
 
-### A — adaptive outQueue capacity
+### A — adaptive outQueue capacity ✅ shipped
 
-Start every connection with `INITIAL_OUTGOING_BUFFER = 64`. When the
-producer side trySends and we observe queue depth crossing a high-water
-mark (e.g. 75% full), grow the channel up to `MAX_OUTGOING_BUFFER =
-8192`. This is not how `kotlinx.coroutines.channels.Channel` is
-structured (capacity is fixed at construction), so the implementation
-is "swap in a wider channel under a per-session lock when watermark
-trips" — drains the old, then routes new sends through the new.
+> Original plan: start at `INITIAL_OUTGOING_BUFFER = 64` and swap to a
+> wider channel under a per-session lock when a high-water mark
+> trips. **Not how it shipped.**
 
-Expected: 90% of connections never fan out, so they stay at 64 slots
-× ~512 B per ref ≈ 32 KB. At 5 000 conns that's ~160 MB → ~5 MB.
-Hot-fanout connections still get the 2 MB cap.
-
-### B — per-relay event-loop pool sizing
-
-Ktor CIO defaults to one event-loop thread per available CPU.
-Beyond a few thousand connections, this becomes the bottleneck — and
-none of geode's per-connection work is CPU-bound (it's mostly waiting
-on incoming frames). Tune CIO via:
+What actually shipped is the simpler alternative the original Risks
+section called out: `Channel.UNLIMITED` plus an `AtomicInteger`
+backlog cap. kotlinx.coroutines' `BufferedChannel` allocates segments
+lazily, so an unlimited channel pays only the small head-segment cost
+on idle connections — there is no preallocated buffer to scale.
 
 ```kotlin
-embeddedServer(CIO, ...) {
-    connectionGroupSize = max(2, Runtime.getRuntime().availableProcessors() / 2)
-    workerGroupSize    = max(4, Runtime.getRuntime().availableProcessors())
-    callGroupSize      = max(8, Runtime.getRuntime().availableProcessors() * 4)
+private val outQueue = Channel<String>(capacity = Channel.UNLIMITED)
+private val outstanding = AtomicInteger(0)
+
+// producer side
+val depth = outstanding.incrementAndGet()
+if (depth > MAX_OUTGOING_BUFFER) {            // 8192
+    outstanding.decrementAndGet()
+    droppedForBackpressure = true
+    outQueue.close()                          // NIP-01: drop the conn
+    return@connect
+}
+val res = outQueue.trySend(json)
+if (!res.isSuccess) outstanding.decrementAndGet()  // closed concurrently
+
+// writer side
+for (json in outQueue) {
+    ws.outgoing.send(Frame.Text(json))
+    outstanding.decrementAndGet()
 }
 ```
 
-Expose these through `RelayConfig.NetworkSection` so an operator on a
-big VM can lift them.
+Memory characteristic the plan asked for is intact: idle connections
+no longer reserve an 8 192-slot fixed buffer; hot fan-out connections
+still get bounded at the same 2 MiB cap before the slow-client cutoff
+fires. NIP-01 ordering is preserved (no silent drop — connection is
+killed at the cap).
 
-### C — reduce per-message JSON allocations
+Implementation: `geode/.../server/WebSocketSessionPump.kt`. The
+channel-swap approach was rejected because
+`Channel.UNLIMITED` already gives the lazy-allocation behavior the
+swap was simulating, with none of the swap's race surface.
 
-`OptimizedJsonMapper.fromJsonToCommand` allocates a `JsonNode` tree per
-incoming frame. At 10k connections with 1 msg/s each that's 10k tree
-allocations/sec. Investigate streaming Jackson + reusing `ObjectMapper`
-per session, or using kotlinx-serialization's lower-overhead path.
+### B — per-relay event-loop pool sizing ✅ shipped
 
-This is more of a quartz-level change than geode-specific, but
-geode's load benchmark is the right place to measure it.
+Three optional knobs added to `[network]` in `RelayConfig`:
 
-## How to verify
+```toml
+[network]
+host = "0.0.0.0"
+port = 7447
+path = "/"
+# connection_group_size = 4
+# worker_group_size = 16
+# call_group_size = 64
+```
 
-Add to `geode.perf.LoadBenchmark`:
+Default is **`null` (Ktor default)** — no behavior change unless an
+operator explicitly tunes them. The values are wired through
+`LocalRelayServer` into the new `embeddedServer(factory = CIO,
+rootConfig = serverConfig {…}, configure = {…})` overload (the
+short-form `embeddedServer(factory, host, port) {…}` overload doesn't
+expose CIO config). The auto-connector that the short form created
+now has to be added explicitly via `connector { host = …; port = …}`.
 
-- `connectionsHeldOpen10k` — opens 10 000 idle WebSocket connections;
-  asserts no FD exhaustion + RSS stays under 1 GB.
-- `connectionsHeldOpenWithFanout` — 5 000 idle subscribers,
-  10 EPS published; measures p99 fanout latency at scale.
+`config.example.toml` documents the knobs and includes the operator
+note that targeting >1k connections needs `ulimit -n 65536` (or
+matching `LimitNOFILE=` in a systemd unit).
 
-The current `connectionsHeldOpen` benchmark stays as the baseline
-floor (~2 000 conns).
+### C — reduce per-message JSON allocations ✅ partially shipped (in Quartz)
 
-## Risks
+> Original plan claim: "`OptimizedJsonMapper.fromJsonToCommand`
+> allocates a `JsonNode` tree per incoming frame." **Overstated.**
 
-- **Adaptive channel swap is fiddly**: drains under the producer's nose
-  must preserve OK ordering. A simpler alternative: keep capacity fixed,
-  but lazily allocate a small `ArrayDeque<String>` only when the first
-  message is sent. Channels in kotlinx.coroutines do allocate up-front.
-- **Bumping CIO group sizes can hurt**: more threads can mean worse
-  L1/L2 locality. Always benchmark before/after, don't trust
-  intuitive sizing.
-- **OS-level FD limit**: per-process FD limit on Linux defaults to
-  1024 in many environments. Document the `ulimit -n` requirement
-  for operators targeting >1k connections.
+Audit of `quartz/.../jackson` showed the Command/Message envelope is
+already streaming:
+
+| Path                    | Already streaming? | Tree alloc?                                        |
+| ----------------------- | ------------------ | -------------------------------------------------- |
+| `MessageDeserializer`   | yes                | only for `COUNT` result (rare)                     |
+| `CommandDeserializer`   | yes                | only for **filter sub-objects** in REQ/COUNT/NEG-OPEN |
+| `EventDeserializer`     | yes                | none — `currentName().hashCode()` dispatch         |
+| `ManualFilterDeserializer` | **no**          | `jp.codec.readTree(jp)` per filter                 |
+
+So the only relay-inbound tree allocation worth chasing was filter
+parsing — the bulk of the per-frame allocations on a REQ-heavy
+relay.
+
+What shipped: a streaming `ManualFilterDeserializer.fromJson(jp:
+JsonParser)` modeled exactly on `EventDeserializer`. Token-loop with
+field-name dispatch (`ids` / `authors` / `kinds` / `since` / `until` /
+`limit` / `search`, plus dynamic `#x` / `&x` tag keys), and
+`readStringArray` / `readIntArray` helpers that drop invalid entries
+silently to match the tree path's `mapNotNull { asTextOrNull() }`
+tolerance. Wired into all four internal call sites:
+`FilterDeserializer.deserialize` and the three `CommandDeserializer`
+paths (REQ, COUNT, NEG-OPEN).
+
+The tree-based `fromJson(ObjectNode)` overload is retained for
+external/cross-format adapters (Quartz is a published library).
+
+What was NOT done — and why:
+- **Streaming Jackson for the Command envelope**: already streaming.
+  No allocation to remove.
+- **kotlinx-serialization for the inbound path**: not pursued. The
+  cross-mapper round-trip tests in `KotlinSerializationMapperTest`
+  show the two formats are interchangeable, but the engine swap is a
+  much larger lift than the filter cut and there's no evidence the
+  KS path is faster on this code shape.
+- **Per-session `ObjectMapper`**: Jackson's `ObjectMapper` is
+  thread-safe and stateless — sharing one is the recommended pattern.
+  Per-session would *increase* allocation, not decrease it.
+
+## How to verify ✅ shipped
+
+Two new benchmarks in `geode.perf.LoadBenchmark`, gated behind
+`-DrunLoadBenchmark=true`:
+
+- **`connectionsHeldOpen10k`** — opens 10 000 idle WebSocket
+  connections, asserts every one settles to EOSE inside 120 s, and
+  measures retained JVM heap (after `System.gc()` + 200 ms settle)
+  with a 1 GiB ceiling assertion. Requires `ulimit -n 32768` on
+  Linux.
+- **`connectionsHeldOpenWithFanout`** — 5 000 subscribers all
+  matching `kinds:[1]`, one publisher emitting `targetEps × duration`
+  events, prints p50 / p99 last-fanout latency. No assertion on
+  latency — just regression-detection via stdout logging.
+
+The original `connectionsHeldOpen` benchmark stays as the **baseline
+floor (~2 000 conns)** for before/after comparisons.
+
+Note on heap-vs-RSS: the original plan said "RSS stays under 1 GB"
+but the JVM can only measure heap from inside; `Runtime.totalMemory
+- freeMemory` is what the benchmark asserts on. RSS will be higher
+because of code, native buffers, off-heap (Ktor CIO), etc.
+
+## Risks (post-implementation)
+
+- ~~**Adaptive channel swap is fiddly**~~ — sidestepped by using
+  `Channel.UNLIMITED` instead of swapping bounded channels.
+- **Bumping CIO group sizes can hurt** — kept the defaults `null`.
+  Operators must opt in, and the docstrings explicitly say to
+  benchmark before/after.
+- **OS-level FD limit** — documented in `config.example.toml` next to
+  the CIO knobs. Test prereq is also documented in the benchmark
+  KDoc.
+
+## Open work
+
+- **Fan-out de-duplication** — when one EVENT matches N subscribers,
+  we currently re-serialize and copy the JSON N times into N
+  channels. Caching one pre-serialized payload per event and
+  broadcasting a shared reference is a much bigger win than anything
+  in this plan; tracked in
+  [`live-broadcast-fanout-index.md`](./2026-05-07-live-broadcast-fanout-index.md).
+- **Filter-matching index** — same plan. At 10k conns × ~5 filters
+  that's 50k evaluations per published EVENT, almost all of which
+  could be culled by indexing subscriptions on `kinds` / `authors` /
+  `#e` / `#p`.
+- **Netty engine evaluation** — Ktor's Netty engine handles many idle
+  connections with measurably lower per-connection overhead than
+  CIO. Not pursued here because it changes the transport layer
+  wholesale; revisit only if the CIO knobs in (B) prove insufficient
+  for an operator at 20k+ connections.
