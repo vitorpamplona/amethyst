@@ -69,6 +69,17 @@ class QlogWriter(
     private val lock = ReentrantLock()
     private val startMillis: Long = nowMillis()
 
+    /** Last wall-clock millis we flushed at. Periodic flushing avoids the
+     *  "qlog truncates at exactly the BufferedWriter buffer size when the
+     *  JVM is hard-killed at runner timeout" trap that hides the test's
+     *  late behavior. The interval is generous enough to keep the macOS
+     *  Docker filesystem virtualization overhead off the hot send path
+     *  (per-event flush there was multi-ms and broke handshakes — see
+     *  commit 99a1a91de). 250 ms keeps us within ~one cwnd of the
+     *  failure under loss while still being far cheaper than per-event. */
+    @Volatile
+    private var lastFlushMillis: Long = startMillis
+
     init {
         // qlog 0.3 JSON-SEQ header. qvis tolerates both `qlog_format`
         // values "JSON-SEQ" and "NDJSON"; we use JSON-SEQ to match the
@@ -301,16 +312,22 @@ class QlogWriter(
             try {
                 writer.write(line)
                 writer.write("\n")
-                // Deliberately NOT flushing per event: this method runs
-                // inside conn.lock.withLock { drainOutbound(...) } on the
-                // hot send path. On macOS Docker Desktop the filesystem
-                // is virtualized and per-event flush is multi-millisecond.
-                // Every flush stalls the connection lock, blocks the
-                // receive loop, and the connection silently dies
-                // mid-handshake. close() does the only flush we need
-                // for normal completion. A hard-killed JVM loses recent
-                // events but that's an acceptable trade — the alternative
-                // is the connection never completing in the first place.
+                // Periodic flush so a runner-timeout SIGKILL doesn't leave
+                // the last seconds of the trace stranded in the JVM buffer.
+                // Pre-fix this method never flushed (relied on close()), and
+                // a 60 s test ended at exactly 32768 bytes = 4 × 8 KB
+                // BufferedWriter blocks — masking 50 s of late-connection
+                // behavior and turning every interop debug session into
+                // "did the connection wedge or did the qlog?". Per-event
+                // flush was the prior shape and was multi-ms on macOS
+                // Docker virtualized filesystems (commit 99a1a91de). 250 ms
+                // is the compromise: cheap enough to not stall the send
+                // path, fine-grained enough to capture per-PTO behavior.
+                val now = nowMillis()
+                if (now - lastFlushMillis >= FLUSH_INTERVAL_MILLIS) {
+                    writer.flush()
+                    lastFlushMillis = now
+                }
             } catch (_: java.io.IOException) {
                 // Stream closed under us. Latch closed so subsequent emits
                 // skip the lock and return immediately.
@@ -320,6 +337,8 @@ class QlogWriter(
     }
 
     companion object {
+        private const val FLUSH_INTERVAL_MILLIS: Long = 250L
+
         private val DEFAULT_MAPPER: ObjectMapper = jacksonObjectMapper()
 
         private fun packetTypeFor(level: EncryptionLevel): String =
