@@ -227,18 +227,32 @@ class QuicConnectionDriver(
 }
 
 /**
- * Spec-correct response to a PTO timer firing (RFC 9002 §6.2.4). Pre-1-RTT
- * the probe packet MUST be ack-eliciting at the encryption level with
- * unacknowledged data, and SHOULD retransmit the lost data rather than
- * emit a bare PING — so we requeue ALL inflight CRYPTO bytes at the
- * highest active pre-application level (Initial or Handshake), and the
- * next [drainOutbound] emits a CRYPTO frame at the original offset.
+ * Spec-correct response to a PTO timer firing (RFC 9002 §6.2.4). The probe
+ * packet MUST be ack-eliciting at the encryption level with unacknowledged
+ * data, and SHOULD retransmit the lost data rather than emit a bare PING —
+ * so we requeue inflight CRYPTO bytes at every active pre-application
+ * level (Initial AND Handshake), and the next [drainOutbound] emits a
+ * CRYPTO frame at the original offset. `requeueAllInflight` is a no-op
+ * when nothing is inflight, so calling this for already-ACKed or
+ * already-discarded levels is harmless.
  *
  * `pendingPing` stays set as a fallback. `collectHandshakeLevelFrames`
  * suppresses the PING when CRYPTO is in the same frame list, so we
- * don't waste a frame on top of the retransmit. Post-1-RTT we keep
- * the bare-PING behavior — STREAM loss detection drives retransmit
- * from the ACK that the PING elicits.
+ * don't waste a frame on top of the retransmit.
+ *
+ * Why every active pre-application level, not just the highest: there's a
+ * window between 1-RTT keys becoming installed (server's Finished arrives,
+ * client derives application keys) and the handshake being confirmed
+ * (server's HANDSHAKE_DONE arrives). In that window our own Finished is
+ * still in flight at Handshake level, and the application-space loss
+ * detection that ACK-only PINGs rely on doesn't cover it. If our Finished
+ * is dropped, the server keeps retransmitting handshake CRYPTO forever
+ * trying to elicit our missing ACK-eliciting handshake-level packet,
+ * never confirms the handshake, never sends HANDSHAKE_DONE. Surfaced by
+ * `handshakeloss` against aioquic at 30% drop rate (multiconnect iter 12
+ * stuck at t=52s with zero handshake_done events; pre-fix
+ * `handlePtoFired` gated the requeue on `application.sendProtection ==
+ * null` and skipped Handshake CRYPTO retransmit once 1-RTT keys existed).
  *
  * Why aioquic interop demands this: aioquic strictly rejects pre-
  * handshake Initials that contain no CRYPTO frame
@@ -263,29 +277,27 @@ class QuicConnectionDriver(
  * `requeueAllInflight` operates on the buffer reference we captured
  * (or the fresh one — both are valid) and is at worst a no-op.
  */
-internal fun handlePtoFired(conn: QuicConnection) {
+internal suspend fun handlePtoFired(conn: QuicConnection) {
     conn.pendingPing = true
-    if (conn.application.sendProtection == null) {
-        val level = highestPreApplicationLevel(conn)
-        if (level != null) {
-            conn.requeueAllInflightCrypto(level)
+    if (conn.handshake.sendProtection != null && !conn.handshake.keysDiscarded) {
+        conn.requeueAllInflightCrypto(EncryptionLevel.HANDSHAKE)
+    }
+    if (conn.initial.sendProtection != null && !conn.initial.keysDiscarded) {
+        conn.requeueAllInflightCrypto(EncryptionLevel.INITIAL)
+    }
+    // Once 1-RTT keys are installed, PTO must also retransmit application
+    // data — STREAM bytes that were sent but never ACK'd. Without this,
+    // a single corrupted/lost 1-RTT packet (especially the first one
+    // carrying our HTTP/3 init streams + the GET request) is unrecoverable
+    // because loss detection only runs after the peer ACKs something
+    // and we have nothing else for the peer to ACK. Iterating streamsList
+    // requires streamsLock — `openBidiStream` and friends mutate it under
+    // the same lock, so unlocked iteration races with stream creation.
+    if (conn.application.sendProtection != null) {
+        conn.streamsLock.withLock {
+            conn.requeueAllInflightStreamData()
+            conn.requeueAllInflightCrypto(EncryptionLevel.APPLICATION)
         }
     }
     conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
 }
-
-/**
- * Highest encryption level for which `conn` currently holds send keys
- * AND hasn't yet discarded them, given that 1-RTT keys are NOT
- * installed. Returns null when the level state has been completely
- * cleared (e.g. CLOSED after a CONNECTION_CLOSE was sent). Mirrors the
- * private helper in [com.vitorpamplona.quic.connection.QuicConnectionWriter]
- * — kept in lockstep so the driver's PTO branch and the writer's PING
- * placement target the same level.
- */
-private fun highestPreApplicationLevel(conn: QuicConnection): EncryptionLevel? =
-    when {
-        conn.handshake.sendProtection != null -> EncryptionLevel.HANDSHAKE
-        conn.initial.sendProtection != null && !conn.initial.keysDiscarded -> EncryptionLevel.INITIAL
-        else -> null
-    }

@@ -1228,6 +1228,49 @@ class QuicConnection(
         levelState(level).cryptoSend.requeueAllInflight()
     }
 
+    /**
+     * RFC 9002 §6.2.4 PTO probe — STREAM-data analogue of
+     * [requeueAllInflightCrypto]. Walks every open stream and moves each
+     * stream's sent-but-not-yet-ACK'd byte ranges back to its retransmit
+     * queue, so the next [com.vitorpamplona.quic.connection.drainOutbound]
+     * re-emits the same bytes (at the same offsets, with FIN preserved
+     * per range).
+     *
+     * Why this exists: loss detection ([com.vitorpamplona.quic.connection.recovery.QuicLossDetection.detectAndRemoveLost])
+     * gates on `pn < largestAckedPn`, which means it never fires when
+     * the peer hasn't ACK'd ANYTHING in the application space. That
+     * happens whenever every 1-RTT packet we send is dropped or
+     * corrupted en route — the peer never sees them, never ACKs, and
+     * `largestAckedPn` stays null forever. A bare PING from PTO doesn't
+     * help either: if the PING itself is lost, the peer doesn't see it
+     * either. Re-queuing the data on every PTO ensures that whenever
+     * one of our PROBE packets does land, the peer immediately receives
+     * the application data we'd been trying to send — not an empty PING
+     * that would need a follow-up RTT to retransmit.
+     *
+     * Discovered via `handshakecorruption` against aioquic at 30%
+     * bit-flip rate: client opens HTTP/3 control + QPACK + GET streams
+     * in 1-RTT pn=0, gets corrupted, server never decrypts, never ACKs.
+     * Pre-fix the streams were never retransmitted, the GET stalled,
+     * the multiconnect iteration timed out at 60 s.
+     *
+     * Idempotent: a second consecutive call is a no-op because the first
+     * call drained `inFlight` empty. Best-effort streams (used by
+     * audio-rooms, where Opus tolerates gaps) drop their inflight
+     * ranges instead of re-queueing — see
+     * [com.vitorpamplona.quic.stream.SendBuffer.requeueAllInflight].
+     *
+     * Caller should hold [streamsLock] while iterating; each per-stream
+     * `requeueAllInflight` is internally `synchronized` on its
+     * SendBuffer so the actual byte-range moves are race-free even
+     * under concurrent `takeChunk` from the writer.
+     */
+    internal fun requeueAllInflightStreamData() {
+        for (stream in streamsList) {
+            stream.send.requeueAllInflight()
+        }
+    }
+
     /** Caller must hold [lock]. Snapshot of streams for the driver's send loop. */
     internal fun streamsLocked(): Map<Long, QuicStream> = streams
 
