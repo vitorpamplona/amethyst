@@ -100,10 +100,18 @@ if ! jq -e '.amethyst' "$RUNNER_DIR/implementations_quic.json" >/dev/null 2>&1; 
     mv "$tmp" "$RUNNER_DIR/implementations_quic.json"
 fi
 
-# 4. Build the endpoint image (skippable for tight loops).
+# 4. Build the endpoint image (skippable for tight loops). Pass DEBUG=1
+# to bake QUIC_INTEROP_DEBUG=1 into the image so the InteropClient +
+# writer emit per-drain stats to stderr (visible via
+# inspect-multiplexing.sh after the run). Off by default.
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
-    echo "==> building amethyst-quic-interop image"
-    make -C "$SCRIPT_DIR" build
+    if [ "${DEBUG:-0}" = "1" ]; then
+        echo "==> building amethyst-quic-interop image (DEBUG=1)"
+        make -C "$SCRIPT_DIR" build DEBUG=1
+    else
+        echo "==> building amethyst-quic-interop image"
+        make -C "$SCRIPT_DIR" build
+    fi
 fi
 
 # 5. Drive the runner.
