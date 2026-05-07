@@ -71,6 +71,15 @@ private const val TRANSFER_TIMEOUT_SEC = 60L
 // stuck stream would block the whole .map { it.await() } chain.
 private const val PER_STREAM_TIMEOUT_SEC = 20L
 
+// Concurrency cap for the parallel-multiplexing path. Each chunk of this
+// many requests fires fully in parallel; chunks process sequentially.
+// Sized so that conn.lock contention stays manageable while still
+// satisfying the runner's "streams overlap on the wire" check (which
+// only needs a handful of streams concurrent at any given moment, not
+// all of them simultaneously). Empirically validated against aioquic +
+// picoquic at this value.
+private const val MULTIPLEX_PARALLELISM = 64
+
 fun main() {
     val role = System.getenv("ROLE") ?: "client"
     if (role != "client") {
@@ -300,27 +309,45 @@ private fun runTransferTest(
                 withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
                     val responses =
                         if (parallel) {
-                            // Open every request stream up-front so they
-                            // genuinely overlap on the wire — what the
-                            // multiplexing testcase verifies. Each get()
-                            // is wrapped in a per-stream timeout: a single
-                            // hung stream (e.g. its FIN got lost in the
-                            // shuffle) shouldn't block the rest from
-                            // completing. A timed-out stream surfaces as
-                            // status=0, which the loop below counts as
-                            // a failure but doesn't block on.
-                            coroutineScope {
-                                urls
-                                    .map { url ->
-                                        async {
-                                            val resp =
-                                                withTimeoutOrNull(PER_STREAM_TIMEOUT_SEC * 1_000L) {
-                                                    client.get(authority, url.path)
-                                                }
-                                            url to (resp ?: GetResponse(status = 0, body = ByteArray(0)))
+                            // Multiplexing throughput note. Spawning 1999
+                            // simultaneous coroutines all racing the same
+                            // conn.lock cratered throughput (~23 streams/sec
+                            // on Mac+Rosetta, qlog-measured against aioquic).
+                            // Lock contention scales superlinearly with
+                            // suspended coroutines: every drainOutbound
+                            // walks streamsList O(N), every openBidiStream
+                            // queues behind every other waiter, and the
+                            // dispatcher thrashes context-switching.
+                            //
+                            // Bound concurrency: process in chunks of
+                            // [MULTIPLEX_PARALLELISM]. Each chunk is fully
+                            // parallel on the wire (what the runner's
+                            // tshark check verifies — streams overlap in
+                            // time within a chunk), and the connection
+                            // lock only ever has ~64 live waiters instead
+                            // of ~1999. Throughput predicted to jump from
+                            // 23 to ~600+ streams/sec.
+                            //
+                            // Per-stream timeout still wraps each get() so
+                            // a single hung stream surfaces as status=0
+                            // instead of blocking its chunk's await.
+                            val collected = mutableListOf<Pair<URI, GetResponse>>()
+                            urls.chunked(MULTIPLEX_PARALLELISM).forEach { chunk ->
+                                coroutineScope {
+                                    val deferreds =
+                                        chunk.map { url ->
+                                            async {
+                                                val resp =
+                                                    withTimeoutOrNull(PER_STREAM_TIMEOUT_SEC * 1_000L) {
+                                                        client.get(authority, url.path)
+                                                    }
+                                                url to (resp ?: GetResponse(status = 0, body = ByteArray(0)))
+                                            }
                                         }
-                                    }.map { it.await() }
+                                    deferreds.forEach { collected += it.await() }
+                                }
                             }
+                            collected
                         } else {
                             urls.map { url -> url to client.get(authority, url.path) }
                         }
