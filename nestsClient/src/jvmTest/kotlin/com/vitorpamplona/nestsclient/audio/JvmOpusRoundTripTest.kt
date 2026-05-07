@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient.audio
 
 import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeTrue
 import kotlin.test.Test
 
 /**
@@ -37,8 +38,18 @@ class JvmOpusRoundTripTest {
     @Test
     fun sine_440_round_trips_through_libopus() {
         val capture = SineWaveAudioCapture(freqHz = 440)
-        val encoder = JvmOpusEncoder()
-        val decoder = JvmOpusDecoder()
+        // club.minnced:opus-java doesn't ship natives for darwin-aarch64 (Apple
+        // Silicon). Skip rather than fail so dev machines without a usable
+        // native still pass the pre-push hook; Linux x86_64 CI keeps coverage.
+        val encoder: JvmOpusEncoder
+        val decoder: JvmOpusDecoder
+        try {
+            encoder = JvmOpusEncoder()
+            decoder = JvmOpusDecoder()
+        } catch (e: IllegalStateException) {
+            assumeTrue("Opus natives not available: ${e.message}", false)
+            return
+        }
         try {
             val decoded = mutableListOf<Float>()
             runBlocking {
