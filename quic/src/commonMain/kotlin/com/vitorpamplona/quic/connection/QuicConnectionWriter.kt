@@ -624,11 +624,25 @@ private fun buildApplicationPacket(
         // pre-priority round-robin behaviour exactly.
         //
         // Cost: O(N log N) per drain pass plus one transient sorted
-        // list. N is small (1–10 in the moq-lite audio path); if it
-        // ever grows enough to matter, switch to an indirect index sort
-        // or maintain an incrementally-sorted view on setPriority.
+        // list. N is small (1–10 in the moq-lite audio path) but the
+        // multiplexing interop testcase pushes N to ~2000, so we
+        // optimize:
+        //   1. filter out streams that are fully closed (no data + no
+        //      retransmits coming) — drops "done" streams from the
+        //      walk, which is most of them under bursty interop loads.
+        //   2. skip the sort entirely when every stream has the
+        //      default priority (the common case) — preserving the
+        //      insertion-ordered round-robin shape.
+        // The combination drops drainOutbound's per-call cost from
+        // O(N log N) where N=total-streams to roughly O(active) under
+        // realistic loads.
+        val active = streamsView.filter { !it.isClosed }
         val sorted =
-            if (streamsView.size > 1) streamsView.sortedByDescending { it.priority } else streamsView
+            when {
+                active.size <= 1 -> active
+                active.all { it.priority == 0 } -> active
+                else -> active.sortedByDescending { it.priority }
+            }
         val rotation = conn.streamRoundRobinStart
         var tierStart = 0
         outer@ while (tierStart < sorted.size) {
