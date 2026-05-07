@@ -153,6 +153,29 @@ class NativeMoqRelayHarness private constructor(
             }
         }
 
+        /**
+         * Tear down the current shared relay subprocess and start a
+         * fresh one. Used as a JUnit `@Before` hook by tests that
+         * need clean per-method relay state — under accumulated
+         * cross-test broadcasts / connections the relay's per-
+         * subscriber forward queues drift, manifesting as
+         * intermittent catalog-cancel and sample-count flakes that
+         * don't reproduce in isolation.
+         *
+         * Cost: ~500 ms per call (cargo binaries are cached, only
+         * the subprocess boot + UDP bind + first client handshake
+         * are paid). At 11 scenarios × 500 ms that's ~5.5 s added
+         * to the suite wallclock — acceptable trade for stability.
+         */
+        fun resetShared() {
+            synchronized(sharedLock) {
+                shared?.let {
+                    runCatching { it.close() }
+                }
+                shared = null
+            }
+        }
+
         private fun doStart(): NativeMoqRelayHarness {
             check(isEnabled()) {
                 "NativeMoqRelayHarness.shared() called without -D$ENABLE_PROPERTY=true."

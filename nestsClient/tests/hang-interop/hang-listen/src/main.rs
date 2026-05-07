@@ -168,11 +168,15 @@ async fn listen(
     // Subscribe to the catalog and read the first published
     // version. The catalog hook in Amethyst's
     // `MoqLiteNestsSpeaker` (`setOnNewSubscriber`) can race the
-    // SUBSCRIBE bidi mid-suite — under accumulated state the
-    // first try sometimes resolves with a "cancelled" stream
-    // before the catalog frame arrives. Retry up to twice with
-    // a fresh subscribe; total wallclock ≤ 1 s, well inside
-    // the test's broadcast window.
+    // SUBSCRIBE bidi mid-suite — under accumulated relay state
+    // the first try sometimes resolves with "cancelled" before
+    // the catalog frame arrives. Retry up to 3 times with a
+    // 2 s per-attempt timeout (6 s total worst case). Under
+    // concurrent load (multiple jvmTest workers contending for
+    // the relay) the first attempt's wire round-trip can
+    // exceed 500 ms; the longer per-attempt budget keeps the
+    // happy-path fast (resolves on the first attempt) while
+    // tolerating slow handshakes.
     let info = {
         let mut last_err: Option<anyhow::Error> = None;
         let mut decoded: Option<hang::Catalog> = None;
@@ -181,7 +185,7 @@ async fn listen(
                 .subscribe_track(&hang::Catalog::default_track())
                 .context("subscribe catalog")?;
             let mut catalog = hang::CatalogConsumer::new(catalog_track);
-            match tokio::time::timeout(Duration::from_millis(500), catalog.next()).await {
+            match tokio::time::timeout(Duration::from_secs(2), catalog.next()).await {
                 Ok(Ok(Some(c))) => {
                     decoded = Some(c);
                     break;

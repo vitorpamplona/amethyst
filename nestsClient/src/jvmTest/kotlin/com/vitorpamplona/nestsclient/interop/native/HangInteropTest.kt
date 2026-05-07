@@ -89,6 +89,15 @@ class HangInteropTest {
     @BeforeTest
     fun gate() {
         NativeMoqRelayHarness.assumeHangInterop()
+        // Reset the shared relay subprocess between scenarios.
+        // Sharing across all 11 methods in one JVM run means the
+        // relay's per-subscriber forward queues + announce
+        // tables accumulate state from prior tests, manifesting
+        // as intermittent catalog-cancel + sample-count flakes
+        // that don't reproduce in isolation. Per-method reboot
+        // costs ~500 ms (cargo binaries are cached) — acceptable
+        // for the stability gain.
+        NativeMoqRelayHarness.resetShared()
     }
 
     /** I1: 5 s 440 Hz mono sine, asserted via FFT peak + ZCR. */
