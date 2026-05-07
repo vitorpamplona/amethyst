@@ -75,10 +75,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.delay
-import java.text.DateFormat
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Date
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -91,7 +92,6 @@ fun ScheduledPostsScreen(
         viewModel(key = "scheduled-posts-$accountPubkey") {
             ScheduledPostsViewModel.create(accountPubkey)
         }
-    val posts by viewModel.posts.collectAsStateWithLifecycle()
     val groups by viewModel.groupedPosts.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -116,17 +116,18 @@ fun ScheduledPostsScreen(
             )
         },
     ) { padding ->
-        if (posts.isEmpty()) {
+        if (groups.isEmpty()) {
             EmptyState(modifier = Modifier.padding(padding))
         } else {
+            val today = remember(nowSec) { LocalDate.now(ZoneId.systemDefault()) }
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 groups.forEach { group ->
-                    stickyHeader(key = "header-${group.day}") {
-                        DayHeader(group.day, context)
+                    stickyHeader(key = group.day) {
+                        DayHeader(group.day, today, context)
                     }
                     items(group.posts, key = { it.id }) { post ->
                         SwipeToDeleteWithConfirmation(
@@ -227,6 +228,7 @@ private fun ScheduledPostRow(
 @Composable
 private fun DayHeader(
     day: LocalDate,
+    today: LocalDate,
     context: android.content.Context,
 ) {
     Surface(
@@ -234,7 +236,7 @@ private fun DayHeader(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = formatDayHeader(day, context),
+            text = formatDayHeader(day, today, context),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -328,13 +330,20 @@ private fun extractPreview(post: ScheduledPost): String =
             .trim()
     }.getOrDefault("")
 
+private val shortTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+private val fullDateFormatter: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+
 private fun formatAtTime(
     publishAtSec: Long,
     nowSec: Long,
     context: android.content.Context,
 ): String {
-    val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT)
-    val absolute = timeFormat.format(Date(publishAtSec * 1000))
+    val absolute =
+        Instant
+            .ofEpochSecond(publishAtSec)
+            .atZone(ZoneId.systemDefault())
+            .toLocalTime()
+            .format(shortTimeFormatter)
     return if (publishAtSec > nowSec) {
         stringRes(context, R.string.scheduled_posts_at_time, absolute, timeAheadNoDot(publishAtSec, context))
     } else {
@@ -344,25 +353,11 @@ private fun formatAtTime(
 
 private fun formatDayHeader(
     day: LocalDate,
+    today: LocalDate,
     context: android.content.Context,
-): String {
-    val today = LocalDate.now(ZoneId.systemDefault())
-    return when (day) {
-        today -> {
-            stringRes(context, R.string.scheduled_posts_day_today)
-        }
-
-        today.plusDays(1) -> {
-            stringRes(context, R.string.scheduled_posts_day_tomorrow)
-        }
-
-        else -> {
-            val fullFormat = DateFormat.getDateInstance(DateFormat.FULL)
-            fullFormat.format(
-                Date.from(
-                    day.atStartOfDay(ZoneId.systemDefault()).toInstant(),
-                ),
-            )
-        }
+): String =
+    when (day) {
+        today -> stringRes(context, R.string.scheduled_posts_day_today)
+        today.plusDays(1) -> stringRes(context, R.string.scheduled_posts_day_tomorrow)
+        else -> day.format(fullDateFormatter)
     }
-}

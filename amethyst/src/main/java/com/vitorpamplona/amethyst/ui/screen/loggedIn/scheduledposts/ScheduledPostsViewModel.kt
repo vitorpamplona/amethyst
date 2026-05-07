@@ -59,27 +59,14 @@ class ScheduledPostsViewModel(
             ScheduledPostStatus.FAILED,
         )
 
-    val posts: StateFlow<List<ScheduledPost>> =
+    /** Posts for [accountPubkey] in active statuses, grouped by local-day, sorted ascending. */
+    val groupedPosts: StateFlow<List<ScheduledPostDayGroup>> =
         store.flow
             .map { all ->
+                val zone = ZoneId.systemDefault()
                 all
                     .filter { it.accountPubkey == accountPubkey && it.status in activeStatuses }
                     .sortedBy { it.publishAtSec }
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = emptyList(),
-            )
-
-    /**
-     * Posts grouped by local-day, sorted ascending. The UI uses this as the
-     * source for sticky-header sections.
-     */
-    val groupedPosts: StateFlow<List<ScheduledPostDayGroup>> =
-        posts
-            .map { sorted ->
-                val zone = ZoneId.systemDefault()
-                sorted
                     .groupBy { Instant.ofEpochSecond(it.publishAtSec).atZone(zone).toLocalDate() }
                     .map { (day, list) -> ScheduledPostDayGroup(day, list) }
                     .sortedBy { it.day }

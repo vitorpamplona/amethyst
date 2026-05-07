@@ -220,6 +220,10 @@ class ScheduledPostStore(
     private fun purgeStale(now: Long): Boolean {
         val before = posts.size
         posts.removeAll { post ->
+            // terminatedAtSec is the post-PR field. Legacy rows lack it; fall back to
+            // lastAttemptAtSec (set at SENT) and finally createdAtSec. The fallback
+            // can purge old CANCELLED rows up to 30d earlier than intended on first
+            // run after upgrade — self-healing once new rows are written.
             val age = now - (post.terminatedAtSec ?: post.lastAttemptAtSec ?: post.createdAtSec)
             when (post.status) {
                 ScheduledPostStatus.SENT -> age > SENT_RETENTION_SEC

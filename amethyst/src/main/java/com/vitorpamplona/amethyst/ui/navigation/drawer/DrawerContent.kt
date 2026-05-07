@@ -49,6 +49,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -97,6 +99,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
@@ -622,17 +625,16 @@ private fun ScheduledPostsNavigationRow(
     nav: INav,
 ) {
     val accountHex = accountViewModel.account.signer.pubKey
-    val allPosts by com.vitorpamplona.amethyst.Amethyst
-        .instance.scheduledPostStore.flow
+    val allPosts by Amethyst.instance.scheduledPostStore.flow
         .collectAsStateWithLifecycle()
     val pendingCount by remember(accountHex) {
         derivedStateOf {
             allPosts.count {
                 it.accountPubkey == accountHex &&
                     (
-                        it.status == com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus.PENDING ||
-                            it.status == com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus.PUBLISHING ||
-                            it.status == com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus.FAILED
+                        it.status == ScheduledPostStatus.PENDING ||
+                            it.status == ScheduledPostStatus.PUBLISHING ||
+                            it.status == ScheduledPostStatus.FAILED
                     )
             }
         }
@@ -680,9 +682,7 @@ private fun IconRowWithBadge(
             fontSize = Font18SP,
         )
         if (badgeCount > 0) {
-            androidx.compose.material3.Badge {
-                Text(badgeCount.toString())
-            }
+            Badge { Text(badgeCount.toString()) }
         }
     }
 }

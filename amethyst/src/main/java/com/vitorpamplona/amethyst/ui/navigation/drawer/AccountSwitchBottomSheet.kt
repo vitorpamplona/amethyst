@@ -303,6 +303,9 @@ private fun LogoutButton(
                         // tap and the cleanup completing.
                         val confirmedCount = unpublishedCount
                         logoutDialog = false
+                        // Guard against a malformed npub: skip the Toast so we don't
+                        // claim "Logged out" when logOff's coroutine bails early.
+                        if (accountHex == null) return@TextButton
                         accountSessionManager.logOff(acc)
                         val toastMessage =
                             if (confirmedCount > 0) {
