@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.relay
 
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
+import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -37,6 +39,7 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Hosts a [Relay] over a real `ws://` endpoint backed by Ktor + CIO.
@@ -72,6 +75,17 @@ class LocalRelayServer(
 ) {
     private var engine: CIOApplicationEngine? = null
     private var resolvedPort: Int = -1
+
+    /**
+     * Active client sessions, registered when their WebSocket handler
+     * runs and removed on disconnect. Exposed (read-only) so [stop] can
+     * NOTICE every connected client during graceful drain, and so tests
+     * can assert lifecycle bookkeeping.
+     */
+    private val activeSessions: MutableSet<RelaySession> = ConcurrentHashMap.newKeySet()
+
+    /** Number of WebSocket sessions currently connected to the server. */
+    val activeSessionCount: Int get() = activeSessions.size
 
     /** `ws://host:port/path` — only valid after [start]. */
     val url: String
@@ -119,6 +133,7 @@ class LocalRelayServer(
                                 // dispatcher; trySend never blocks the relay thread.
                                 outgoing.trySend(Frame.Text(json))
                             }
+                        activeSessions.add(session)
                         try {
                             incoming.consumeEach { frame ->
                                 if (frame is Frame.Text) {
@@ -126,6 +141,7 @@ class LocalRelayServer(
                                 }
                             }
                         } finally {
+                            activeSessions.remove(session)
                             session.close()
                         }
                     }
@@ -145,13 +161,45 @@ class LocalRelayServer(
         return this
     }
 
-    /** Stops the engine. Safe to call multiple times. */
+    /**
+     * Graceful shutdown. Safe to call multiple times.
+     *
+     * 1. Sends a NOTICE("closing: …") to every currently-connected
+     *    client so well-behaved clients know to reconnect later.
+     * 2. Stops the Ktor engine: rejects new connections immediately,
+     *    then waits up to [gracePeriodMillis] for active WebSocket
+     *    handlers to finish whatever they're processing (so an in-flight
+     *    `EVENT` lands its `OK` reply before the socket dies). After
+     *    the grace window, in-progress handlers are cancelled and the
+     *    engine waits up to [timeoutMillis] - [gracePeriodMillis] for
+     *    that cancellation to complete.
+     *
+     * Defaults to 5 s grace / 10 s total — generous enough that a
+     * SQLite write + reply round-trip can land for typical event
+     * sizes. Override either with a tighter budget if your operator
+     * knows their workload.
+     */
     fun stop(
-        gracePeriodMillis: Long = 100,
-        timeoutMillis: Long = 1_000,
+        gracePeriodMillis: Long = 5_000,
+        timeoutMillis: Long = 10_000,
     ) {
-        engine?.stop(gracePeriodMillis, timeoutMillis)
+        val e = engine ?: return
+        notifyShutdown()
+        e.stop(gracePeriodMillis, timeoutMillis)
         engine = null
         resolvedPort = -1
+    }
+
+    /**
+     * Best-effort NOTICE to every active client. Failures are
+     * swallowed — a flaky socket on its way out is exactly the case
+     * where a NOTICE will fail anyway, and the client's read of the
+     * close frame is the authoritative shutdown signal.
+     */
+    private fun notifyShutdown() {
+        val notice = NoticeMessage("closing: relay is shutting down — please reconnect later")
+        activeSessions.forEach { session ->
+            runCatching { session.send(notice) }
+        }
     }
 }
