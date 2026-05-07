@@ -83,14 +83,22 @@ class TlsClientHello(
  *   - signature_algorithms covering ECDSA / RSA-PSS / Ed25519
  *   - key_share with the caller's X25519 public
  *   - psk_key_exchange_modes = [ psk_dhe_ke ]
- *   - ALPN  = [ h3 ]
+ *   - ALPN  = caller-supplied list (default `[ h3 ]`)
  *   - quic_transport_parameters = (caller-supplied opaque bytes)
+ *
+ * Caller must pass the FULL list of ALPNs to offer. Earlier shape took an
+ * `additionalAlpn` parameter and forced `h3` first — that silently dropped
+ * any caller-supplied list (e.g. `[hq-interop, h3]` for the interop
+ * runner's hq-interop testcases) because the production call site never
+ * threaded the list through. quic-go enforces strictly with TLS alert
+ * 120 (`no_application_protocol`, CRYPTO_ERROR 376) when the offered
+ * ALPNs don't include one its server is configured for.
  */
 fun buildQuicClientHello(
     serverName: String,
     x25519PublicKey: ByteArray,
     quicTransportParams: ByteArray,
-    additionalAlpn: List<ByteArray> = emptyList(),
+    alpns: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
     random: ByteArray = RandomInstance.bytes(32),
     cipherSuites: IntArray =
         intArrayOf(
@@ -98,9 +106,6 @@ fun buildQuicClientHello(
             TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
         ),
 ): TlsClientHello {
-    val alpn = mutableListOf<ByteArray>()
-    alpn += TlsConstants.ALPN_H3
-    alpn += additionalAlpn
     val exts =
         listOf(
             TlsExtension(TlsConstants.EXT_SERVER_NAME, encodeServerNameExtension(serverName)),
@@ -109,7 +114,7 @@ fun buildQuicClientHello(
             TlsExtension(TlsConstants.EXT_SIGNATURE_ALGORITHMS, encodeSignatureAlgorithms()),
             TlsExtension(TlsConstants.EXT_KEY_SHARE, encodeKeyShareClientX25519(x25519PublicKey)),
             TlsExtension(TlsConstants.EXT_PSK_KEY_EXCHANGE_MODES, encodePskKeyExchangeModesDhe()),
-            TlsExtension(TlsConstants.EXT_ALPN, encodeAlpn(alpn)),
+            TlsExtension(TlsConstants.EXT_ALPN, encodeAlpn(alpns)),
             TlsExtension(TlsConstants.EXT_QUIC_TRANSPORT_PARAMETERS, quicTransportParams),
         )
     return TlsClientHello(random = random, cipherSuites = cipherSuites, extensions = exts)

@@ -15,6 +15,20 @@ set -e
 
 case "${ROLE:-client}" in
     client)
+        # Wait for the simulator's readiness port BEFORE first send.
+        # The sim sets up ns3 + tcpdump capture asynchronously; until
+        # sim:57832 opens, packets we send are blackholed and never
+        # show up in the pcap. The longrtt test in particular checks
+        # for ≥2 ClientHellos in the trace — if our first Initial leaves
+        # before sim is capturing, only the PTO retransmit lands in the
+        # pcap and the test fails with "Expected at least 2 ClientHellos".
+        # aioquic, picoquic, quic-go all gate their client launch on
+        # this same probe. Skip if the wait helper isn't on PATH so
+        # off-runner invocations (no sim) keep working.
+        if [ -x /wait-for-it.sh ]; then
+            /wait-for-it.sh sim:57832 -s -t 30 || \
+                echo "(wait-for-it sim:57832 timed out; continuing anyway)" >&2
+        fi
         exec /opt/quic-interop/bin/quic-interop
         ;;
     server)
