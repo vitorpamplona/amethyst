@@ -477,6 +477,19 @@
     <string name="scheduled_posts_status_sent">Sent</string>
     <string name="scheduled_posts_status_cancelled">Cancelled</string>
     <string name="scheduled_posts_logout_warning">You have %1$d scheduled post(s) that haven\'t been published yet. Logging out will permanently delete them.</string>
+    <plurals name="scheduled_posts_subtitle_queued">
+        <item quantity="one">%d queued</item>
+        <item quantity="other">%d queued</item>
+    </plurals>
+    <plurals name="scheduled_posts_subtitle_due_suffix">
+        <item quantity="one"> · 1 due in 1h</item>
+        <item quantity="other"> · %d due in 1h</item>
+    </plurals>
+    <plurals name="scheduled_posts_relay_count">
+        <item quantity="one">to 1 relay</item>
+        <item quantity="other">to %d relays</item>
+    </plurals>
+    <string name="scheduled_posts_event_id_copied">Note ID copied</string>
     <string name="polls">Polls</string>
     <string name="open_polls">Open</string>
     <string name="closed_polls">Closed</string>

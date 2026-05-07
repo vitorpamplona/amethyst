@@ -2488,4 +2488,23 @@
     <string name="scheduled_posts_notification_failed_title">Naplánovaný příspěvek selhal</string>
     <string name="app_notification_scheduled_posts_channel_name">Naplánované příspěvky</string>
     <string name="app_notification_scheduled_posts_channel_description">Oznámení, když je naplánovaný příspěvek publikován nebo selže při publikaci.</string>
+    <plurals name="scheduled_posts_subtitle_queued">
+        <item quantity="one">%d ve frontě</item>
+        <item quantity="few">%d ve frontě</item>
+        <item quantity="many">%d ve frontě</item>
+        <item quantity="other">%d ve frontě</item>
+    </plurals>
+    <plurals name="scheduled_posts_subtitle_due_suffix">
+        <item quantity="one"> · 1 do 1 h</item>
+        <item quantity="few"> · %d do 1 h</item>
+        <item quantity="many"> · %d do 1 h</item>
+        <item quantity="other"> · %d do 1 h</item>
+    </plurals>
+    <plurals name="scheduled_posts_relay_count">
+        <item quantity="one">na 1 relay</item>
+        <item quantity="few">na %d relaye</item>
+        <item quantity="many">na %d relayů</item>
+        <item quantity="other">na %d relayů</item>
+    </plurals>
+    <string name="scheduled_posts_event_id_copied">ID příspěvku zkopírováno</string>
 </resources>

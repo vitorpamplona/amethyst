@@ -2473,4 +2473,17 @@
     <string name="scheduled_posts_notification_failed_title">Schemalagt inlägg misslyckades</string>
     <string name="app_notification_scheduled_posts_channel_name">Schemalagda inlägg</string>
     <string name="app_notification_scheduled_posts_channel_description">Aviseringar när ett schemalagt inlägg publiceras eller misslyckas att publicera.</string>
+    <plurals name="scheduled_posts_subtitle_queued">
+        <item quantity="one">%d i kö</item>
+        <item quantity="other">%d i kö</item>
+    </plurals>
+    <plurals name="scheduled_posts_subtitle_due_suffix">
+        <item quantity="one"> · 1 inom 1 h</item>
+        <item quantity="other"> · %d inom 1 h</item>
+    </plurals>
+    <plurals name="scheduled_posts_relay_count">
+        <item quantity="one">till 1 relä</item>
+        <item quantity="other">till %d reläer</item>
+    </plurals>
+    <string name="scheduled_posts_event_id_copied">Inläggs-ID kopierat</string>
 </resources>

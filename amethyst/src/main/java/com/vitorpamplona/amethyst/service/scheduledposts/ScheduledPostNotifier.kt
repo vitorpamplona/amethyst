@@ -29,8 +29,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.extractContentPreview
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
  * Posts user-visible system notifications when a scheduled post completes
@@ -51,7 +51,7 @@ object ScheduledPostNotifier {
             context = context,
             notId = idFor(post.id),
             title = stringRes(context, R.string.scheduled_posts_notification_sent_title),
-            body = previewOf(post),
+            body = extractContentPreview(post, 120),
         )
     }
 
@@ -61,7 +61,7 @@ object ScheduledPostNotifier {
         error: String?,
     ) {
         ensureChannel(context)
-        val snippet = previewOf(post)
+        val snippet = extractContentPreview(post, 120)
         val body =
             if (error.isNullOrBlank()) {
                 snippet
@@ -123,15 +123,6 @@ object ScheduledPostNotifier {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(channel!!)
     }
-
-    private fun previewOf(post: ScheduledPost): String =
-        runCatching {
-            Event
-                .fromJson(post.signedEventJson)
-                .content
-                .take(120)
-                .trim()
-        }.getOrDefault("")
 
     // Distinct id per post so multiple completions don't collapse onto one row.
     private fun idFor(postId: String): Int = SCHEDULED_POST_NOT_ID_BASE xor postId.hashCode()

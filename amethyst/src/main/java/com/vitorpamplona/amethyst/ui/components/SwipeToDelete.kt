@@ -81,6 +81,7 @@ fun SwipeToDeleteContainer(
 fun SwipeToDeleteWithConfirmation(
     modifier: Modifier = Modifier,
     onDelete: () -> Unit,
+    confirmLabelRes: Int = R.string.request_deletion,
     content: @Composable (RowScope.() -> Unit),
 ) {
     val scope = rememberCoroutineScope()
@@ -103,6 +104,7 @@ fun SwipeToDeleteWithConfirmation(
                 onCancel = {
                     scope.launch { dismissState.reset() }
                 },
+                confirmLabelRes = confirmLabelRes,
             )
         },
         enableDismissFromEndToStart = true,
@@ -156,6 +158,7 @@ fun ConfirmDeleteBackground(
     dismissState: SwipeToDismissBoxState,
     onConfirmDelete: () -> Unit,
     onCancel: () -> Unit,
+    confirmLabelRes: Int = R.string.request_deletion,
 ) {
     val settled = dismissState.currentValue == Settled && dismissState.targetValue == Settled
 
@@ -195,12 +198,12 @@ fun ConfirmDeleteBackground(
         ) {
             Icon(
                 MaterialSymbols.Delete,
-                contentDescription = stringRes(id = R.string.request_deletion),
+                contentDescription = stringRes(id = confirmLabelRes),
                 tint = Color.White,
             )
             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
             Text(
-                text = stringRes(id = R.string.request_deletion),
+                text = stringRes(id = confirmLabelRes),
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
             )

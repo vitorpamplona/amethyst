@@ -76,6 +76,15 @@ class ScheduledPostsViewModel(
                 initialValue = emptyList(),
             )
 
+    val totalActive: StateFlow<Int> =
+        groupedPosts
+            .map { groups -> groups.sumOf { it.posts.size } }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0,
+            )
+
     fun cancel(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
             store.cancel(id)

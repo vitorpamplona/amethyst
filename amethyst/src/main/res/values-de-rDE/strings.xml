@@ -2479,4 +2479,17 @@ anz der Bedingungen ist erforderlich</string>
     <string name="scheduled_posts_notification_failed_title">Geplanter Beitrag fehlgeschlagen</string>
     <string name="app_notification_scheduled_posts_channel_name">Geplante Beiträge</string>
     <string name="app_notification_scheduled_posts_channel_description">Benachrichtigungen, wenn ein geplanter Beitrag veröffentlicht wird oder die Veröffentlichung fehlschlägt.</string>
+    <plurals name="scheduled_posts_subtitle_queued">
+        <item quantity="one">%d in Warteschlange</item>
+        <item quantity="other">%d in Warteschlange</item>
+    </plurals>
+    <plurals name="scheduled_posts_subtitle_due_suffix">
+        <item quantity="one"> · 1 fällig in 1 Std.</item>
+        <item quantity="other"> · %d fällig in 1 Std.</item>
+    </plurals>
+    <plurals name="scheduled_posts_relay_count">
+        <item quantity="one">an 1 Relay</item>
+        <item quantity="other">an %d Relays</item>
+    </plurals>
+    <string name="scheduled_posts_event_id_copied">Beitrags-ID kopiert</string>
 </resources>
