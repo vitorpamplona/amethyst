@@ -23,6 +23,7 @@ package com.vitorpamplona.quic.interop.runner
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.sync.withLock
 
 /**
  * HQ-interop (HTTP/0.9 over QUIC) GET client. quic-interop-runner convention
@@ -51,6 +52,20 @@ class HqInteropGetClient(
         stream.send.finish()
         return HqRequestHandle(stream)
     }
+
+    override suspend fun prepareRequests(
+        @Suppress("UNUSED_PARAMETER") authority: String,
+        paths: List<String>,
+    ): List<RequestHandle> =
+        conn.lock.withLock {
+            paths.map { path ->
+                val stream = conn.openBidiStreamLocked()
+                val request = "GET $path\r\n".encodeToByteArray()
+                stream.send.enqueue(request)
+                stream.send.finish()
+                HqRequestHandle(stream)
+            }
+        }
 
     override suspend fun awaitResponse(handle: RequestHandle): GetResponse {
         val stream = (handle as HqRequestHandle).stream

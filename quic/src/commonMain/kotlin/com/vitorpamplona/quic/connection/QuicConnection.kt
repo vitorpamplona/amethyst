@@ -706,22 +706,34 @@ class QuicConnection(
      * check capacity proactively if the caller wants to back-pressure rather
      * than throw.
      */
-    suspend fun openBidiStream(): QuicStream =
-        lock.withLock {
-            if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
-                throw QuicStreamLimitException(
-                    "peer-granted bidi stream cap reached " +
-                        "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
-                )
-            }
-            val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
-            val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
-            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
-            stream.receiveLimit = config.initialMaxStreamDataBidiLocal
-            streams[id] = stream
-            streamsList += stream
-            stream
+    suspend fun openBidiStream(): QuicStream = lock.withLock { openBidiStreamLocked() }
+
+    /**
+     * The connection-lock-holding part of [openBidiStream]. Public so
+     * batched-multiplex callers (interop multiplexing testcase, MoQ
+     * audio rooms emitting many group streams in quick succession) can
+     * acquire [lock] ONCE and bracket multiple stream opens — preventing
+     * the send loop from interjecting between opens and draining one
+     * stream's data per packet. Caller MUST hold [lock].
+     *
+     * The non-batched paths use [openBidiStream] which holds the lock
+     * for one call only.
+     */
+    fun openBidiStreamLocked(): QuicStream {
+        if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
+            throw QuicStreamLimitException(
+                "peer-granted bidi stream cap reached " +
+                    "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
+            )
         }
+        val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
+        val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
+        stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
+        stream.receiveLimit = config.initialMaxStreamDataBidiLocal
+        streams[id] = stream
+        streamsList += stream
+        return stream
+    }
 
     /**
      * Allocate a new client-initiated unidirectional (write-only) stream.

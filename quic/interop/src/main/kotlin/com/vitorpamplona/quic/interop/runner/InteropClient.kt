@@ -349,14 +349,16 @@ private fun runTransferTest(
                             // by batching enqueues + single wake.
                             val collected = mutableListOf<Pair<URI, GetResponse>>()
                             urls.chunked(MULTIPLEX_PARALLELISM).forEach { chunk ->
-                                val prepared =
-                                    chunk.map { url ->
-                                        url to client.prepareRequest(authority, url.path)
-                                    }
+                                // Single lock-held batch open + enqueue.
+                                // Without this, openBidiStream's per-call
+                                // lock acquire / release lets the send loop
+                                // interject between opens and drain one
+                                // stream per packet.
+                                val handles = client.prepareRequests(authority, chunk.map { it.path })
                                 driver.wakeup()
                                 coroutineScope {
                                     val deferreds =
-                                        prepared.map { (url, handle) ->
+                                        chunk.zip(handles).map { (url, handle) ->
                                             async {
                                                 val resp =
                                                     withTimeoutOrNull(PER_STREAM_TIMEOUT_SEC * 1_000L) {

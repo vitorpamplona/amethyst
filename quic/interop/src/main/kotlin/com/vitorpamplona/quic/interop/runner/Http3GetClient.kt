@@ -33,6 +33,7 @@ import com.vitorpamplona.quic.qpack.QpackDecoder
 import com.vitorpamplona.quic.qpack.QpackEncoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.sync.withLock
 
 /** Common shape for the two interop GET clients (HTTP/3 and HQ-interop).
  *
@@ -48,6 +49,23 @@ interface GetClient {
         authority: String,
         path: String,
     ): RequestHandle
+
+    /**
+     * Atomically open + enqueue + FIN N streams under a single hold of
+     * the connection lock. The send loop cannot interject between
+     * opens, so when it next drains it sees ALL N streams' data ready
+     * and packs them into coalesced packets instead of emitting one
+     * tiny packet per stream.
+     *
+     * Without this, the equivalent serial loop of [prepareRequest]
+     * yields between calls (lock release → send loop wakes → drains
+     * one stream → next prepareRequest acquires...) and we send one
+     * stream per packet — what cratered the multiplexing testcase.
+     */
+    suspend fun prepareRequests(
+        authority: String,
+        paths: List<String>,
+    ): List<RequestHandle>
 
     /** Suspend until the server FINs the response stream associated with
      *  [handle]. Returns the assembled response. */
@@ -136,6 +154,19 @@ class Http3GetClient(
         stream.send.finish()
         return Http3RequestHandle(stream)
     }
+
+    override suspend fun prepareRequests(
+        authority: String,
+        paths: List<String>,
+    ): List<RequestHandle> =
+        conn.lock.withLock {
+            paths.map { path ->
+                val stream = conn.openBidiStreamLocked()
+                stream.send.enqueue(encodeRequest(authority, path))
+                stream.send.finish()
+                Http3RequestHandle(stream)
+            }
+        }
 
     override suspend fun awaitResponse(handle: RequestHandle): GetResponse {
         val stream = (handle as Http3RequestHandle).stream
