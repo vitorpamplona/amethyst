@@ -113,13 +113,18 @@ internal object PlaywrightDriver {
         overallTimeoutSec: Int = durationSec + 30,
         track: String = "audio/data",
         serverCertHashB64: String? = null,
+        channels: Int = 1,
     ): HarnessRun {
-        val extraQuery =
+        val certPart =
             if (serverCertHashB64 != null) {
                 "&certSha256=" + java.net.URLEncoder.encode(serverCertHashB64, Charsets.UTF_8)
             } else {
                 ""
             }
+        // Always pass the channel count so listen.ts can configure
+        // its WebCodecs AudioDecoder with the matching value. The
+        // hang-tier I4 uses 2 (440/660 stereo); the rest use 1.
+        val extraQuery = "$certPart&channels=$channels"
         return run(
             "listen.html",
             relayUrlFull,

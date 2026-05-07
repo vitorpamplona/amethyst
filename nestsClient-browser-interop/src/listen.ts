@@ -131,7 +131,12 @@ async function main() {
 
     // -- WebCodecs AudioDecoder ----------------------------------------
     const sampleRate = 48_000;
-    const numberOfChannels = 1; // overwritten by catalog if available; default mono
+    // Channel count from `?channels=N` URL param; defaults to mono.
+    // The hang-tier I4 uses 2 (440 Hz L / 660 Hz R) — Chromium's
+    // WebCodecs AudioDecoder must be configured with the correct
+    // channel count up front; reconfiguring after frames arrive
+    // discards decoder state.
+    const numberOfChannels = Number(params.get("channels") ?? "1");
     let warmed = 0;
     // I14 instrumentation. `decoderOutputs` counts every successful
     // `output()` callback (warmup frames included), `decoderErrors`

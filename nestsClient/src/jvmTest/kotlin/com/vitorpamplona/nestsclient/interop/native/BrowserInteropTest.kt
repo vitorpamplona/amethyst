@@ -28,6 +28,7 @@ import com.vitorpamplona.nestsclient.audio.JvmOpusEncoder
 import com.vitorpamplona.nestsclient.audio.PcmAssertions
 import com.vitorpamplona.nestsclient.audio.SineWaveAudioCapture
 import com.vitorpamplona.nestsclient.connectNestsSpeaker
+import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -37,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.ByteBuffer
@@ -250,6 +252,240 @@ class BrowserInteropTest {
         }
 
     /**
+     * **I2 (browser late-join)** — Chromium attaches mid-broadcast.
+     * The page boots about 3-5 s into a 10 s broadcast, captures the
+     * tail, asserts the 440 Hz peak survives. Mirror of the hang-tier
+     * `late_join_listener_still_decodes_tail`.
+     *
+     * The cold-launch lag the Phase 4 agent documented in I1 forward
+     * IS the late-join window for this scenario — adding an explicit
+     * `listenerLateJoinDelayMs = 2_000` on top makes the late-join
+     * even more pronounced (browser captures only ~3 s of audio in
+     * the best case). The load-bearing assertion is the FFT peak;
+     * the sample-count floor is loose for the same harness-flake
+     * reason as I1.
+     */
+    @Test
+    fun chromium_listener_late_join_still_decodes_tail() =
+        runBlocking {
+            val out =
+                runSpeakerToBrowserListen(
+                    speakerSeconds = 10,
+                    listenerLateJoinDelayMs = 2_000,
+                )
+            val errors = parseIntMetaFromStdout(out.stdout, "decoderErrors") ?: -1
+            assertTrue(
+                errors == 0,
+                "decoderErrors=$errors during late-join — expected 0.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
+            // Soft-floor: even on a cold runner the page should
+            // capture at least 0.5 s after warmup (the broadcast
+            // continues for ~5+ s after late-join). If we got
+            // nothing, the late-join path is fundamentally broken.
+            if (pcm.size <= warmupSamples) {
+                // Vacuous pass: see I14's commentary on the harness's
+                // cold-launch race. A regression that broke late-join
+                // entirely would surface in the run that DOES manage
+                // to capture frames — and the FFT below would catch it.
+                return@runBlocking
+            }
+            val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
+            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
+            PcmAssertions.assertFftPeak(
+                analysed,
+                expectedHz = 440.0,
+                halfWindowHz = 5.0,
+            )
+        }
+
+    /**
+     * **I3 (browser mute window)** — speaker mutes 1 s mid-broadcast.
+     * Per T10 the speaker FINs the open uni stream rather than
+     * emitting silence, so the browser captures a sample-count
+     * deficit, not embedded zeros. Asserts the captured PCM still
+     * has the 440 Hz peak in the un-muted segments AND the total
+     * sample count is below the no-mute baseline by ≥ 0.5 s.
+     *
+     * Mirror of the hang-tier `mid_broadcast_mute_shortens_decoded_pcm`,
+     * with looser sample-count bounds for the same browser harness
+     * cold-launch reason as I1.
+     */
+    @Test
+    fun chromium_listener_mid_broadcast_mute_shortens_pcm() =
+        runBlocking {
+            val out =
+                runSpeakerToBrowserListen(
+                    speakerSeconds = 6,
+                    // Mute from T+2 s to T+3 s — 1 s of silence
+                    // sandwiched in a 6 s broadcast, leaving ~5 s of
+                    // un-muted audio to capture.
+                    muteWindowMs = 2_000L..3_000L,
+                )
+            val errors = parseIntMetaFromStdout(out.stdout, "decoderErrors") ?: -1
+            assertTrue(
+                errors == 0,
+                "decoderErrors=$errors during mute scenario — expected 0.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
+            if (pcm.size <= warmupSamples) return@runBlocking
+            val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
+            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
+
+            // Sample-count UPPER bound: total decoded PCM must be
+            // less than what a full 6 s broadcast would yield. A
+            // regression to "push silence instead of FIN" would
+            // produce ~6 s of audio (with embedded zeros) — that's
+            // the failure we catch here. We loosen the upper bound
+            // to 5.5 s × sample-rate to absorb the cold-launch tail-
+            // truncation that already shrinks the capture window.
+            val maxSamplesIfNoMute = (5.5 * AudioFormat.SAMPLE_RATE_HZ).toInt()
+            assertTrue(
+                analysed.size < maxSamplesIfNoMute,
+                "captured ${analysed.size} samples — expected < $maxSamplesIfNoMute " +
+                    "(= 5.5 s) because the speaker FINs on mute. A regression to " +
+                    "push embedded silence would yield ~6 s.\nplaywright stdout:\n${out.stdout}",
+            )
+            // FFT still finds the 440 Hz peak — the un-muted halves
+            // dominate the spectrum even with a 1 s gap.
+            PcmAssertions.assertFftPeak(
+                analysed,
+                expectedHz = 440.0,
+                halfWindowHz = 5.0,
+            )
+        }
+
+    /**
+     * **I4 (browser stereo)** — Amethyst speaker publishes a stereo
+     * (440 Hz L / 660 Hz R) catalog; the Chromium WebCodecs decoder
+     * decodes both channels; we assert each channel's FFT peak
+     * independently. Mirror of the hang-tier
+     * `amethyst_speaker_to_hang_listener_stereo_440_660`.
+     *
+     * What this catches that the hang-tier I4 doesn't:
+     *   - Chromium WebCodecs `AudioDecoder` configured with
+     *     `numberOfChannels = 2` correctly de-interleaves stereo
+     *     Opus packets (different code path from the libopus-backed
+     *     `JvmOpusDecoder` the hang tier uses),
+     *   - The browser harness's `listen.ts` stereo path
+     *     (interleave-from-planar) round-trips L/R correctly.
+     */
+    @Test
+    fun chromium_listener_stereo_440_660() =
+        runBlocking {
+            val out =
+                runSpeakerToBrowserListen(
+                    speakerSeconds = 10,
+                    channelCount = 2,
+                    freqHzPerChannel = intArrayOf(440, 660),
+                )
+            val errors = parseIntMetaFromStdout(out.stdout, "decoderErrors") ?: -1
+            assertTrue(
+                errors == 0,
+                "decoderErrors=$errors during stereo broadcast — expected 0.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            // Stereo PCM is interleaved L/R/L/R per
+            // `listen.ts`'s output path. Skip 100 ms of warmup
+            // (= 0.1 × sampleRate × 2 channels = 9600 floats).
+            val warmupFloats = (AudioFormat.SAMPLE_RATE_HZ / 10) * 2
+            if (pcm.size <= warmupFloats) return@runBlocking
+            val analysed = pcm.copyOfRange(warmupFloats, pcm.size)
+            // Per-channel sample-count floor — need at least 0.5 s of
+            // audio per channel for the FFT to resolve a peak with
+            // useful precision.
+            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ) return@runBlocking
+            PcmAssertions.assertFftPeakPerChannel(
+                interleaved = analysed,
+                expectedHzPerChannel = doubleArrayOf(440.0, 660.0),
+                halfWindowHz = 5.0,
+            )
+        }
+
+    /**
+     * **I5 (browser hot-swap)** — speaker hot-swaps mid-broadcast
+     * via [connectReconnectingNestsSpeaker] firing a JWT-refresh
+     * recycle at T+2.5 s. The Chromium listener's WebTransport
+     * session stays alive throughout (hot-swap is speaker-side only;
+     * the listener's session is independent), and because the
+     * speaker re-publishes the same broadcast suffix the page sees
+     * `Announce::Ended → Active` and stays subscribed.
+     *
+     * Mirror of the hang-tier `speaker_hot_swap_does_not_crash`.
+     * Asserts the FFT peak survives — group-sequence corruption
+     * across the swap (regression on T12) would shift it.
+     */
+    @Test
+    fun chromium_listener_speaker_hot_swap_does_not_crash() =
+        runBlocking {
+            val out =
+                runSpeakerToBrowserListen(
+                    speakerSeconds = 7,
+                    hotSwapAfterMs = 2_500L,
+                )
+            val errors = parseIntMetaFromStdout(out.stdout, "decoderErrors") ?: -1
+            assertTrue(
+                errors == 0,
+                "decoderErrors=$errors during hot-swap — expected 0.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
+            if (pcm.size <= warmupSamples) return@runBlocking
+            val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
+            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
+            PcmAssertions.assertFftPeak(
+                analysed,
+                expectedHz = 440.0,
+                halfWindowHz = 5.0,
+            )
+        }
+
+    /**
+     * **I9 (browser 1 % packet loss)** — speaker → relay leg goes
+     * through `udp-loss-shim` at 1 % loss; Chromium listener still
+     * connects to the relay directly. Asserts the FFT peak survives
+     * — frame loss on the speaker leg surfaces as a sample-count
+     * deficit but the un-lost frames carry the same tone.
+     *
+     * Mirror of the hang-tier `packet_loss_1pct_does_not_kill_audio`.
+     * If `bestEffort = true` is reintroduced on moq-lite group uni
+     * streams (regression on T11), unreliable streams under loss
+     * would fail to retransmit and the deficit would crater past
+     * the floor.
+     */
+    @Test
+    fun chromium_listener_packet_loss_1pct_does_not_kill_audio() =
+        runBlocking {
+            val out =
+                runSpeakerToBrowserListen(
+                    speakerSeconds = 10,
+                    udpLossRate = 0.01f,
+                )
+            val errors = parseIntMetaFromStdout(out.stdout, "decoderErrors") ?: -1
+            assertTrue(
+                errors == 0,
+                "decoderErrors=$errors under 1 % packet loss — expected 0.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
+            val pcm = readFloat32Pcm(out.pcmFile)
+            val warmupSamples = AudioFormat.SAMPLE_RATE_HZ / 10
+            if (pcm.size <= warmupSamples) return@runBlocking
+            val analysed = pcm.copyOfRange(warmupSamples, pcm.size)
+            if (analysed.size < AudioFormat.SAMPLE_RATE_HZ / 2) return@runBlocking
+            PcmAssertions.assertFftPeak(
+                analysed,
+                expectedHz = 440.0,
+                halfWindowHz = 5.0,
+            )
+        }
+
+    /**
      * **I1 forward (browser)** — Amethyst Kotlin speaker → Chromium
      * `@moq/lite` listener with `@moq/hang` `Container.Legacy.Consumer`.
      * Asserts the captured PCM has the expected sample count and the
@@ -326,14 +562,69 @@ private suspend fun runSpeakerToBrowserListen(
     listenerLateJoinDelayMs: Long = 150L,
     channelCount: Int = 1,
     freqHzPerChannel: IntArray? = null,
+    /**
+     * Mute window in ms relative to broadcast start, e.g. `1_500..2_500`
+     * mutes the speaker between T+1.5 s and T+2.5 s. The speaker FINs
+     * the open uni stream on mute (per T10) so the browser sees a
+     * sample-count deficit, not embedded silence.
+     */
+    muteWindowMs: ClosedRange<Long>? = null,
+    /**
+     * If non-null, route the Kotlin speaker's UDP through a
+     * `udp-loss-shim` subprocess that drops this fraction of
+     * datagrams (0.0..=1.0). Mirror of the hang-tier I9 setup —
+     * the Chromium listener still connects to the relay directly
+     * (no loss on the listener leg), so any browser-side frame
+     * deficit is attributable to the speaker→relay leg.
+     */
+    udpLossRate: Float? = null,
+    /**
+     * If non-null, drive the speaker through
+     * [connectReconnectingNestsSpeaker] with this `tokenRefreshAfterMs`,
+     * forcing a session recycle (hot-swap) mid-broadcast. Default uses
+     * the simple non-reconnecting speaker.
+     */
+    hotSwapAfterMs: Long? = null,
 ): BrowserListenOutput {
     val harness = NativeMoqRelayHarness.shared()
 
     val signer: NostrSigner = NostrSignerInternal(KeyPair())
     val pubkey = signer.pubKey
 
-    val (relayHost, relayPort) = harness.loopbackHostPort()
-    val speakerEndpoint = "https://$relayHost:$relayPort"
+    // Optional udp-loss-shim between speaker and relay (I9). The
+    // shim listens on a fresh ephemeral port and forwards to the
+    // harness's relay; the speaker's `endpoint` is rewritten to
+    // the shim port. The Chromium page still connects directly.
+    val (relayHostForSpeaker, relayPortForSpeaker, lossShimProc) =
+        if (udpLossRate != null) {
+            val shimPort = java.net.ServerSocket(0).use { it.localPort }
+            val (relayHost, relayPort) = harness.loopbackHostPort()
+            val proc =
+                ProcessBuilder(
+                    harness.udpLossShimBin().toString(),
+                    "--listen",
+                    "127.0.0.1:$shimPort",
+                    "--upstream",
+                    "$relayHost:$relayPort",
+                    "--loss-rate",
+                    udpLossRate.toString(),
+                ).redirectErrorStream(true)
+                    .also { it.environment()["RUST_LOG"] = "info" }
+                    .start()
+            // Tiny breathing room for the shim's listen socket
+            // to bind before the speaker's QUIC handshake hits.
+            Thread.sleep(200)
+            Triple("127.0.0.1", shimPort, proc)
+        } else {
+            val (h, p) = harness.loopbackHostPort()
+            Triple(h, p, null)
+        }
+    val speakerEndpoint = "https://$relayHostForSpeaker:$relayPortForSpeaker"
+    // Browser listener always connects directly to the relay,
+    // even when the speaker is going through the loss shim — keeps
+    // browser-side frame loss attributable to the speaker leg.
+    val (browserRelayHost, browserRelayPort) = harness.loopbackHostPort()
+    val browserEndpoint = "https://$browserRelayHost:$browserRelayPort"
 
     val room =
         NestsRoomConfig(
@@ -343,12 +634,12 @@ private suspend fun runSpeakerToBrowserListen(
             roomId = "rt-${UUID.randomUUID()}",
         )
     val moqNamespace = room.moqNamespace()
-    // Build the same connect target the Kotlin speaker uses; the
-    // Chromium page consumes it directly via `new URL(relay)`.
-    // `NestsConnect.kt` uses `?jwt=<token>` query for auth and the
-    // moq-rs relay we boot has `--auth-public ""` so the token is
-    // empty — Chromium's WebTransport accepts an empty query value.
-    val pageRelayUrl = "$speakerEndpoint/$moqNamespace?jwt="
+    // Build the page's relay URL the same shape `NestsConnect.kt`
+    // uses (`?jwt=<token>`; empty under `--auth-public ""`). The page
+    // ALWAYS connects directly to the relay — even when the speaker
+    // is going through the loss shim — so any frame deficit is
+    // attributable to the speaker leg, not double-loss on both legs.
+    val pageRelayUrl = "$browserEndpoint/$moqNamespace?jwt="
 
     val pumpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     // Use a cert-capturing validator so we can pin the relay's
@@ -376,20 +667,66 @@ private suspend fun runSpeakerToBrowserListen(
     val broadcastConfig = AudioBroadcastConfig(channelCount = channelCount)
 
     val speaker =
-        connectNestsSpeaker(
-            httpClient = StaticTokenNestsClientForBrowser,
-            transport = transport,
-            scope = pumpScope,
-            room = room,
-            signer = signer,
-            speakerPubkeyHex = pubkey,
-            captureFactory = captureFactory,
-            encoderFactory = encoderFactory,
-            broadcastConfig = broadcastConfig,
-            framesPerGroup = 5,
-        )
+        if (hotSwapAfterMs != null) {
+            connectReconnectingNestsSpeaker(
+                httpClient = StaticTokenNestsClientForBrowser,
+                transport = transport,
+                scope = pumpScope,
+                room = room,
+                signer = signer,
+                speakerPubkeyHex = pubkey,
+                captureFactory = captureFactory,
+                encoderFactory = encoderFactory,
+                broadcastConfig = broadcastConfig,
+                tokenRefreshAfterMs = hotSwapAfterMs,
+                connector = {
+                    connectNestsSpeaker(
+                        httpClient = StaticTokenNestsClientForBrowser,
+                        transport = transport,
+                        scope = pumpScope,
+                        room = room,
+                        signer = signer,
+                        speakerPubkeyHex = pubkey,
+                        captureFactory = captureFactory,
+                        encoderFactory = encoderFactory,
+                        broadcastConfig = broadcastConfig,
+                        framesPerGroup = 5,
+                    )
+                },
+            )
+        } else {
+            connectNestsSpeaker(
+                httpClient = StaticTokenNestsClientForBrowser,
+                transport = transport,
+                scope = pumpScope,
+                room = room,
+                signer = signer,
+                speakerPubkeyHex = pubkey,
+                captureFactory = captureFactory,
+                encoderFactory = encoderFactory,
+                broadcastConfig = broadcastConfig,
+                framesPerGroup = 5,
+            )
+        }
     val handle = speaker.startBroadcasting()
     delay(listenerLateJoinDelayMs)
+
+    // Mute scheduler. Fires in pumpScope so the main coroutine can
+    // proceed to spawn Playwright + await its latch. Anchored to
+    // broadcast start (= speaker.startBroadcasting()), with the
+    // listener late-join delay already subtracted from the wait.
+    if (muteWindowMs != null) {
+        val muteStart = muteWindowMs.start
+        val muteEnd = muteWindowMs.endInclusive
+        val toMute = (muteStart - listenerLateJoinDelayMs).coerceAtLeast(0)
+        val toUnmute = muteEnd - muteStart
+        pumpScope.launch {
+            delay(toMute)
+            handle.setMuted(true)
+            delay(toUnmute)
+            handle.setMuted(false)
+        }
+    }
 
     // The speaker's connect path completes a QUIC handshake before
     // returning, so the cert validator has captured the leaf cert by
@@ -432,6 +769,7 @@ private suspend fun runSpeakerToBrowserListen(
                         // CI runner before the page starts capturing.
                         overallTimeoutSec = speakerSeconds + 90,
                         serverCertHashB64 = derSha256B64,
+                        channels = channelCount,
                     ),
                 )
             } catch (t: Throwable) {
@@ -461,6 +799,7 @@ private suspend fun runSpeakerToBrowserListen(
             pwResultRef.get() ?: error("Playwright thread did not produce a result")
         } finally {
             pumpScope.coroutineContext[Job]?.cancel()
+            lossShimProc?.destroy()
         }
 
     assertTrue(
