@@ -279,12 +279,50 @@ accumulation), and its only purpose is wire-format bisects.
 - **I8 SubscribeDrop**, **I10 long broadcast**, **I12 Goaway** —
   next batch of P0 scenarios on the existing harness.
 
+## Phase 3 update — I7 publisher reconnect (ref→A)
+
+Added `--reconnect-after-ms <N>` to `hang-publish` (see
+`nestsClient/tests/hang-interop/hang-publish/src/main.rs`). When set,
+the publisher emits frames into one `client.with_publish(...)`
+session for the first N ms, drops that session's `Reconnect` handle
++ `Origin`, builds a fresh session against the same URL, and
+re-creates the broadcast under the same path so the relay sees
+`Announce::Ended → Active` on a single suffix. State that has to
+stay continuous across cycles (`frame_no` for the legacy timestamp,
+`sample_idx` for the sine-wave phase) lives in the run scope; group
+sequences reset per cycle since they're broadcast-scoped.
+
+`HangInteropReverseTest.rust_hang_publish_reconnect_kotlin_listener_recovers`
+is the I7 scenario: the Amethyst Kotlin listener runs through
+`connectReconnectingNestsListener` (with the proactive JWT-refresh
+disabled so the only re-issuance trigger is the publisher's cycle)
+and asserts ≥ 2.5 s of decoded mono PCM at 440 Hz survives the
+reconnect.
+
+**Production-side follow-up (not blocking I7):** with moq-relay
+0.10.25 the listener captures the full pre-reconnect chunk (~1.9 s
+of frames out of the publisher's first 2.5 s cycle, the missing
+600 ms is normal subscribe-start latency) but the post-reconnect
+chunk is itself truncated mid-stream — the listener receives the
+first ~10 groups (~1.0 s) of the second cycle then stops getting
+new uni streams while the publisher continues emitting groupSeq
+10–24 for another ~1.5 s. Pre+post = ~2.86 s of audio observed in
+practice out of a possible ~5 s. Plausible cause is QUIC
+`MAX_STREAMS_UNI` credit not returning fast enough on the listener
+side after cycle 1's stream FINs, OR the moq-relay 0.10.x per-
+broadcast forward queue holding cycle-2 frames behind cycle-1
+fan-out. Documented in the test's threshold comment; raise as a
+separate bug if reproduced outside the harness. The test threshold
+is tuned to PASS on the current behaviour and FAIL if the
+re-issuance pump never fires (which would cap capture at ~1.9 s).
+
 ## Phase 3 + 4 + 5 deferred
 
 Untouched in Phase 1:
 
 - Phase 3 transport robustness (`udp-loss-shim` body, hot-swap,
-  long-broadcast).
+  long-broadcast). I7 (publisher reconnect ref→A) has now landed —
+  see above.
 - Phase 4 browser harness (`nestsClient-browser-interop/` directory,
   Playwright driver).
 - Phase 5 browser-only scenarios.
@@ -317,6 +355,7 @@ nestsClient/src/jvmTest/kotlin/com/vitorpamplona/nestsclient/
     ├── NativeMoqRelayHarness.kt                # boots moq-relay subprocess
     ├── NativeMoqRelayHarnessSmokeTest.kt
     ├── HangInteropTest.kt                      # I1 + I2 + I3 + I11 + Rust↔Rust
+    ├── HangInteropReverseTest.kt               # I7 (publisher reconnect ref→A)
     └── KotlinSpeakerKotlinListenerThroughNativeRelayTest.kt
                                                 # diagnostic, gated separately
 

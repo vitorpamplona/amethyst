@@ -76,6 +76,17 @@ struct Args {
     /// custom interop scenarios.
     #[arg(long, default_value_t = DEFAULT_TRACK_NAME.to_string())]
     track_name: String,
+
+    /// If non-zero, drop the active session at this many ms into the
+    /// broadcast and re-announce on a fresh session. Mirrors the
+    /// behaviour the Amethyst reconnecting speaker exhibits during
+    /// JWT refresh: the publisher unannounces, opens a new
+    /// transport, and re-announces the same broadcast path so any
+    /// listener with a re-issuance pump can pick up where it left
+    /// off. Used by the I7 cross-stack interop scenario to
+    /// exercise the Kotlin listener's publisher-cycle handling.
+    #[arg(long, default_value_t = 0)]
+    reconnect_after_ms: u64,
 }
 
 #[tokio::main]
@@ -113,32 +124,149 @@ async fn run(args: Args) -> anyhow::Result<()> {
     ]);
     let client = cfg.init().context("init moq client")?;
 
-    // Set up the publish side: a producer this binary writes to,
-    // and a consumer the moq-native client forwards to the relay.
-    let origin = moq_lite::Origin::produce();
-    let publish_consumer = origin.consume();
+    let total_frames = (args.duration * 1_000_000 / FRAME_DURATION_US) as usize;
+    let channels = match args.channels {
+        1 => opus::Channels::Mono,
+        2 => opus::Channels::Stereo,
+        n => anyhow::bail!("unsupported channel count: {n}"),
+    };
+    let mut encoder = opus::Encoder::new(SAMPLE_RATE_HZ, channels, opus::Application::Audio)
+        .context("init opus encoder")?;
+    encoder
+        .set_bitrate(opus::Bitrate::Bits(32_000))
+        .context("set opus bitrate")?;
 
-    // Start the reconnect loop in the background. It owns the
-    // session lifecycle.
-    let session_url = url.clone();
-    let session = tokio::spawn(async move {
-        let reconnect = client.with_publish(publish_consumer).reconnect(session_url);
-        if let Err(err) = reconnect.closed().await {
-            tracing::warn!(%err, "reconnect loop exited");
+    // Per-channel phase step: each channel may have its own
+    // frequency (I4 stereo). Defaults to args.freq_hz on every
+    // channel.
+    let mut phase_steps: Vec<f64> = Vec::with_capacity(args.channels as usize);
+    for ch in 0..(args.channels as usize) {
+        let f = match (ch, args.freq_hz_l, args.freq_hz_r) {
+            (0, Some(l), _) => l,
+            (1, _, Some(r)) => r,
+            _ => args.freq_hz,
+        };
+        phase_steps
+            .push(2.0_f64 * std::f64::consts::PI * (f as f64) / (SAMPLE_RATE_HZ as f64));
+    }
+
+    // Cross-cycle pump state. `frame_no` is the absolute frame index
+    // since broadcast start (used as the legacy timestamp), so on a
+    // mid-broadcast reconnect the new session continues monotonically
+    // from where the old one left off. `sample_idx` likewise advances
+    // across cycles so the per-channel sine wave keeps its phase
+    // continuous — a regression that resets the phase manifests as
+    // an audible click at the reconnect point on the listener side.
+    let mut frame_no: usize = 0;
+    let mut sample_idx: u64 = 0;
+    // Group sequences must restart at 0 on each fresh broadcast.
+    // moq-lite treats group sequences as broadcast-scoped, and the
+    // re-announced broadcast is a brand-new producer-side instance
+    // — so reset to 0 in each cycle below.
+
+    let mut next_send = tokio::time::Instant::now();
+
+    let reconnect_at_frame = if args.reconnect_after_ms > 0 {
+        Some((args.reconnect_after_ms * 1_000 / FRAME_DURATION_US) as usize)
+    } else {
+        None
+    };
+
+    let mut cycle_idx: usize = 0;
+    while frame_no < total_frames {
+        cycle_idx += 1;
+        // Set up a fresh origin → consumer pair for this cycle.
+        // Dropping the previous Reconnect handle aborts its background
+        // tokio task; dropping the prior origin causes the previous
+        // session's broadcast to unannounce. On the listener side this
+        // surfaces as Announce::Ended, the audio frames flow
+        // completes, and the consumer's re-issuance pump fires a
+        // fresh subscribe against the next-announced broadcast.
+        let origin = moq_lite::Origin::produce();
+        let publish_consumer = origin.consume();
+        let session_url = url.clone();
+        let session_client = client.clone();
+        let _reconnect = session_client
+            .with_publish(publish_consumer)
+            .reconnect(session_url);
+
+        // Stop the cycle either at total_frames or the reconnect
+        // boundary, whichever comes first.
+        let cycle_end = match reconnect_at_frame {
+            Some(reconnect_frame) if cycle_idx == 1 && reconnect_frame < total_frames => {
+                reconnect_frame
+            }
+            _ => total_frames,
+        };
+
+        tracing::info!(
+            cycle = cycle_idx,
+            from_frame = frame_no,
+            until_frame = cycle_end,
+            "publish cycle starting"
+        );
+
+        let outcome = publish_cycle(
+            &origin,
+            &args,
+            &mut encoder,
+            &phase_steps,
+            &mut frame_no,
+            &mut sample_idx,
+            &mut next_send,
+            cycle_end,
+        )
+        .await;
+        // Drop the reconnect handle + origin BEFORE bubbling the
+        // result so the relay sees the unannounce promptly. _reconnect
+        // is dropped at scope-end which aborts its task; origin is
+        // dropped a moment later when this iteration's stack frame
+        // unwinds. Without explicitly ordering the drops, the next
+        // cycle's `with_publish` call would race the previous
+        // session's tear-down and the listener could see a stale
+        // Active before the Ended.
+        drop(_reconnect);
+        drop(origin);
+        outcome?;
+
+        // Brief settling delay so the listener observes a clean
+        // Ended → Active transition rather than two overlapping
+        // Actives. ~50 ms is plenty for moq-relay 0.10.x's
+        // announce-watch fan-out without being audibly long.
+        if frame_no < total_frames {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            // The fresh cycle's pacing anchor must restart from
+            // "now" — otherwise the publisher would try to catch up
+            // by sending a burst of frames at full speed, which
+            // confuses the listener's group-cadence assumptions.
+            next_send = tokio::time::Instant::now();
         }
-    });
+    }
 
-    // Result of the publish loop is what determines test pass/fail.
-    let publish_result = publish(&origin, &args).await;
-
-    // Once we drop origin all published broadcasts unannounce; the
-    // reconnect task exits when the session closes.
-    drop(session);
-
-    publish_result
+    tracing::info!(
+        frames = total_frames,
+        cycles = cycle_idx,
+        "hang-publish done"
+    );
+    Ok(())
 }
 
-async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Result<()> {
+/// Publish one cycle's worth of audio frames into the relay through
+/// `origin`, advancing `frame_no` / `sample_idx` / `next_send` in
+/// place. Stops at `cycle_end` (exclusive). Catalog + audio_track
+/// are created fresh per cycle since they're owned by the cycle's
+/// origin and would unannounce on origin drop anyway.
+#[allow(clippy::too_many_arguments)]
+async fn publish_cycle(
+    origin: &moq_lite::OriginProducer,
+    args: &Args,
+    encoder: &mut opus::Encoder,
+    phase_steps: &[f64],
+    frame_no: &mut usize,
+    sample_idx: &mut u64,
+    next_send: &mut tokio::time::Instant,
+    cycle_end: usize,
+) -> anyhow::Result<()> {
     let mut broadcast = origin
         .create_broadcast(args.broadcast.as_str())
         .ok_or_else(|| anyhow!("broadcast '{}' not allowed by origin", args.broadcast))?;
@@ -176,9 +304,6 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
         .write_frame(catalog_json)
         .context("publish catalog frame")?;
     catalog_group.finish().ok();
-    // We don't finish() the catalog_track itself yet — moq-lite
-    // treats track-end as broadcast-end, and we want the audio
-    // track to keep streaming.
 
     // 2. Audio track.
     let mut audio_track = broadcast
@@ -188,54 +313,24 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
         })
         .context("create audio track")?;
 
-    let channels = match args.channels {
-        1 => opus::Channels::Mono,
-        2 => opus::Channels::Stereo,
-        n => anyhow::bail!("unsupported channel count: {n}"),
-    };
-    let mut encoder = opus::Encoder::new(SAMPLE_RATE_HZ, channels, opus::Application::Audio)
-        .context("init opus encoder")?;
-    encoder
-        .set_bitrate(opus::Bitrate::Bits(32_000))
-        .context("set opus bitrate")?;
-
-    let total_frames = (args.duration * 1_000_000 / FRAME_DURATION_US) as usize;
-    // Per-channel phase step: each channel may have its own
-    // frequency (I4 stereo). Defaults to args.freq_hz on every
-    // channel.
-    let mut phase_steps: Vec<f64> = Vec::with_capacity(args.channels as usize);
-    for ch in 0..(args.channels as usize) {
-        let f = match (ch, args.freq_hz_l, args.freq_hz_r) {
-            (0, Some(l), _) => l,
-            (1, _, Some(r)) => r,
-            _ => args.freq_hz,
-        };
-        phase_steps
-            .push(2.0_f64 * std::f64::consts::PI * (f as f64) / (SAMPLE_RATE_HZ as f64));
-    }
-    let mut sample_idx: u64 = 0;
-    // Sized to libopus's worst-case output for one 20 ms frame.
     let mut opus_buf = vec![0u8; 4_000];
-
-    let frame_period = Duration::from_micros(FRAME_DURATION_US);
-    let mut next_send = tokio::time::Instant::now();
     let mut group_idx: u64 = 0;
     let mut frames_in_group = 0usize;
     let mut group: Option<moq_lite::GroupProducer> = None;
 
-    for frame_no in 0..total_frames {
+    while *frame_no < cycle_end {
         // Generate one PCM frame, possibly with a different sine
         // tone on each channel.
         let mut pcm = vec![0i16; FRAME_SIZE_SAMPLES * args.channels as usize];
         for i in 0..FRAME_SIZE_SAMPLES {
-            let t = (sample_idx + i as u64) as f64;
+            let t = (*sample_idx + i as u64) as f64;
             for ch in 0..(args.channels as usize) {
                 let v = (t * phase_steps[ch]).sin();
                 let s = (v * 16_383.0) as i16;
                 pcm[i * args.channels as usize + ch] = s;
             }
         }
-        sample_idx += FRAME_SIZE_SAMPLES as u64;
+        *sample_idx += FRAME_SIZE_SAMPLES as u64;
 
         let n = encoder
             .encode(&pcm, &mut opus_buf)
@@ -243,10 +338,11 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
         let opus_packet = Bytes::copy_from_slice(&opus_buf[..n]);
 
         // Wrap the Opus packet in a hang Legacy frame: VarInt
-        // timestamp prefix + raw codec payload.
+        // timestamp prefix + raw codec payload. timestamp continues
+        // across cycles so the listener sees a monotonic stream.
         let frame = hang::container::Frame {
             timestamp: hang::container::Timestamp::from_micros(
-                (frame_no as u64) * FRAME_DURATION_US,
+                (*frame_no as u64) * FRAME_DURATION_US,
             )
             .context("frame timestamp out of range")?,
             payload: opus_packet.into(),
@@ -274,8 +370,11 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
             frames_in_group = 0;
         }
 
-        next_send += frame_period;
-        tokio::time::sleep_until(next_send).await;
+        *frame_no += 1;
+
+        let frame_period = Duration::from_micros(FRAME_DURATION_US);
+        *next_send += frame_period;
+        tokio::time::sleep_until(*next_send).await;
     }
 
     if let Some(mut g) = group.take() {
@@ -283,12 +382,6 @@ async fn publish(origin: &moq_lite::OriginProducer, args: &Args) -> anyhow::Resu
     }
     audio_track.finish().ok();
     catalog_track.finish().ok();
-
-    tracing::info!(
-        frames = total_frames,
-        groups = group_idx,
-        "hang-publish done"
-    );
     Ok(())
 }
 
