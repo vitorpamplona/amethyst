@@ -76,7 +76,19 @@ if [[ -n "$QLOG" ]]; then
       | sort -n | uniq -c
 
     echo
-    echo "=============== peer transport_parameters (initial_max_data is the key) ==============="
+    echo "=============== first 10 packet_sent events (full) ==============="
+    # The very first stream-bearing packets reveal whether we burst
+    # the chunk's 64 streams OR dribbled them out one per RTT. Look
+    # at the `frames` array — if it has 13 stream entries, writer
+    # is bursting; if 1, writer is regressed.
+    grep '"name":"transport:packet_sent"' "$QLOG" | head -n 10
+
+    echo
+    echo "=============== first 10 packet_received events (full) ==============="
+    # If we sent N streams in burst, server should respond with N
+    # responses interleaved as it processes them. Spread tells us
+    # server-side serial cost.
+    grep '"name":"transport:packet_received"' "$QLOG" | head -n 10
     # If initial_max_data is small (e.g. < 1000 bytes), our writer
     # gets throttled to one stream per packet because connBudget
     # exhausts after the first stream. Each subsequent stream has to
