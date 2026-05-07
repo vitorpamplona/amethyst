@@ -71,6 +71,7 @@ fun main() {
     // does NOT export a DOWNLOADS env var. Hard-code the mount path.
     val downloadsDir = File("/downloads")
     val keyLogPath = System.getenv("SSLKEYLOGFILE")?.takeIf { it.isNotBlank() }
+    val qlogDir = System.getenv("QLOGDIR")?.takeIf { it.isNotBlank() }?.let { File(it) }
 
     // One-line context header. Verbose per-field dump deferred to debug
     // mode (env var QUIC_INTEROP_DEBUG=1) so the runner's aggregated output
@@ -81,6 +82,7 @@ fun main() {
         System.err.println("requests:       $requests")
         System.err.println("downloads dir:  ${downloadsDir.absolutePath} (exists=${downloadsDir.isDirectory})")
         System.err.println("sslkeylogfile:  ${keyLogPath ?: "(unset)"}")
+        System.err.println("qlogdir:        ${qlogDir?.absolutePath ?: "(unset)"}")
     }
 
     val cipherSuites =
@@ -155,6 +157,7 @@ fun main() {
                     offeredAlpns = offeredAlpns,
                     initialVersion = initialVersion,
                     keyLogPath = keyLogPath,
+                    qlogDir = qlogDir,
                     parallel = (testcase == "multiplexing"),
                 )
             }
@@ -186,6 +189,7 @@ private fun runTransferTest(
     offeredAlpns: List<Alpn>,
     initialVersion: Int,
     keyLogPath: String?,
+    qlogDir: File?,
     parallel: Boolean,
 ): Int {
     val urls =
@@ -215,6 +219,15 @@ private fun runTransferTest(
                     return@runBlocking "udp_failed: ${t.message ?: t::class.simpleName}"
                 }
             val keyLogger = keyLogPath?.let { SslKeyLogger(File(it)) }
+            val qlogWriter =
+                qlogDir?.let { dir ->
+                    dir.mkdirs()
+                    // ODCID is unknown until the connection generates one in
+                    // its init block; we'd need to plumb through, but for the
+                    // header it's fine to start with a placeholder and the
+                    // packet-sent events will carry SCID/DCID anyway.
+                    QlogWriter(file = File(dir, "client.sqlog"), odcidHex = "client")
+                }
             val conn =
                 QuicConnection(
                     serverName = host,
@@ -229,6 +242,7 @@ private fun runTransferTest(
                                 TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
                             ),
                     extraSecretsListener = keyLogger?.listener,
+                    qlogObserver = qlogWriter ?: com.vitorpamplona.quic.observability.QlogObserver.NoOp,
                 )
             val driver = QuicConnectionDriver(conn, socket, scope)
             driver.start()
@@ -240,6 +254,7 @@ private fun runTransferTest(
             if (handshake == null || handshake.isFailure) {
                 runCatching { driver.close() }
                 conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+                runCatching { qlogWriter?.close() }
                 return@runBlocking "handshake_failed"
             }
 
@@ -297,6 +312,7 @@ private fun runTransferTest(
 
             runCatching { driver.close() }
             conn.tls.clientRandom?.let { keyLogger?.flush(it) }
+            runCatching { qlogWriter?.close() }
             delay(50)
             outcome
         }
