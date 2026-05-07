@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
@@ -410,6 +411,10 @@ class AppModules(
             }
     }
 
+    val localBlossomCacheProbe by lazy {
+        LocalBlossomCacheProbe(roleBasedHttpClientBuilder)
+    }
+
     val blossomResolver by lazy {
         Log.d("AppModules", "BlossomServerResolver Init")
         BlossomServerResolver(
@@ -426,6 +431,14 @@ class AppModules(
                 }
             },
             httpClientBuilder = roleBasedHttpClientBuilder,
+            useLocalBlossomCache = {
+                sessionManager
+                    .loggedInAccount()
+                    ?.settings
+                    ?.useLocalBlossomCache
+                    ?.value ?: false
+            },
+            localCacheProbe = localBlossomCacheProbe,
         )
     }
 
@@ -573,6 +586,34 @@ class AppModules(
                     alwaysOnNotificationServiceManager.stop()
                 }
             }
+        }
+
+        // Evict the BlossomServerResolver URL cache whenever the local-cache
+        // toggle flips or the probe transitions up/down so stale entries don't
+        // outlive the underlying decision.
+        applicationIOScope.launch {
+            sessionManager.accountContent.collectLatest { state ->
+                if (state is AccountState.LoggedIn) {
+                    state.account.settings.useLocalBlossomCache
+                        .drop(1)
+                        .collect {
+                            blossomResolver.uriToUrlCache.evictAll()
+                            blossomResolver.blossomHitCache.cache.evictAll()
+                            localBlossomCacheProbe.invalidate()
+                        }
+                }
+            }
+        }
+        applicationIOScope.launch {
+            localBlossomCacheProbe.available.drop(1).collect {
+                blossomResolver.uriToUrlCache.evictAll()
+                blossomResolver.blossomHitCache.cache.evictAll()
+            }
+        }
+        // Warm the local-cache probe so the very first image load doesn't pay
+        // the loopback round-trip cost.
+        applicationIOScope.launch {
+            localBlossomCacheProbe.isAvailable()
         }
 
         // Warms the video cache off the main thread. SimpleCache's constructor opens a SQLite

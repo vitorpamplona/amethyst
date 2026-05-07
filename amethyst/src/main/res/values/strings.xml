@@ -806,6 +806,11 @@
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
 
+    <string name="use_local_blossom_cache">Use local Blossom cache</string>
+    <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>
+    <string name="local_blossom_cache_detected">Local cache detected on port 24242.</string>
+    <string name="local_blossom_cache_not_detected">Local cache not detected on port 24242.</string>
+
     <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
 

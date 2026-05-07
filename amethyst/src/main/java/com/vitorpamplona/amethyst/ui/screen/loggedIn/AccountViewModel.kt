@@ -188,6 +188,28 @@ class AccountViewModel(
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
+    /**
+     * `true` when both the per-account toggle is enabled AND the local
+     * Blossom cache HEAD probe currently sees `127.0.0.1:24242` as
+     * available. UI call sites use this to decide whether to convert plain
+     * http(s) URLs (with imeta sha256) into `blossom:` URIs so the request
+     * routes through the local cache.
+     */
+    val useLocalBlossomBridge: StateFlow<Boolean> =
+        try {
+            combine(
+                account.settings.useLocalBlossomCache,
+                Amethyst.instance.localBlossomCacheProbe.available,
+            ) { toggle, probeUp -> toggle && probeUp }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                false,
+            )
+        } catch (e: UninitializedPropertyAccessException) {
+            // Mock/test instances don't initialise Amethyst.instance.
+            MutableStateFlow(false)
+        }
+
     val callManager =
         CallManager(
             signer = account.signer,
