@@ -1348,6 +1348,14 @@ class QuicConnection(
         val wasClosed = status == Status.CLOSED
         if (status != Status.CLOSED) status = Status.CLOSED
         if (!wasClosed) {
+            // First-call wins for [closeReason] so the highest-quality
+            // diagnostic is preserved when several teardown paths race
+            // (e.g. read loop's `socket.receive() == null` finally fires
+            // a moment before the send loop's `socket.send` throw catch
+            // block does). Without this, downstream observers like
+            // `ReconnectingNestsListener.terminalAwait` see a closed
+            // connection but no human-readable cause for the failure.
+            closeReason = reason
             // "remote" covers both peer-initiated CONNECTION_CLOSE and
             // local invariant violations (CID mismatch, frame decode
             // failure) that the parser surfaces as markClosedExternally.

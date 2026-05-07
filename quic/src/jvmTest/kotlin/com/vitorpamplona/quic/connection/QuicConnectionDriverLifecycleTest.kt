@@ -203,6 +203,90 @@ class QuicConnectionDriverLifecycleTest {
             }
         }
 
+    @Test
+    fun socketDeathMidSessionFlipsConnectionToClosed() =
+        runBlocking {
+            // Soak target #3: when Android backgrounds the app and the
+            // OS reclaims the UDP socket FD ~30 s later, the next
+            // `socket.send` from the QUIC driver throws. Without the
+            // try/catch on the send loop, that throw escapes silently
+            // into the SupervisorJob and the connection sits in
+            // HANDSHAKING / CONNECTED forever — the
+            // ReconnectingNestsListener's terminal-state listener
+            // never fires, the room screen shows "live" while audio
+            // is dead, and the user has to back out and rejoin.
+            //
+            // Pin the contract: closing the socket out from under a
+            // running driver MUST flip connection.status to CLOSED
+            // within a bounded window (the next send-loop iteration —
+            // typically the next PTO firing). The reconnect orchestrator
+            // observes this as terminal and reschedules a fresh handshake.
+            val parent = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            val (driver, connection, socket) = startDriver(parent)
+
+            // Let the driver get past start() and into the read+send
+            // loop steady state — it doesn't matter that the handshake
+            // isn't completing (no peer); the send loop is alive and
+            // will hit the dead socket on its next drain or PTO.
+            delay(50)
+            // The driver's status here is HANDSHAKING (no peer to
+            // complete it). Verify that's our pre-condition rather
+            // than CLOSED — otherwise the test would trivially pass.
+            assertTrue(
+                connection.status != QuicConnection.Status.CLOSED,
+                "pre-condition: connection must NOT yet be CLOSED (was ${connection.status})",
+            )
+
+            // Simulate the OS killing the socket. UdpSocket.close()
+            // is the same path Android takes when the kernel reclaims
+            // a backgrounded app's FDs.
+            socket.close()
+
+            // Wait for the send loop to actually attempt a send and
+            // raise. The send loop fires every PTO; the first PTO is
+            // ~1 s for a connection without an RTT sample. Give it 3 s
+            // of headroom.
+            val startedAt = System.nanoTime()
+            while (connection.status != QuicConnection.Status.CLOSED &&
+                (System.nanoTime() - startedAt) < 5_000_000_000L // 5 s in nanos
+            ) {
+                delay(50)
+            }
+            assertEquals(
+                QuicConnection.Status.CLOSED,
+                connection.status,
+                "connection must transition to CLOSED after socket dies; pre-fix it would " +
+                    "stay HANDSHAKING/CONNECTED indefinitely because the send-loop throw " +
+                    "escaped the SupervisorJob silently",
+            )
+            // closeReason should be populated for observability — the
+            // ReconnectingNestsListener orchestrator surfaces this in
+            // its NestsListenerState.Failed.reason. Either the read
+            // loop's finally (socket.receive returns null on close) or
+            // the send loop's catch (socket.send throws on closed
+            // socket) gets there first depending on scheduler timing;
+            // both produce a human-readable message that mentions the
+            // loop. The exact path is racy, so we just check both
+            // possible reason strings cover the symptom.
+            val reason = connection.closeReason
+            assertTrue(
+                reason != null && (reason.contains("read loop") || reason.contains("send loop")),
+                "closeReason must mention the loop death so observability surfaces the cause; " +
+                    "got '$reason'",
+            )
+
+            // Cleanup — the driver's job tree should still wind down
+            // cleanly even though we tore the socket out from under it.
+            driver.close()
+            withTimeoutOrNull(2_000L) { driver.closeTeardownJob?.join() }
+            parent.cancel()
+            withTimeoutOrNull(2_000L) { driver.driverJob.join() }
+            assertTrue(
+                driver.driverJob.isCompleted,
+                "driver job must complete cleanly even after a socket-death teardown",
+            )
+        }
+
     /** True if a UDP send on the socket throws — i.e. close() has run. */
     private fun socketIsClosed(socket: UdpSocket): Boolean =
         try {

@@ -151,6 +151,34 @@ class QuicConnectionDriver(
         // the first RTT sample we fall back to a 1 s conservative
         // floor (the same prior-shipping behavior, kept for
         // handshake-timeout safety on lossy paths).
+        //
+        // Mirror the read loop's symmetry: any uncaught throw inside
+        // the loop (most common: `socket.send` raising once the OS
+        // tears down the UDP socket — typical on Android when the
+        // app backgrounds and the kernel reclaims the FD ~30 s
+        // later) MUST flip the connection to CLOSED so the
+        // higher-level reconnect orchestration in
+        // [com.vitorpamplona.nestsclient.connectReconnectingNestsListener]
+        // observes a Failed terminal state and fires a fresh
+        // handshake. Pre-fix, the throw escaped silently into the
+        // SupervisorJob, the read loop kept blocking on
+        // `socket.receive()` (which doesn't throw — it returns null
+        // on close, but the OS may not surface that for many
+        // seconds), and the connection sat in HANDSHAKING / CONNECTED
+        // long after the socket was dead — invisibly wedged.
+        try {
+            sendLoopBody()
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            // Cooperative cancel from close() / scope.cancel(). Don't
+            // mark closed here — close() is already driving the
+            // teardown and would race with our markClosedExternally.
+            throw ce
+        } catch (t: Throwable) {
+            connection.markClosedExternally("send loop exited: ${t::class.simpleName}: ${t.message}")
+        }
+    }
+
+    private suspend fun sendLoopBody() {
         while (connection.status != QuicConnection.Status.CLOSED) {
             // Phase 1 of the lock-split refactor: the writer holds
             // streamsLock for the build, releases it for the actual
