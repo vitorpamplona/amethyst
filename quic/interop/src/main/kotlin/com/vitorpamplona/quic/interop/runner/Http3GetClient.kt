@@ -27,7 +27,6 @@ import com.vitorpamplona.quic.http3.Http3Frame
 import com.vitorpamplona.quic.http3.Http3FrameReader
 import com.vitorpamplona.quic.http3.Http3FrameType
 import com.vitorpamplona.quic.http3.Http3Settings
-import com.vitorpamplona.quic.http3.Http3SettingsId
 import com.vitorpamplona.quic.http3.Http3StreamType
 import com.vitorpamplona.quic.qpack.QpackDecoder
 import com.vitorpamplona.quic.qpack.QpackEncoder
@@ -63,27 +62,17 @@ class Http3GetClient(
     private val conn: QuicConnection,
 ) : GetClient {
     suspend fun init(scope: CoroutineScope) {
-        // Control stream: type-0x00 prefix followed by a SETTINGS frame.
-        // Explicitly advertise QPACK_MAX_TABLE_CAPACITY=0 and
-        // QPACK_BLOCKED_STREAMS=0 — our QpackDecoder is literal-only
-        // (no dynamic-table support, RFC 9204 Required Insert Count = 0).
-        // Empty SETTINGS would let the spec default kick in (also 0),
-        // but aioquic's behavior on multiplexing showed that without
-        // explicit signal it still emits dynamic-table-referenced fields
-        // in response HEADERS, which our decoder silently mis-parses
-        // (status=0, file not written). Sending the explicit zeros
-        // forces aioquic onto the literal-only QPACK path.
+        // Control stream: type-0x00 prefix followed by a SETTINGS frame
+        // (empty body is legal — RFC 9114 §7.2.4). Empty body = spec
+        // defaults: QPACK_MAX_TABLE_CAPACITY=0, QPACK_BLOCKED_STREAMS=0,
+        // MAX_FIELD_SECTION_SIZE=unlimited. We deliberately do NOT
+        // explicitly send QPACK_MAX_TABLE_CAPACITY=0 — empirically
+        // (aioquic 2026-05-07) that worsened the multiplexing case
+        // from 1 file to 0 files.
         val control = conn.openUniStream()
         val w = QuicWriter()
         w.writeVarint(Http3StreamType.CONTROL)
-        w.writeBytes(
-            Http3Settings(
-                mapOf(
-                    Http3SettingsId.QPACK_MAX_TABLE_CAPACITY to 0L,
-                    Http3SettingsId.QPACK_BLOCKED_STREAMS to 0L,
-                ),
-            ).encodeFrame(),
-        )
+        w.writeBytes(Http3Settings(emptyMap()).encodeFrame())
         control.send.enqueue(w.toByteArray())
         // Control stream stays open for the lifetime of the H3 connection;
         // do NOT call finish() — peers treat that as H3_CLOSED_CRITICAL_STREAM.

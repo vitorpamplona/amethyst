@@ -181,13 +181,25 @@ the marquee result.
   Implementing v2 is its own project (different Initial-secret
   derivation, different transport-parameter encoding, different
   long-header type bits — not just a version-number swap).
-- **Multiplexing throughput on Mac+Rosetta** — the timeout bump
-  unblocks tests that were finishing in time. The deeper fix is
-  per-stream backpressure (parser suspends when channel near
-  capacity instead of tearing down or dropping). See `:quic`'s
-  `Audit-4 #3` decision: prefer fail-fast over silent-drop on
-  per-stream channel saturation. Needs a re-think for
-  multi-stream-heavy workloads.
+- **Multiplexing throughput on Mac+Rosetta** — measured at ~23 streams/sec
+  (aioquic processed 1359 GETs in 58s). The runner's multiplexing test
+  generates 1999 files; even with a 60s budget we only get 70% of them
+  open before the test ends, with most coroutines failing to surface a
+  status=200 in time for the file-write loop. Throughput is hard-bottlenecked
+  by `:quic`'s single `conn.lock` serializing the send loop, the read
+  loop, and `openBidiStream` across all 1999 awaiting coroutines. Under
+  this lock contention pattern, parallelism doesn't help — coroutines
+  queue on the lock anyway.
+  Possible fixes (non-trivial):
+    - Per-level / per-stream lock split (big refactor; touches almost
+      everything in `:quic/connection`).
+    - Batch concurrency via a `Semaphore` capping in-flight `client.get()`
+      calls to e.g. 64 at a time. Doesn't lift the throughput ceiling but
+      reduces lock thrash and probably lets MORE files complete in 60s.
+    - QPACK dynamic-table support so aioquic doesn't need to fall back
+      to literal encoding (would help on the response-decode side).
+  None are urgent; this is a stress-test scenario, not a normal-traffic
+  one. Filed for follow-up.
 - **Server role** — entire stack is client-only. Implementing the
   server side would unlock `handshakeloss` against aioquic
   (currently `?` because aioquic-server doesn't support it), and
