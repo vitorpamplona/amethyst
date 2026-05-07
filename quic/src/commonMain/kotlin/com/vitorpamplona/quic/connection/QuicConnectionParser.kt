@@ -32,6 +32,8 @@ import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
 import com.vitorpamplona.quic.frame.NewConnectionIdFrame
 import com.vitorpamplona.quic.frame.NewTokenFrame
+import com.vitorpamplona.quic.frame.PathChallengeFrame
+import com.vitorpamplona.quic.frame.PathResponseFrame
 import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
@@ -707,6 +709,39 @@ private fun dispatchFrames(
                 // RFC 9000 §13.2.1: NEW_CONNECTION_ID is ack-eliciting. We
                 // don't support migration but still need to ACK to keep
                 // peer's loss-recovery happy.
+                ackEliciting = true
+            }
+
+            is PathChallengeFrame -> {
+                // RFC 9000 §8.2.2 — peer is validating that a path is
+                // alive. We MUST echo the SAME 8-byte payload in a
+                // PATH_RESPONSE on the path the challenge arrived on.
+                // The writer drains [pendingPathResponses] on the next
+                // application-level packet build.
+                //
+                // Common practical trigger: server-side path
+                // validation after our connection-id rotation, OR
+                // post-NAT-rebind probing. Without responding the
+                // server may declare the path dead within a few RTTs
+                // and tear the connection down — visible to users as
+                // a sudden audio cut on a phone that briefly
+                // switched cells.
+                //
+                // RFC 9000 §13.2.1: PATH_CHALLENGE is ack-eliciting.
+                // The PATH_RESPONSE we queue here is itself
+                // ack-eliciting; the regular ACK path covers both.
+                ackEliciting = true
+                conn.queuePathResponseLocked(frame.data)
+            }
+
+            is PathResponseFrame -> {
+                // RFC 9000 §13.2.1: PATH_RESPONSE is ack-eliciting.
+                // We don't yet issue PATH_CHALLENGE ourselves (that's
+                // the client-initiated migration path, out of scope
+                // for the first-pass landing here), so any PATH_RESPONSE
+                // we receive is necessarily for a challenge we never
+                // sent — drop it after marking ack-eliciting so the
+                // outbound ACK still goes out.
                 ackEliciting = true
             }
 

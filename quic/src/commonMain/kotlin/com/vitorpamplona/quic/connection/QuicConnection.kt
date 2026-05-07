@@ -481,6 +481,31 @@ class QuicConnection(
         MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId> = HashMap()
 
     /**
+     * RFC 9000 §8.2.2: queue of inbound PATH_CHALLENGE payloads we
+     * still owe a PATH_RESPONSE for. Each entry is the EXACT 8 bytes
+     * the peer challenged with — the response MUST echo them
+     * unchanged. The writer drains this queue on the next
+     * application-level packet build, emitting one PATH_RESPONSE
+     * per entry until empty.
+     *
+     * Bounded at [MAX_PENDING_PATH_RESPONSES] to defend against an
+     * attacker spamming PATH_CHALLENGE frames to exhaust memory.
+     * Excess challenges are dropped; the protocol allows it (a peer
+     * that doesn't get a response just retries).
+     *
+     * RFC 9000 §8.2.1 nuance: the response MUST go out on the
+     * incoming-packet's path. We model a single path today (one
+     * UDP socket per connection — see [com.vitorpamplona.quic.transport.UdpSocket]'s
+     * "no migration" kdoc), so "path the challenge arrived on" is
+     * trivially "the only path." When client-initiated migration
+     * lands, this queue grows to remember which path each entry
+     * belongs to.
+     *
+     * Caller must hold [streamsLock] for any read/write.
+     */
+    internal val pendingPathResponses: ArrayDeque<ByteArray> = ArrayDeque()
+
+    /**
      * RFC 9002 RTT estimator + loss-detection algorithm. Single
      * shared instance per connection (RTT is per-path; we model a
      * single path). Per-space `largestAcked*` lives on
@@ -1857,6 +1882,29 @@ class QuicConnection(
     }
 
     /**
+     * Queue a PATH_RESPONSE for the given [challengeData]. Called by
+     * the parser when a PATH_CHALLENGE arrives. Idempotent on
+     * duplicate challenges (peer retransmit) — the writer drains
+     * each entry exactly once, so an over-eager peer that sends
+     * many PATH_CHALLENGEs gets many PATH_RESPONSEs (RFC 9000 §8.2
+     * permits this; the spec just requires at-least-one).
+     *
+     * The queue is bounded at [MAX_PENDING_PATH_RESPONSES]; excess
+     * entries are silently dropped (the protocol allows the peer
+     * to time out and retry).
+     *
+     * Caller must hold [streamsLock].
+     */
+    internal fun queuePathResponseLocked(challengeData: ByteArray) {
+        if (pendingPathResponses.size >= MAX_PENDING_PATH_RESPONSES) return
+        // Defensive copy: the parser hands us a slice of the inbound
+        // packet's plaintext payload, which the parser may free /
+        // reuse after we return. Copying preserves the bytes for the
+        // writer to encode later.
+        pendingPathResponses.addLast(challengeData.copyOf())
+    }
+
+    /**
      * True if [streamId] has been retired *and* is still inside the
      * ring's eviction window. Used by [QuicConnectionParser] to drop
      * STREAM frames the peer retransmits on already-retired streams.
@@ -2072,6 +2120,19 @@ class QuicConnection(
          * the per-stream object size we're saving by retiring.
          */
         const val RETIRED_STREAM_ID_RING_SIZE: Int = 4_096
+
+        /**
+         * Bound on the [pendingPathResponses] queue. RFC 9000 §8.2
+         * doesn't cap PATH_CHALLENGE rate, so a malicious peer could
+         * spam them to exhaust our memory. 64 entries × 8 bytes = 512 B
+         * worst case — trivial to absorb but tight enough that an
+         * attacker can't pin 100 MB by flooding.
+         *
+         * Excess challenges are dropped; the spec allows it (a peer
+         * that doesn't see a response will retransmit on the next
+         * PTO if path validation matters to them).
+         */
+        const val MAX_PENDING_PATH_RESPONSES: Int = 64
     }
 }
 

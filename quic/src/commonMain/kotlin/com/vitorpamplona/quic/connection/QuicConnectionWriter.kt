@@ -32,6 +32,7 @@ import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
 import com.vitorpamplona.quic.frame.NewConnectionIdFrame
+import com.vitorpamplona.quic.frame.PathResponseFrame
 import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
@@ -947,6 +948,18 @@ private fun appendFlowControlUpdates(
                 )
             stream.stopSendingEmitPending = false
         }
+    }
+
+    // PATH_RESPONSE — drain every pending challenge response in one
+    // pass. RFC 9000 §13.3 is silent on retransmission for
+    // PATH_RESPONSE: it's NOT in the ack-eliciting-and-retransmittable
+    // class, so we don't track tokens for these. If the response
+    // packet is lost, the peer's next PATH_CHALLENGE retry queues a
+    // fresh entry here and we respond again. The peer is responsible
+    // for retrying its challenge until it sees a matching response.
+    while (conn.pendingPathResponses.isNotEmpty()) {
+        val data = conn.pendingPathResponses.removeFirst()
+        frames += PathResponseFrame(data)
     }
 
     // NEW_CONNECTION_ID retransmits. No application path emits these

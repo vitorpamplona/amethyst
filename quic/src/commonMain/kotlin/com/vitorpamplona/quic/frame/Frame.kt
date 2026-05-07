@@ -314,6 +314,54 @@ class NewConnectionIdFrame(
 }
 
 /**
+ * RFC 9000 §19.17 — PATH_CHALLENGE frame, used for path validation
+ * (§8.2). The 8-byte [data] payload is opaque random bytes the
+ * sender uses to bind a PATH_RESPONSE back to a specific
+ * challenge. The receiver MUST echo the SAME 8 bytes in a
+ * [PathResponseFrame] on the path the challenge arrived on.
+ *
+ * Path validation lets either endpoint confirm the peer can still
+ * receive on a 4-tuple: the most common practical use is the
+ * server probing the client after a NAT rebind / connection
+ * migration. Without responding, the server may declare the path
+ * dead and tear the connection down — visible to users as a
+ * sudden audio cut on a phone that briefly switched cells.
+ */
+class PathChallengeFrame(
+    val data: ByteArray,
+) : Frame() {
+    init {
+        require(data.size == 8) { "PATH_CHALLENGE data must be exactly 8 bytes per RFC 9000 §19.17" }
+    }
+
+    override fun encode(out: QuicWriter) {
+        out.writeByte(FrameType.PATH_CHALLENGE.toInt())
+        out.writeBytes(data)
+    }
+}
+
+/**
+ * RFC 9000 §19.18 — PATH_RESPONSE frame, the reply to a
+ * [PathChallengeFrame]. Carries the EXACT same 8-byte payload back.
+ * The challenger uses byte-equality to match a response to its
+ * outstanding challenge — a peer that echoes random bytes would
+ * pass validation, so callers that issue PATH_CHALLENGE MUST use
+ * a cryptographically-random payload.
+ */
+class PathResponseFrame(
+    val data: ByteArray,
+) : Frame() {
+    init {
+        require(data.size == 8) { "PATH_RESPONSE data must be exactly 8 bytes per RFC 9000 §19.18" }
+    }
+
+    override fun encode(out: QuicWriter) {
+        out.writeByte(FrameType.PATH_RESPONSE.toInt())
+        out.writeBytes(data)
+    }
+}
+
+/**
  * Decode a stream of frames from [data]. Padding bytes (0x00) are silently
  * absorbed. Unknown frame types raise [QuicCodecException] (per RFC 9000 §19
  * we MUST close the connection with FRAME_ENCODING_ERROR).
@@ -445,11 +493,11 @@ fun decodeFrames(data: ByteArray): List<Frame> {
             }
 
             type == FrameType.PATH_CHALLENGE -> {
-                r.readBytes(8)
+                out += PathChallengeFrame(r.readBytes(8))
             }
 
             type == FrameType.PATH_RESPONSE -> {
-                r.readBytes(8)
+                out += PathResponseFrame(r.readBytes(8))
             }
 
             type == FrameType.CONNECTION_CLOSE_TRANSPORT -> {
