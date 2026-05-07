@@ -75,6 +75,23 @@ class QuicConnection(
     },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
     /**
+     * Optional second listener invoked after the connection's own
+     * key-installation listener. Used by the interop runner endpoint to
+     * dump SSLKEYLOG lines so Wireshark can decrypt captured pcaps.
+     * Default `null` keeps production callers unaffected.
+     */
+    val extraSecretsListener: TlsSecretsListener? = null,
+    /**
+     * TLS cipher suites to offer in the ClientHello. Override to e.g.
+     * `intArrayOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256)` for the
+     * `chacha20` interop testcase. Default matches [TlsClient]'s default.
+     */
+    val cipherSuites: IntArray =
+        intArrayOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
+    /**
      * Version this connection puts in the FIRST Initial it sends. Defaults
      * to [QuicVersion.V1]; the interop runner sets it to
      * [QuicVersion.FORCE_VERSION_NEGOTIATION] for the `versionnegotiation`
@@ -144,15 +161,6 @@ class QuicConnection(
     @Volatile
     var retryConsumed: Boolean = false
         internal set
-
-    /**
-     * The verbatim ClientHello CRYPTO bytes the TLS layer emitted at
-     * [start]. Captured so [applyRetry] can re-enqueue them after Retry
-     * resets the Initial-level CRYPTO send buffer (TLS itself only
-     * emits ClientHello once and we have no path to drive it to re-emit).
-     * Null until [start] has been called.
-     */
-    private var originalClientHello: ByteArray? = null
 
     var handshakeComplete: Boolean = false
         private set
@@ -529,6 +537,41 @@ class QuicConnection(
         // Switch the writer's stamp to v1 so the next Initial / Handshake
         // long-header carries the right version.
         currentVersion = QuicVersion.V1
+    }
+
+    /**
+     * Apply a verified Retry packet per RFC 9000 §17.2.5 + RFC 9001 §5.8.
+     * Validates the retry-integrity tag, swaps DCID, re-derives Initial keys,
+     * resets the Initial PN space, and re-enqueues the cached ClientHello so
+     * the next outbound Initial carries `Token = retryPacket.retryToken`.
+     *
+     * Returns false on bad tag, second Retry (RFC 9000 §17.2.5.2), or
+     * pre-start (no original ClientHello captured) — all silently dropped.
+     */
+    internal fun applyRetry(
+        retryPacket: com.vitorpamplona.quic.packet.RetryPacket,
+        originalPacketBytes: ByteArray,
+    ): Boolean {
+        if (retryConsumed) return false
+        if (!retryPacket.verifyIntegrityTag(originalPacketBytes, originalDestinationConnectionId.bytes)) {
+            return false
+        }
+        val savedClientHello = originalClientHello ?: return false
+
+        destinationConnectionId = retryPacket.scid
+        val proto = InitialSecrets.derive(destinationConnectionId.bytes)
+        val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
+        initial.resetForVersionNegotiation(
+            sendProtection =
+                PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp),
+            receiveProtection =
+                PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp),
+        )
+        initial.cryptoSend.enqueue(savedClientHello)
+
+        retryToken = retryPacket.retryToken
+        retryConsumed = true
+        return true
     }
 
     private fun buildLocalTransportParameters(): TransportParameters =
