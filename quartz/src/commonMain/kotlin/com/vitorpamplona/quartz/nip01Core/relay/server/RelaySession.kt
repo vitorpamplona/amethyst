@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
 
 /**
@@ -147,7 +148,7 @@ class RelaySession(
                     }
                 }
             }
-        } catch (_: kotlinx.coroutines.channels.ClosedSendChannelException) {
+        } catch (_: ClosedSendChannelException) {
             // Server is shutting down — the queue is closed. Reply
             // with a transient failure so a client re-trying against
             // the next instance gets a sane signal; the WS itself is

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
@@ -104,10 +105,7 @@ fun main(args: Array<String>) {
     val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
 
     val policyBuilder: () -> IRelayPolicy = {
-        // When parallel verify is enabled the IngestQueue runs
-        // Schnorr verify off the WS pump, so the policy chain skips
-        // VerifyPolicy to avoid double-verifying every event.
-        composePolicy(config, advertisedUrl, requireAuth, verifySigs && !parallelVerify)
+        composePolicy(config, advertisedUrl, requireAuth, verifySigs, parallelVerify)
     }
 
     val stateFile = config.admin.state_file?.let { File(it) }
@@ -168,6 +166,7 @@ private fun composePolicy(
     advertisedUrl: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
     requireAuth: Boolean,
     verifySigs: Boolean,
+    parallelVerify: Boolean,
 ): IRelayPolicy {
     val pieces = mutableListOf<IRelayPolicy>()
 
@@ -188,7 +187,11 @@ private fun composePolicy(
     }
 
     if (verifySigs) {
-        pieces += VerifyPolicy
+        // When parallel verify is on, the IngestQueue handles EVENT
+        // verification on the writer's CPU fan-out — but AUTH events
+        // bypass the queue, so we still need the policy chain to
+        // verify those. `VerifyAuthOnlyPolicy` does exactly that.
+        pieces += if (parallelVerify) VerifyAuthOnlyPolicy else VerifyPolicy
     }
 
     return pieces.fold<IRelayPolicy, IRelayPolicy>(EmptyPolicy) { acc, p ->

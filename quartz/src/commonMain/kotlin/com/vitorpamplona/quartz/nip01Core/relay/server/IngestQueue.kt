@@ -30,6 +30,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
@@ -168,43 +169,53 @@ class IngestQueue(
                 processBatch(batch)
                 batch.clear()
             }
-        } catch (_: kotlinx.coroutines.channels.ClosedReceiveChannelException) {
+        } catch (_: ClosedReceiveChannelException) {
             // Normal shutdown via close().
         }
     }
 
     private suspend fun processBatch(batch: List<Submission>) {
-        // Tier 3: parallel pre-insert verify. Each batch entry that
-        // fails verification is pre-marked Rejected and excluded from
-        // the SQLite transaction. The remaining (verified) events go
-        // through batchInsert in original order; we re-stitch outcomes
-        // back to the full batch by index.
-        val verifyResults: BooleanArray? =
-            verify?.let { hook ->
-                coroutineScope {
-                    batch
-                        .map { sub -> async(Dispatchers.Default) { hook(sub.event) } }
-                        .awaitAll()
-                        .toBooleanArray()
-                }
-            }
+        val verifyResults = verifyBatch(batch)
+        val finalOutcomes = runInsertStage(batch, verifyResults)
+        dispatchOutcomes(batch, finalOutcomes)
+    }
 
-        val toInsert: List<Event>
-        val insertIndices: IntArray
-        if (verifyResults == null) {
-            toInsert = batch.map { it.event }
-            insertIndices = IntArray(batch.size) { it }
-        } else {
-            val accepted = ArrayList<Event>(batch.size)
-            val mapping = ArrayList<Int>(batch.size)
-            for (i in batch.indices) {
-                if (verifyResults[i]) {
-                    accepted.add(batch[i].event)
-                    mapping.add(i)
-                }
+    /**
+     * Tier 3: per-row verify. Returns `null` when no [verify] hook is
+     * configured (skip the stage entirely). For multi-event batches
+     * each verify runs as its own `async(Default)` so they spread
+     * across CPU cores; single-event batches short-circuit to a
+     * direct call to avoid coroutine-scope overhead.
+     */
+    private suspend fun verifyBatch(batch: List<Submission>): BooleanArray? {
+        val hook = verify ?: return null
+        if (batch.size == 1) return BooleanArray(1) { hook(batch[0].event) }
+        return coroutineScope {
+            batch
+                .map { sub -> async(Dispatchers.Default) { hook(sub.event) } }
+                .awaitAll()
+                .toBooleanArray()
+        }
+    }
+
+    /**
+     * Run the SQLite transaction for the verified subset of [batch]
+     * and stitch outcomes back to a per-batch-index array. Failed
+     * verifies pre-mark `Rejected` and skip the insert. A whole-batch
+     * commit failure converts every persisted entry to `Rejected`
+     * with the throw message.
+     */
+    private suspend fun runInsertStage(
+        batch: List<Submission>,
+        verifyResults: BooleanArray?,
+    ): Array<IEventStore.InsertOutcome?> {
+        val toInsert = ArrayList<Event>(batch.size)
+        val insertIndices = ArrayList<Int>(batch.size)
+        for (i in batch.indices) {
+            if (verifyResults == null || verifyResults[i]) {
+                toInsert.add(batch[i].event)
+                insertIndices.add(i)
             }
-            toInsert = accepted
-            insertIndices = mapping.toIntArray()
         }
 
         val insertOutcomes: List<IEventStore.InsertOutcome> =
@@ -220,11 +231,10 @@ class IngestQueue(
                 }
             }
 
-        // Build a per-batch-index outcome array.
         val finalOutcomes = arrayOfNulls<IEventStore.InsertOutcome>(batch.size)
         for (j in insertIndices.indices) {
-            finalOutcomes[insertIndices[j]] = insertOutcomes.getOrNull(j)
-                ?: IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
+            finalOutcomes[insertIndices[j]] =
+                insertOutcomes.getOrNull(j) ?: missingOutcome
         }
         if (verifyResults != null) {
             for (i in batch.indices) {
@@ -233,12 +243,16 @@ class IngestQueue(
                 }
             }
         }
+        return finalOutcomes
+    }
 
+    private fun dispatchOutcomes(
+        batch: List<Submission>,
+        outcomes: Array<IEventStore.InsertOutcome?>,
+    ) {
         for (i in batch.indices) {
             val sub = batch[i]
-            val outcome =
-                finalOutcomes[i]
-                    ?: IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
+            val outcome = outcomes[i] ?: missingOutcome
             try {
                 sub.onComplete(outcome)
             } catch (e: Throwable) {
@@ -262,6 +276,14 @@ class IngestQueue(
     }
 
     companion object {
+        /**
+         * Default for a missing per-row outcome — only reachable on a
+         * contract violation (the store returned fewer outcomes than
+         * inserts), so the message is informational, not user-facing.
+         */
+        private val missingOutcome =
+            IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
+
         /**
          * Cap per batch. Sized to keep per-batch latency low (each
          * transaction holds the SQLite writer mutex; over-large

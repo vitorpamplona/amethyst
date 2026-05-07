@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
@@ -65,7 +64,7 @@ class NostrServer(
         IngestQueue(
             store = store,
             parentContext = parentContext,
-            verify = if (parallelVerify) ::verifyEvent else null,
+            verify = if (parallelVerify) ({ it.verify() }) else null,
         )
 
     private val subStore = LiveEventStore(store, ingest)
@@ -128,11 +127,4 @@ class NostrServer(
      */
     @Deprecated("Use close() instead", replaceWith = ReplaceWith("close()"))
     fun shutdown() = close()
-
-    private companion object {
-        // Function reference (`Event::verify`) wrapper so the
-        // ingest hook keeps a single instance per server rather
-        // than allocating a fresh lambda on every call site.
-        private fun verifyEvent(event: Event): Boolean = event.verify()
-    }
 }

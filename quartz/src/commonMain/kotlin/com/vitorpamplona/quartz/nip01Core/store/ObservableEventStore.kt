@@ -137,8 +137,11 @@ class ObservableEventStore(
             }
         }
 
-        @Suppress("UNCHECKED_CAST")
-        return outcomes.toList() as List<IEventStore.InsertOutcome>
+        // Every index in `events.indices` was populated above (either
+        // from the ephemeral pre-pass or the `inner.batchInsert`
+        // result), so no nulls remain. `requireNoNulls()` enforces
+        // that with a runtime check instead of an unchecked cast.
+        return outcomes.requireNoNulls().asList()
     }
 
     override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
