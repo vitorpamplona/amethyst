@@ -199,19 +199,25 @@ class LoadBenchmark {
                             Thread.sleep(50)
                         }
                     }
+                // JVM heap usage, not OS RSS — we can only measure
+                // what the JVM itself has allocated. Force a GC first
+                // so the reading reflects retained bytes, not in-flight
+                // allocation churn from the connect ramp-up.
                 val rt = Runtime.getRuntime()
-                val rssMb = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024)
+                System.gc()
+                Thread.sleep(200)
+                val heapMb = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024)
                 println(
                     "target=$target opened=${opened.get()} eosed=${gotEose.get()} " +
                         "active=${server.activeSessionCount} elapsedMs=${opens.inWholeMilliseconds} " +
-                        "heapMb=$rssMb",
+                        "heapMb=$heapMb",
                 )
                 sockets.forEach { runCatching { it.cancel() } }
                 check(gotEose.get() == target.toLong()) {
                     "expected $target EOSE but got ${gotEose.get()} — connection scaling regression"
                 }
-                check(rssMb < 1024) {
-                    "heap usage $rssMb MiB exceeded 1 GiB ceiling for $target idle connections"
+                check(heapMb < 1024) {
+                    "JVM heap $heapMb MiB exceeded 1 GiB ceiling for $target idle connections"
                 }
             }
         }
@@ -238,11 +244,11 @@ class LoadBenchmark {
                     val relayUrl = server.url.normalizeRelayUrl()
                     val received = AtomicLong()
                     val eosed = AtomicLong()
-                    // Per-event fan-out latency, capped at the # of
-                    // events we expect (durationSeconds * targetEps).
-                    val fanoutLatenciesNs =
-                        java.util.concurrent.ConcurrentHashMap<String, AtomicLong>()
-                    val firstSeenNs =
+                    // Last-receive timestamp per event id. The N-th
+                    // subscriber to deliver wins; combined with the
+                    // publish timestamp this gives us the full fan-out
+                    // duration to the slowest subscriber.
+                    val lastReceiveNs =
                         java.util.concurrent.ConcurrentHashMap<String, AtomicLong>()
 
                     repeat(subs) { i ->
@@ -256,12 +262,9 @@ class LoadBenchmark {
                                     relay: NormalizedRelayUrl,
                                     forFilters: List<Filter>?,
                                 ) {
-                                    val now = System.nanoTime()
-                                    firstSeenNs
-                                        .computeIfAbsent(event.id) { AtomicLong(now) }
-                                    fanoutLatenciesNs
-                                        .computeIfAbsent(event.id) { AtomicLong(now) }
-                                        .set(now)
+                                    lastReceiveNs
+                                        .computeIfAbsent(event.id) { AtomicLong() }
+                                        .set(System.nanoTime())
                                     received.incrementAndGet()
                                 }
 
@@ -306,7 +309,7 @@ class LoadBenchmark {
                     }
 
                     val perEventLastMs =
-                        fanoutLatenciesNs.entries
+                        lastReceiveNs.entries
                             .mapNotNull { (id, last) ->
                                 publishedAt[id]?.let { (last.get() - it) / 1_000_000.0 }
                             }.sorted()
