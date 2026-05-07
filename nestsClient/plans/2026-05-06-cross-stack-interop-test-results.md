@@ -2,8 +2,9 @@
 
 **Status:** Phases 1–3 (and Phase 2.E follow-ups) landed. Phase 4 (browser
 harness) and Phase 5 (browser-only scenarios) are running in parallel
-agent branches; not yet merged. CI gating (the `hang-interop` job in
-`.github/workflows/build.yml`) is live and Linux-only.
+agent branches; not yet merged. **CI gating intentionally NOT wired** —
+the suite runs locally only via `-DnestsHangInterop=true`. See the
+"CI integration" section below.
 
 **Scenario inventory (committed in this branch + sister branches):**
 
@@ -422,18 +423,22 @@ relay-side timing under load.
 
 ## CI integration
 
-`.github/workflows/build.yml` now has a `hang-interop` job:
+**Not wired.** Intentionally kept out of `.github/workflows/build.yml`
+for now — the full suite shows ~33% flake on
+`late_join_listener_still_decodes_tail` (catalog cancelled, race
+between speaker's `setOnNewSubscriber` hook and the listener's
+catalog subscribe-bidi) that the per-method `resetShared()` fix
+doesn't fully resolve. Wiring CI on a flaky suite would burn
+maintainer time on false reds.
 
-- Linux-only (Rust toolchain + libopus available out of the box)
-- Caches `~/.cargo` and `~/.cache/amethyst-nests-interop/` between
-  runs so `cargo install moq-relay` and the workspace `cargo build`
-  are warm on the second run
-- Runs `:nestsClient:jvmTest -DnestsHangInterop=true`
-- Depends on the existing `lint` job (only runs after spotless +
-  ktlint pass)
+The suite runs locally via `-DnestsHangInterop=true` and is
+documented as the regression bar for any future MoQ wire-format
+or moq-lite session-cycle changes. Re-evaluate CI gating after the
+late-join flake's root cause lands.
 
-Browser interop will land its own job once `feat/nests-browser-interop`
-merges; that job adds `bun install` + Playwright Chromium caching.
+Browser interop (`feat/nests-browser-interop`) follows the same
+"locally only via `-DnestsBrowserInterop=true`" rule pending its own
+flake assessment.
 
 ## Pending follow-ups
 
