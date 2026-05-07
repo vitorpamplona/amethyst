@@ -1,10 +1,17 @@
 # Plan: I4 stereo cross-stack interop scenario
 
-**Status:** 📋 Spec — ready for implementation. Phase 2 of the
-T16 cross-stack interop suite landed every other P0 scenario
-(I1, I2, I3, I8, I10, I11) but I4 stereo was deferred because
-it requires a non-trivial change in `:nestsClient` production
-code, not just test plumbing. This plan scopes that change.
+**Status:** ✅ Landed. Production-side change merged to main as
+PR #2755 (`refactor(nests): per-stream channel count +
+AudioBroadcastConfig`). Test scenarios merged into
+`claude/cross-stack-interop-test-XAbYB`:
+- `HangInteropTest.amethyst_speaker_to_hang_listener_stereo_440_660`
+  (forward)
+- `HangInteropTest.rust_hang_publish_stereo_to_kotlin_listener_440_660`
+  (reverse)
+- `BrowserInteropTest.chromium_listener_stereo_440_660`
+  (forward, browser-tier)
+
+The spec text below is preserved for archaeology.
 
 **Origin:** `nestsClient/plans/2026-05-06-cross-stack-interop-test.md`
 table row I4: "Stereo Opus (`numberOfChannels=2`); freq differs L/R

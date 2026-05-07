@@ -1,6 +1,17 @@
 # Plan: cross-stack interop test (T16)
 
-**Status:** 📋 Spec — ready to implement.
+**Status:** ✅ Implemented and merged. See:
+- `2026-05-06-cross-stack-interop-test-results.md` for the scenario
+  inventory + per-scenario status
+- `2026-05-06-cross-stack-interop-test-gap-matrix.md` for the
+  T-series wire-fix → asserting-scenario mapping (DoD #5)
+- `2026-05-07-t16-closure-roadmap.md` for the next-steps roadmap
+  (residual upstream relay flake → tighten assertions → wire CI)
+
+The spec text below is preserved for archaeology; some scenarios
+were re-shaped during implementation (I12 GOAWAY is N/A in
+moq-lite-03; I13's `framesPerGroup = 50` got pinned to 5 due to the
+local relay's per-stream byte cliff).
 
 **Origin:** audit of `claude/debug-audio-dropout-n0g6Z` against the audio
 path verified all wire fixes (T1–T14) by inspection, but the existing

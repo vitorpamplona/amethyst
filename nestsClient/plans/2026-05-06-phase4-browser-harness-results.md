@@ -1,8 +1,25 @@
 # Plan: Phase 4 (browser harness) — landed results
 
-**Status:** 4.A scaffold + 4.B Playwright driver + first Kotlin
-test green; 4.C ships I15; 4.D ships the CI workflow job. Tracks
-the spec at `nestsClient/plans/2026-05-06-phase4-browser-harness.md`.
+**Status:** ✅ Phase 4.A (scaffold) + 4.B (Playwright driver) +
+4.C (full scenario coverage) all landed. Phase 4.D (CI workflow
+job) was originally added in commit `c79a3ffa8` but later removed
+per maintainer ask in commit `b94737de7` ("don't add these tests
+to the build.yml for now"); see
+`2026-05-07-cross-stack-interop-ci-gating.md` for the path to
+re-wiring.
+
+**Browser harness location:** `nestsClient/tests/browser-interop/`
+(was originally `nestsClient-browser-interop/` at repo root;
+moved to mirror `nestsClient/tests/hang-interop/` layout).
+
+**Final scenario coverage:** I1, I2, I3, I4 (stereo), I5
+(hot-swap), I7 (Chromium publisher reconnect), I9 (packet loss),
+I13 (long broadcast), I14 (WebCodecs warmup × CSD), I15 (ALPN).
+See `2026-05-06-cross-stack-interop-test-results.md` for the
+full inventory.
+
+Tracks the spec at
+`nestsClient/plans/2026-05-06-phase4-browser-harness.md`.
 
 ## Where it landed
 

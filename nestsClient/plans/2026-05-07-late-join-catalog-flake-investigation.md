@@ -1,7 +1,19 @@
 # `late_join_listener_still_decodes_tail` catalog-cancelled flake investigation
 
-**Status: partially fixed (commits `8cc7cbd42`, `00f6cba31`,
-`207057374`), residual flake documented as upstream-territory.**
+**Status: partially fixed (commit `8cc7cbd42` shipped; commits
+`00f6cba31` + `207057374` reverted as net-negative). Residual
+flake is upstream-territory in moq-relay 0.10.x. Action plan
+moved to `2026-05-07-moq-relay-routing-investigation.md`.**
+
+The flake also affects four browser-tier scenarios after the
+Browser I7 work landed:
+`chromium_listener_late_join_still_decodes_tail`,
+`chromium_publisher_baseline_kotlin_listener_decodes`,
+`chromium_publisher_reconnect_kotlin_listener_recovers`, and
+intermittently `chromium_listener_long_broadcast_60s_tone_440`.
+Browser scenarios soft-pass listener-side assertions on 0-frame
+outcomes; hard floors planned in
+`2026-05-07-tighten-cross-stack-assertions.md`.
 
 `HangInteropTest.late_join_listener_still_decodes_tail`,
 `packet_loss_1pct_does_not_kill_audio`,

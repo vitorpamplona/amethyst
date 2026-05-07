@@ -1,12 +1,24 @@
 # Plan: Phase 4 — browser-side cross-stack harness (T16)
 
-**Status:** 📋 Spec — ready for implementation. Phase 1–3 of the
-T16 cross-stack interop suite landed the Rust path
-(`hang-listen` + `hang-publish` against `moq-relay 0.10.x`,
-seven scenarios green). Phase 4 adds the **browser path**:
-headless Chromium running `@moq/watch` (listener) and
-`@moq/publish` (publisher) against the same harness's relay,
-driven from `:nestsClient:jvmTest` via Playwright.
+**Status:** ✅ Landed. Browser harness lives at
+`nestsClient/tests/browser-interop/`; tests are
+`BrowserInteropTest.kt` covering I1, I2, I3, I4 (stereo), I5
+(hot-swap), I7 (publisher reconnect), I9 (packet loss), I13
+(long broadcast), I14 (WebCodecs warmup × CSD), I15 (ALPN).
+Companion landed-results doc:
+`2026-05-06-phase4-browser-harness-results.md`.
+
+The spec text below is preserved for archaeology; some pieces
+shifted during implementation:
+- `@moq/watch` / `@moq/publish` weren't directly used; the
+  harness uses `@moq/lite` + `@moq/hang` `Container.Legacy.Consumer/Producer`
+  because the published `@moq/hang` 0.2.4 didn't expose the
+  high-level `Container.Consumer` API.
+- Cert pinning uses `serverCertificateHashes` not
+  `--ignore-certificate-errors` because Chromium's flag does
+  NOT bypass QUIC cert validation.
+- Phase 4.C originally deferred I2/I3/I4/I13/I14 — those
+  subsequently landed, see results doc.
 
 **Origin:** parent plan
 `nestsClient/plans/2026-05-06-cross-stack-interop-test.md`,
