@@ -31,6 +31,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
 class PoolEventOutbox {
+    // @Volatile so the polling path (INostrClient.pendingPublishRelaysFor)
+    // sees current state from threads that didn't write the map. Mutations
+    // still happen on NostrClient's IO scope; this only closes the
+    // visibility gap for cross-thread readers.
+    @Volatile
     private var eventOutbox = mapOf<HexKey, PoolEventOutboxState>()
     val relays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
@@ -89,6 +94,14 @@ class PoolEventOutbox {
         }
         return myEvents
     }
+
+    /**
+     * Returns the relays that have NOT yet acknowledged [eventId] with an OK, or
+     * null if the event is not currently tracked (never sent or already fully done).
+     * Callers can poll this after publish to detect when relays ack: the set shrinks
+     * as OKs arrive, then the entry is removed from the outbox (returns null).
+     */
+    fun pendingRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>? = eventOutbox[eventId]?.relaysLeft()
 
     fun markAsSending(
         event: Event,

@@ -2425,4 +2425,57 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
+    <string name="scheduled_posts">Schemalagda inlägg</string>
+    <string name="schedule_post">Schemalägg</string>
+    <string name="schedule_post_time_label">Schemalagd tid</string>
+    <string name="schedule_post_helper">Inlägg publiceras inom ~15 minuter från den schemalagda tiden.</string>
+    <string name="schedule_post_pick_time">Välj schemalagd tid</string>
+    <string name="schedule_post_pick_label">Schemalägg för…</string>
+    <string name="schedule_post_publishes_in">Publiceras om %1$s</string>
+    <string name="schedule_post_was_due">Skulle ha publicerats för %1$s sedan</string>
+    <string name="schedule_post_picker_time_title">Tid</string>
+    <string name="schedule_post_button_add">Schemalägg inlägg</string>
+    <string name="schedule_post_button_remove">Avbryt schemaläggning</string>
+    <string name="schedule_post_warning_title">Alltid-på-aviseringar avstängda</string>
+    <string name="schedule_post_warning_single">Schemalagda inlägg kanske inte publiceras förrän du öppnar appen igen. Aktivera alltid-på i Inställningar → UI-inställningar för pålitlig schemaläggning i bakgrunden.</string>
+    <string name="schedule_post_warning_multi">Schemalagda inlägg kanske inte publiceras förrän du öppnar appen igen. Andra kontons schemalagda inlägg utlöses inte medan detta konto är aktivt. Aktivera alltid-på i Inställningar → UI-inställningar för pålitlig schemaläggning i bakgrunden.</string>
+    <string name="schedule_post_preset_in_one_hour">Om 1 timme</string>
+    <string name="schedule_post_preset_tomorrow_morning">Imorgon kl. 09:00</string>
+    <string name="schedule_post_preset_next_monday_morning">Nästa måndag kl. 09:00</string>
+    <string name="schedule_post_always_on_prompt_title">Aktivera alltid-på-aviseringar?</string>
+    <string name="schedule_post_always_on_prompt_message">Schemalagda inlägg publiceras pålitligt endast när alltid-på-aviseringar är aktiverade. Annars kanske de inte utlöses förrän du öppnar appen igen.</string>
+    <string name="schedule_post_always_on_prompt_open_settings">Öppna inställningar</string>
+    <string name="schedule_post_always_on_prompt_continue">Fortsätt ändå</string>
+    <string name="scheduled_posts_at_time">%1$s · om %2$s</string>
+    <string name="scheduled_posts_at_time_past">%1$s · för %2$s sedan</string>
+    <string name="scheduled_posts_day_tomorrow">Imorgon</string>
+    <string name="scheduled_posts_logout_toast_zero">Utloggad</string>
+    <string name="scheduled_posts_logout_toast">Utloggad · %1$d schemalagda inlägg raderade</string>
+    <string name="scheduled_posts_action_send_now">Skicka nu</string>
+    <string name="scheduled_posts_empty_title">Inga schemalagda inlägg</string>
+    <string name="scheduled_posts_empty_hint">Skriv en anteckning och tryck på klockikonen för att schemalägga den.</string>
+    <string name="scheduled_posts_error_prefix">Fel: %1$s</string>
+    <string name="scheduled_posts_status_pending">Schemalagd</string>
+    <string name="scheduled_posts_status_publishing">Skickar…</string>
+    <string name="scheduled_posts_status_failed">Misslyckades</string>
+    <string name="scheduled_posts_status_sent">Skickat</string>
+    <string name="scheduled_posts_status_cancelled">Avbrutet</string>
+    <string name="scheduled_posts_logout_warning">Du har %1$d schemalagda inlägg som inte har publicerats än. Att logga ut raderar dem permanent.</string>
+    <string name="scheduled_posts_notification_sent_title">Schemalagt inlägg publicerat</string>
+    <string name="scheduled_posts_notification_failed_title">Schemalagt inlägg misslyckades</string>
+    <string name="app_notification_scheduled_posts_channel_name">Schemalagda inlägg</string>
+    <string name="app_notification_scheduled_posts_channel_description">Aviseringar när ett schemalagt inlägg publiceras eller misslyckas att publicera.</string>
+    <plurals name="scheduled_posts_subtitle_queued">
+        <item quantity="one">%d i kö</item>
+        <item quantity="other">%d i kö</item>
+    </plurals>
+    <plurals name="scheduled_posts_subtitle_due_suffix">
+        <item quantity="one"> · 1 inom 1 h</item>
+        <item quantity="other"> · %d inom 1 h</item>
+    </plurals>
+    <plurals name="scheduled_posts_relay_count">
+        <item quantity="one">till 1 relä</item>
+        <item quantity="other">till %d reläer</item>
+    </plurals>
+    <string name="scheduled_posts_event_id_copied">Inläggs-ID kopierat</string>
 </resources>
