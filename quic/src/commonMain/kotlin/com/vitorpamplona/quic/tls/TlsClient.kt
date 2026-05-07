@@ -166,6 +166,23 @@ class TlsClient(
      */
     private var pskAccepted: Boolean = false
 
+    /**
+     * RFC 8446 §4.2.10 — true after EncryptedExtensions echoes the empty
+     * `early_data` extension we sent in the resumption ClientHello.
+     * False (the default) means the server rejected 0-RTT — any
+     * application data we already sent under early-data keys was
+     * silently dropped server-side and the QUIC layer must re-queue it
+     * for retransmission once 1-RTT keys are available.
+     *
+     * Read by [com.vitorpamplona.quic.connection.QuicConnection]'s
+     * onApplicationKeysReady callback to decide whether to invoke
+     * [com.vitorpamplona.quic.connection.QuicConnection.requeueAllInflightStreamData].
+     * Only meaningful on resumption + 0-RTT connections; non-0-RTT
+     * connections leave it at false and never check it.
+     */
+    var earlyDataAccepted: Boolean = false
+        private set
+
     /** The 32-byte ClientHello random, available after [start]. Exposed so
      *  observers (e.g. SSLKEYLOGFILE writer) can correlate secrets with
      *  this connection. */
@@ -396,6 +413,12 @@ class TlsClient(
                 }
                 negotiatedAlpn = alpn
                 peerTransportParameters = ee.quicTransportParameters
+                // RFC 8446 §4.2.10 — server's `early_data` extension in
+                // EE confirms 0-RTT acceptance. Absence means the server
+                // ignored / dropped any app data we already sent under
+                // early-data keys, and the QUIC layer must re-queue it
+                // for 1-RTT replay.
+                earlyDataAccepted = ee.extensions.any { it.type == TlsConstants.EXT_EARLY_DATA }
                 transcript.append(msg)
                 state = State.WAITING_CERTIFICATE_OR_FINISHED
             }

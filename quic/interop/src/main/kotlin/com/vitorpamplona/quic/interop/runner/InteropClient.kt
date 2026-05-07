@@ -34,7 +34,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -876,23 +875,35 @@ private suspend fun runOneResumptionConnection(
     // get away without the rebuild — the server processes the
     // requests and replies in 1-RTT after handshake.
     val zeroRttPlanned = resumption != null && resumption.maxEarlyDataSize > 0 && fetchUrls.isNotEmpty()
-    val pre0RttHandles =
+    // ALPN isn't yet renegotiated for THIS connection (we're
+    // pre-handshake), so use the cached ALPN from the prior
+    // connection. RFC 9001 §4.6 requires the same ALPN when sending
+    // 0-RTT data; the wire format MUST match it. aioquic's h3 server
+    // accepts 0-RTT at the TLS layer but silently drops bidi streams
+    // whose payload isn't a valid HEADERS frame, so we must
+    // pre-instantiate the right GetClient (h3 → Http3GetClient with
+    // its three uni control streams + HEADERS-framed bidi requests;
+    // hq-interop → raw "GET /\r\n").
+    val cachedAlpn = resumption?.negotiatedAlpn?.decodeToString().orEmpty()
+    val pre0RttClient: GetClient? =
         if (zeroRttPlanned) {
-            // ALPN isn't yet renegotiated for THIS connection (we're
-            // pre-handshake), so use the cached ALPN from the prior
-            // connection — RFC 9001 §4.6 requires the same ALPN when
-            // sending 0-RTT data.
-            val cachedAlpn = resumption!!.negotiatedAlpn?.decodeToString().orEmpty()
+            when (cachedAlpn) {
+                "h3" -> Http3GetClient(conn, driver).also { it.init(scope) }
+                else -> HqInteropGetClient(conn, driver)
+            }
+        } else {
+            null
+        }
+    val pre0RttHandles =
+        if (pre0RttClient != null) {
             // Pre-handshake stream open works because QuicConnection.init
             // pre-loaded peerMaxStreamsBidi from the resumption state.
-            val handles =
-                conn.openBidiStreamsBatch(fetchUrls.map { "GET ${it.path}\r\n".encodeToByteArray() }) { stream, request ->
-                    stream.send.enqueue(request)
-                    stream.send.finish()
-                    stream
-                }
+            // prepareRequests opens N bidi streams under a single
+            // streamsLock hold so the writer's first 0-RTT drain
+            // coalesces them into one (or few) packets.
+            val handles = pre0RttClient.prepareRequests(authority, fetchUrls.map { it.path })
             driver.wakeup()
-            cachedAlpn to handles
+            handles
         } else {
             null
         }
@@ -912,8 +923,13 @@ private suspend fun runOneResumptionConnection(
         conn.tls.negotiatedAlpn
             ?.decodeToString()
             .orEmpty()
+    // Reuse the pre-handshake client when 0-RTT was attempted —
+    // its uni control streams (h3 SETTINGS + qpack streams) are
+    // already opened and either survived 0-RTT or got requeued
+    // by QuicConnection.onApplicationKeysReady's rejection path
+    // when the server skipped the early_data extension.
     val client: GetClient =
-        when (negotiated) {
+        pre0RttClient ?: when (negotiated) {
             "h3" -> {
                 Http3GetClient(conn, driver).also { it.init(scope) }
             }
@@ -930,34 +946,29 @@ private suspend fun runOneResumptionConnection(
 
     var anyFailed = false
     if (pre0RttHandles != null) {
-        // 0-RTT path: streams already opened and GETs already enqueued
-        // pre-handshake. Just collect the responses on each stream.
-        // Server may have accepted the 0-RTT data (responses come back)
-        // or rejected it; rejection means data was dropped server-side
-        // and we'd have to resend in 1-RTT, which is real work and not
-        // wired here. For the runner's zerortt testcase against picoquic
-        // (which accepts), this path is sufficient.
-        val (_, handles) = pre0RttHandles
-        for ((url, stream) in fetchUrls.zip(handles)) {
-            val body =
+        // 0-RTT path: streams already opened and requests already
+        // enqueued pre-handshake. Just collect the responses via the
+        // ALPN-matching client. If the server rejected 0-RTT at the
+        // TLS layer, QuicConnection.onApplicationKeysReady has already
+        // requeued the stream data through the 1-RTT keys — same
+        // handles, same response collection.
+        for ((url, handle) in fetchUrls.zip(pre0RttHandles)) {
+            val resp =
                 withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
-                    val chunks = stream.incoming.toList()
-                    val total = chunks.sumOf { it.size }
-                    val buf = ByteArray(total)
-                    var off = 0
-                    for (c in chunks) {
-                        c.copyInto(buf, off)
-                        off += c.size
-                    }
-                    buf
+                    client.awaitResponse(handle)
                 }
-            if (body == null || body.isEmpty()) {
+            if (resp == null || resp.body.isEmpty()) {
                 anyFailed = true
                 System.err.println("[resumption:$iterIdx] 0RTT GET ${url.path} → empty/timeout")
                 continue
             }
+            if (resp.status != 200 && resp.status != 0) {
+                System.err.println("[resumption:$iterIdx] 0RTT GET ${url.path} → status ${resp.status}")
+                anyFailed = true
+                continue
+            }
             val name = url.path.substringAfterLast('/').ifBlank { "index" }
-            File(downloadsDir, name).writeBytes(body)
+            File(downloadsDir, name).writeBytes(resp.body)
         }
     } else {
         for (url in fetchUrls) {

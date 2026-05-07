@@ -540,6 +540,33 @@ class QuicConnection(
                 clientSecret: ByteArray,
                 serverSecret: ByteArray,
             ) {
+                // RFC 9001 §4.10 — 0-RTT rejection fallback. If we
+                // offered 0-RTT but the server's EncryptedExtensions
+                // didn't echo the early_data extension, any application
+                // data we already shipped under early-data keys was
+                // silently dropped server-side. Re-queue it so the
+                // writer replays it under the about-to-be-installed
+                // 1-RTT keys. Must run BEFORE we install the 1-RTT
+                // sendProtection — once the writer sees 1-RTT keys
+                // available it'll start drainOutbound under short
+                // headers; we want any pending retransmits to flow
+                // through that path with the original byte content.
+                //
+                // requeueAllInflightStreamData walks streamsList under
+                // the assumption the caller holds streamsLock — which
+                // we do here because the parser path that fired this
+                // listener (handleServerFinished → onApplicationKeysReady)
+                // runs inside streamsLock.withLock { feedDatagram(...) }
+                // in the read loop.
+                val rejected0Rtt =
+                    resumption != null &&
+                        resumption.maxEarlyDataSize > 0 &&
+                        !tls.earlyDataAccepted
+                if (rejected0Rtt) {
+                    requeueAllInflightStreamData()
+                    application.cryptoSend.requeueAllInflight()
+                    application.sentPackets.clear()
+                }
                 application.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 application.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
                 // Drop 0-RTT keys — the writer must use 1-RTT short
