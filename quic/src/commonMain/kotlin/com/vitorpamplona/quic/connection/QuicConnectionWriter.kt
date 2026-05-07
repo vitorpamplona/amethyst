@@ -304,7 +304,12 @@ private fun buildBestLevelPacket(
         val pn = app.pnSpace.allocateOutbound()
         val built =
             ShortHeaderPacket.build(
-                ShortHeaderPlaintextPacket(conn.destinationConnectionId, pn, payload),
+                ShortHeaderPlaintextPacket(
+                    conn.destinationConnectionId,
+                    pn,
+                    payload,
+                    keyPhase = conn.currentSendKeyPhase,
+                ),
                 proto.aead,
                 proto.key,
                 proto.iv,
@@ -736,7 +741,12 @@ private fun buildApplicationPacket(
     val sizeBytes =
         runCatching {
             ShortHeaderPacket.build(
-                ShortHeaderPlaintextPacket(conn.destinationConnectionId, pn, payload),
+                ShortHeaderPlaintextPacket(
+                    conn.destinationConnectionId,
+                    pn,
+                    payload,
+                    keyPhase = conn.currentSendKeyPhase,
+                ),
                 proto.aead,
                 proto.key,
                 proto.iv,

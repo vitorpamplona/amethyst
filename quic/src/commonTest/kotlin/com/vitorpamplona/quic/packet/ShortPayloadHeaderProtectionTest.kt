@@ -175,6 +175,103 @@ class ShortPayloadHeaderProtectionTest {
     }
 
     @Test
+    fun peek_key_phase_returns_phase_bit_without_aead() {
+        // Build a phase-1 packet, peek without running AEAD, expect the
+        // peek to surface keyPhase=true even though we never had the
+        // AEAD keys to actually decrypt the body. This is the gating
+        // operation in feedShortHeaderPacket — pick keys based on the
+        // peek before attempting AEAD.
+        val plain =
+            ShortHeaderPlaintextPacket(
+                dcid = dcid,
+                packetNumber = 0L,
+                payload = byteArrayOf(0x01, 0x02, 0x03, 0x04),
+                keyPhase = true,
+            )
+        val wire =
+            ShortHeaderPacket.build(
+                plain = plain,
+                aead = Aes128Gcm,
+                key = proto.clientKey,
+                iv = proto.clientIv,
+                hp = hp,
+                hpKey = proto.clientHp,
+                largestAckedInSpace = -1L,
+            )
+        val peek =
+            ShortHeaderPacket.peekKeyPhase(
+                bytes = wire,
+                offset = 0,
+                dcidLen = dcid.length,
+                hp = hp,
+                hpKey = proto.clientHp,
+            )
+        assertNotNull(peek)
+        assertEquals(true, peek.keyPhase)
+    }
+
+    @Test
+    fun peek_key_phase_returns_null_for_long_header() {
+        // Long-header form bit set → peek must reject.
+        val longHeader = ByteArray(64) { 0 }
+        longHeader[0] = 0xC0.toByte() // form=1, fixed=1
+        val peek =
+            ShortHeaderPacket.peekKeyPhase(
+                bytes = longHeader,
+                offset = 0,
+                dcidLen = dcid.length,
+                hp = hp,
+                hpKey = proto.clientHp,
+            )
+        assertEquals(null, peek)
+    }
+
+    @Test
+    fun two_byte_pn_round_trips_when_largest_acked_is_far_behind() {
+        // Reproduces the quic-go transferloss interop drop: server sends pn=100
+        // with pnLen=2 (because their `num_unacked = pn - largest_acked` exceeds
+        // 128 from their sender-side bookkeeping), client's largestReceived is
+        // 99 from the contiguous burst it just acked. If our HP unmask + PN
+        // decode mishandles 2-byte PNs, AEAD auth fails and we silently drop
+        // every packet from here on. The connection wedges in a one-packet-
+        // per-PTO loop because we stop generating ACKs.
+        val payload = byteArrayOf(0x01, 0x02, 0x03, 0x04)
+        val plain =
+            ShortHeaderPlaintextPacket(
+                dcid = dcid,
+                packetNumber = 100L,
+                payload = payload,
+            )
+        // largestAckedInSpace = -1 forces num_unacked = 101, which exceeds
+        // the 128-byte threshold and selects pnLen=2 in the builder.
+        val wire =
+            ShortHeaderPacket.build(
+                plain = plain,
+                aead = Aes128Gcm,
+                key = proto.clientKey,
+                iv = proto.clientIv,
+                hp = hp,
+                hpKey = proto.clientHp,
+                largestAckedInSpace = -1L,
+            )
+        val parsed =
+            ShortHeaderPacket.parseAndDecrypt(
+                bytes = wire,
+                offset = 0,
+                dcidLen = dcid.length,
+                aead = Aes128Gcm,
+                key = proto.clientKey,
+                iv = proto.clientIv,
+                hp = hp,
+                hpKey = proto.clientHp,
+                largestReceivedInSpace = 99L,
+            )
+        assertNotNull(parsed, "2-byte pn=100 with largestReceived=99 should decrypt")
+        assertEquals(100L, parsed.packet.packetNumber)
+        assertContentEquals(payload, parsed.packet.payload)
+    }
+
+    @Test
     fun payload_at_or_above_threshold_is_unchanged() {
         // pnLen=1, payload=4: already satisfies pnLen+payload >= 4. The
         // builder MUST NOT add gratuitous padding — a regression there would

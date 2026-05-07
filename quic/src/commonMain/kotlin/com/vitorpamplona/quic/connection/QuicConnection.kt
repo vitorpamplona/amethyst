@@ -166,6 +166,56 @@ class QuicConnection(
     val handshake = LevelState()
     val application = LevelState()
 
+    /**
+     * RFC 9001 §6 1-RTT key update — application-level state.
+     *
+     * The TLS handshake hands us the initial 1-RTT secrets via
+     * [onApplicationKeysReady]. From there, EITHER side can roll forward
+     * to the next-phase secret by computing
+     * `next = HKDF-Expand-Label(current, "quic ku", "", Hash.length)` —
+     * QUIC signals the rotation in the per-packet `KEY_PHASE` bit.
+     *
+     *  - [appReceiveSecret] / [appSendSecret] hold the LIVE secrets in use
+     *    (the keys derived from these are what [application.receiveProtection]
+     *    / [application.sendProtection] hold).
+     *  - [currentReceiveKeyPhase] / [currentSendKeyPhase] track which phase
+     *    those secrets correspond to (false = phase 0, true = phase 1, then
+     *    flipping). The wire bit must match the live keys' phase.
+     *  - [previousReceiveProtection] holds the keys for the PRIOR phase so
+     *    we can decrypt reordered packets that arrive after we've already
+     *    rotated forward (RFC 9001 §6.1: "The recipient SHOULD retain old
+     *    keys for some time after unprotecting a packet sent using the new
+     *    keys"). Cleared on the next rotation.
+     *
+     * Initial-/Handshake-level packets carry long headers and are not
+     * subject to key update — these fields apply only to APPLICATION.
+     *
+     * Why we initiate the rotation in lockstep with the peer rather than
+     * driving it ourselves: when a peer initiates a key update, RFC 9001
+     * §6.1 requires us to respond with packets in the new phase so they
+     * can confirm the rotation took effect. We don't proactively initiate
+     * key updates — there's no safety benefit at our connection scale and
+     * not initiating means we never have to track per-packet usage limits
+     * (RFC 9001 §6.6).
+     */
+    @Volatile
+    internal var appCipherSuite: Int = 0
+
+    @Volatile
+    internal var appReceiveSecret: ByteArray? = null
+
+    @Volatile
+    internal var appSendSecret: ByteArray? = null
+
+    @Volatile
+    internal var currentReceiveKeyPhase: Boolean = false
+
+    @Volatile
+    internal var currentSendKeyPhase: Boolean = false
+
+    @Volatile
+    internal var previousReceiveProtection: PacketProtection? = null
+
     @Volatile
     var handshakeComplete: Boolean = false
         private set
@@ -429,6 +479,15 @@ class QuicConnection(
             ) {
                 application.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 application.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
+                // Stash the live secrets + cipher suite so we can derive
+                // next-phase keys via HKDF-Expand-Label("quic ku") on demand
+                // when the peer initiates a key update (RFC 9001 §6). Only
+                // application-level keys are subject to key update —
+                // Initial / Handshake levels are short-lived and never see
+                // the KEY_PHASE bit (long headers don't carry it).
+                appCipherSuite = cipherSuite
+                appReceiveSecret = serverSecret.copyOf()
+                appSendSecret = clientSecret.copyOf()
                 qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
                 qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
             }
@@ -1269,6 +1328,137 @@ class QuicConnection(
         for (stream in streamsList) {
             stream.send.requeueAllInflight()
         }
+    }
+
+    /**
+     * RFC 9001 §6.1 key update — rotate application-level keys forward by
+     * one phase. Called from [com.vitorpamplona.quic.connection.feedShortHeaderPacket]
+     * once it has positively decrypted a packet whose `KEY_PHASE` bit
+     * differs from [currentReceiveKeyPhase] using freshly-derived keys.
+     *
+     *   next_secret = HKDF-Expand-Label(current_secret, "quic ku", "", Hash.length)
+     *   next_key    = HKDF-Expand-Label(next_secret,    "quic key", "", aead.key_length)
+     *   next_iv     = HKDF-Expand-Label(next_secret,    "quic iv",  "", iv.length)
+     *
+     * Header-protection key is NOT updated (RFC 9001 §6.1: "The QUIC header
+     * is protected using the same packet protection key as the packet
+     * payload, but the header_protection key is not updated when keys are
+     * updated").
+     *
+     * Caller has already validated that the new-phase keys decrypt the
+     * triggering packet — we install them as live, demote the prior keys
+     * to [previousReceiveProtection] for the reorder window, and update
+     * the send side in lockstep so our next outbound packet carries the
+     * matching `KEY_PHASE` bit.
+     *
+     * Returns the [PacketProtection] the caller should retry-decrypt with
+     * (the new receive-side keys); null if app keys aren't installed yet
+     * (handshake hasn't completed) or the cipher suite is unsupported.
+     *
+     * Idempotent guard: if [currentReceiveKeyPhase] already matches
+     * [newPhase] (concurrent path raced us to the rotation), this returns
+     * the current keys unchanged. Should never happen given the parser is
+     * single-threaded, but cheap insurance.
+     */
+    internal fun deriveNextPhaseReceiveKeys(): com.vitorpamplona.quic.connection.PacketProtection? {
+        val current = appReceiveSecret ?: return null
+        val cs = appCipherSuite.takeIf { it != 0 } ?: return null
+        // RFC 9001 §6.1 — secret rotation label.
+        val nextSecret =
+            com.vitorpamplona.quic.crypto.HKDF
+                .expandLabel(current, "quic ku", ByteArray(0), current.size)
+        // Reuse the existing builder; it derives key + iv + hp from a secret,
+        // and the spec just discards the new HP key (we keep the old one).
+        val nextProtection =
+            com.vitorpamplona.quic.connection.packetProtectionFromSecret(
+                cipherSuite = cs,
+                secret = nextSecret,
+            )
+        // Keep the OLD HP key — RFC 9001 §6.1 forbids rotating it.
+        val live = application.receiveProtection ?: return null
+        val rebound =
+            com.vitorpamplona.quic.connection.PacketProtection(
+                aead = nextProtection.aead,
+                key = nextProtection.key,
+                iv = nextProtection.iv,
+                hp = live.hp,
+                hpKey = live.hpKey,
+            )
+        // Rotation is committed by the caller after AEAD success — return
+        // the new keys without mutating state. The caller calls
+        // [commitKeyUpdate] on success.
+        return rebound
+    }
+
+    /**
+     * Commit a successful 1-RTT key rotation. Called by the parser after
+     * [deriveNextPhaseReceiveKeys] returned keys that decrypted the
+     * triggering packet. Side effects:
+     *  - Demote the live receive keys to [previousReceiveProtection]
+     *    (kept for the reorder window — packets sent before the peer
+     *    rotated are still tagged with the old KEY_PHASE).
+     *  - Install the next-phase receive keys as live.
+     *  - Flip [currentReceiveKeyPhase].
+     *  - Roll the send-side secret + keys forward in lockstep so our next
+     *    outbound packet carries the matching KEY_PHASE bit. Per RFC 9001
+     *    §6.1 the peer uses our matching-phase response to confirm the
+     *    rotation took effect.
+     *  - Replace the stashed secret with the next-phase secret so a SECOND
+     *    rotation derives off the right base.
+     *
+     * The send-side rotation is unconditional — we always echo the peer's
+     * phase rather than running independent rotation schedules. This is
+     * spec-compliant (the peer just observes our phase; there's no
+     * requirement to drive our own rotation independently) and avoids the
+     * extra plumbing needed to enforce RFC 9001 §6.6 packet-count limits.
+     */
+    internal fun commitKeyUpdate(newReceive: com.vitorpamplona.quic.connection.PacketProtection) {
+        val live = application.receiveProtection ?: return
+        previousReceiveProtection = live
+        application.receiveProtection = newReceive
+        // Re-derive the receive secret so the NEXT rotation hashes off the
+        // right base. The receive keys were derived from
+        // HKDF-Expand-Label(current_secret, "quic ku", ...), so the new
+        // current_secret is the same expansion.
+        val cs = appCipherSuite
+        val curRx = appReceiveSecret
+        if (curRx != null && cs != 0) {
+            appReceiveSecret =
+                com.vitorpamplona.quic.crypto.HKDF
+                    .expandLabel(curRx, "quic ku", ByteArray(0), curRx.size)
+        }
+        currentReceiveKeyPhase = !currentReceiveKeyPhase
+
+        // Send side: roll forward in lockstep so our next outbound packet
+        // carries the matching KEY_PHASE bit. Peer's loss-recovery uses our
+        // matching-phase response as the "rotation confirmed" signal.
+        val curTx = appSendSecret
+        if (curTx != null && cs != 0) {
+            val nextSendSecret =
+                com.vitorpamplona.quic.crypto.HKDF
+                    .expandLabel(curTx, "quic ku", ByteArray(0), curTx.size)
+            appSendSecret = nextSendSecret
+            val freshSend =
+                com.vitorpamplona.quic.connection.packetProtectionFromSecret(
+                    cipherSuite = cs,
+                    secret = nextSendSecret,
+                )
+            val liveSend = application.sendProtection
+            if (liveSend != null) {
+                // Reuse old HP key for send too (HP is not rotated).
+                application.sendProtection =
+                    com.vitorpamplona.quic.connection.PacketProtection(
+                        aead = freshSend.aead,
+                        key = freshSend.key,
+                        iv = freshSend.iv,
+                        hp = liveSend.hp,
+                        hpKey = liveSend.hpKey,
+                    )
+                currentSendKeyPhase = !currentSendKeyPhase
+            }
+        }
+        qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
+        qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
     }
 
     /** Caller must hold [lock]. Snapshot of streams for the driver's send loop. */

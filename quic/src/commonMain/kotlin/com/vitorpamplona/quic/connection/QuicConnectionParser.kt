@@ -262,24 +262,88 @@ private fun feedShortHeaderPacket(
     nowMillis: Long,
 ) {
     val state = conn.levelState(EncryptionLevel.APPLICATION)
-    val proto = state.receiveProtection
-    if (proto == null) {
+    val live = state.receiveProtection
+    if (live == null) {
         conn.qlogObserver.onPacketDropped(
             "no application receive keys",
             datagram.size - offset,
         )
         return
     }
+
+    // RFC 9001 §6 — pick the right keys BEFORE running AEAD by peeking at
+    // the protected first byte's key-phase bit. Three cases:
+    //   1. Wire phase == current phase → use current (live) keys.
+    //   2. Wire phase != current phase but matches the previously-current
+    //      phase (we already rotated past it) → use the retained
+    //      [previousReceiveProtection] for reordered packets.
+    //   3. Wire phase != current phase and != previous → peer has rotated
+    //      to the next phase; derive next-phase keys, attempt AEAD, on
+    //      success commit the rotation.
+    // Without this dance, every post-rotation packet AEAD-fails silently
+    // (qlog drops) and the connection wedges (no ACKs to peer, peer falls
+    // into PTO mode → throughput collapse). Surfaced by quic-go
+    // transferloss interop, which initiates a key update around server
+    // pn=100 by default.
+    val peek =
+        ShortHeaderPacket.peekKeyPhase(
+            bytes = datagram,
+            offset = offset,
+            dcidLen = conn.sourceConnectionId.length,
+            hp = live.hp,
+            hpKey = live.hpKey,
+        )
+    if (peek == null) {
+        conn.qlogObserver.onPacketDropped(
+            "AEAD auth failed or header parse failed at level APPLICATION",
+            datagram.size - offset,
+        )
+        return
+    }
+
+    val keysToUse: PacketProtection
+    val rotateOnSuccess: PacketProtection?
+    when {
+        peek.keyPhase == conn.currentReceiveKeyPhase -> {
+            keysToUse = live
+            rotateOnSuccess = null
+        }
+
+        // Reordered packet from before our last rotation — try the
+        // retained previous keys. Reordering window is small but real
+        // for paths with non-trivial RTT.
+        conn.previousReceiveProtection != null -> {
+            keysToUse = conn.previousReceiveProtection!!
+            rotateOnSuccess = null
+        }
+
+        // Peer just rotated. Derive next-phase keys and prepare to commit
+        // if AEAD succeeds. Failure path is the same as a corrupted /
+        // unauthenticated packet — silent drop.
+        else -> {
+            val nextPhase = conn.deriveNextPhaseReceiveKeys()
+            if (nextPhase == null) {
+                conn.qlogObserver.onPacketDropped(
+                    "AEAD auth failed or header parse failed at level APPLICATION",
+                    datagram.size - offset,
+                )
+                return
+            }
+            keysToUse = nextPhase
+            rotateOnSuccess = nextPhase
+        }
+    }
+
     val parsed =
         ShortHeaderPacket.parseAndDecrypt(
             bytes = datagram,
             offset = offset,
             dcidLen = conn.sourceConnectionId.length,
-            aead = proto.aead,
-            key = proto.key,
-            iv = proto.iv,
-            hp = proto.hp,
-            hpKey = proto.hpKey,
+            aead = keysToUse.aead,
+            key = keysToUse.key,
+            iv = keysToUse.iv,
+            hp = keysToUse.hp,
+            hpKey = keysToUse.hpKey,
             largestReceivedInSpace = state.pnSpace.largestReceived,
         )
     if (parsed == null) {
@@ -288,6 +352,14 @@ private fun feedShortHeaderPacket(
             datagram.size - offset,
         )
         return
+    }
+    // AEAD succeeded with the candidate next-phase keys → commit the
+    // rotation. The commit installs them as live, demotes the prior keys
+    // to [previousReceiveProtection], and rolls the send side forward so
+    // the next outbound carries the matching KEY_PHASE bit (peer uses
+    // that to confirm the rotation completed).
+    if (rotateOnSuccess != null) {
+        conn.commitKeyUpdate(rotateOnSuccess)
     }
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
     if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
