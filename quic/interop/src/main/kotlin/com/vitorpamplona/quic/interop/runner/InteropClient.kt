@@ -285,7 +285,25 @@ private fun runTransferTest(
             val conn =
                 QuicConnection(
                     serverName = host,
-                    config = QuicConnectionConfig(),
+                    config =
+                        QuicConnectionConfig(
+                            // Interop stress sizes — push the receive
+                            // window past the largest single-file transfer
+                            // any testcase exercises (longrtt does 5 MB,
+                            // transferloss / transfercorruption do up to
+                            // a few MB). Without this, the peer sends
+                            // up to initialMaxStreamDataBidiLocal then
+                            // stalls until our parser sends a
+                            // MAX_STREAM_DATA — at high RTT (longrtt
+                            // is 750 ms one-way) each stall is ~1.5 s
+                            // round-trip lost. Setting both connection-
+                            // and stream-level windows to 32 MB lets
+                            // the peer's CC alone determine throughput.
+                            initialMaxData = 32L * 1024 * 1024,
+                            initialMaxStreamDataBidiLocal = 32L * 1024 * 1024,
+                            initialMaxStreamDataBidiRemote = 32L * 1024 * 1024,
+                            initialMaxStreamDataUni = 32L * 1024 * 1024,
+                        ),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
                     alpnList = offeredAlpns.map { it.wireBytes },
                     initialVersion = initialVersion,
