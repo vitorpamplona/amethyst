@@ -157,23 +157,33 @@ fun buildResumptionClientHelloBytes(
     binderFinishedKey: ByteArray,
     transcriptHashOfPartialCh: (ByteArray) -> ByteArray,
     binderHmac: (key: ByteArray, data: ByteArray) -> ByteArray,
+    /** When true, include the empty `early_data` extension to opt into 0-RTT. */
+    includeEarlyData: Boolean = false,
 ): ByteArray {
     val exts =
-        listOf(
-            TlsExtension(TlsConstants.EXT_SERVER_NAME, encodeServerNameExtension(serverName)),
-            TlsExtension(TlsConstants.EXT_SUPPORTED_VERSIONS, encodeSupportedVersionsExtensionClient()),
-            TlsExtension(TlsConstants.EXT_SUPPORTED_GROUPS, encodeSupportedGroupsX25519()),
-            TlsExtension(TlsConstants.EXT_SIGNATURE_ALGORITHMS, encodeSignatureAlgorithms()),
-            TlsExtension(TlsConstants.EXT_KEY_SHARE, encodeKeyShareClientX25519(x25519PublicKey)),
-            TlsExtension(TlsConstants.EXT_PSK_KEY_EXCHANGE_MODES, encodePskKeyExchangeModesDhe()),
-            TlsExtension(TlsConstants.EXT_ALPN, encodeAlpn(alpns)),
-            TlsExtension(TlsConstants.EXT_QUIC_TRANSPORT_PARAMETERS, quicTransportParams),
+        buildList {
+            add(TlsExtension(TlsConstants.EXT_SERVER_NAME, encodeServerNameExtension(serverName)))
+            add(TlsExtension(TlsConstants.EXT_SUPPORTED_VERSIONS, encodeSupportedVersionsExtensionClient()))
+            add(TlsExtension(TlsConstants.EXT_SUPPORTED_GROUPS, encodeSupportedGroupsX25519()))
+            add(TlsExtension(TlsConstants.EXT_SIGNATURE_ALGORITHMS, encodeSignatureAlgorithms()))
+            add(TlsExtension(TlsConstants.EXT_KEY_SHARE, encodeKeyShareClientX25519(x25519PublicKey)))
+            add(TlsExtension(TlsConstants.EXT_PSK_KEY_EXCHANGE_MODES, encodePskKeyExchangeModesDhe()))
+            add(TlsExtension(TlsConstants.EXT_ALPN, encodeAlpn(alpns)))
+            add(TlsExtension(TlsConstants.EXT_QUIC_TRANSPORT_PARAMETERS, quicTransportParams))
+            if (includeEarlyData) {
+                // RFC 8446 §4.2.10 — empty body in ClientHello signals
+                // "I'm about to send 0-RTT data". Goes BEFORE
+                // pre_shared_key (which must be last per §4.2.11).
+                add(TlsExtension(TlsConstants.EXT_EARLY_DATA, encodeEarlyDataEmpty()))
+            }
             // pre_shared_key MUST be last (RFC 8446 §4.2.11).
-            TlsExtension(
-                TlsConstants.EXT_PRE_SHARED_KEY,
-                encodePreSharedKeyPlaceholder(ticket, obfuscatedTicketAge),
-            ),
-        )
+            add(
+                TlsExtension(
+                    TlsConstants.EXT_PRE_SHARED_KEY,
+                    encodePreSharedKeyPlaceholder(ticket, obfuscatedTicketAge),
+                ),
+            )
+        }
     val ch = TlsClientHello(random = random, cipherSuites = cipherSuites, extensions = exts)
     val withPlaceholder = ch.encode()
     // PartialClientHello = encoded bytes minus the trailing binders block

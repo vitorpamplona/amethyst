@@ -212,6 +212,7 @@ class TlsClient(
                     ticket = resumption.ticket,
                     obfuscatedTicketAge = obfuscatedAge,
                     binderFinishedKey = binderFinishedKey,
+                    includeEarlyData = resumption.maxEarlyDataSize > 0,
                     transcriptHashOfPartialCh = { partial ->
                         // Hash a one-shot copy of the running transcript
                         // would-be-state: an empty TlsRunningSha256 fed
@@ -245,6 +246,20 @@ class TlsClient(
 
         transcript.append(chBytes)
         outboundQueues[Level.INITIAL]!!.addLast(chBytes)
+
+        // Resumption + 0-RTT: derive client_early_traffic_secret from
+        // the early-secret-from-PSK + post-ClientHello transcript and
+        // hand the secret off so the QUIC layer can install 0-RTT
+        // packet protection. The server applies the same derivation
+        // on its side when it processes our PSK-bound ClientHello.
+        if (resumption != null && resumption.maxEarlyDataSize > 0) {
+            keySchedule.deriveEarlyTraffic(transcript.snapshot())
+            secretsListener.onEarlyDataKeysReady(
+                cipherSuite = resumption.cipherSuite,
+                clientEarlySecret = keySchedule.clientEarlyTrafficSecret!!,
+            )
+        }
+
         state = State.WAITING_SERVER_HELLO
     }
 
@@ -458,6 +473,18 @@ class TlsClient(
                         if (rms != null) {
                             val ticket = parseNewSessionTicketBody(bodyReader)
                             val psk = resumptionPsk(rms, ticket.nonce)
+                            // RFC 8446 §4.2.10 — NewSessionTicket-side
+                            // early_data extension carries uint32
+                            // max_early_data_size. Presence (with size>0)
+                            // signals the server permits 0-RTT for this
+                            // ticket.
+                            val edExt = ticket.extensions.firstOrNull { it.type == TlsConstants.EXT_EARLY_DATA }
+                            val maxEarly =
+                                if (edExt != null && edExt.data.size >= 4) {
+                                    QuicReader(edExt.data).readUint32().toLong() and 0xFFFFFFFFL
+                                } else {
+                                    0L
+                                }
                             secretsListener.onNewSessionTicket(
                                 TlsResumptionState(
                                     ticket = ticket.ticket,
@@ -466,6 +493,9 @@ class TlsClient(
                                     ticketAgeAdd = ticket.ticketAgeAdd,
                                     ticketLifetimeSec = ticket.ticketLifetimeSec,
                                     issuedAtMillis = nowMillisSource(),
+                                    maxEarlyDataSize = maxEarly,
+                                    peerTransportParameters = peerTransportParameters,
+                                    negotiatedAlpn = negotiatedAlpn,
                                 ),
                             )
                         }
@@ -552,6 +582,23 @@ interface TlsSecretsListener {
     fun onHandshakeComplete()
 
     /**
+     * Resumption + 0-RTT path: TLS has derived
+     * `client_early_traffic_secret` (RFC 8446 §7.1) right after the
+     * ClientHello transcript snapshot. The QUIC layer can install
+     * 0-RTT send-side packet protection at this point so subsequent
+     * outbound application data goes out as 0-RTT (long header
+     * packet type 0x01) until 1-RTT keys arrive and supersede.
+     *
+     * Default no-op so existing callers don't have to know about
+     * 0-RTT. Fires AT MOST ONCE per connection — non-resumption
+     * connections never derive an early-data secret.
+     */
+    fun onEarlyDataKeysReady(
+        cipherSuite: Int,
+        clientEarlySecret: ByteArray,
+    ) = Unit
+
+    /**
      * Server issued a NewSessionTicket. The TLS layer hands off a
      * ready-to-use [TlsResumptionState] capturing everything the next
      * connection needs for PSK-based resumption: the opaque ticket, the
@@ -599,6 +646,28 @@ data class TlsResumptionState(
     val ticketLifetimeSec: Long,
     /** Wall-clock millis when the ticket was issued (server time, but we use ours — the obfuscation makes the absolute clock irrelevant). */
     val issuedAtMillis: Long,
+    /**
+     * RFC 9001 §4.6.1 + RFC 8446 §4.2.10. Non-zero when the issuing
+     * server signaled in NewSessionTicket's `early_data` extension that
+     * this ticket may carry up to N bytes of 0-RTT application data on
+     * the next connection. Zero (the default) means the server didn't
+     * advertise 0-RTT for this ticket; the client MUST NOT include the
+     * `early_data` extension on the resumption ClientHello in that case.
+     */
+    val maxEarlyDataSize: Long = 0L,
+    /**
+     * Peer's transport parameters from the connection that issued this
+     * ticket — opaque encoded blob from the prior connection's
+     * EncryptedExtensions. RFC 9001 §7.4.1: a 0-RTT-sending client MUST
+     * use the REMEMBERED transport parameters (specifically flow-control
+     * windows and stream caps) when sending 0-RTT data, since the new
+     * connection's ServerHello hasn't arrived yet so the new params
+     * aren't known. The QUIC layer applies these to the connection
+     * before writing 0-RTT packets.
+     */
+    val peerTransportParameters: ByteArray? = null,
+    /** Negotiated ALPN from the prior connection. 0-RTT must use the same protocol. */
+    val negotiatedAlpn: ByteArray? = null,
 )
 
 /** Pluggable certificate validator. Decoupled so we can stub it in tests. */

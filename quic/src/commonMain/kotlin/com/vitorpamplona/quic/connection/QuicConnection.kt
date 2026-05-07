@@ -245,6 +245,26 @@ class QuicConnection(
     @Volatile
     internal var previousReceiveProtection: PacketProtection? = null
 
+    /**
+     * RFC 9001 §4.10 — 0-RTT send-side packet protection. Installed when
+     * the TLS layer derives `client_early_traffic_secret` (right after
+     * a resumption ClientHello with the early_data extension goes out)
+     * and cleared when 1-RTT keys arrive (the protocol forbids using
+     * 0-RTT keys after that point — the next outbound packet must use
+     * 1-RTT and a short header).
+     *
+     * When non-null AND [application]'s 1-RTT [LevelState.sendProtection]
+     * is null, the writer builds outbound application data as long-
+     * header 0-RTT packets (type 0x01) using these keys; the packet
+     * number space is shared with 1-RTT (RFC 9000 §17.2.3).
+     *
+     * Receive side is symmetric on the server only — the server never
+     * sends 0-RTT packets to the client, so we never need a 0-RTT
+     * receive protection slot.
+     */
+    @Volatile
+    internal var zeroRttSendProtection: PacketProtection? = null
+
     @Volatile
     var handshakeComplete: Boolean = false
         private set
@@ -501,6 +521,20 @@ class QuicConnection(
                 qlogObserver.onKeyUpdated("server", EncryptionLevel.HANDSHAKE)
             }
 
+            override fun onEarlyDataKeysReady(
+                cipherSuite: Int,
+                clientEarlySecret: ByteArray,
+            ) {
+                // Resumption + 0-RTT path: install 0-RTT packet
+                // protection so the writer can encrypt outbound
+                // application data with early-data keys until 1-RTT
+                // keys arrive. Cleared in onApplicationKeysReady (RFC
+                // 9001 §4.10 forbids using 0-RTT keys once 1-RTT is
+                // available).
+                zeroRttSendProtection = packetProtectionFromSecret(cipherSuite, clientEarlySecret)
+                qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
+            }
+
             override fun onApplicationKeysReady(
                 cipherSuite: Int,
                 clientSecret: ByteArray,
@@ -508,6 +542,9 @@ class QuicConnection(
             ) {
                 application.sendProtection = packetProtectionFromSecret(cipherSuite, clientSecret)
                 application.receiveProtection = packetProtectionFromSecret(cipherSuite, serverSecret)
+                // Drop 0-RTT keys — the writer must use 1-RTT short
+                // headers from here on (RFC 9001 §4.10).
+                zeroRttSendProtection = null
                 // Stash the live secrets + cipher suite so we can derive
                 // next-phase keys via HKDF-Expand-Label("quic ku") on demand
                 // when the peer initiates a key update (RFC 9001 §6). Only
