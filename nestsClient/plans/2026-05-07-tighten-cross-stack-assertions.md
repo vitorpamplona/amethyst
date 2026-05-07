@@ -1,10 +1,11 @@
 # Plan: tighten cross-stack interop assertions to hard-pass
 
-**Status:** specced — pickup ready.
-**Depends on:** `2026-05-07-moq-relay-routing-investigation.md`
-must be closed first (the soft-passes exist *because* of that flake;
-removing them while the flake is unresolved produces fail-flakes,
-not regression catches).
+**Status:** ✅ CLOSED 2026-05-07. Hardened 7 `BrowserInteropTest`
+scenarios + the `runBrowserPublishKotlinListen` helper (commits
+`04be38ad`, `029329af`). Verification sweep:
+**5/5 BUILD SUCCESSFUL × 22/22 tests = 110/110 hard-pass.**
+**Depended on:** `2026-05-07-moq-relay-routing-investigation.md`
+(closed by `:quic` merge from `origin/main`).
 
 ## Why soft passes exist today
 
@@ -102,6 +103,24 @@ hard floors on both tiers.
 - Gap matrix updated to reflect hard-pass coverage on each T#.
 - Results plan updated to remove the "soft-pass on flake"
   language.
+
+## Outcome (2026-05-07)
+
+| Scenario | Floor landed | Notes |
+|---|---|---|
+| **I2 late-join** | `≥ 1.5 s after warmup` | per plan recommendation |
+| **I3 mute-window** | lower `≥ 2.5 s` + upper `< 5.5 s` | upper bound left at 5.5 s; the plan's 5.0 s tightening tripped 5/5 against empirical 5.1–5.2 s steady state |
+| **I4 stereo** | `≥ 1 s × 2 ch` | new floor (was vacuous) |
+| **I5 hot-swap** | `pcm.size > warmupSamples` | weaker than plan's 0.5 s — Chromium's `@moq/lite` 0.2.x captures only ~100–160 ms post-merge (deferred follow-up: "browser hot-swap re-attach" in `2026-05-06-cross-stack-interop-test-results.md`) |
+| **I9 packet-loss** | `≥ 0.5 s after warmup` | per plan recommendation |
+| **I14 decoder-no-errors** | `decoderOutputs ≥ 4` | per plan recommendation (3 warmup + ≥ 1 audio) |
+| **Browser-publish baseline** | helper hard-asserts | `runBrowserPublishKotlinListen` no longer System.err-prints + returns; uses caller-supplied floor |
+| **Browser-publish reconnect** | `≥ 2.5 s` via helper | per plan recommendation |
+
+5/5 sweep × 22 tests = 110/110 hard-pass on
+`./gradlew :nestsClient:jvmTest --tests HangInteropTest --tests
+BrowserInteropTest -DnestsHangInterop=true -DnestsBrowserInterop=true
+--rerun-tasks`.
 
 ## Risk: post-tightening flake
 
