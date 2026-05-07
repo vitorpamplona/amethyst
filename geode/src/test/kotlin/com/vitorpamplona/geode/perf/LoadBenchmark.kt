@@ -140,6 +140,192 @@ class LoadBenchmark {
         }
 
     /**
+     * Holds 10 000 idle WebSocket connections open against a single
+     * relay. Verifies that the adaptive outQueue (sketch A in
+     * [connection-scaling plan][1]) lets us cross the ~2 000-connection
+     * floor measured by [connectionsHeldOpen] without FD exhaustion or
+     * runaway RSS.
+     *
+     * RUN PREREQ: requires a process FD limit ≥ ~12 000 (each WS uses
+     * one FD on each side plus margin). On Linux: `ulimit -n 32768`
+     * before launching the test JVM.
+     *
+     * [1]: geode/plans/2026-05-07-connection-scaling.md
+     */
+    @Test
+    fun connectionsHeldOpen10k() =
+        benchmark("connections held open 10k") {
+            val target = 10_000
+            runBenchmarkServer { server, http ->
+                val httpUrl =
+                    okhttp3.Request
+                        .Builder()
+                        .url(server.url.replace("ws://", "http://"))
+                        .build()
+                val sockets = java.util.concurrent.CopyOnWriteArrayList<okhttp3.WebSocket>()
+                val opened = AtomicLong()
+                val gotEose = AtomicLong()
+                val opens =
+                    measureTime {
+                        repeat(target) {
+                            val ws =
+                                http.newWebSocket(
+                                    httpUrl,
+                                    object : okhttp3.WebSocketListener() {
+                                        override fun onOpen(
+                                            webSocket: okhttp3.WebSocket,
+                                            response: okhttp3.Response,
+                                        ) {
+                                            opened.incrementAndGet()
+                                            webSocket.send(
+                                                """["REQ","s",{"kinds":[1],"limit":1}]""",
+                                            )
+                                        }
+
+                                        override fun onMessage(
+                                            webSocket: okhttp3.WebSocket,
+                                            text: String,
+                                        ) {
+                                            if (text.startsWith("[\"EOSE\"")) {
+                                                gotEose.incrementAndGet()
+                                            }
+                                        }
+                                    },
+                                )
+                            sockets += ws
+                        }
+                        val deadline = System.currentTimeMillis() + 120_000
+                        while (gotEose.get() < target && System.currentTimeMillis() < deadline) {
+                            Thread.sleep(50)
+                        }
+                    }
+                val rt = Runtime.getRuntime()
+                val rssMb = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024)
+                println(
+                    "target=$target opened=${opened.get()} eosed=${gotEose.get()} " +
+                        "active=${server.activeSessionCount} elapsedMs=${opens.inWholeMilliseconds} " +
+                        "heapMb=$rssMb",
+                )
+                sockets.forEach { runCatching { it.cancel() } }
+                check(gotEose.get() == target.toLong()) {
+                    "expected $target EOSE but got ${gotEose.get()} — connection scaling regression"
+                }
+                check(rssMb < 1024) {
+                    "heap usage $rssMb MiB exceeded 1 GiB ceiling for $target idle connections"
+                }
+            }
+        }
+
+    /**
+     * 5 000 idle subscribers, one publisher emitting 10 EPS for 10 s.
+     * Measures fan-out latency at scale — exercises the queue path
+     * for a connection that *does* fan out, not just an idle one.
+     *
+     * Each subscriber matches every published event (`kinds:[1]`),
+     * so a single EVENT generates 5 000 outbound frames per tick.
+     */
+    @Test
+    fun connectionsHeldOpenWithFanout() =
+        benchmark("connections held open with fanout") {
+            val subs = 5_000
+            val durationSeconds = 10
+            val targetEps = 10
+            runBenchmarkServer { server, http ->
+                val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+                val subClient = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
+                val pubClient = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
+                try {
+                    val relayUrl = server.url.normalizeRelayUrl()
+                    val received = AtomicLong()
+                    val eosed = AtomicLong()
+                    // Per-event fan-out latency, capped at the # of
+                    // events we expect (durationSeconds * targetEps).
+                    val fanoutLatenciesNs =
+                        java.util.concurrent.ConcurrentHashMap<String, AtomicLong>()
+                    val firstSeenNs =
+                        java.util.concurrent.ConcurrentHashMap<String, AtomicLong>()
+
+                    repeat(subs) { i ->
+                        subClient.subscribe(
+                            "fanout-$i",
+                            mapOf(relayUrl to listOf(Filter(kinds = listOf(1)))),
+                            object : SubscriptionListener {
+                                override fun onEvent(
+                                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                                    isLive: Boolean,
+                                    relay: NormalizedRelayUrl,
+                                    forFilters: List<Filter>?,
+                                ) {
+                                    val now = System.nanoTime()
+                                    firstSeenNs
+                                        .computeIfAbsent(event.id) { AtomicLong(now) }
+                                    fanoutLatenciesNs
+                                        .computeIfAbsent(event.id) { AtomicLong(now) }
+                                        .set(now)
+                                    received.incrementAndGet()
+                                }
+
+                                override fun onEose(
+                                    relay: NormalizedRelayUrl,
+                                    forFilters: List<Filter>?,
+                                ) {
+                                    eosed.incrementAndGet()
+                                }
+                            },
+                        )
+                    }
+
+                    runBlocking {
+                        withTimeout(120_000) {
+                            while (eosed.get() < subs) kotlinx.coroutines.delay(100)
+                        }
+                    }
+                    println("$subs subs ready; publishing ${targetEps * durationSeconds} events at $targetEps EPS...")
+
+                    val signer = NostrSignerSync(KeyPair())
+                    val publishedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+                    val totalEvents = targetEps * durationSeconds
+                    val tickIntervalMs = 1000L / targetEps
+
+                    runBlocking {
+                        repeat(totalEvents) { i ->
+                            val event = signer.sign(TextNoteEvent.build("fanout-$i"))
+                            publishedAt[event.id] = System.nanoTime()
+                            pubClient.publishAndConfirm(event, setOf(relayUrl))
+                            kotlinx.coroutines.delay(tickIntervalMs)
+                        }
+                    }
+
+                    // Wait for fan-out completion (or 30s, whichever first).
+                    runBlocking {
+                        withTimeout(30_000) {
+                            while (received.get() < subs.toLong() * totalEvents) {
+                                kotlinx.coroutines.delay(100)
+                            }
+                        }
+                    }
+
+                    val perEventLastMs =
+                        fanoutLatenciesNs.entries
+                            .mapNotNull { (id, last) ->
+                                publishedAt[id]?.let { (last.get() - it) / 1_000_000.0 }
+                            }.sorted()
+                    val p50 = perEventLastMs.getOrNull(perEventLastMs.size / 2) ?: -1.0
+                    val p99 = perEventLastMs.getOrNull((perEventLastMs.size * 99) / 100) ?: -1.0
+                    println(
+                        "subs=$subs events=$totalEvents received=${received.get()}/${subs.toLong() * totalEvents} " +
+                            "p50LastFanoutMs=${"%.1f".format(p50)} " +
+                            "p99LastFanoutMs=${"%.1f".format(p99)}",
+                    )
+                } finally {
+                    subClient.disconnect()
+                    pubClient.disconnect()
+                    scope.cancel()
+                }
+            }
+        }
+
+    /**
      * One publisher sends 10k events serially. Measures the round-trip
      * `EVENT` → `OK true` time, which is dominated by SQLite write
      * throughput + the write side of the policy stack.

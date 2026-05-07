@@ -25,6 +25,20 @@ contact = "admin@example.com"
 host = "0.0.0.0"
 port = 7447
 path = "/"
+# Ktor CIO event-loop pool sizing. Leave commented-out for sensible
+# per-CPU defaults (typical for <2k concurrent connections). Lift on
+# big-VM deployments targeting 10k+ connections — over-threading at
+# low connection counts hurts L1/L2 cache locality, so always
+# benchmark before/after when tuning these.
+#
+# Operators targeting >1k concurrent WebSockets should also raise the
+# OS file-descriptor limit: `ulimit -n 65536` (or higher) before
+# launching, plus a matching `LimitNOFILE=` in any systemd unit. The
+# default of 1024 on most distros caps the relay well below 1k FDs
+# (one per WS plus DB and listening sockets).
+# connection_group_size = 4
+# worker_group_size = 16
+# call_group_size = 64
 
 [database]
 # True keeps an in-memory SQLite db (events vanish on restart). Useful

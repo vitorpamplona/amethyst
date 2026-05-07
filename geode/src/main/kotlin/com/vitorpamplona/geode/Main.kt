@@ -117,6 +117,9 @@ fun main(args: Array<String>) {
             maxFrameBytes = frameLimit,
             adminPubkeys = config.admin.pubkeys.toSet(),
             publicUrl = config.admin.public_url,
+            connectionGroupSize = config.network.connection_group_size,
+            workerGroupSize = config.network.worker_group_size,
+            callGroupSize = config.network.call_group_size,
         ).start()
 
     Runtime.getRuntime().addShutdownHook(
