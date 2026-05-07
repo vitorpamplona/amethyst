@@ -345,9 +345,16 @@ Phase 3 (transport robustness) shipped as part of the same
   60 s mono tone, no other variations. Asserts the full sample
   count and the peak.
 
-Production-side **I12 Goaway** is deferred — the `goAway` API is
-not currently surfaced on `MoqLiteNestsSpeaker`; a separate
-production patch is required before a test can drive it.
+**I12 Goaway** is deferred and likely won't ship as a moq-lite test:
+`GOAWAY` is an IETF `draft-ietf-moq-transport-17` control message
+(`MoqSession.kt:417` references it for forward-compat decode skipping)
+but the moq-lite-03 wire protocol Amethyst runs in production has
+no `GOAWAY` frame. moq-relay 0.10.x signals shutdown by closing the
+QUIC connection with a session-reset error code, which is exercised
+indirectly today by I7 (publisher reconnect) — that scenario already
+asserts the listener tolerates a session ending mid-broadcast and
+recovers on a subsequent re-issuance. If a future moq-lite revision
+adds an explicit goaway frame, the test would slot in here.
 
 ## Phase 2.E follow-ups — landed
 
@@ -438,8 +445,9 @@ Tracked in branch comments / kdoc but not blocking:
   relay AND the nostrnests production deployment) needs to vary
   `framesPerGroup` per environment or pick a value that survives
   both cliffs.
-- **Production `goAway` surface on `MoqLiteNestsSpeaker`** —
-  required before I12 can ship as a test.
+- **I12 (Goaway)** — does not apply to moq-lite-03; tracked in
+  the "Phase 3 — landed" section above. If we ever add an IETF
+  moq-transport target, this becomes a real ask.
 - **Post-reconnect listener cliff** (documented in the I7 commit
   message) — moq-relay 0.10.x truncates the second cycle of a
   hang-publish session-cycle reconnect at ~1.0 s out of ~2.5 s.
