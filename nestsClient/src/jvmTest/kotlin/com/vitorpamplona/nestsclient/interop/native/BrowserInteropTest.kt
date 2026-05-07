@@ -84,6 +84,34 @@ class BrowserInteropTest {
     }
 
     /**
+     * **I15 (WT-Protocol round-trip)** — assert Chromium's WebTransport
+     * round-trip with `moq-relay 0.10.x` produces a known-good moq-lite
+     * version on the `Connection`. The harness page exposes
+     * `connection.version` at `window.__moqVersion`; the Playwright
+     * spec bundles it in the trailing JSON line on stdout.
+     *
+     * The assertion accepts any of the moq-lite draft versions the
+     * relay advertises through SETUP — Chromium's `@moq/lite` 0.2.x
+     * client offers `moq-lite-04`, `moq-lite-03`, `moql` (legacy)
+     * ALPNs in that priority. moq-relay 0.10.x's choice depends on
+     * its build flags, but the `moq-lite-` prefix is invariant. A
+     * regression that breaks ALPN negotiation entirely or
+     * downgrades to a non-lite version (`draft-17` etc.) is caught
+     * here even if I1 audio assertions still pass via a fallback path.
+     */
+    @Test
+    fun chromium_round_trips_a_moq_lite_session() =
+        runBlocking {
+            val out = runSpeakerToBrowserListen(speakerSeconds = 5)
+            val moqVersion = parseMoqVersionFromStdout(out.stdout)
+            assertTrue(
+                moqVersion != null && moqVersion.startsWith("moq-lite-"),
+                "expected Chromium to round-trip a moq-lite-* version; got '$moqVersion'.\n" +
+                    "playwright stdout:\n${out.stdout}",
+            )
+        }
+
+    /**
      * **I1 forward (browser)** — Amethyst Kotlin speaker → Chromium
      * `@moq/lite` listener with `@moq/hang` `Container.Legacy.Consumer`.
      * Asserts the captured PCM has the expected sample count and the
@@ -316,6 +344,23 @@ private object StaticTokenNestsClientForBrowser : NestsClient {
         publish: Boolean,
         signer: NostrSigner,
     ): String = ""
+}
+
+/**
+ * Pull the `meta.moqVersion` field out of the trailing JSON line
+ * the Playwright spec emits to stdout. The spec writes a single
+ * `{"state":"done","meta":{"moqVersion":"moq-lite-03",...}}` line
+ * per run; we substring-search for it rather than wiring up a JSON
+ * dependency just for this one helper.
+ */
+private fun parseMoqVersionFromStdout(stdout: String): String? {
+    val needle = "\"moqVersion\":\""
+    val start = stdout.indexOf(needle)
+    if (start < 0) return null
+    val valueStart = start + needle.length
+    val valueEnd = stdout.indexOf('"', valueStart)
+    if (valueEnd < 0) return null
+    return stdout.substring(valueStart, valueEnd)
 }
 
 /**
