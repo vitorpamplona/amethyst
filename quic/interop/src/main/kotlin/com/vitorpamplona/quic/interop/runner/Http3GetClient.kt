@@ -159,7 +159,19 @@ class Http3GetClient(
         authority: String,
         paths: List<String>,
     ): List<RequestHandle> =
-        conn.lock.withLock {
+        // CRITICAL: streamsLock — the lock the writer's drainOutbound
+        // takes. Holding lifecycleLock (the deprecated `conn.lock`
+        // alias) here did NOT block the send loop, so the writer
+        // interjected between every openBidiStreamLocked call and
+        // emitted ONE STREAM frame per packet. aioquic interop
+        // 2026-05-06 qlog: 2898 packets sent in 60s, each carrying
+        // exactly one stream frame; server processed streams strictly
+        // sequentially at ~1 RTT per stream → 1421/2000 files in 60s
+        // before timeout. Holding streamsLock blocks the drain so
+        // all N opens land before any drain runs, the writer then
+        // packs many STREAM frames into each datagram, and the
+        // server sees the burst on the wire.
+        conn.streamsLock.withLock {
             paths.map { path ->
                 val stream = conn.openBidiStreamLocked()
                 stream.send.enqueue(encodeRequest(authority, path))

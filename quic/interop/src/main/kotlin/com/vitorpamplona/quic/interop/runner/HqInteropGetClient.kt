@@ -57,7 +57,11 @@ class HqInteropGetClient(
         @Suppress("UNUSED_PARAMETER") authority: String,
         paths: List<String>,
     ): List<RequestHandle> =
-        conn.lock.withLock {
+        // streamsLock, NOT lifecycleLock (the deprecated `conn.lock`
+        // alias) — see Http3GetClient.prepareRequests for the full
+        // story. tl;dr: holding the wrong lock lets the send-loop
+        // drain between opens and emits one STREAM per packet.
+        conn.streamsLock.withLock {
             paths.map { path ->
                 val stream = conn.openBidiStreamLocked()
                 val request = "GET $path\r\n".encodeToByteArray()

@@ -768,6 +768,22 @@ class QuicConnection(
      * [streamsLock].
      */
     fun openBidiStreamLocked(): QuicStream {
+        // Mutex.isLocked is the only check we have — kotlinx.coroutines
+        // Mutex doesn't expose ownership without an `owner` argument,
+        // and we don't pass one in production. So this catches the
+        // common bug — caller used the wrong lock or no lock — but
+        // not the rarer case of "caller held a DIFFERENT lock that
+        // happens to be locked too." The interop runner's multiplexing
+        // failure on 2026-05-06 was precisely this: prepareRequests
+        // held lifecycleLock (`conn.lock`) and called this fn, the
+        // send loop's drainOutbound interleaved between opens, and
+        // we emitted one STREAM per packet (1421/2000 files in 60s).
+        check(streamsLock.isLocked) {
+            "openBidiStreamLocked requires streamsLock to be held — caller " +
+                "must wrap with streamsLock.withLock { ... }. Without that, " +
+                "drainOutbound can race the streams mutation and emit one " +
+                "STREAM per packet under multiplex load."
+        }
         if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
             throw QuicStreamLimitException(
                 "peer-granted bidi stream cap reached " +
