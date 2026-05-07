@@ -96,15 +96,40 @@ Inspect `./logs/<run>/client_qlog/*.qlog` in qvis when something breaks.
   - `crosstraffic` → transfer (competing UDP flows on the same link)
   - `handshakeloss` → handshake (loss during handshake — tests CRYPTO retransmit)
 
+## Phase 3 — landed 2026-05-07 (post-quic-go interop)
+
+- ALPN per testcase (`:quic-interop`'s `Alpn` enum + per-test switch in
+  `InteropClient.main`). quic-go enforces strictly with TLS
+  `no_application_protocol` (CRYPTO_ERROR 0x178); aioquic / picoquic accept
+  either. Convention: `h3` for `http3`/`multiplexing`, `hq-interop`
+  everywhere else.
+- `HqInteropGetClient` (HTTP/0.9 over QUIC) — open bidi, send `GET /path\r\n`,
+  FIN, read body until server FINs. No framing, no QPACK. ~30 lines.
+- Multi-stream FIN delivery fix in `QuicConnection.closeAllSignals()`: pre-fix
+  iterated only the connection-wide signal channels, leaving every per-stream
+  `incomingChannel` open after teardown — coroutines suspended on
+  `stream.incoming.collect { ... }` hung forever. Fix iterates `streamsList`
+  on close. Three regression tests in `MultiStreamFinDeliveryTest`.
+- `retry` + `ipv6` testcases enabled in dispatch. `retry` rides on agent 3's
+  RFC 9000 §17.2.5 + RFC 9001 §5.8 implementation. `ipv6` should "just work"
+  via JDK's `DatagramChannel` v6 support; runner-validated when run.
+
+## Validated against (as of 2026-05-07)
+
+| Peer | handshake | chacha20 | transfer | http3 | multiplexing | transferloss | handshakeloss |
+|---|---|---|---|---|---|---|---|
+| aioquic   | ✓ | ✓ | ✓ | ✓ | (was ✕, fixed in this push) | ✓ | server-not-supported |
+| picoquic  | ✓ | ✓ | ✓ | ✓ | (untested in last run) | (untested) | (untested) |
+| quic-go   | (was ✕, fixed in this push) | (was ✕) | (was ✕) | (was ✕, multi-stream-bug) | (was ✕) | (untested) | (untested) |
+
 ## Explicitly unsupported testcases (return 127, runner skips)
 
 | Testcase | Reason |
 |---|---|
-| `versionnegotiation` | `QuicConnectionWriter` hard-codes `QuicVersion.V1`; needs a configurable initial version + VN-response retry path |
+| `versionnegotiation` | `QuicConnectionWriter` hard-codes `QuicVersion.V1`; needs a configurable initial version + VN-response retry path. **In progress (background agent)**. |
 | `resumption` | session ticket parsing + persistence not yet implemented |
 | `zerortt` | depends on `resumption` + early-data path |
 | `keyupdate` | KEY_PHASE bit handling not yet implemented in 1-RTT |
-| `retry` | `RetryPacket` parses but isn't fully wired into the connection feed-loop yet — claiming support without verifying would mask bugs |
 | `rebinding-port`, `rebinding-addr` | client-side connection migration (re-bind UDP socket, NEW_CONNECTION_ID rotation) not implemented |
 | `amplificationlimit` | server-side test, N/A for client role |
 | `blackhole` | inverse test (verifies we *fail* on dead network in bounded time); needs special handling |

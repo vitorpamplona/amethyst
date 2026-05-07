@@ -117,9 +117,17 @@ fun main() {
             //                         scenarios.
             //   multiplexing        — H3 GETs issued in parallel; runner
             //                         verifies overlap on the wire via tshark.
+            //   retry               — server sends a Retry packet first; our
+            //                         applyRetry path (RFC 9000 §17.2.5 +
+            //                         RFC 9001 §5.8) handles DCID swap +
+            //                         token threading + key re-derivation.
+            //   ipv6                — same flow over an IPv6 socket;
+            //                         JDK DatagramChannel.connect handles
+            //                         the v6 address resolution natively.
             "handshake", "chacha20", "handshakeloss",
             "transfer", "http3", "multiplexing",
             "transferloss", "transfercorruption", "longrtt", "goodput", "crosstraffic",
+            "retry", "ipv6",
             -> {
                 runTransferTest(
                     requests = requests,
