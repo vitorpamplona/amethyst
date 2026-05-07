@@ -82,7 +82,7 @@ class StreamRetransmitTest {
             val firstPn = firstPacketEntry.key
 
             // Simulate loss via direct dispatch.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 val streamToken =
                     firstPacketEntry.value.tokens
@@ -93,7 +93,7 @@ class StreamRetransmitTest {
                 // detector would have done this).
                 client.application.sentPackets.remove(firstPn)
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
 
             // SendBuffer should have re-queued the bytes for retransmit.
@@ -133,11 +133,11 @@ class StreamRetransmitTest {
             val packet =
                 client.application.sentPackets.entries
                     .first { it.value.tokens.any { t -> t is RecoveryToken.Stream } }
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensAcked(packet.value.tokens)
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
 
             // After ACK: enqueue more, observe that the buffer

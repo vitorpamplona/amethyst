@@ -51,6 +51,15 @@ import com.vitorpamplona.quic.tls.TlsClient
  * — typically Initial + Handshake from the server in the same datagram during
  * the handshake. We loop until the datagram is fully consumed or a packet
  * fails to parse (which we drop silently per RFC 9001 §5.5).
+ *
+ * Lock-split refactor (2026-05-08): caller must hold
+ * [QuicConnection.streamsLock]. The driver wraps its read loop in
+ * `streamsLock.withLock { feedDatagram(...) }`. Test harnesses that drive
+ * single-threaded packet flow (no concurrent app code) may invoke this
+ * directly without lock acquisition; the runtime invariants still hold
+ * because there's no contending thread. Phase 1 wraps the whole feed
+ * under streamsLock so frame-dispatch / stream creation / level state
+ * remains a single critical section.
  */
 fun feedDatagram(
     conn: QuicConnection,

@@ -35,10 +35,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * Owns the UDP socket and runs the read + send loops for a [QuicConnection].
  *
- * Synchronization: every public mutator on [QuicConnection] takes
- * `connection.lock`; the driver acquires the same lock around feed + drain.
- * That guarantees the read loop, send loop, and app coroutines never see a
- * mid-mutation state of the streams map / datagram queues / counters.
+ * Synchronization (post lock-split refactor 2026-05-08): the driver no
+ * longer takes a single connection-wide lock around feed/drain. Instead
+ * [feedDatagram] and [drainOutbound] internally acquire the appropriate
+ * domain locks (`streamsLock` and the per-level `LevelState.levelLock`)
+ * for the precise critical sections they touch — leaving app coroutines
+ * (`openBidiStream`, etc.) free to run in parallel with the I/O loops.
  *
  * The send loop is woken by a `Channel<Unit>(CONFLATED)` rather than a
  * polling timer — no idle CPU. App writes ([QuicConnection.queueDatagram]
@@ -99,7 +101,9 @@ class QuicConnectionDriver(
         try {
             while (connection.status != QuicConnection.Status.CLOSED) {
                 val datagram = socket.receive() ?: break
-                connection.lock.withLock {
+                // Phase 1 of the lock-split refactor: parser holds
+                // streamsLock for a single datagram-feed pass.
+                connection.streamsLock.withLock {
                     feedDatagram(connection, datagram, nowMillis())
                 }
                 // Inbound data may have produced new outbound (acks, crypto, etc.).
@@ -123,11 +127,16 @@ class QuicConnectionDriver(
         // floor (the same prior-shipping behavior, kept for
         // handshake-timeout safety on lossy paths).
         while (connection.status != QuicConnection.Status.CLOSED) {
-            connection.lock.withLock {
-                while (true) {
-                    val out = drainOutbound(connection, nowMillis()) ?: break
-                    socket.send(out)
-                }
+            // Phase 1 of the lock-split refactor: the writer holds
+            // streamsLock for the build, releases it for the actual
+            // socket.send() so a slow socket doesn't stall app
+            // coroutines (open/close streams, queue datagrams).
+            while (true) {
+                val out =
+                    connection.streamsLock.withLock {
+                        drainOutbound(connection, nowMillis())
+                    } ?: break
+                socket.send(out)
             }
             val ptoBaseMs =
                 if (connection.lossDetection.hasFirstRttSample) {
@@ -148,12 +157,11 @@ class QuicConnectionDriver(
                 // PTO fired. Set pendingPing so the writer emits a
                 // PING on the next drain (RFC 9002 §6.2.4 probe
                 // packet). The peer's ACK feeds loss detection +
-                // retransmit (steps 5–6).
-                connection.lock.withLock {
-                    connection.pendingPing = true
-                    connection.consecutivePtoCount =
-                        (connection.consecutivePtoCount + 1).coerceAtMost(6)
-                }
+                // retransmit (steps 5–6). Both fields are @Volatile;
+                // no lock required.
+                connection.pendingPing = true
+                connection.consecutivePtoCount =
+                    (connection.consecutivePtoCount + 1).coerceAtMost(6)
             }
         }
     }

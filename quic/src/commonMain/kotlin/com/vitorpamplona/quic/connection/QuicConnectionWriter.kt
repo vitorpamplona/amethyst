@@ -55,6 +55,15 @@ import com.vitorpamplona.quic.packet.ShortHeaderPlaintextPacket
  *
  * RFC 9000 §14: any datagram containing an Initial packet from the client
  * MUST be padded to at least 1200 bytes total.
+ *
+ * Lock-split refactor (2026-05-08): caller must hold
+ * [QuicConnection.streamsLock]. Phase 1 keeps level-state mutation
+ * inline under the same critical section as the streams-domain work
+ * the writer needs — the win comes from `lifecycleLock`-only callers
+ * (close(), status reads, PTO bookkeeping) no longer fighting this lock.
+ * The driver wraps `streamsLock.withLock { drainOutbound(...) }`; tests
+ * that drive single-threaded send paths can call this without holding
+ * the lock — there's no contending thread.
  */
 fun drainOutbound(
     conn: QuicConnection,
