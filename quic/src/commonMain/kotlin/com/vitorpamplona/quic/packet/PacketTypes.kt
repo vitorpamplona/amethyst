@@ -42,4 +42,17 @@ enum class LongHeaderType(
 object QuicVersion {
     const val V1: Int = 0x00000001
     const val VERSION_NEGOTIATION: Int = 0x00000000
+
+    /**
+     * RFC 9000 §6 / interop runner convention: a "force VN" version
+     * number that no QUIC server is allowed to support. Sending this
+     * in the first Initial guarantees the server replies with a
+     * Version Negotiation packet listing the versions it actually
+     * supports. The interop runner's `versionnegotiation` testcase
+     * uses this to drive the client through the VN code path.
+     *
+     * Value 0x1a2a3a4a is conventional for this purpose; any
+     * non-spec-assigned 32-bit value would work equally well.
+     */
+    const val FORCE_VERSION_NEGOTIATION: Int = 0x1a2a3a4a
 }

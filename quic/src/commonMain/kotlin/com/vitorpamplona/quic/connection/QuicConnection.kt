@@ -24,6 +24,7 @@ import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
 import com.vitorpamplona.quic.crypto.bestAes128GcmAead
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -74,27 +75,53 @@ class QuicConnection(
     },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
     /**
-     * Optional second listener invoked after the connection's own
-     * key-installation listener. Used by the interop runner endpoint to
-     * dump SSLKEYLOG lines so Wireshark can decrypt captured pcaps.
-     * Default `null` keeps production callers unaffected.
+     * Version this connection puts in the FIRST Initial it sends. Defaults
+     * to [QuicVersion.V1]; the interop runner sets it to
+     * [QuicVersion.FORCE_VERSION_NEGOTIATION] for the `versionnegotiation`
+     * testcase, which drives the client through the RFC 9000 §6 VN flow.
+     *
+     * On a successful Version Negotiation (server replies with a list of
+     * versions it supports including v1), [applyVersionNegotiation] resets
+     * [currentVersion] to v1 and the writer's subsequent Initial packets
+     * carry v1 in the long-header version field.
      */
-    val extraSecretsListener: TlsSecretsListener? = null,
-    /**
-     * TLS cipher suites to offer in the ClientHello. Override to e.g.
-     * `intArrayOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256)` for the
-     * `chacha20` interop testcase. Default matches [TlsClient]'s default.
-     */
-    val cipherSuites: IntArray =
-        intArrayOf(
-            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
-            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
-        ),
+    val initialVersion: Int = QuicVersion.V1,
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
     var destinationConnectionId: ConnectionId = ConnectionId.random(8)
         internal set
     val originalDestinationConnectionId: ConnectionId = destinationConnectionId
+
+    /**
+     * Version the writer stamps into the long-header version field on the
+     * NEXT outbound Initial / Handshake packet. Initialised to
+     * [initialVersion]; switched to [QuicVersion.V1] by
+     * [applyVersionNegotiation] after a successful VN exchange.
+     */
+    @Volatile
+    var currentVersion: Int = initialVersion
+        internal set
+
+    /**
+     * RFC 9000 §6.2: a client MUST consume at most one VN response per
+     * connection. After [applyVersionNegotiation] runs once, any further
+     * inbound VN packet is dropped silently — the latch defends against a
+     * mid-handshake attacker who replays an old VN datagram to wedge us
+     * into an endless re-negotiation loop.
+     */
+    @Volatile
+    var vnConsumed: Boolean = false
+        internal set
+
+    /**
+     * Cached ClientHello bytes captured by [start]. Re-enqueued onto the
+     * fresh Initial-level [LevelState.cryptoSend] when
+     * [applyVersionNegotiation] resets the encryption level so the new
+     * Initial datagram still carries a valid TLS handshake. Without this
+     * the reset wipes the bytes that [TlsClient] already enqueued and the
+     * post-VN Initial would carry an empty CRYPTO frame.
+     */
+    private var originalClientHello: ByteArray? = null
 
     val initial = LevelState()
     val handshake = LevelState()
@@ -425,123 +452,83 @@ class QuicConnection(
     fun start() {
         tls.start()
         // Drain ClientHello bytes into the Initial-level CRYPTO send buffer.
-        // Capture them too so [applyRetry] can re-queue the ClientHello onto
-        // the new Initial keys after a Retry rolls our DCID. The TLS state
-        // machine only emits ClientHello once — without a snapshot we'd have
-        // no way to resend it on the new keys (RFC 9000 §17.2.5.2).
-        tls.pollOutbound(TlsClient.Level.INITIAL)?.let { bytes ->
-            originalClientHello = bytes
-            initial.cryptoSend.enqueue(bytes)
+        // Cache the bytes so [applyVersionNegotiation] can re-enqueue them
+        // onto a fresh cryptoSend after resetting Initial-level state.
+        // Cannot re-pollOutbound — the queue is destructive.
+        tls.pollOutbound(TlsClient.Level.INITIAL)?.let {
+            originalClientHello = it
+            initial.cryptoSend.enqueue(it)
         }
     }
 
     /**
-     * RFC 9000 §17.2.5 + RFC 9001 §5.8 Retry handling.
+     * Apply a Version Negotiation packet (RFC 9000 §6) received from the
+     * server. The client offered [initialVersion]; the server replies with
+     * a list of versions it supports. We pick [QuicVersion.V1] from the
+     * list, regenerate the destination CID + Initial keys, reset the
+     * Initial encryption level, and re-emit the cached ClientHello so the
+     * next drain produces a valid v1 Initial packet.
      *
-     * Called by the parser when a long-header packet of type Retry is seen.
-     * [originalPacketBytes] is the Retry packet's exact on-wire bytes
-     * (needed because RFC 9001 §5.8's integrity-tag AAD covers the entire
-     * Retry header including the unused low 4 bits of the first byte —
-     * which the server is free to set however).
+     * RFC 9000 §6.2 invariants enforced here:
+     *   - The supported_versions list MUST NOT contain
+     *     [initialVersion] — including it would mean the server received
+     *     our offer and STILL replied with VN, which is a downgrade signal.
+     *     Drop the packet (treat as no-op).
+     *   - At most one VN per connection (latched via [vnConsumed]).
+     *   - If we cannot speak any of the offered versions, fail the
+     *     handshake.
      *
-     * Steps applied on a verified Retry:
-     *
-     *   1. Verify the integrity tag using [originalDestinationConnectionId]
-     *      as the AAD prefix (the DCID we used in our first Initial).
-     *      A bad tag → silently drop, no state changes (RFC 9001 §5.8).
-     *   2. Drop any second / subsequent Retry (RFC 9000 §17.2.5.2 caps a
-     *      connection to one Retry).
-     *   3. Swap our DCID to the Retry's SCID — this is what the server
-     *      now expects to see on every Initial we send.
-     *   4. Re-derive Initial-level packet protection from the new DCID
-     *      and reinstall it on [initial].
-     *   5. Reset Initial-level state: PN counter back to 0, sentPackets
-     *      cleared (the original PN=0 ClientHello is irrelevant — it's
-     *      not retransmittable and the server already discarded its
-     *      receiving state), inbound ack-tracker reset (no Initials have
-     *      arrived yet on the new keys).
-     *   6. Re-queue the cached ClientHello bytes onto the fresh Initial
-     *      cryptoSend so the writer's next drain sends a Token-bearing
-     *      Initial.
-     *   7. Store the Retry token so [QuicConnectionWriter] writes it into
-     *      the Initial header's Token field on the next emit.
-     *   8. Latch [retryConsumed] so a second Retry is dropped.
-     *
-     * Returns true if the Retry was applied, false if dropped (bad tag,
-     * second-retry, or no [originalClientHello] captured because [start]
-     * hasn't been called).
-     *
-     * Caller is the parser, holding nothing — Retry handling occurs
-     * before any frame dispatch and before the connection lock is
-     * acquired by application paths. The mutated fields ([retryToken],
-     * [retryConsumed], [destinationConnectionId], [initial]) are all
-     * read by single-threaded loops (parser → writer in the driver) so
-     * extra synchronization is unnecessary; [retryToken] and
-     * [retryConsumed] are `@Volatile` for cross-thread visibility on
-     * the diagnostic side.
+     * Caller MUST hold [lock] (the parser already does).
      */
-    internal fun applyRetry(
-        retryPacket: com.vitorpamplona.quic.packet.RetryPacket,
-        originalPacketBytes: ByteArray,
-    ): Boolean {
-        // Step 2 ordering: an attacker who knows our original DCID and
-        // observed our first Initial could craft a "second Retry" with a
-        // forged tag computed over a freshly-randomised SCID. Honoring
-        // it would let them force us onto attacker-chosen keys. Rejecting
-        // BEFORE the integrity check would cost cycles on every spoofed
-        // tag — but more importantly, RFC 9000 §17.2.5.2 says a second
-        // Retry is dropped REGARDLESS of validity.
-        if (retryConsumed) return false
-        // Step 1.
-        if (!retryPacket.verifyIntegrityTag(originalPacketBytes, originalDestinationConnectionId.bytes)) {
-            return false
+    internal fun applyVersionNegotiation(supportedVersions: List<Int>) {
+        // RFC 9000 §6.2: a second VN must be ignored.
+        if (vnConsumed) return
+        // Anti-downgrade: server-claimed support for the version we
+        // already offered indicates VN replay / spoof. Drop silently.
+        if (supportedVersions.contains(initialVersion)) return
+        // Pick a version we can speak. Today that's only v1.
+        if (!supportedVersions.contains(QuicVersion.V1)) {
+            signalHandshakeFailed(
+                QuicVersionNegotiationException(
+                    "VERSION_NEGOTIATION: server offered ${supportedVersions.map { v -> "0x" + v.toUInt().toString(16) }}, " +
+                        "client only supports 0x" + QuicVersion.V1.toUInt().toString(16),
+                ),
+            )
+            markClosedExternally("VERSION_NEGOTIATION: no mutually supported version")
+            return
         }
-        val savedClientHello = originalClientHello ?: return false
 
-        // Step 3.
-        destinationConnectionId = retryPacket.scid
-        // Step 4.
-        val proto = InitialSecrets.derive(destinationConnectionId.bytes)
+        // Latch BEFORE reset so a re-entrant inbound VN during the reset
+        // window is rejected by the early-return at the top.
+        vnConsumed = true
+
+        // Generate a fresh destination CID. RFC 9000 §6.2 doesn't strictly
+        // require this (the server hasn't indexed our CID with any state
+        // since its only response was VN), but it matches what reference
+        // implementations do and keeps the post-VN connection
+        // cryptographically isolated from the pre-VN exchange.
+        val newDcid = ConnectionId.random(8)
+        destinationConnectionId = newDcid
+
+        // Reset Initial-level state in place: fresh PN space (next
+        // allocateOutbound returns 0), fresh ackTracker, fresh
+        // cryptoSend / cryptoReceive, fresh sentPackets retention.
+        // Writer + parser only ever reach the level via [conn.initial],
+        // so we mutate the fields rather than swap the instance.
+        val proto = InitialSecrets.derive(newDcid.bytes)
         val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
-        val freshInitial = LevelState()
-        freshInitial.sendProtection =
+        val newSend =
             PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp)
-        freshInitial.receiveProtection =
+        val newReceive =
             PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp)
-        // Re-enqueue the captured ClientHello onto the fresh CRYPTO send buffer
-        // so the writer's next drain emits an Initial with PN=0 carrying the
-        // ClientHello CRYPTO + Retry token. The fresh LevelState gives us PN=0
-        // automatically (no rewind dance needed).
-        freshInitial.cryptoSend.enqueue(savedClientHello)
-        // Step 5: replace the LevelState wholesale via reflection-ish path —
-        // [initial] is a `val`, so instead of swapping the reference we copy
-        // the fields. Symmetric to how `discardKeys()` resets in place.
-        replaceInitialState(freshInitial)
+        initial.resetForVersionNegotiation(sendProtection = newSend, receiveProtection = newReceive)
+        // Re-enqueue the ClientHello so the next drainOutbound emits a v1
+        // Initial datagram with the same TLS handshake the original carried.
+        originalClientHello?.let { initial.cryptoSend.enqueue(it) }
 
-        // Steps 6 + 7 + 8.
-        retryToken = retryPacket.retryToken
-        retryConsumed = true
-        return true
-    }
-
-    /**
-     * Reinstall the Initial [LevelState] in-place from [fresh]. We can't
-     * reassign [initial] (it's a `val`); we mirror the logic
-     * [LevelState.discardKeys] uses — drop everything and re-seed from the
-     * fresh state's protection. The fresh state's CRYPTO send buffer is
-     * also taken over so the writer drains the re-queued ClientHello.
-     */
-    private fun replaceInitialState(fresh: LevelState) {
-        // Reset the existing LevelState's protection + buffers + ack tracking.
-        // We use [LevelState.discardKeys] to clear, then re-attach the freshly
-        // derived protection — this avoids leaking sentPackets / cryptoSend
-        // state from the pre-Retry Initial.
-        initial.discardKeys()
-        // discardKeys latches `keysDiscarded = true`; reverse that via a fresh
-        // LevelState swap. Since we can't replace the reference we use a small
-        // backdoor — restoreFromRetry on LevelState — to reinstall fields and
-        // clear the latch.
-        initial.restoreFromRetry(fresh)
+        // Switch the writer's stamp to v1 so the next Initial / Handshake
+        // long-header carries the right version.
+        currentVersion = QuicVersion.V1
     }
 
     private fun buildLocalTransportParameters(): TransportParameters =
@@ -1164,6 +1151,17 @@ class QuicConnectionClosedException(
 
 /** Caller tried to open a stream beyond the peer's MAX_STREAMS allowance. */
 class QuicStreamLimitException(
+    message: String,
+) : RuntimeException(message)
+
+/**
+ * RFC 9000 §6: the server replied with a Version Negotiation packet but
+ * the supported_versions list does not contain any version the client can
+ * speak (today: only [com.vitorpamplona.quic.packet.QuicVersion.V1]).
+ * The handshake is unrecoverable — caller must treat the connection as
+ * permanently failed.
+ */
+class QuicVersionNegotiationException(
     message: String,
 ) : RuntimeException(message)
 

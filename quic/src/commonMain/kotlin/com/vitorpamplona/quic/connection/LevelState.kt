@@ -26,7 +26,8 @@ import com.vitorpamplona.quic.stream.SendBuffer
 
 /** Per-encryption-level state owned by [QuicConnection]. */
 class LevelState {
-    val pnSpace = PacketNumberSpaceState()
+    var pnSpace = PacketNumberSpaceState()
+        private set
 
     var ackTracker =
         com.vitorpamplona.quic.recovery
@@ -124,35 +125,32 @@ class LevelState {
     }
 
     /**
-     * RFC 9000 §17.2.5 Retry: install fresh protection material + re-seed
-     * the CRYPTO send buffer from [fresh] in place. Used by
-     * [QuicConnection.applyRetry] to re-init Initial-level state on the
-     * post-Retry DCID without the caller having to swap the level
-     * reference (which is a `val`).
+     * RFC 9000 §6: reset every per-level field to a constructor-fresh
+     * state, then install [sendProtection] / [receiveProtection] keyed
+     * to the post-VN destination CID.
      *
-     * Re-zeros the PN counter (Initial-level PN restarts at 0 on the new
-     * keys per §17.2.5.2) and clears the keysDiscarded latch so the
-     * writer can build packets again.
-     *
-     * Caller must already have called [discardKeys] (or otherwise know
-     * the existing state is dead) — this method does not free the
-     * existing protection on its own; the assumption is the caller is
-     * replacing it.
+     * Differs from [discardKeys] in that this re-arms the level for
+     * a fresh handshake — caller (
+     * [QuicConnection.applyVersionNegotiation]) re-enqueues the cached
+     * ClientHello onto [cryptoSend] immediately afterwards, so the
+     * next outbound drain emits a v1 Initial with PN=0 and the same
+     * TLS bytes the original Initial carried.
      */
-    internal fun restoreFromRetry(fresh: LevelState) {
-        sendProtection = fresh.sendProtection
-        receiveProtection = fresh.receiveProtection
-        cryptoSend = fresh.cryptoSend
-        cryptoReceive = fresh.cryptoReceive
+    internal fun resetForVersionNegotiation(
+        sendProtection: PacketProtection,
+        receiveProtection: PacketProtection,
+    ) {
+        pnSpace = PacketNumberSpaceState()
         ackTracker =
             com.vitorpamplona.quic.recovery
                 .AckTracker()
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
         sentPackets.clear()
         largestAckedPn = null
         largestAckedSentTimeMs = null
-        // Clear the latch — keys are alive again on the new DCID.
         keysDiscarded = false
-        // Restart the PN space on the new keys (RFC 9000 §17.2.5.2).
-        pnSpace.resetForRetry()
+        this.sendProtection = sendProtection
+        this.receiveProtection = receiveProtection
     }
 }
