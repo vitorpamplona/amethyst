@@ -76,13 +76,29 @@ if [[ -n "$QLOG" ]]; then
       | sort -n | uniq -c
 
     echo
-    echo "=============== wall-clock arrival of first 30 sent stream-bearing packets ==============="
-    # Did we BURST 64 streams in ~50ms after handshake, or did we
-    # dribble them out over time?
-    grep '"name":"transport:packet_sent".*"frame_type":"stream"' "$QLOG" \
-      | head -n 30 \
-      | grep -oE '"time":[0-9]+' \
-      | head -n 30
+    echo "=============== peer transport_parameters (initial_max_data is the key) ==============="
+    # If initial_max_data is small (e.g. < 1000 bytes), our writer
+    # gets throttled to one stream per packet because connBudget
+    # exhausts after the first stream. Each subsequent stream has to
+    # wait for a MAX_DATA frame from the peer (1 RTT each).
+    grep '"name":"transport:parameters_set"' "$QLOG"
+
+    echo
+    echo "=============== peer MAX_DATA frame timestamps + values (received) ==============="
+    # If MAX_DATA frames arrive with small bumps and at one-per-RTT
+    # cadence, we're flow-control bottlenecked: peer extends credit
+    # by ~50 bytes per RTT, we send one stream per credit bump.
+    grep '"name":"transport:packet_received"' "$QLOG" \
+      | grep -oE '"frame_type":"max_data"[^}]*' \
+      | head -n 30 || echo "(no max_data frames in qlog — may need to upgrade qlog observer)"
+
+    echo
+    echo "=============== first 30 packet_sent stream offsets (per-stream byte count) ==============="
+    # If every stream emits exactly one ~50-byte chunk before the next
+    # stream starts, we're connection-flow-control bound.
+    grep '"name":"transport:packet_sent"' "$QLOG" \
+      | grep -oE '"stream_id":[0-9]+' \
+      | head -n 30 || echo "(no stream_id field in qlog — may need to upgrade qlog observer)"
 
     echo
     echo "=============== last 5 packet_received events ==============="

@@ -148,6 +148,8 @@ else
             -e '^sim +\| +(Received signal:|msg=|NS_FATAL)' \
             -e '^Using the client'\''s key log file\.$' \
             -e '^Command: WAITFORSERVER=' \
+            -e '^[0-9-]+ [0-9:,]+ Generated random file: ' \
+            -e '^[0-9-]+ [0-9:,]+ Requests: \[' \
             -e '^==> ' \
             -e '^$'
     exit "${PIPESTATUS[0]}"
