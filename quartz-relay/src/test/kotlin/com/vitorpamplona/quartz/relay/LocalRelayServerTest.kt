@@ -213,4 +213,199 @@ class LocalRelayServerTest {
                 authRelay.close()
             }
         }
+
+    /**
+     * Successful NIP-42 AUTH must unlock REQ/EVENT/COUNT. We can't bind
+     * the server on a known port AND configure the policy with that URL
+     * unless we discover the port first — so reserve a free TCP port
+     * before constructing the relay, then bind to that exact port so
+     * the policy's `relay` field matches what `RelayAuthenticator`
+     * sends in the AUTH event's `relay` tag.
+     */
+    @Test
+    fun nip42_successfulAuthUnlocksPublishing() =
+        runBlocking {
+            val freePort =
+                java.net.ServerSocket(0).use { it.localPort }
+            val authUrl = "ws://127.0.0.1:$freePort/".normalizeRelayUrl()
+            val authRelay = Relay(authUrl, policyBuilder = { FullAuthPolicy(authUrl) })
+            val authServer = LocalRelayServer(authRelay, host = "127.0.0.1", port = freePort).start()
+            try {
+                val signer =
+                    com.vitorpamplona.quartz.nip01Core.signers
+                        .NostrSignerSync(KeyPair())
+
+                // RelayAuthenticator hooks the client: when the relay
+                // sends the AUTH challenge, it auto-signs and replies.
+                val authenticator =
+                    com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator(
+                        client = client,
+                        scope = scope,
+                    ) { template ->
+                        listOf(signer.sign(template))
+                    }
+                try {
+                    // Trigger the AUTH dance: subscribe to anything,
+                    // which the relay rejects with `auth-required:` →
+                    // [RelayAuthenticator] catches the challenge, signs
+                    // and sends the AUTH event, the relay's OK true
+                    // makes the client re-sync filters, and the second
+                    // REQ succeeds and EOSEs.
+                    val gotEose =
+                        kotlinx.coroutines.channels.Channel<Unit>(
+                            kotlinx.coroutines.channels.Channel.UNLIMITED,
+                        )
+                    client.subscribe(
+                        "auth-warmup",
+                        mapOf(authUrl to listOf(Filter(kinds = listOf(1)))),
+                        object : com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener {
+                            override fun onEose(
+                                relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
+                                forFilters: List<Filter>?,
+                            ) {
+                                gotEose.trySend(Unit)
+                            }
+                        },
+                    )
+                    kotlinx.coroutines.withTimeout(5000) { gotEose.receive() }
+                    client.unsubscribe("auth-warmup")
+
+                    val event = signer.sign(TextNoteEvent.build("after-auth"))
+                    val ok =
+                        client.publishAndConfirm(
+                            event = event,
+                            relayList = setOf(authUrl),
+                        )
+                    assertEquals(true, ok, "after AUTH succeeds, publishing must work")
+                } finally {
+                    authenticator.destroy()
+                }
+            } finally {
+                authServer.stop()
+                authRelay.close()
+            }
+        }
+
+    /**
+     * Regression for the OkMessage wire format (the Jackson serializer
+     * was writing `success` as a JSON string). `publishAndConfirm`
+     * relies on parsing the OK response — if the relay's serialization
+     * regresses, this test catches it.
+     */
+    @Test
+    fun nip01_okMessageRoundtripWithEmptyAndNonEmptyMessage() =
+        runBlocking {
+            val signer =
+                com.vitorpamplona.quartz.nip01Core.signers
+                    .NostrSignerSync(KeyPair())
+            val event = signer.sign(TextNoteEvent.build("ok-roundtrip"))
+            val ok =
+                client.publishAndConfirm(
+                    event = event,
+                    relayList = setOf(server.url.normalizeRelayUrl()),
+                )
+            assertEquals(true, ok, "successful insert must round-trip OK true on the wire")
+
+            // Duplicate insert returns OK false; this also exercises the
+            // "non-empty message" branch of the serializer.
+            val ok2 =
+                client.publishAndConfirm(
+                    event = event,
+                    relayList = setOf(server.url.normalizeRelayUrl()),
+                )
+            assertEquals(false, ok2, "duplicate insert must round-trip OK false")
+        }
+
+    /**
+     * A custom config's `[info]` section flows through to the NIP-11
+     * doc returned on the HTTP endpoint.
+     */
+    @Test
+    fun nip11_servesConfigDrivenInfoDoc() {
+        val freePort =
+            java.net.ServerSocket(0).use { it.localPort }
+        val customUrl = "ws://127.0.0.1:$freePort/".normalizeRelayUrl()
+        val customInfo =
+            RelayInfo(
+                Nip11RelayInformation(
+                    name = "custom-relay-name",
+                    contact = "ops@example.com",
+                    description = "Custom from config",
+                    supported_nips = listOf("1", "11", "42"),
+                ),
+            )
+        val customRelay = Relay(customUrl, info = customInfo)
+        val customServer =
+            LocalRelayServer(customRelay, host = "127.0.0.1", port = freePort).start()
+        try {
+            val httpUrl = customServer.url.replace("ws://", "http://")
+            val response =
+                httpClient
+                    .newCall(
+                        Request
+                            .Builder()
+                            .url(httpUrl)
+                            .header("Accept", "application/nostr+json")
+                            .build(),
+                    ).execute()
+            response.use {
+                assertEquals(200, it.code)
+                val info = Nip11RelayInformation.fromJson(it.body.string())
+                assertEquals("custom-relay-name", info.name)
+                assertEquals("ops@example.com", info.contact)
+                assertEquals(listOf("1", "11", "42"), info.supported_nips)
+            }
+        } finally {
+            customServer.stop()
+            customRelay.close()
+        }
+    }
+
+    @Test
+    fun nip01_closeStopsLiveSubscription() =
+        runBlocking {
+            val ch =
+                kotlinx.coroutines.channels.Channel<com.vitorpamplona.quartz.nip01Core.core.Event>(
+                    kotlinx.coroutines.channels.Channel.UNLIMITED,
+                )
+            val gotEose =
+                kotlinx.coroutines.channels.Channel<Unit>(
+                    kotlinx.coroutines.channels.Channel.UNLIMITED,
+                )
+            client.subscribe(
+                "close-test",
+                mapOf(server.url.normalizeRelayUrl() to listOf(Filter(kinds = listOf(1)))),
+                object : com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener {
+                    override fun onEvent(
+                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                        isLive: Boolean,
+                        relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        ch.trySend(event)
+                    }
+
+                    override fun onEose(
+                        relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        gotEose.trySend(Unit)
+                    }
+                },
+            )
+            kotlinx.coroutines.withTimeout(5000) { gotEose.receive() }
+
+            // CLOSE the subscription, then publish a matching event over
+            // the wire. The unsubscribed client must NOT receive it.
+            client.unsubscribe("close-test")
+
+            val signer =
+                com.vitorpamplona.quartz.nip01Core.signers
+                    .NostrSignerSync(KeyPair())
+            val late = signer.sign(TextNoteEvent.build("post-close"))
+            relay.publish(late)
+
+            val seen = kotlinx.coroutines.withTimeoutOrNull(500) { ch.receive() }
+            assertEquals(null, seen, "events arriving after CLOSE must not reach the unsubscribed client")
+        }
 }

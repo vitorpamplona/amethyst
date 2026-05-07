@@ -195,6 +195,161 @@ class Nip01ComplianceTest {
             assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)), events.map { it.id }.toSet())
         }
 
+    /** REQ with `#p` tag filter — same single-letter machinery as `#e`. */
+    @Test
+    fun reqFiltersByPTag() =
+        runBlocking {
+            val targetPubkey = SyntheticEvents.hexId(2222)
+            preload(
+                fakeEvent(1, tags = arrayOf(arrayOf("p", targetPubkey))),
+                fakeEvent(2, tags = arrayOf(arrayOf("p", SyntheticEvents.hexId(3333)))),
+                fakeEvent(3, tags = arrayOf(arrayOf("p", targetPubkey), arrayOf("e", SyntheticEvents.hexId(99)))),
+            )
+
+            val (events, _) = collectUntilEose(Filter(tags = mapOf("p" to listOf(targetPubkey))))
+
+            assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)), events.map { it.id }.toSet())
+        }
+
+    /** REQ with a generic single-letter tag (e.g. `#t`) for hashtags. */
+    @Test
+    fun reqFiltersByGenericSingleLetterTag() =
+        runBlocking {
+            preload(
+                fakeEvent(1, tags = arrayOf(arrayOf("t", "nostr"))),
+                fakeEvent(2, tags = arrayOf(arrayOf("t", "bitcoin"))),
+                fakeEvent(3, tags = arrayOf(arrayOf("t", "nostr"), arrayOf("t", "kotlin"))),
+            )
+
+            val (events, _) = collectUntilEose(Filter(tags = mapOf("t" to listOf("nostr"))))
+
+            assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)), events.map { it.id }.toSet())
+        }
+
+    /**
+     * Multi-value tag filter — matches events with tag value in the OR
+     * set. NIP-01 says values inside a single filter list are OR'd.
+     */
+    @Test
+    fun reqTagFilterValuesAreOred() =
+        runBlocking {
+            val a = SyntheticEvents.hexId(101)
+            val b = SyntheticEvents.hexId(102)
+            preload(
+                fakeEvent(1, tags = arrayOf(arrayOf("e", a))),
+                fakeEvent(2, tags = arrayOf(arrayOf("e", b))),
+                fakeEvent(3, tags = arrayOf(arrayOf("e", SyntheticEvents.hexId(999)))),
+            )
+
+            val (events, _) = collectUntilEose(Filter(tags = mapOf("e" to listOf(a, b))))
+
+            assertEquals(setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(2)), events.map { it.id }.toSet())
+        }
+
+    // -- Multi-filter REQ ----------------------------------------------------
+
+    /**
+     * NIP-01: filters within a single REQ are OR'd. The relay returns
+     * events matching ANY of the filters, deduplicated.
+     */
+    @Test
+    fun reqMultipleFiltersAreOred() =
+        runBlocking {
+            preload(
+                fakeEvent(1, kind = 1),
+                fakeEvent(2, kind = 4),
+                fakeEvent(3, kind = 7),
+            )
+
+            val (events, _) =
+                collectUntilEoseMulti(
+                    listOf(
+                        Filter(kinds = listOf(1)),
+                        Filter(kinds = listOf(7)),
+                    ),
+                )
+
+            assertEquals(
+                setOf(SyntheticEvents.hexId(1), SyntheticEvents.hexId(3)),
+                events.map { it.id }.toSet(),
+            )
+        }
+
+    /**
+     * Two subscriptions on the same connection are independent — each
+     * gets its own EOSE and its own event stream.
+     */
+    @Test
+    fun multipleSubscriptionsOnOneConnectionAreIndependent() =
+        runBlocking {
+            preload(
+                fakeEvent(1, kind = 1),
+                fakeEvent(2, kind = 4),
+            )
+
+            val ch1 = Channel<Event>(UNLIMITED)
+            val ch2 = Channel<Event>(UNLIMITED)
+            val eose1 = Channel<Unit>(UNLIMITED)
+            val eose2 = Channel<Unit>(UNLIMITED)
+
+            client.subscribe(
+                "sub-A",
+                mapOf(relayUrl to listOf(Filter(kinds = listOf(1)))),
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        ch1.trySend(event)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        eose1.trySend(Unit)
+                    }
+                },
+            )
+            client.subscribe(
+                "sub-B",
+                mapOf(relayUrl to listOf(Filter(kinds = listOf(4)))),
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        ch2.trySend(event)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        eose2.trySend(Unit)
+                    }
+                },
+            )
+
+            withTimeout(5000) {
+                eose1.receive()
+                eose2.receive()
+            }
+
+            // sub-A only saw kind=1, sub-B only saw kind=4.
+            val a = withTimeoutOrNull(100) { ch1.receive() }
+            val b = withTimeoutOrNull(100) { ch2.receive() }
+            assertEquals(SyntheticEvents.hexId(1), a?.id)
+            assertEquals(SyntheticEvents.hexId(2), b?.id)
+
+            client.unsubscribe("sub-A")
+            client.unsubscribe("sub-B")
+        }
+
     // -- Replaceable + addressable ------------------------------------------
 
     /** Kind 0 is replaceable by `(pubkey, kind)` — newer wins. */
@@ -444,6 +599,45 @@ class Nip01ComplianceTest {
             },
         )
 
+        val events = mutableListOf<Event>()
+        var eose = false
+        withTimeout(5000) {
+            while (!eose) {
+                when (val msg = ch.receive()) {
+                    is Either.Ev -> events += msg.event
+                    Either.Eose -> eose = true
+                }
+            }
+        }
+        client.unsubscribe(subId)
+        return events to eose
+    }
+
+    /** Variant of [collectUntilEose] that subscribes with multiple filters. */
+    private suspend fun collectUntilEoseMulti(filters: List<Filter>): Pair<List<Event>, Boolean> {
+        val ch = Channel<Either>(UNLIMITED)
+        val subId = "sub-${System.nanoTime()}"
+        client.subscribe(
+            subId,
+            mapOf(relayUrl to filters),
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    ch.trySend(Either.Ev(event))
+                }
+
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    ch.trySend(Either.Eose)
+                }
+            },
+        )
         val events = mutableListOf<Event>()
         var eose = false
         withTimeout(5000) {
