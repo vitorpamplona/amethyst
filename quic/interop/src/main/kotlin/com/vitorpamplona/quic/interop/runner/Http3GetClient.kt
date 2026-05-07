@@ -151,6 +151,13 @@ class Http3GetClient(
         val stream = conn.openBidiStream()
         stream.send.enqueue(encodeRequest(authority, path))
         stream.send.finish()
+        // Without this, the data sits in the queue until the PTO
+        // timer fires (~1 s later). On the longrtt scenario (750 ms
+        // one-way, 1.5 s RTT) that's a fatal delay — the runner's
+        // 8 s timeout doesn't leave room for the PTO + RTT + RTT
+        // dance. The parallel path wakes after the chunk; the
+        // serial path was missing the same nudge.
+        driver.wakeup()
         return Http3RequestHandle(stream)
     }
 

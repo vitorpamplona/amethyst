@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.toList
  */
 class HqInteropGetClient(
     private val conn: QuicConnection,
-    @Suppress("UNUSED_PARAMETER") private val driver: QuicConnectionDriver,
+    private val driver: QuicConnectionDriver,
 ) : GetClient {
     override suspend fun prepareRequest(
         @Suppress("UNUSED_PARAMETER") authority: String,
@@ -49,6 +49,8 @@ class HqInteropGetClient(
         val request = "GET $path\r\n".encodeToByteArray()
         stream.send.enqueue(request)
         stream.send.finish()
+        // Wake the send loop — same reasoning as Http3GetClient.
+        driver.wakeup()
         return HqRequestHandle(stream)
     }
 
