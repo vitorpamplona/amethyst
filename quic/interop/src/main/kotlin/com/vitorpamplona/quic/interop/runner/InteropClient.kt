@@ -72,7 +72,20 @@ private const val HANDSHAKE_TIMEOUT_SEC = 10L
 // per-iter transfer; the file is 1KB but its STREAM frames have
 // to land through the same lossy path.
 private const val MULTICONNECT_HANDSHAKE_TIMEOUT_SEC = 30L
-private const val MULTICONNECT_TRANSFER_TIMEOUT_SEC = 30L
+
+// Multiconnect transfer-side per-iter budget. Larger than the
+// handshake budget because once 1-RTT keys are up our smoothed_rtt
+// reflects the loss-recovery cost — RFC 9002 §5.2 takes the RTT
+// sample from the largest-acked packet's send time, and that's the
+// PTO-retransmit that finally landed, not the original send. So an
+// iteration whose handshake recovered after 2-3 PTO rounds will
+// have smoothed_rtt ~1s, which doubles the post-handshake PTO into
+// 3s+. Three doublings under 30% bit-flip can hit 24s before our
+// GET request is acked, so 30s is right on the cliff. 60s gives
+// the slow-recovery iterations real headroom; 50 iters × ~3s
+// average + a few slow ones × 60s still fits the runner's 300s
+// testcase budget.
+private const val MULTICONNECT_TRANSFER_TIMEOUT_SEC = 60L
 
 // Multiplexing generates ~hundreds-to-thousands of small files; download
 // throughput on Mac+Rosetta is dominated by Docker filesystem overhead
