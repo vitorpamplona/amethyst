@@ -769,6 +769,21 @@ class QuicConnection(
      * closes. Returns null on close. Replaces the older `pollIncomingPeerStream
      * + delay(5)` busy-loop — this version wakes within microseconds of the
      * parser appending a stream and parks the coroutine the rest of the time.
+     *
+     * **An H3 application MUST consume peer-initiated streams.** RFC 9114
+     * §6.2.1 mandates that the server opens at least three peer-initiated
+     * uni streams (CONTROL + QPACK_ENCODER + QPACK_DECODER). The parser
+     * routes their bytes into the per-[QuicStream] `incomingChannel`
+     * (capacity 64 chunks); if nothing accepts and reads them, the channel
+     * fills and the next inbound chunk trips the audit-4 #3 "slow consumer"
+     * tear-down at [QuicConnectionParser] (`INTERNAL_ERROR: stream …
+     * consumer overflowed`). Symptoms: under H3 multiplexing of many bidi
+     * request streams, the server's QPACK encoder issues a burst of
+     * dynamic-table inserts on its uni stream and the connection dies
+     * after ~5 s with zero requests completed. See
+     * [drainPeerInitiatedUniStreamsIntoBlackHole] for a one-line opt-in
+     * drainer that satisfies the contract when the H3 layer doesn't
+     * actually need the SETTINGS / QPACK bytes.
      */
     suspend fun awaitIncomingPeerStream(): QuicStream? {
         while (true) {
