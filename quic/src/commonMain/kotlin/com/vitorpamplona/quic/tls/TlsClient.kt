@@ -154,6 +154,7 @@ class TlsClient(
                 serverName = serverName,
                 x25519PublicKey = keyPair!!.publicKey,
                 quicTransportParams = transportParameters,
+                alpns = offeredAlpns,
                 random = random,
                 cipherSuites = cipherSuites,
             )
