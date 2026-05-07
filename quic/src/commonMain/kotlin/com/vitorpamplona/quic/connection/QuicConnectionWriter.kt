@@ -40,7 +40,6 @@ import com.vitorpamplona.quic.frame.encodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderPlaintextPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
-import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.packet.ShortHeaderPlaintextPacket
 
@@ -214,7 +213,7 @@ private fun buildLongHeaderPacket(
     return LongHeaderPacket.build(
         LongHeaderPlaintextPacket(
             type = type,
-            version = QuicVersion.V1,
+            version = conn.currentVersion,
             dcid = conn.destinationConnectionId,
             scid = conn.sourceConnectionId,
             packetNumber = pn,
@@ -314,7 +313,7 @@ private fun buildLongHeaderFromFrames(
         LongHeaderPacket.build(
             LongHeaderPlaintextPacket(
                 type = type,
-                version = QuicVersion.V1,
+                version = conn.currentVersion,
                 dcid = conn.destinationConnectionId,
                 scid = conn.sourceConnectionId,
                 packetNumber = pn,

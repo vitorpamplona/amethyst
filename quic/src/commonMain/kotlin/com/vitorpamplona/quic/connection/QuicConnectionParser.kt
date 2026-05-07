@@ -39,6 +39,7 @@ import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.decodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -62,6 +63,23 @@ fun feedDatagram(
         val first = datagram[offset].toInt() and 0xFF
         val isLong = (first and 0x80) != 0
         if (isLong) {
+            // RFC 9000 §17.2.1: a Version Negotiation packet has the form
+            // bit set but version=0. Detect it BEFORE peekHeader, which
+            // assumes a v1-shaped layout (token, length fields).
+            if (offset + 5 <= datagram.size) {
+                val version =
+                    ((datagram[offset + 1].toInt() and 0xFF) shl 24) or
+                        ((datagram[offset + 2].toInt() and 0xFF) shl 16) or
+                        ((datagram[offset + 3].toInt() and 0xFF) shl 8) or
+                        (datagram[offset + 4].toInt() and 0xFF)
+                if (version == QuicVersion.VERSION_NEGOTIATION) {
+                    feedVersionNegotiationPacket(conn, datagram, offset)
+                    // VN packets MUST be the only packet in their datagram
+                    // (RFC 9000 §17.2.1: no length field, body is rest of
+                    // datagram). Stop walking.
+                    return
+                }
+            }
             // Per RFC 9001 §5.5, drop ONLY the failing packet, not subsequent
             // coalesced ones. Use peekHeader to advance over a packet whose
             // payload we couldn't decrypt; only break the loop on a header
@@ -76,6 +94,66 @@ fun feedDatagram(
             return
         }
     }
+}
+
+/**
+ * RFC 9000 §17.2.1 / §6: parse a Version Negotiation packet and dispatch
+ * to [QuicConnection.applyVersionNegotiation].
+ *
+ * Wire layout:
+ *
+ *   first byte (form=1, unused 4 bits — server fills with random)
+ *   version    (4 bytes, fixed at 0x00000000)
+ *   dcid_len   (1 byte) + dcid (dcid_len bytes)
+ *   scid_len   (1 byte) + scid (scid_len bytes)
+ *   supported_versions: sequence of 32-bit big-endian version numbers,
+ *     consuming the rest of the UDP datagram.
+ *
+ * VN packets are NOT AEAD-protected — there's nothing to decrypt. We do
+ * a minimal sanity check (DCID matches our SCID) and then hand the
+ * version list off. Malformed packets are dropped silently per RFC 9000
+ * §17.2.1 ("an endpoint MUST NOT send … in response to a Version
+ * Negotiation packet").
+ */
+private fun feedVersionNegotiationPacket(
+    conn: QuicConnection,
+    datagram: ByteArray,
+    offset: Int,
+) {
+    // Layout fields above; bail early if any read would run past the
+    // end of the datagram (truncated VN — drop silently).
+    var pos = offset + 5
+    if (pos >= datagram.size) return
+    val dcidLen = datagram[pos].toInt() and 0xFF
+    pos += 1
+    if (dcidLen > 20 || pos + dcidLen > datagram.size) return
+    val dcid = datagram.copyOfRange(pos, pos + dcidLen)
+    pos += dcidLen
+    if (pos >= datagram.size) return
+    val scidLen = datagram[pos].toInt() and 0xFF
+    pos += 1
+    if (scidLen > 20 || pos + scidLen > datagram.size) return
+    pos += scidLen // SCID body — not validated; servers may pick anything.
+
+    // RFC 9000 §6.1: the VN packet's destination CID MUST equal the SCID
+    // the client put in its first Initial. Mismatch ⇒ probable spoof
+    // from an off-path attacker; drop without state change.
+    if (!dcid.contentEquals(conn.sourceConnectionId.bytes)) return
+
+    val versionsRegion = datagram.size - pos
+    if (versionsRegion <= 0 || versionsRegion % 4 != 0) return // malformed
+
+    val supportedVersions = ArrayList<Int>(versionsRegion / 4)
+    while (pos + 4 <= datagram.size) {
+        val v =
+            ((datagram[pos].toInt() and 0xFF) shl 24) or
+                ((datagram[pos + 1].toInt() and 0xFF) shl 16) or
+                ((datagram[pos + 2].toInt() and 0xFF) shl 8) or
+                (datagram[pos + 3].toInt() and 0xFF)
+        supportedVersions += v
+        pos += 4
+    }
+    conn.applyVersionNegotiation(supportedVersions)
 }
 
 private fun feedLongHeaderPacket(

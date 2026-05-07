@@ -23,6 +23,7 @@ package com.vitorpamplona.quic.interop
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import com.vitorpamplona.quic.transport.UdpSocket
 import kotlinx.coroutines.CoroutineScope
@@ -52,10 +53,25 @@ fun main(args: Array<String>) {
     val host = System.getProperty("interopHost") ?: args.getOrNull(0) ?: "127.0.0.1"
     val port = (System.getProperty("interopPort") ?: args.getOrNull(1) ?: "4433").toInt()
     val timeoutSec = (System.getProperty("interopTimeoutSec") ?: "10").toLong()
+    // Public quic-interop-runner contract: TESTCASE env names the scenario.
+    // We currently only special-case `versionnegotiation`; everything else
+    // falls through to the default v1-handshake path, which is enough for
+    // the `transfer` / `handshake` / `multiconnect` testcases.
+    val testcase =
+        System.getProperty("interopTestcase")
+            ?: System.getenv("TESTCASE")
+            ?: args.getOrNull(2)
+    val initialVersion =
+        when (testcase) {
+            "versionnegotiation" -> QuicVersion.FORCE_VERSION_NEGOTIATION
+            else -> QuicVersion.V1
+        }
 
     println("== :quic interop runner ==")
-    println("target:  $host:$port")
-    println("timeout: ${timeoutSec}s")
+    println("target:    $host:$port")
+    println("testcase:  ${testcase ?: "(default)"}")
+    println("init ver:  0x${initialVersion.toUInt().toString(16)}")
+    println("timeout:   ${timeoutSec}s")
     println()
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -73,6 +89,7 @@ fun main(args: Array<String>) {
                     serverName = host,
                     config = QuicConnectionConfig(),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
+                    initialVersion = initialVersion,
                 )
             val driver = QuicConnectionDriver(conn, socket, scope)
             driver.start()

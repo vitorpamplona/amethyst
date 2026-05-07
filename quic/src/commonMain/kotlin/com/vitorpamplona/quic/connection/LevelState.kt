@@ -26,7 +26,8 @@ import com.vitorpamplona.quic.stream.SendBuffer
 
 /** Per-encryption-level state owned by [QuicConnection]. */
 class LevelState {
-    val pnSpace = PacketNumberSpaceState()
+    var pnSpace = PacketNumberSpaceState()
+        private set
 
     var ackTracker =
         com.vitorpamplona.quic.recovery
@@ -121,5 +122,35 @@ class LevelState {
         largestAckedPn = null
         largestAckedSentTimeMs = null
         keysDiscarded = true
+    }
+
+    /**
+     * RFC 9000 §6: reset every per-level field to a constructor-fresh
+     * state, then install [sendProtection] / [receiveProtection] keyed
+     * to the post-VN destination CID.
+     *
+     * Differs from [discardKeys] in that this re-arms the level for
+     * a fresh handshake — caller (
+     * [QuicConnection.applyVersionNegotiation]) re-enqueues the cached
+     * ClientHello onto [cryptoSend] immediately afterwards, so the
+     * next outbound drain emits a v1 Initial with PN=0 and the same
+     * TLS bytes the original Initial carried.
+     */
+    internal fun resetForVersionNegotiation(
+        sendProtection: PacketProtection,
+        receiveProtection: PacketProtection,
+    ) {
+        pnSpace = PacketNumberSpaceState()
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = false
+        this.sendProtection = sendProtection
+        this.receiveProtection = receiveProtection
     }
 }

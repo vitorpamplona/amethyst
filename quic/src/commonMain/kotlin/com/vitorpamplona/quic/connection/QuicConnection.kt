@@ -24,6 +24,7 @@ import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
 import com.vitorpamplona.quic.crypto.bestAes128GcmAead
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -73,11 +74,54 @@ class QuicConnection(
             .toEpochMilliseconds()
     },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
+    /**
+     * Version this connection puts in the FIRST Initial it sends. Defaults
+     * to [QuicVersion.V1]; the interop runner sets it to
+     * [QuicVersion.FORCE_VERSION_NEGOTIATION] for the `versionnegotiation`
+     * testcase, which drives the client through the RFC 9000 §6 VN flow.
+     *
+     * On a successful Version Negotiation (server replies with a list of
+     * versions it supports including v1), [applyVersionNegotiation] resets
+     * [currentVersion] to v1 and the writer's subsequent Initial packets
+     * carry v1 in the long-header version field.
+     */
+    val initialVersion: Int = QuicVersion.V1,
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
     var destinationConnectionId: ConnectionId = ConnectionId.random(8)
         internal set
     val originalDestinationConnectionId: ConnectionId = destinationConnectionId
+
+    /**
+     * Version the writer stamps into the long-header version field on the
+     * NEXT outbound Initial / Handshake packet. Initialised to
+     * [initialVersion]; switched to [QuicVersion.V1] by
+     * [applyVersionNegotiation] after a successful VN exchange.
+     */
+    @Volatile
+    var currentVersion: Int = initialVersion
+        internal set
+
+    /**
+     * RFC 9000 §6.2: a client MUST consume at most one VN response per
+     * connection. After [applyVersionNegotiation] runs once, any further
+     * inbound VN packet is dropped silently — the latch defends against a
+     * mid-handshake attacker who replays an old VN datagram to wedge us
+     * into an endless re-negotiation loop.
+     */
+    @Volatile
+    var vnConsumed: Boolean = false
+        internal set
+
+    /**
+     * Cached ClientHello bytes captured by [start]. Re-enqueued onto the
+     * fresh Initial-level [LevelState.cryptoSend] when
+     * [applyVersionNegotiation] resets the encryption level so the new
+     * Initial datagram still carries a valid TLS handshake. Without this
+     * the reset wipes the bytes that [TlsClient] already enqueued and the
+     * post-VN Initial would carry an empty CRYPTO frame.
+     */
+    private var originalClientHello: ByteArray? = null
 
     val initial = LevelState()
     val handshake = LevelState()
@@ -377,7 +421,83 @@ class QuicConnection(
     fun start() {
         tls.start()
         // Drain ClientHello bytes into the Initial-level CRYPTO send buffer.
-        tls.pollOutbound(TlsClient.Level.INITIAL)?.let { initial.cryptoSend.enqueue(it) }
+        // Cache the bytes so [applyVersionNegotiation] can re-enqueue them
+        // onto a fresh cryptoSend after resetting Initial-level state.
+        // Cannot re-pollOutbound — the queue is destructive.
+        tls.pollOutbound(TlsClient.Level.INITIAL)?.let {
+            originalClientHello = it
+            initial.cryptoSend.enqueue(it)
+        }
+    }
+
+    /**
+     * Apply a Version Negotiation packet (RFC 9000 §6) received from the
+     * server. The client offered [initialVersion]; the server replies with
+     * a list of versions it supports. We pick [QuicVersion.V1] from the
+     * list, regenerate the destination CID + Initial keys, reset the
+     * Initial encryption level, and re-emit the cached ClientHello so the
+     * next drain produces a valid v1 Initial packet.
+     *
+     * RFC 9000 §6.2 invariants enforced here:
+     *   - The supported_versions list MUST NOT contain
+     *     [initialVersion] — including it would mean the server received
+     *     our offer and STILL replied with VN, which is a downgrade signal.
+     *     Drop the packet (treat as no-op).
+     *   - At most one VN per connection (latched via [vnConsumed]).
+     *   - If we cannot speak any of the offered versions, fail the
+     *     handshake.
+     *
+     * Caller MUST hold [lock] (the parser already does).
+     */
+    internal fun applyVersionNegotiation(supportedVersions: List<Int>) {
+        // RFC 9000 §6.2: a second VN must be ignored.
+        if (vnConsumed) return
+        // Anti-downgrade: server-claimed support for the version we
+        // already offered indicates VN replay / spoof. Drop silently.
+        if (supportedVersions.contains(initialVersion)) return
+        // Pick a version we can speak. Today that's only v1.
+        if (!supportedVersions.contains(QuicVersion.V1)) {
+            signalHandshakeFailed(
+                QuicVersionNegotiationException(
+                    "VERSION_NEGOTIATION: server offered ${supportedVersions.map { v -> "0x" + v.toUInt().toString(16) }}, " +
+                        "client only supports 0x" + QuicVersion.V1.toUInt().toString(16),
+                ),
+            )
+            markClosedExternally("VERSION_NEGOTIATION: no mutually supported version")
+            return
+        }
+
+        // Latch BEFORE reset so a re-entrant inbound VN during the reset
+        // window is rejected by the early-return at the top.
+        vnConsumed = true
+
+        // Generate a fresh destination CID. RFC 9000 §6.2 doesn't strictly
+        // require this (the server hasn't indexed our CID with any state
+        // since its only response was VN), but it matches what reference
+        // implementations do and keeps the post-VN connection
+        // cryptographically isolated from the pre-VN exchange.
+        val newDcid = ConnectionId.random(8)
+        destinationConnectionId = newDcid
+
+        // Reset Initial-level state in place: fresh PN space (next
+        // allocateOutbound returns 0), fresh ackTracker, fresh
+        // cryptoSend / cryptoReceive, fresh sentPackets retention.
+        // Writer + parser only ever reach the level via [conn.initial],
+        // so we mutate the fields rather than swap the instance.
+        val proto = InitialSecrets.derive(newDcid.bytes)
+        val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
+        val newSend =
+            PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp)
+        val newReceive =
+            PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp)
+        initial.resetForVersionNegotiation(sendProtection = newSend, receiveProtection = newReceive)
+        // Re-enqueue the ClientHello so the next drainOutbound emits a v1
+        // Initial datagram with the same TLS handshake the original carried.
+        originalClientHello?.let { initial.cryptoSend.enqueue(it) }
+
+        // Switch the writer's stamp to v1 so the next Initial / Handshake
+        // long-header carries the right version.
+        currentVersion = QuicVersion.V1
     }
 
     private fun buildLocalTransportParameters(): TransportParameters =
@@ -951,6 +1071,17 @@ class QuicConnectionClosedException(
 
 /** Caller tried to open a stream beyond the peer's MAX_STREAMS allowance. */
 class QuicStreamLimitException(
+    message: String,
+) : RuntimeException(message)
+
+/**
+ * RFC 9000 §6: the server replied with a Version Negotiation packet but
+ * the supported_versions list does not contain any version the client can
+ * speak (today: only [com.vitorpamplona.quic.packet.QuicVersion.V1]).
+ * The handshake is unrecoverable — caller must treat the connection as
+ * permanently failed.
+ */
+class QuicVersionNegotiationException(
     message: String,
 ) : RuntimeException(message)
 
