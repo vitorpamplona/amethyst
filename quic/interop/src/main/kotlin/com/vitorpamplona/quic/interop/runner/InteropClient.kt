@@ -58,6 +58,22 @@ private const val EXIT_UNSUPPORTED = 127
 
 private const val HANDSHAKE_TIMEOUT_SEC = 10L
 
+// Multiconnect's per-iteration handshake timeout. The runner's
+// handshakeloss / handshakecorruption tests run 50 sequential
+// connections under 30% packet drop / bit-flip with burst=3, then
+// verify the pcap contains exactly 50 distinct handshakes. Under
+// that loss intensity, individual handshakes routinely need three or
+// four PTO rounds (1s + 2s + 4s + 8s = 15s of doublings) before
+// either side's flight finally lands. The 10s default leaves us
+// declaring "handshake_failed" mid-recovery on the unlucky iter.
+// 30s gives clean PTO headroom while staying under the runner's
+// 300s testcase budget for 50 iters (avg ~5s/iter typical, ≤30s
+// worst-case before we give up). Same threshold used for the
+// per-iter transfer; the file is 1KB but its STREAM frames have
+// to land through the same lossy path.
+private const val MULTICONNECT_HANDSHAKE_TIMEOUT_SEC = 30L
+private const val MULTICONNECT_TRANSFER_TIMEOUT_SEC = 30L
+
 // Multiplexing generates ~hundreds-to-thousands of small files; download
 // throughput on Mac+Rosetta is dominated by Docker filesystem overhead
 // per-write. 30s wasn't enough for the larger file counts; the qlog
@@ -633,7 +649,7 @@ private fun runMulticonnectTest(
                 driver.start()
 
                 val handshake =
-                    withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
+                    withTimeoutOrNull(MULTICONNECT_HANDSHAKE_TIMEOUT_SEC * 1_000L) {
                         runCatching { conn.awaitHandshake() }
                     }
                 if (handshake == null || handshake.isFailure) {
@@ -664,7 +680,7 @@ private fun runMulticonnectTest(
                     }
 
                 val resp =
-                    withTimeoutOrNull(TRANSFER_TIMEOUT_SEC * 1_000L) {
+                    withTimeoutOrNull(MULTICONNECT_TRANSFER_TIMEOUT_SEC * 1_000L) {
                         client.get(authority, url.path)
                     }
 
