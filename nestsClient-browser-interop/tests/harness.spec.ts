@@ -56,6 +56,11 @@ test.describe("nests-browser-interop", () => {
             // peak in I1 catches the silent-tolerance variant.
             decoderOutputs: (window as any).__decoderOutputs,
             decoderErrors: (window as any).__decoderErrors,
+            // Browser I7 / publish-baseline instrumentation: total
+            // encoded frames the publisher pumped, and the count of
+            // moq-lite session reconnect cycles the page completed.
+            framesIn: (window as any).__framesIn,
+            cycles: (window as any).__publishCycle,
         }));
         // Always print a summary line — Kotlin parses this for follow-up
         // assertions (e.g. moq-lite-03 ALPN echo for I15).

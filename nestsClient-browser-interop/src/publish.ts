@@ -9,11 +9,13 @@
 // listener (and `hang-listen` for cross-validation) can discover the
 // audio rendition.
 //
-// Status: Phase 4.A scaffold only — wire the Connection.connect +
-// catalog publish + first-frame send. Phase 4.C extends this for I4
-// reverse / I14 / I15 scenarios. Until then, the I1-forward smoke test
-// (Amethyst speaker → Chromium listener) is the path that lights this
-// harness up.
+// Optional `?reconnectAfterMs=N` URL param: cycles the moq session
+// at N ms into the broadcast — drops the current `Connection`,
+// builds a fresh one, re-publishes the same broadcast suffix. The
+// relay sees `Announce::Ended → Active` on the same path. Used by
+// the Browser I7 scenario (Chromium publisher reconnect → Kotlin
+// listener recovers via `connectReconnectingNestsListener`'s
+// re-issuance pump).
 
 import * as Moq from "@moq/lite";
 import * as Container from "@moq/hang/container";
@@ -27,6 +29,8 @@ const freqHz = Number(params.get("freqHz") ?? "440");
 const channels = Number(params.get("channels") ?? "1");
 const durationSec = Number(params.get("duration") ?? "5");
 const wsPort = Number(params.get("wsPort") ?? "0");
+const reconnectAfterMs = Number(params.get("reconnectAfterMs") ?? "0");
+const certSha256B64 = params.get("certSha256");
 
 function required(v: string | null, name: string): string {
     if (!v) throw new Error(`publish.html: missing ?${name}=`);
@@ -41,11 +45,103 @@ const status = (msg: string) => {
     console.log("[publish]", msg);
 };
 
+const catalogJson = JSON.stringify({
+    audio: {
+        renditions: {
+            [trackParam]: {
+                codec: "opus",
+                container: { kind: "legacy" },
+                sampleRate: 48000,
+                numberOfChannels: channels,
+                jitter: 20,
+            },
+        },
+    },
+});
+const catalogBytes = new TextEncoder().encode(catalogJson);
+
+/**
+ * Open one moq-lite session + broadcast. Returns the bits the encoder
+ * pump needs (Connection + audio Track) plus a `close` to tear it down
+ * cleanly when the reconnect cycle fires.
+ */
+type Session = {
+    audioMoqTrack: Moq.Track;
+    closeAll: () => void;
+};
+
+async function openSession(): Promise<Session> {
+    const relayUrl = new URL(relayUrlString);
+    status(`connecting to ${relayUrl.toString()}`);
+    // serverCertificateHashes pinning per the same comment in listen.ts
+    // — Chromium's --ignore-certificate-errors does NOT bypass QUIC
+    // cert validation. The test driver passes the SHA-256 of the
+    // relay's leaf DER cert via ?certSha256=base64.
+    const webtransportOpts: WebTransportOptions = {};
+    if (certSha256B64) {
+        const raw = Uint8Array.from(atob(certSha256B64), (c) => c.charCodeAt(0));
+        webtransportOpts.serverCertificateHashes = [
+            { algorithm: "sha-256", value: raw },
+        ];
+    }
+    const conn = await Moq.Connection.connect(relayUrl, {
+        websocket: { enabled: false },
+        webtransport: webtransportOpts,
+    });
+    (window as any).__moqVersion = conn.version;
+    status(`connected, alpn=${conn.version}`);
+
+    const broadcast = new Moq.Broadcast();
+    conn.publish(Moq.Path.from(broadcastName), broadcast);
+    status(`announced ${broadcastName}`);
+
+    let audioTrackResolved: Moq.Track | undefined;
+    const audioTrackResolver = new Promise<Moq.Track>((resolve) => {
+        const probe = setInterval(() => {
+            if (audioTrackResolved) {
+                clearInterval(probe);
+                resolve(audioTrackResolved);
+            }
+        }, 20);
+    });
+
+    // Serve catalog + audio tracks as they're requested by the relay.
+    const requestPump = (async () => {
+        for (;;) {
+            const req = await broadcast.requested();
+            if (!req) return;
+            if (req.track.name === catalogTrack) {
+                const group = req.track.appendGroup();
+                group.writeFrame(catalogBytes);
+                group.close();
+            } else if (req.track.name === trackParam) {
+                audioTrackResolved = req.track;
+            }
+        }
+    })().catch((e) => console.error("[publish] requests:", e));
+
+    const audioMoqTrack = await audioTrackResolver;
+
+    const closeAll = () => {
+        try {
+            broadcast.close();
+        } catch (_) {
+            // ignore
+        }
+        try {
+            conn.close();
+        } catch (_) {
+            // ignore
+        }
+        // requestPump exits on its own once broadcast.requested()
+        // returns null after broadcast.close().
+        void requestPump;
+    };
+
+    return { audioMoqTrack, closeAll };
+}
+
 async function main() {
-    // Optional WS back-channel for the test driver to read out
-    // status — currently only used by Phase 4.C scenarios that want
-    // to assert the publisher reached `playing` before the listener
-    // attaches.
     let ws: WebSocket | undefined;
     if (wsPort) {
         ws = new WebSocket(`ws://127.0.0.1:${wsPort}/pcm`);
@@ -58,51 +154,28 @@ async function main() {
         if (ws?.readyState === WebSocket.OPEN) ws.send("done");
     };
 
-    const relayUrl = new URL(relayUrlString);
-    status(`connecting to ${relayUrl.toString()}`);
-    const conn = await Moq.Connection.connect(relayUrl, {
-        websocket: { enabled: false },
-    });
-    (window as any).__moqVersion = conn.version;
-    status(`connected, alpn=${conn.version}`);
+    // Open the FIRST session.
+    let session = await openSession();
 
-    // Build a publishable Broadcast — the relay opens SUBSCRIBE bidis
-    // back to us per track and we serve them via `broadcast.subscribe`
-    // (despite the name, on the publish side `subscribe` is what the
-    // relay calls to *request* the track).
-    const broadcast = new Moq.Broadcast();
-    conn.publish(Moq.Path.from(broadcastName), broadcast);
-    status(`announced ${broadcastName}`);
-
-    // Catalog: match `MoqLiteHangCatalog.opus48k(audioTrackName, channels)`
-    // byte-for-byte. Field order matters less than the content because
-    // hang.js uses zod parsing, but we keep the shape canonical.
-    const catalogJson = JSON.stringify({
-        audio: {
-            renditions: {
-                [trackParam]: {
-                    codec: "opus",
-                    container: { kind: "legacy" },
-                    sampleRate: 48000,
-                    numberOfChannels: channels,
-                    jitter: 20,
-                },
-            },
-        },
-    });
-    const catalogBytes = new TextEncoder().encode(catalogJson);
-
-    // -- Audio encoder pump --------------------------------------------
-    // Build oscillator → MediaStreamAudioDestinationNode → MediaStreamTrack
-    // pipeline; then loop pulling AudioData out of an MSTrack reader
-    // via `MediaStreamTrackProcessor` and feed each frame into the
-    // WebCodecs AudioEncoder. Encoded outputs land in `Producer.encode`.
+    // -- Audio source pump (single source across reconnect cycles) -----
+    // Sine osc → MediaStreamAudioDestinationNode → MediaStreamTrack →
+    // MediaStreamTrackProcessor → AudioData. The osc + processor
+    // SURVIVE a reconnect — only the moq-lite Producer (which writes
+    // to the per-cycle session's track) is rebuilt.
     const ctx = new AudioContext({ sampleRate: 48_000, latencyHint: "interactive" });
     await ctx.resume();
     const osc = ctx.createOscillator();
     osc.frequency.value = freqHz;
     osc.type = "sine";
     const dst = ctx.createMediaStreamDestination();
+    // The destination's channelCount defaults to 2 (stereo); pin it
+    // to whatever the test configured so the AudioEncoder's
+    // `numberOfChannels` matches what AudioData carries. Mismatch
+    // surfaces as `EncodingError: Input audio buffer is incompatible
+    // with codec parameters` and immediately closes the codec.
+    dst.channelCount = channels;
+    dst.channelCountMode = "explicit";
+    dst.channelInterpretation = "speakers";
     osc.connect(dst);
     osc.start();
 
@@ -111,51 +184,28 @@ async function main() {
     const processor = new MediaStreamTrackProcessor({ track: audioTrack });
     const reader = (processor.readable as ReadableStream<AudioData>).getReader();
 
-    // Serve catalog + audio tracks as they're requested by the relay.
-    const handleRequests = async () => {
-        for (;;) {
-            const req = await broadcast.requested();
-            if (!req) return;
-            if (req.track.name === catalogTrack) {
-                // One-shot emit-on-subscribe, like Amethyst speaker's
-                // `catalogPublisher.setOnNewSubscriber`.
-                const group = req.track.appendGroup();
-                group.writeFrame(catalogBytes);
-                group.close();
-            } else if (req.track.name === trackParam) {
-                // The audio track is fed by the encoder pump below;
-                // nothing to do here other than accept the request
-                // (the Producer below writes into `req.track`).
-                (window as any).__audioTrack = req.track;
-            }
-        }
-    };
-    handleRequests().catch((e) => console.error("[publish] requests:", e));
-
-    // Wait until the relay subscribes to the audio track, then start the
-    // encoder pump. The test driver is responsible for spawning the
-    // listener AFTER the publisher reports `data-state="publishing"`.
-    const audioMoqTrack: Moq.Track = await new Promise((resolve) => {
-        const probe = setInterval(() => {
-            const t = (window as any).__audioTrack as Moq.Track | undefined;
-            if (t) {
-                clearInterval(probe);
-                resolve(t);
-            }
-        }, 20);
-    });
-    const producer = new Container.Legacy.Producer(audioMoqTrack);
+    // Producer is rebuilt on each reconnect cycle.
+    let producer = new Container.Legacy.Producer(session.audioMoqTrack);
+    let producerStarted = false;
+    let cycleId = 0;
 
     const encoder = new AudioEncoder({
         output: (chunk, _meta) => {
             const data = new Uint8Array(chunk.byteLength);
             chunk.copyTo(data);
-            // Force a new group at the start so the first frame is a
-            // keyframe — the moq-lite Container.Legacy.Producer requires
-            // it for the first packet.
-            const isKey = (window as any).__producerStarted !== true;
-            (window as any).__producerStarted = true;
-            producer.encode(data, chunk.timestamp as any, isKey);
+            // Force a new group at each cycle's start so the first
+            // post-reconnect frame is a keyframe — Container.Legacy
+            // requires it. `producerStarted` tracks per-producer.
+            const isKey = !producerStarted;
+            producerStarted = true;
+            try {
+                producer.encode(data, chunk.timestamp as any, isKey);
+            } catch (e) {
+                // The producer can throw if the underlying session
+                // closed mid-encode (we're between cycles). Swallow
+                // — the next encoded chunk lands on the new producer.
+                console.warn("[publish] encoder.output: producer.encode threw", e);
+            }
         },
         error: (e) => console.error("[publish] AudioEncoder", e),
     });
@@ -169,6 +219,35 @@ async function main() {
     document.body.dataset.state = "publishing";
     status("publishing");
 
+    // -- Reconnect scheduler (optional) --------------------------------
+    // If reconnectAfterMs > 0, fire ONCE at that mark to cycle the
+    // session. We schedule one-shot — the test only needs to assert
+    // the listener recovers across a single Announce::Ended → Active.
+    let reconnectFired = false;
+    const reconnectScheduler = (async () => {
+        if (reconnectAfterMs <= 0) return;
+        await new Promise((r) => setTimeout(r, reconnectAfterMs));
+        if (reconnectFired) return;
+        reconnectFired = true;
+        cycleId += 1;
+        status(`reconnect cycle ${cycleId}: closing session`);
+        const oldSession = session;
+        // Close the current session first so the relay sees
+        // Announce::Ended cleanly. Then open a fresh one.
+        oldSession.closeAll();
+        try {
+            session = await openSession();
+        } catch (e) {
+            console.error("[publish] reconnect openSession failed", e);
+            return;
+        }
+        producer = new Container.Legacy.Producer(session.audioMoqTrack);
+        producerStarted = false;
+        status(`reconnect cycle ${cycleId}: published fresh session`);
+        (window as any).__publishCycle = cycleId;
+    })();
+
+    // -- Encoder feed loop --------------------------------------------
     const deadline = performance.now() + durationSec * 1000;
     let framesIn = 0;
     while (performance.now() < deadline) {
@@ -181,7 +260,7 @@ async function main() {
             value.close();
         }
     }
-    status(`flushing, framesIn=${framesIn}`);
+    status(`flushing, framesIn=${framesIn}, cycles=${cycleId}`);
 
     try {
         await encoder.flush();
@@ -191,13 +270,19 @@ async function main() {
     encoder.close();
     osc.stop();
     audioTrack.stop();
-    producer.close();
-    broadcast.close();
-    conn.close();
+    try {
+        producer.close();
+    } catch (_) {
+        // ignore
+    }
+    session.closeAll();
     sendDone();
+    void reconnectScheduler;
 
     document.body.dataset.state = "done";
-    status(`done. framesIn=${framesIn}`);
+    (window as any).__framesIn = framesIn;
+    (window as any).__publishCycle = cycleId;
+    status(`done. framesIn=${framesIn}, cycles=${cycleId}`);
 }
 
 main().catch((e) => {

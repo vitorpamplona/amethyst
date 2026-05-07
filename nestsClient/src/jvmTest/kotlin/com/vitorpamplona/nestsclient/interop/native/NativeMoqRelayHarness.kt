@@ -153,6 +153,24 @@ class NativeMoqRelayHarness private constructor(
             }
         }
 
+        /**
+         * Tear down the current shared relay subprocess (if any) so the
+         * next [shared] call boots a fresh one. Used by per-method
+         * `@BeforeTest` hooks in `HangInteropTest` /
+         * `BrowserInteropTest` to keep relay-side accumulated state
+         * (per-subscriber forward queues, announce tables) from
+         * leaking between scenarios. Each scenario then runs against
+         * a relay that started ~500 ms before the test body.
+         */
+        fun resetShared() {
+            synchronized(sharedLock) {
+                shared?.let {
+                    runCatching { it.close() }
+                }
+                shared = null
+            }
+        }
+
         private fun doStart(): NativeMoqRelayHarness {
             check(isEnabled()) {
                 "NativeMoqRelayHarness.shared() called without -D$ENABLE_PROPERTY=true."

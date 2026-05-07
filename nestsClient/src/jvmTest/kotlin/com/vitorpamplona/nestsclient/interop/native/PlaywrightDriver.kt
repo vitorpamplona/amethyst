@@ -140,6 +140,15 @@ internal object PlaywrightDriver {
      * Spawn the publisher harness. Symmetric to [openListenPage] but
      * loads `publish.html` and passes the oscillator parameters.
      * Phase 4.C scenarios — the I1-forward smoke test does NOT use this.
+     *
+     * @param serverCertHashB64 Base64-encoded SHA-256 of the relay's
+     *   leaf DER cert. Same channel as [openListenPage]; required so
+     *   Chromium's WebTransport accepts the test harness's
+     *   self-signed cert.
+     * @param reconnectAfterMs If > 0, the publisher cycles its moq-lite
+     *   session at this mark — drops the current Connection, builds a
+     *   fresh one, re-publishes the same broadcast suffix. Used by the
+     *   Browser I7 scenario.
      */
     @Suppress("LongParameterList")
     fun openPublishPage(
@@ -150,8 +159,18 @@ internal object PlaywrightDriver {
         durationSec: Int,
         overallTimeoutSec: Int = durationSec + 30,
         track: String = "audio/data",
+        serverCertHashB64: String? = null,
+        reconnectAfterMs: Long = 0L,
     ): HarnessRun {
-        val extraQuery = "&freqHz=$freqHz&channels=$channels"
+        val certPart =
+            if (serverCertHashB64 != null) {
+                "&certSha256=" + java.net.URLEncoder.encode(serverCertHashB64, Charsets.UTF_8)
+            } else {
+                ""
+            }
+        val reconnectPart =
+            if (reconnectAfterMs > 0) "&reconnectAfterMs=$reconnectAfterMs" else ""
+        val extraQuery = "&freqHz=$freqHz&channels=$channels$certPart$reconnectPart"
         return run(
             "publish.html",
             relayUrlFull,
