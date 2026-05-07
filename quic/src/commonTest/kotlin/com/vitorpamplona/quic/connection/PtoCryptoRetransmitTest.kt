@@ -91,15 +91,16 @@ class PtoCryptoRetransmitTest {
                 "no PTO yet, no fresh data → second drain must be empty (got ${emptyDrain?.size} bytes)",
             )
 
-            // Simulate the driver's PTO branch firing: requeue the
-            // unacknowledged CRYPTO and set the PING flag.
-            client.lock.lock()
-            try {
-                client.requeueAllInflightCrypto(EncryptionLevel.INITIAL)
-                client.pendingPing = true
-            } finally {
-                client.lock.unlock()
-            }
+            // Drive the EXACT helper QuicConnectionDriver.sendLoop
+            // calls when its PTO timer fires. Earlier versions of
+            // this test inlined the simulation (set pendingPing,
+            // call requeueAllInflightCrypto manually) — but that
+            // hid the regression where the driver itself stopped
+            // calling requeueAllInflightCrypto. Calling
+            // [handlePtoFired] keeps the test in lockstep with the
+            // production code path: if anyone unwires the requeue
+            // again, this test breaks.
+            handlePtoFired(client)
 
             // Next drain must emit a fresh Initial packet carrying
             // the ClientHello CRYPTO at the original offset.

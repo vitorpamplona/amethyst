@@ -154,45 +154,7 @@ class QuicConnectionDriver(
                     Unit
                 }
             if (woke == null) {
-                // PTO fired. RFC 9002 §6.2.4: the probe packet MUST
-                // be ack-eliciting at the encryption level with
-                // unacknowledged data, and SHOULD retransmit lost
-                // data rather than just emit a PING.
-                //
-                // Pre-1-RTT we have a concrete thing to retransmit:
-                // the unacknowledged ClientHello (at Initial) or
-                // ClientFinished (at Handshake). Requeue ALL
-                // currently-inflight CRYPTO bytes for the highest
-                // active pre-application level so the next drain's
-                // takeChunk emits a fresh CRYPTO frame at the
-                // original offset. pendingPing stays set as a
-                // fallback only — `collectHandshakeLevelFrames`
-                // skips the PING when CRYPTO is in the same frame
-                // list. aioquic strictly rejects pre-handshake
-                // Initials with no CRYPTO frame ("Packet contains
-                // no CRYPTO frame"), so a bare-PING probe is fatal.
-                //
-                // Post-handshake (1-RTT installed) we keep the
-                // bare-PING behavior; STREAM retransmit is driven
-                // by ACK-driven packet-threshold loss detection.
-                //
-                // pendingPing + consecutivePtoCount are @Volatile.
-                // requeueAllInflightCrypto mutates the level's
-                // cryptoSend buffer; the writer reads it under
-                // levelLock during drainOutbound, so we take that
-                // lock for the requeue to avoid racing the writer's
-                // takeChunk with our requeue mid-build.
-                connection.pendingPing = true
-                if (connection.application.sendProtection == null) {
-                    val level = highestPreApplicationLevel(connection)
-                    if (level != null) {
-                        connection.levelState(level).levelLock.withLock {
-                            connection.requeueAllInflightCrypto(level)
-                        }
-                    }
-                }
-                connection.consecutivePtoCount =
-                    (connection.consecutivePtoCount + 1).coerceAtMost(6)
+                handlePtoFired(connection)
             }
         }
     }
@@ -261,6 +223,53 @@ class QuicConnectionDriver(
         /** Upper bound on close() flush wait. Each phase (drain + join) gets up to this much. */
         private const val CLOSE_FLUSH_TIMEOUT_MILLIS = 250L
     }
+}
+
+/**
+ * Spec-correct response to a PTO timer firing (RFC 9002 §6.2.4). Pre-1-RTT
+ * the probe packet MUST be ack-eliciting at the encryption level with
+ * unacknowledged data, and SHOULD retransmit the lost data rather than
+ * emit a bare PING — so we requeue ALL inflight CRYPTO bytes at the
+ * highest active pre-application level (Initial or Handshake), and the
+ * next [drainOutbound] emits a CRYPTO frame at the original offset.
+ *
+ * `pendingPing` stays set as a fallback. `collectHandshakeLevelFrames`
+ * suppresses the PING when CRYPTO is in the same frame list, so we
+ * don't waste a frame on top of the retransmit. Post-1-RTT we keep
+ * the bare-PING behavior — STREAM loss detection drives retransmit
+ * from the ACK that the PING elicits.
+ *
+ * Why aioquic interop demands this: aioquic strictly rejects pre-
+ * handshake Initials that contain no CRYPTO frame
+ * (`CONNECTION_CLOSE 0x0 "Packet contains no CRYPTO frame"`). A
+ * bare-PING probe before the ClientHello is acknowledged is fatal.
+ *
+ * Extracted from [QuicConnectionDriver.sendLoop]'s PTO branch into a
+ * top-level helper so the unit test in
+ * [com.vitorpamplona.quic.connection.PtoCryptoRetransmitTest]
+ * can invoke the EXACT logic the live driver does, without standing
+ * up a UDP socket. Earlier shapes simulated the steps inline in the
+ * test, which let the driver-side wiring regress twice
+ * (commits c0d7b6031, then again in the lock-split refactor) without
+ * any test breaking.
+ *
+ * `pendingPing` and `consecutivePtoCount` are `@Volatile` so we set
+ * them outside any external lock. `requeueAllInflightCrypto` mutates
+ * the level's `cryptoSend` buffer; we take `levelLock` for the
+ * requeue so the writer's `takeChunk` can't observe a half-mutated
+ * inflight queue mid-build.
+ */
+internal suspend fun handlePtoFired(conn: QuicConnection) {
+    conn.pendingPing = true
+    if (conn.application.sendProtection == null) {
+        val level = highestPreApplicationLevel(conn)
+        if (level != null) {
+            conn.levelState(level).levelLock.withLock {
+                conn.requeueAllInflightCrypto(level)
+            }
+        }
+    }
+    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
 }
 
 /**
