@@ -62,6 +62,13 @@ class LocalRelayServer(
     /** Pass 0 to let the OS pick a free port. Read [url] after [start] to learn it. */
     val port: Int = 0,
     val path: String = "/",
+    /**
+     * Per-frame size cap; mirrors `[limits].max_ws_frame_bytes` in the
+     * config. Frames larger than this are rejected at the WebSocket
+     * layer, which is the only layer that sees the raw bytes. `null`
+     * uses Ktor's default (~1 MiB).
+     */
+    val maxFrameBytes: Long? = null,
 ) {
     private var engine: CIOApplicationEngine? = null
     private var resolvedPort: Int = -1
@@ -80,7 +87,9 @@ class LocalRelayServer(
     fun start(): LocalRelayServer {
         val server =
             embeddedServer(CIO, host = host, port = port) {
-                install(WebSockets)
+                install(WebSockets) {
+                    maxFrameBytes?.let { maxFrameSize = it }
+                }
                 routing {
                     // NIP-11: GET on the relay URL with Accept:
                     // application/nostr+json returns the relay info doc.

@@ -28,6 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.relay.config.RelayConfig
+import com.vitorpamplona.quartz.relay.policies.KindAllowDenyPolicy
+import com.vitorpamplona.quartz.relay.policies.MaxEventBytesPolicy
+import com.vitorpamplona.quartz.relay.policies.PubkeyAllowDenyPolicy
+import com.vitorpamplona.quartz.relay.policies.RateLimitPolicy
+import com.vitorpamplona.quartz.relay.policies.RejectFutureEventsPolicy
 import java.io.File
 
 /**
@@ -89,18 +94,26 @@ fun main(args: Array<String>) {
 
     val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
 
-    val policyBuilder: () -> IRelayPolicy =
-        when {
-            verifySigs && requireAuth -> { -> VerifyPolicy + FullAuthPolicy(advertisedUrl) }
-            verifySigs -> { -> VerifyPolicy }
-            requireAuth -> { -> FullAuthPolicy(advertisedUrl) }
-            else -> { -> EmptyPolicy }
-        }
+    val policyBuilder: () -> IRelayPolicy = {
+        composePolicy(config, advertisedUrl, requireAuth, verifySigs)
+    }
 
     warnUnenforcedSections(config)
 
     val relay = Relay(advertisedUrl, store, info, policyBuilder)
-    val server = LocalRelayServer(relay, host = host, port = port, path = path).start()
+    // Frame cap honors max_ws_frame_bytes when set; max_ws_message_bytes
+    // is treated as the same cap (Ktor's WebSockets plugin only exposes
+    // a single per-frame limit; multi-frame messages remain unbounded).
+    val frameLimit =
+        (config.limits.max_ws_frame_bytes ?: config.limits.max_ws_message_bytes)?.toLong()
+    val server =
+        LocalRelayServer(
+            relay,
+            host = host,
+            port = port,
+            path = path,
+            maxFrameBytes = frameLimit,
+        ).start()
 
     Runtime.getRuntime().addShutdownHook(
         Thread {
@@ -116,30 +129,72 @@ fun main(args: Array<String>) {
     Thread.currentThread().join()
 }
 
-/** Surface a warning when the operator has set sections we don't yet enforce. */
+/**
+ * Builds the policy stack for one connection from the config.
+ *
+ * Order matters — cheap rejection paths run before expensive ones:
+ *   1. Rate limit (per-session, fastest reject path)
+ *   2. AUTH (drops everything if not authenticated)
+ *   3. Future-timestamp + size-cap + allow/deny lists
+ *   4. Signature verification (most expensive)
+ *
+ * The relay's `policyBuilder` factory is invoked per connection so
+ * rate-limit token buckets are session-scoped (not global).
+ */
+private fun composePolicy(
+    config: RelayConfig,
+    advertisedUrl: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
+    requireAuth: Boolean,
+    verifySigs: Boolean,
+): IRelayPolicy {
+    val pieces = mutableListOf<IRelayPolicy>()
+
+    val l = config.limits
+    if (l.messages_per_sec != null || l.subscriptions_per_min != null) {
+        pieces += RateLimitPolicy(l.messages_per_sec, l.subscriptions_per_min)
+    }
+
+    if (requireAuth) {
+        pieces += FullAuthPolicy(advertisedUrl)
+    }
+
+    config.options.reject_future_seconds?.let { secs ->
+        pieces += RejectFutureEventsPolicy(secs)
+    }
+
+    l.max_event_bytes?.let { bytes ->
+        pieces += MaxEventBytesPolicy(bytes)
+    }
+
+    val auth = config.authorization
+    if (auth.kind_whitelist.isNotEmpty() || auth.kind_blacklist.isNotEmpty()) {
+        pieces += KindAllowDenyPolicy(auth.kind_whitelist.toSet(), auth.kind_blacklist.toSet())
+    }
+    if (auth.pubkey_whitelist.isNotEmpty() || auth.pubkey_blacklist.isNotEmpty()) {
+        pieces += PubkeyAllowDenyPolicy(auth.pubkey_whitelist.toSet(), auth.pubkey_blacklist.toSet())
+    }
+
+    if (verifySigs) {
+        pieces += VerifyPolicy
+    }
+
+    return pieces.fold<IRelayPolicy, IRelayPolicy>(EmptyPolicy) { acc, p ->
+        if (acc === EmptyPolicy) p else acc + p
+    }
+}
+
+/**
+ * Surface a warning for config sections we still don't enforce. As we
+ * add policies the matching branch is removed here.
+ */
 private fun warnUnenforcedSections(config: RelayConfig) {
     val warnings = mutableListOf<String>()
     val l = config.limits
-    if (l.max_event_bytes != null ||
-        l.max_ws_message_bytes != null ||
-        l.max_ws_frame_bytes != null ||
-        l.messages_per_sec != null ||
-        l.subscriptions_per_min != null ||
-        l.max_subscriptions_per_session != null ||
-        l.max_filters_per_req != null
-    ) {
-        warnings += "[limits] section is parsed but NOT YET ENFORCED — rate limits / message size caps are pending."
+    if (l.max_subscriptions_per_session != null) {
+        warnings += "[limits].max_subscriptions_per_session is parsed but NOT YET ENFORCED."
     }
-    val auth = config.authorization
-    if (auth.pubkey_whitelist.isNotEmpty() ||
-        auth.pubkey_blacklist.isNotEmpty() ||
-        auth.kind_whitelist.isNotEmpty() ||
-        auth.kind_blacklist.isNotEmpty()
-    ) {
-        warnings += "[authorization] section is parsed but NOT YET ENFORCED — pubkey/kind allow-deny lists are pending."
-    }
-    if (config.options.reject_future_seconds != null) {
-        warnings += "[options].reject_future_seconds is parsed but NOT YET ENFORCED."
+    if (l.max_filters_per_req != null) {
+        warnings += "[limits].max_filters_per_req is parsed but NOT YET ENFORCED."
     }
     if (config.network.remote_ip_header != null) {
         warnings += "[network].remote_ip_header is parsed but NOT YET ENFORCED — IP-based limits are pending."

@@ -145,7 +145,10 @@ class Nip40ExpirationTest {
             )
 
             // Wait until shortLived is past its expiration, then sweep.
-            kotlinx.coroutines.delay(1500)
+            // SQLite's unixepoch() is integer seconds, so we need a full
+            // second's gap from the (now + 1) expiration; bump to 2.5s
+            // to absorb thread-scheduling jitter on busy CI runners.
+            kotlinx.coroutines.delay(2500)
             hub.getOrCreate(relayUrl).store.deleteExpiredEvents()
 
             // Long-lived survives.
