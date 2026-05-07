@@ -50,6 +50,8 @@ import kotlin.system.exitProcess
  *  - `1`   — testcase failed (bug in our impl, OR partner)
  *  - `127` — testcase not implemented (runner skips, doesn't fail)
  */
+private fun nowMs(): Long = System.currentTimeMillis()
+
 private const val EXIT_OK = 0
 private const val EXIT_FAIL = 1
 private const val EXIT_UNSUPPORTED = 127
@@ -348,7 +350,16 @@ private fun runTransferTest(
                             // ~10 streams/packet. Coalescing recovered
                             // by batching enqueues + single wake.
                             val collected = mutableListOf<Pair<URI, GetResponse>>()
-                            urls.chunked(MULTIPLEX_PARALLELISM).forEach { chunk ->
+                            // Quiet by default. QUIC_INTEROP_DEBUG=1 emits one
+                            // line per chunk to stderr — wall-clock split between
+                            // "all enqueued" and "all responded" lets us see
+                            // whether time is spent in the writer (lots of ms
+                            // before responses start arriving) or the server
+                            // (responses dribble in over a long stretch).
+                            val debug = System.getenv("QUIC_INTEROP_DEBUG") == "1"
+                            val transferStartMs = nowMs()
+                            urls.chunked(MULTIPLEX_PARALLELISM).forEachIndexed { chunkIdx, chunk ->
+                                val chunkStartMs = nowMs()
                                 // Single lock-held batch open + enqueue.
                                 // Without this, openBidiStream's per-call
                                 // lock acquire / release lets the send loop
@@ -356,6 +367,7 @@ private fun runTransferTest(
                                 // stream per packet.
                                 val handles = client.prepareRequests(authority, chunk.map { it.path })
                                 driver.wakeup()
+                                val enqueuedMs = nowMs()
                                 coroutineScope {
                                     val deferreds =
                                         chunk.zip(handles).map { (url, handle) ->
@@ -368,6 +380,15 @@ private fun runTransferTest(
                                             }
                                         }
                                     deferreds.forEach { collected += it.await() }
+                                }
+                                if (debug) {
+                                    val doneMs = nowMs()
+                                    System.err.println(
+                                        "[interop] chunk=$chunkIdx size=${chunk.size} " +
+                                            "enqueue=${enqueuedMs - chunkStartMs}ms " +
+                                            "responses=${doneMs - enqueuedMs}ms " +
+                                            "cumulative=${doneMs - transferStartMs}ms",
+                                    )
                                 }
                             }
                             collected

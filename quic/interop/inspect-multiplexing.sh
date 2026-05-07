@@ -58,6 +58,33 @@ if [[ -n "$QLOG" ]]; then
     grep -oE '"name":"[^"]+"' "$QLOG" | sort | uniq -c | sort -rn | head -n 20
 
     echo
+    echo "=============== frames-per-packet histogram (sent) ==============="
+    # Smoking gun for "is the writer coalescing or sending one STREAM
+    # per datagram":
+    #   - Many `frames=1`  → regressed, one stream per packet on the wire
+    #   - Most `frames>=4` → writer is bursting, server is the bottleneck
+    grep '"name":"transport:packet_sent"' "$QLOG" \
+      | awk -F'"frame_type":' '{print NF - 1}' \
+      | sort -n | uniq -c
+
+    echo
+    echo "=============== stream-frames-per-sent-packet histogram ==============="
+    # Same shape but counts STREAM frames specifically (vs ack/ping/etc).
+    # A "stream" frame_type means request data going out.
+    grep '"name":"transport:packet_sent"' "$QLOG" \
+      | awk -F'"frame_type":"stream"' '{print NF - 1}' \
+      | sort -n | uniq -c
+
+    echo
+    echo "=============== wall-clock arrival of first 30 sent stream-bearing packets ==============="
+    # Did we BURST 64 streams in ~50ms after handshake, or did we
+    # dribble them out over time?
+    grep '"name":"transport:packet_sent".*"frame_type":"stream"' "$QLOG" \
+      | head -n 30 \
+      | grep -oE '"time":[0-9]+' \
+      | head -n 30
+
+    echo
     echo "=============== last 5 packet_received events ==============="
     grep '"name":"transport:packet_received"' "$QLOG" | tail -n 5
 
