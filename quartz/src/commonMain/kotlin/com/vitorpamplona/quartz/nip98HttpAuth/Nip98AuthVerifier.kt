@@ -18,33 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.admin
+package com.vitorpamplona.quartz.nip98HttpAuth
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.abs
 
 /**
- * Verifies a NIP-98 `Authorization: Nostr <base64-event>` header.
+ * Server-side counterpart to [HTTPAuthorizationEvent]. Verifies a
+ * NIP-98 `Authorization: Nostr <base64-event>` header.
  *
  * NIP-98 reuses kind 27235 events with `u`, `method`, and (for bodies)
- * `payload` tags. The relay must check:
+ * `payload` tags. Verification checks:
  *  1. Header is `Nostr <base64>`.
  *  2. Decoded body is a kind-27235 event with a valid Schnorr signature.
- *  3. The event's `created_at` is within ±60 s of now (NIP-98 spec).
+ *  3. The event's `created_at` is within ±[toleranceSeconds] of now.
  *  4. The `method` tag matches the HTTP method.
  *  5. The `u` tag matches the requested URL.
  *  6. If a body is present, the `payload` tag matches `sha256(body)` hex.
  *
- * Returns the verified pubkey on success; `null` on any failure (the
- * caller turns this into a `401 Unauthorized`).
+ * Returns the verified pubkey on success; a [Result.Malformed] /
+ * [Result.Missing] otherwise (the caller turns these into 401/403).
  */
 class Nip98AuthVerifier(
     private val now: () -> Long = { TimeUtils.now() },
@@ -57,16 +59,19 @@ class Nip98AuthVerifier(
      * `2 × toleranceSeconds` (twice the accepted window so a token
      * can't be reused by an attacker who buffers across the boundary).
      *
-     * `synchronized` access is sufficient — the table is small (~hundreds
-     * of entries at most) and admin RPC traffic is low-rate.
+     * Guarded by [seenLock] so the eviction sweep + insertion are
+     * atomic. We use a coroutine [Mutex] so the type works in KMP
+     * commonMain (no `synchronized` block).
      */
     private val seenEventIds: LinkedHashMap<String, Long> =
         object : LinkedHashMap<String, Long>(64, 0.75f, true) {
             override fun removeEldestEntry(eldest: Map.Entry<String, Long>?): Boolean = size > MAX_REPLAY_ENTRIES
         }
 
+    private val seenLock = Mutex()
+
     @OptIn(ExperimentalEncodingApi::class)
-    fun verify(
+    suspend fun verify(
         authorizationHeader: String?,
         method: String,
         url: String,
@@ -128,8 +133,12 @@ class Nip98AuthVerifier(
         // Replay check — done LAST so we don't burn a one-shot id on a
         // request that would otherwise have failed signature/url/etc.
         val expiry = nowSec + 2 * toleranceSeconds
-        synchronized(seenEventIds) {
-            // Evict expired entries while we hold the lock.
+        seenLock.withLock {
+            // Evict expired entries while we hold the lock. Insertion
+            // order (LinkedHashMap default) tracks expiry order
+            // because every entry's expiry = now + 2·tolerance, so
+            // the first non-expired entry guarantees no later entry
+            // is expired either.
             val it = seenEventIds.entries.iterator()
             while (it.hasNext()) {
                 if (it.next().value <= nowSec) it.remove() else break

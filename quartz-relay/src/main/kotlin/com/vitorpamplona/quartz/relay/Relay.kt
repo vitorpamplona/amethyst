@@ -30,8 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.relay.admin.BanStore
-import com.vitorpamplona.quartz.relay.admin.DynamicBanPolicy
+import com.vitorpamplona.quartz.nip86RelayManagement.server.BanListPolicy
+import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import com.vitorpamplona.quartz.relay.persistence.BannedEntry
 import com.vitorpamplona.quartz.relay.persistence.RelayPersistedState
 import com.vitorpamplona.quartz.relay.persistence.RelayStateStore
@@ -49,7 +49,8 @@ import kotlin.coroutines.CoroutineContext
  * NIP-45 (COUNT) and NIP-50 (search via the SQLite FTS index).
  *
  * Two transports:
- *   - [InProcessWebSocket] / [RelayHub] — no socket, fastest path, ideal
+ *   - [com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket] /
+ *     [RelayHub] — no socket, fastest path, ideal
  *     for unit tests inside one JVM.
  *   - [LocalRelayServer] — Ktor `embeddedServer` listening on a real port.
  *     Use when external clients need to connect (`cli`, instrumented tests,
@@ -91,7 +92,7 @@ class Relay(
         stateStore?.load()?.info?.let { RelayInfo(it) } ?: info
         private set
 
-    /** Mutates the live NIP-11 doc. Called by [admin.Nip86Server]. */
+    /** Mutates the live NIP-11 doc. Called by [Nip86Server]. */
     fun updateInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
         info = RelayInfo(transform(info.document))
         snapshot()
@@ -99,8 +100,8 @@ class Relay(
 
     /**
      * Runtime-mutable ban / allow lists. NIP-86 RPC handlers in
-     * [admin.Nip86Server] mutate this; the policy stack consults it on
-     * every accept call via [DynamicBanPolicy].
+     * [Nip86Server] mutate this; the policy stack consults it on
+     * every accept call via [BanListPolicy].
      */
     val banStore: BanStore = BanStore(onMutation = { snapshot() })
 
@@ -148,13 +149,13 @@ class Relay(
     val server =
         NostrServer(
             store,
-            // Always prepend a DynamicBanPolicy so NIP-86 admin actions
+            // Always prepend a BanListPolicy so NIP-86 admin actions
             // bite. When the operator-supplied builder returns
             // [EmptyPolicy] we use the dynamic policy alone; otherwise
             // we stack them so both layers must accept.
             policyBuilder = {
                 val user = policyBuilder()
-                if (user === EmptyPolicy) DynamicBanPolicy(banStore) else user + DynamicBanPolicy(banStore)
+                if (user === EmptyPolicy) BanListPolicy(banStore) else user + BanListPolicy(banStore)
             },
             parentContext,
         )

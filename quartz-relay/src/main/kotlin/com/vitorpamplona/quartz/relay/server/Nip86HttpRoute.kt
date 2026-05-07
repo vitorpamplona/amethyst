@@ -24,8 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response
-import com.vitorpamplona.quartz.relay.admin.Nip86Server
-import com.vitorpamplona.quartz.relay.admin.Nip98AuthVerifier
+import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
+import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode

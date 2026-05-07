@@ -18,11 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.admin
+package com.vitorpamplona.quartz.nip98HttpAuth
 
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,66 +55,80 @@ class Nip98AuthVerifierTest {
 
     @Test
     fun missingHeaderReturnsMissing() {
-        val r = verifier.verify(null, "POST", "http://x/", null)
-        assertIs<Nip98AuthVerifier.Result.Missing>(r)
+        runBlocking {
+            val r = verifier.verify(null, "POST", "http://x/", null)
+            assertIs<Nip98AuthVerifier.Result.Missing>(r)
+        }
     }
 
     @Test
     fun wrongSchemeIsMalformed() {
-        val r = verifier.verify("Bearer abc", "POST", "http://x/", null)
-        assertIs<Nip98AuthVerifier.Result.Malformed>(r)
-        assertTrue(r.reason.contains("Nostr"))
+        runBlocking {
+            val r = verifier.verify("Bearer abc", "POST", "http://x/", null)
+            assertIs<Nip98AuthVerifier.Result.Malformed>(r)
+            assertTrue(r.reason.contains("Nostr"))
+        }
     }
 
     @Test
     fun urlMismatchIsMalformed() {
-        val (_, header) = signedToken("http://x/", "POST")
-        val r = verifier.verify(header, "POST", "http://y/", null)
-        assertIs<Nip98AuthVerifier.Result.Malformed>(r)
-        assertTrue(r.reason.contains("url mismatch"))
+        runBlocking {
+            val (_, header) = signedToken("http://x/", "POST")
+            val r = verifier.verify(header, "POST", "http://y/", null)
+            assertIs<Nip98AuthVerifier.Result.Malformed>(r)
+            assertTrue(r.reason.contains("url mismatch"))
+        }
     }
 
     @Test
     fun methodMismatchIsMalformed() {
-        val (_, header) = signedToken("http://x/", "POST")
-        val r = verifier.verify(header, "GET", "http://x/", null)
-        assertIs<Nip98AuthVerifier.Result.Malformed>(r)
-        assertTrue(r.reason.contains("method mismatch"))
+        runBlocking {
+            val (_, header) = signedToken("http://x/", "POST")
+            val r = verifier.verify(header, "GET", "http://x/", null)
+            assertIs<Nip98AuthVerifier.Result.Malformed>(r)
+            assertTrue(r.reason.contains("method mismatch"))
+        }
     }
 
     @Test
     fun payloadHashMismatchIsMalformed() {
-        val (_, header) = signedToken("http://x/", "POST", "alpha".encodeToByteArray())
-        val r = verifier.verify(header, "POST", "http://x/", "beta".encodeToByteArray())
-        assertIs<Nip98AuthVerifier.Result.Malformed>(r)
-        assertTrue(r.reason.contains("payload hash"))
+        runBlocking {
+            val (_, header) = signedToken("http://x/", "POST", "alpha".encodeToByteArray())
+            val r = verifier.verify(header, "POST", "http://x/", "beta".encodeToByteArray())
+            assertIs<Nip98AuthVerifier.Result.Malformed>(r)
+            assertTrue(r.reason.contains("payload hash"))
+        }
     }
 
     @Test
     fun staleCreatedAtIsMalformed() {
-        // Verifier's clock is fixed at 1_000; sign a token created 5
-        // minutes earlier — outside the 60s tolerance.
-        val (_, header) = signedToken("http://x/", "POST", createdAt = 1_000L - 600)
-        val r = verifier.verify(header, "POST", "http://x/", null)
-        assertIs<Nip98AuthVerifier.Result.Malformed>(r)
-        assertTrue(r.reason.contains("created_at"))
+        runBlocking {
+            // Verifier's clock is fixed at 1_000; sign a token created 5
+            // minutes earlier — outside the 60s tolerance.
+            val (_, header) = signedToken("http://x/", "POST", createdAt = 1_000L - 600)
+            val r = verifier.verify(header, "POST", "http://x/", null)
+            assertIs<Nip98AuthVerifier.Result.Malformed>(r)
+            assertTrue(r.reason.contains("created_at"))
+        }
     }
 
     @Test
     fun nonAuthEventKindIsMalformed() {
-        // Build a kind-1 event by hand and shove it into the header — it
-        // must be rejected because NIP-98 specifically uses kind 27235.
-        val signer = NostrSignerSync(KeyPair())
-        val template =
-            com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-                .build("not an auth event")
-        val signed = signer.sign(template)
-        val token =
-            "Nostr " +
-                kotlin.io.encoding.Base64
-                    .encode(signed.toJson().encodeToByteArray())
-        val r = verifier.verify(token, "POST", "http://x/", null)
-        assertIs<Nip98AuthVerifier.Result.Malformed>(r)
-        assertTrue(r.reason.contains("kind"))
+        runBlocking {
+            // Build a kind-1 event by hand and shove it into the header — it
+            // must be rejected because NIP-98 specifically uses kind 27235.
+            val signer = NostrSignerSync(KeyPair())
+            val template =
+                com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+                    .build("not an auth event")
+            val signed = signer.sign(template)
+            val token =
+                "Nostr " +
+                    kotlin.io.encoding.Base64
+                        .encode(signed.toJson().encodeToByteArray())
+            val r = verifier.verify(token, "POST", "http://x/", null)
+            assertIs<Nip98AuthVerifier.Result.Malformed>(r)
+            assertTrue(r.reason.contains("kind"))
+        }
     }
 }

@@ -24,13 +24,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.relay.config.RelayConfig
-import com.vitorpamplona.quartz.relay.policies.KindAllowDenyPolicy
-import com.vitorpamplona.quartz.relay.policies.PubkeyAllowDenyPolicy
-import com.vitorpamplona.quartz.relay.policies.RejectFutureEventsPolicy
 import java.io.File
 
 /**

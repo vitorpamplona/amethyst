@@ -18,42 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.admin
+package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
-import com.vitorpamplona.quartz.relay.policies.PassThroughPolicy
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * Reads the live [BanStore] on every EVENT and rejects events that
- * violate any of: banned-event-id, banned-pubkey, missing from a
- * non-empty allow list, or kind disallowed / not in the kind allow
- * list.
+ * Rejects events whose `created_at` is more than [maxFutureSeconds]
+ * seconds in the future relative to the relay's clock. Mirrors
+ * nostr-rs-relay's `[options].reject_future_seconds`.
  *
- * This is the runtime-mutable counterpart of the static
- * [com.vitorpamplona.quartz.relay.policies.KindAllowDenyPolicy] +
- * [com.vitorpamplona.quartz.relay.policies.PubkeyAllowDenyPolicy] —
- * both sets compose: the event must clear both layers. NIP-86 admin
- * RPC mutations land here; the static policies stay frozen at
- * boot-time config values.
+ * Catches both clock-skew accidents and intentional far-future
+ * timestamps used to push events to the top of newest-first feeds.
+ *
+ * The current time is read from [TimeUtils.now] (epoch seconds), the
+ * same source the [com.vitorpamplona.quartz.nip40Expiration.isExpired]
+ * check uses, so the relay's "future" and "expired" decisions agree.
  */
-class DynamicBanPolicy(
-    val banStore: BanStore,
+class RejectFutureEventsPolicy(
+    val maxFutureSeconds: Int,
+    private val now: () -> Long = { TimeUtils.now() },
 ) : PassThroughPolicy() {
+    init {
+        require(maxFutureSeconds >= 0) { "maxFutureSeconds must be >= 0, got $maxFutureSeconds" }
+    }
+
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> {
-        val ev = cmd.event
-        if (banStore.isBannedEvent(ev.id)) {
-            return PolicyResult.Rejected("blocked: event id is banned")
+        val skew = cmd.event.createdAt - now()
+        return if (skew > maxFutureSeconds) {
+            PolicyResult.Rejected("invalid: created_at is $skew seconds in the future (max $maxFutureSeconds)")
+        } else {
+            PolicyResult.Accepted(cmd)
         }
-        if (banStore.isBanned(ev.pubKey)) {
-            return PolicyResult.Rejected("blocked: pubkey is banned")
-        }
-        if (banStore.hasAllowList() && !banStore.isAllowedPubkey(ev.pubKey)) {
-            return PolicyResult.Rejected("blocked: pubkey is not on the allow list")
-        }
-        if (!banStore.isKindAllowed(ev.kind)) {
-            return PolicyResult.Rejected("blocked: kind ${ev.kind} not allowed")
-        }
-        return PolicyResult.Accepted(cmd)
     }
 }

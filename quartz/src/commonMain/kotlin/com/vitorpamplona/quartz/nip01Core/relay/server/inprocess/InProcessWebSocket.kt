@@ -18,8 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay
+package com.vitorpamplona.quartz.nip01Core.relay.server.inprocess
 
+import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
@@ -33,21 +34,26 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.launch
 
 /**
- * In-memory implementation of [WebSocket] that talks to a [Relay] without
- * touching the network. Each instance opens one [RelaySession] on
- * [connect] and routes:
+ * In-memory implementation of [WebSocket] that talks directly to a
+ * [NostrServer] without touching the network. Each instance opens one
+ * [RelaySession] on [connect] and routes:
  *
- *  - Outbound (`send`) → server `RelaySession.receive()` via an inbound channel
- *    drained by a single coroutine, preserving message order per the
- *    [WebSocketListener] contract.
+ *  - Outbound (`send`) → server `RelaySession.receive()` via an inbound
+ *    channel drained by a single coroutine, preserving message order
+ *    per the [WebSocketListener] contract.
  *  - Server-side `send` callbacks → [WebSocketListener.onMessage].
+ *
+ * Use this to wire a `NostrClient` to an embedded server in unit tests
+ * or single-JVM scenarios without paying for a real TCP socket. Because
+ * it implements [WebSocket], it slots into anywhere a `WebsocketBuilder`
+ * expects.
  *
  * Reconnect-after-disconnect is supported: each [connect] creates a
  * fresh scope + drain channel so a previous [disconnect] (which
  * cancels both) doesn't leave a dead drainer behind.
  */
 class InProcessWebSocket(
-    private val relay: Relay,
+    private val server: NostrServer,
     private val out: WebSocketListener,
 ) : WebSocket {
     private var scope: CoroutineScope? = null
@@ -61,7 +67,7 @@ class InProcessWebSocket(
         if (session != null) return
         val newScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val newIncoming = Channel<String>(UNLIMITED)
-        val s = relay.server.connect { json -> out.onMessage(json) }
+        val s = server.connect { json -> out.onMessage(json) }
 
         scope = newScope
         incoming = newIncoming

@@ -170,7 +170,7 @@ class Nip86EndToEndTest {
 
             // Subsequent EVENT from the banned author is rejected.
             val after = nostrClient.publishAndConfirm(targetUser.sign(TextNoteEvent.build("second")), setOf(relayUrl))
-            assertEquals(false, after, "DynamicBanPolicy must reject events from banned pubkeys")
+            assertEquals(false, after, "BanListPolicy must reject events from banned pubkeys")
         }
 
     @Test

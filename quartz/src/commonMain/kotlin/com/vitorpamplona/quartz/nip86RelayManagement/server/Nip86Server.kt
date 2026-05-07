@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.admin
+package com.vitorpamplona.quartz.nip86RelayManagement.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Method
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response
-import com.vitorpamplona.quartz.relay.RelayInfo
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.KSerializer
@@ -43,14 +42,16 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.int
 
 /**
- * NIP-86 RPC dispatcher. Holds the [BanStore] (mutated by ban/allow
- * methods), the live [RelayInfo] handle (mutated by `changerelay*`
- * methods, which atomically swap the doc), and the underlying
- * [IEventStore] so `banevent` can also delete the offending event.
+ * Server-side dispatcher for the NIP-86 relay management API.
  *
- * The dispatcher is transport-agnostic — `LocalRelayServer` calls
- * [dispatch] from its HTTP route, but the same handler also works for
- * in-process tests that build a [Nip86Request] directly.
+ * Holds the [BanStore] (mutated by ban/allow methods), an [InfoHolder]
+ * for the live NIP-11 doc (mutated by `changerelay*` methods, which
+ * atomically swap it), and an optional [IEventStore] so `banevent`
+ * can also delete the offending event from the store.
+ *
+ * Transport-agnostic — relay implementations call [dispatch] from
+ * whatever HTTP route they expose (e.g. POST `application/nostr+json+rpc`),
+ * and in-process tests can build a [Nip86Request] directly.
  *
  * [supportedMethods] is the canonical list this server actually
  * implements; methods returned outside of it are no-ops and a NIP-86
@@ -70,9 +71,9 @@ class Nip86Server(
 ) {
     /** Pluggable container so the relay's NIP-11 doc can be swapped at runtime. */
     interface InfoHolder {
-        fun get(): RelayInfo
+        fun get(): Nip11RelayInformation
 
-        fun set(info: RelayInfo)
+        fun set(info: Nip11RelayInformation)
     }
 
     val supportedMethods: List<String> =
@@ -225,8 +226,7 @@ class Nip86Server(
     }
 
     private fun rewriteInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
-        val current = infoHolder.get().document
-        infoHolder.set(RelayInfo(transform(current)))
+        infoHolder.set(transform(infoHolder.get()))
     }
 }
 

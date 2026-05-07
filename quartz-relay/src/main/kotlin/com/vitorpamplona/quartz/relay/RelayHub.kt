@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.relay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
@@ -72,7 +73,7 @@ class RelayHub(
     override fun build(
         url: NormalizedRelayUrl,
         out: WebSocketListener,
-    ): WebSocket = InProcessWebSocket(getOrCreate(url), out)
+    ): WebSocket = InProcessWebSocket(getOrCreate(url).server, out)
 
     /**
      * Idempotent. Sets the closed flag first so concurrent

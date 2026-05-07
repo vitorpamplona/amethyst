@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.policies
+package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -33,8 +33,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
  * Convenience base that accepts everything by default. Subclasses
  * override only the hook(s) they actually enforce so the call sites
  * stay readable.
+ *
+ * Concrete (not abstract) so [EmptyPolicy] can subclass it as a
+ * singleton and external code that just wants a no-op policy can
+ * instantiate this directly.
  */
-abstract class PassThroughPolicy : IRelayPolicy {
+open class PassThroughPolicy : IRelayPolicy {
     override fun onConnect(send: (Message) -> Unit) {}
 
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> = PolicyResult.Accepted(cmd)

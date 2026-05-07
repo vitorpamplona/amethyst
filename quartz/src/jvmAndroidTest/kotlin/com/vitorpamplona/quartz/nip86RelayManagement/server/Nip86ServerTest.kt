@@ -18,16 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.admin
+package com.vitorpamplona.quartz.nip86RelayManagement.server
 
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Method
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
-import com.vitorpamplona.quartz.relay.RelayInfo
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -43,18 +41,17 @@ import kotlin.test.assertTrue
 class Nip86ServerTest {
     private fun fixture(): Triple<Nip86Server, BanStore, Holder> {
         val store = BanStore()
-        val holder =
-            Holder(RelayInfo(Nip11RelayInformation(name = "before", description = "before-desc")))
+        val holder = Holder(Nip11RelayInformation(name = "before", description = "before-desc"))
         val server = Nip86Server(banStore = store, infoHolder = holder, store = null)
         return Triple(server, store, holder)
     }
 
     private class Holder(
-        var current: RelayInfo,
+        var current: Nip11RelayInformation,
     ) : Nip86Server.InfoHolder {
         override fun get() = current
 
-        override fun set(info: RelayInfo) {
+        override fun set(info: Nip11RelayInformation) {
             current = info
         }
     }
@@ -62,10 +59,9 @@ class Nip86ServerTest {
     private val pk = "a".repeat(64)
     private val pk2 = "b".repeat(64)
     private val eventId = "c".repeat(64)
-    private val relayUrl = RelayUrlNormalizer.normalize("ws://test/")
 
     @Test
-    fun supportedMethodsRoundTrip() =
+    fun supportedMethodsRoundTrip() {
         runBlocking {
             val (server, _, _) = fixture()
             val resp = server.dispatch(Nip86Request.supportedMethods())
@@ -76,9 +72,10 @@ class Nip86ServerTest {
             assertTrue(Nip86Method.BAN_PUBKEY in names)
             assertTrue(Nip86Method.CHANGE_RELAY_NAME in names)
         }
+    }
 
     @Test
-    fun banPubkeyMutatesStoreAndListsRoundTripWithReason() =
+    fun banPubkeyMutatesStoreAndListsRoundTripWithReason() {
         runBlocking {
             val (server, banStore, _) = fixture()
 
@@ -100,9 +97,10 @@ class Nip86ServerTest {
             server.dispatch(Nip86Request.unbanPubkey(pk))
             assertTrue(banStore.listBannedPubkeys().isEmpty())
         }
+    }
 
     @Test
-    fun allowPubkeyAndListRoundTrip() =
+    fun allowPubkeyAndListRoundTrip() {
         runBlocking {
             val (server, banStore, _) = fixture()
             server.dispatch(Nip86Request.allowPubkey(pk, "trusted"))
@@ -119,9 +117,10 @@ class Nip86ServerTest {
             assertEquals(2, list.size)
             assertEquals(setOf(pk, pk2), list.map { it.pubkey }.toSet())
         }
+    }
 
     @Test
-    fun banEventMarksIdAndDeletesFromStoreWhenStorePresent() =
+    fun banEventMarksIdAndDeletesFromStoreWhenStorePresent() {
         runBlocking {
             val (server, banStore, _) = fixture()
             server.dispatch(Nip86Request.banEvent(eventId, "off-topic"))
@@ -142,9 +141,10 @@ class Nip86ServerTest {
             server.dispatch(Nip86Request.allowEvent(eventId))
             assertTrue(banStore.listBannedEvents().isEmpty())
         }
+    }
 
     @Test
-    fun allowKindAndDisallowKind() =
+    fun allowKindAndDisallowKind() {
         runBlocking {
             val (server, banStore, _) = fixture()
             server.dispatch(Nip86Request.allowKind(1))
@@ -160,34 +160,37 @@ class Nip86ServerTest {
             assertEquals(false, banStore.isKindAllowed(4))
             assertEquals(false, banStore.isKindAllowed(99))
         }
+    }
 
     @Test
-    fun changeRelayNameDescriptionIconRewriteInfoDoc() =
+    fun changeRelayNameDescriptionIconRewriteInfoDoc() {
         runBlocking {
             val (server, _, holder) = fixture()
-            assertEquals("before", holder.current.document.name)
+            assertEquals("before", holder.current.name)
 
             server.dispatch(Nip86Request.changeRelayName("after"))
-            assertEquals("after", holder.current.document.name)
+            assertEquals("after", holder.current.name)
 
             server.dispatch(Nip86Request.changeRelayDescription("nice relay"))
-            assertEquals("nice relay", holder.current.document.description)
+            assertEquals("nice relay", holder.current.description)
 
             server.dispatch(Nip86Request.changeRelayIcon("https://x/icon.png"))
-            assertEquals("https://x/icon.png", holder.current.document.icon)
+            assertEquals("https://x/icon.png", holder.current.icon)
         }
+    }
 
     @Test
-    fun unsupportedMethodReturnsError() =
+    fun unsupportedMethodReturnsError() {
         runBlocking {
             val (server, _, _) = fixture()
             val resp = server.dispatch(Nip86Request(method = "frobnicate"))
             assertNotNull(resp.error)
             assertTrue(resp.error!!.contains("frobnicate"))
         }
+    }
 
     @Test
-    fun missingParamsAreReportedAsErrors() =
+    fun missingParamsAreReportedAsErrors() {
         runBlocking {
             val (server, _, _) = fixture()
             // banpubkey requires at least one positional param.
@@ -195,4 +198,5 @@ class Nip86ServerTest {
             assertNotNull(resp.error)
             assertTrue(resp.error!!.startsWith("invalid params"))
         }
+    }
 }

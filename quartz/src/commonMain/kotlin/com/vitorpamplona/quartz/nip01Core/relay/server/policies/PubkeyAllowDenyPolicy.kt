@@ -18,38 +18,39 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.policies
+package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * Rejects events whose `created_at` is more than [maxFutureSeconds]
- * seconds in the future relative to the relay's clock. Mirrors
- * nostr-rs-relay's `[options].reject_future_seconds`.
+ * Operator-controlled author allow/deny list. Mirrors nostr-rs-relay's
+ * `[authorization].pubkey_whitelist` / `pubkey_blacklist`.
  *
- * This catches both clock-skew accidents and intentional far-future
- * timestamps used to push events to the top of newest-first feeds.
+ *  - [allow] non-empty: only events from listed pubkeys are accepted.
+ *    This is the "private relay" mode.
+ *  - [deny] non-empty: events from listed pubkeys are rejected.
+ *  - Empty lists are no-op pass-through.
+ *  - When both are set, allow is checked first.
  *
- * The current time is read from [TimeUtils.now] (epoch seconds), the
- * same source the [com.vitorpamplona.quartz.nip40Expiration.isExpired]
- * check uses, so the relay's "future" and "expired" decisions agree.
+ * Pubkeys are matched case-insensitively (lowercased on entry).
  */
-class RejectFutureEventsPolicy(
-    val maxFutureSeconds: Int,
-    private val now: () -> Long = { TimeUtils.now() },
+class PubkeyAllowDenyPolicy(
+    allow: Set<HexKey> = emptySet(),
+    deny: Set<HexKey> = emptySet(),
 ) : PassThroughPolicy() {
-    init {
-        require(maxFutureSeconds >= 0) { "maxFutureSeconds must be >= 0, got $maxFutureSeconds" }
-    }
+    private val allow = allow.mapTo(HashSet()) { it.lowercase() }
+    private val deny = deny.mapTo(HashSet()) { it.lowercase() }
 
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> {
-        val skew = cmd.event.createdAt - now()
-        return if (skew > maxFutureSeconds) {
-            PolicyResult.Rejected("invalid: created_at is $skew seconds in the future (max $maxFutureSeconds)")
-        } else {
-            PolicyResult.Accepted(cmd)
+        val pk = cmd.event.pubKey.lowercase()
+        if (allow.isNotEmpty() && pk !in allow) {
+            return PolicyResult.Rejected("blocked: pubkey not on allow list")
         }
+        if (pk in deny) {
+            return PolicyResult.Rejected("blocked: pubkey is denied")
+        }
+        return PolicyResult.Accepted(cmd)
     }
 }

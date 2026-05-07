@@ -18,34 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.relay.policies
+package com.vitorpamplona.quartz.nip86RelayManagement.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
 
 /**
- * Operator-controlled kind allow/deny list. Mirrors nostr-rs-relay's
- * `[authorization].kind_whitelist` / `kind_blacklist`.
+ * Reads the live [BanStore] on every EVENT and rejects events that
+ * violate any of: banned-event-id, banned-pubkey, missing from a
+ * non-empty pubkey allow list, or kind disallowed / not in the kind
+ * allow list.
  *
- *  - When [allow] is non-empty, only events whose [Event.kind] is in
- *    [allow] are accepted; everything else gets `blocked: kind X not allowed`.
- *  - When [deny] is non-empty, events whose kind is in [deny] are
- *    rejected with `blocked: kind X denied`.
- *  - Both lists may be empty (no-op pass-through).
- *  - When both are set, allow is checked first (deny inside allow is
- *    still denied, matching nostr-rs-relay's precedence).
+ * This is the runtime-mutable counterpart of the static
+ * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy] +
+ * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy] —
+ * both layers compose: the event must clear all stacked policies.
+ * NIP-86 admin RPC mutations land in the [BanStore]; the static
+ * policies stay frozen at boot-time config values.
  */
-class KindAllowDenyPolicy(
-    val allow: Set<Int> = emptySet(),
-    val deny: Set<Int> = emptySet(),
+class BanListPolicy(
+    val banStore: BanStore,
 ) : PassThroughPolicy() {
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> {
-        val k = cmd.event.kind
-        if (allow.isNotEmpty() && k !in allow) {
-            return PolicyResult.Rejected("blocked: kind $k not allowed")
+        val ev = cmd.event
+        if (banStore.isBannedEvent(ev.id)) {
+            return PolicyResult.Rejected("blocked: event id is banned")
         }
-        if (k in deny) {
-            return PolicyResult.Rejected("blocked: kind $k denied")
+        if (banStore.isBanned(ev.pubKey)) {
+            return PolicyResult.Rejected("blocked: pubkey is banned")
+        }
+        if (banStore.hasAllowList() && !banStore.isAllowedPubkey(ev.pubKey)) {
+            return PolicyResult.Rejected("blocked: pubkey is not on the allow list")
+        }
+        if (!banStore.isKindAllowed(ev.kind)) {
+            return PolicyResult.Rejected("blocked: kind ${ev.kind} not allowed")
         }
         return PolicyResult.Accepted(cmd)
     }

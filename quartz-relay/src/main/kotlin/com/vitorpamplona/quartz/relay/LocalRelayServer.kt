@@ -23,8 +23,9 @@ package com.vitorpamplona.quartz.relay
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
-import com.vitorpamplona.quartz.relay.admin.Nip86Server
-import com.vitorpamplona.quartz.relay.admin.Nip98AuthVerifier
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
+import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
 import com.vitorpamplona.quartz.relay.server.Nip86HttpRoute
 import com.vitorpamplona.quartz.relay.server.WebSocketSessionPump
 import io.ktor.http.ContentType
@@ -47,12 +48,14 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Hosts a [Relay] over a real `ws://` endpoint backed by Ktor + CIO.
  *
- * Use this when something other than the in-process [InProcessWebSocket] needs
- * to talk to the relay — Android instrumented tests, the `cli` tooling,
- * external clients, or a standalone "run a Nostr relay" process.
+ * Use this when something other than the in-process
+ * [com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket]
+ * needs to talk to the relay — Android instrumented tests, the `cli`
+ * tooling, external clients, or a standalone "run a Nostr relay"
+ * process.
  *
- * For unit-test wiring inside a single JVM, prefer [RelayHub] +
- * [InProcessWebSocket] — same protocol, no socket overhead.
+ * For unit-test wiring inside a single JVM, prefer [RelayHub] + the
+ * in-process socket — same protocol, no socket overhead.
  *
  * Lifecycle:
  * ```
@@ -109,10 +112,10 @@ class LocalRelayServer(
 ) {
     private val infoHolder =
         object : Nip86Server.InfoHolder {
-            override fun get() = relay.info
+            override fun get(): Nip11RelayInformation = relay.info.document
 
-            override fun set(info: RelayInfo) {
-                relay.updateInfo { info.document }
+            override fun set(info: Nip11RelayInformation) {
+                relay.updateInfo { info }
             }
         }
 
