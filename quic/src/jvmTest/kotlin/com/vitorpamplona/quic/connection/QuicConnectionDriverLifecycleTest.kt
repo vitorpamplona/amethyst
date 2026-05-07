@@ -29,6 +29,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
 import kotlin.test.AfterTest
@@ -139,6 +140,7 @@ class QuicConnectionDriverLifecycleTest {
             // shows up as a leak.
             warmUpDispatchersIo()
             val baseline = liveThreadCount()
+            val baselineFds = liveFileDescriptorCount()
             val sessions = 100
             for (i in 0 until sessions) {
                 val parent = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -182,6 +184,23 @@ class QuicConnectionDriverLifecycleTest {
                 "thread count grew by $growth across $sessions sessions " +
                     "(baseline=$baseline final=$finalCount). Anything > 16 indicates a leak.",
             )
+
+            // FD-leak canary. On Linux, /proc/self/fd holds one entry per
+            // open file descriptor (sockets + pipes + regular files).
+            // A leak that misses socket.close() would show up here as
+            // ~1 FD per session — 100 sessions → growth ≥ 100 with
+            // certainty. We band at 16 (same headroom as threads). On
+            // platforms without /proc, [liveFileDescriptorCount] returns
+            // -1 and this branch silently no-ops.
+            val finalFds = liveFileDescriptorCount()
+            if (baselineFds >= 0 && finalFds >= 0) {
+                val fdGrowth = finalFds - baselineFds
+                assertTrue(
+                    fdGrowth <= 16,
+                    "FD count grew by $fdGrowth across $sessions sessions " +
+                        "(baseline=$baselineFds final=$finalFds). UDP socket / pipe leak.",
+                )
+            }
         }
 
     /** True if a UDP send on the socket throws — i.e. close() has run. */
@@ -217,4 +236,18 @@ class QuicConnectionDriverLifecycleTest {
     }
 
     private fun liveThreadCount(): Int = Thread.getAllStackTraces().keys.size
+
+    /**
+     * Linux: count entries in `/proc/self/fd`. macOS / Windows / other
+     * platforms don't expose this path; return -1 so the caller
+     * silently skips the FD assertion. This is a strictly additive
+     * canary — no false-positive risk on platforms that can't measure.
+     */
+    private fun liveFileDescriptorCount(): Int =
+        try {
+            val procFd = File("/proc/self/fd")
+            if (procFd.isDirectory) procFd.list()?.size ?: -1 else -1
+        } catch (_: Throwable) {
+            -1
+        }
 }

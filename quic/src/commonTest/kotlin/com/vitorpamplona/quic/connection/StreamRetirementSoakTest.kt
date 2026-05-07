@@ -208,6 +208,71 @@ class StreamRetirementSoakTest {
         }
 
     @Test
+    fun phantomGuardDropsRetransmitOnRetiredPeerStream() =
+        runBlocking {
+            // Phantom-stream guard regression: after we've retired a
+            // peer-uni stream, a duplicate STREAM frame the peer
+            // retransmits (because its loss-detector fired before our
+            // ACK reached it) MUST NOT mint a fresh QuicStream object.
+            // Pre-guard, the duplicate frame would:
+            //   - re-populate `streams[id]` and `streamsList`
+            //   - bump `peerInitiatedUniCount` a second time
+            //   - re-fire `newPeerStreams.addLast(...)`, signalling
+            //     a phantom stream-arrival to application code
+            //   - re-deliver the same bytes on a fresh incoming Flow
+            // The guard at the parser drops the frame (still
+            // ack-eliciting, so our ACK still goes out and the peer's
+            // loss-detector quiets down).
+            val (client, pipe) = newConnectedClient()
+            val streamId = StreamId.build(StreamId.Kind.SERVER_UNI, 0L)
+            val payload = "phantom-test".encodeToByteArray()
+            val frame = StreamFrame(streamId = streamId, offset = 0L, data = payload, fin = true)
+
+            val firstPacket = pipe.buildServerApplicationDatagram(listOf(frame))!!
+            feedDatagram(client, firstPacket, nowMillis = 0L)
+            // Drain the original delivery to retire the stream.
+            client.streamById(streamId)?.incoming?.toList()
+            drainAll(client, pipe)
+            assertEquals(
+                1L,
+                client.retiredStreamsCount,
+                "first delivery + drain must retire exactly one stream",
+            )
+            assertTrue(
+                client.isStreamIdRetiredLocked(streamId),
+                "retired-id ring must hold the just-retired stream id",
+            )
+            val countAfterFirstDelivery = client.peerInitiatedUniCount
+
+            // Replay the same STREAM+FIN frame — i.e. peer retransmit.
+            val replayPacket = pipe.buildServerApplicationDatagram(listOf(frame))!!
+            feedDatagram(client, replayPacket, nowMillis = 0L)
+            drainAll(client, pipe)
+
+            // No phantom stream — counters must not move.
+            assertEquals(
+                1L,
+                client.retiredStreamsCount,
+                "duplicate STREAM frame must not create a phantom stream that re-retires",
+            )
+            assertEquals(
+                countAfterFirstDelivery,
+                client.peerInitiatedUniCount,
+                "peerInitiatedUniCount must not double-count the retransmitted FIN",
+            )
+            assertEquals(
+                0,
+                client.streamsListLocked().size,
+                "streamsList must stay empty after the phantom-guard drop",
+            )
+            assertEquals(
+                QuicConnection.Status.CONNECTED,
+                client.status,
+                "connection must stay CONNECTED across a duplicate STREAM frame",
+            )
+        }
+
+    @Test
     fun retirementPreservesConnectionLevelMaxDataAccounting() =
         runBlocking {
             // Without the retiredStreamsRecvBytes seed, the writer's

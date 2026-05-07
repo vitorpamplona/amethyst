@@ -513,6 +513,24 @@ private fun dispatchFrames(
                     )
                     return
                 }
+                // Phantom-stream guard: drop STREAM frames the peer
+                // retransmitted on a stream we've already retired. Without
+                // this, the next line would mint a fresh QuicStream object
+                // and re-deliver duplicate bytes to the application
+                // (worse, on a SERVER_UNI stream it would also bump
+                // peerInitiatedUniCount and trigger a spurious
+                // MAX_STREAMS_UNI emission). The frame is still
+                // ack-eliciting — we set ackEliciting above — so our
+                // ACK goes out and the peer's loss-detector backs off.
+                // Stays inside the StreamFrame handler so other frame
+                // types (RESET_STREAM, MAX_STREAM_DATA, STOP_SENDING)
+                // on retired ids gracefully fall through their existing
+                // streamByIdLocked == null branches as no-ops.
+                if (conn.isStreamIdRetiredLocked(frame.streamId) &&
+                    conn.streamByIdLocked(frame.streamId) == null
+                ) {
+                    continue
+                }
                 val stream = conn.getOrCreatePeerStreamLocked(frame.streamId)
                 // RFC 9000 §4.1: peer MUST NOT send beyond the limit we advertised.
                 // The connection-level kill protects against unbounded memory

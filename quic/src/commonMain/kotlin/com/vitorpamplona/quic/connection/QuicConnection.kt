@@ -351,6 +351,33 @@ class QuicConnection(
         private set
 
     /**
+     * FIFO ring of recently-retired stream IDs. The parser consults
+     * this in [getOrCreatePeerStreamLocked] to drop duplicate STREAM
+     * frames the peer might retransmit on a stream we've already torn
+     * down — without this guard, a retransmit (which can happen if our
+     * ACK of the FIN frame was lost and the peer's loss detector
+     * re-fired) would create a fresh QuicStream object, deliver
+     * duplicate bytes to the application, and bump
+     * [peerInitiatedUniCount] a second time.
+     *
+     * Bounded at [RETIRED_STREAM_ID_RING_SIZE] entries. Eviction is
+     * FIFO so a long-running session never grows this set unbounded —
+     * at moq-lite churn rates of ~50 streams/sec, the ring covers the
+     * last ~80 seconds of retired IDs, far longer than the peer's
+     * loss-detection retransmit window (a small multiple of RTT).
+     *
+     * Out-of-bounds duplicate retransmits (extremely rare — would need
+     * the peer's ACK to be lost AND our retransmit not arriving for
+     * many seconds) fall through to the existing
+     * "create-and-immediately-retire" path, which is the previous
+     * pre-guard behavior and merely costs a re-iteration.
+     *
+     * Caller of any read/write must hold [streamsLock].
+     */
+    private val retiredStreamIdsOrder = ArrayDeque<Long>()
+    private val retiredStreamIdSet = HashSet<Long>()
+
+    /**
      * Peer-advertised concurrent bidirectional stream cap. Initialised from
      * [TransportParameters.initialMaxStreamsBidi] when peer params arrive,
      * then bumped by inbound MAX_STREAMS frames (RFC 9000 §19.11). Must not
@@ -1753,13 +1780,11 @@ class QuicConnection(
      *    will not re-send anything on the stream.
      *  - RECEIVE side waits for the parser to have pushed every byte to
      *    the application's incoming Channel ([ReceiveBuffer.isFullyRead]).
-     *    Subsequent retransmits from the peer (rare — peer only retransmits
-     *    if its own loss-detection fires) would land on a fresh stream
-     *    object created by [getOrCreatePeerStreamLocked], deliver
-     *    duplicate bytes, and re-fire FIN to a closed channel; the moq-lite
-     *    listener treats duplicates as no-ops, so the failure mode is "a
-     *    bit of wasted CPU" rather than "wrong audio". The alternative
-     *    (retain every stream forever) is a hard memory leak in soak.
+     *    Retired stream IDs are recorded in [retiredStreamIdSet] so a
+     *    duplicate STREAM frame the peer retransmits (because its own
+     *    loss-detection fired before our ACK arrived) is dropped at
+     *    [getOrCreatePeerStreamLocked] rather than minting a phantom
+     *    stream that delivers duplicate bytes to the application.
      */
     internal fun retireFullyDoneStreamsLocked(): Int {
         if (streamsList.isEmpty()) return 0
@@ -1778,6 +1803,12 @@ class QuicConnection(
             // resetAcked never having received any STREAM frame at all).
             // closeIncoming is idempotent.
             stream.closeIncoming()
+            // Record the id so a peer retransmit on this stream gets
+            // dropped instead of recreating a phantom stream. FIFO
+            // ring with bounded size — ancient retired IDs eventually
+            // age out, but the eviction window is far larger than the
+            // peer's plausible retransmit horizon.
+            recordRetiredStreamIdLocked(stream.streamId)
             streams.remove(stream.streamId)
             it.remove()
             removed++
@@ -1793,6 +1824,38 @@ class QuicConnection(
         }
         return removed
     }
+
+    /**
+     * Add [streamId] to the retired-IDs ring. FIFO eviction once the
+     * ring is at [RETIRED_STREAM_ID_RING_SIZE] entries — the oldest
+     * entry is removed from both the ordered deque and the lookup
+     * set in lockstep. Idempotent on duplicate adds (the
+     * [retireFullyDoneStreamsLocked] caller already drops the stream
+     * from `streams` before this fires, so a duplicate add can only
+     * happen if a caller manually re-records — defensive `add` skip
+     * keeps the ring entries unique without the cost of a fresh
+     * dedup pass).
+     *
+     * Caller must hold [streamsLock].
+     */
+    private fun recordRetiredStreamIdLocked(streamId: Long) {
+        if (retiredStreamIdSet.add(streamId)) {
+            retiredStreamIdsOrder.addLast(streamId)
+            while (retiredStreamIdsOrder.size > RETIRED_STREAM_ID_RING_SIZE) {
+                val evicted = retiredStreamIdsOrder.removeFirst()
+                retiredStreamIdSet.remove(evicted)
+            }
+        }
+    }
+
+    /**
+     * True if [streamId] has been retired *and* is still inside the
+     * ring's eviction window. Used by [QuicConnectionParser] to drop
+     * STREAM frames the peer retransmits on already-retired streams.
+     *
+     * Caller must hold [streamsLock].
+     */
+    internal fun isStreamIdRetiredLocked(streamId: Long): Boolean = streamId in retiredStreamIdSet
 
     /** Caller must hold [lock]. Pending datagram queue for the driver's send loop. */
     internal fun pendingDatagramsLocked(): ArrayDeque<ByteArray> = pendingDatagrams
@@ -1983,6 +2046,24 @@ class QuicConnection(
          * audio/video, fresh frames matter more than stale ones.
          */
         const val MAX_INCOMING_DATAGRAM_QUEUE: Int = 256
+
+        /**
+         * Capacity of the retired-stream-IDs ring used by
+         * [recordRetiredStreamIdLocked] / [isStreamIdRetiredLocked].
+         * Sized so the ring covers ≥ 80 seconds of retirement at
+         * moq-lite's ~50 streams/sec churn rate, far longer than any
+         * plausible peer retransmit window (a small multiple of RTT
+         * — at the absolute worst tens of seconds on lossy mobile
+         * networks). Older retired IDs eviction-fall-through to the
+         * existing create-and-immediately-retire path, which is
+         * functionally correct, just with one extra round of work
+         * per duplicate.
+         *
+         * Memory: 4 096 × (8 bytes Long key + ~32 bytes HashSet
+         * overhead + 8 bytes ArrayDeque slot) ≈ 200 KB. Trivial vs
+         * the per-stream object size we're saving by retiring.
+         */
+        const val RETIRED_STREAM_ID_RING_SIZE: Int = 4_096
     }
 }
 
