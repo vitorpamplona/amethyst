@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.onSubscription
 
 /**
  * A reactive event store that combines historical data retrieval with live event streaming.
@@ -56,18 +57,23 @@ class LiveEventStore(
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
-        // 1. Replay stored events matching filters.
-        store.query(filters, onEach)
-
-        // 2. Signal end of stored events.
-        onEose()
-
-        // 3. Stream live events until cancelled.
-        newEventStream.collect { newEvent ->
-            if (filters.any { it.match(newEvent) }) {
-                onEach(newEvent)
+        // Order matters: register the live collector BEFORE replaying
+        // stored events and signalling EOSE. Otherwise an event emitted
+        // between EOSE and `collect` is lost because [newEventStream] has
+        // replay=0. The race is only occasionally visible for kinds the
+        // store persists (insert latency masks it) but fires reliably for
+        // ephemeral kinds (20000-29999) where insert is a no-op — and
+        // ephemeral events MUST still reach matching live subscribers per
+        // NIP-01.
+        newEventStream
+            .onSubscription {
+                store.query(filters, onEach)
+                onEose()
+            }.collect { newEvent ->
+                if (filters.any { it.match(newEvent) }) {
+                    onEach(newEvent)
+                }
             }
-        }
     }
 
     suspend fun count(filters: List<Filter>) = store.count(filters)

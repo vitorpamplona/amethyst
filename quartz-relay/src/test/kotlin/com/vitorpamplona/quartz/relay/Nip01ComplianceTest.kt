@@ -311,6 +311,64 @@ class Nip01ComplianceTest {
             client.unsubscribe("live-2")
         }
 
+    // -- Ephemeral events (NIP-01: kinds 20000-29999) ----------------------
+
+    /**
+     * Ephemeral events MUST be forwarded to active subscriptions whose
+     * filters match, even though the relay does not persist them.
+     */
+    @Test
+    fun ephemeralEventForwardedToActiveSubscription() =
+        runBlocking {
+            val ch = Channel<Event>(UNLIMITED)
+            val gotEose = Channel<Unit>(UNLIMITED)
+            client.subscribe(
+                "eph-1",
+                mapOf(relayUrl to listOf(Filter(kinds = listOf(20_001)))),
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        ch.trySend(event)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        gotEose.trySend(Unit)
+                    }
+                },
+            )
+            withTimeout(5000) { gotEose.receive() }
+
+            hub.getOrCreate(relayUrl).publish(fakeEvent(70, kind = 20_001, content = "ephemeral-payload"))
+
+            val received = withTimeout(5000) { ch.receive() }
+            assertEquals("ephemeral-payload", received.content)
+            assertEquals(20_001, received.kind)
+            client.unsubscribe("eph-1")
+        }
+
+    /**
+     * Ephemeral events MUST NOT be persisted. A REQ issued after the
+     * event was published returns nothing.
+     */
+    @Test
+    fun ephemeralEventIsNotStoredAndDoesNotShowOnFollowupReq() =
+        runBlocking {
+            // Publish ephemeral first — no live subscriber listening.
+            hub.getOrCreate(relayUrl).publish(fakeEvent(71, kind = 20_002, content = "vanish"))
+
+            // Late subscriber: should see EOSE with no events.
+            val (events, eose) = collectUntilEose(Filter(kinds = listOf(20_002)))
+            assertTrue(eose, "EOSE must fire for an ephemeral kind even if zero events match")
+            assertEquals(0, events.size, "Ephemeral events must not be persisted")
+        }
+
     // -- Multi-relay --------------------------------------------------------
 
     /** A single client can hold subscriptions against multiple relays simultaneously. */
