@@ -271,6 +271,88 @@ class StreamRetirementSoakTest {
         }
 
     @Test
+    fun phantomGuardDropsRetransmitOnRetiredClientBidiStream() =
+        runBlocking {
+            // Same shape as [phantomGuardDropsRetransmitOnRetiredPeerStream]
+            // but for a CLIENT_BIDI id we opened ourselves. The audit-4 #5
+            // guard rejects STREAM frames on client-initiated ids without a
+            // live local stream (server squatting). Pre-fix that guard fired
+            // BEFORE the retired-id check, so msquic-style aggressive
+            // retransmits on a stream we'd already retired (peer's
+            // loss-detector refire racing our FIN-ACK) closed the
+            // connection with STREAM_STATE_ERROR. Observed in the parallel
+            // `transfer` interop test where retransmits on retired
+            // streams 0/4 truncated whichever stream was still mid-receive.
+            val (client, pipe) = newConnectedClient()
+            val stream = client.openBidiStream()
+            val streamId = stream.streamId
+            stream.send.enqueue("hi".encodeToByteArray())
+            stream.send.finish()
+            val anyOutput = drainAll(client, pipe)
+            assertTrue(anyOutput, "writer must emit our request + FIN")
+
+            // Peer ACKs everything sent so far → finAcked latches.
+            val largestSent = client.application.pnSpace.nextPacketNumber - 1L
+            val ackPacket =
+                pipe.buildServerApplicationDatagram(
+                    listOf(
+                        AckFrame(
+                            largestAcknowledged = largestSent,
+                            ackDelay = 0L,
+                            firstAckRange = largestSent,
+                        ),
+                    ),
+                )!!
+            feedDatagram(client, ackPacket, nowMillis = 0L)
+            assertTrue(stream.send.finAcked, "send-side FIN must be ACKed")
+
+            // Peer responds and FINs the bidi stream.
+            val responseFrame =
+                StreamFrame(
+                    streamId = streamId,
+                    offset = 0L,
+                    data = "hello".encodeToByteArray(),
+                    fin = true,
+                )
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(listOf(responseFrame))!!,
+                nowMillis = 0L,
+            )
+            // Drain the application-side flow → isFullyRead transitions true.
+            client.streamById(streamId)?.incoming?.toList()
+            // Trigger retirement at the top of the next buildApplicationPacket.
+            drainAll(client, pipe)
+            assertTrue(
+                client.isStreamIdRetiredLocked(streamId),
+                "fully-settled CLIENT_BIDI stream must enter retired-id ring",
+            )
+
+            // The regression: replay the same STREAM+FIN frame as a peer
+            // retransmit. Pre-fix the audit-4 #5 guard fired with reason
+            // "peer opened stream X on client-initiated id space
+            // (STREAM_STATE_ERROR)" because it ran BEFORE the retired-id
+            // check. Post-fix the guard exempts retired ids and the
+            // existing phantom-stream branch silently drops the frame.
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(listOf(responseFrame))!!,
+                nowMillis = 0L,
+            )
+
+            assertEquals(
+                QuicConnection.Status.CONNECTED,
+                client.status,
+                "retransmit on retired CLIENT_BIDI id must NOT close the connection",
+            )
+            assertEquals(
+                0,
+                client.streamsListLocked().size,
+                "retransmit must not mint a phantom stream entry",
+            )
+        }
+
+    @Test
     fun retirementPreservesConnectionLevelMaxDataAccounting() =
         runBlocking {
             // Without the retiredStreamsRecvBytes seed, the writer's

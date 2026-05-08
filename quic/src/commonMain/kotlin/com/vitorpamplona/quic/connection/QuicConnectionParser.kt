@@ -554,8 +554,18 @@ private fun dispatchFrames(
                 // 9000 §19.8, only the side that owns the parity may open;
                 // a server squatting on a CLIENT_* id is a protocol violation
                 // and could otherwise inject phantom streams into newPeerStreams.
+                //
+                // Exempt retired ids: msquic-style aggressive loss recovery
+                // can retransmit a STREAM frame on a stream we've fully
+                // retired before the peer sees our FIN-ACK. That's a
+                // legitimate retransmit on a stream WE opened, not squatting
+                // — the next guard drops it silently. Without this exemption
+                // the close fires on the parallel `transfer` interop test
+                // (3 GETs on streams 0/4/8) and truncates whichever stream
+                // is still mid-receive when the close lands.
                 if (StreamId.isClientInitiated(frame.streamId) &&
-                    conn.streamByIdLocked(frame.streamId) == null
+                    conn.streamByIdLocked(frame.streamId) == null &&
+                    !conn.isStreamIdRetiredLocked(frame.streamId)
                 ) {
                     conn.markClosedExternally(
                         "peer opened stream ${frame.streamId} on client-initiated id space (STREAM_STATE_ERROR)",
