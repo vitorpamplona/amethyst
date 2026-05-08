@@ -375,13 +375,13 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
             R.string.disable_client_tag_title,
             R.string.disable_client_tag_explainer,
         ) {
-            var disableClientTag by remember { mutableStateOf(accountViewModel.account.settings.disableClientTag) }
+            var disableClientTag by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.disableClientTag.value) }
 
             Switch(
                 checked = disableClientTag,
                 onCheckedChange = {
                     disableClientTag = it
-                    accountViewModel.account.settings.changeDisableClientTag(it)
+                    accountViewModel.updateDisableClientTag(disableClientTag)
                 },
             )
         }

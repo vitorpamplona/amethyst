@@ -139,7 +139,7 @@ class AccountCacheState(
             NostrSignerWithClientTag(
                 inner = signer,
                 clientName = CLIENT_TAG_NAME,
-                disabled = { accountSettings.disableClientTag },
+                disabled = { accountSettings.syncedSettings.security.disableClientTag.value },
             )
 
         val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}").apply { mkdirs() }

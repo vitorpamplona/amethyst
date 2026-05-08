@@ -55,6 +55,7 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.security.filterSpamFromStrangers),
             MutableStateFlow(internalSettings.security.maxHashtagLimit),
             MutableStateFlow(internalSettings.security.sendKind0EventsToLocalRelay),
+            MutableStateFlow(internalSettings.security.disableClientTag),
         )
     val videoPlayer =
         AccountVideoPlayerPreferences(
@@ -82,6 +83,7 @@ class AccountSyncedSettings(
                     security.filterSpamFromStrangers.value,
                     security.maxHashtagLimit.value,
                     security.sendKind0EventsToLocalRelay.value,
+                    security.disableClientTag.value,
                 ),
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
         )
@@ -136,6 +138,10 @@ class AccountSyncedSettings(
 
         if (security.sendKind0EventsToLocalRelay.value != syncedSettingsInternal.security.sendKind0EventsToLocalRelay) {
             security.sendKind0EventsToLocalRelay.tryEmit(syncedSettingsInternal.security.sendKind0EventsToLocalRelay)
+        }
+
+        if (security.disableClientTag.value != syncedSettingsInternal.security.disableClientTag) {
+            security.disableClientTag.tryEmit(syncedSettingsInternal.security.disableClientTag)
         }
 
         val newVideoPlayerButtonItems = syncedSettingsInternal.videoPlayer.buttonItems.toImmutableList()
@@ -233,6 +239,7 @@ class AccountSecurityPreferences(
     var filterSpamFromStrangers: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(5),
     var sendKind0EventsToLocalRelay: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val disableClientTag: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     fun updateShowSensitiveContent(show: Boolean?): Boolean {
         if (showSensitiveContent.value != show) {
@@ -269,6 +276,14 @@ class AccountSecurityPreferences(
     fun updateSendKind0EventsToLocalRelay(send: Boolean): Boolean =
         if (send != sendKind0EventsToLocalRelay.value) {
             sendKind0EventsToLocalRelay.tryEmit(send)
+            true
+        } else {
+            false
+        }
+
+    fun updateDisableClientTag(disable: Boolean): Boolean =
+        if (disable != disableClientTag.value) {
+            disableClientTag.tryEmit(disable)
             true
         } else {
             false
