@@ -216,7 +216,7 @@ class AppModules(
     val dnsStore = SurgeDnsStore(appContext, surgeDns)
 
     // manages all the other connections separately from relays.
-    val okHttpClients =
+    val okHttpClients: DualHttpClientManager =
         DualHttpClientManager(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
@@ -224,6 +224,15 @@ class AppModules(
             keyCache = keyCache,
             scope = applicationIOScope,
             dns = surgeDns,
+            // Transparently rewrites sha256-keyed HTTP requests to the local
+            // Blossom cache when the master toggle is on, the profile-pictures-only
+            // restriction is off, and the probe sees 127.0.0.1:24242 as available.
+            shouldBridgeBlossomCache = {
+                val settings = sessionManager.loggedInAccount()?.settings
+                val master = settings?.useLocalBlossomCache?.value ?: false
+                val profileOnly = settings?.localBlossomCacheProfilePicturesOnly?.value ?: false
+                master && !profileOnly && localBlossomCacheProbe.available.value
+            },
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
