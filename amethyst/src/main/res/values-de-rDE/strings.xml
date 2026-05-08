@@ -426,7 +426,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="scheduled_posts_at_time_past">%1$s · vor %2$s</string>
     <string name="scheduled_posts_day_tomorrow">Morgen</string>
     <string name="scheduled_posts_logout_toast_zero">Abgemeldet</string>
-    <string name="scheduled_posts_logout_toast">Abgemeldet · %1$d geplante(n) Beitrag/Beiträge gelöscht</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="one">Abgemeldet · %d geplanter Beitrag gelöscht</item>
+        <item quantity="other">Abgemeldet · %d geplante Beiträge gelöscht</item>
+    </plurals>
     <string name="scheduled_posts_notification_sent_title">Geplanter Beitrag veröffentlicht</string>
     <string name="scheduled_posts_notification_failed_title">Geplanter Beitrag fehlgeschlagen</string>
     <string name="app_notification_scheduled_posts_channel_name">Geplante Beiträge</string>
@@ -440,17 +443,20 @@ anz der Bedingungen ist erforderlich</string>
     <string name="scheduled_posts_status_failed">Fehlgeschlagen</string>
     <string name="scheduled_posts_status_sent">Gesendet</string>
     <string name="scheduled_posts_status_cancelled">Abgebrochen</string>
-    <string name="scheduled_posts_logout_warning">Du hast %1$d geplante(n) Beitrag/Beiträge, der/die noch nicht veröffentlicht wurden. Beim Abmelden werden sie dauerhaft gelöscht.</string>
+    <plurals name="scheduled_posts_logout_warning">
+        <item quantity="one">Du hast %d geplanten Beitrag, der noch nicht veröffentlicht wurde. Beim Abmelden wird er dauerhaft gelöscht.</item>
+        <item quantity="other">Du hast %d geplante Beiträge, die noch nicht veröffentlicht wurden. Beim Abmelden werden sie dauerhaft gelöscht.</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="one">%d in Warteschlange</item>
         <item quantity="other">%d in Warteschlange</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · 1 fällig in 1 Std.</item>
+        <item quantity="one"> · %d fällig in 1 Std.</item>
         <item quantity="other"> · %d fällig in 1 Std.</item>
     </plurals>
     <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">an 1 Relay</item>
+        <item quantity="one">an %d Relay</item>
         <item quantity="other">an %d Relays</item>
     </plurals>
     <string name="scheduled_posts_event_id_copied">Beitrags-ID kopiert</string>

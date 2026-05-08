@@ -453,7 +453,10 @@
     <string name="scheduled_posts_at_time_past">%1$s · %2$s ago</string>
     <string name="scheduled_posts_day_tomorrow">Tomorrow</string>
     <string name="scheduled_posts_logout_toast_zero">Logged out</string>
-    <string name="scheduled_posts_logout_toast">Logged out · %1$d scheduled post(s) deleted</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="one">Logged out · %d scheduled post deleted</item>
+        <item quantity="other">Logged out · %d scheduled posts deleted</item>
+    </plurals>
     <string name="scheduled_posts_notification_sent_title">Scheduled post published</string>
     <string name="scheduled_posts_notification_failed_title">Scheduled post failed</string>
     <string name="app_notification_scheduled_posts_channel_id" translatable="false">ScheduledPostsID</string>
@@ -468,17 +471,20 @@
     <string name="scheduled_posts_status_failed">Failed</string>
     <string name="scheduled_posts_status_sent">Sent</string>
     <string name="scheduled_posts_status_cancelled">Cancelled</string>
-    <string name="scheduled_posts_logout_warning">You have %1$d scheduled post(s) that haven\'t been published yet. Logging out will permanently delete them.</string>
+    <plurals name="scheduled_posts_logout_warning">
+        <item quantity="one">You have %d scheduled post that hasn\'t been published yet. Logging out will permanently delete it.</item>
+        <item quantity="other">You have %d scheduled posts that haven\'t been published yet. Logging out will permanently delete them.</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="one">%d queued</item>
         <item quantity="other">%d queued</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · 1 due in 1h</item>
+        <item quantity="one"> · %d due in 1h</item>
         <item quantity="other"> · %d due in 1h</item>
     </plurals>
     <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">to 1 relay</item>
+        <item quantity="one">to %d relay</item>
         <item quantity="other">to %d relays</item>
     </plurals>
     <string name="scheduled_posts_event_id_copied">Note ID copied</string>

@@ -421,7 +421,11 @@
     <string name="scheduled_posts_at_time_past">%1$s · há %2$s</string>
     <string name="scheduled_posts_day_tomorrow">Amanhã</string>
     <string name="scheduled_posts_logout_toast_zero">Desconectado</string>
-    <string name="scheduled_posts_logout_toast">Desconectado · %1$d post(s) agendado(s) excluído(s)</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="one">Desconectado · %d post agendado excluído</item>
+        <item quantity="many">Desconectado · %d posts agendados excluídos</item>
+        <item quantity="other">Desconectado · %d posts agendados excluídos</item>
+    </plurals>
     <string name="scheduled_posts_notification_sent_title">Post agendado publicado</string>
     <string name="scheduled_posts_notification_failed_title">Post agendado falhou</string>
     <string name="app_notification_scheduled_posts_channel_name">Posts agendados</string>
@@ -435,7 +439,11 @@
     <string name="scheduled_posts_status_failed">Falhou</string>
     <string name="scheduled_posts_status_sent">Enviado</string>
     <string name="scheduled_posts_status_cancelled">Cancelado</string>
-    <string name="scheduled_posts_logout_warning">Você tem %1$d post(s) agendado(s) que ainda não foram publicados. Sair excluirá esses posts permanentemente.</string>
+    <plurals name="scheduled_posts_logout_warning">
+        <item quantity="one">Você tem %d post agendado que ainda não foi publicado. Sair excluirá esse post permanentemente.</item>
+        <item quantity="many">Você tem %d posts agendados que ainda não foram publicados. Sair excluirá esses posts permanentemente.</item>
+        <item quantity="other">Você tem %d posts agendados que ainda não foram publicados. Sair excluirá esses posts permanentemente.</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="one">%d na fila</item>
         <item quantity="other">%d na fila</item>
