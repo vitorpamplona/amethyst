@@ -421,7 +421,10 @@
     <string name="scheduled_posts_at_time_past">%1$s · för %2$s sedan</string>
     <string name="scheduled_posts_day_tomorrow">Imorgon</string>
     <string name="scheduled_posts_logout_toast_zero">Utloggad</string>
-    <string name="scheduled_posts_logout_toast">Utloggad · %1$d schemalagda inlägg raderade</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="one">Utloggad · %d schemalagt inlägg raderat</item>
+        <item quantity="other">Utloggad · %d schemalagda inlägg raderade</item>
+    </plurals>
     <string name="scheduled_posts_notification_sent_title">Schemalagt inlägg publicerat</string>
     <string name="scheduled_posts_notification_failed_title">Schemalagt inlägg misslyckades</string>
     <string name="app_notification_scheduled_posts_channel_name">Schemalagda inlägg</string>
@@ -435,7 +438,10 @@
     <string name="scheduled_posts_status_failed">Misslyckades</string>
     <string name="scheduled_posts_status_sent">Skickat</string>
     <string name="scheduled_posts_status_cancelled">Avbrutet</string>
-    <string name="scheduled_posts_logout_warning">Du har %1$d schemalagda inlägg som inte har publicerats än. Att logga ut raderar dem permanent.</string>
+    <plurals name="scheduled_posts_logout_warning">
+        <item quantity="one">Du har %d schemalagt inlägg som inte har publicerats än. Att logga ut raderar det permanent.</item>
+        <item quantity="other">Du har %d schemalagda inlägg som inte har publicerats än. Att logga ut raderar dem permanent.</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="one">%d i kö</item>
         <item quantity="other">%d i kö</item>

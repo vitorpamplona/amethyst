@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
@@ -289,7 +291,14 @@ private fun LogoutButton(
             title = { Text(text = stringRes(R.string.log_out)) },
             text = {
                 if (unpublishedCount > 0) {
-                    Text(text = stringRes(R.string.scheduled_posts_logout_warning, unpublishedCount))
+                    Text(
+                        text =
+                            pluralStringResource(
+                                id = R.plurals.scheduled_posts_logout_warning,
+                                count = unpublishedCount,
+                                unpublishedCount,
+                            ),
+                    )
                 } else {
                     Text(text = stringRes(R.string.are_you_sure_you_want_to_log_out))
                 }
@@ -309,7 +318,12 @@ private fun LogoutButton(
                         accountSessionManager.logOff(acc)
                         val toastMessage =
                             if (confirmedCount > 0) {
-                                stringRes(context, R.string.scheduled_posts_logout_toast, confirmedCount)
+                                pluralStringRes(
+                                    context,
+                                    R.plurals.scheduled_posts_logout_toast,
+                                    confirmedCount,
+                                    confirmedCount,
+                                )
                             } else {
                                 stringRes(context, R.string.scheduled_posts_logout_toast_zero)
                             }
