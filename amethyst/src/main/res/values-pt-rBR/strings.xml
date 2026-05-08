@@ -441,11 +441,11 @@
         <item quantity="other">%d na fila</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · 1 em 1h</item>
+        <item quantity="one"> · %d em 1h</item>
         <item quantity="other"> · %d em 1h</item>
     </plurals>
     <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">para 1 relay</item>
+        <item quantity="one">para %d relay</item>
         <item quantity="other">para %d relays</item>
     </plurals>
     <string name="scheduled_posts_event_id_copied">ID do post copiado</string>
