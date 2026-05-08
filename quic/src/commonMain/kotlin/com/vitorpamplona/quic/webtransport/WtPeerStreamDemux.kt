@@ -125,6 +125,21 @@ class WtPeerStreamDemux(
     var peerGoawayProtocolError: String? = null
         private set
 
+    /**
+     * Surface RFC 9114 §7.2 frame-validation violations the
+     * [Http3FrameReader] catches (H3_FRAME_UNEXPECTED, H3_MISSING_SETTINGS,
+     * forbidden reserved types). The route()-level `catch (_: Throwable)`
+     * cancels the per-stream collector but doesn't propagate the
+     * underlying [com.vitorpamplona.quic.QuicCodecException]'s message
+     * upstream — without this field a buggy server would just see
+     * "stream stops being read" with no diagnostic. Stays null until a
+     * violation is observed; the QUIC-layer caller polls it and closes
+     * the connection on non-null.
+     */
+    @Volatile
+    var peerH3ProtocolError: String? = null
+        private set
+
     val incomingStrippedStreams: Flow<StrippedWtStream> = readyStreams.consumeAsFlow()
 
     /**
@@ -246,13 +261,25 @@ class WtPeerStreamDemux(
         pending: ArrayDeque<ByteArray>,
         chunkChannel: Channel<ByteArray>,
     ) {
-        val reader = Http3FrameReader()
+        val reader = Http3FrameReader(context = Http3FrameReader.StreamContext.CONTROL)
         // Push whatever we already buffered.
-        while (pending.isNotEmpty()) reader.push(pending.removeFirst())
-        consumeFrames(reader)
-        for (chunk in chunkChannel) {
-            reader.push(chunk)
+        try {
+            while (pending.isNotEmpty()) reader.push(pending.removeFirst())
             consumeFrames(reader)
+            for (chunk in chunkChannel) {
+                reader.push(chunk)
+                consumeFrames(reader)
+            }
+        } catch (e: com.vitorpamplona.quic.QuicCodecException) {
+            // RFC 9114 §7.2 frame-validation throws (H3_FRAME_UNEXPECTED /
+            // H3_MISSING_SETTINGS / reserved type) land here. Record the
+            // diagnostic so the QUIC layer / application can close the
+            // connection deliberately instead of having the route() catch
+            // silently swallow the message. Idempotent on duplicate hits.
+            if (peerH3ProtocolError == null) {
+                peerH3ProtocolError = e.message ?: "HTTP/3 protocol violation on CONTROL stream"
+            }
+            throw e
         }
     }
 

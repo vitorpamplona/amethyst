@@ -33,9 +33,20 @@ import com.vitorpamplona.quic.Varint
  * Use one [Http3FrameReader] per HTTP/3 stream. Feed bytes via [push]; drain
  * frames via [next] until it returns null.
  *
- * Unknown frame types (per RFC 9114 §9 — "frame types in the format and intent
- * not recognized SHOULD be ignored") are surfaced as [Http3Frame.Unknown] so
- * the caller can decide policy. SETTINGS, HEADERS, DATA are typed.
+ * Stream-context enforcement (RFC 9114 §7.2):
+ *  * On the [StreamContext.CONTROL] stream, the FIRST frame MUST be SETTINGS
+ *    (else H3_MISSING_SETTINGS); DATA / HEADERS / PUSH_PROMISE are not
+ *    allowed (H3_FRAME_UNEXPECTED).
+ *  * On a [StreamContext.REQUEST] stream, SETTINGS / GOAWAY / MAX_PUSH_ID /
+ *    CANCEL_PUSH are not allowed (H3_FRAME_UNEXPECTED).
+ *  * On a [StreamContext.PUSH] stream, SETTINGS / GOAWAY / MAX_PUSH_ID /
+ *    PUSH_PROMISE / CANCEL_PUSH are not allowed.
+ *  * Reserved frame types `0x02, 0x06, 0x08, 0x09` are explicitly rejected
+ *    (H3_FRAME_UNEXPECTED) per RFC 9114 §7.2.8 — only the
+ *    `0x21 + 0x1f * N` reserved-greasing pattern is ignored as Unknown.
+ *  * On [StreamContext.WT_BIDI_DATA] / [StreamContext.WT_UNI_DATA]
+ *    (post-prefix WebTransport stream payload), no HTTP/3 framing applies
+ *    — the caller never feeds bytes through here. Provided for symmetry.
  *
  * Memory safety:
  *  * Pending buffered bytes are capped at [maxPendingBytes]; a peer that
@@ -48,14 +59,45 @@ import com.vitorpamplona.quic.Varint
  *    `ByteArray(len.toInt())` allocation.
  */
 class Http3FrameReader(
+    private val context: StreamContext = StreamContext.UNCHECKED,
     private val maxPendingBytes: Int = DEFAULT_MAX_PENDING_BYTES,
     private val maxFrameBodyBytes: Int = DEFAULT_MAX_FRAME_BODY_BYTES,
 ) {
     private var buf: ByteArray = ByteArray(0)
     private var pos: Int = 0
+    private var framesEmitted: Int = 0
 
     /** Bytes currently buffered awaiting a complete frame. Diagnostic; tests use this. */
     val bufferedBytes: Int get() = buf.size - pos
+
+    /**
+     * Stream context for [Http3FrameReader] frame validation. The reader is
+     * stateless about which kind of stream it's running on unless the
+     * caller tells it. [UNCHECKED] preserves pre-fix behaviour for tests
+     * that intentionally feed mixed frames; production callers should
+     * specify the actual context.
+     */
+    enum class StreamContext {
+        /** No per-context validation (pre-fix behaviour, tests). */
+        UNCHECKED,
+
+        /** RFC 9114 §6.2.1 server CONTROL unidi stream. */
+        CONTROL,
+
+        /** RFC 9114 §6.1 client/server REQUEST bidi stream. */
+        REQUEST,
+
+        /** RFC 9114 §6.2.2 PUSH unidi stream. */
+        PUSH,
+
+        /**
+         * Post-prefix WT bidi/uni stream payload. WebTransport bytes don't
+         * use HTTP/3 framing — this exists so the type system can prevent
+         * accidental use of [Http3FrameReader] on raw WT data.
+         */
+        WT_BIDI_DATA,
+        WT_UNI_DATA,
+    }
 
     fun push(bytes: ByteArray) {
         if (bytes.isEmpty()) return
@@ -94,14 +136,101 @@ class Http3FrameReader(
         }
         val bodyEnd = bodyStart + len.toInt()
         if (bodyEnd > buf.size) return null // not all body bytes present yet
+        val type = typeRes.value
+        validateFrameType(type)
         val body = buf.copyOfRange(bodyStart, bodyEnd)
         pos = bodyEnd
-        return when (typeRes.value) {
+        framesEmitted++
+        return when (type) {
             Http3FrameType.DATA -> Http3Frame.Data(body)
             Http3FrameType.HEADERS -> Http3Frame.Headers(body)
             Http3FrameType.SETTINGS -> Http3Frame.Settings(Http3Settings.decodeBody(body))
             Http3FrameType.GOAWAY -> Http3Frame.Goaway(body)
-            else -> Http3Frame.Unknown(typeRes.value, body)
+            else -> Http3Frame.Unknown(type, body)
+        }
+    }
+
+    /**
+     * Enforce RFC 9114 §7.2 per-stream-context rules. Throws
+     * [QuicCodecException] (mapped upstream to H3_FRAME_UNEXPECTED /
+     * H3_MISSING_SETTINGS) on violation.
+     */
+    private fun validateFrameType(type: Long) {
+        // RFC 9114 §7.2.8: explicit reserved-and-forbidden frame types.
+        // Distinct from the reserved-greasing pattern `0x21 + 0x1f * N`
+        // (which is allowed and falls through as Unknown).
+        if (type == 0x02L || type == 0x06L || type == 0x08L || type == 0x09L) {
+            throw QuicCodecException(
+                "H3_FRAME_UNEXPECTED: reserved HTTP/3 frame type 0x${type.toString(16)}",
+            )
+        }
+        when (context) {
+            StreamContext.UNCHECKED -> {
+                Unit
+            }
+
+            StreamContext.CONTROL -> {
+                // §7.2.4: SETTINGS MUST be the first frame on the
+                // control stream; any non-SETTINGS first frame =>
+                // H3_MISSING_SETTINGS.
+                if (framesEmitted == 0 && type != Http3FrameType.SETTINGS) {
+                    throw QuicCodecException(
+                        "H3_MISSING_SETTINGS: first CONTROL-stream frame was 0x${type.toString(16)}",
+                    )
+                }
+                // §7.2.4: a second SETTINGS is also forbidden.
+                if (framesEmitted > 0 && type == Http3FrameType.SETTINGS) {
+                    throw QuicCodecException(
+                        "H3_FRAME_UNEXPECTED: duplicate SETTINGS on CONTROL stream",
+                    )
+                }
+                // §7.2.1, §7.2.2, §7.2.5: DATA / HEADERS / PUSH_PROMISE
+                // are forbidden on the control stream.
+                if (type == Http3FrameType.DATA ||
+                    type == Http3FrameType.HEADERS ||
+                    type == Http3FrameType.PUSH_PROMISE
+                ) {
+                    throw QuicCodecException(
+                        "H3_FRAME_UNEXPECTED: 0x${type.toString(16)} on CONTROL stream",
+                    )
+                }
+            }
+
+            StreamContext.REQUEST -> {
+                // §7.2.4 / §7.2.6 / §7.2.7: control-only frames are
+                // forbidden on request streams.
+                if (type == Http3FrameType.SETTINGS ||
+                    type == Http3FrameType.GOAWAY ||
+                    type == Http3FrameType.MAX_PUSH_ID ||
+                    type == Http3FrameType.CANCEL_PUSH
+                ) {
+                    throw QuicCodecException(
+                        "H3_FRAME_UNEXPECTED: 0x${type.toString(16)} on REQUEST stream",
+                    )
+                }
+            }
+
+            StreamContext.PUSH -> {
+                if (type == Http3FrameType.SETTINGS ||
+                    type == Http3FrameType.GOAWAY ||
+                    type == Http3FrameType.MAX_PUSH_ID ||
+                    type == Http3FrameType.PUSH_PROMISE ||
+                    type == Http3FrameType.CANCEL_PUSH
+                ) {
+                    throw QuicCodecException(
+                        "H3_FRAME_UNEXPECTED: 0x${type.toString(16)} on PUSH stream",
+                    )
+                }
+            }
+
+            StreamContext.WT_BIDI_DATA, StreamContext.WT_UNI_DATA -> {
+                // WebTransport stream payload doesn't use HTTP/3 framing.
+                // The caller shouldn't be feeding bytes through this
+                // reader for those contexts; flag any attempt loudly.
+                throw QuicCodecException(
+                    "WebTransport stream payload routed through Http3FrameReader",
+                )
+            }
         }
     }
 
