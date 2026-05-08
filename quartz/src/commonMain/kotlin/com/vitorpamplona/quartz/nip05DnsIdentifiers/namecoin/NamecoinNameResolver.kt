@@ -281,8 +281,16 @@ class NamecoinNameResolver(
      * Extract Nostr data from a `d/` domain value.
      *
      * Supports:
-     *   { "nostr": "hex-pubkey" }                           → simple form
+     *   { "nostr": "hex-pubkey" }                           → simple-string form
      *   { "nostr": { "names": { "alice": "hex" }, ... } }   → extended NIP-05-like form
+     *   { "nostr": { "pubkey": "hex", "relays": [...] } }   → single-identity form
+     *
+     * The single-identity form is the same shape used by `id/` records and is
+     * the natural way to express "this one name = this one pubkey". It only
+     * resolves the root local-part (`_`) — there are no sub-identities in
+     * this shape. If `nostr.names` is also present, it wins for any
+     * sub-identity; root-lookups fall back to the bare `pubkey` when
+     * `names["_"]` is missing.
      */
     private fun extractFromDomainValue(
         value: JsonObject,
@@ -290,7 +298,7 @@ class NamecoinNameResolver(
     ): NamecoinNostrResult? {
         val nostrField = value["nostr"] ?: return null
 
-        // Simple form: "nostr": "hex-pubkey"
+        // Simple-string form: "nostr": "hex-pubkey"
         if (nostrField is JsonPrimitive && nostrField.isString) {
             val pubkey = nostrField.content
             if (parsed.localPart == "_" && isValidPubkey(pubkey)) {
@@ -305,48 +313,73 @@ class NamecoinNameResolver(
             if (parsed.localPart != "_") return null
         }
 
-        // Extended form: "nostr": { "names": {...}, "relays": {...} }
         if (nostrField is JsonObject) {
-            val names = nostrField["names"]?.jsonObject ?: return null
+            // Extended NIP-05-like form first: "nostr": { "names": {...}, "relays": {...} }
+            val names = nostrField["names"]?.jsonObject
 
-            // Resolve: exact match → "_" root → first entry (root lookups only)
-            val resolvedLocalPart: String
-            val pubkey: String
+            if (names != null) {
+                val exactMatch = names[parsed.localPart]
+                val rootMatch = names["_"]
+                val firstEntry = if (parsed.localPart == "_") names.entries.firstOrNull() else null
 
-            val exactMatch = names[parsed.localPart]
-            val rootMatch = names["_"]
-            val firstEntry = if (parsed.localPart == "_") names.entries.firstOrNull() else null
-
-            when {
-                exactMatch is JsonPrimitive && isValidPubkey(exactMatch.content) -> {
-                    resolvedLocalPart = parsed.localPart
-                    pubkey = exactMatch.content
+                if (exactMatch is JsonPrimitive && isValidPubkey(exactMatch.content)) {
+                    return NamecoinNostrResult(
+                        pubkey = exactMatch.content.lowercase(),
+                        relays = extractRelays(nostrField, exactMatch.content),
+                        namecoinName = parsed.namecoinName,
+                        localPart = parsed.localPart,
+                    )
                 }
-
-                rootMatch is JsonPrimitive && isValidPubkey(rootMatch.content) -> {
-                    resolvedLocalPart = "_"
-                    pubkey = rootMatch.content
+                if (rootMatch is JsonPrimitive && isValidPubkey(rootMatch.content)) {
+                    return NamecoinNostrResult(
+                        pubkey = rootMatch.content.lowercase(),
+                        relays = extractRelays(nostrField, rootMatch.content),
+                        namecoinName = parsed.namecoinName,
+                        localPart = "_",
+                    )
                 }
-
-                firstEntry != null &&
+                if (firstEntry != null &&
                     firstEntry.value is JsonPrimitive &&
-                    isValidPubkey((firstEntry.value as JsonPrimitive).content) -> {
-                    resolvedLocalPart = firstEntry.key
-                    pubkey = (firstEntry.value as JsonPrimitive).content
+                    isValidPubkey((firstEntry.value as JsonPrimitive).content)
+                ) {
+                    val pk = (firstEntry.value as JsonPrimitive).content
+                    return NamecoinNostrResult(
+                        pubkey = pk.lowercase(),
+                        relays = extractRelays(nostrField, pk),
+                        namecoinName = parsed.namecoinName,
+                        localPart = firstEntry.key,
+                    )
                 }
-
-                else -> {
-                    return null
-                }
+                // names was present but didn't yield a match. Fall through to
+                // the single-identity check below — only meaningful for root
+                // lookups (non-root requests against a names-only record
+                // correctly stop here).
+                if (parsed.localPart != "_") return null
             }
 
-            val relays = extractRelays(nostrField, pubkey)
-            return NamecoinNostrResult(
-                pubkey = pubkey.lowercase(),
-                relays = relays,
-                namecoinName = parsed.namecoinName,
-                localPart = resolvedLocalPart,
-            )
+            // Single-identity form: "nostr": { "pubkey": "hex", "relays": [...] }
+            // Only resolves the root local-part; non-root requests against a
+            // single-identity record fall through to null so we don't hand
+            // alice@example.bit the root operator's identity.
+            if (parsed.localPart == "_") {
+                val pubkey = (nostrField["pubkey"] as? JsonPrimitive)?.content
+                if (pubkey != null && isValidPubkey(pubkey)) {
+                    val relays =
+                        try {
+                            nostrField["relays"]?.jsonArray?.mapNotNull {
+                                (it as? JsonPrimitive)?.content
+                            } ?: emptyList()
+                        } catch (_: Exception) {
+                            emptyList()
+                        }
+                    return NamecoinNostrResult(
+                        pubkey = pubkey.lowercase(),
+                        relays = relays,
+                        namecoinName = parsed.namecoinName,
+                        localPart = "_",
+                    )
+                }
+            }
         }
 
         return null
