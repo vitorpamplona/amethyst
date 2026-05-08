@@ -143,8 +143,15 @@ class AckTracker {
             val len = ranges[i].endInclusive - ranges[i].start
             rest += AckRange(gap, len)
         }
-        val ackDelayMicros = (nowMillis - largestRecvTimeMillis) * 1000L
-        val ackDelay = (ackDelayMicros ushr ackDelayExponent).coerceAtLeast(0L)
+        // Clamp ≥ 0 BEFORE the shift, not after: `ushr` on a negative
+        // Long produces a giant positive value that the peer's RTT
+        // estimator would interpret as a multi-hour delay, poisoning
+        // its smoothed_rtt below min_rtt. Clock can move backwards if
+        // [nowMillis] is wallclock-derived (NTP step) — even though we
+        // default to a monotonic source, the ctor allows a custom
+        // supplier and tests inject virtual clocks.
+        val rawDelayMicros = (nowMillis - largestRecvTimeMillis).coerceAtLeast(0L) * 1000L
+        val ackDelay = rawDelayMicros ushr ackDelayExponent
         ackElicitingPending = false
         return AckFrame(
             largestAcknowledged = largest,

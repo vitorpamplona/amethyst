@@ -52,8 +52,16 @@ class QuicConnectionDriver(
     val connection: QuicConnection,
     private val socket: UdpSocket,
     private val parentScope: CoroutineScope,
-    private val nowMillis: () -> Long = { System.currentTimeMillis() },
 ) {
+    /**
+     * Single time source: defer to the connection's [QuicConnection.nowMillis]
+     * (monotonic by default). Pre-fix the driver had its own
+     * `System.currentTimeMillis()` default which silently disagreed with the
+     * connection's wallclock-derived clock; under NTP step the two could
+     * report different values for the SAME logical "now", leading to RTT
+     * samples computed against drifted timestamps.
+     */
+    private val nowMillis: () -> Long get() = connection.nowMillis
     private val job = SupervisorJob(parentScope.coroutineContext[Job])
     private val scope = CoroutineScope(parentScope.coroutineContext + job + Dispatchers.IO)
     private val sendWakeup = Channel<Unit>(Channel.CONFLATED)
@@ -390,6 +398,13 @@ class QuicConnectionDriver(
  * (or the fresh one — both are valid) and is at worst a no-op.
  */
 internal suspend fun handlePtoFired(conn: QuicConnection) {
+    // Increment FIRST so [requeueInflightForProbe]'s threshold check
+    // sees the post-increment value. The increment must happen exactly
+    // once per PTO event — not per call to [requeueInflightForProbe],
+    // because the send loop calls that helper again between the first
+    // and second probe (RFC 9002 §6.2.4) and that re-requeue is part
+    // of the SAME PTO event.
+    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
     conn.pendingPing = true
     requeueInflightForProbe(conn)
     // RFC 9002 §6.2.4: the spec allows up to 2 ack-eliciting packets
@@ -400,7 +415,6 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
     // nothing requeued yet" — the requeue is what makes the budget
     // meaningful.
     conn.pendingProbePackets = 2
-    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
 }
 
 /**
@@ -426,12 +440,13 @@ internal suspend fun requeueInflightForProbe(conn: QuicConnection) {
     if (conn.initial.sendProtection != null && !conn.initial.keysDiscarded) {
         conn.requeueAllInflightCrypto(EncryptionLevel.INITIAL)
     }
-    // Bug-6 fix: increment BEFORE the threshold check. With the
-    // pre-fix ordering and threshold=2, the rotation actually fired
-    // on the 3rd PTO (count went 0→1→2 before check). Now the count
-    // matches the constant's natural reading: "after 2 consecutive
-    // PTOs with no progress, trigger migration on the 2nd PTO firing."
-    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
+    // The PTO count is incremented in [handlePtoFired] BEFORE this
+    // helper runs, so the threshold check below sees the post-increment
+    // value (matching the constant's natural reading: "after N
+    // consecutive PTOs with no progress, trigger migration on the Nth
+    // PTO firing"). The send loop's between-probe re-requeue calls
+    // this helper without bumping the count again — that's the same
+    // PTO event, not a new one.
     // Once 1-RTT keys are installed, PTO must also retransmit application
     // data — STREAM bytes that were sent but never ACK'd. Without this,
     // a single corrupted/lost 1-RTT packet (especially the first one

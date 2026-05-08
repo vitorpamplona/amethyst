@@ -69,11 +69,19 @@ class QuicConnection(
      * of letting null silently disable MITM protection.
      */
     val tlsCertificateValidator: com.vitorpamplona.quic.tls.CertificateValidator,
-    val nowMillis: () -> Long = {
-        kotlin.time.Clock.System
-            .now()
-            .toEpochMilliseconds()
-    },
+    /**
+     * Monotonic clock used by ACK-delay encoding, RTT samples, PTO scheduling,
+     * loss detection, and path-validation timeouts. Default uses
+     * [kotlin.time.TimeSource.Monotonic] so an NTP step / suspend-resume
+     * doesn't poison RTT estimates or trigger spurious losses. The returned
+     * value is "milliseconds since this connection was constructed" — only
+     * differences are meaningful.
+     *
+     * Tests inject a virtual clock; production callers should leave the
+     * default unless they have a specific reason (e.g. recording wallclock
+     * timestamps in qlog) and understand the wallclock pitfalls.
+     */
+    val nowMillis: () -> Long = defaultMonotonicNowMillis(),
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
     /**
      * Optional second listener invoked after the connection's own
@@ -283,12 +291,26 @@ class QuicConnection(
     /**
      * Lock-split refactor (2026-05-08): @Volatile so concurrent loops can
      * read the status without a lock — coarse "are we still alive?" checks.
-     * Mutating transitions still go through [lifecycleLock] for atomicity
+     * Mutating transitions still go through [closeStateMonitor] for atomicity
      * with [closeReason]/[closeErrorCode] updates.
      */
     @Volatile
     var status: Status = Status.HANDSHAKING
         internal set
+
+    /**
+     * Non-suspend monitor protecting the atomic transition of
+     * [status] / [closeReason] / [closeErrorCode] from a non-CLOSED to a
+     * CLOSED/CLOSING state. We intentionally do NOT use [lifecycleLock]
+     * for this — that's a `kotlinx.coroutines.sync.Mutex` which only
+     * works from suspend contexts, and [markClosedExternally] is invoked
+     * from the parser inside a `streamsLock.withLock { }` block where
+     * suspending again on a different mutex is awkward and risks lock
+     * inversion. A plain monitor avoids both problems while still
+     * giving us a true compare-and-set for "first caller wins the
+     * close-reason and gets to fire the qlog event".
+     */
+    private val closeStateMonitor = Any()
 
     /** App-level error code for graceful close. */
     var closeReason: String? = null
@@ -299,27 +321,36 @@ class QuicConnection(
     private val streams = mutableMapOf<Long, QuicStream>()
 
     /**
-     * Round-4 perf #10: parallel insertion-ordered list of streams so the
-     * writer's round-robin scan can index by position without
-     * `streams.entries.toList()` allocating per drain. Mutated in lockstep
-     * with [streams] under [streamsLock]:
+     * Per-connection insertion-ordered list of live streams. Mutated only
+     * under [streamsLock] (single-writer):
      *  - [openBidiStreamLocked] / [openUniStreamLocked] /
      *    [getOrCreatePeerStreamLocked] append.
      *  - [retireFullyDoneStreamsLocked] removes entries whose stream has
-     *    flipped [QuicStream.isFullyRetired] = true. The retire pass
-     *    folds the receive-side high-water mark into
-     *    [retiredStreamsRecvBytes] so the writer's MAX_DATA accounting
-     *    in `appendFlowControlUpdates` doesn't regress when a retired
-     *    stream's `receive.contiguousEnd()` drops out of the iteration.
+     *    flipped [QuicStream.isFullyRetired] = true, folding the
+     *    receive-side high-water mark into [retiredStreamsRecvBytes] so
+     *    the writer's MAX_DATA accounting in `appendFlowControlUpdates`
+     *    doesn't regress when a retired stream's `receive.contiguousEnd()`
+     *    drops out of the iteration.
+     *
+     * Read by both lock-holding paths (writer drain, parser dispatch) and
+     * by lock-free observers ([closeAllSignals] after teardown). To make
+     * lock-free reads safe we use an immutable snapshot pattern: every
+     * mutation publishes a fresh `List` via the `@Volatile` reference,
+     * and readers see either the pre- or post-mutation snapshot — never
+     * a half-modified ArrayList that can raise
+     * `ConcurrentModificationException`. The cost is one shallow copy
+     * per add / retire; steady-state churn stays under ~100/sec even at
+     * peak audio-room load (see
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`,
+     * which pegs ~50 streams/sec at peak).
      *
      * Without retirement, the moq-lite audio-rooms path leaks one
-     * QuicStream per Opus frame for the lifetime of the session — the
-     * stream-cliff investigation in
-     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`
-     * pegs steady-state churn at ~50 streams/sec, so a 3-hour room
-     * accumulates ~540 000 entries before retirement was wired.
+     * QuicStream per Opus frame for the lifetime of the session — a
+     * 3-hour room accumulates ~540 000 entries before retirement was
+     * wired.
      */
-    private val streamsList = mutableListOf<QuicStream>()
+    @Volatile
+    private var streamsList: List<QuicStream> = emptyList()
     private var nextLocalBidiIndex: Long = 0L
     private var nextLocalUniIndex: Long = 0L
 
@@ -926,6 +957,15 @@ class QuicConnection(
         originalPacketBytes: ByteArray,
     ): Boolean {
         if (retryConsumed) return false
+        // RFC 9000 §17.2.5.2: "the client MUST discard a Retry packet
+        // that contains a Source Connection ID field that is identical
+        // to the Destination Connection ID field of its Initial packet".
+        // Without this guard a self-loop / off-path attacker could feed
+        // us a Retry that nominally validates but pins our state to the
+        // attacker's chosen DCID forever.
+        if (retryPacket.scid.bytes.contentEquals(originalDestinationConnectionId.bytes)) {
+            return false
+        }
         if (!retryPacket.verifyIntegrityTag(originalPacketBytes, originalDestinationConnectionId.bytes)) {
             return false
         }
@@ -1184,7 +1224,7 @@ class QuicConnection(
         stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
         stream.receiveLimit = config.initialMaxStreamDataBidiLocal
         streams[id] = stream
-        streamsList += stream
+        streamsList = streamsList + stream
         return stream
     }
 
@@ -1218,7 +1258,7 @@ class QuicConnection(
         stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
         stream.receiveLimit = 0L // can't receive
         streams[id] = stream
-        streamsList += stream
+        streamsList = streamsList + stream
         return stream
     }
 
@@ -1412,15 +1452,21 @@ class QuicConnection(
         errorCode: Long,
         reason: String,
     ) {
-        var firedQlog = false
-        lifecycleLock.withLock {
-            if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
-            closeErrorCode = errorCode
-            closeReason = reason
-            status = Status.CLOSING
-            firedQlog = true
-        }
-        if (firedQlog) qlogObserver.onConnectionClosed("local", errorCode, reason)
+        // Atomic CAS via [closeStateMonitor] so two concurrent
+        // close()/markClosedExternally callers can't both observe a
+        // non-CLOSED state and both proceed to fire the qlog event /
+        // overwrite [closeReason]. First caller wins; subsequent
+        // callers no-op silently.
+        val firedQlog =
+            synchronized(closeStateMonitor) {
+                if (status == Status.CLOSED || status == Status.CLOSING) return@synchronized false
+                closeErrorCode = errorCode
+                closeReason = reason
+                status = Status.CLOSING
+                true
+            }
+        if (!firedQlog) return
+        qlogObserver.onConnectionClosed("local", errorCode, reason)
         // If a caller is suspended on awaitHandshake() and we're tearing down
         // before completion, fail the deferred so the caller throws instead
         // of hanging forever.
@@ -1432,17 +1478,23 @@ class QuicConnection(
 
     /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
     internal fun markClosedExternally(reason: String) {
-        val wasClosed = status == Status.CLOSED
-        if (status != Status.CLOSED) status = Status.CLOSED
-        if (!wasClosed) {
-            // First-call wins for [closeReason] so the highest-quality
-            // diagnostic is preserved when several teardown paths race
-            // (e.g. read loop's `socket.receive() == null` finally fires
-            // a moment before the send loop's `socket.send` throw catch
-            // block does). Without this, downstream observers like
-            // `ReconnectingNestsListener.terminalAwait` see a closed
-            // connection but no human-readable cause for the failure.
-            closeReason = reason
+        // First-call wins for [closeReason] so the highest-quality
+        // diagnostic is preserved when several teardown paths race
+        // (e.g. read loop's `socket.receive() == null` finally fires
+        // a moment before the send loop's `socket.send` throw catch
+        // block does). Pre-fix, the "did we win the race?" check was a
+        // non-atomic read-then-write on [status], so two callers could
+        // both observe `status != CLOSED`, both fire the qlog event,
+        // and both stomp on [closeReason] in unpredictable order. The
+        // monitor below makes the transition truly atomic.
+        val firstClose =
+            synchronized(closeStateMonitor) {
+                if (status == Status.CLOSED) return@synchronized false
+                status = Status.CLOSED
+                closeReason = reason
+                true
+            }
+        if (firstClose) {
             // "remote" covers both peer-initiated CONNECTION_CLOSE and
             // local invariant violations (CID mismatch, frame decode
             // failure) that the parser surfaces as markClosedExternally.
@@ -1480,7 +1532,12 @@ class QuicConnection(
         closedSignal.close()
         peerStreamSignal.close()
         incomingDatagramSignal.close()
-        // Iterate the snapshot list (safe: we never remove from it).
+        // [streamsList] is now an immutable List published via @Volatile,
+        // so reading it here without [streamsLock] yields a consistent
+        // snapshot — either the pre-mutation or post-mutation view —
+        // and never a half-mutated ArrayList raising CME. Mutators
+        // (open*Locked, retireFullyDoneStreamsLocked) all run under
+        // [streamsLock] and publish a fresh List on each change.
         // closeIncoming is idempotent on the underlying Channel.close().
         for (stream in streamsList) {
             stream.closeIncoming()
@@ -1527,7 +1584,7 @@ class QuicConnection(
                 StreamId.Kind.CLIENT_BIDI -> config.initialMaxStreamDataBidiLocal
             }
         streams[id] = stream
-        streamsList += stream
+        streamsList = streamsList + stream
         newPeerStreams.addLast(stream)
         // Track lifetime peer-stream counts so the writer can emit a
         // refreshed MAX_STREAMS_* once the peer's usage approaches the
@@ -1882,12 +1939,20 @@ class QuicConnection(
      *    stream that delivers duplicate bytes to the application.
      */
     internal fun retireFullyDoneStreamsLocked(): Int {
-        if (streamsList.isEmpty()) return 0
+        val current = streamsList
+        if (current.isEmpty()) return 0
+        // Build the post-retire snapshot in one pass. Mutating the live
+        // [streamsList] in-place would force readers (closeAllSignals,
+        // diagnostic accessors) to take [streamsLock] just to iterate;
+        // building a fresh list and publishing it via the @Volatile ref
+        // makes those reads lock-free and CME-free.
         var removed = 0
-        val it = streamsList.iterator()
-        while (it.hasNext()) {
-            val stream = it.next()
-            if (!stream.isFullyRetired) continue
+        val kept = ArrayList<QuicStream>(current.size)
+        for (stream in current) {
+            if (!stream.isFullyRetired) {
+                kept.add(stream)
+                continue
+            }
             // Fold the per-stream receive high-water into the cumulative
             // counter BEFORE we drop it — once we lose the reference the
             // writer can no longer reconstruct the contribution.
@@ -1905,10 +1970,10 @@ class QuicConnection(
             // peer's plausible retransmit horizon.
             recordRetiredStreamIdLocked(stream.streamId)
             streams.remove(stream.streamId)
-            it.remove()
             removed++
         }
         if (removed > 0) {
+            streamsList = kept
             retiredStreamsCount += removed.toLong()
             // The writer's round-robin cursor is a position in
             // [streamsList], so a removal that crossed the cursor would
@@ -2489,6 +2554,19 @@ class QuicConnection(
          */
         const val MAX_PENDING_PATH_RESPONSES: Int = 64
     }
+}
+
+/**
+ * Default monotonic clock supplier for [QuicConnection.nowMillis]. Returns a
+ * lambda that yields milliseconds-elapsed-since-construction, anchored on a
+ * fresh [kotlin.time.TimeSource.Monotonic.markNow] mark. Only differences are
+ * meaningful; an NTP step / suspend-resume does not affect the values.
+ */
+private fun defaultMonotonicNowMillis(): () -> Long {
+    val anchor =
+        kotlin.time.TimeSource.Monotonic
+            .markNow()
+    return { anchor.elapsedNow().inWholeMilliseconds }
 }
 
 /** Connection was closed (locally or by peer) before reaching CONNECTED. */

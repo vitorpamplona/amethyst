@@ -34,8 +34,14 @@ import com.vitorpamplona.quic.frame.AckFrame
  * from blowing up the iterator.
  *
  * The function does not allocate per-PN; it iterates by primitive
- * `Long` and invokes [block] for each ACK'd PN. Hot path on every
- * inbound ACK frame, so allocation matters.
+ * `Long` and invokes [block] for each ACK'd PN.
+ *
+ * NOTE: this primitive walks every PN in the range. Production code
+ * MUST use [drainAckedSentPackets] (which is bounded by the in-flight
+ * map) — a hostile peer with `firstAckRange = 2^62-1` would otherwise
+ * pin a core forever inside this loop. This entry point is retained
+ * for tests that intentionally inspect the on-wire range expansion
+ * with small, well-formed inputs.
  */
 inline fun forEachAckedPacketNumber(
     ack: AckFrame,
@@ -71,14 +77,62 @@ inline fun forEachAckedPacketNumber(
  * `quic/plans/2026-05-04-control-frame-retransmit.md`).
  *
  * Caller must hold the connection lock.
+ *
+ * DoS hardening: instead of walking every PN inside each ACK range
+ * (up to 2^62 with a hostile peer — single 8-byte varint pinning a
+ * core forever), we walk the [sentPackets] keys (bounded by the
+ * congestion window, typically ≤ a few thousand) and check
+ * membership against the parsed range list. O(N·M) where N = sent
+ * packets in flight, M = ACK ranges (bounded by packet payload
+ * size). A peer with `firstAckRange = 2^62-1` simply matches every
+ * legitimate in-flight PN once, then returns.
  */
 fun drainAckedSentPackets(
     sentPackets: MutableMap<Long, SentPacket>,
     ack: AckFrame,
 ): List<SentPacket> {
+    if (sentPackets.isEmpty()) return emptyList()
+    val ranges = parseAckRanges(ack)
+    if (ranges.isEmpty()) return emptyList()
     val drained = mutableListOf<SentPacket>()
-    forEachAckedPacketNumber(ack) { pn ->
-        sentPackets.remove(pn)?.let { drained += it }
+    val it = sentPackets.entries.iterator()
+    while (it.hasNext()) {
+        val entry = it.next()
+        val pn = entry.key
+        for (i in ranges.indices) {
+            val r = ranges[i]
+            if (pn in r) {
+                drained += entry.value
+                it.remove()
+                break
+            }
+        }
     }
     return drained
+}
+
+/**
+ * Parse an [AckFrame]'s on-wire ranges into a list of `[smallest, largest]`
+ * `LongRange` entries, descending. Each range is clamped to non-negative
+ * PNs and bounded against [Long] underflow on the additional-ranges
+ * walk. Stops early when the descending walk crosses zero (per RFC 9000
+ * §19.3.1, all PNs are non-negative). The result is small (bounded by
+ * the ACK frame's payload size).
+ */
+private fun parseAckRanges(ack: AckFrame): List<LongRange> {
+    val largest = ack.largestAcknowledged
+    if (largest < 0L) return emptyList()
+    val firstSmallest = (largest - ack.firstAckRange).coerceAtLeast(0L)
+    val out = ArrayList<LongRange>(ack.additionalRanges.size + 1)
+    out += firstSmallest..largest
+    var prevSmallest = firstSmallest
+    for (range in ack.additionalRanges) {
+        // RFC 9000 §19.3.1: nextLargest = prevSmallest - gap - 2.
+        val nextLargest = prevSmallest - range.gap - 2L
+        if (nextLargest < 0L) break
+        val nextSmallest = (nextLargest - range.ackRangeLength).coerceAtLeast(0L)
+        out += nextSmallest..nextLargest
+        prevSmallest = nextSmallest
+    }
+    return out
 }

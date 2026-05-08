@@ -54,27 +54,43 @@ class ReceiveBuffer {
     var finOffset: Long? = null
         private set
 
-    /** Insert a chunk at [offset] of size [data.size]. Idempotent on overlap. */
+    /**
+     * Insert a chunk at [offset] of size [data.size]. Idempotent on overlap.
+     *
+     * Returns [InsertResult.OK] for a well-formed frame, or one of the
+     * RFC 9000 §4.5 final-size error variants when the peer's frame is
+     * inconsistent with state we've already accepted. The caller (the
+     * QUIC parser) is expected to translate these into a connection
+     * close with `FINAL_SIZE_ERROR`. Pre-fix the buffer silently
+     * dropped conflicting FINs and accepted post-FIN extension data,
+     * letting a buggy peer drift state without termination.
+     */
     fun insert(
         offset: Long,
         data: ByteArray,
         fin: Boolean = false,
-    ) {
-        if (data.isEmpty() && !fin) return
+    ): InsertResult {
+        if (data.isEmpty() && !fin) return InsertResult.OK
+        val frameEnd = offset + data.size
+        // RFC 9000 §4.5: once a final size is established, no STREAM
+        // frame may extend past it, and a second FIN must agree.
+        finOffset?.let { existing ->
+            if (fin && frameEnd != existing) {
+                return InsertResult.FIN_CONFLICTS_WITH_PRIOR_FIN
+            }
+            if (frameEnd > existing) {
+                return InsertResult.OFFSET_PAST_FIN
+            }
+        }
         if (fin) {
             finReceived = true
-            // The FIN flag carries an implicit final offset = offset + data.size.
-            // RFC 9000 §4.5: once set, this MUST NOT change; ignore subsequent
-            // FIN frames whose final size disagrees (they should already have
-            // been rejected at the stream-state level, but be defensive here).
-            val finalSize = offset + data.size
-            if (finOffset == null) finOffset = finalSize
+            if (finOffset == null) finOffset = frameEnd
         }
-        if (data.isEmpty()) return
+        if (data.isEmpty()) return InsertResult.OK
 
         val end = offset + data.size
         // Drop chunk parts already consumed.
-        if (end <= readOffset) return
+        if (end <= readOffset) return InsertResult.OK
         val effOffset: Long
         val effData: ByteArray
         if (offset < readOffset) {
@@ -101,7 +117,7 @@ class ReceiveBuffer {
         if (startIdx == endIdx) {
             // No overlap — just insert.
             chunks.add(startIdx, Chunk(effOffset, effData))
-            return
+            return InsertResult.OK
         }
 
         // Coalesce [startIdx, endIdx) plus the new chunk.
@@ -119,6 +135,32 @@ class ReceiveBuffer {
         // Replace
         for (i in 1..(endIdx - startIdx)) chunks.removeAt(startIdx)
         chunks.add(startIdx, Chunk(lo, merged))
+        return InsertResult.OK
+    }
+
+    /** Highest `offset + data.size` ever seen on this stream (whether or not contiguous). */
+    fun highestObservedOffset(): Long {
+        val finEnd = finOffset
+        val bufEnd = if (chunks.isEmpty()) readOffset else chunks.last().endOffset()
+        return if (finEnd != null) maxOf(finEnd, bufEnd) else bufEnd
+    }
+
+    /** Result of an [insert] call — see RFC 9000 §4.5. */
+    enum class InsertResult {
+        /** Frame accepted (or harmlessly redundant). */
+        OK,
+
+        /**
+         * The frame's `offset + data.size` exceeds the previously-established
+         * final size. Caller MUST close with FINAL_SIZE_ERROR.
+         */
+        OFFSET_PAST_FIN,
+
+        /**
+         * A second FIN-bearing frame disagreed with the established final
+         * size. Caller MUST close with FINAL_SIZE_ERROR.
+         */
+        FIN_CONFLICTS_WITH_PRIOR_FIN,
     }
 
     /** Returns and consumes the contiguous bytes available starting from [readOffset]. */

@@ -34,8 +34,12 @@ import javax.crypto.spec.SecretKeySpec
  * (which is much cheaper than `getInstance`) plus the AEAD math itself.
  *
  * Single-thread per direction: one PacketProtection feeds either the read
- * loop OR the send loop, never both. Locking would be needed if that ever
- * changes.
+ * loop OR the send loop, never both. The class still synchronizes on a
+ * private monitor as a defence-in-depth: the lock-split refactor in
+ * `QuicConnectionDriver` keeps each side single-threaded by design, but
+ * a future caller (test harness, key-update path) sharing the instance
+ * across coroutines would otherwise corrupt the cached `Cipher` state
+ * silently. The JCA `Cipher` itself is documented as not thread-safe.
  */
 class JcaAesGcmAead(
     key: ByteArray,
@@ -58,29 +62,63 @@ class JcaAesGcmAead(
     // Cipher.getInstance — slow but rare (once per Initial datagram).
     private val encryptCipher: Cipher = Cipher.getInstance("AES/GCM/NoPadding")
     private val decryptCipher: Cipher = Cipher.getInstance("AES/GCM/NoPadding")
-    private var lastEncryptNonce: ByteArray? = null
+
+    /**
+     * Last nonce successfully consumed by [seal]. We use a fresh
+     * [Cipher.getInstance] when the caller asks us to seal under the
+     * SAME nonce a second time (RFC 9000 §14 Initial-padding rebuild).
+     *
+     * Recent-history set rather than just the most-recent nonce: a
+     * single intermediate seal between two rebuilds could otherwise
+     * mask a duplicate against the SECOND-most-recent nonce, which
+     * some JCA providers (Conscrypt) reject with
+     * `InvalidAlgorithmParameterException` while others (SunJCE)
+     * silently allow. Bounded at [NONCE_HISTORY_LIMIT] entries — far
+     * more than any legitimate rebuild path needs (typically 1–2),
+     * but cheap to keep.
+     */
+    private val recentEncryptNonces = ArrayDeque<ByteArray>()
 
     override fun seal(
         key: ByteArray,
         nonce: ByteArray,
         aad: ByteArray,
         plaintext: ByteArray,
-    ): ByteArray {
-        // Detect IV reuse — happens on the Initial-padding rebuild path. Fall
-        // back to a one-shot fresh Cipher for that case rather than fighting
-        // JCA's safety check.
-        val reuse = lastEncryptNonce?.contentEquals(nonce) == true
-        return if (reuse) {
-            val fresh = Cipher.getInstance("AES/GCM/NoPadding")
-            fresh.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
-            fresh.updateAAD(aad)
-            fresh.doFinal(plaintext)
-        } else {
-            encryptCipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
-            encryptCipher.updateAAD(aad)
-            val out = encryptCipher.doFinal(plaintext)
-            lastEncryptNonce = nonce
-            out
+    ): ByteArray =
+        synchronized(this) {
+            val reuse = recentEncryptNonces.any { it.contentEquals(nonce) }
+            if (reuse) {
+                val fresh = Cipher.getInstance("AES/GCM/NoPadding")
+                fresh.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+                fresh.updateAAD(aad)
+                fresh.doFinal(plaintext)
+            } else {
+                try {
+                    encryptCipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+                    encryptCipher.updateAAD(aad)
+                    val out = encryptCipher.doFinal(plaintext)
+                    rememberEncryptNonce(nonce)
+                    out
+                } catch (t: Throwable) {
+                    // Any throw mid-`init`/`updateAAD`/`doFinal` leaves the
+                    // cached cipher in a provider-defined state. The next
+                    // legitimate call's `init` should reset it, but if a
+                    // crafted input triggers a partial init the next seal
+                    // could conceivably reuse residual state. Drop the
+                    // most recent nonce from the history so a retry with
+                    // the same nonce takes the safe fresh-Cipher path.
+                    if (recentEncryptNonces.lastOrNull()?.contentEquals(nonce) == true) {
+                        recentEncryptNonces.removeLast()
+                    }
+                    throw t
+                }
+            }
+        }
+
+    private fun rememberEncryptNonce(nonce: ByteArray) {
+        recentEncryptNonces.addLast(nonce)
+        while (recentEncryptNonces.size > NONCE_HISTORY_LIMIT) {
+            recentEncryptNonces.removeFirst()
         }
     }
 
@@ -90,11 +128,17 @@ class JcaAesGcmAead(
         aad: ByteArray,
         ciphertext: ByteArray,
     ): ByteArray? =
-        try {
-            decryptCipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
-            decryptCipher.updateAAD(aad)
-            decryptCipher.doFinal(ciphertext)
-        } catch (_: GeneralSecurityException) {
-            null
+        synchronized(this) {
+            try {
+                decryptCipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+                decryptCipher.updateAAD(aad)
+                decryptCipher.doFinal(ciphertext)
+            } catch (_: GeneralSecurityException) {
+                null
+            }
         }
+
+    private companion object {
+        private const val NONCE_HISTORY_LIMIT = 8
+    }
 }

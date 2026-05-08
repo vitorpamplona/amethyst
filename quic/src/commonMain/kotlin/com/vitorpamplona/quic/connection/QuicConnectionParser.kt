@@ -408,7 +408,16 @@ private fun feedShortHeaderPacket(
     // to [previousReceiveProtection], and rolls the send side forward so
     // the next outbound carries the matching KEY_PHASE bit (peer uses
     // that to confirm the rotation completed).
-    if (rotateOnSuccess != null) {
+    //
+    // RFC 9001 §6.1: a peer that initiated a key update MUST NOT send a
+    // post-rotation packet with a smaller PN than any pre-rotation
+    // packet. So a "next-phase" packet with PN <= largestReceived is
+    // either a misbehaving peer or an off-path attempt to flip our key
+    // state with a captured/forged packet. We refuse the commit in that
+    // case — AEAD already cleared, so the frames are still delivered,
+    // but we don't promote next-phase keys to current. Aligns with
+    // quicly / quiche / s2n-quic behaviour.
+    if (rotateOnSuccess != null && parsed.packet.packetNumber > state.pnSpace.largestReceived) {
         conn.commitKeyUpdate(rotateOnSuccess)
     }
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
@@ -499,7 +508,19 @@ private fun dispatchFrames(
                     state.largestAckedSentTimeMs = largestSentTime
                 }
                 if (advancedLargest && largestSentTime != null && drained.any { it.ackEliciting }) {
-                    val ackDelayUs = frame.ackDelay shl conn.config.ackDelayExponent.toInt()
+                    // Peer-controlled `frame.ackDelay` is a varint up to 2^62-1.
+                    // Naive `shl ackDelayExponent` overflows Long for crafted
+                    // values (negative result → poisoned RTT sample inflating
+                    // smoothed_rtt). Clamp the exponent and the shift result
+                    // before consuming. Per RFC 9000 §18.2 the exponent is
+                    // 0..20; we further clamp ackDelay so the shift never
+                    // overflows (`ackDelay <= Long.MAX_VALUE >>> exponent`).
+                    val rawExponent = conn.config.ackDelayExponent
+                    val exponent = rawExponent.coerceIn(0L, 20L).toInt()
+                    val maxAckDelayPreShift =
+                        if (exponent == 0) Long.MAX_VALUE else Long.MAX_VALUE ushr exponent
+                    val safeAckDelay = frame.ackDelay.coerceIn(0L, maxAckDelayPreShift)
+                    val ackDelayUs = safeAckDelay shl exponent
                     val ackDelayMs = ackDelayUs / 1_000L
                     conn.lossDetection.onRttSample(
                         largestAckedSentTimeMs = largestSentTime,
@@ -602,7 +623,33 @@ private fun dispatchFrames(
                     )
                     return
                 }
-                stream.receive.insert(frame.offset, frame.data, frame.fin)
+                // RFC 9000 §4.5: enforce final-size invariants. The
+                // [com.vitorpamplona.quic.stream.ReceiveBuffer.insert]
+                // surface returns a typed result; map any non-OK result
+                // to a connection close with FINAL_SIZE_ERROR so the
+                // peer knows it just violated the spec instead of
+                // having its bytes silently dropped.
+                when (stream.receive.insert(frame.offset, frame.data, frame.fin)) {
+                    com.vitorpamplona.quic.stream.ReceiveBuffer.InsertResult.OK -> {
+                        Unit
+                    }
+
+                    com.vitorpamplona.quic.stream.ReceiveBuffer.InsertResult.OFFSET_PAST_FIN -> {
+                        conn.markClosedExternally(
+                            "FINAL_SIZE_ERROR: stream ${frame.streamId} frame ends at " +
+                                "${frame.offset + frame.data.size} past final size ${stream.receive.finOffset}",
+                        )
+                        return
+                    }
+
+                    com.vitorpamplona.quic.stream.ReceiveBuffer.InsertResult.FIN_CONFLICTS_WITH_PRIOR_FIN -> {
+                        conn.markClosedExternally(
+                            "FINAL_SIZE_ERROR: stream ${frame.streamId} second FIN at " +
+                                "${frame.offset + frame.data.size} disagrees with prior final size ${stream.receive.finOffset}",
+                        )
+                        return
+                    }
+                }
                 val data = stream.receive.readContiguous()
                 if (data.isNotEmpty()) {
                     // Round-4 perf #9: mark the stream as needing a flow-
@@ -698,17 +745,61 @@ private fun dispatchFrames(
                     )
                     return
                 }
+                // RFC 9000 §4.5: the [finalSize] in RESET_STREAM MUST agree
+                // with any final size implied by previously-received STREAM
+                // frames AND MUST be ≥ the highest offset already observed.
+                // A peer that violates this is closed with FINAL_SIZE_ERROR
+                // — pre-fix we accepted any value silently, letting a buggy
+                // peer drift our state.
+                val target = conn.streamByIdLocked(frame.streamId)
+                if (target != null) {
+                    val priorFin = target.receive.finOffset
+                    val highestSeen = target.receive.highestObservedOffset()
+                    if (priorFin != null && frame.finalSize != priorFin) {
+                        conn.markClosedExternally(
+                            "FINAL_SIZE_ERROR: stream ${frame.streamId} RESET_STREAM finalSize " +
+                                "${frame.finalSize} disagrees with prior FIN size $priorFin",
+                        )
+                        return
+                    }
+                    if (frame.finalSize < highestSeen) {
+                        conn.markClosedExternally(
+                            "FINAL_SIZE_ERROR: stream ${frame.streamId} RESET_STREAM finalSize " +
+                                "${frame.finalSize} below already-observed offset $highestSeen",
+                        )
+                        return
+                    }
+                }
                 // Mark the peer's stream aborted and close our read side; the
                 // application sees a truncated incoming flow.
-                conn.streamByIdLocked(frame.streamId)?.closeIncoming()
+                target?.closeIncoming()
             }
 
             is StopSendingFrame -> {
-                // Round-4 #2: peer asks us to stop sending on its read side.
-                // We don't model an outbound abort yet — this is acknowledged
-                // and dropped. A future enhancement should emit RESET_STREAM
-                // back per RFC 9000 §3.5.
+                // RFC 9000 §3.5: peer asks us to stop sending on its read side.
+                // We MUST respond with RESET_STREAM carrying the same
+                // application error code so the peer can free its receive
+                // resources. Pre-fix this was silently dropped, so the peer
+                // would keep buffering bytes we kept emitting and the
+                // application kept paying CPU on a stream the peer no
+                // longer cared about.
+                //
+                // resetStream() is "first-call wins" so a duplicate
+                // STOP_SENDING (peer retransmit) doesn't redundantly mutate
+                // state. Only triggers for streams with an outgoing side —
+                // peer-uni (CLIENT_UNI from peer's perspective = SERVER_UNI
+                // here) has none, so the call is a defensive no-op.
                 ackEliciting = true
+                conn.streamByIdLocked(frame.streamId)?.let { stream ->
+                    val kind = StreamId.kindOf(frame.streamId)
+                    val hasLocalSend =
+                        kind == StreamId.Kind.CLIENT_BIDI ||
+                            kind == StreamId.Kind.SERVER_BIDI ||
+                            kind == StreamId.Kind.CLIENT_UNI
+                    if (hasLocalSend) {
+                        stream.resetStream(frame.applicationErrorCode)
+                    }
+                }
             }
 
             is NewTokenFrame -> {
