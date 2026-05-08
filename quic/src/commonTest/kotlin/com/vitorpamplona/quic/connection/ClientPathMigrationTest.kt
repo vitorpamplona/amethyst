@@ -27,9 +27,11 @@ import com.vitorpamplona.quic.frame.RetireConnectionIdFrame
 import com.vitorpamplona.quic.frame.decodeFrames
 import com.vitorpamplona.quic.frame.encodeFrames
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -382,6 +384,220 @@ class ClientPathMigrationTest {
                 client.status,
                 "server-forced rotation must NOT close the connection",
             )
+        }
+
+    @Test
+    fun backToBackSuccessfulMigrationsRetireExactlyOnePerRotationAndStampNewDcid() =
+        runBlocking {
+            // Rebind-port regression: prior to the 2026-05-08 fix, two
+            // back-to-back rotations could leak a packet stamped with
+            // a just-retired DCID — quic-go / picoquic / msquic /
+            // mvfst correctly close that as PROTOCOL_VIOLATION. This
+            // test drives the validator through TWO completed
+            // rotations and asserts:
+            //  1. exactly ONE RETIRE_CONNECTION_ID frame is queued
+            //     per rotation (the prior active seq);
+            //  2. EVERY post-rotation outbound packet is stamped
+            //     with the new DCID (no stray packet leaks the
+            //     retired seq).
+            val (client, pipe) = newConnectedClient()
+
+            val cidSeq1 = ByteArray(8) { (0xA0 or it).toByte() }
+            val cidSeq2 = ByteArray(8) { (0xB0 or it).toByte() }
+            val token1 = ByteArray(16) { 0x71 }
+            val token2 = ByteArray(16) { 0x72 }
+
+            // Server offers two spare CIDs up front so we can do two
+            // rotations without waiting for replenishment.
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(
+                    listOf(
+                        NewConnectionIdFrame(1L, 0L, cidSeq1, token1),
+                        NewConnectionIdFrame(2L, 0L, cidSeq2, token2),
+                    ),
+                )!!,
+                nowMillis = 0L,
+            )
+            assertEquals(2, client.pathValidator.unusedCount())
+            // Drain the ACK so subsequent assertions see only post-rotation traffic.
+            drainOutbound(client, nowMillis = 0L)
+
+            // ── Rotation #1 ────────────────────────────────────────
+            assertEquals(PathMigrationResult.Started, client.triggerPathMigration(100L, 1_000L))
+            assertContentEquals(cidSeq1, client.destinationConnectionId.bytes)
+            val out1 = drainOutbound(client, nowMillis = 100L)!!
+            val frames1 = pipe.decryptClientApplicationFrames(out1)!!
+            val challenge1 = frames1.first { it is PathChallengeFrame } as PathChallengeFrame
+            // Exactly ONE RETIRE_CONNECTION_ID frame in this packet,
+            // for the prior active seq (0). No retire of seq 1.
+            val retires1 = frames1.filterIsInstance<RetireConnectionIdFrame>()
+            assertEquals(1, retires1.size, "rotation #1 must queue exactly one RETIRE — got ${retires1.map { it.sequenceNumber }}")
+            assertEquals(0L, retires1.single().sequenceNumber)
+            // PATH_RESPONSE arrives — validation succeeds.
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(listOf(PathResponseFrame(challenge1.data.copyOf())))!!,
+                nowMillis = 200L,
+            )
+            assertContentEquals(cidSeq1, client.destinationConnectionId.bytes)
+            assertEquals(1L, client.pathValidator.activeCidSequence)
+            assertEquals(1L, client.pathValidator.successfulValidations)
+            // Drain the ACK so the next outbound is rotation-specific.
+            drainOutbound(client, nowMillis = 200L)
+
+            // ── Rotation #2 ────────────────────────────────────────
+            assertEquals(PathMigrationResult.Started, client.triggerPathMigration(300L, 1_000L))
+            assertContentEquals(cidSeq2, client.destinationConnectionId.bytes)
+            val out2 = drainOutbound(client, nowMillis = 300L)!!
+            val frames2 = pipe.decryptClientApplicationFrames(out2)!!
+            val challenge2 = frames2.first { it is PathChallengeFrame } as PathChallengeFrame
+            assertNotEquals(
+                challenge1.data.toList(),
+                challenge2.data.toList(),
+                "second rotation must emit a fresh random PATH_CHALLENGE payload",
+            )
+            // Exactly ONE RETIRE_CONNECTION_ID frame for seq=1 (the
+            // prior active). Critically NOT also seq=0 — that was
+            // already retired in rotation #1 and the writer must
+            // not re-emit a stale entry.
+            val retires2 = frames2.filterIsInstance<RetireConnectionIdFrame>()
+            assertEquals(1, retires2.size, "rotation #2 must queue exactly one RETIRE — got ${retires2.map { it.sequenceNumber }}")
+            assertEquals(1L, retires2.single().sequenceNumber)
+
+            // PATH_RESPONSE arrives — second validation succeeds.
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(listOf(PathResponseFrame(challenge2.data.copyOf())))!!,
+                nowMillis = 400L,
+            )
+            assertContentEquals(cidSeq2, client.destinationConnectionId.bytes)
+            assertEquals(2L, client.pathValidator.activeCidSequence)
+            assertEquals(2L, client.pathValidator.successfulValidations)
+            assertEquals(QuicConnection.Status.CONNECTED, client.status)
+        }
+
+    @Test
+    fun validationTimeoutWithSpareRotatesDcidAndRetiresFailedSeq() =
+        runBlocking {
+            // Rebind-port regression: when validation times out and
+            // a spare CID exists, the writer's destinationConnectionId
+            // MUST rotate to that spare BEFORE the next outbound is
+            // built. Otherwise we'd queue RETIRE for the failed seq
+            // and stamp the same retired seq on the same packet —
+            // exactly the PROTOCOL_VIOLATION the strict servers
+            // close us on.
+            val (client, pipe) = newConnectedClient()
+            val cidSeq1 = ByteArray(8) { (0xA0 or it).toByte() }
+            val cidSeq2 = ByteArray(8) { (0xB0 or it).toByte() }
+
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(
+                    listOf(
+                        NewConnectionIdFrame(1L, 0L, cidSeq1, ByteArray(16) { 0x11 }),
+                        NewConnectionIdFrame(2L, 0L, cidSeq2, ByteArray(16) { 0x22 }),
+                    ),
+                )!!,
+                nowMillis = 0L,
+            )
+            drainOutbound(client, nowMillis = 0L)
+
+            // Trigger validation. tryStart consumes seq=1; pool keeps seq=2.
+            val pto = 1_000L
+            assertEquals(PathMigrationResult.Started, client.triggerPathMigration(100L, pto))
+            assertContentEquals(cidSeq1, client.destinationConnectionId.bytes)
+            // Drain the PATH_CHALLENGE so any subsequent build is
+            // post-timeout traffic only.
+            drainOutbound(client, nowMillis = 100L)
+
+            // Force the 3*PTO timeout. checkPathValidationTimeoutLocked
+            // is the same path the driver / writer take, so this
+            // exercises the production wrapper.
+            val timedOut =
+                client.streamsLock.withLock {
+                    client.checkPathValidationTimeoutLocked(nowMillis = 100L + pto * 4L)
+                }
+            assertTrue(timedOut)
+            // Validator rotated active to the spare; connection swapped DCID.
+            assertEquals(2L, client.pathValidator.activeCidSequence)
+            assertContentEquals(
+                cidSeq2,
+                client.destinationConnectionId.bytes,
+                "DCID must rotate to the spare before any outbound runs",
+            )
+            assertTrue(
+                client.pathValidator.pendingRetireSequences.contains(1L),
+                "failed seq=1 must be queued for RETIRE alongside the rotation",
+            )
+
+            // Next outbound must stamp the SPARE seq (cidSeq2), NOT
+            // the failed seq (cidSeq1) — the bug we're guarding
+            // against. The packet carries RETIRE(1) on a DCID of
+            // seq=2's bytes.
+            val out = drainOutbound(client, nowMillis = 100L + pto * 4L)!!
+            val frames = pipe.decryptClientApplicationFrames(out)!!
+            val retire = frames.firstOrNull { it is RetireConnectionIdFrame } as? RetireConnectionIdFrame
+            assertTrue(retire != null, "outbound must carry RETIRE for the failed seq — got ${frames.map { it::class.simpleName }}")
+            assertEquals(1L, retire.sequenceNumber)
+            // The pipe parser uses serverScid.length to peel the
+            // DCID off the short header. We verify the rotation
+            // structurally via destinationConnectionId rather than
+            // reparsing the wire bytes — but the pipe successfully
+            // decrypted the packet, which already requires the DCID
+            // to match a recognized issued CID on the server side.
+        }
+
+    @Test
+    fun validationTimeoutWithoutSpareKeepsActiveCidAndDoesNotRetire() =
+        runBlocking {
+            // Rebind-port regression (no-spare branch): when
+            // validation times out and NO spare exists, the
+            // validator must NOT queue retire for the failed seq —
+            // doing so would have us stamping a CID we just told
+            // the peer to retire. Instead activeCidSequence stays
+            // on the failed seq; the writer keeps using it; the
+            // next NEW_CONNECTION_ID arrival lets a fresh trigger
+            // rotate cleanly.
+            val (client, pipe) = newConnectedClient()
+            val cidSeq1 = ByteArray(8) { (0xC0 or it).toByte() }
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(
+                    listOf(NewConnectionIdFrame(1L, 0L, cidSeq1, ByteArray(16) { 0x33 })),
+                )!!,
+                nowMillis = 0L,
+            )
+            drainOutbound(client, nowMillis = 0L)
+
+            val pto = 1_000L
+            assertEquals(PathMigrationResult.Started, client.triggerPathMigration(100L, pto))
+            assertContentEquals(cidSeq1, client.destinationConnectionId.bytes)
+            // Pool is now empty — only seq=1 was offered, and it's
+            // the active.
+            assertEquals(0, client.pathValidator.unusedCount())
+            drainOutbound(client, nowMillis = 100L)
+
+            val timedOut =
+                client.streamsLock.withLock {
+                    client.checkPathValidationTimeoutLocked(nowMillis = 100L + pto * 4L)
+                }
+            assertTrue(timedOut)
+            // Active stays on the failed seq; DCID unchanged.
+            assertEquals(1L, client.pathValidator.activeCidSequence)
+            assertContentEquals(
+                cidSeq1,
+                client.destinationConnectionId.bytes,
+                "no spare available — DCID must stay on the failed seq, not be cleared",
+            )
+            // Crucially: no retire queued. The writer doesn't have
+            // a way to stamp anything else, so retiring would put
+            // us into the bug.
+            assertTrue(
+                !client.pathValidator.pendingRetireSequences.contains(1L),
+                "failed seq must NOT be queued for retire when no spare exists — pending=${client.pathValidator.pendingRetireSequences}",
+            )
+            assertEquals(QuicConnection.Status.CONNECTED, client.status, "stuck-on-failed-cid must not close the connection")
         }
 
     @Test

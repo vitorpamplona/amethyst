@@ -23,7 +23,6 @@ package com.vitorpamplona.quic.connection
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -191,31 +190,88 @@ class PathValidatorTest {
     }
 
     @Test
-    fun twoConsecutiveFailedValidationsRetireAllAbandonedSequences() {
-        // Bug-B regression: prior to the fix, two failed validations
-        // would leave the original seq=0 unretired (the priorSeq
-        // queue entry was scheduled inside applyPathResponse, which
-        // never runs for failed validations).
+    fun twoConsecutiveFailedValidationsRetireAllAbandonedSequencesWithSpare() {
+        // Bug-B regression (original): prior to the priorSeq fix,
+        // two failed validations would leave seq=0 unretired forever
+        // (the priorSeq retire was scheduled inside applyPathResponse
+        // which never ran for failed validations).
+        //
+        // 2026-05-08 update: timeout no longer queues retire for the
+        // failed seq UNLESS a spare is available to rotate the writer
+        // onto. Otherwise we'd be stamping a CID we just retired
+        // (the rebind-port bug). With a spare per attempt the
+        // original Bug-B contract still holds — every abandoned seq
+        // gets retired.
         val v = PathValidator(challengePayloadFactory = { ByteArray(8) { 0x22 } })
+        // Need 4 spares: each failed validation consumes one (the
+        // tryStart pick) and rotates to another (the timeout
+        // recovery pick). Two failed cycles → 4 spares total.
         v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16) { 0x10 })
         v.recordPeerNewConnectionId(2L, 0L, ByteArray(8) { 0x02 }, ByteArray(16) { 0x20 })
+        v.recordPeerNewConnectionId(3L, 0L, ByteArray(8) { 0x03 }, ByteArray(16) { 0x30 })
+        v.recordPeerNewConnectionId(4L, 0L, ByteArray(8) { 0x04 }, ByteArray(16) { 0x40 })
         val pto = 1_000L
-        // First attempt fails by timeout.
+        // First attempt: tryStart consumes seq=1, queues retire(0),
+        // active=1. Timeout consumes seq=2 (spare), queues retire(1),
+        // active=2.
         v.tryStartValidation(0L, pto)
-        v.checkValidationTimeout(nowMillis = pto * 4L)
+        val first = v.checkValidationTimeout(nowMillis = pto * 4L)
+        assertTrue(first is PathValidator.TimeoutOutcome.RecoveredOnSpare, "got $first")
+        assertEquals(2L, first.newSequence)
         v.acknowledgeTerminal()
-        // Second attempt also fails.
+        // Second attempt: tryStart consumes seq=3, queues retire(2),
+        // active=3. Timeout consumes seq=4 (spare), queues retire(3),
+        // active=4.
         v.tryStartValidation(nowMillis = 10_000L, currentPtoMillis = pto)
-        v.checkValidationTimeout(nowMillis = 10_000L + pto * 4L)
+        val second = v.checkValidationTimeout(nowMillis = 10_000L + pto * 4L)
+        assertTrue(second is PathValidator.TimeoutOutcome.RecoveredOnSpare, "got $second")
+        assertEquals(4L, second.newSequence)
 
-        // All three sequences abandoned along the way (the original
-        // seq=0 plus seq=1 plus seq=2) MUST be queued for retire.
-        for (seq in listOf(0L, 1L, 2L)) {
+        // Every abandoned sequence (0, 1, 2, 3) MUST be queued for
+        // retire. seq=4 is the new active and is NOT queued.
+        for (seq in listOf(0L, 1L, 2L, 3L)) {
             assertTrue(
                 v.pendingRetireSequences.contains(seq),
                 "seq=$seq abandoned but not queued for retire — pending=${v.pendingRetireSequences}",
             )
         }
+        assertTrue(
+            !v.pendingRetireSequences.contains(4L),
+            "seq=4 is the new active CID — must NOT be queued for retire",
+        )
+    }
+
+    @Test
+    fun timeoutWithoutSpareKeepsFailedSeqActiveAndDoesNotRetire() {
+        // Rebind-port regression: queuing a RETIRE_CONNECTION_ID for
+        // the failed seq while the writer is still stamping that
+        // same seq as DCID is a PROTOCOL_VIOLATION on the wire (the
+        // strict server retires its routing entry as soon as it
+        // sees our RETIRE, then closes us when subsequent packets
+        // arrive stamped with the just-retired CID). When no spare
+        // is available, the validator must NOT queue retire and
+        // must keep the failed seq as activeCidSequence so the
+        // writer doesn't stamp a retired CID.
+        val v = PathValidator(challengePayloadFactory = { ByteArray(8) { 0x55 } })
+        v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16) { 0x10 })
+        val pto = 1_000L
+        v.tryStartValidation(nowMillis = 0L, currentPtoMillis = pto)
+        // After tryStartValidation pool is empty (the only spare was
+        // consumed). Now timeout with no spare to recover onto.
+        val outcome = v.checkValidationTimeout(nowMillis = pto * 4L)
+        assertTrue(outcome is PathValidator.TimeoutOutcome.StuckOnFailedCid, "got $outcome")
+        assertEquals(1L, outcome.abandoned.newCidSequence)
+        assertTrue(v.state is PathValidationState.Failed)
+        assertEquals(1L, v.failedValidations)
+        // Critical: seq=1 is the writer's active and must NOT be
+        // queued for retire.
+        assertTrue(
+            !v.pendingRetireSequences.contains(1L),
+            "failed seq must NOT be queued for retire when no spare exists — pending=${v.pendingRetireSequences}",
+        )
+        // activeCidSequence stays on the failed seq so the writer
+        // continues to stamp it.
+        assertEquals(1L, v.activeCidSequence)
     }
 
     @Test
@@ -291,27 +347,38 @@ class PathValidatorTest {
     }
 
     @Test
-    fun validationTimeoutAfter3PtoTransitionsToFailedAndRetiresFailedCid() {
-        // Bug-2 regression: on 3 * PTO timeout the failed CID's
-        // sequence MUST be queued for RETIRE_CONNECTION_ID.
-        // Without this the peer keeps the routing entry forever
-        // because we sent a packet with that DCID (the challenge)
-        // but never told them we abandoned it.
+    fun validationTimeoutAfter3PtoTransitionsToFailedAndRetiresFailedCidWithSpare() {
+        // Bug-2 regression (updated 2026-05-08): on 3 * PTO timeout
+        // the failed CID's sequence MUST be queued for
+        // RETIRE_CONNECTION_ID **and** the writer must rotate off
+        // that CID. The pre-2026-05-08 shape queued retire alone,
+        // leaving the writer stamping the just-retired CID — see
+        // [timeoutWithoutSpareKeepsFailedSeqActiveAndDoesNotRetire]
+        // for the no-spare branch and the rebind-port plan for the
+        // PROTOCOL_VIOLATION the strict servers raised.
         val v = PathValidator(challengePayloadFactory = { ByteArray(8) { 0x44 } })
         v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16))
+        v.recordPeerNewConnectionId(2L, 0L, ByteArray(8) { 0x02 }, ByteArray(16) { 0x22 })
         val pto = 1_000L
         v.tryStartValidation(nowMillis = 0L, currentPtoMillis = pto)
 
-        assertNull(v.checkValidationTimeout(nowMillis = pto * 2L), "still within budget")
-        val abandoned = v.checkValidationTimeout(nowMillis = pto * 4L)
-        assertTrue(abandoned != null, "validation must time out at 3*PTO")
-        assertEquals(1L, abandoned.newCidSequence)
+        assertEquals(
+            PathValidator.TimeoutOutcome.NotTimedOut,
+            v.checkValidationTimeout(nowMillis = pto * 2L),
+            "still within budget",
+        )
+        val outcome = v.checkValidationTimeout(nowMillis = pto * 4L)
+        assertTrue(outcome is PathValidator.TimeoutOutcome.RecoveredOnSpare, "got $outcome")
+        assertEquals(1L, outcome.abandoned.newCidSequence)
+        assertEquals(2L, outcome.newSequence)
+        assertContentEquals(ByteArray(8) { 0x02 }, outcome.newConnectionId)
         assertTrue(v.state is PathValidationState.Failed)
         assertEquals(1L, v.failedValidations)
         assertTrue(
             v.pendingRetireSequences.contains(1L),
             "abandoned CID sequence must be queued for RETIRE_CONNECTION_ID — pending=${v.pendingRetireSequences}",
         )
+        assertEquals(2L, v.activeCidSequence, "active must rotate to the spare so writer stops stamping the retired CID")
     }
 
     @Test

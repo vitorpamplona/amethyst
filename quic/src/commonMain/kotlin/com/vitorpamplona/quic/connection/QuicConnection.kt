@@ -2676,25 +2676,57 @@ class QuicConnection(
     /**
      * Check whether an outstanding PATH_CHALLENGE has exceeded the
      * 3 * PTO budget (RFC 9000 §8.2.4). Called from the driver's
-     * PTO timer path. Returns true when validation just timed out.
+     * PTO timer path AND from [drainOutbound]. Returns true when
+     * validation just timed out.
      *
-     * On timeout the validator queues the failed CID's sequence
-     * number into [PathValidator.pendingRetireSequences] (Bug-2
-     * fix) so the writer's next drain emits a
-     * RETIRE_CONNECTION_ID. Without this the peer keeps the
-     * routing entry forever — we promised by sending the challenge
-     * that we might use the CID, and §5.1.2 obligates us to
-     * retire it once we abandon it.
+     * Two outcomes (see [PathValidator.checkValidationTimeout]):
+     *
+     *  - [PathValidator.TimeoutOutcome.RecoveredOnSpare] — the
+     *    validator picked a fresh spare and rotated
+     *    `activeCidSequence` onto it; we MUST swap
+     *    [destinationConnectionId] to the new bytes synchronously
+     *    here, before the lock is released. Otherwise the next
+     *    drain would stamp the just-retired CID on the wire (the
+     *    bug from `quic/plans/2026-05-08-rebind-port-bug.md` —
+     *    quic-go / picoquic / msquic / mvfst correctly close us
+     *    with PROTOCOL_VIOLATION when they see "RETIRE(seq=N) +
+     *    DCID=seq=N bytes" in the same packet).
+     *  - [PathValidator.TimeoutOutcome.StuckOnFailedCid] — no
+     *    spare available, validator kept the failed seq active
+     *    and DID NOT queue retire. We stay on that CID; if the
+     *    path is genuinely dead the connection idles out, and if
+     *    a spare arrives later the next trigger will rotate
+     *    cleanly.
      *
      * Caller must hold [streamsLock].
      */
-    internal fun checkPathValidationTimeoutLocked(nowMillis: Long): Boolean {
-        val abandoned = pathValidator.checkValidationTimeout(nowMillis) ?: return false
-        qlogObserver.onPathValidationFailed(abandoned.newCidSequence)
-        qlogObserver.onConnectionIdRetired("peer", abandoned.newCidSequence)
-        pathValidator.acknowledgeTerminal()
-        return true
-    }
+    internal fun checkPathValidationTimeoutLocked(nowMillis: Long): Boolean =
+        when (val outcome = pathValidator.checkValidationTimeout(nowMillis)) {
+            PathValidator.TimeoutOutcome.NotTimedOut -> {
+                false
+            }
+
+            is PathValidator.TimeoutOutcome.StuckOnFailedCid -> {
+                qlogObserver.onPathValidationFailed(outcome.abandoned.newCidSequence)
+                pathValidator.acknowledgeTerminal()
+                true
+            }
+
+            is PathValidator.TimeoutOutcome.RecoveredOnSpare -> {
+                qlogObserver.onPathValidationFailed(outcome.abandoned.newCidSequence)
+                qlogObserver.onConnectionIdRetired("peer", outcome.abandoned.newCidSequence)
+                // Atomic with the validator's queued RETIRE: rotate
+                // the writer off the abandoned CID before any drain
+                // can run. Both this method and the writer drain
+                // hold streamsLock, so no packet builds between
+                // here and the next outbound — the swap is
+                // synchronous from the wire's perspective.
+                destinationConnectionId = ConnectionId(outcome.newConnectionId)
+                qlogObserver.onConnectionIdActivated("peer", outcome.newSequence, outcome.newConnectionId)
+                pathValidator.acknowledgeTerminal()
+                true
+            }
+        }
 
     /**
      * Queue a PATH_RESPONSE for the given [challengeData]. Called by

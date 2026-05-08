@@ -589,28 +589,125 @@ class PathValidator(
     /**
      * RFC 9000 §8.2.4: abandon validation if more than 3 * PTO has
      * elapsed since the challenge went out without a matching
-     * response. Returns the abandoned context (so the caller can
-     * surface a qlog event / decide whether to attempt another
-     * rotation), or null if no validation is in progress / the
-     * timer hasn't fired yet.
+     * response.
      *
-     * On abandonment the new CID's sequence is queued for
-     * RETIRE_CONNECTION_ID. We probed with that CID — even though
-     * the peer never echoed our challenge, our challenge packet
-     * may have reached them and they've stamped routing state
-     * against the CID. Retiring it tells them they can drop that
-     * state. RFC 9000 §5.1.2: a connection ID that was used and
-     * then abandoned MUST be retired.
+     * On abandonment we probed with the new CID — even though the
+     * peer never echoed our challenge, our challenge packet may
+     * have reached them and they've stamped routing state against
+     * the CID. So we'd like to retire it (RFC 9000 §5.1.2: a
+     * connection ID that was used and then abandoned MUST be
+     * retired). BUT — under the abrupt-migration model, the
+     * writer's outbound DCID is currently STAMPING the failed
+     * CID. If we queue a RETIRE_CONNECTION_ID for it without
+     * rotating the writer to a different CID, the next outbound
+     * packet carries both the RETIRE frame AND the now-retired
+     * CID as its destination — quic-go / picoquic / msquic /
+     * mvfst correctly read that as PROTOCOL_VIOLATION (see
+     * `quic/plans/2026-05-08-rebind-port-bug.md`).
+     *
+     * So on timeout we have two cases:
+     *
+     *  - **Spare available** ([TimeoutOutcome.RecoveredOnSpare]):
+     *    pick the lowest-sequence unused CID, rotate
+     *    [activeCidSequence] to it, and queue
+     *    `RETIRE_CONNECTION_ID` for the failed sequence. The
+     *    caller MUST swap the connection's
+     *    `destinationConnectionId` to
+     *    [RecoveredOnSpare.newConnectionId] atomically with the
+     *    state change so the next outbound stamps the rotated
+     *    CID, not the retired one.
+     *
+     *  - **No spare** ([TimeoutOutcome.StuckOnFailedCid]): keep
+     *    [activeCidSequence] on the failed sequence and do NOT
+     *    queue retire. The validation didn't succeed but the CID
+     *    itself is still "ours" until we explicitly retire it —
+     *    the peer hasn't been told to drop it. The writer keeps
+     *    using it; if the path actually still works, traffic
+     *    resumes; if it really is dead, the next idle-timeout or
+     *    application-layer close handles the connection. Once a
+     *    spare arrives via NEW_CONNECTION_ID we'll rotate on the
+     *    next trigger.
+     *
+     * Returns [TimeoutOutcome.NotTimedOut] if no validation is in
+     * progress or the budget hasn't elapsed yet.
      */
-    fun checkValidationTimeout(nowMillis: Long): PathValidationState.Validating? {
-        val current = state as? PathValidationState.Validating ?: return null
+    fun checkValidationTimeout(nowMillis: Long): TimeoutOutcome {
+        val current = state as? PathValidationState.Validating ?: return TimeoutOutcome.NotTimedOut
         val elapsed = nowMillis - current.startedAtMillis
         val budget = (current.priorPtoMillis * VALIDATION_PTO_BUDGET_MULTIPLIER).coerceAtLeast(MIN_VALIDATION_BUDGET_MS)
-        if (elapsed < budget) return null
-        queueRetireSequence(current.newCidSequence)
+        if (elapsed < budget) return TimeoutOutcome.NotTimedOut
+        // Drop any PATH_CHALLENGE we hadn't yet drained for this
+        // attempt — the writer mustn't emit them onto an abandoned
+        // validation cycle.
+        pendingChallenges.removeAll { it.contentEquals(current.challengeData) }
         state = PathValidationState.Failed
         failedValidations += 1
-        return current
+        val sparePair = unusedCids.entries.firstOrNull()
+        if (sparePair == null) {
+            // No spare to rotate into. KEEP the failed seq active —
+            // queuing a retire here would have us stamping a retired
+            // CID on every subsequent packet (the very bug we're
+            // guarding against). The CID is still valid from the
+            // peer's perspective until we explicitly retire it.
+            return TimeoutOutcome.StuckOnFailedCid(abandoned = current)
+        }
+        val (spareSeq, spareEntry) = sparePair
+        unusedCids.remove(spareSeq)
+        // Atomic with the rotation: queue retire AND bump active to
+        // the spare. The caller (connection wrapper) MUST also
+        // update its `destinationConnectionId` to the new bytes
+        // before releasing the lock.
+        queueRetireSequence(current.newCidSequence)
+        activeCidSequence = spareSeq
+        return TimeoutOutcome.RecoveredOnSpare(
+            abandoned = current,
+            newSequence = spareSeq,
+            newConnectionId = spareEntry.connectionId,
+        )
+    }
+
+    sealed class TimeoutOutcome {
+        /** No validation in progress, or budget hasn't elapsed yet. */
+        object NotTimedOut : TimeoutOutcome()
+
+        /**
+         * Validation timed out and we rotated [activeCidSequence]
+         * to a fresh spare. The caller MUST update the
+         * connection's `destinationConnectionId` to
+         * [newConnectionId] atomically with this transition.
+         * `RETIRE_CONNECTION_ID` for the abandoned seq has been
+         * queued for the next outbound.
+         */
+        data class RecoveredOnSpare(
+            val abandoned: PathValidationState.Validating,
+            val newSequence: Long,
+            val newConnectionId: ByteArray,
+        ) : TimeoutOutcome() {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (other !is RecoveredOnSpare) return false
+                return abandoned == other.abandoned &&
+                    newSequence == other.newSequence &&
+                    newConnectionId.contentEquals(other.newConnectionId)
+            }
+
+            override fun hashCode(): Int {
+                var h = abandoned.hashCode()
+                h = 31 * h + newSequence.hashCode()
+                h = 31 * h + newConnectionId.contentHashCode()
+                return h
+            }
+        }
+
+        /**
+         * Validation timed out but no spare CID is available. The
+         * failed sequence is KEPT as active (no retire queued) so
+         * the writer doesn't stamp a CID it has already retired —
+         * see [checkValidationTimeout] kdoc for the rationale.
+         */
+        data class StuckOnFailedCid(
+            val abandoned: PathValidationState.Validating,
+        ) : TimeoutOutcome()
     }
 
     /**
