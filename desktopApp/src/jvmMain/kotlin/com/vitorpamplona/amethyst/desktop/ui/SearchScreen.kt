@@ -586,8 +586,78 @@ fun SearchScreen(
             Spacer(Modifier.height(16.dp))
 
             // Results
+
+            // Namecoin results (shown before everything else when query looks like a Namecoin id)
+            if (isNamecoinQuery && namecoinState != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Namecoin lookup",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    )
+                    when (val ncState = namecoinState) {
+                        is NamecoinResolveState.Loading -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                LinearProgressIndicator(modifier = Modifier.width(120.dp))
+                                Text(
+                                    "Resolving ${displayText.trim()}...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        is NamecoinResolveState.Resolved -> {
+                            SearchResultCard(
+                                result =
+                                    SearchResult.UserResult(
+                                        pubKeyHex = ncState.result.pubkey,
+                                        displayId = "${ncState.result.namecoinName} → ${ncState.result.pubkey.take(12)}...",
+                                    ),
+                                onNavigateToProfile = onNavigateToProfile,
+                                onNavigateToThread = onNavigateToThread,
+                                onNavigateToHashtag = onNavigateToHashtag,
+                            )
+                            if (ncState.result.relays.isNotEmpty()) {
+                                Text(
+                                    "Relays: ${ncState.result.relays.joinToString(", ")}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
+                        }
+
+                        is NamecoinResolveState.NotFound -> {
+                            Text(
+                                "Name not found on Namecoin blockchain",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+
+                        is NamecoinResolveState.Error -> {
+                            Text(
+                                "Resolution error: ${ncState.message}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+
+                        null -> {}
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
             val hasAnyResults =
-                bech32Results.isNotEmpty() || peopleResults.isNotEmpty() || noteResults.isNotEmpty()
+                bech32Results.isNotEmpty() || peopleResults.isNotEmpty() || noteResults.isNotEmpty() ||
+                    (namecoinState is NamecoinResolveState.Resolved)
 
             if (bech32Results.isNotEmpty()) {
                 // Show bech32 results (exact lookup)
