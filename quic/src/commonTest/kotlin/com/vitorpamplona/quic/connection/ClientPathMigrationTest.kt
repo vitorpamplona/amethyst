@@ -163,14 +163,24 @@ class ClientPathMigrationTest {
                 "DCID must rotate at challenge time so PATH_CHALLENGE goes out on the new path",
             )
 
-            // Step 3 — the next outbound application packet must carry a
-            // PATH_CHALLENGE stamped with the NEW DCID.
+            // Step 3 — the next outbound application packet must carry
+            // BOTH the PATH_CHALLENGE (stamped with the NEW DCID) AND
+            // a RETIRE_CONNECTION_ID for the old sequence (Bug-B fix:
+            // abrupt migration retires the prior CID at trigger time,
+            // not at response time, so the writer drains both in the
+            // same packet).
             val challengeOut = drainOutbound(client, nowMillis = 100L)
             assertTrue(challengeOut != null, "client must emit a packet carrying PATH_CHALLENGE")
             val outboundFrames = pipe.decryptClientApplicationFrames(challengeOut)
             assertTrue(outboundFrames != null, "client outbound must decrypt with server keys")
             val challenge = outboundFrames.firstOrNull { it is PathChallengeFrame } as? PathChallengeFrame
             assertTrue(challenge != null, "outbound must contain PATH_CHALLENGE — got ${outboundFrames.map { it::class.simpleName }}")
+            val retire = outboundFrames.firstOrNull { it is RetireConnectionIdFrame } as? RetireConnectionIdFrame
+            assertTrue(
+                retire != null,
+                "outbound must contain RETIRE_CONNECTION_ID for the prior CID alongside PATH_CHALLENGE — got ${outboundFrames.map { it::class.simpleName }}",
+            )
+            assertEquals(0L, retire.sequenceNumber)
 
             // Step 4 — server echoes the payload in PATH_RESPONSE.
             val response =
@@ -179,26 +189,13 @@ class ClientPathMigrationTest {
                 )!!
             feedDatagram(client, response, nowMillis = 200L)
 
-            // Step 5 — validation succeeded; DCID is still the new bytes
-            // (already rotated at step 2), the prior sequence (0) is
-            // queued for RETIRE_CONNECTION_ID, and activeCidSequence now
-            // reflects the new sequence.
+            // Step 5 — validation succeeded; state transitions to
+            // Idle (after acknowledgeTerminal), activeCidSequence is
+            // still the new sequence (already bumped at trigger),
+            // DCID still the new bytes.
             assertContentEquals(newCidBytes, client.destinationConnectionId.bytes)
             assertEquals(1L, client.pathValidator.activeCidSequence)
-            assertTrue(
-                client.pathValidator.pendingRetireSequences.contains(0L),
-                "old sequence number must be queued for retire",
-            )
-
-            // Step 6 — the next outbound packet should carry the
-            // RETIRE_CONNECTION_ID for the old sequence.
-            val retireOut = drainOutbound(client, nowMillis = 200L)
-            assertTrue(retireOut != null, "client must emit a packet after PATH_RESPONSE")
-            val frames = pipe.decryptClientApplicationFrames(retireOut)
-            assertTrue(frames != null, "outbound after rotation must decrypt")
-            val retire = frames.firstOrNull { it is RetireConnectionIdFrame } as? RetireConnectionIdFrame
-            assertTrue(retire != null, "outbound must contain RETIRE_CONNECTION_ID — got ${frames.map { it::class.simpleName }}")
-            assertEquals(0L, retire.sequenceNumber)
+            assertEquals(1L, client.pathValidator.successfulValidations)
 
             // Sanity: connection still alive after the rotation.
             assertEquals(QuicConnection.Status.CONNECTED, client.status)
@@ -243,7 +240,11 @@ class ClientPathMigrationTest {
 
             assertContentEquals(newCid, client.destinationConnectionId.bytes, "mismatched response must not undo the rotation")
             assertTrue(client.pathValidator.state is PathValidationState.Validating, "still validating")
-            assertEquals(0L, client.pathValidator.activeCidSequence, "active sequence still old until validation succeeds")
+            assertEquals(
+                1L,
+                client.pathValidator.activeCidSequence,
+                "active sequence tracks what the writer is putting on the wire — bumped at challenge time per Bug-B fix",
+            )
         }
 
     @Test
@@ -328,6 +329,59 @@ class ClientPathMigrationTest {
                 nowMillis = 200L,
             )
             assertEquals(0, client.consecutivePtoCount, "successful path validation must reset consecutivePtoCount")
+        }
+
+    @Test
+    fun newConnectionIdWithRetirePriorToPastActiveForcesRotationOnSamePath() =
+        runBlocking {
+            // Bug-C regression: RFC 9000 §5.1.2 — a peer that
+            // advances retire_prior_to past our active CID forces
+            // us to rotate on the SAME path (no PATH_CHALLENGE).
+            // Pre-fix the parser silently accepted the offer and
+            // we'd keep stamping the now-retired seq=0 on outbound
+            // packets.
+            val (client, pipe) = newConnectedClient()
+            val originalDcid = client.destinationConnectionId
+            val replacementCid = ByteArray(8) { (0xB0 or it).toByte() }
+            val token = ByteArray(16) { 0x33 }
+
+            // First offer: seq=1, no retirement. Pool fills.
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(
+                    listOf(NewConnectionIdFrame(1L, 0L, replacementCid, token)),
+                )!!,
+                nowMillis = 0L,
+            )
+            assertEquals(originalDcid, client.destinationConnectionId, "first offer doesn't force rotation")
+
+            // Second offer: seq=2 with retire_prior_to=1. Watermark
+            // advances past our active seq=0. MUST rotate on the
+            // same path to seq=1 (the lowest spare).
+            val secondToken = ByteArray(16) { 0x44 }
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(
+                    listOf(NewConnectionIdFrame(2L, 1L, ByteArray(8) { 0xCC.toByte() }, secondToken)),
+                )!!,
+                nowMillis = 0L,
+            )
+
+            assertContentEquals(
+                replacementCid,
+                client.destinationConnectionId.bytes,
+                "DCID must rotate to the lowest spare (seq=1) when watermark advances past seq=0",
+            )
+            assertEquals(1L, client.pathValidator.activeCidSequence)
+            assertTrue(
+                client.pathValidator.pendingRetireSequences.contains(0L),
+                "old active seq=0 must be queued for RETIRE_CONNECTION_ID",
+            )
+            assertEquals(
+                QuicConnection.Status.CONNECTED,
+                client.status,
+                "server-forced rotation must NOT close the connection",
+            )
         }
 
     @Test

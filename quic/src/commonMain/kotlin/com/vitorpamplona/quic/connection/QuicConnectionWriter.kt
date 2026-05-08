@@ -91,6 +91,17 @@ fun drainOutbound(
         return datagram
     }
 
+    // Bug-A fix: drive the §8.2.4 3*PTO validation budget on every
+    // drain, not just on PTO expiration. The peer ACKs PATH_CHALLENGE
+    // (it's ack-eliciting), and ACK arrival resets consecutivePtoCount —
+    // so the PTO timer that previously hosted [checkPathValidationTimeoutLocked]
+    // can stop firing before the budget elapses, leaving validation
+    // hung indefinitely. Drain happens at least every PTO_BASE
+    // (~30-100ms) even when the application is idle, which covers the
+    // budget-elapsed condition reliably. Cheap (one type-cast +
+    // time comparison) when the validator is in [PathValidationState.Idle].
+    conn.checkPathValidationTimeoutLocked(nowMillis)
+
     // Drain destructive frame sources into local lists, ONCE.
     val initialContents = collectHandshakeLevelFrames(conn, EncryptionLevel.INITIAL, nowMillis)
     val handshakeContents = collectHandshakeLevelFrames(conn, EncryptionLevel.HANDSHAKE, nowMillis)

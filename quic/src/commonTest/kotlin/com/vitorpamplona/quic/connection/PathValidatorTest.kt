@@ -174,6 +174,106 @@ class PathValidatorTest {
     }
 
     @Test
+    fun triggerRetiresPriorSequenceImmediately() {
+        // Bug-B regression: under abrupt-migration semantics the
+        // prior CID is abandoned the moment we rotate (RFC 9000
+        // §5.1.2). Queuing the retire only at PATH_RESPONSE success
+        // means a failed first attempt followed by a never-validated
+        // second attempt would leave seq=0 unretired forever.
+        val v = PathValidator(challengePayloadFactory = { ByteArray(8) { 0x11 } })
+        v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16) { 0x10 })
+        v.tryStartValidation(0L, 100L)
+        assertTrue(
+            v.pendingRetireSequences.contains(0L),
+            "prior sequence must be queued for retire at trigger time, not at response time",
+        )
+        assertEquals(1L, v.activeCidSequence, "activeCidSequence advances at trigger to track the on-wire DCID")
+    }
+
+    @Test
+    fun twoConsecutiveFailedValidationsRetireAllAbandonedSequences() {
+        // Bug-B regression: prior to the fix, two failed validations
+        // would leave the original seq=0 unretired (the priorSeq
+        // queue entry was scheduled inside applyPathResponse, which
+        // never runs for failed validations).
+        val v = PathValidator(challengePayloadFactory = { ByteArray(8) { 0x22 } })
+        v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16) { 0x10 })
+        v.recordPeerNewConnectionId(2L, 0L, ByteArray(8) { 0x02 }, ByteArray(16) { 0x20 })
+        val pto = 1_000L
+        // First attempt fails by timeout.
+        v.tryStartValidation(0L, pto)
+        v.checkValidationTimeout(nowMillis = pto * 4L)
+        v.acknowledgeTerminal()
+        // Second attempt also fails.
+        v.tryStartValidation(nowMillis = 10_000L, currentPtoMillis = pto)
+        v.checkValidationTimeout(nowMillis = 10_000L + pto * 4L)
+
+        // All three sequences abandoned along the way (the original
+        // seq=0 plus seq=1 plus seq=2) MUST be queued for retire.
+        for (seq in listOf(0L, 1L, 2L)) {
+            assertTrue(
+                v.pendingRetireSequences.contains(seq),
+                "seq=$seq abandoned but not queued for retire — pending=${v.pendingRetireSequences}",
+            )
+        }
+    }
+
+    @Test
+    fun forceRotateRunsWhenWatermarkPassesActiveCid() {
+        // Bug-C regression: RFC 9000 §5.1.2 — "If the active
+        // connection ID's sequence number is less than the Retire
+        // Prior To value, the endpoint MUST retire the active
+        // connection ID and adopt one with a higher sequence number."
+        val v = PathValidator()
+        v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16) { 0x10 })
+        v.recordPeerNewConnectionId(2L, 0L, ByteArray(8) { 0x02 }, ByteArray(16) { 0x20 })
+        // Now the peer advances retire_prior_to past our active CID
+        // (seq 0), forcing same-path rotation.
+        v.recordPeerNewConnectionId(3L, retirePriorTo = 1L, ByteArray(8) { 0x03 }, ByteArray(16) { 0x30 })
+
+        val rotation = v.forceRotateToHigherSequence()
+        assertTrue(rotation is PathValidator.ForcedRotationResult.Rotated, "got $rotation")
+        assertEquals(1L, rotation.newSequence, "must pick the lowest spare sequence")
+        assertEquals(0L, rotation.retiredSequence)
+        assertContentEquals(ByteArray(8) { 0x01 }, rotation.connectionId)
+        assertEquals(1L, v.activeCidSequence)
+        assertTrue(v.pendingRetireSequences.contains(0L))
+    }
+
+    @Test
+    fun forceRotateNoOpWhenWatermarkBelowActive() {
+        val v = PathValidator()
+        v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16) { 0x10 })
+        // Watermark is still 0; active is also 0 (initial). Nothing
+        // to rotate.
+        assertEquals(null, v.forceRotateToHigherSequence())
+        assertEquals(0L, v.activeCidSequence)
+    }
+
+    @Test
+    fun forceRotateRotatesAgainWhenNewerOfferAdvancesWatermark() {
+        // Cascading server-forced rotation: peer issues seq=1 then
+        // (later) seq=2 with retire_prior_to=2, retiring seq=1
+        // immediately after we'd just adopted it.
+        val v = PathValidator()
+        v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16) { 0x10 })
+        // Tester adopts seq=1 via initial-state simulation: trigger
+        // a validation just to bump activeCidSequence past 0.
+        v.tryStartValidation(0L, 100L)
+        v.applyPathResponse(ByteArray(8) { 0x00 }) // mismatched, validation stays Validating
+        v.acknowledgeTerminal() // benign no-op (state isn't terminal)
+        assertEquals(1L, v.activeCidSequence)
+
+        // Peer now advances watermark to 2 with a fresh offer.
+        v.recordPeerNewConnectionId(2L, retirePriorTo = 2L, ByteArray(8) { 0x02 }, ByteArray(16) { 0x20 })
+        val rotation = v.forceRotateToHigherSequence()
+        assertTrue(rotation is PathValidator.ForcedRotationResult.Rotated, "got $rotation")
+        assertEquals(2L, rotation.newSequence)
+        assertEquals(1L, rotation.retiredSequence)
+        assertEquals(2L, v.activeCidSequence)
+    }
+
+    @Test
     fun pathResponseWithMismatchedPayloadIsIgnored() {
         val v = PathValidator(challengePayloadFactory = { ByteArray(8) { 0x77 } })
         v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16))

@@ -560,7 +560,17 @@ class QuicConnection(
      * PTO expiration without an intervening ACK; reset to 0 when an
      * inbound ACK acknowledges any ack-eliciting packet. The driver
      * doubles its sleep between probes by `1 shl consecutivePtoCount`.
+     *
+     * `@Volatile` because the driver's send-loop reads this without
+     * holding `streamsLock` (in the backoff calculation in
+     * [QuicConnectionDriver.sendLoopBody]), while three writers
+     * mutate it: the driver's PTO firing path, the parser's ACK
+     * handler resetting on inbound ACK, and the
+     * [applyPeerPathResponseLocked] reset on successful migration.
+     * Without volatility the JIT can cache a stale value
+     * indefinitely and the backoff multiplier grows unbounded.
      */
+    @Volatile
     internal var consecutivePtoCount: Int = 0
 
     /**
@@ -1911,13 +1921,15 @@ class QuicConnection(
      * RFC 9000 §19.15: store a peer-issued connection ID into the
      * [pathValidator] pool, enforcing `retire_prior_to` semantics
      * and capping pool size. On a peer protocol violation
-     * ([PathValidator.RecordResult.RetirePriorToExceedsSequence] /
-     * [PathValidator.RecordResult.RetirePriorToRegressed] /
-     * [PathValidator.RecordResult.DuplicateSequenceMismatch] /
-     * [PathValidator.RecordResult.InvalidCidLength] /
-     * [PathValidator.RecordResult.InvalidStatelessResetToken]) the
-     * connection is closed with FRAME_ENCODING_ERROR — these are
-     * MUSTs in the spec.
+     * the connection is closed with FRAME_ENCODING_ERROR /
+     * PROTOCOL_VIOLATION — these are MUSTs in the spec.
+     *
+     * After a successful store, if the peer's `retire_prior_to`
+     * has advanced past our currently-active CID sequence,
+     * RFC 9000 §5.1.2 obligates us to "retire the active
+     * connection ID and adopt one with a higher sequence number."
+     * That's a server-forced rotation on the same path — no
+     * PATH_CHALLENGE needed (Bug-C fix).
      *
      * Caller must hold [streamsLock].
      */
@@ -1927,23 +1939,18 @@ class QuicConnection(
         connectionId: ByteArray,
         statelessResetToken: ByteArray,
     ) {
-        when (
+        val recordResult =
             pathValidator.recordPeerNewConnectionId(
                 sequenceNumber = sequenceNumber,
                 retirePriorTo = retirePriorTo,
                 connectionId = connectionId,
                 statelessResetToken = statelessResetToken,
             )
-        ) {
-            PathValidator.RecordResult.Stored -> {
-                Unit
-            }
-
-            PathValidator.RecordResult.Duplicate -> {
-                Unit
-            }
-
-            PathValidator.RecordResult.AlreadyRetired -> {
+        when (recordResult) {
+            PathValidator.RecordResult.Stored,
+            PathValidator.RecordResult.Duplicate,
+            PathValidator.RecordResult.AlreadyRetired,
+            -> {
                 Unit
             }
 
@@ -1953,31 +1960,65 @@ class QuicConnection(
                 // we MAY treat this as CONNECTION_ID_LIMIT_ERROR. We
                 // only drop silently here — pinning memory is the
                 // real concern, and the cap defense already handled
-                // that.
+                // that. Skip the watermark check below; this offer
+                // wasn't accepted.
+                return
             }
 
             PathValidator.RecordResult.RetirePriorToExceedsSequence -> {
                 markClosedExternally(
                     "FRAME_ENCODING_ERROR: NEW_CONNECTION_ID retire_prior_to ($retirePriorTo) > sequence_number ($sequenceNumber)",
                 )
+                return
             }
 
             PathValidator.RecordResult.DuplicateSequenceMismatch -> {
                 markClosedExternally(
                     "PROTOCOL_VIOLATION: NEW_CONNECTION_ID seq=$sequenceNumber re-issued with different bytes",
                 )
+                return
             }
 
             PathValidator.RecordResult.InvalidCidLength -> {
                 markClosedExternally(
                     "FRAME_ENCODING_ERROR: NEW_CONNECTION_ID has invalid cid length",
                 )
+                return
             }
 
             PathValidator.RecordResult.InvalidStatelessResetToken -> {
                 markClosedExternally(
                     "FRAME_ENCODING_ERROR: NEW_CONNECTION_ID has invalid stateless reset token length",
                 )
+                return
+            }
+        }
+
+        // Bug-C fix: §5.1.2 server-forced rotation. The watermark
+        // may have advanced past our active CID as a side effect of
+        // [recordPeerNewConnectionId]. If so we MUST swap on the
+        // same path before the next outbound packet (which would
+        // otherwise stamp a now-retired CID).
+        when (val rotation = pathValidator.forceRotateToHigherSequence()) {
+            null -> {
+                Unit
+            }
+
+            // active CID is still valid; nothing to do.
+            PathValidator.ForcedRotationResult.NoSpareCid -> {
+                // Watermark forced retirement of the active CID but
+                // the pool is empty — we have nothing valid to use.
+                // RFC 9000 §5.1.2 leaves recovery to the endpoint;
+                // CONNECTION_ID_LIMIT_ERROR is the canonical close.
+                markClosedExternally(
+                    "CONNECTION_ID_LIMIT_ERROR: peer retired our active CID with no spare available",
+                )
+            }
+
+            is PathValidator.ForcedRotationResult.Rotated -> {
+                destinationConnectionId = ConnectionId(rotation.connectionId)
+                qlogObserver.onConnectionIdActivated("peer", rotation.newSequence, rotation.connectionId)
+                qlogObserver.onConnectionIdRetired("peer", rotation.retiredSequence)
             }
         }
     }
@@ -2014,14 +2055,12 @@ class QuicConnection(
                 qlogObserver.onConnectionIdActivated("peer", outcome.newSequence, outcome.connectionId)
                 qlogObserver.onConnectionIdRetired("peer", outcome.retiredSequence)
                 pathValidator.acknowledgeTerminal()
-                // Note: the writer's `destinationConnectionId` was
-                // already swapped to [outcome.connectionId] inside
+                // The writer's `destinationConnectionId` was already
+                // swapped at challenge time inside
                 // [triggerPathMigrationLocked] (abrupt-migration
-                // model — the challenge itself MUST go out on the
-                // new path per RFC 9000 §9.3). On success there's
-                // nothing more to swap; we just confirm the
-                // promotion is durable by re-stamping (idempotent).
-                destinationConnectionId = ConnectionId(outcome.connectionId)
+                // model — RFC 9000 §9.3 requires the challenge on
+                // the new path). On success there is no further
+                // mutation to make.
             }
         }
     }

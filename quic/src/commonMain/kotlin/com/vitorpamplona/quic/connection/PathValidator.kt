@@ -116,8 +116,12 @@ sealed class PathValidationState {
 }
 
 /**
- * Outcome of [PathValidator.tryStartValidation], used by the caller
- * (driver / test) to know whether a probe was actually issued.
+ * Outcome of attempting to start a client-initiated path
+ * migration. Produced by [PathValidator.tryStartValidation] (which
+ * never returns [NotConnected]) and the connection-level wrapper
+ * [QuicConnection.triggerPathMigrationLocked] (which adds the
+ * pre-handshake gate). Used by the driver / application code that
+ * fires the trigger to decide whether to retry later.
  */
 enum class PathMigrationResult {
     /** A `PATH_CHALLENGE` was queued; state is [PathValidationState.Validating]. */
@@ -402,11 +406,16 @@ class PathValidator(
      * sequence unused CID, generates a random 8-byte challenge,
      * queues the challenge in [pendingChallenges], and transitions
      * [state] to [PathValidationState.Validating]. The selected
-     * CID is removed from the unused pool; on validation success
-     * [applyPathResponse] commits it (callers swap the writer's
-     * DCID), and on timeout [checkValidationTimeout] queues it
-     * for RETIRE_CONNECTION_ID so the peer can drop the routing
-     * entry.
+     * CID is removed from the unused pool. The prior CID's
+     * sequence is queued for RETIRE_CONNECTION_ID immediately —
+     * we're abandoning that path and the peer can drop the
+     * routing entry now (RFC 9000 §5.1.2). [activeCidSequence]
+     * is bumped to the new sequence so it tracks what the writer
+     * is putting on the wire.
+     *
+     * On success the writer just promotes [PathValidationState] to
+     * [PathValidationState.Succeeded]; on timeout the failed CID
+     * is also queued for retire (see [checkValidationTimeout]).
      *
      * Caller is responsible for two follow-ups when this returns
      * [PathMigrationResult.Started]:
@@ -428,12 +437,25 @@ class PathValidator(
                 require(it.size == 8) { "challenge payload supplier must return 8 bytes" }
             }
         pendingChallenges.addLast(payload)
+        val priorSeq = activeCidSequence
+        // Bug-B fix: retire the prior sequence at trigger time.
+        // Abrupt migration means we won't use the old DCID again,
+        // so the peer's routing entry for it is dead state. Without
+        // this, two consecutive failed validations leave the
+        // initial seq=0 unretired indefinitely.
+        if (priorSeq != seq) queueRetireSequence(priorSeq)
+        // [activeCidSequence] tracks "the seq the writer is currently
+        // stamping on the wire", so it advances at trigger time
+        // alongside `destinationConnectionId`. The
+        // [PathValidationState.Validating.priorCidSequence] field
+        // preserves the value for diagnostic / qlog purposes.
+        activeCidSequence = seq
         state =
             PathValidationState.Validating(
                 challengeData = payload,
                 newCidSequence = seq,
                 newConnectionId = entry.connectionId,
-                priorCidSequence = activeCidSequence,
+                priorCidSequence = priorSeq,
                 startedAtMillis = nowMillis,
                 priorPtoMillis = currentPtoMillis,
             )
@@ -441,30 +463,33 @@ class PathValidator(
     }
 
     /**
-     * Process an inbound `PATH_RESPONSE` payload. Returns true when
-     * it matched the outstanding challenge and the migration just
-     * completed; false if there's no outstanding challenge or the
-     * payload doesn't match (an attacker echoing random bytes).
+     * Process an inbound `PATH_RESPONSE` payload. Confirms the
+     * outstanding challenge: state transitions to
+     * [PathValidationState.Succeeded] and a [ValidationOutcome.Validated]
+     * is returned with the new sequence + connection-id bytes for
+     * the connection-level wrapper to surface in qlog.
      *
-     * Side effects on success:
-     *  - [state] transitions to [PathValidationState.Succeeded].
-     *  - [activeCidSequence] is bumped to the validated sequence.
-     *  - The prior sequence is queued for RETIRE_CONNECTION_ID.
-     *  - Returns the new entry so the connection can swap its
-     *    `destinationConnectionId` field.
+     * Note that [activeCidSequence] and the retire-queue entry for
+     * the prior sequence were already mutated at challenge-issue
+     * time (see [tryStartValidation]) — under the abrupt-migration
+     * model the prior CID is abandoned the moment we rotate, not
+     * when the response arrives. So this method has no further
+     * cleanup work beyond marking the state as Succeeded.
+     *
+     * Returns [ValidationOutcome.NotValidating] if no challenge
+     * is outstanding, or [ValidationOutcome.PayloadMismatch] if
+     * the bytes don't match. Both are silently dropped at the
+     * caller per RFC 9000 §8.2.2.
      */
     fun applyPathResponse(payload: ByteArray): ValidationOutcome {
         val current = state as? PathValidationState.Validating ?: return ValidationOutcome.NotValidating
         if (!payload.contentEquals(current.challengeData)) return ValidationOutcome.PayloadMismatch
-        val priorSeq = activeCidSequence
-        activeCidSequence = current.newCidSequence
-        if (priorSeq != current.newCidSequence) queueRetireSequence(priorSeq)
         state = PathValidationState.Succeeded
         successfulValidations += 1
         return ValidationOutcome.Validated(
             newSequence = current.newCidSequence,
             connectionId = current.newConnectionId,
-            retiredSequence = priorSeq,
+            retiredSequence = current.priorCidSequence,
         )
     }
 
@@ -531,6 +556,77 @@ class PathValidator(
     fun acknowledgeTerminal() {
         if (state is PathValidationState.Succeeded || state is PathValidationState.Failed) {
             state = PathValidationState.Idle
+        }
+    }
+
+    /**
+     * RFC 9000 §5.1.2: "If the active connection ID's sequence
+     * number is less than the Retire Prior To value, the endpoint
+     * MUST retire the active connection ID and adopt one with a
+     * higher sequence number."
+     *
+     * Server-forced retirement does NOT require path validation —
+     * it's the same 4-tuple, just a different CID. Pick the
+     * lowest-sequence entry from the pool, swap it in, queue the
+     * old active sequence for RETIRE_CONNECTION_ID. If no spare
+     * is available, returns null and the caller should close the
+     * connection (we have no CID to use that satisfies the peer's
+     * watermark).
+     *
+     * If a path validation happens to be in progress when this
+     * fires, the in-flight challenge's CID may itself fall under
+     * the watermark — abandon the validation and queue the failed
+     * sequence for retire alongside the swap.
+     */
+    fun forceRotateToHigherSequence(): ForcedRotationResult? {
+        if (activeCidSequence >= retirePriorToWatermark) return null
+        val (seq, entry) = unusedCids.entries.firstOrNull() ?: return ForcedRotationResult.NoSpareCid
+        unusedCids.remove(seq)
+        val priorSeq = activeCidSequence
+        queueRetireSequence(priorSeq)
+        activeCidSequence = seq
+
+        // If we were mid-validation, the challenge we issued is
+        // for a CID that may now be retired (priorSeq could be
+        // the seq we were trying to validate). Abandon it.
+        val s = state
+        if (s is PathValidationState.Validating) {
+            queueRetireSequence(s.newCidSequence)
+            pendingChallenges.removeAll { it.contentEquals(s.challengeData) }
+            state = PathValidationState.Failed
+            failedValidations += 1
+        }
+        return ForcedRotationResult.Rotated(newSequence = seq, connectionId = entry.connectionId, retiredSequence = priorSeq)
+    }
+
+    sealed class ForcedRotationResult {
+        /**
+         * Watermark moved past active CID but the pool was empty —
+         * the caller cannot satisfy the spec MUST. RFC 9000 §5.1.2
+         * leaves the recovery to the caller; closing the connection
+         * with CONNECTION_ID_LIMIT_ERROR is the safe default.
+         */
+        object NoSpareCid : ForcedRotationResult()
+
+        data class Rotated(
+            val newSequence: Long,
+            val connectionId: ByteArray,
+            val retiredSequence: Long,
+        ) : ForcedRotationResult() {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (other !is Rotated) return false
+                return newSequence == other.newSequence &&
+                    connectionId.contentEquals(other.connectionId) &&
+                    retiredSequence == other.retiredSequence
+            }
+
+            override fun hashCode(): Int {
+                var h = newSequence.hashCode()
+                h = 31 * h + connectionId.contentHashCode()
+                h = 31 * h + retiredSequence.hashCode()
+                return h
+            }
         }
     }
 
