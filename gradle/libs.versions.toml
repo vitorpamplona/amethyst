@@ -7,7 +7,7 @@ accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
 composeMultiplatform = "1.10.3"
 activityCompose = "1.13.0"
-agp = "9.2.0"
+agp = "9.2.1"
 android-compileSdk = "37"
 android-minSdk = "26"
 android-targetSdk = "37"
@@ -26,7 +26,7 @@ espressoCore = "3.7.0"
 firebaseBom = "34.12.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
-jacksonModuleKotlin = "2.21.2"
+jacksonModuleKotlin = "2.21.3"
 javaKeyring = "1.0.4"
 jtorctl = "0.4.5.7"
 kmpTorRuntime = "2.6.0"
@@ -56,7 +56,7 @@ navigationCompose = "2.9.8"
 okhttp = "5.3.2"
 runner = "1.7.0"
 secp256k1KmpJniAndroid = "0.23.0"
-schnorr256k1Kmp = "1.0.0"
+schnorr256k1Kmp = "1.0.5"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.17"
 spotless = "8.4.0"
@@ -77,10 +77,12 @@ workRuntime = "2.11.2"
 androidxCamera = "1.6.0"
 androidxCollection = "1.6.0"
 androidxExifinterface = "1.4.2"
-kotlinTest = "2.3.20"
+kotlinTest = "2.3.21"
 core = "1.7.0"
 mavenPublish = "0.36.0"
 sqlite = "2.6.2"
+ktor = "3.4.1"
+fourkoma = "1.2.0"
 
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
@@ -175,10 +177,14 @@ negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", versi
 net-thauvin-erik-urlencoder-lib = { module = "net.thauvin.erik.urlencoder:urlencoder-lib", version.ref = "netUrlencoderLibVersion" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
+ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
+ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
+ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
+fourkoma = { module = "cc.ekblad:4koma", version.ref = "fourkoma" }
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
-schnorr256k1-kmp = { group = "com.vitorpamplona", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
+schnorr256k1-kmp = { group = "com.vitorpamplona.schnorr256k1", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
 stream-webrtc-android = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "streamWebrtcAndroid" }
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }

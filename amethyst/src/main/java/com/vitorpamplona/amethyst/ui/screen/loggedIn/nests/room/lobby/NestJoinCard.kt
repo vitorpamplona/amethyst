@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby
 
-import android.R.attr.textColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -50,6 +48,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -59,8 +58,6 @@ import com.vitorpamplona.amethyst.ui.note.types.MeetingSpaceOpenFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePlannedFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -163,7 +160,7 @@ private fun NestJoinCardContent(
                     }
                     Spacer(StdHorzSpacer)
                     when (status) {
-                        StatusTag.STATUS.OPEN -> {
+                        StatusTag.STATUS.LIVE -> {
                             MeetingSpaceOpenFlag()
                         }
 
@@ -171,7 +168,7 @@ private fun NestJoinCardContent(
                             MeetingSpacePrivateFlag()
                         }
 
-                        StatusTag.STATUS.CLOSED -> {
+                        StatusTag.STATUS.ENDED -> {
                             MeetingSpaceClosedFlag()
                         }
 
@@ -260,7 +257,7 @@ private fun NestJoinCardContent(
                 ) {
                     JoinNestButton(
                         event = event,
-                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }
@@ -269,12 +266,15 @@ private fun NestJoinCardContent(
 }
 
 /**
- * Standalone "Join nest" button. Reusable from any composable that has
- * a [MeetingSpaceEvent] in hand — the lobby card, the in-feed note
- * renderer (so a `nostr:naddr1...` deep-link to a kind-30312 lands one
- * tap away from the room), and any future room-list surface. Renders
- * nothing for events without a service / endpoint / d-tag — those
- * rooms can't be joined on the audio plane.
+ * "Join nest" entry button — navigates to [NestLobbyScreen] rather
+ * than launching the audio activity directly. The lobby exposes the
+ * cached chat plus an active composer, so a user who's just coming
+ * back to read or chime in doesn't trigger a MoQ handshake or the
+ * host's kind-30312 republish path. The actual room launch lives
+ * behind the lobby's top-bar "Open" action.
+ *
+ * Renders nothing for events without a service / endpoint / d-tag —
+ * those rooms can't be joined on the audio plane.
  *
  * [primaryColorOverride] lets the lobby card paint the button with
  * the room's themed primary color (`["c", hex, "primary"]`); other
@@ -283,7 +283,7 @@ private fun NestJoinCardContent(
 @Composable
 fun JoinNestButton(
     event: MeetingSpaceEvent,
-    accountViewModel: AccountViewModel,
+    nav: INav,
     primaryColorOverride: Color? = null,
 ) {
     val serviceBase = event.service()
@@ -291,7 +291,6 @@ fun JoinNestButton(
     val roomId = event.address().dTag
     if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
-    val context = LocalContext.current
     val colors =
         if (primaryColorOverride != null) {
             androidx.compose.material3.ButtonDefaults
@@ -301,14 +300,9 @@ fun JoinNestButton(
                 .buttonColors()
         }
 
+    val addressValue = event.address().toValue()
     Button(
-        onClick = {
-            NestBridge.set(accountViewModel)
-            NestActivity.launch(
-                context = context,
-                addressValue = event.address().toValue(),
-            )
-        },
+        onClick = { nav.nav(Route.NestLobby(addressValue)) },
         colors = colors,
     ) {
         Text(stringRes(R.string.nest_join))

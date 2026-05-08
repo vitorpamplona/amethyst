@@ -45,13 +45,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
@@ -86,11 +83,13 @@ fun LoggedInPage(
     // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)
 
-    // Pre-loads each of the main screens.
-    HomeFilterAssemblerSubscription(accountViewModel)
-    ChatroomListFilterAssemblerSubscription(accountViewModel)
-    VideoFilterAssemblerSubscription(accountViewModel)
-    DiscoveryFilterAssemblerSubscription(accountViewModel)
+    // Foreground-only loaders: follows-outbox finder + random-relay notifications.
+    // Pauses on ON_STOP, resumes on ON_START.
+    AccountForegroundFilterAssemblerSubscription(accountViewModel)
+
+    // Pre-loads the feed for every icon the user has pinned to the bottom bar.
+    // Subscriptions follow the user's chosen list reactively, not the default 5.
+    BottomBarFeedPreloaders(accountViewModel)
 
     // Updates local cache of the anti-spam filter choice of this user.
     ObserveAntiSpamFilterSettings(accountViewModel)

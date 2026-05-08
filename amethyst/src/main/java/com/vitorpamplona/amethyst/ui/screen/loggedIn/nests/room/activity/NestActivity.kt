@@ -35,6 +35,11 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.StringResSetup
+import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
+import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -78,11 +83,30 @@ class NestActivity : AppCompatActivity() {
                     }
 
                     ACTION_PIP_LEAVE -> {
+                        // Tear down the speaker session + listener BEFORE
+                        // finish() so AudioRecord (and the system mic
+                        // indicator) releases promptly. onCleared() alone
+                        // runs late in the destroy lifecycle.
+                        pipCleanupAction?.invoke()
                         finish()
                     }
                 }
             }
         }
+
+    /**
+     * Wired by [NestActivityBody] via a DisposableEffect. Invokes
+     * `viewModel.leave()` so the broadcast handle + listener close
+     * route through `cleanupScope`/GlobalScope and survive Activity
+     * destruction. Called from PIP close paths (the overlay's Leave
+     * action and a swipe-dismiss while in PIP).
+     */
+    @Volatile
+    private var pipCleanupAction: (() -> Unit)? = null
+
+    fun setPipCleanupAction(action: (() -> Unit)?) {
+        pipCleanupAction = action
+    }
 
     private val _toggleMuteSignal =
         MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -138,6 +162,18 @@ class NestActivity : AppCompatActivity() {
 
         setContent {
             AmethystTheme {
+                StringResSetup()
+
+                // Pauses relay services when the app pauses
+                ManageRelayServices()
+                ManageWebOkHttp()
+
+                // Adds this account to the authentication procedures for relays.
+                RelayAuthSubscription(accountViewModel)
+
+                // Loads account information + DMs and Notifications from Relays.
+                AccountFilterAssemblerSubscription(accountViewModel)
+
                 NestActivityContent(
                     addressValue = addressValue,
                     accountViewModel = accountViewModel,
@@ -161,6 +197,22 @@ class NestActivity : AppCompatActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         enterPip()
+    }
+
+    /**
+     * Detects a PIP swipe-dismiss. When the user dismisses the floating
+     * window the system finishes the activity, so [isFinishing] is true
+     * by the time onStop runs. Tearing down here (rather than waiting
+     * for onCleared) keeps AudioRecord + the system mic indicator from
+     * lingering through the destruction queue. Non-PIP onStop (Home /
+     * Recents while not in PIP) is a no-op so backgrounding doesn't
+     * teardown.
+     */
+    override fun onStop() {
+        if (isInPipMode.value && isFinishing) {
+            pipCleanupAction?.invoke()
+        }
+        super.onStop()
     }
 
     /**

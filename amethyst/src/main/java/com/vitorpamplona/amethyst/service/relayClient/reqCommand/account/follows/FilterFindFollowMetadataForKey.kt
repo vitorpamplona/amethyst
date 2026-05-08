@@ -89,7 +89,7 @@ fun pickRelaysToLoadUsers(
     hasTried: EOSEAccountFast<User>,
 ): Map<NormalizedRelayUrl, Set<HexKey>> =
     mapOfSet {
-        users.forEachIndexed { idx, key ->
+        users.forEachIndexed { _, key ->
             val tried = (hasTried.since(key)?.keys ?: emptySet()) + cannotConnectRelays
 
             val outbox = key.authorRelayList()?.writeRelaysNorm()

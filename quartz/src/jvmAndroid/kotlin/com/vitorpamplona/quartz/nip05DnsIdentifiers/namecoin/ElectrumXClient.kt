@@ -457,7 +457,8 @@ class ElectrumXClient(
     /**
      * Parse a Namecoin name and value from a verbose transaction response.
      *
-     * Scans each output for a NAME_UPDATE script (starts with OP_3 = 0x53),
+     * Scans each output for a NAME_UPDATE (OP_3 = 0x53) or NAME_FIRSTUPDATE
+     * (OP_2 = 0x52) script,
      * then extracts the name and value from the script's push data.
      */
     private fun parseNameFromTransaction(
@@ -482,8 +483,10 @@ class ElectrumXClient(
                     ?.content
                     ?: continue
 
-            // NAME_UPDATE scripts start with OP_3 (0x53)
-            if (!scriptHex.startsWith("53")) continue
+            // NAME_UPDATE scripts start with OP_3 (0x53);
+            // NAME_FIRSTUPDATE scripts start with OP_2 (0x52). Both carry the
+            // current value at the time of that on-chain operation.
+            if (!scriptHex.startsWith("53") && !scriptHex.startsWith("52")) continue
 
             val scriptBytes = hexToBytes(scriptHex)
             val parsed = parseNameScript(scriptBytes) ?: continue
@@ -510,13 +513,21 @@ class ElectrumXClient(
      * @return Pair of (name, value) as strings, or null if parsing fails
      */
     private fun parseNameScript(script: ByteArray): Pair<String, String>? {
-        if (script.isEmpty() || script[0] != OP_NAME_UPDATE) return null
+        if (script.isEmpty()) return null
+        val op = script[0]
+        if (op != OP_NAME_UPDATE && op != OP_NAME_FIRSTUPDATE) return null
 
         var pos = 1
 
         // Read name
         val (nameBytes, newPos1) = readPushData(script, pos) ?: return null
         pos = newPos1
+
+        // FIRSTUPDATE has an extra <rand> push between name and value; skip it.
+        if (op == OP_NAME_FIRSTUPDATE) {
+            val (_, newPos2) = readPushData(script, pos) ?: return null
+            pos = newPos2
+        }
 
         // Read value
         val (valueBytes, _) = readPushData(script, pos) ?: return null
@@ -815,6 +826,7 @@ class ElectrumXClient(
         const val NAME_EXPIRE_DEPTH = 36_000
 
         // Namecoin script opcodes
+        private const val OP_NAME_FIRSTUPDATE: Byte = 0x52 // OP_2 repurposed by Namecoin
         private const val OP_NAME_UPDATE: Byte = 0x53 // OP_3 repurposed by Namecoin
         private const val OP_2DROP: Byte = 0x6d
         private const val OP_DROP: Byte = 0x75
@@ -888,6 +900,31 @@ QXYftBo0HbtfsaJjImQdDjmlmRPSzE/RW6iUe+1cesKBC7e8nVf69Yu/fxO4m083
 VWwAstlWJfk1GyU7jzVc8svealg/oIiDoOMe6CFSLx1BDv2FeHSpRdqd3fn+AC73
 bK2N2smrHUOQnFijuiFw3WOrjERi0eMhjVNfVu9W9ZYa/Wd6SdIzV55LbG+NpmSf
 5W7ix41hRvdT6cTAJA==
+-----END CERTIFICATE-----
+                """.trimIndent(),
+                // relay.testls.bit:50002 — expires 2036-04-30
+                // Self-signed RSA-2048 cert (CN=relay.testls.bit) served by
+                // ElectrumX-NMC alongside the Namecoin-anchored Nostr relay.
+                // SHA-256 (DER): BB:0B:35:E6:42:35:A7:94:E1:57:B6:9A:CD:72:DA:4C:CC:16:A4:D8:1D:0F:F6:B1:D8:F7:FD:FC:6C:CA:6C:BA
+                """
+-----BEGIN CERTIFICATE-----
+MIIDFzCCAf+gAwIBAgIUAz+Ky5Lu2u1QchHKTwQIStWD8fQwDQYJKoZIhvcNAQEL
+BQAwGzEZMBcGA1UEAwwQcmVsYXkudGVzdGxzLmJpdDAeFw0yNjA1MDMwNjEyNDBa
+Fw0zNjA0MzAwNjEyNDBaMBsxGTAXBgNVBAMMEHJlbGF5LnRlc3Rscy5iaXQwggEi
+MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCngMim0wilCdclMyIIBRAeFBjE
+HWA0l5n3ebCtyepYmyXUrbth2TDdyMHiUNVvE3f7RSAUFtE+Tjb9+xzmLf04qlbC
+i3b2DV3xdVOZpRCI4kybmraYG6lRLQJ5I/N8NWgPsFgcy2mZF3q0yMVEkzGAKqUT
+QGZd2eBs/OVicbCWKmgyhXlnqGeHIs4iKOqenHKSZ8QE5bhAKaMn+Q116QEdBg12
+svGNoSZSlX8hDNUf5N5pOcsK8vj0Yb0ypJOd0J5eVpYS/KA0oMMwALnEs0H17hfO
+IIaWqrbfaqmdR67uzUfci2EoiwQJrXSy7WkNiVX0ikN02VlUPCb2OaSABmwjAgMB
+AAGjUzBRMB0GA1UdDgQWBBSgnHYFU93wufP131xk5w843VWhATAfBgNVHSMEGDAW
+gBSgnHYFU93wufP131xk5w843VWhATAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3
+DQEBCwUAA4IBAQAiVC5RJj/Y3S5uNYraPmRLQrgPui9eGlWDh6LeZvjftACA3WiN
+XabJtTmHxOFFwxmBtzGVCWKR6udETHyfqaq0me/XoYLjGstYTd14GfoV9Klx7Glh
+gLOgqC3Do04o2xnXxhPh00c0jUggKdI05KLVAc4dLfU/XDrOfxBl4XHZY4lYz4CF
+bn+n5Q1cqqcGqoJIHl2cgDdrxSMigIpsunjk8cJXO+hsteA/Pd1UUY5plvE9nbNv
+hy4QgfNqjy36b0Nbm7Fc9Te9W6zgXjHM+q7KhuQvTfKh2sHbCJzRcy7Chgwqyrfq
+NsK0JcBkyRPB+fXmEoE/Xmj/UnOD0fZCCanD
 -----END CERTIFICATE-----
                 """.trimIndent(),
             )

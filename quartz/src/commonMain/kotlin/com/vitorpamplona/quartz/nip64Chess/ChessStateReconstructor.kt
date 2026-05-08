@@ -60,7 +60,7 @@ object ChessStateReconstructor {
         events: JesterGameEvents,
         viewerPubkey: String,
     ): ReconstructionResult {
-        Log.d("chessdebug", "[Reconstructor] reconstruct() called: viewerPubkey=${viewerPubkey.take(8)}, startEvent=${events.startEvent?.id?.take(8)}, moveCount=${events.moves.size}")
+        Log.d("chessdebug") { "[Reconstructor] reconstruct() called: viewerPubkey=${viewerPubkey.take(8)}, startEvent=${events.startEvent?.id?.take(8)}, moveCount=${events.moves.size}" }
 
         // Step 1: Get start event (required for player info)
         val startEvent =
@@ -75,7 +75,7 @@ object ChessStateReconstructor {
         val challengerColor = startEvent.playerColor() ?: Color.WHITE
         val challengedPubkey = startEvent.opponentPubkey()
 
-        Log.d("chessdebug", "[Reconstructor] startEventId=${startEventId.take(8)}, challenger=${challengerPubkey.take(8)}, challengerColor=$challengerColor, challengedPubkey=${challengedPubkey?.take(8)}")
+        Log.d("chessdebug") { "[Reconstructor] startEventId=${startEventId.take(8)}, challenger=${challengerPubkey.take(8)}, challengerColor=$challengerColor, challengedPubkey=${challengedPubkey?.take(8)}" }
 
         // In Jester, we determine opponent from the p-tag or from move events
         // For open challenges, we need to find who made the first move
@@ -85,7 +85,7 @@ object ChessStateReconstructor {
                 ?.pubKey
 
         val actualOpponent = challengedPubkey ?: opponentFromMoves
-        Log.d("chessdebug", "[Reconstructor] opponentFromMoves=${opponentFromMoves?.take(8)}, actualOpponent=${actualOpponent?.take(8)}")
+        Log.d("chessdebug") { "[Reconstructor] opponentFromMoves=${opponentFromMoves?.take(8)}, actualOpponent=${actualOpponent?.take(8)}" }
 
         // Determine players based on challenger's color choice
         val (whitePubkey, blackPubkey) =
@@ -117,7 +117,7 @@ object ChessStateReconstructor {
                 ViewerRole.SPECTATOR -> blackPubkey ?: "" // For spectators, "opponent" is black
             }
 
-        Log.d("chessdebug", "[Reconstructor] white=${whitePubkey?.take(8)}, black=${blackPubkey?.take(8)}, viewerRole=$viewerRole, playerColor=$playerColor")
+        Log.d("chessdebug") { "[Reconstructor] white=${whitePubkey?.take(8)}, black=${blackPubkey?.take(8)}, viewerRole=$viewerRole, playerColor=$playerColor" }
 
         // Check if game is pending (no moves yet AND viewer is the challenger)
         // If viewer accepted someone else's challenge, the game is NOT pending
@@ -129,9 +129,9 @@ object ChessStateReconstructor {
         val latestMove = events.latestMove()
         val history = latestMove?.history() ?: emptyList()
 
-        Log.d("chessdebug", "[Reconstructor] latestMove=${latestMove?.id?.take(8)}, historySize=${history.size}, isPendingChallenge=$isPendingChallenge")
+        Log.d("chessdebug") { "[Reconstructor] latestMove=${latestMove?.id?.take(8)}, historySize=${history.size}, isPendingChallenge=$isPendingChallenge" }
         if (history.isNotEmpty()) {
-            Log.d("chessdebug", "[Reconstructor] history: ${history.joinToString(" ")}")
+            Log.d("chessdebug") { "[Reconstructor] history: ${history.joinToString(" ")}" }
         }
 
         // Track applied moves
@@ -147,10 +147,10 @@ object ChessStateReconstructor {
             } else {
                 // Move failed - game might be desynced
                 isDesynced = true
-                Log.d("chessdebug", "[Reconstructor] DESYNC: move #$moveNumber '$san' failed: ${result.error}")
+                Log.d("chessdebug") { "[Reconstructor] DESYNC: move #$moveNumber '$san' failed: ${result.error}" }
                 // Try to recover by loading the FEN from latest move if available
                 latestMove?.fen()?.let { fen ->
-                    Log.d("chessdebug", "[Reconstructor] Recovering with FEN: $fen")
+                    Log.d("chessdebug") { "[Reconstructor] Recovering with FEN: $fen" }
                     engine.loadFen(fen)
                 }
                 break
@@ -162,7 +162,7 @@ object ChessStateReconstructor {
             val currentFen = engine.getFen()
             if (!fenPositionsMatch(currentFen, expectedFen)) {
                 isDesynced = true
-                Log.d("chessdebug", "[Reconstructor] FEN MISMATCH: current=$currentFen, expected=$expectedFen")
+                Log.d("chessdebug") { "[Reconstructor] FEN MISMATCH: current=$currentFen, expected=$expectedFen" }
                 engine.loadFen(expectedFen)
             }
         }
@@ -173,13 +173,13 @@ object ChessStateReconstructor {
             when {
                 gameResult != null -> {
                     val result = parseGameResult(gameResult)
-                    Log.d("chessdebug", "[Reconstructor] Game finished from result tag: $gameResult -> $result")
+                    Log.d("chessdebug") { "[Reconstructor] Game finished from result tag: $gameResult -> $result" }
                     GameStatus.Finished(result)
                 }
 
                 engine.isCheckmate() -> {
                     val winner = engine.getSideToMove().opposite()
-                    Log.d("chessdebug", "[Reconstructor] Checkmate detected, winner=$winner")
+                    Log.d("chessdebug") { "[Reconstructor] Checkmate detected, winner=$winner" }
                     GameStatus.Finished(
                         if (winner == Color.WHITE) GameResult.WHITE_WINS else GameResult.BLACK_WINS,
                     )
@@ -219,7 +219,7 @@ object ChessStateReconstructor {
                 timeControl = null, // Not supported in Jester
             )
 
-        Log.d("chessdebug", "[Reconstructor] Result: status=$gameStatus, appliedMoves=${appliedMoveNumbers.size}, isDesynced=$isDesynced, headEvent=${headEventId.take(8)}")
+        Log.d("chessdebug") { "[Reconstructor] Result: status=$gameStatus, appliedMoves=${appliedMoveNumbers.size}, isDesynced=$isDesynced, headEvent=${headEventId.take(8)}" }
 
         return ReconstructionResult.Success(state, engine)
     }

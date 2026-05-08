@@ -22,8 +22,10 @@ package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -41,8 +43,16 @@ import kotlin.math.min
  * OkHttp-backed [NestsClient] used on JVM + Android. A shared [OkHttpClient]
  * can be injected so the app reuses connection pools / interceptors across
  * the process; the default constructor creates a dedicated client.
+ *
+ * [callTimeoutMs] enforces an upper bound on each `mintToken` round trip,
+ * including all transport / 429 retries. The injected [OkHttpClient] may
+ * have its own per-call/connect/read timeouts, but those don't bound the
+ * retry loop itself — without this watchdog, a stalled server can hold
+ * the reconnect orchestrator indefinitely (the orchestrator is suspended
+ * inside `connectNestsListener`'s mint step).
  */
 class OkHttpNestsClient(
+    private val callTimeoutMs: Long = DEFAULT_CALL_TIMEOUT_MS,
     private val httpClient: (String) -> OkHttpClient,
 ) : NestsClient {
     override suspend fun mintToken(
@@ -83,7 +93,17 @@ class OkHttpNestsClient(
         }
 
         return withContext(Dispatchers.IO) {
-            executeWithRetry(buildRequest, url)
+            // Hard upper bound on the entire mint round-trip (including
+            // retries) so a stalled server can't suspend the reconnect
+            // orchestrator indefinitely. The injected OkHttpClient's
+            // own callTimeout doesn't cover the retry loop.
+            val response =
+                try {
+                    withTimeout(callTimeoutMs) { executeWithRetry(buildRequest, url) }
+                } catch (e: TimeoutCancellationException) {
+                    throw NestsException("nests mint timed out after ${callTimeoutMs}ms for $url", e)
+                }
+            response
                 .use { response ->
                     val body = response.body.string()
                     if (!response.isSuccessful) {
@@ -97,6 +117,11 @@ class OkHttpNestsClient(
                     } catch (e: IOException) {
                         throw NestsException("Malformed nests response from $url", e)
                     } catch (e: IllegalArgumentException) {
+                        throw NestsException("Malformed nests response from $url", e)
+                    } catch (e: IllegalStateException) {
+                        // kotlinx.serialization can throw IllegalStateException
+                        // on some malformed input shapes (e.g. unfinished
+                        // escapes) instead of SerializationException.
                         throw NestsException("Malformed nests response from $url", e)
                     } catch (e: kotlinx.serialization.SerializationException) {
                         throw NestsException("Malformed nests response from $url", e)
@@ -180,10 +205,18 @@ class OkHttpNestsClient(
         throw NestsException("Failed to reach $url", transportError)
     }
 
-    private companion object {
+    companion object {
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
 
         private const val MAX_TRANSPORT_RETRIES = 2
+
+        /**
+         * Default upper bound on a full `mintToken` call, including all
+         * transport / 429 retries. Worst-case 429 backoff totals ~63 s
+         * per [MAX_RATE_LIMIT_RETRIES] kdoc; 90 s leaves headroom for
+         * one slow-responding 200 on top of that.
+         */
+        const val DEFAULT_CALL_TIMEOUT_MS: Long = 90_000L
     }
 }
 

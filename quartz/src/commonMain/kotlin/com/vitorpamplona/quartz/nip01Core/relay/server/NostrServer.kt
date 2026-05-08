@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -36,16 +38,41 @@ import kotlin.coroutines.CoroutineContext
  *
  * @param store The [IEventStore] backing this relay.
  * @param policyBuilder Controls requirements for relay commands.
+ * @param parallelVerify When `true`, Schnorr verification runs in
+ *   parallel inside the [IngestQueue] (one async per event, dispatched
+ *   on `Dispatchers.Default`) rather than serially on the WS pump
+ *   coroutine inside [VerifyPolicy]. Callers that flip this on should
+ *   *omit* `VerifyPolicy` from their [policyBuilder] chain to avoid
+ *   double-verifying.
+ * @param negentropySettings NIP-77 server-side tuning (frame cap,
+ *   snapshot cap, per-connection session cap). Defaults to strfry-
+ *   parity values; see [NegentropySettings].
  */
 class NostrServer(
     private val store: IEventStore,
     private val policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
     private val parentContext: CoroutineContext = SupervisorJob(),
+    parallelVerify: Boolean = false,
+    private val negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : AutoCloseable {
-    private val subStore = LiveEventStore(store)
-
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
+
+    /**
+     * Group-commit writer shared across every connected session.
+     * Sessions hand off EVENT publishes here instead of awaiting
+     * [IEventStore.insert] inline; the queue coalesces back-to-back
+     * publishes into a single SQLite transaction. See [IngestQueue]
+     * for the OK ordering and durability semantics.
+     */
+    private val ingest =
+        IngestQueue(
+            store = store,
+            parentContext = parentContext,
+            verify = if (parallelVerify) ({ it.verify() }) else null,
+        )
+
+    private val subStore = LiveEventStore(store, ingest)
 
     /** Active client sessions keyed by an opaque connection id. */
     private val connections = LargeCache<Int, RelaySession>()
@@ -65,6 +92,7 @@ class NostrServer(
             onClose = { session ->
                 connections.remove(session.hashCode())
             },
+            negentropySettings = negentropySettings,
         ).also { session ->
             connections.put(session.hashCode(), session)
         }
@@ -95,6 +123,7 @@ class NostrServer(
     override fun close() {
         connections.forEach { _, session -> session.cancelAllSubscriptions() }
         connections.clear()
+        ingest.close()
         scope.cancel()
         store.close()
     }

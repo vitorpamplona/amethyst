@@ -20,111 +20,13 @@
  */
 package com.vitorpamplona.nestsclient.moq.lite
 
-/**
- * moq-lite ALPN strings. Lite-03 is preferred; `"moql"` is the legacy
- * combined ALPN that requires an in-band SETUP exchange.
- *
- * Source: `kixelated/moq-rs/rs/moq-lite/src/version.rs:21-26`,
- * `@moq/lite/connection/connect.js:277`.
- */
-object MoqLiteAlpn {
-    const val LITE_03: String = "moq-lite-03"
-    const val LEGACY: String = "moql"
-}
-
-/**
- * ControlType varint discriminator written as the first datum on every
- * client-initiated bidi stream. Selects which message body the peer
- * should expect to read next.
- *
- * Source: `rs/moq-lite/src/lite/stream.rs:7-15`.
- */
-enum class MoqLiteControlType(
-    val code: Long,
-) {
-    /** Lite-01/02 only — unused on Lite-03. Reserved here for completeness. */
-    Session(0L),
-    Announce(1L),
-    Subscribe(2L),
-    Fetch(3L),
-    Probe(4L),
-    ;
-
-    companion object {
-        private val byCode = entries.associateBy { it.code }
-
-        fun fromCode(code: Long): MoqLiteControlType? = byCode[code]
-    }
-}
-
-/**
- * DataType varint written as the first byte of every uni stream that
- * carries payload. Lite-03 currently uses `Group=0` only.
- *
- * Source: `rs/moq-lite/src/lite/stream.rs:32-36`.
- */
-enum class MoqLiteDataType(
-    val code: Long,
-) {
-    Group(0L),
-    ;
-
-    companion object {
-        private val byCode = entries.associateBy { it.code }
-
-        fun fromCode(code: Long): MoqLiteDataType? = byCode[code]
-    }
-}
-
-/**
- * Status byte at the head of an [MoqLiteAnnounce] payload. `Active=1`
- * is sent on first publish; `Ended=0` on explicit unannounce. Disconnect
- * is NOT signalled with `Ended` — the bidi just closes.
- *
- * Source: `rs/moq-lite/src/lite/announce.rs:84-90`.
- */
-enum class MoqLiteAnnounceStatus(
-    val code: Int,
-) {
-    Ended(0),
-    Active(1),
-    ;
-
-    companion object {
-        fun fromCode(code: Int): MoqLiteAnnounceStatus? =
-            when (code) {
-                0 -> Ended
-                1 -> Active
-                else -> null
-            }
-    }
-}
-
-/**
- * Type discriminator at the head of a SubscribeResponse on the response
- * side of a Subscribe bidi. Wire layout (Lite-03+):
- *
- *   type   varint  (0 = Ok, 1 = Drop)
- *   body   size-prefixed bytes
- *
- * The type sits OUTSIDE the body size prefix — see
- * `rs/moq-lite/src/lite/subscribe.rs::SubscribeResponse::encode` (the
- * `_` arm covers Lite03+). Earlier drafts wrapped type+body in one
- * outer size prefix; Lite03 split them.
- */
-enum class MoqLiteSubscribeResponseType(
-    val code: Long,
-) {
-    Ok(0L),
-    Drop(1L),
-    ;
-
-    companion object {
-        private val byCode = entries.associateBy { it.code }
-
-        fun fromCode(code: Long): MoqLiteSubscribeResponseType? = byCode[code]
-    }
-}
+// Wire-format payload data classes for moq-lite messages.
+//
+// The discriminator enums (which message-body to expect at the top of
+// a bidi / uni stream) live in `MoqLiteControlCodes.kt`; the ALPN
+// negotiation strings live in `MoqLiteAlpn.kt`. This file holds only
+// the body shapes the codec encodes / decodes once a discriminator
+// has selected one.
 
 /**
  * "I'm interested in broadcasts under this prefix" — the first message
@@ -204,7 +106,17 @@ data class MoqLiteSubscribeOk(
     val maxLatencyMillis: Long,
     val startGroup: Long?,
     val endGroup: Long?,
-)
+) {
+    init {
+        // Mirror the bounds [MoqLiteSubscribe] enforces on the request side
+        // so a publisher building a malformed Ok reply fails loudly here
+        // rather than silently writing a truncated byte on the wire.
+        require(priority in 0..255) { "moq-lite priority must fit in a byte: $priority" }
+        require(maxLatencyMillis >= 0) { "maxLatencyMillis must be non-negative: $maxLatencyMillis" }
+        if (startGroup != null) require(startGroup >= 0) { "startGroup must be non-negative: $startGroup" }
+        if (endGroup != null) require(endGroup >= 0) { "endGroup must be non-negative: $endGroup" }
+    }
+}
 
 /**
  * Publisher's reject / drop reply. moq-lite has no SUBSCRIBE_ERROR
@@ -212,13 +124,39 @@ data class MoqLiteSubscribeOk(
  * RESET_STREAM, but the publisher can pre-emptively decline a
  * subscription with [MoqLiteSubscribeDrop] before any group flows.
  *
- * Decode-only as far as the client cares — we never send Drop back
- * upstream.
+ * Sent by [MoqLiteSession] when a relay opens a SUBSCRIBE bidi for a
+ * `track` we don't publish (e.g. a watcher subscribes to a `video/data`
+ * rendition but our broadcast only declares `audio/data` + `catalog.json`
+ * in its catalog). Without a Drop reply the watcher's response wait
+ * resolves only when the bidi is FIN'd, with no indication WHY — Drop
+ * carries the error code and a reason phrase the watcher can log /
+ * surface.
+ *
+ * Decoded by [MoqLiteSession] when the relay or upstream publisher
+ * rejects one of OUR subscriptions — we surface it as
+ * [MoqLiteSubscribeException] so callers see a typed protocol-level
+ * rejection rather than a silent end-of-flow.
  */
 data class MoqLiteSubscribeDrop(
     val errorCode: Long,
     val reasonPhrase: String,
 )
+
+/**
+ * Error codes carried in the [MoqLiteSubscribeDrop.errorCode] varint.
+ * moq-lite leaves these application-defined; we mirror the IETF-MoQ
+ * conventions in `com.vitorpamplona.nestsclient.moq.ErrorCode` so a
+ * cross-protocol reader gets the same semantic from either path.
+ */
+object MoqLiteSubscribeDropCode {
+    /**
+     * The publisher does not serve this `(broadcast, track)` tuple.
+     * Sent for a subscribe whose `track` doesn't match any of the
+     * publishers we registered on this session. Mirrors
+     * `com.vitorpamplona.nestsclient.moq.ErrorCode.TRACK_DOES_NOT_EXIST`.
+     */
+    const val TRACK_DOES_NOT_EXIST: Long = 0x04L
+}
 
 /**
  * Header at the start of a Group uni stream. After the

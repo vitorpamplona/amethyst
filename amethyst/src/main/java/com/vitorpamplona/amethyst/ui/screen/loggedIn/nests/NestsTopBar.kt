@@ -39,14 +39,14 @@ fun NestsTopBar(
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultLiveStreamsFollowList
+        val list by accountViewModel.account.settings.defaultNestsFollowList
             .collectAsStateWithLifecycle()
 
         NestsTopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultLiveStreamsFollowList,
+            onChange = accountViewModel.account.settings::changeDefaultNestsFollowList,
         )
     }
 }

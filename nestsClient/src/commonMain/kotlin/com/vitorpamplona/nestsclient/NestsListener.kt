@@ -48,10 +48,24 @@ interface NestsListener {
      * Opus stream under the namespace `["nests", <roomId>]` with the
      * speaker's pubkey hex as the track name.
      *
+     * @param maxLatencyMs subscriber-side group-staleness tolerance (milliseconds)
+     *   sent in the moq-lite SUBSCRIBE message. Per
+     *   `kixelated/moq/doc/concept/layer/moq-lite.md` "Congestion": when the
+     *   relay's per-track group queue can't drain fast enough, groups older
+     *   than `maxLatencyMs` are evicted in favour of newer ones. `0`
+     *   (default) means *unlimited* — the relay falls back to its own
+     *   `MAX_GROUP_AGE = 30 s` default. For low-latency live audio set this
+     *   to e.g. `500L` so the listener prefers fresh frames over stale
+     *   buffered ones during transient relay backpressure. Ignored on the
+     *   IETF MoQ-transport listener path (no equivalent field on that wire).
+     *
      * @throws MoqProtocolException if the publisher rejects the subscription.
      * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
      */
-    suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle
+    suspend fun subscribeSpeaker(
+        speakerPubkeyHex: String,
+        maxLatencyMs: Long = 0L,
+    ): SubscribeHandle
 
     /**
      * Subscribe to a speaker's `catalog.json` track — moq-lite's
@@ -101,6 +115,27 @@ interface NestsListener {
         throw UnsupportedOperationException(
             "announces() is moq-lite-only; IETF listener has no announce-prefix flow.",
         )
+
+    /**
+     * Force the underlying transport / MoQ session to be torn down and
+     * a fresh one opened in its place — without permanently closing
+     * this listener. Used by the platform layer on a network change
+     * (Wi-Fi ↔ cellular handover) to skip the ~30 s QUIC PTO that
+     * would otherwise have to fire before the wrapper notices the
+     * old socket is dead.
+     *
+     * Default no-op for non-reconnecting implementations (raw
+     * [DefaultNestsListener] / [MoqLiteNestsListener]) — there's no
+     * orchestrator to drive a reconnect, so a force recycle would
+     * just close the listener. The reconnecting wrapper
+     * (`ReconnectingHandle` from [connectReconnectingNestsListener])
+     * overrides to close the active inner listener so its
+     * orchestrator opens a fresh session.
+     */
+    suspend fun recycleSession() {
+        // no-op — only the reconnecting wrapper has anywhere to
+        // recycle to.
+    }
 
     /** Tear down the MoQ session + underlying transport. Idempotent. */
     suspend fun close()
@@ -198,10 +233,18 @@ class DefaultNestsListener internal constructor(
 ) : NestsListener {
     override val state: StateFlow<NestsListenerState> = mutableState.asStateFlow()
 
-    override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle {
+    override suspend fun subscribeSpeaker(
+        speakerPubkeyHex: String,
+        maxLatencyMs: Long,
+    ): SubscribeHandle {
         check(state.value is NestsListenerState.Connected) {
             "NestsListener.subscribeSpeaker requires Connected state, was ${state.value}"
         }
+        // IETF MoQ-transport-17 has no per-subscribe staleness tolerance
+        // field on the wire — `maxLatencyMs` is ignored on this path.
+        // Closest analogue would be the SUBSCRIBE filter, which is
+        // already pinned to LatestGroup so a slow listener wakes up at
+        // the freshest group rather than from history.
         return session.subscribe(
             namespace = roomNamespace,
             trackName = speakerPubkeyHex.encodeToByteArray(),

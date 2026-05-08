@@ -455,7 +455,7 @@ private fun MessageWithReactions(
                     try {
                         event.decryptContent(account.signer)
                     } catch (_: Exception) {
-                        event.content
+                        null
                     }
                 }
 
@@ -597,11 +597,22 @@ private fun MessageWithReactions(
 
                     else -> {
                         SelectionContainer {
-                            Text(
-                                text = decryptedContent ?: "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            if (decryptedContent != null) {
+                                Text(
+                                    text = decryptedContent!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            } else {
+                                Text(
+                                    text = "Could not decrypt the message",
+                                    style =
+                                        MaterialTheme.typography.bodyMedium.copy(
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                        ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }

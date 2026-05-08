@@ -37,21 +37,38 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassembl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies.filterNestsByGeohash
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies.filterNestsByHashtag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies.filterNestsGlobal
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies.filterNestsPresence
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun makeNestsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
-): List<RelayBasedFilter> =
-    when (feedSettings) {
-        is AllCommunitiesTopNavPerRelayFilterSet -> filterNestsByAllCommunities(feedSettings, since, defaultSince)
-        is AllFollowsTopNavPerRelayFilterSet -> filterNestsByFollows(feedSettings, since, defaultSince)
-        is AuthorsTopNavPerRelayFilterSet -> filterNestsByAuthors(feedSettings, since, defaultSince)
-        is GlobalTopNavPerRelayFilterSet -> filterNestsGlobal(feedSettings, since, defaultSince)
-        is HashtagTopNavPerRelayFilterSet -> filterNestsByHashtag(feedSettings, since, defaultSince)
-        is LocationTopNavPerRelayFilterSet -> filterNestsByGeohash(feedSettings, since, defaultSince)
-        is MutedAuthorsTopNavPerRelayFilterSet -> filterNestsByAuthors(feedSettings, since, defaultSince)
-        is SingleCommunityTopNavPerRelayFilterSet -> filterNestsByCommunity(feedSettings, since, defaultSince)
-        else -> emptyList()
-    }
+): List<RelayBasedFilter> {
+    val rooms =
+        when (feedSettings) {
+            is AllCommunitiesTopNavPerRelayFilterSet -> filterNestsByAllCommunities(feedSettings, since, defaultSince)
+            is AllFollowsTopNavPerRelayFilterSet -> filterNestsByFollows(feedSettings, since, defaultSince)
+            is AuthorsTopNavPerRelayFilterSet -> filterNestsByAuthors(feedSettings, since, defaultSince)
+            is GlobalTopNavPerRelayFilterSet -> filterNestsGlobal(feedSettings, since, defaultSince)
+            is HashtagTopNavPerRelayFilterSet -> filterNestsByHashtag(feedSettings, since, defaultSince)
+            is LocationTopNavPerRelayFilterSet -> filterNestsByGeohash(feedSettings, since, defaultSince)
+            is MutedAuthorsTopNavPerRelayFilterSet -> filterNestsByAuthors(feedSettings, since, defaultSince)
+            is SingleCommunityTopNavPerRelayFilterSet -> filterNestsByCommunity(feedSettings, since, defaultSince)
+            else -> return emptyList()
+        }
+    if (rooms.isEmpty()) return rooms
+
+    // Add a single presence probe per relay we're already querying for
+    // rooms — feeds NestsFeedFilter's freshness gate without forcing
+    // the per-card subscription to color the live badge. Already
+    // included by [filterNestsGlobal]; for other top-filters we splice
+    // it in here so every selection benefits.
+    if (feedSettings is GlobalTopNavPerRelayFilterSet) return rooms
+    val presenceByRelay =
+        rooms
+            .map { it.relay }
+            .toSet()
+            .map { filterNestsPresence(it) }
+    return rooms + presenceByRelay
+}

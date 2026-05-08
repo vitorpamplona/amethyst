@@ -124,12 +124,27 @@ class ReconnectingNestsSpeakerTest {
 
         private val _startCount = AtomicInteger(0)
         val startCount: Int get() = _startCount.get()
-        val handles = mutableListOf<ScriptedBroadcastHandle>()
 
-        override suspend fun startBroadcasting(): BroadcastHandle {
-            _startCount.incrementAndGet()
+        // CopyOnWriteArrayList — the broadcast pump runs on
+        // Dispatchers.Default while tests read `handles[0]` from the
+        // runBlocking thread. A plain `mutableListOf` is neither
+        // thread-safe nor publishes its writes; observed flake on
+        // Ubuntu CI where the test thread sees startCount==1 (volatile
+        // read on AtomicInteger) before the subsequent list mutation
+        // becomes visible. Using a thread-safe list AND ordering the
+        // list mutation BEFORE the AtomicInteger increment ensures
+        // that any reader who sees startCount>=N also sees N entries
+        // already published into `handles`.
+        val handles: MutableList<ScriptedBroadcastHandle> =
+            java.util.concurrent.CopyOnWriteArrayList()
+
+        override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle {
             val handle = ScriptedBroadcastHandle()
             handles += handle
+            // Increment AFTER appending to `handles` so the volatile
+            // write on AtomicInteger publishes the list mutation —
+            // tests poll on startCount and then read handles[index].
+            _startCount.incrementAndGet()
             // Mirror the production speaker's contract: transition
             // Connected → Broadcasting on startBroadcasting.
             val current = mutableState.value
@@ -161,7 +176,7 @@ class ReconnectingNestsSpeakerTest {
         override val state: StateFlow<NestsSpeakerState> =
             MutableStateFlow(NestsSpeakerState.Failed("scripted-fail")).asStateFlow()
 
-        override suspend fun startBroadcasting(): BroadcastHandle = error("never connected")
+        override suspend fun startBroadcasting(onLevel: (Float) -> Unit): BroadcastHandle = error("never connected")
 
         override suspend fun close() {}
     }
@@ -331,9 +346,16 @@ class ReconnectingNestsSpeakerTest {
                 }
                 assertTrue(first.handles[0].isMuted, "first handle should be muted by user toggle")
 
-                // Wait for refresh to swap to the second session.
+                // Wait for refresh to swap to the second session AND
+                // for the pump to replay mute intent on the new handle.
+                // `startCount > 0` is published from inside
+                // ScriptedSpeaker.startBroadcasting BEFORE the pump
+                // gets to run `if (desiredMuted) handle.setMuted(true)`,
+                // so polling startCount alone races the replay step
+                // under load (observed flake on CI). Wait for the
+                // post-condition the assertion is about instead.
                 withTimeout(5_000L) {
-                    while (second.startCount == 0) delay(5)
+                    while (second.handles.isEmpty() || !second.handles[0].isMuted) delay(5)
                 }
 
                 // Critical postcondition: the new underlying handle

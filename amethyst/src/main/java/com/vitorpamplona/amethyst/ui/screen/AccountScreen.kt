@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.tor.TorConnectionFailureDialog
 import com.vitorpamplona.quartz.utils.Log
 
 @Composable
@@ -45,6 +46,8 @@ fun AccountScreen(accountSessionManager: AccountSessionManager) {
     // Pauses relay services when the app pauses
     ManageWebOkHttp()
     ManageRelayServices()
+
+    TorConnectionFailureDialog(Amethyst.instance.torManager)
 
     val accountState by accountSessionManager.accountContent.collectAsStateWithLifecycle()
 

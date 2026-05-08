@@ -53,7 +53,7 @@ class FrameStat {
 
     fun reset() {
         eventCount.set(0)
-        kinds.forEach { key, value -> value.reset() }
+        kinds.forEach { _, value -> value.reset() }
     }
 
     fun log() {

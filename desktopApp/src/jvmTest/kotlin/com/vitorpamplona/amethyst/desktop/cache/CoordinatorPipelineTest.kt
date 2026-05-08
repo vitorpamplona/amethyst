@@ -112,6 +112,8 @@ class CoordinatorPipelineTest {
             relayList: Set<NormalizedRelayUrl>,
         ) {}
 
+        override fun pendingPublishRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>? = null
+
         override fun addConnectionListener(listener: RelayConnectionListener) {}
 
         override fun removeConnectionListener(listener: RelayConnectionListener) {}
@@ -167,7 +169,7 @@ class CoordinatorPipelineTest {
                     content = "Hello from relay",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(event, relayUrl)
+            coordinator.consumeEvent(event, relayUrl, wasVerified = true)
 
             waitForBundler()
 
@@ -203,7 +205,7 @@ class CoordinatorPipelineTest {
                     content = "test",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(event, relayUrl)
+            coordinator.consumeEvent(event, relayUrl, wasVerified = true)
             waitForBundler()
 
             assertTrue(coordinator.lastEventAt.value != null, "lastEventAt should be set after consumeEvent")
@@ -227,7 +229,7 @@ class CoordinatorPipelineTest {
                     content = "",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(contactEvent, relayUrl)
+            coordinator.consumeEvent(contactEvent, relayUrl, wasVerified = true)
             waitForBundler()
 
             assertTrue(
@@ -255,7 +257,7 @@ class CoordinatorPipelineTest {
                     content = "",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(contactEvent, relayUrl)
+            coordinator.consumeEvent(contactEvent, relayUrl, wasVerified = true)
             waitForBundler()
 
             // Step 2: Create following feed ViewModel
@@ -274,7 +276,7 @@ class CoordinatorPipelineTest {
                     content = "Note from followed user",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(textEvent, relayUrl)
+            coordinator.consumeEvent(textEvent, relayUrl, wasVerified = true)
             waitForBundler()
 
             val state = vm.feedState.feedContent.value
@@ -311,7 +313,7 @@ class CoordinatorPipelineTest {
                     content = "Note that won't show",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(textEvent, relayUrl)
+            coordinator.consumeEvent(textEvent, relayUrl, wasVerified = true)
             waitForBundler()
 
             assertIs<FeedState.Empty>(
@@ -349,8 +351,8 @@ class CoordinatorPipelineTest {
                 )
 
             // Consume same event twice (can happen with multiple relays)
-            coordinator.consumeEvent(event, relayUrl)
-            coordinator.consumeEvent(event, NormalizedRelayUrl("wss://relay2.test/"))
+            coordinator.consumeEvent(event, relayUrl, wasVerified = true)
+            coordinator.consumeEvent(event, NormalizedRelayUrl("wss://relay2.test/"), wasVerified = true)
             waitForBundler()
 
             assertTrue(

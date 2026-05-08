@@ -109,7 +109,7 @@ class NostrServerTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
-            assertTrue(okMessages[0].contains("\"true\""))
+            assertTrue(okMessages[0].contains(",true,"))
 
             // Event should be in store
             val stored = store.query<Event>(Filter(ids = listOf(event.id)))
@@ -135,8 +135,8 @@ class NostrServerTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
-            assertTrue(okMessages[0].contains("\"true\""))
-            assertTrue(okMessages[1].contains("\"false\""))
+            assertTrue(okMessages[0].contains(",true,"))
+            assertTrue(okMessages[1].contains(",false,"))
 
             server.close()
         }

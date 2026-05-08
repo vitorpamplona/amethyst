@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -32,5 +32,5 @@ fun ProfileBadgesFilterAssemblerSubscription(accountViewModel: AccountViewModel)
             ProfileBadgesQueryState(accountViewModel.account)
         }
 
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().profileBadges)
+    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().profileBadges)
 }

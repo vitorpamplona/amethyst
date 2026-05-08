@@ -91,6 +91,10 @@ sealed class Route {
 
     @Serializable object Nests : Route()
 
+    @Serializable data class NestLobby(
+        val addressValue: String,
+    ) : Route()
+
     @Serializable object Longs : Route()
 
     @Serializable object Articles : Route()
@@ -201,6 +205,8 @@ sealed class Route {
 
     @Serializable object Drafts : Route()
 
+    @Serializable object ScheduledPosts : Route()
+
     @Serializable object AllSettings : Route()
 
     @Serializable object AccountBackup : Route()
@@ -212,6 +218,8 @@ sealed class Route {
     @Serializable object ReactionsSettings : Route()
 
     @Serializable object BottomBarSettings : Route()
+
+    @Serializable object HomeTabsSettings : Route()
 
     @Serializable object VideoPlayerSettings : Route()
 

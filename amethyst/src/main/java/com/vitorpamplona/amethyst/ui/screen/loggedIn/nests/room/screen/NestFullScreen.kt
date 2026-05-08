@@ -21,14 +21,17 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -131,7 +135,6 @@ internal fun NestFullScreen(
 
     val isHost = accountViewModel.account.signer.pubKey == event.pubKey
     val myPubkey = accountViewModel.account.signer.pubKey
-    val isOnStageMe = remember(onStage, myPubkey) { onStage.any { it.pubKey == myPubkey } }
     val leaveScope = rememberCoroutineScope()
     val topBarContext = LocalContext.current
 
@@ -147,6 +150,17 @@ internal fun NestFullScreen(
                 participants = event.participants(),
                 presences = presences,
             )
+        }
+    // Tie the action bar's "am I on stage" gate to the same data
+    // source the StageGrid uses (role + presence.onstage flag),
+    // not just the kind-30312 role tag. Otherwise a host who taps
+    // "Leave Stage" flips presence to onstage=0 and disappears
+    // from the StageGrid, but the action bar keeps showing the
+    // Talk + Leave Stage cluster because it's still gated on
+    // role-only.
+    val isOnStageMe =
+        remember(participantGrid, myPubkey) {
+            participantGrid.onStage.any { it.pubkey == myPubkey }
         }
     // Same logic HandRaiseQueueSection uses internally — duplicated
     // here so the tab label can show a count without coupling the
@@ -200,31 +214,14 @@ internal fun NestFullScreen(
                 },
             )
         },
-        bottomBar = {
-            NestActionBar(
-                viewModel = viewModel,
-                ui = ui,
-                isOnStage = isOnStageMe,
-                canBroadcast = viewModel.canBroadcast,
-                speakerPubkeyHex = myPubkey,
-                handRaised = handRaised,
-                onHandRaisedChange = onHandRaisedChange,
-                onShowReactionPicker = { showReactionPicker = true },
-                onLeave = {
-                    if (isHost) {
-                        showHostLeaveConfirm = true
-                    } else {
-                        onLeave()
-                    }
-                },
-            )
-        },
     ) { padding ->
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .consumeWindowInsets(padding)
+                    .imePadding(),
         ) {
             if (summaryExpanded) {
                 RoomSummaryStrip(summary = event.summary())
@@ -249,6 +246,35 @@ internal fun NestFullScreen(
                 onTapSelf = onTapSelf,
                 listenerCount = presences.size,
                 modifier = Modifier.padding(horizontal = 16.dp),
+                // Speaker controls live inside the Stage card so they
+                // only render when the user is actually on stage. This
+                // keeps the action bar narrow for audience and makes
+                // the controls appearing/disappearing a deliberate
+                // signal that the mic is now (or no longer) available.
+                bottomBar = {
+                    StageControlsBar(
+                        viewModel = viewModel,
+                        ui = ui,
+                        isOnStage = isOnStageMe,
+                        canBroadcast = viewModel.canBroadcast,
+                        speakerPubkeyHex = myPubkey,
+                    )
+                },
+            )
+            NestActionBar(
+                viewModel = viewModel,
+                ui = ui,
+                isOnStage = isOnStageMe,
+                handRaised = handRaised,
+                onHandRaisedChange = onHandRaisedChange,
+                onShowReactionPicker = { showReactionPicker = true },
+                onLeave = {
+                    if (isHost) {
+                        showHostLeaveConfirm = true
+                    } else {
+                        onLeave()
+                    }
+                },
             )
             NestTabRow(
                 tabs = tabs,
@@ -262,6 +288,7 @@ internal fun NestFullScreen(
                 NestTab.Chat -> {
                     NestChatPanel(
                         event = event,
+                        roomNote = roomNote,
                         viewModel = viewModel,
                         accountViewModel = accountViewModel,
                         modifier =
@@ -271,10 +298,16 @@ internal fun NestFullScreen(
                 }
 
                 NestTab.Audience -> {
+                    // Tap and long-press on an audience avatar both open
+                    // the per-participant sheet — the host's primary path
+                    // for promoting a listener to the stage. Without the
+                    // tap binding, the only way to reach "Promote to
+                    // Speaker" is the discoverability-poor long-press.
                     AudienceGrid(
                         members = participantGrid.audience,
                         accountViewModel = accountViewModel,
                         onLongPressParticipant = onLongPressParticipant,
+                        onTapParticipant = onLongPressParticipant,
                         myPubkey = myPubkey,
                         modifier =
                             Modifier
@@ -339,6 +372,17 @@ internal fun NestFullScreen(
                                     R.string.nest_leave_host_close_failed,
                                 )
                             }
+                            // Tear down the speaker session + listener
+                            // BEFORE finishing the activity so the
+                            // AudioRecord (and the system mic indicator)
+                            // releases promptly. onCleared() alone runs
+                            // late in the destroy lifecycle and can
+                            // leave the mic held while the activity is
+                            // queued for destruction. Only the
+                            // "Close the Room" path triggers this — the
+                            // "Just leave" and non-host leave paths
+                            // still rely on onCleared.
+                            viewModel.leave()
                             onLeave()
                         }
                     },
@@ -350,6 +394,15 @@ internal fun NestFullScreen(
                 TextButton(
                     onClick = {
                         showHostLeaveConfirm = false
+                        // Tear down the speaker session + listener before
+                        // finishing so the AudioRecord (and the system mic
+                        // indicator) releases promptly. Same reasoning as
+                        // the Close the Room path — onCleared() runs late
+                        // in the destroy lifecycle and can leave the mic
+                        // held while the activity is queued for destruction.
+                        // Unlike Close the Room, this path leaves the
+                        // kind-30312 meeting space open for other users.
+                        viewModel.leave()
                         onLeave()
                     },
                 ) {
@@ -420,16 +473,18 @@ private fun NestTabRow(
                 selected = tab == selectedTab,
                 onClick = { onSelect(tab) },
                 text = {
-                    if (count > 0) {
-                        BadgedBox(
-                            badge = {
-                                Badge { Text(text = count.toString()) }
-                            },
-                        ) {
-                            Text(text = label)
-                        }
-                    } else {
+                    // Lay the label and the count badge side-by-side so
+                    // the count reads as "Audience  3" instead of being
+                    // overlapped on top of the label by `BadgedBox`'s
+                    // default top-end placement (audit Android #43).
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
                         Text(text = label)
+                        if (count > 0) {
+                            Badge { Text(text = count.toString()) }
+                        }
                     }
                 },
             )
@@ -550,7 +605,7 @@ private suspend fun closeMeetingSpace(
         )
     return try {
         val template =
-            EditNestViewModel.buildEditTemplate(event, verbatim, StatusTag.STATUS.CLOSED)
+            EditNestViewModel.buildEditTemplate(event, verbatim, StatusTag.STATUS.ENDED)
         accountViewModel.account.signAndComputeBroadcast(template)
         true
     } catch (_: Throwable) {

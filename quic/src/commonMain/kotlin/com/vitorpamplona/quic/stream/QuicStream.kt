@@ -33,11 +33,40 @@ import kotlinx.coroutines.flow.consumeAsFlow
 class QuicStream(
     val streamId: Long,
     val direction: Direction,
+    /**
+     * If true, lost STREAM bytes are dropped instead of retransmitted
+     * (see [SendBuffer.bestEffort]). Used by moq-lite group streams
+     * carrying real-time Opus audio: a STREAM frame arriving 200 ms
+     * late is worse than useless. Default false (RFC 9000 §3.5
+     * reliable byte sequence).
+     */
+    val bestEffort: Boolean = false,
 ) {
     enum class Direction { BIDIRECTIONAL, UNIDIRECTIONAL_LOCAL_TO_REMOTE, UNIDIRECTIONAL_REMOTE_TO_LOCAL }
 
-    val send = SendBuffer()
+    val send = SendBuffer(bestEffort = bestEffort)
     val receive = ReceiveBuffer()
+
+    /**
+     * Send-side scheduling priority. The connection writer's drain loop
+     * iterates streams by descending priority; same-priority streams keep
+     * their existing round-robin order. Higher value = drains first under
+     * congestion. Default 0 matches pre-priority round-robin behaviour for
+     * every existing call site.
+     *
+     * Used by moq-lite group streams: the publisher assigns each new group
+     * a priority equal to its sequence number so that newer groups
+     * (fresher audio) drain ahead of older ones when retransmits queue up
+     * on a lossy link. Mirrors `Publisher::serve_group` in
+     * `rs/moq-lite/src/lite/publisher.rs` (`stream.set_priority`).
+     *
+     * `@Volatile` because callers (e.g. moq-lite's openGroupStream)
+     * assign from arbitrary coroutines while the writer reads it under
+     * [com.vitorpamplona.quic.connection.QuicConnection.lock] during a
+     * drain pass.
+     */
+    @Volatile
+    var priority: Int = 0
 
     /**
      * Bytes received and confirmed contiguous, exposed as a flow to the consumer.
@@ -85,6 +114,64 @@ class QuicStream(
         get() = send.finSent && receive.finReceived
 
     /**
+     * True once both directions are *fully* settled and the stream may be
+     * removed from the connection's tracking lists (see
+     * `QuicConnection.retireFullyDoneStreamsLocked`). This is strictly
+     * stronger than [isClosed]: the latter only requires the FIN bits to
+     * have been observed, not that the peer has acknowledged our FIN /
+     * RESET (send side) nor that the application has drained the buffered
+     * receive bytes (receive side).
+     *
+     * Lifetime contract:
+     *  - SEND side done: peer has ACK'd our FIN ([SendBuffer.finAcked]) OR
+     *    we ABORTed the stream and the peer ACK'd our RESET_STREAM
+     *    ([resetAcked]). For [Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL]
+     *    there is no send side, so this leg is trivially done.
+     *  - RECEIVE side done: peer FIN'd ([ReceiveBuffer.finReceived]) AND
+     *    every byte has been delivered from the receive buffer to the
+     *    application's incoming Channel ([ReceiveBuffer.isFullyRead]).
+     *    Once both hold, the parser has already invoked [closeIncoming]
+     *    so any application coroutine still draining the buffered
+     *    [incoming] flow will terminate naturally — the QuicStream object
+     *    can outlive its membership in the connection's `streamsList`.
+     *    For [Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE] there is no
+     *    receive side, so this leg is trivially done.
+     *
+     * The motivation is the moq-lite audio-rooms path: each Opus frame is
+     * forwarded as a fresh peer-uni stream by the relay. A 3-hour session
+     * at ~50 frames/sec churns ~540 000 streams. Without retirement,
+     * `streamsList` and the `streams` map grow monotonically — the
+     * `nestsClient/plans/2026-04-26-moq-lite-gap.md` soak target wants
+     * memory flat past handshake-stable. Stream retirement is the only
+     * QUIC-level fix that keeps the tracker bounded for that workload.
+     *
+     * Read this from any thread under the connection's `streamsLock` — the
+     * underlying flags are `@Volatile` and the buffers' synchronized
+     * blocks publish their state atomically.
+     */
+    val isFullyRetired: Boolean
+        get() {
+            val sendSettled =
+                when (direction) {
+                    Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL -> true
+
+                    Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE,
+                    Direction.BIDIRECTIONAL,
+                    -> send.finAcked || resetAcked
+                }
+            if (!sendSettled) return false
+            val recvSettled =
+                when (direction) {
+                    Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE -> true
+
+                    Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL,
+                    Direction.BIDIRECTIONAL,
+                    -> receive.finReceived && receive.isFullyRead()
+                }
+            return recvSettled
+        }
+
+    /**
      * Pushes [data] toward the consumer. Returns false if the bounded channel
      * was full; the caller (parser) is expected to escalate to a connection-
      * level error in that case (audit-4 #3 — silent data loss is unacceptable
@@ -100,4 +187,114 @@ class QuicStream(
     internal fun closeIncoming() {
         incomingChannel.close()
     }
+
+    /**
+     * RFC 9000 §3.5: abruptly terminate the SEND side. Application code
+     * calls this when it wants to cancel a partially-written stream
+     * (e.g. user cancelled a request mid-upload). After [resetStream]:
+     *
+     *   - A `RESET_STREAM(streamId, errorCode, finalSize)` frame is
+     *     queued for emission on the next writer drain. `finalSize` is
+     *     the largest stream offset the application has appended, i.e.
+     *     [SendBuffer.nextOffset] at reset time (RFC 9000 §3.5 — the
+     *     peer uses this to satisfy its receive-side flow-control
+     *     accounting even though it discards the bytes).
+     *   - The frame is reliable per §13.3 — if its carrying packet is
+     *     declared lost, the dispatcher in
+     *     [com.vitorpamplona.quic.connection.QuicConnection.onTokensLost]
+     *     re-flags [resetEmitPending] for re-emit on next drain.
+     *   - Once the peer ACKs the RESET_STREAM, [resetAcked] latches
+     *     true and the writer stops re-emitting.
+     *
+     * First call wins. A second [resetStream] is a no-op: RFC 9000 §3.5
+     * pins `finalSize` at the first emission; replaying retransmits with
+     * a larger value (because the app enqueued more bytes between the
+     * two calls) would trigger `FINAL_SIZE_ERROR` on the peer. The
+     * `errorCode` is likewise frozen.
+     *
+     * Threading: callable from any coroutine. The boolean flags
+     * ([resetEmitPending], [resetAcked]) are `@Volatile` so the writer
+     * (which reads them under [com.vitorpamplona.quic.connection.QuicConnection.lock])
+     * sees the assignment without acquiring the connection mutex. The
+     * "first call wins" gate above closes the only multi-writer race
+     * (two app threads racing the writer's clear-after-emit).
+     */
+    fun resetStream(errorCode: Long) {
+        if (resetState != null) return
+        resetState =
+            ResetState(
+                errorCode = errorCode,
+                finalSize = send.nextOffset,
+            )
+        resetEmitPending = true
+    }
+
+    /**
+     * RFC 9000 §3.5: ask the peer to stop sending on this stream's
+     * RECEIVE side. Application calls this when it's done reading
+     * (e.g. an HTTP/3 request handler returned an early response and
+     * doesn't care about the rest of the request body). The
+     * `STOP_SENDING(streamId, errorCode)` frame is queued for emission
+     * on the next writer drain; reliable per §13.3, retransmitted on
+     * loss like [resetStream].
+     *
+     * First call wins (same reasoning as [resetStream]: the peer treats
+     * the first STOP_SENDING as authoritative; replaying retransmits
+     * with a different `errorCode` would visibly disagree with the
+     * original frame already on the wire).
+     */
+    fun stopSending(errorCode: Long) {
+        if (stopSendingState != null) return
+        stopSendingState = StopSendingState(errorCode = errorCode)
+        stopSendingEmitPending = true
+    }
+
+    /**
+     * RFC 9000 §3.5 send-side reset state. Set once by [resetStream]
+     * (subsequent calls no-op); read by the writer + loss/ACK
+     * dispatchers. Once set, contents are immutable.
+     */
+    internal var resetState: ResetState? = null
+
+    /**
+     * True while a RESET_STREAM emit is pending. Cleared after the
+     * writer emits; set back to true by the loss dispatcher; cleared
+     * again (and not re-set) once [resetAcked] latches.
+     *
+     * `@Volatile` because [resetStream] writes it from an arbitrary
+     * coroutine while the writer / dispatchers read it under
+     * [com.vitorpamplona.quic.connection.QuicConnection.lock]. Volatile
+     * gives the cross-thread happens-before; the "first call wins"
+     * gate in [resetStream] eliminates the write-write race with the
+     * writer's clear-after-emit.
+     */
+    @Volatile
+    internal var resetEmitPending: Boolean = false
+
+    /**
+     * Latches true when the peer ACKs the RESET_STREAM. After this
+     * the writer no longer re-emits even if a stale lost token shows
+     * up. Mirrors neqo's `send_stream::ResetAcked` state. Volatile for
+     * the same reason as [resetEmitPending].
+     */
+    @Volatile
+    internal var resetAcked: Boolean = false
+
+    /** Receive-side stop-sending state. Set by [stopSending]. */
+    internal var stopSendingState: StopSendingState? = null
+
+    @Volatile
+    internal var stopSendingEmitPending: Boolean = false
+
+    @Volatile
+    internal var stopSendingAcked: Boolean = false
+
+    internal data class ResetState(
+        val errorCode: Long,
+        val finalSize: Long,
+    )
+
+    internal data class StopSendingState(
+        val errorCode: Long,
+    )
 }

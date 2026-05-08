@@ -142,10 +142,32 @@ android {
         ]
     }
 
+    // Opt-in fast-build flags. Default behavior is unchanged.
+    //
+    //   -PdisableAbiSplits=true       skip per-ABI APK splits; produces a single
+    //                                 APK per (flavor, buildType) instead of 5.
+    //                                 Cuts ~600 MB of intermediates and several
+    //                                 minutes off CI.
+    //   -PdisableUniversalApk=true    when ABI splits are enabled, skip the
+    //                                 extra universal APK output. (No effect
+    //                                 when disableAbiSplits is also set, since
+    //                                 there are no splits to add to.)
+    //   -Pamethyst.skipMapping=true   disable R8 minification on release and
+    //                                 benchmark. APK is larger, but builds are
+    //                                 much faster and outputs/mapping/ (~260MB)
+    //                                 is not produced. Local-dev and PR-CI use
+    //                                 only — release pipelines must not set it.
+    def disableAbiSplits = providers.gradleProperty("disableAbiSplits")
+            .map { it.toBoolean() }.getOrElse(false)
+    def disableUniversalApk = providers.gradleProperty("disableUniversalApk")
+            .map { it.toBoolean() }.getOrElse(false)
+    def skipMapping = providers.gradleProperty("amethyst.skipMapping")
+            .map { it.toBoolean() }.getOrElse(false)
+
     buildTypes {
         release {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), 'proguard-rules.pro'
-            minifyEnabled = true
+            minifyEnabled = !skipMapping
         }
         debug {
             applicationIdSuffix '.debug'
@@ -186,10 +208,10 @@ android {
 
     splits {
         abi {
-            enable = true
+            enable = !disableAbiSplits
             reset()
             include "x86", "x86_64", "arm64-v8a", "armeabi-v7a"
-            universalApk = true
+            universalApk = !disableUniversalApk
         }
     }
 

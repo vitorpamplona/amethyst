@@ -20,17 +20,192 @@
  */
 package com.vitorpamplona.quic.connection
 
+import com.vitorpamplona.quic.connection.recovery.SentPacket
 import com.vitorpamplona.quic.stream.ReceiveBuffer
 import com.vitorpamplona.quic.stream.SendBuffer
 
-/** Per-encryption-level state owned by [QuicConnection]. */
+/**
+ * Per-encryption-level state owned by [QuicConnection].
+ *
+ * Concurrency: [cryptoSend] / [cryptoReceive] use their internal
+ * [SendBuffer] / [ReceiveBuffer] `synchronized(this)` blocks for
+ * thread safety — the writer's `takeChunk`, the parser's `markAcked`,
+ * and PTO-driven `requeueAllInflight` are all serialized through
+ * those leaf locks. [sentPackets] is currently mutated by the writer
+ * (under [QuicConnection.streamsLock]) and read by the parser without
+ * synchronization; that race is pre-existing audit-tracked and not
+ * fixed by [LevelState] today.
+ */
 class LevelState {
     val pnSpace = PacketNumberSpaceState()
-    val ackTracker =
+
+    var ackTracker =
         com.vitorpamplona.quic.recovery
             .AckTracker()
-    val cryptoSend = SendBuffer()
-    val cryptoReceive = ReceiveBuffer()
+        private set
+
+    var cryptoSend = SendBuffer()
+        private set
+
+    var cryptoReceive = ReceiveBuffer()
+        private set
+
     var sendProtection: PacketProtection? = null
     var receiveProtection: PacketProtection? = null
+
+    /**
+     * Per-packet retention for RFC 9002 loss detection + retransmit.
+     * Populated by [QuicConnectionWriter] when a packet is built;
+     * drained by the ACK handler in [QuicConnectionParser] (step 3 of
+     * `quic/plans/2026-05-04-control-frame-retransmit.md`) and by
+     * loss detection (step 5).
+     *
+     * Keyed by packet number. Step 2 only populates this map for
+     * Application-level packets — Initial / Handshake-level
+     * retransmit (CRYPTO) is out of scope, see plan.
+     *
+     * Caller of any read/write to this map must hold
+     * [QuicConnection.lock].
+     */
+    val sentPackets: MutableMap<Long, SentPacket> = HashMap()
+
+    /**
+     * RFC 9002 §6.1 largest acknowledged packet number observed
+     * by an inbound ACK in this space. Updated only when the ACK
+     * advances it — duplicate ACKs do not move the value.
+     * Used as the high-water mark for packet-threshold loss detection.
+     */
+    var largestAckedPn: Long? = null
+
+    /**
+     * Send time (epoch ms, from the writer's `nowMillis` source) of
+     * the SentPacket whose PN is [largestAckedPn]. Used to compute
+     * the RTT sample on a newly-advancing ACK (RFC 9002 §5.2).
+     * Null until an ACK arrives.
+     */
+    var largestAckedSentTimeMs: Long? = null
+
+    /**
+     * RFC 9001 §4.9: latches true once [discardKeys] runs. Used by
+     * the writer / parser to short-circuit operations on a discarded
+     * level (parser already drops packets via the
+     * [receiveProtection] null check; this flag is for the symmetry
+     * tests + future code that wants to assert "level is dead").
+     */
+    var keysDiscarded: Boolean = false
+        private set
+
+    /**
+     * RFC 9001 §4.9: drop all key material + buffered state for this
+     * encryption level once the level is no longer needed. Idempotent.
+     *
+     *   - §4.9.1: a client MUST discard Initial keys when it first
+     *     sends a Handshake packet. Trigger lives in
+     *     [com.vitorpamplona.quic.connection.QuicConnectionWriter] —
+     *     after we build a Handshake-level packet, we discard Initial.
+     *   - §4.9.2: an endpoint MUST discard Handshake keys when the
+     *     handshake is confirmed. Per §4.1.2 a client confirms the
+     *     handshake on receipt of a HANDSHAKE_DONE frame; the trigger
+     *     lives in [com.vitorpamplona.quic.connection.QuicConnectionParser].
+     *
+     * Frees the AEAD cipher state, drops any unsent / unacked CRYPTO
+     * bytes (no longer reachable since they were handshake-only), and
+     * resets the loss-detection accounting. Future inbound packets at
+     * this encryption level are dropped silently because
+     * [receiveProtection] is null. Future outbound builds skip the
+     * level for the same reason on [sendProtection].
+     *
+     * The class-level docstring on [LevelState] still describes the
+     * fields as if they're permanent; after [discardKeys] those
+     * descriptions only apply while [keysDiscarded] is false.
+     */
+    fun discardKeys() {
+        if (keysDiscarded) return
+        sendProtection = null
+        receiveProtection = null
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = true
+    }
+
+    /**
+     * RFC 9000 §6: reset every per-level field to a constructor-fresh
+     * state, then install [sendProtection] / [receiveProtection] keyed
+     * to the post-VN destination CID.
+     *
+     * Differs from [discardKeys] in that this re-arms the level for
+     * a fresh handshake — caller (
+     * [QuicConnection.applyVersionNegotiation]) re-enqueues the cached
+     * ClientHello onto [cryptoSend] immediately afterwards, so the
+     * next outbound drain emits a v1 Initial with PN=0 and the same
+     * TLS bytes the original Initial carried.
+     */
+    internal fun resetForVersionNegotiation(
+        sendProtection: PacketProtection,
+        receiveProtection: PacketProtection,
+    ) {
+        // pnSpace is val (lock-split refactor); reset its fields in place.
+        // The PacketNumberSpaceState.resetForRetry() name is historical but
+        // the semantics are right for VN too: zero out the PN counter +
+        // received-side state.
+        pnSpace.resetForRetry()
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = false
+        this.sendProtection = sendProtection
+        this.receiveProtection = receiveProtection
+    }
+
+    /**
+     * Reset the Initial-level state for a successful Retry.
+     *
+     * Differs from [resetForVersionNegotiation] in that the packet number
+     * namespace is **preserved**: per RFC 9001 §5.7 + RFC 9000 §17.2.5,
+     * the Initial PN space spans the original AND the post-Retry Initials.
+     * The client MUST NOT reuse a packet number across the boundary —
+     * the next Initial sent after Retry uses PN = (last-used) + 1.
+     *
+     * The runner's retry test specifically checks for this: a client that
+     * resets the PN gets "Client reset the packet number. Check failed
+     * for PN 0".
+     *
+     * Everything else resets to mirror VN semantics:
+     *  - cryptoSend cleared so the caller can re-enqueue the cached
+     *    ClientHello on top of fresh empty buffer state.
+     *  - sentPackets cleared because the pre-Retry Initial's loss-recovery
+     *    state references PNs the server will never ACK (the server
+     *    discarded that packet when it sent the Retry).
+     *  - keys re-derived from the new DCID and reinstalled.
+     *  - keysDiscarded latch reset (the pre-Retry keys are gone, but the
+     *    level itself is still alive with the new keys).
+     */
+    internal fun resetForRetry(
+        sendProtection: PacketProtection,
+        receiveProtection: PacketProtection,
+    ) {
+        // pnSpace is INTENTIONALLY preserved — see kdoc above.
+        ackTracker =
+            com.vitorpamplona.quic.recovery
+                .AckTracker()
+        cryptoSend = SendBuffer()
+        cryptoReceive = ReceiveBuffer()
+        sentPackets.clear()
+        largestAckedPn = null
+        largestAckedSentTimeMs = null
+        keysDiscarded = false
+        this.sendProtection = sendProtection
+        this.receiveProtection = receiveProtection
+    }
 }

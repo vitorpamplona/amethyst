@@ -1,0 +1,7 @@
+{
+  "amethyst": {
+    "image": "amethyst-quic-interop:latest",
+    "url": "https://github.com/vitorpamplona/amethyst",
+    "role": "client"
+  }
+}

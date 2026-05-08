@@ -37,7 +37,9 @@ class Nip44DecryptResponse {
                 }
 
                 else -> {
-                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    response.result?.let {
+                        SignerResult.RequestAddressed.Successful(DecryptionResult(it))
+                    } ?: SignerResult.RequestAddressed.ReceivedButCouldNotPerform("No result in response")
                 }
             }
     }

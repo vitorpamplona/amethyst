@@ -25,6 +25,7 @@ import com.vitorpamplona.nestsclient.OkHttpNestsClient
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
@@ -41,6 +42,8 @@ import kotlin.test.assertTrue
  * Skipped by default — set `-DnestsInterop=true` to enable.
  */
 class NostrNestsAuthInteropTest {
+    val client = OkHttpNestsClient { OkHttpClient() }
+
     @Test
     fun production_OkHttpNestsClient_mints_a_jwt_against_real_moq_auth() =
         runBlocking {
@@ -48,7 +51,7 @@ class NostrNestsAuthInteropTest {
             val harness = harnessOrNull ?: return@runBlocking
 
             val signer = NostrSignerInternal(KeyPair())
-            val client = OkHttpNestsClient()
+
             val room =
                 NestsRoomConfig(
                     authBaseUrl = harness.authBaseUrl,

@@ -63,8 +63,8 @@ class KindGroup(
     fun reset() {
         count.set(0)
         memory.set(0)
-        subs.forEach { key, value -> value.set(0) }
-        relays.forEach { key, value -> value.set(0) }
+        subs.forEach { _, value -> value.set(0) }
+        relays.forEach { _, value -> value.set(0) }
     }
 
     fun printSubs() = subs.joinToString(", ") { key, value -> if (value.get() > 0) "$key ($value)" else "" }

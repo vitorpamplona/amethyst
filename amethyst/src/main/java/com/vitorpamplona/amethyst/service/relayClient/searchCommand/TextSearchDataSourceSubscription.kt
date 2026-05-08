@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchBarViewModel
 
@@ -36,5 +36,5 @@ fun TextSearchDataSourceSubscription(
     searchBarViewModel: SearchBarViewModel,
     dataSource: SearchFilterAssembler,
 ) {
-    KeyDataSourceSubscription(searchBarViewModel.searchDataSourceState, dataSource)
+    LifecycleAwareKeyDataSourceSubscription(searchBarViewModel.searchDataSourceState, dataSource)
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.account
 
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -77,7 +78,7 @@ class AccountManagerNip46IsolationTest {
                 ephemeralKeyPair.pubKey.toNpub(),
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             val result = manager.loadSavedAccount()
@@ -138,7 +139,7 @@ class AccountManagerNip46IsolationTest {
                 ephemeralKeyPair.pubKey.toNpub(),
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             manager.loadSavedAccount()
@@ -166,7 +167,7 @@ class AccountManagerNip46IsolationTest {
             }
 
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             // First load

@@ -70,6 +70,43 @@ class TlsClient(
     val fixedKeyPair: X25519KeyPair? = null,
     /** When non-null, used as the ClientHello random (for deterministic tests). */
     val fixedRandom: ByteArray? = null,
+    /**
+     * Cipher suites offered in the ClientHello, in preference order. The
+     * default offers AES-128-GCM first then ChaCha20-Poly1305. Override to
+     * force a specific negotiation (e.g. `chacha20`-only for the matching
+     * quic-interop-runner testcase).
+     */
+    val cipherSuites: IntArray =
+        intArrayOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
+    /**
+     * Wall-clock provider for the NewSessionTicket [issuedAtMillis] stamp.
+     * Tests inject a fixed clock; production uses System.currentTimeMillis().
+     * Stored at issue-time only — the obfuscated_ticket_age the next
+     * connection emits is `(now_at_resume - issuedAtMillis + ticketAgeAdd)
+     * mod 2^32`, so a slightly stale clock skew is harmless (the server
+     * de-obfuscates and only cares about its own tracked age window).
+     */
+    val nowMillisSource: () -> Long = { System.currentTimeMillis() },
+    /**
+     * If non-null, this connection resumes a prior session via PSK rather
+     * than running a full handshake. The TLS layer:
+     *  - Seeds the early secret from [TlsResumptionState.psk] instead of
+     *    zeros (RFC 8446 §7.1).
+     *  - Adds `pre_shared_key` as the last ClientHello extension, with
+     *    the cached ticket as the identity and a binder computed over
+     *    the partial ClientHello.
+     *  - Tolerates the server skipping Certificate / CertificateVerify
+     *    when it accepts the PSK (server only sends them on full
+     *    handshakes).
+     *
+     * Caller's responsibility to ensure the resumption state is fresh
+     * (within `ticket_lifetime` seconds of issue) and bound to a cipher
+     * suite this client offers.
+     */
+    val resumption: TlsResumptionState? = null,
 ) {
     enum class State {
         INITIAL,
@@ -120,26 +157,126 @@ class TlsClient(
     private var sharedSecret: ByteArray? = null
     private var negotiatedCipherSuite: Int = -1
 
+    /**
+     * True after ServerHello carries a `pre_shared_key` extension with the
+     * `selected_identity` we offered. When set, the state machine accepts
+     * Finished immediately after EncryptedExtensions (no Certificate /
+     * CertificateVerify path) and the application-traffic secrets are
+     * computed off the PSK-seeded early secret rather than zeros.
+     */
+    private var pskAccepted: Boolean = false
+
+    /**
+     * RFC 8446 §4.2.10 — true after EncryptedExtensions echoes the empty
+     * `early_data` extension we sent in the resumption ClientHello.
+     * False (the default) means the server rejected 0-RTT — any
+     * application data we already sent under early-data keys was
+     * silently dropped server-side and the QUIC layer must re-queue it
+     * for retransmission once 1-RTT keys are available.
+     *
+     * Read by [com.vitorpamplona.quic.connection.QuicConnection]'s
+     * onApplicationKeysReady callback to decide whether to invoke
+     * [com.vitorpamplona.quic.connection.QuicConnection.requeueAllInflightStreamData].
+     * Only meaningful on resumption + 0-RTT connections; non-0-RTT
+     * connections leave it at false and never check it.
+     */
+    var earlyDataAccepted: Boolean = false
+        private set
+
+    /** The 32-byte ClientHello random, available after [start]. Exposed so
+     *  observers (e.g. SSLKEYLOGFILE writer) can correlate secrets with
+     *  this connection. */
+    var clientRandom: ByteArray? = null
+        private set
+
     /** Begin the handshake by emitting a ClientHello at Initial level. */
     fun start() {
         check(state == State.INITIAL) { "TlsClient already started" }
         keyPair = fixedKeyPair ?: X25519.generateKeyPair()
 
-        keySchedule.deriveEarly()
+        // Seed the early secret. Resumption path uses the cached PSK as
+        // IKM (RFC 8446 §7.1) so the binder for the pre_shared_key
+        // extension can be derived from the same early secret the server
+        // will use to validate it. Non-resumption path uses zero IKM.
+        if (resumption != null) {
+            keySchedule.deriveEarlyFromPsk(resumption.psk)
+        } else {
+            keySchedule.deriveEarly()
+        }
 
-        val ch =
-            buildQuicClientHello(
-                serverName = serverName,
-                x25519PublicKey = keyPair!!.publicKey,
-                quicTransportParams = transportParameters,
-                random =
-                    fixedRandom ?: com.vitorpamplona.quartz.utils.RandomInstance
-                        .bytes(32),
-            )
+        val random =
+            fixedRandom ?: com.vitorpamplona.quartz.utils.RandomInstance
+                .bytes(32)
+        clientRandom = random
 
-        val chBytes = ch.encode()
+        val chBytes =
+            if (resumption != null) {
+                // Resumption ClientHello carries pre_shared_key (last
+                // extension per spec) with binder bound to the partial CH
+                // hash. obfuscated_ticket_age = (current_age + ticket_age_add)
+                // mod 2^32. We use the local clock — server's de-obfuscation
+                // only cares about its own tracked age window.
+                val ageMillis = (nowMillisSource() - resumption.issuedAtMillis).coerceAtLeast(0L)
+                val obfuscatedAge = (ageMillis + resumption.ticketAgeAdd) and 0xFFFFFFFFL
+                val binderFinishedKey = pskBinderFinishedKey(keySchedule.earlySecret!!)
+                buildResumptionClientHelloBytes(
+                    serverName = serverName,
+                    x25519PublicKey = keyPair!!.publicKey,
+                    quicTransportParams = transportParameters,
+                    alpns = offeredAlpns,
+                    random = random,
+                    cipherSuites = cipherSuites,
+                    ticket = resumption.ticket,
+                    obfuscatedTicketAge = obfuscatedAge,
+                    binderFinishedKey = binderFinishedKey,
+                    includeEarlyData = resumption.maxEarlyDataSize > 0,
+                    transcriptHashOfPartialCh = { partial ->
+                        // Hash a one-shot copy of the running transcript
+                        // would-be-state: an empty TlsRunningSha256 fed
+                        // partial-CH-bytes is identical to running the
+                        // shared transcript "as if" we'd appended
+                        // partial-CH and snapshotted.
+                        val h = TlsRunningSha256()
+                        h.update(partial)
+                        h.snapshot()
+                    },
+                    binderHmac = { key, data ->
+                        val mac =
+                            com.vitorpamplona.quartz.utils.mac
+                                .MacInstance("HmacSHA256", key)
+                        mac.update(data)
+                        mac.doFinal()
+                    },
+                )
+            } else {
+                val ch =
+                    buildQuicClientHello(
+                        serverName = serverName,
+                        x25519PublicKey = keyPair!!.publicKey,
+                        quicTransportParams = transportParameters,
+                        alpns = offeredAlpns,
+                        random = random,
+                        cipherSuites = cipherSuites,
+                    )
+                ch.encode()
+            }
+
         transcript.append(chBytes)
         outboundQueues[Level.INITIAL]!!.addLast(chBytes)
+
+        // Resumption + 0-RTT: derive client_early_traffic_secret from
+        // the early-secret-from-PSK + post-ClientHello transcript and
+        // hand the secret off so the QUIC layer can install 0-RTT
+        // packet protection. The server applies the same derivation
+        // on its side when it processes our PSK-bound ClientHello.
+        if (resumption != null && resumption.maxEarlyDataSize > 0) {
+            keySchedule.deriveEarlyTraffic(transcript.snapshot())
+            secretsListener.onEarlyDataKeysReady(
+                cipherSuite = resumption.cipherSuite,
+                clientEarlySecret = keySchedule.clientEarlyTrafficSecret!!,
+            )
+        }
+
         state = State.WAITING_SERVER_HELLO
     }
 
@@ -213,6 +350,36 @@ class TlsClient(
                 }
                 negotiatedCipherSuite = cipher
                 serverKeyShare = sh.serverKeyShareX25519
+
+                // RFC 8446 §4.2.11 — server signals PSK acceptance with a
+                // pre_shared_key extension carrying selected_identity (uint16).
+                // We only ever offer one identity, so anything other than 0
+                // is a protocol violation.
+                val pskExt = sh.extensions.firstOrNull { it.type == TlsConstants.EXT_PRE_SHARED_KEY }
+                if (resumption != null) {
+                    if (pskExt == null) {
+                        // We offered PSK but server picked full-handshake.
+                        // Plumbing for the fallback path (clear early secret,
+                        // re-run binder-less ClientHello transcript) is real
+                        // work; for now hard-fail. In production we'd want
+                        // to handle gracefully — for the runner's resumption
+                        // testcase the server MUST accept or the test fails
+                        // anyway, so this gate isn't load-bearing.
+                        throw QuicCodecException(
+                            "server rejected PSK; full-handshake fallback not implemented",
+                        )
+                    }
+                    val r = QuicReader(pskExt.data)
+                    val selectedIdentity = r.readUint16()
+                    if (selectedIdentity != 0) {
+                        throw QuicCodecException(
+                            "server selected PSK identity $selectedIdentity but we only offered 0",
+                        )
+                    }
+                    pskAccepted = true
+                } else if (pskExt != null) {
+                    throw QuicCodecException("server picked PSK we never offered")
+                }
                 transcript.append(msg)
 
                 val privKey = keyPair!!.privateKey
@@ -246,6 +413,12 @@ class TlsClient(
                 }
                 negotiatedAlpn = alpn
                 peerTransportParameters = ee.quicTransportParameters
+                // RFC 8446 §4.2.10 — server's `early_data` extension in
+                // EE confirms 0-RTT acceptance. Absence means the server
+                // ignored / dropped any app data we already sent under
+                // early-data keys, and the QUIC layer must re-queue it
+                // for 1-RTT replay.
+                earlyDataAccepted = ee.extensions.any { it.type == TlsConstants.EXT_EARLY_DATA }
                 transcript.append(msg)
                 state = State.WAITING_CERTIFICATE_OR_FINISHED
             }
@@ -260,16 +433,26 @@ class TlsClient(
                     }
 
                     TlsConstants.HS_FINISHED -> {
-                        // Audit-4 #3: we never offer a `pre_shared_key`
-                        // extension, so a server MUST send Certificate +
-                        // CertificateVerify. A Finished here means a
-                        // misbehaving server (or an MITM that stripped the
-                        // cert messages). Hard-fail rather than completing
-                        // a handshake with no peer authentication.
-                        throw QuicCodecException(
-                            "server skipped Certificate/CertificateVerify but we never offered PSK " +
-                                "(unauthenticated handshake refused)",
-                        )
+                        if (!pskAccepted) {
+                            // Audit-4 #3: we never offered (or never had
+                            // accepted) a `pre_shared_key` extension, so a
+                            // server MUST send Certificate +
+                            // CertificateVerify. A Finished here means a
+                            // misbehaving server (or an MITM that stripped
+                            // the cert messages). Hard-fail rather than
+                            // completing a handshake with no peer
+                            // authentication.
+                            throw QuicCodecException(
+                                "server skipped Certificate/CertificateVerify but we never offered PSK " +
+                                    "(unauthenticated handshake refused)",
+                            )
+                        }
+                        // Resumption path: server accepted our PSK so it
+                        // skips Certificate / CertificateVerify (the PSK
+                        // itself authenticates the server through the
+                        // earlier full handshake that issued the ticket).
+                        // Process Finished directly.
+                        handleServerFinished(msg, bodyReader, len)
                     }
 
                     else -> {
@@ -305,6 +488,40 @@ class TlsClient(
                     TlsConstants.HS_NEW_SESSION_TICKET -> {
                         // Don't append to transcript — NewSessionTicket is not
                         // part of the handshake transcript per RFC 8446 §4.4.1.
+                        // Parse the ticket, derive a PSK from it +
+                        // resumption_master_secret, and surface a
+                        // [TlsResumptionState] to the listener so the QUIC
+                        // layer can stash it for the next connection.
+                        val rms = keySchedule.resumptionMasterSecret
+                        if (rms != null) {
+                            val ticket = parseNewSessionTicketBody(bodyReader)
+                            val psk = resumptionPsk(rms, ticket.nonce)
+                            // RFC 8446 §4.2.10 — NewSessionTicket-side
+                            // early_data extension carries uint32
+                            // max_early_data_size. Presence (with size>0)
+                            // signals the server permits 0-RTT for this
+                            // ticket.
+                            val edExt = ticket.extensions.firstOrNull { it.type == TlsConstants.EXT_EARLY_DATA }
+                            val maxEarly =
+                                if (edExt != null && edExt.data.size >= 4) {
+                                    QuicReader(edExt.data).readUint32().toLong() and 0xFFFFFFFFL
+                                } else {
+                                    0L
+                                }
+                            secretsListener.onNewSessionTicket(
+                                TlsResumptionState(
+                                    ticket = ticket.ticket,
+                                    psk = psk,
+                                    cipherSuite = currentCipherSuite(),
+                                    ticketAgeAdd = ticket.ticketAgeAdd,
+                                    ticketLifetimeSec = ticket.ticketLifetimeSec,
+                                    issuedAtMillis = nowMillisSource(),
+                                    maxEarlyDataSize = maxEarly,
+                                    peerTransportParameters = peerTransportParameters,
+                                    negotiatedAlpn = negotiatedAlpn,
+                                ),
+                            )
+                        }
                     }
 
                     TlsConstants.HS_KEY_UPDATE -> {
@@ -355,6 +572,12 @@ class TlsClient(
         transcript.append(cfBytes)
         outboundQueues[Level.HANDSHAKE]!!.addLast(cfBytes)
 
+        // Derive resumption_master_secret AFTER appending client Finished —
+        // RFC 8446 §7.1 binds it to H(CH..client_Finished). Future
+        // NewSessionTicket frames will derive their PSKs off this secret
+        // plus the server-supplied ticket_nonce.
+        keySchedule.deriveResumption(transcript.snapshot())
+
         state = State.SENT_CLIENT_FINISHED
         secretsListener.onHandshakeComplete()
     }
@@ -380,7 +603,95 @@ interface TlsSecretsListener {
     )
 
     fun onHandshakeComplete()
+
+    /**
+     * Resumption + 0-RTT path: TLS has derived
+     * `client_early_traffic_secret` (RFC 8446 §7.1) right after the
+     * ClientHello transcript snapshot. The QUIC layer can install
+     * 0-RTT send-side packet protection at this point so subsequent
+     * outbound application data goes out as 0-RTT (long header
+     * packet type 0x01) until 1-RTT keys arrive and supersede.
+     *
+     * Default no-op so existing callers don't have to know about
+     * 0-RTT. Fires AT MOST ONCE per connection — non-resumption
+     * connections never derive an early-data secret.
+     */
+    fun onEarlyDataKeysReady(
+        cipherSuite: Int,
+        clientEarlySecret: ByteArray,
+    ) = Unit
+
+    /**
+     * Server issued a NewSessionTicket. The TLS layer hands off a
+     * ready-to-use [TlsResumptionState] capturing everything the next
+     * connection needs for PSK-based resumption: the opaque ticket, the
+     * derived PSK, the cipher suite the secret was bound to, and the
+     * obfuscation parameters. The QUIC layer's only job is to stash this
+     * somewhere the next [TlsClient] construction can read it from.
+     *
+     * Default no-op so existing callers (which don't care about
+     * resumption) compile unchanged. Multiple invocations are possible
+     * — RFC 8446 lets servers issue several tickets per connection. The
+     * caller may keep all of them or just the latest; for the
+     * quic-interop-runner `resumption` testcase keeping the latest
+     * suffices.
+     */
+    fun onNewSessionTicket(state: TlsResumptionState) = Unit
 }
+
+/**
+ * Self-contained state needed to resume a TLS 1.3 session via PSK on the
+ * next connection. Produced by the TLS layer when a NewSessionTicket
+ * arrives; consumed by a fresh [TlsClient] via its `resumption`
+ * constructor argument.
+ *
+ * Why store all this rather than just the ticket: the PSK derivation
+ * binds to a specific cipher suite (32-byte hash for our SHA-256 suites)
+ * so we can't re-derive on the fly without that suite, and the
+ * obfuscation arithmetic on the next connection needs both
+ * [ticketAgeAdd] and [issuedAtMillis] to compute the obfuscated_ticket_age
+ * the server expects.
+ */
+data class TlsResumptionState(
+    /** Opaque ticket bytes echoed verbatim as the PSK identity on the next connection. */
+    val ticket: ByteArray,
+    /** PSK derived from `resumption_master_secret` + `ticket_nonce` per RFC 8446 §4.6.1. */
+    val psk: ByteArray,
+    /**
+     * Cipher suite this PSK is bound to. The next connection MUST offer
+     * (at least) this suite or the server will fall back to a full
+     * handshake.
+     */
+    val cipherSuite: Int,
+    /** Server-supplied obfuscation factor (RFC 8446 §4.6.1) — added to the elapsed-since-issue ticket age. */
+    val ticketAgeAdd: Long,
+    /** Server-supplied lifetime hint in seconds. Tickets expire after this; the client SHOULD discard. */
+    val ticketLifetimeSec: Long,
+    /** Wall-clock millis when the ticket was issued (server time, but we use ours — the obfuscation makes the absolute clock irrelevant). */
+    val issuedAtMillis: Long,
+    /**
+     * RFC 9001 §4.6.1 + RFC 8446 §4.2.10. Non-zero when the issuing
+     * server signaled in NewSessionTicket's `early_data` extension that
+     * this ticket may carry up to N bytes of 0-RTT application data on
+     * the next connection. Zero (the default) means the server didn't
+     * advertise 0-RTT for this ticket; the client MUST NOT include the
+     * `early_data` extension on the resumption ClientHello in that case.
+     */
+    val maxEarlyDataSize: Long = 0L,
+    /**
+     * Peer's transport parameters from the connection that issued this
+     * ticket — opaque encoded blob from the prior connection's
+     * EncryptedExtensions. RFC 9001 §7.4.1: a 0-RTT-sending client MUST
+     * use the REMEMBERED transport parameters (specifically flow-control
+     * windows and stream caps) when sending 0-RTT data, since the new
+     * connection's ServerHello hasn't arrived yet so the new params
+     * aren't known. The QUIC layer applies these to the connection
+     * before writing 0-RTT packets.
+     */
+    val peerTransportParameters: ByteArray? = null,
+    /** Negotiated ALPN from the prior connection. 0-RTT must use the same protocol. */
+    val negotiatedAlpn: ByteArray? = null,
+)
 
 /** Pluggable certificate validator. Decoupled so we can stub it in tests. */
 interface CertificateValidator {

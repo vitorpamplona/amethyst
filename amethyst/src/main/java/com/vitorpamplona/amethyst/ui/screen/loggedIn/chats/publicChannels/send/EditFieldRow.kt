@@ -81,7 +81,7 @@ fun EditFieldRow(
     }
 
     channelScreenModel.uploadState?.let { uploading ->
-        uploading.multiOrchestrator?.let { selectedFiles ->
+        uploading.multiOrchestrator?.let { _ ->
             ChannelFileUploadDialog(
                 channelScreenModel = channelScreenModel,
                 state = uploading,

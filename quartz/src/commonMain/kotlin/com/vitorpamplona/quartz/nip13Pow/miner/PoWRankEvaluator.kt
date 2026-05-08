@@ -53,7 +53,7 @@ class PoWRankEvaluator {
 
         fun calculatePowRankOf(id: HexKey): Int {
             var rank = 0
-            for (i in 0..id.length) {
+            for (i in id.indices) {
                 if (id[i] == '0') {
                     rank += 4
                 } else if (id[i] in '4'..'7') {

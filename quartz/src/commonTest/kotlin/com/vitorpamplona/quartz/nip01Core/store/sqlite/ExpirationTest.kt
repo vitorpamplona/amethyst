@@ -50,7 +50,7 @@ class ExpirationTest : BaseDBTest() {
             val noteToExpire =
                 signer.sign(
                     TextNoteEvent.build("test1", createdAt = time + 1) {
-                        expiration(time + 1)
+                        expiration(time + 5)
                     },
                 )
 
@@ -58,7 +58,7 @@ class ExpirationTest : BaseDBTest() {
 
             db.assertQuery(noteToExpire, Filter(ids = listOf(noteToExpire.id)))
 
-            delay(2000)
+            delay(6000)
 
             db.deleteExpiredEvents()
 

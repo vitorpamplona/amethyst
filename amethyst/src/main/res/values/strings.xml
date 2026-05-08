@@ -176,6 +176,8 @@
     <string name="failed_to_save_the_image">Failed to save the image</string>
     <string name="video_saved_to_the_gallery">Video saved to the phone\'s video gallery</string>
     <string name="failed_to_save_the_video">Failed to save the video</string>
+    <string name="pdf_saved_to_the_gallery">PDF saved to Downloads/Amethyst</string>
+    <string name="failed_to_save_the_pdf">Failed to save the PDF</string>
     <string name="upload_image">Upload Image</string>
     <string name="upload_file">Upload File</string>
     <string name="take_a_picture">Take a picture</string>
@@ -426,6 +428,66 @@
     <string name="migrate_bookmarks_button">Move All to New Bookmarks</string>
     <string name="migrate_bookmarks_success">Bookmarks migrated successfully</string>
     <string name="drafts">Drafts</string>
+    <string name="scheduled_posts">Scheduled posts</string>
+    <string name="schedule_post">Schedule</string>
+    <string name="schedule_post_time_label">Scheduled time</string>
+    <string name="schedule_post_helper">Posts publish within ~15 minutes of the scheduled time.</string>
+    <string name="schedule_post_pick_time">Pick scheduled time</string>
+    <string name="schedule_post_pick_label">Schedule for…</string>
+    <string name="schedule_post_publishes_in">Publishes in %1$s</string>
+    <string name="schedule_post_was_due">Was due %1$s ago</string>
+    <string name="schedule_post_picker_time_title">Time</string>
+    <string name="schedule_post_button_add">Schedule post</string>
+    <string name="schedule_post_button_remove">Cancel scheduling</string>
+    <string name="schedule_post_warning_title">Always-on notifications disabled</string>
+    <string name="schedule_post_warning_single">Scheduled posts may not publish until you next reopen the app. Enable always-on in Settings → UI Preferences for reliable background scheduling.</string>
+    <string name="schedule_post_warning_multi">Scheduled posts may not publish until you reopen the app. Other accounts\' scheduled posts won\'t fire while this account is active. Enable always-on in Settings → UI Preferences for reliable background scheduling.</string>
+    <string name="schedule_post_preset_in_one_hour">In 1 hour</string>
+    <string name="schedule_post_preset_tomorrow_morning">Tomorrow 9 AM</string>
+    <string name="schedule_post_preset_next_monday_morning">Next Monday 9 AM</string>
+    <string name="schedule_post_always_on_prompt_title">Enable always-on notifications?</string>
+    <string name="schedule_post_always_on_prompt_message">Scheduled posts publish reliably only when always-on notifications are enabled. Otherwise, they may not fire until you next reopen the app.</string>
+    <string name="schedule_post_always_on_prompt_open_settings">Open settings</string>
+    <string name="schedule_post_always_on_prompt_continue">Continue anyway</string>
+    <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
+    <string name="scheduled_posts_at_time_past">%1$s · %2$s ago</string>
+    <string name="scheduled_posts_day_tomorrow">Tomorrow</string>
+    <string name="scheduled_posts_logout_toast_zero">Logged out</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="one">Logged out · %d scheduled post deleted</item>
+        <item quantity="other">Logged out · %d scheduled posts deleted</item>
+    </plurals>
+    <string name="scheduled_posts_notification_sent_title">Scheduled post published</string>
+    <string name="scheduled_posts_notification_failed_title">Scheduled post failed</string>
+    <string name="app_notification_scheduled_posts_channel_id" translatable="false">ScheduledPostsID</string>
+    <string name="app_notification_scheduled_posts_channel_name">Scheduled posts</string>
+    <string name="app_notification_scheduled_posts_channel_description">Notifications when a scheduled post is published or fails to publish.</string>
+    <string name="scheduled_posts_action_send_now">Send now</string>
+    <string name="scheduled_posts_empty_title">No scheduled posts</string>
+    <string name="scheduled_posts_empty_hint">Compose a note and tap the clock icon to schedule it for later.</string>
+    <string name="scheduled_posts_error_prefix">Error: %1$s</string>
+    <string name="scheduled_posts_status_pending">Scheduled</string>
+    <string name="scheduled_posts_status_publishing">Sending…</string>
+    <string name="scheduled_posts_status_failed">Failed</string>
+    <string name="scheduled_posts_status_sent">Sent</string>
+    <string name="scheduled_posts_status_cancelled">Cancelled</string>
+    <plurals name="scheduled_posts_logout_warning">
+        <item quantity="one">You have %d scheduled post that hasn\'t been published yet. Logging out will permanently delete it.</item>
+        <item quantity="other">You have %d scheduled posts that haven\'t been published yet. Logging out will permanently delete them.</item>
+    </plurals>
+    <plurals name="scheduled_posts_subtitle_queued">
+        <item quantity="one">%d queued</item>
+        <item quantity="other">%d queued</item>
+    </plurals>
+    <plurals name="scheduled_posts_subtitle_due_suffix">
+        <item quantity="one"> · %d due in 1h</item>
+        <item quantity="other"> · %d due in 1h</item>
+    </plurals>
+    <plurals name="scheduled_posts_relay_count">
+        <item quantity="one">to %d relay</item>
+        <item quantity="other">to %d relays</item>
+    </plurals>
+    <string name="scheduled_posts_event_id_copied">Note ID copied</string>
     <string name="polls">Polls</string>
     <string name="open_polls">Open</string>
     <string name="closed_polls">Closed</string>
@@ -516,15 +578,14 @@
     <string name="nest_audio_failed">Audio failed: %1$s</string>
     <string name="nest_audio_unavailable">Audio is not available for this room</string>
     <string name="nest_talk">Talk</string>
-    <string name="nest_stop_talking">Stop talking</string>
     <string name="nest_leave_stage">Leave stage</string>
     <string name="nest_mic_mute">Mute mic</string>
     <string name="nest_mic_unmute">Unmute mic</string>
     <string name="nest_broadcast_connecting">Going live…</string>
-    <string name="nest_broadcasting">Live</string>
     <string name="nest_broadcast_failed">Broadcast failed: %1$s</string>
+    <string name="nest_mute_failed">Mute failed: %1$s</string>
     <string name="nest_record_permission_required">Microphone access is required to talk in this room.</string>
-    <string name="nest_open_settings">Open settings</string>
+    <string name="nest_open_settings">No permissions</string>
     <string name="nest_notification_channel">Nests</string>
     <string name="nest_notification_channel_description">Keeps audio playing while a room is open.</string>
     <string name="nest_notification_listening">Nest connected</string>
@@ -533,6 +594,10 @@
     <string name="nest_notification_stop">Stop</string>
     <string name="nest_join">Join nest</string>
     <string name="nest_lobby_host_label">Host</string>
+    <string name="nest_lobby_open_action">Open</string>
+    <string name="nest_lobby_recent_chat">Recent chat</string>
+    <string name="nest_lobby_no_listeners">No one is in the room right now.</string>
+    <string name="nest_lobby_listeners_count">%1$d listening</string>
     <string name="nest_role_host">Host</string>
     <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Microphone muted</string>
@@ -587,7 +652,15 @@
     <string name="nest_minimize">Minimize</string>
     <string name="nest_minimize_description">Minimize to keep listening</string>
     <string name="nest_audio_dropped">Audio dropped</string>
+    <string name="nest_loading_room">Loading room…</string>
+    <string name="nest_unjoinable_title">This room can\'t be opened</string>
+    <string name="nest_unjoinable_body">The room is missing an audio service or endpoint. The host needs to update its details before listeners can connect.</string>
+    <string name="nest_unjoinable_back">Back</string>
     <string name="nest_create_fab">Start space</string>
+    <string name="nests_section_live_now">Live now</string>
+    <string name="nests_section_scheduled">Scheduled</string>
+    <string name="nests_section_recently_ended">Recently ended</string>
+    <string name="nests_ended_ago">Ended %1$s ago</string>
     <string name="nest_no_server_title">Set up a nest server</string>
     <string name="nest_no_server_body">You haven\'t picked a nest server yet. Add %1$s to your server list and continue?\n\nYou can change this later in Settings.</string>
     <string name="nest_no_server_use_default">Use default</string>
@@ -610,6 +683,11 @@
     <string name="nests_servers_my_section">Your servers</string>
     <string name="nests_servers_my_explainer">Saved as a kind-10112 replaceable event so other clients can read your preference.</string>
     <string name="nests_servers_add_field">Add a nest server</string>
+    <string name="nests_servers_add_relay_field">Relay (WebTransport) URL</string>
+    <string name="nests_servers_add_auth_field">Auth (JWT mint) URL</string>
+    <string name="nests_servers_add_pair_button">Add</string>
+    <string name="nests_servers_relay_label">Relay</string>
+    <string name="nests_servers_auth_label">Auth</string>
     <string name="nests_servers_recommended_section">Recommended servers</string>
     <string name="nests_servers_recommended_explainer">Built-in suggestions you can add to your list with one tap.</string>
     <string name="nests_servers_use_defaults">Use Amethyst defaults</string>
@@ -787,6 +865,13 @@
 
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
+
+    <string name="use_local_blossom_cache">Use local Blossom cache</string>
+    <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>
+    <string name="local_blossom_cache_detected">Local cache detected on port 24242.</string>
+    <string name="local_blossom_cache_not_detected">Local cache not detected on port 24242.</string>
+    <string name="local_blossom_cache_profile_pics_only">Only cache profile pictures</string>
+    <string name="local_blossom_cache_profile_pics_only_caption">Restrict the local cache to profile pictures. Feed images and videos will be fetched directly from the original servers.</string>
 
     <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
@@ -1100,6 +1185,8 @@
 
     <string name="filter_spam_from_strangers_title">Filter spam</string>
     <string name="filter_spam_from_strangers_explainer">Hides posts from strangers that were exactly the same for 5 or more times</string>
+    <string name="disable_client_tag_title">Don\'t add client tag to my events</string>
+    <string name="disable_client_tag_explainer">When enabled, Amethyst will not append a NIP-89 client tag to events you publish.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Warn on reports</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts have 5 or more reports from your follows</string>
     <string name="show_sensitive_content_title">Show sensitive content</string>
@@ -1486,6 +1573,10 @@
     <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
 
     <string name="could_not_connect_to_tor">Could not connect to Tor</string>
+    <string name="tor_connection_failed_title">Tor isn\'t connecting</string>
+    <string name="tor_connection_failed_body">Amethyst couldn\'t finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We\'ll remember this choice for the next hour and re-try Tor after that.</string>
+    <string name="tor_continue_without_for_session">Use regular connection</string>
+    <string name="tor_keep_waiting">Keep waiting</string>
     <string name="unable_to_download_relay_document">Download relay document unavailable</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>
@@ -1711,6 +1802,7 @@
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
 
     <string name="reply_description">Reply</string>
+    <string name="jump_to_parent_reply">Jump to the note this reply is replying to</string>
     <string name="boost_or_quote_description">Boost Or Quote</string>
     <string name="like_description">Like</string>
     <string name="zap_description">Zap</string>
@@ -1721,6 +1813,10 @@
     <string name="bottom_bar_settings_description">Drag to reorder. Toggle to add or remove an item from the bottom bar. With zero items the bottom bar is hidden.</string>
     <string name="bottom_bar_settings_available">Available</string>
     <string name="bottom_bar_settings_reorder">Reorder</string>
+    <string name="bottom_bar_settings_restore_default">Restore Default</string>
+    <string name="home_tabs_settings">Home Tabs</string>
+    <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
+    <string name="home_tab_everything">Everything</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
@@ -2379,6 +2475,34 @@
     <string name="relay_settings_lower2">outbox lists</string>
     <string name="relay_settings_lower">relay settings</string>
     <string name="last_seen">Last seen %1$s ago</string>
+    <string name="last_seen_on_date">Last seen on %1$s (%2$s ago)</string>
+    <string name="last_seen_just_now">Last seen just now</string>
+    <string name="last_seen_never">Never seen</string>
+
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="duration_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="duration_weeks">
+        <item quantity="one">%1$d week</item>
+        <item quantity="other">%1$d weeks</item>
+    </plurals>
+    <plurals name="duration_months">
+        <item quantity="one">%1$d month</item>
+        <item quantity="other">%1$d months</item>
+    </plurals>
+    <plurals name="duration_years">
+        <item quantity="one">%1$d year</item>
+        <item quantity="other">%1$d years</item>
+    </plurals>
 
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Connecting</string>

@@ -89,7 +89,20 @@ class NotificationRelayService : Service() {
             try {
                 ContextCompat.startForegroundService(context, intent)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to start foreground service", e)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    e is ForegroundServiceStartNotAllowedException
+                ) {
+                    // Android 12+ blocks startForegroundService() from the background unless
+                    // the caller has a temporary FGS exemption (e.g. broadcast receiver,
+                    // exact alarm, high-priority FCM). Cold-start triggered by a flow emission
+                    // from AlwaysOnNotificationServiceManager hits this path. The other
+                    // notification layers (BootCompletedReceiver, ServiceWatchdogManager,
+                    // NotificationCatchUpWorker) plus MainActivity.onResume retry from
+                    // contexts that are allowed.
+                    Log.w(TAG) { "Foreground service start not allowed from background; will retry from another layer" }
+                } else {
+                    Log.e(TAG, "Failed to start foreground service", e)
+                }
             }
         }
 

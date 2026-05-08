@@ -24,14 +24,32 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 class StatusTag {
+    /**
+     * Canonical status codes match the deployed nostrnests reference:
+     * `live` for an in-progress room, `ended` for a closed one,
+     * `planned` for a scheduled future room. The earlier EGG-01 draft
+     * used `open` / `closed`; those values are accepted on read for
+     * back-compat but never emitted.
+     *
+     * `private` is a forward-looking value for invite-only rooms; it
+     * is not yet emitted by the deployed reference but is reserved on
+     * the spec side so the auth sidecar's `not_invited` error has a
+     * room status to anchor against.
+     */
     enum class STATUS(
         val code: String,
     ) {
         /** Scheduled in the future — host hasn't started the room yet. Pairs with a `["starts", <unix>]` tag. */
         PLANNED("planned"),
-        OPEN("open"),
+
+        /** Live, in-progress room (formerly `open` in the EGG-01 draft). */
+        LIVE("live"),
+
+        /** Reserved for invite-only rooms; not yet emitted by deployed clients. */
         PRIVATE("private"),
-        CLOSED("closed"),
+
+        /** Room is over (formerly `closed` in the EGG-01 draft). */
+        ENDED("ended"),
         ;
 
         fun toTagArray() = assemble(this)
@@ -41,20 +59,18 @@ class StatusTag {
                 when (code) {
                     PLANNED.code -> PLANNED
 
-                    OPEN.code -> OPEN
+                    LIVE.code -> LIVE
 
                     PRIVATE.code -> PRIVATE
 
-                    CLOSED.code -> CLOSED
+                    ENDED.code -> ENDED
 
-                    // Legacy aliases used by first-generation nostrnests
-                    // web clients that reused NIP-53 streaming-event
-                    // status values for kind-30312 meeting spaces.
-                    // Accept on read to preserve interop; we always emit
-                    // the canonical EGG-01 codes.
-                    "live" -> OPEN
+                    // Earlier EGG-01 draft used "open" / "closed". Accept
+                    // on read for back-compat; we always emit the deployed
+                    // nostrnests codes ("live" / "ended").
+                    "open" -> LIVE
 
-                    "ended" -> CLOSED
+                    "closed" -> ENDED
 
                     else -> null
                 }

@@ -69,8 +69,14 @@ object ShortHeaderPacket {
         }
         val headerBytes = w.toByteArray()
 
+        // RFC 9001 §5.4.2: pad the plaintext so that pnLen + payload >= 4. The
+        // 16-byte AEAD tag then guarantees the encrypted output has the 20
+        // bytes following pnOffset that header-protection sampling needs.
+        // Trailing 0x00 bytes decode as PADDING frames (RFC 9000 §19.1).
+        val paddedPlaintext = padForHeaderProtectionSample(plain.payload, pnLen)
+
         val nonce = aeadNonce(iv, plain.packetNumber)
-        val ciphertext = aead.seal(key, nonce, headerBytes, plain.payload)
+        val ciphertext = aead.seal(key, nonce, headerBytes, paddedPlaintext)
 
         val packet = ByteArray(headerBytes.size + ciphertext.size)
         headerBytes.copyInto(packet, 0)
@@ -83,6 +89,49 @@ object ShortHeaderPacket {
         applyHeaderProtectionMask(packet, firstByteOffset, pnOffset, pnLen, mask)
         return packet
     }
+
+    /**
+     * Header-protection unmask only — peek the first byte's key-phase bit
+     * before committing to a particular AEAD key set. Returns null if the
+     * datagram is too short for a HP sample.
+     *
+     * RFC 9001 §6 (key update): the receiver MUST decide which key-phase
+     * keys to use BEFORE running AEAD. The key-phase bit is part of the
+     * header-protected first byte, so the only honest way to choose the
+     * right keys is to unmask the first byte first. This helper does that
+     * cheaply (one HP-block call), letting the caller pick current vs
+     * next-phase keys before paying for the AEAD.
+     *
+     * The result also reports the unmasked PN length so the caller can
+     * stop early on an obviously bogus header rather than allocating
+     * buffers for the doomed AEAD attempt.
+     */
+    fun peekKeyPhase(
+        bytes: ByteArray,
+        offset: Int,
+        dcidLen: Int,
+        hp: HeaderProtection,
+        hpKey: ByteArray,
+    ): Peek? {
+        if (offset >= bytes.size) return null
+        val first = bytes[offset].toInt() and 0xFF
+        if ((first and 0x80) != 0) return null
+        val pnOffset = offset + 1 + dcidLen
+        val sampleStart = pnOffset + 4
+        if (sampleStart + 16 > bytes.size) return null
+        val sample = bytes.copyOfRange(sampleStart, sampleStart + 16)
+        val mask = hp.mask(hpKey, sample)
+        val unprotectedFirst = first xor (mask[0].toInt() and 0x1F)
+        return Peek(
+            keyPhase = (unprotectedFirst and 0x04) != 0,
+            pnLen = (unprotectedFirst and 0x03) + 1,
+        )
+    }
+
+    data class Peek(
+        val keyPhase: Boolean,
+        val pnLen: Int,
+    )
 
     /** Strip HP + decrypt a short-header packet. The DCID length must be known from connection state. */
     fun parseAndDecrypt(
@@ -142,4 +191,21 @@ object ShortHeaderPacket {
         val packet: ShortHeaderPlaintextPacket,
         val consumed: Int,
     )
+}
+
+/**
+ * Return [payload] padded with trailing zero bytes so that
+ * `pnLen + paddedSize >= 4`. After AEAD seal adds the 16-byte tag, the
+ * resulting ciphertext satisfies the RFC 9001 §5.4.2 requirement that 20
+ * bytes follow the start of the packet number for the HP sample.
+ */
+internal fun padForHeaderProtectionSample(
+    payload: ByteArray,
+    pnLen: Int,
+): ByteArray {
+    val minSize = (4 - pnLen).coerceAtLeast(0)
+    if (payload.size >= minSize) return payload
+    val padded = ByteArray(minSize)
+    payload.copyInto(padded, 0)
+    return padded
 }

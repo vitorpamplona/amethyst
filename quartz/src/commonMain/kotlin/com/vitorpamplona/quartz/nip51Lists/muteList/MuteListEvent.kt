@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -127,6 +128,23 @@ class MuteListEvent(
             return resign(
                 privateTags = privateTags.remove(mute.toTagIdOnly()),
                 publicTags = earlierVersion.tags.remove(mute.toTagIdOnly()),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
+        suspend fun removeAll(
+            earlierVersion: MuteListEvent,
+            mutes: List<MuteTag>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): MuteListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            val ids = mutes.map { it.toTagIdOnly() }
+
+            return resign(
+                privateTags = privateTags.removeAny(ids),
+                publicTags = earlierVersion.tags.removeAny(ids),
                 signer = signer,
                 createdAt = createdAt,
             )

@@ -73,7 +73,9 @@ class FakeWebTransport private constructor(
      * the moq-lite publisher path to push group data. The peer side
      * receives the new stream via [incomingUniStreams].
      */
-    override suspend fun openUniStream(): WebTransportWriteStream {
+    override suspend fun openUniStream(bestEffort: Boolean): WebTransportWriteStream {
+        // The fake transport ignores [bestEffort] — there's no loss to
+        // simulate in the in-memory channel.
         stateLock.withLock { check(open) { "session closed" } }
         val pipe = Channel<ByteArray>(Channel.BUFFERED)
         outboundUniStreams.send(FakeReadStream(pipe))
@@ -160,6 +162,8 @@ class FakeBidiStream internal constructor(
     override suspend fun finish() {
         write.close()
     }
+
+    override fun setPriority(priority: Int) = Unit
 }
 
 class FakeReadStream internal constructor(
@@ -184,4 +188,6 @@ private class ChannelWriteStream(
     override suspend fun finish() {
         channel.close()
     }
+
+    override fun setPriority(priority: Int) = Unit
 }

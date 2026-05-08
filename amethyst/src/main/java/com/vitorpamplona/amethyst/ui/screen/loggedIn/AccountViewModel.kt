@@ -188,6 +188,46 @@ class AccountViewModel(
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
+    /**
+     * `true` when feed/note media (images and videos in `MediaUrlContent`)
+     * should be routed through the local Blossom cache. Requires the master
+     * toggle on, the probe up, AND the profile-pictures-only restriction
+     * to be off.
+     */
+    val useLocalBlossomBridge: StateFlow<Boolean> =
+        try {
+            combine(
+                account.settings.useLocalBlossomCache,
+                account.settings.localBlossomCacheProfilePicturesOnly,
+                Amethyst.instance.localBlossomCacheProbe.available,
+            ) { toggle, profileOnly, probeUp -> toggle && probeUp && !profileOnly }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                false,
+            )
+        } catch (e: UninitializedPropertyAccessException) {
+            MutableStateFlow(false)
+        }
+
+    /**
+     * `true` when profile pictures should be routed through the local
+     * Blossom cache. Requires only the master toggle and the probe to be
+     * up; the profile-pictures-only restriction does not gate this flow.
+     */
+    val useLocalBlossomBridgeForProfilePics: StateFlow<Boolean> =
+        try {
+            combine(
+                account.settings.useLocalBlossomCache,
+                Amethyst.instance.localBlossomCacheProbe.available,
+            ) { toggle, probeUp -> toggle && probeUp }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                false,
+            )
+        } catch (e: UninitializedPropertyAccessException) {
+            MutableStateFlow(false)
+        }
+
     val callManager =
         CallManager(
             signer = account.signer,
@@ -856,7 +896,8 @@ class AccountViewModel(
         dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
-    ) = launchSigner { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
+        image: String? = null,
+    ) = launchSigner { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType, image = image) }
 
     fun removeFromMediaGallery(note: Note) = launchSigner { account.removeFromGallery(note) }
 
@@ -1111,6 +1152,8 @@ class AccountViewModel(
 
     fun updateWarnReports(warnReports: Boolean) = launchSigner { account.updateWarnReports(warnReports) }
 
+    fun updateDisableClientTag(disable: Boolean) = launchSigner { account.updateDisableClientTag(disable) }
+
     fun updateFilterSpam(filterSpam: Boolean) =
         launchSigner {
             if (account.updateFilterSpam(filterSpam)) {
@@ -1171,6 +1214,10 @@ class AccountViewModel(
     fun hide(word: String) = launchSigner { account.hideWord(word) }
 
     fun showUser(pubkeyHex: String) = launchSigner { account.showUser(pubkeyHex) }
+
+    fun showUsers(pubkeys: List<HexKey>) = launchSigner { account.showUsers(pubkeys) }
+
+    fun showWords(words: List<String>) = launchSigner { account.showWords(words) }
 
     fun createStatus(newStatus: String) = launchSigner { account.createStatus(newStatus) }
 

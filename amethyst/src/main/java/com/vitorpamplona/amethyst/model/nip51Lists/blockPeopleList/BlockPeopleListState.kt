@@ -117,4 +117,24 @@ class BlockPeopleListState(
             null
         }
     }
+
+    suspend fun showUsers(pubkeys: List<String>): PeopleListEvent? {
+        if (pubkeys.isEmpty()) return null
+        val blockList = getBlockList() ?: return null
+        return PeopleListEvent.removeAll(
+            earlierVersion = blockList,
+            persons = pubkeys.map { UserTag(it) },
+            signer = signer,
+        )
+    }
+
+    suspend fun showWords(words: List<String>): PeopleListEvent? {
+        if (words.isEmpty()) return null
+        val blockList = getBlockList() ?: return null
+        return PeopleListEvent.removeAll(
+            earlierVersion = blockList,
+            persons = words.map { WordTag(it) },
+            signer = signer,
+        )
+    }
 }

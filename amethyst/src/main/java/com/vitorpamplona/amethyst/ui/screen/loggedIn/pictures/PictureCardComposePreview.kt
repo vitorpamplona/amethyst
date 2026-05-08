@@ -44,11 +44,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
+private const val SAMPLE_PUBKEY_FRAGMENT =
+    "\"pubkey\":\"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c\","
+
+private const val SAMPLE_KIND_20_FRAGMENT = "\"kind\":20,"
+
 private const val SAMPLE_PICTURE_EVENT_JSON =
     "{\"id\":\"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\"," +
-        "\"pubkey\":\"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c\"," +
+        SAMPLE_PUBKEY_FRAGMENT +
         "\"created_at\":1708695717," +
-        "\"kind\":20," +
+        SAMPLE_KIND_20_FRAGMENT +
         "\"tags\":[[\"title\",\"Sunset at the Beach\"]," +
         "[\"imeta\",\"url https://image.nostr.build/sample-sunset.jpg\"," +
         "\"m image/jpeg\",\"dim 1200x800\",\"alt A beautiful sunset over the ocean\"," +
@@ -58,9 +63,9 @@ private const val SAMPLE_PICTURE_EVENT_JSON =
 
 private const val SAMPLE_PICTURE_EVENT_NO_TITLE_JSON =
     "{\"id\":\"b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3\"," +
-        "\"pubkey\":\"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c\"," +
+        SAMPLE_PUBKEY_FRAGMENT +
         "\"created_at\":1708695000," +
-        "\"kind\":20," +
+        SAMPLE_KIND_20_FRAGMENT +
         "\"tags\":[[\"imeta\",\"url https://image.nostr.build/sample-mountain.jpg\"," +
         "\"m image/jpeg\",\"dim 1080x1080\",\"alt Mountain landscape\"]]," +
         "\"content\":\"Mountain vibes today. Fresh air and clear skies.\"," +
@@ -68,9 +73,9 @@ private const val SAMPLE_PICTURE_EVENT_NO_TITLE_JSON =
 
 private const val SAMPLE_MULTI_IMAGE_EVENT_JSON =
     "{\"id\":\"c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4\"," +
-        "\"pubkey\":\"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c\"," +
+        SAMPLE_PUBKEY_FRAGMENT +
         "\"created_at\":1708694000," +
-        "\"kind\":20," +
+        SAMPLE_KIND_20_FRAGMENT +
         "\"tags\":[[\"title\",\"Travel Photos\"]," +
         "[\"imeta\",\"url https://image.nostr.build/sample-travel1.jpg\"," +
         "\"m image/jpeg\",\"dim 800x600\",\"alt City street\"]," +

@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.update
  * tag so the relay treats it as a replacement of the original.
  *
  * Closing the room ([closeRoom]) is the same path with
- * [StatusTag.STATUS.CLOSED] forced regardless of the form fields,
+ * [StatusTag.STATUS.ENDED] forced regardless of the form fields,
  * so a host can close without editing anything else.
  *
  * Participants are preserved verbatim — re-publishing must NOT lose
@@ -92,10 +92,10 @@ class EditNestViewModel : ViewModel() {
     fun setServiceUrl(value: String) = _state.update { it.copy(serviceUrl = value) }
 
     /** Publish the edited room. Returns `true` on success. */
-    suspend fun save(): Boolean = republish(StatusTag.STATUS.OPEN)
+    suspend fun save(): Boolean = republish(StatusTag.STATUS.LIVE)
 
     /** Close the room (host only). Republishes with status=CLOSED. */
-    suspend fun closeRoom(): Boolean = republish(StatusTag.STATUS.CLOSED)
+    suspend fun closeRoom(): Boolean = republish(StatusTag.STATUS.ENDED)
 
     private suspend fun republish(targetStatus: StatusTag.STATUS): Boolean {
         val avm = account ?: return false

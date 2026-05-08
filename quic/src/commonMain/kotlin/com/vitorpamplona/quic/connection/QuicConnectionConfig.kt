@@ -36,7 +36,30 @@ data class QuicConnectionConfig(
     val initialMaxStreamDataBidiRemote: Long = 1L * 1024 * 1024,
     val initialMaxStreamDataUni: Long = 1L * 1024 * 1024,
     val initialMaxStreamsBidi: Long = 100L,
-    val initialMaxStreamsUni: Long = 100L,
+    /**
+     * Initial peer-initiated unidirectional stream limit. moq-rs's
+     * Quinn stack advertises `max_concurrent_uni_streams = 10000`
+     * for the same audio-rooms workload — every Opus group is a
+     * fresh peer-initiated uni stream — so we match.
+     *
+     * Earlier the value was set to 1 000 000 as a workaround for a
+     * production cliff against moq.nostrnests.com:  emitting
+     * `MAX_STREAMS_UNI` mid-connection caused the relay to silently
+     * stop forwarding uni streams (see
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`).
+     * That workaround dodged the bug at the cost of unbounded
+     * lifetime stream-id allocation per connection.
+     *
+     * The true fix landed in
+     * `quic/plans/2026-05-04-control-frame-retransmit.md`:
+     * RFC 9002 §6 loss detection + retransmit. With control-frame
+     * retransmit working, a single dropped MAX_STREAMS_UNI is
+     * recovered automatically — no need for the high-cap
+     * workaround. Lowered back to a moq-rs-matching default so the
+     * rolling-extension path (and its retransmit) actually
+     * exercises in production, validating the new code path.
+     */
+    val initialMaxStreamsUni: Long = 10_000L,
     val maxIdleTimeoutMillis: Long = 30_000L,
     val maxUdpPayloadSize: Long = 1452L,
     val activeConnectionIdLimit: Long = 4L,

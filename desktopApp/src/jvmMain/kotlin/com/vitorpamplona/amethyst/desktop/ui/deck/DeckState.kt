@@ -306,6 +306,7 @@ class DeckState(
                 "profile" -> param?.let { DeckColumnType.Profile(it) }
                 "thread" -> param?.let { DeckColumnType.Thread(it) }
                 "hashtag" -> param?.let { DeckColumnType.Hashtag(it) }
+                "custom_feed" -> param?.let { DeckColumnType.CustomFeed(feedId = it) }
                 else -> null
             }
         }

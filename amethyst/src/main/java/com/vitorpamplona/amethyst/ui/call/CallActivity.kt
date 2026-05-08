@@ -59,7 +59,7 @@ class CallActivity : AppCompatActivity() {
 
     // Launcher for requesting call permissions when accepting from notification
     private val permissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { _ ->
             if (hasCallPermissions(this, isVideo = pendingAcceptIsVideo)) {
                 acceptCall()
             }

@@ -19,16 +19,13 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
+import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
@@ -36,12 +33,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientSubscriptionTest : BaseNostrClientTest() {
+class NostrClientSubscriptionTest : RelayClientTest() {
     @Test
     fun testNostrClientSubscription() =
         runBlocking {
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            defaultRelay.preload(SyntheticEvents.batch(150, kind = MetadataEvent.KIND))
 
             val resultChannel = Channel<Event>(UNLIMITED)
             val events = mutableSetOf<Event>()
@@ -49,15 +45,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
             val sub =
                 StaticSubscription(
                     client,
-                    mapOf(
-                        RelayUrlNormalizer.normalize("wss://nos.lol") to
-                            listOf(
-                                Filter(
-                                    kinds = listOf(MetadataEvent.KIND),
-                                    limit = 100,
-                                ),
-                            ),
-                    ),
+                    mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(MetadataEvent.KIND), limit = 100))),
                 ) { event ->
                     assertEquals(MetadataEvent.KIND, event.kind)
                     resultChannel.trySend(event)
@@ -71,11 +59,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
             }
 
             resultChannel.close()
-
             sub.close()
-
-            client.disconnect()
-            appScope.cancel()
 
             assertEquals(100, events.size)
         }

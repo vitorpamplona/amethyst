@@ -65,7 +65,7 @@ fun Notifying(
                 modifier = Modifier.align(CenterVertically),
             )
 
-            mentions.forEachIndexed { idx, user ->
+            mentions.forEachIndexed { _, user ->
                 Button(
                     shape = ButtonBorder,
                     colors =

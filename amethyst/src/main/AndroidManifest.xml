@@ -37,6 +37,11 @@
     <!-- To know receive notifications when the app connects/disconnects from the web -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
+    <!-- For ConnectivityManager.registerDefaultNetworkCallback used by NestForegroundService
+         to detect Wi-Fi ↔ cellular handover and recycle the active QUIC session promptly
+         (otherwise the wrapper waits ~30s for QUIC PTO before reconnecting). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- Audio/Video Playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -86,6 +91,7 @@
         android:theme="@style/Theme.Amethyst"
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:hardwareAccelerated="true"
         android:localeConfig="@xml/locales_config"
         tools:targetApi="34">
@@ -226,6 +232,7 @@
             android:launchMode="singleTask"
             android:exported="false"
             android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Amethyst" />
 
         <activity

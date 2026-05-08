@@ -147,4 +147,5 @@ class AccountSecurityPreferencesInternal(
     var filterSpamFromStrangers: Boolean = true,
     val maxHashtagLimit: Int = 5,
     var sendKind0EventsToLocalRelay: Boolean = false,
+    var disableClientTag: Boolean = false,
 )

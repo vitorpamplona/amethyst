@@ -23,17 +23,22 @@ package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * URL of the moq-relay WebTransport endpoint for a NIP-53 / nests
+ * audio room. Matches the deployed nostrnests reference, which writes
+ * `["streaming", "<https URL>"]` on `kind:30312`. The early EGG-01
+ * draft called this `endpoint`; we accept that name on read for older
+ * events but always emit `streaming`.
+ */
 class EndpointUrlTag {
     companion object Companion {
-        const val TAG_NAME = "endpoint"
+        const val TAG_NAME = "streaming"
 
         /**
-         * Legacy alias used by first-generation nostrnests web clients,
-         * which reused the NIP-53 streaming-event tag name for the
-         * kind-30312 MoQ relay URL. Accepted on read; we always emit
-         * the canonical [TAG_NAME].
+         * Earlier EGG-01 draft name for the MoQ relay URL. Accepted on
+         * read for back-compat; we always emit the canonical [TAG_NAME].
          */
-        const val LEGACY_TAG_NAME = "streaming"
+        const val LEGACY_TAG_NAME = "endpoint"
 
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }

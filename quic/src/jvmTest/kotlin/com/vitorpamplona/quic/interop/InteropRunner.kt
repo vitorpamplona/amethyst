@@ -23,6 +23,8 @@ package com.vitorpamplona.quic.interop
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
+import com.vitorpamplona.quic.observability.QlogObserver
+import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import com.vitorpamplona.quic.transport.UdpSocket
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +33,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 
 /**
  * Standalone interop runner. Drives [QuicConnection] against a real QUIC
@@ -52,11 +55,40 @@ fun main(args: Array<String>) {
     val host = System.getProperty("interopHost") ?: args.getOrNull(0) ?: "127.0.0.1"
     val port = (System.getProperty("interopPort") ?: args.getOrNull(1) ?: "4433").toInt()
     val timeoutSec = (System.getProperty("interopTimeoutSec") ?: "10").toLong()
+    // Public quic-interop-runner contract: TESTCASE env names the scenario.
+    // We currently only special-case `versionnegotiation`; everything else
+    // falls through to the default v1-handshake path, which is enough for
+    // the `transfer` / `handshake` / `multiconnect` testcases.
+    val testcase =
+        System.getProperty("interopTestcase")
+            ?: System.getenv("TESTCASE")
+            ?: args.getOrNull(2)
+    val initialVersion =
+        when (testcase) {
+            "versionnegotiation" -> QuicVersion.FORCE_VERSION_NEGOTIATION
+            else -> QuicVersion.V1
+        }
 
     println("== :quic interop runner ==")
-    println("target:  $host:$port")
-    println("timeout: ${timeoutSec}s")
+    println("target:    $host:$port")
+    println("testcase:  ${testcase ?: "(default)"}")
+    println("init ver:  0x${initialVersion.toUInt().toString(16)}")
+    println("timeout:   ${timeoutSec}s")
     println()
+
+    // qlog: if QLOGDIR is set, drop a `client.sqlog` file at
+    // <QLOGDIR>/client.sqlog so the operator can hand the failed run
+    // to qvis. The interop-runner contract from the IETF QUIC team's
+    // Docker harness (quic-interop-runner) sets this env var on every
+    // test invocation.
+    val qlogDir =
+        (System.getenv("QLOGDIR") ?: System.getProperty("QLOGDIR"))?.takeIf { it.isNotBlank() }
+    val qlogWriter: QlogWriter? =
+        qlogDir?.let { dir ->
+            val parent = File(dir).also { it.mkdirs() }
+            QlogWriter(File(parent, "client.sqlog"), odcidHex = "00")
+        }
+    val qlogObserver: QlogObserver = qlogWriter ?: QlogObserver.NoOp
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val outcome =
@@ -73,6 +105,7 @@ fun main(args: Array<String>) {
                     serverName = host,
                     config = QuicConnectionConfig(),
                     tlsCertificateValidator = PermissiveCertificateValidator(),
+                    qlogObserver = qlogObserver,
                 )
             val driver = QuicConnectionDriver(conn, socket, scope)
             driver.start()
@@ -110,6 +143,10 @@ fun main(args: Array<String>) {
     // are torn down before main() exits. Without this the JVM hangs on stray
     // IO-dispatcher threads.
     scope.cancel()
+    // Flush + close the qlog file before exiting. Without this, an
+    // exitProcess() call below could leave the trailing events
+    // unflushed.
+    runCatching { qlogWriter?.close() }
 
     when (outcome) {
         is InteropOutcome.Connected -> {

@@ -35,10 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -46,7 +48,9 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
+import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
@@ -64,6 +68,19 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
+
+// Mirrors the canonical HLS-playlist mime list used in MediaItemCache.toExoPlayerMimeType.
+// Kept inline rather than extracting a shared helper for one read-side caller.
+private fun isHlsMimeType(mimeType: String?): Boolean =
+    when (mimeType?.lowercase()) {
+        HlsContentTypes.HLS_PLAYLIST,
+        "application/x-mpegurl",
+        "audio/x-mpegurl",
+        "audio/mpegurl",
+        -> true
+
+        else -> false
+    }
 
 @Composable
 fun GalleryThumbnail(
@@ -87,6 +104,7 @@ fun GalleryThumbnail(
                         uri = null,
                         mimeType = noteEvent.mimeType(),
                         thumbhash = noteEvent.thumbhash(),
+                        artworkUri = noteEvent.image()?.imageUrl ?: noteEvent.thumb()?.imageUrl,
                     )
                 } else {
                     MediaUrlImage(
@@ -117,7 +135,27 @@ fun GalleryThumbnail(
                 )
             }
         } else if (noteEvent is VideoEvent) {
-            noteEvent.imetaTags().map { imeta ->
+            // An HLS publish writes one imeta per rendition (master + each variant) on the same
+            // NIP-71 event. Rendering them all expands a single video into a sub-grid of black
+            // tiles inside one gallery card — the .m3u8 playlist is a text manifest Coil can't
+            // decode. Collapse to a single tile when every imeta is an HLS playlist; prefer an
+            // imeta that carries a poster image, breaking ties by smallest dimensions so we
+            // pick the lowest-resolution variant. Non-HLS multi-imeta videos keep the existing
+            // per-imeta layout.
+            val imetas = noteEvent.imetaTags()
+            val isAllHls = imetas.isNotEmpty() && imetas.all { isHlsMimeType(it.mimeType) }
+            val toRender =
+                if (isAllHls) {
+                    val withPoster = imetas.filter { it.image.isNotEmpty() }
+                    val pick =
+                        withPoster.ifEmpty { imetas }.minBy {
+                            it.dimension?.let { d -> d.width * d.height } ?: Int.MAX_VALUE
+                        }
+                    listOf(pick)
+                } else {
+                    imetas
+                }
+            toRender.map { imeta ->
                 MediaUrlVideo(
                     url = imeta.url,
                     description = noteEvent.content,
@@ -128,6 +166,7 @@ fun GalleryThumbnail(
                     uri = null,
                     mimeType = imeta.mimeType,
                     thumbhash = imeta.thumbhash,
+                    artworkUri = imeta.image.firstOrNull(),
                 )
             }
         } else if (noteEvent is LiveActivitiesClipEvent) {
@@ -217,10 +256,24 @@ fun UrlImageView(
             )
         }
 
+    val isVideo = content is MediaUrlVideo
+    val artworkUri = (content as? MediaUrlVideo)?.artworkUri
+    val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
+    // Coil's VideoFrameDecoder can extract a frame from .mp4/.webm but not from an HLS .m3u8
+    // playlist (it's a text manifest). For an HLS video without a separate artwork URL, sending
+    // the playlist to SubcomposeAsyncImage just produces an Error state and a stand-in icon.
+    // Skip the fetch in that case and render blurhash + play overlay directly.
+    val bridgedUrl =
+        remember(content.url, useLocalBlossomBridge) {
+            content.toCoilModel(useLocalBlossomBridge)
+        }
+    val imageModelUrl = artworkUri ?: bridgedUrl
+    val canLoadAsImage = !isVideo || artworkUri != null || !isLiveStreaming(content.url)
+
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
-        if (it) {
+        if (it && canLoadAsImage) {
             SubcomposeAsyncImage(
-                model = content.url,
+                model = imageModelUrl,
                 contentDescription = content.description,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
@@ -245,23 +298,26 @@ fun UrlImageView(
                     }
 
                     is AsyncImagePainter.State.Error -> {
-                        Box(defaultModifier, contentAlignment = Alignment.Center) {
-                            Icon(
-                                symbol = MaterialSymbols.PlayCircleOutline,
-                                contentDescription = stringRes(id = R.string.play),
-                                modifier = Size50Modifier,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
+                        VideoPlaceholder(content, defaultModifier)
                     }
 
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(defaultModifier)
+                        if (isVideo) {
+                            Icon(
+                                symbol = MaterialSymbols.PlayCircleOutline,
+                                contentDescription = stringRes(id = R.string.play),
+                                modifier = Size50Modifier,
+                                tint = Color.White,
+                            )
+                        }
                     }
 
                     else -> {}
                 }
             }
+        } else if (it && isVideo) {
+            VideoPlaceholder(content, defaultModifier)
         } else {
             if (content.blurhash != null || content.thumbhash != null) {
                 DisplayBlurHash(
@@ -286,5 +342,29 @@ fun UrlImageView(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun VideoPlaceholder(
+    content: MediaUrlContent,
+    defaultModifier: Modifier,
+) {
+    if (content.blurhash != null || content.thumbhash != null) {
+        DisplayBlurHash(
+            content.blurhash,
+            content.description,
+            ContentScale.Crop,
+            defaultModifier,
+            thumbhash = content.thumbhash,
+        )
+    }
+    Box(defaultModifier, contentAlignment = Alignment.Center) {
+        Icon(
+            symbol = MaterialSymbols.PlayCircleOutline,
+            contentDescription = stringRes(id = R.string.play),
+            modifier = Size50Modifier,
+            tint = if (content.blurhash != null || content.thumbhash != null) Color.White else MaterialTheme.colorScheme.onBackground,
+        )
     }
 }

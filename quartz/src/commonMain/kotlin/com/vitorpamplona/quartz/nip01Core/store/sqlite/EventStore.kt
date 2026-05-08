@@ -26,10 +26,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 
+/**
+ * SQLite-backed [IEventStore] with default DB-file name and relay
+ * scoping. Wrap in `ObservableEventStore` if you want to feed
+ * `EventStoreProjection`.
+ */
 class EventStore(
     dbName: String? = "events.db",
-    relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
+    override val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
@@ -37,6 +43,8 @@ class EventStore(
     override suspend fun insert(event: Event) = store.insertEvent(event)
 
     override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = store.transaction(body)
+
+    override suspend fun batchInsert(events: List<Event>) = store.batchInsertEvents(events)
 
     override suspend fun <T : Event> query(filter: Filter) = store.query<T>(filter)
 
@@ -55,6 +63,11 @@ class EventStore(
     override suspend fun count(filter: Filter) = store.count(filter)
 
     override suspend fun count(filters: List<Filter>) = store.count(filters)
+
+    override suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int?,
+    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
 
     override suspend fun delete(filter: Filter) {
         store.delete(filter)

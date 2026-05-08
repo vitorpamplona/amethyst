@@ -155,7 +155,7 @@ class BleMeshManager(
         val role = assignRole(transport.deviceUuid, peerUuid)
         val peer = BlePeer(peerUuid, role, platformHandle)
 
-        Log.d("BleMeshManager", "Discovered peer $peerUuid, my role: $role")
+        Log.d("BleMeshManager") { "Discovered peer $peerUuid, my role: $role" }
 
         when (role) {
             BleRole.CLIENT -> {
@@ -239,7 +239,7 @@ class BleMeshManager(
         peer: BlePeer?,
         error: String,
     ) {
-        Log.e("BleMeshManager", "BLE error for peer ${peer?.deviceUuid}: $error")
+        Log.e("BleMeshManager") { "BLE error for peer ${peer?.deviceUuid}: $error" }
         listener.onError(peer, error)
     }
 

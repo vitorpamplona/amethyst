@@ -113,7 +113,9 @@ class CallAudioManager(
             override fun onAccuracyChanged(
                 sensor: Sensor?,
                 accuracy: Int,
-            ) {}
+            ) {
+                // no-op: proximity is a binary near/far signal; accuracy changes don't affect routing.
+            }
         }
 
     fun startRinging() {

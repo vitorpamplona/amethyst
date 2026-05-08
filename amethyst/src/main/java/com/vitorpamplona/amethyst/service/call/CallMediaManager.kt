@@ -180,7 +180,7 @@ class CallMediaManager(
                 }
 
                 override fun onCameraSwitchError(error: String?) {
-                    Log.e(TAG, "Camera switch failed: $error")
+                    Log.e(TAG) { "Camera switch failed: $error" }
                 }
             },
         )

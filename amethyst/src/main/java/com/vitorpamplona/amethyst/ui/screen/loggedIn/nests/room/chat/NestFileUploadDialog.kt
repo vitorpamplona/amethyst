@@ -27,19 +27,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 
 /**
  * Mirror of `ChannelFileUploadDialog` for nest chat. Wraps the
@@ -59,8 +58,8 @@ fun NestFileUploadDialog(
     val room = nestScreenModel.room ?: return
     val context = LocalContext.current
 
-    val host = remember(room.pubKey) { LocalCache.getOrCreateUser(room.pubKey) }
-    val title = room.room().orEmpty()
+    val host = room.author ?: return
+    val title = (room.event as? MeetingSpaceEvent)?.room().orEmpty()
 
     ChatFileUploadDialog(
         state,

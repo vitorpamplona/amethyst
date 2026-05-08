@@ -149,6 +149,8 @@ class AccountSettings(
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     var stripLocationOnUpload: Boolean = true,
+    val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -159,6 +161,7 @@ class AccountSettings(
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPublicChatsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLiveStreamsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNestsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
@@ -402,6 +405,28 @@ class AccountSettings(
         }
     }
 
+    fun changeUseLocalBlossomCache(enabled: Boolean) {
+        if (useLocalBlossomCache.value != enabled) {
+            useLocalBlossomCache.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeLocalBlossomCacheProfilePicturesOnly(enabled: Boolean) {
+        if (localBlossomCacheProfilePicturesOnly.value != enabled) {
+            localBlossomCacheProfilePicturesOnly.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun updateDisableClientTag(disable: Boolean): Boolean =
+        if (syncedSettings.security.updateDisableClientTag(disable)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
     // ---
     // list names
     // ---
@@ -523,6 +548,17 @@ class AccountSettings(
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultNestsFollowList(name: FeedDefinition) {
+        changeDefaultNestsFollowList(name.code)
+    }
+
+    fun changeDefaultNestsFollowList(name: TopFilter) {
+        if (defaultNestsFollowList.value != name) {
+            defaultNestsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

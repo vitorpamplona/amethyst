@@ -53,7 +53,7 @@ fun TabFollowedTags(
         val items by observeUserTagFollows(baseUser, accountViewModel)
 
         LazyColumn(Modifier.fillMaxSize()) {
-            itemsIndexed(items) { index, hashtag ->
+            itemsIndexed(items) { _, hashtag ->
                 HashtagHeader(
                     tag = hashtag,
                     account = accountViewModel,

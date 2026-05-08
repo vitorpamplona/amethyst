@@ -23,18 +23,39 @@ package com.vitorpamplona.nestsclient.audio
 /**
  * PCM audio format the audio pipeline produces and consumes.
  *
- * Listener-only flow runs at 48 kHz mono signed-16-bit, matching the nests
- * Opus profile (RFC 6716 wideband at the codec's native rate). The whole
- * pipeline is hardcoded to this format for now — when nests starts varying
- * codec settings, this becomes a per-room negotiated value out of the
- * `/api/v1/nests/<room>` response.
+ * Sample rate + frame cadence are pipeline-wide invariants (48 kHz Opus,
+ * 20 ms frames) and live as flat constants. Channel count is **per-stream**:
+ * a microphone is mono, a stereo broadcast is two-channel, and a single
+ * listener may simultaneously decode tracks of different shapes. Call sites
+ * either inline `1` (the device is intrinsically mono — e.g. the production
+ * mic) or take a `channelCount` parameter, plumbed in from a catalog (on
+ * the listener side) or from an [com.vitorpamplona.nestsclient.AudioBroadcastConfig]
+ * (on the speaker side). [DEFAULT_CHANNELS] is what call sites use as the
+ * factory default when they want the historical mono behaviour.
  */
 object AudioFormat {
     const val SAMPLE_RATE_HZ: Int = 48_000
-    const val CHANNELS: Int = 1
+
+    /**
+     * Default channel count for call sites that don't yet thread a
+     * per-stream override through. Mono — matches what the pipeline
+     * shipped before stereo support landed. Use this only as a default
+     * value; do NOT assume every audio track is mono just because this
+     * exists.
+     */
+    const val DEFAULT_CHANNELS: Int = 1
 
     /** 20 ms at 48 kHz. */
     const val FRAME_SIZE_SAMPLES: Int = 960
+
+    /**
+     * Duration of one Opus frame in microseconds — derived from
+     * [FRAME_SIZE_SAMPLES] / [SAMPLE_RATE_HZ]. Used by the publisher
+     * to stamp each frame at frame-index × this value, giving hang.js's
+     * watcher a perfect 20 ms cadence even when the broadcaster's send
+     * loop suspends on transport backpressure.
+     */
+    const val FRAME_DURATION_US: Long = (FRAME_SIZE_SAMPLES.toLong() * 1_000_000L) / SAMPLE_RATE_HZ
 
     /** Bytes per PCM 16-bit sample. */
     const val BYTES_PER_SAMPLE: Int = 2
@@ -99,10 +120,36 @@ interface AudioCapture {
 /**
  * Sink for PCM audio playback. Implementations buffer internally — [enqueue]
  * may suspend if the device's playback buffer is full.
+ *
+ * **Two-phase startup.** [start] allocates the underlying device + per-instance
+ * resources but does NOT begin consuming samples; [beginPlayback] flips the
+ * device into the playing state. Splitting the two lets [com.vitorpamplona.nestsclient.audio.NestPlayer]
+ * pre-roll a few decoded frames into the device's buffer before playback
+ * starts, so the AudioTrack has slack the moment the hardware begins pulling
+ * samples. Calling [enqueue] between [start] and [beginPlayback] is allowed
+ * and is the intended pattern. Implementations that don't need the
+ * distinction (test fakes, software-only sinks) can leave the default
+ * [beginPlayback] no-op alone.
  */
 interface AudioPlayer {
-    /** Allocate underlying audio resources and begin playback. */
+    /**
+     * Allocate underlying audio resources. The returned device is in a
+     * "ready, not playing" state — [enqueue] is allowed but the hardware
+     * doesn't consume samples until [beginPlayback] is called. Throws on
+     * device-unavailable so callers (typically
+     * [com.vitorpamplona.nestsclient.audio.NestPlayer.play]) get a
+     * synchronous failure they can roll back the subscription on.
+     */
     fun start()
+
+    /**
+     * Transition the allocated device into the playing state. The
+     * hardware begins pulling samples from whatever's already been
+     * [enqueue]d. Default no-op so test fakes / software-only sinks
+     * don't have to grow a method they'll never use; production
+     * Android implementations override to call `AudioTrack.play()`.
+     */
+    fun beginPlayback() {}
 
     /**
      * Feed one PCM frame (any length, but typically [AudioFormat.FRAME_SIZE_SAMPLES]
@@ -152,6 +199,9 @@ class AudioException(
     enum class Kind {
         /** Decoder rejected an Opus packet (corrupted bytes, unsupported config). */
         DecoderError,
+
+        /** Encoder rejected a PCM frame. */
+        EncoderError,
 
         /** Audio device resource (AudioTrack/AudioRecord) couldn't be allocated. */
         DeviceUnavailable,

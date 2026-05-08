@@ -94,8 +94,13 @@ object LongHeaderPacket {
             w.writeVarint(plain.token.size.toLong())
             w.writeBytes(plain.token)
         }
-        // Length covers PN bytes + payload + AEAD tag.
-        val lengthValue = pnLen + plain.payload.size + aead.tagLength
+        // RFC 9001 §5.4.2: pad the plaintext so that pnLen + payload >= 4 — the
+        // 16-byte AEAD tag then provides the rest of the 20 bytes the HP sample
+        // window needs after pnOffset. Trailing 0x00 bytes decode as PADDING
+        // frames (RFC 9000 §19.1). Length covers PN bytes + (padded) payload +
+        // AEAD tag, so the padded size must feed into lengthValue.
+        val paddedPlaintext = padForHeaderProtectionSample(plain.payload, pnLen)
+        val lengthValue = pnLen + paddedPlaintext.size + aead.tagLength
         w.writeVarint(lengthValue.toLong())
         val pnOffset = w.size
         // Encode the packet number big-endian, low bytes
@@ -104,9 +109,9 @@ object LongHeaderPacket {
         }
         val headerBytes = w.toByteArray()
 
-        // Encrypt payload
+        // Encrypt padded payload
         val nonce = aeadNonce(iv, plain.packetNumber)
-        val ciphertext = aead.seal(key, nonce, headerBytes, plain.payload)
+        val ciphertext = aead.seal(key, nonce, headerBytes, paddedPlaintext)
 
         // Concatenate header + ciphertext
         val packet = ByteArray(headerBytes.size + ciphertext.size)

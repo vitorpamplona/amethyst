@@ -88,6 +88,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
@@ -261,7 +262,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.SortedSet
-import java.util.concurrent.ConcurrentHashMap
 
 interface ILocalCache {
     fun markAsSeen(
@@ -290,7 +290,15 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     val deletionIndex = DeletionIndex()
 
-    val observables = ConcurrentHashMap<Observable, Observable>(10)
+    /**
+     * Inverted index over the active [Observable]s. New events fan
+     * out only to observers whose filter actually narrows on a field
+     * the event carries (author, kind, single-letter tag), instead
+     * of waking every observer per event. Predicate-only observers
+     * (no underlying [Filter]) live in the unindexed pool and still
+     * see every event.
+     */
+    val observables = FilterIndex<Observable>()
 
     fun Filter.match(note: Note): Boolean {
         val event = note.event
@@ -361,10 +369,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             newFilter.init()
 
-            observables[newFilter] = newFilter
+            observables.register(filter, newFilter)
 
             awaitClose {
-                observables.remove(newFilter)
+                observables.unregister(newFilter)
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
@@ -377,10 +385,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             cachedFilter.init()
 
-            observables.put(cachedFilter, cachedFilter)
+            observables.register(filter, cachedFilter)
 
             awaitClose {
-                observables.remove(cachedFilter)
+                observables.unregister(cachedFilter)
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
@@ -402,14 +410,28 @@ object LocalCache : ILocalCache, ICacheProvider {
                     trySend(it)
                 }
 
-            observables.put(newFilter, newFilter)
+            // Unindexed: predicate is opaque, the index can't narrow.
+            // Caller is delivered every event and runs the predicate.
+            observables.registerUnindexed(newFilter)
 
             awaitClose {
-                observables.remove(newFilter)
+                observables.unregister(newFilter)
             }
         }
 
-    fun <T : Event> observeNewEvents(filter: Filter): Flow<T> = observeNewEvents(filter::match)
+    fun <T : Event> observeNewEvents(filter: Filter): Flow<T> =
+        callbackFlow {
+            val newFilter =
+                NewEventMatchingFilter<T>(filter::match) {
+                    trySend(it)
+                }
+
+            observables.register(filter, newFilter)
+
+            awaitClose {
+                observables.unregister(newFilter)
+            }
+        }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
@@ -1173,7 +1195,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                         }
                     }
 
-                notes.forEach { key, note ->
+                notes.forEach { _, note ->
                     val noteEvent = note.event
                     if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
                         if (noteEvent.pubKey == event.pubKey && noteEvent.createdAt <= event.createdAt) {
@@ -1549,30 +1571,47 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     /**
-     * Audio-room presence (kind-10312) — addressable storage AND
-     * attach the version note to the room's [LiveActivitiesChannel].
-     * The home live-bubble surfaces a room when a follow is
-     * publishing in it; that fan-out walks `channel.notes`, so the
-     * presence event needs to be in there alongside chat. Without
-     * this, presence-driven inclusion can't see follows broadcasting
-     * in the room (only chat-driven inclusion would fire).
+     * Audio-room presence (kind-10312) — addressable storage plus an
+     * author-keyed entry in the room's
+     * [LiveActivitiesChannel.presenceNotes] index.
+     *
+     * Presence is intentionally NOT added to `channel.notes`: that
+     * map is dominated by chat in active rooms and feeds that care
+     * about presence (Nests drawer, home live-bubble, NestsFeedLoaded)
+     * iterate `presenceNotes` directly for an O(speakers) scan.
+     *
+     * Cross-room move handling: kind-10312 is replaceable per author,
+     * but the room a presence points to (`a`-tag) can change when a
+     * speaker hops between rooms. The replaceable cache only swaps
+     * the addressable's content — it has no notion of which channel
+     * the old version was attached to. Without explicit eviction the
+     * old room would keep surfacing as "live" via the stale entry
+     * until it dropped out of the freshness window. Capture the prior
+     * room before replacement and, when it differs, drop the author
+     * from the old channel's presence index.
      */
     fun consume(
         event: MeetingRoomPresenceEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        val priorVersion = getAddressableNoteIfExists(event.address())?.event as? MeetingRoomPresenceEvent
+        val priorRoomAddress = priorVersion?.interactiveRoom()?.address
+        val isReplacement = priorVersion != null && event.createdAt > priorVersion.createdAt
+
         val new = consumeBaseReplaceable(event, relay, wasVerified)
 
-        // The replaceable cache keys this on the AUTHOR's address
-        // (kind=10312, pubkey, fixed-d-tag) — independent of the
-        // room. To wire the room bubble we also attach the version
-        // note to the room's channel keyed by its kind-30312 address.
         val roomAddress = event.interactiveRoom()?.address ?: return new
         if (roomAddress.kind != MeetingSpaceEvent.KIND) return new
+
+        if (isReplacement && priorRoomAddress != null && priorRoomAddress != roomAddress) {
+            getLiveActivityChannelIfExists(priorRoomAddress)?.removePresenceNote(event.pubKey)
+        }
+
         val channel = getOrCreateLiveChannel(roomAddress)
         val versionNote = getOrCreateNote(event.id)
-        channel.addNote(versionNote, relay)
+        channel.addPresenceNote(versionNote)
+        if (relay != null) channel.addRelay(relay)
 
         return new
     }
@@ -1656,7 +1695,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
             if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-                Log.e("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
+                Log.d("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
                 return false
             }
 
@@ -2224,6 +2263,11 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
+    // 2× the 10-min `PRESENCE_FRESHNESS_WINDOW_SECONDS` used by
+    // `NestsFeedFilter` so a presence still inside any feed's window
+    // can never be pruned.
+    private val PRESENCE_PRUNE_AGE_SECONDS = 20L * 60L
+
     fun pruneOldMessagesChannel(channel: Channel) {
         val toBeRemoved = channel.pruneOldMessages()
 
@@ -2236,6 +2280,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         removeFromCache(childrenToBeRemoved)
+
+        // Audio-room presence is keyed separately from `notes` and
+        // never gets reaped by the top-N rule. Drop entries older
+        // than 2× the 10-min freshness window so the index doesn't
+        // grow unbounded with every author who ever heartbeat here.
+        if (channel is LiveActivitiesChannel) {
+            channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
+        }
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
             println(
@@ -2484,22 +2536,21 @@ object LocalCache : ILocalCache, ICacheProvider {
     private fun refreshNewNoteObservers(newNote: Note) {
         val event = newNote.event as Event
 
-        val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { t, u ->
-                u.new(event, newNote)
-            }
-
-        observables.forEach(observableBiConsumer)
+        // Index-driven fanout: only observers whose filter narrows
+        // on a field this event carries (or that registered as
+        // unindexed) get woken up. The match check inside each
+        // observer's `new()` still enforces negative constraints.
+        for (observer in observables.candidatesFor(event)) {
+            observer.new(event, newNote)
+        }
         live.newNote(newNote)
     }
 
     private fun refreshDeletedNoteObservers(newNote: Note) {
-        val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { t, u ->
-                u.remove(newNote)
-            }
-
-        observables.forEach(observableBiConsumer)
+        // Deletes don't have a filterable shape — every observer
+        // might hold this note in its result set, so iterate them
+        // all. The index doesn't help here.
+        observables.forEach { it.remove(newNote) }
         live.removedNote(newNote)
     }
 

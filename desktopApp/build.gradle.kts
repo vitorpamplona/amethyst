@@ -1,3 +1,4 @@
+import de.undercouch.gradle.tasks.download.Download
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.nio.file.Files
 
@@ -132,7 +133,10 @@ compose.desktop {
 }
 
 vlcSetup {
-    vlcVersion.set("3.0.21")
+    // Pinned to 3.0.20 because the Linux VLC plugins on Maven Central
+    // (ir.mahozad:vlc-plugins-linux) have not been republished for 3.0.21 — the
+    // latest there is 3.0.20-2. Using 3.0.21 makes vlcDownload 404 on Linux CI.
+    vlcVersion.set("3.0.20")
     shouldCompressVlcFiles.set(true)
     shouldIncludeAllVlcFiles.set(true)
     pathToCopyVlcLinuxFilesTo.set(file("src/jvmMain/appResources/linux/vlc"))
@@ -142,6 +146,25 @@ vlcSetup {
 
 tasks.named("spotlessKotlin") {
     mustRunAfter("vlcSetup")
+}
+
+// `ir.mahozad.vlc-setup` registers `vlcDownload` / `upxDownload` tasks that
+// extend `de.undercouch.gradle.tasks.download.Download`. Defaults are 0 retries
+// and a short read timeout, so a transient blip on get.videolan.org fails the
+// whole desktop build on CI (Windows MSI, macOS DMG, Linux DEB). Configure all
+// Download tasks in this project to retry with generous timeouts so flaky
+// network conditions do not break packaging jobs.
+tasks.withType<Download>().configureEach {
+    // 5 attempts total (initial + 4 retries) before failing the task.
+    retries(4)
+    // 30s to establish a TCP / TLS connection.
+    connectTimeout(30_000)
+    // 5 minutes per attempt for the body — VLC archives are 40-90 MB and
+    // get.videolan.org can be slow under load.
+    readTimeout(5 * 60_000)
+    // Stage to a temp file and rename only on full success, so a partial
+    // download from one attempt cannot poison the next.
+    tempAndMove(true)
 }
 
 // --- AppImage packaging (Linux) ---

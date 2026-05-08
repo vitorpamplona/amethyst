@@ -100,12 +100,18 @@ class MoqCodecTest {
     }
 
     @Test
-    fun unknown_message_type_is_rejected() {
-        // Craft a frame with message type 0xFFFF (large varint), length 0, no payload.
+    fun unknown_message_type_throws_typed_exception_with_full_frame_size() {
+        // Craft a frame with message type 0xFFFF (large varint), length 4,
+        // four bytes of payload. The pump uses bytesConsumed to skip past
+        // the unknown frame instead of dropping the whole buffer.
         val bogus = MoqWriter()
         bogus.writeVarint(0xFFFFL)
-        bogus.writeVarint(0L)
-        assertFailsWith<MoqCodecException> { MoqCodec.decode(bogus.toByteArray()) }
+        bogus.writeVarint(4L)
+        bogus.writeBytes(byteArrayOf(0x01, 0x02, 0x03, 0x04))
+        val encoded = bogus.toByteArray()
+        val ex = assertFailsWith<MoqUnknownTypeException> { MoqCodec.decode(encoded) }
+        assertEquals(0xFFFFL, ex.typeCode)
+        assertEquals(encoded.size, ex.bytesConsumed)
     }
 
     @Test

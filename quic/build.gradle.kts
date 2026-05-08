@@ -124,3 +124,14 @@ tasks.register<JavaExec>("interop") {
     args(host, port)
     systemProperty("interopTimeoutSec", timeoutSec)
 }
+
+// Long-form audio-rooms soak test. Disabled by default — `./gradlew test`
+// must stay fast for CI. Opt in with `-PquicSoakSeconds=N` (e.g. 1800 for
+// the 30-minute run from the soak prompt). Without the property the test
+// class checks for null and skips via `Assume.assumeTrue`.
+tasks.withType<Test>().configureEach {
+    val soakSeconds = (project.findProperty("quicSoakSeconds") as? String)
+    if (soakSeconds != null) {
+        systemProperty("quicSoakSeconds", soakSeconds)
+    }
+}

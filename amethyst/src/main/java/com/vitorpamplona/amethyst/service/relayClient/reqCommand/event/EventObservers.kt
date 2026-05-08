@@ -348,7 +348,7 @@ fun observeNoteReferences(
                 note.flow().zaps.stateFlow,
                 note.flow().boosts.stateFlow,
                 note.flow().reactions.stateFlow,
-            ) { zapState, boostState, reactionState ->
+            ) { zapState, _, _ ->
                 zapState.note.hasZapsBoostsOrReactions()
             }.distinctUntilChanged()
         }

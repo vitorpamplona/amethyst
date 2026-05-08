@@ -64,6 +64,7 @@ fun ExpandableRichTextViewer(
     backgroundColor: MutableState<Color>,
     id: String,
     callbackUri: String? = null,
+    authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -100,6 +101,7 @@ fun ExpandableRichTextViewer(
             tags,
             backgroundColor,
             callbackUri,
+            authorPubKey,
             accountViewModel,
             nav,
         )

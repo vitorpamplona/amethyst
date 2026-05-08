@@ -25,6 +25,8 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.BitRelayUrlRewriter
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.TlsaConnectionPolicy
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
@@ -42,6 +44,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
@@ -49,8 +52,6 @@ import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.namecoin.BitRelayUrlRewriter
-import com.vitorpamplona.amethyst.service.namecoin.TlsaConnectionPolicy
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
@@ -58,6 +59,8 @@ import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.okhttp.SurgeDns
+import com.vitorpamplona.amethyst.service.okhttp.SurgeDnsStore
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -71,7 +74,10 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.safeCacheDir
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
@@ -106,6 +112,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
@@ -179,20 +190,55 @@ class AppModules(
 
     val torManager = TorManager(torPrefs, appContext, applicationIOScope)
 
+    // Whenever the underlying network identity changes (wifi↔cellular, regained from
+    // offline, etc.) we clear any active Tor session bypass so the manager re-attempts
+    // bootstrap on the new network. The remembered-approval window is unaffected: if Tor
+    // stays stuck we will silently bypass again after the timeout fires.
+    init {
+        applicationIOScope.launch {
+            connManager.status
+                .map { (it as? ConnectivityStatus.Active)?.networkId }
+                .filterNotNull()
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { torManager.clearSessionBypass() }
+        }
+    }
+
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
 
     // Key cache service to download and decrypt encrypted files before caching them.
     val keyCache = EncryptionKeyCache()
 
+    // Concurrent, caching DNS resolver shared by every OkHttp client built below — a host
+    // resolved for an image fetch is reused when a relay handshake or NIP-05 lookup hits the
+    // same host.
+    val surgeDns = SurgeDns()
+
+    // Persists [surgeDns]'s positive cache across process restarts so cold starts don't pay
+    // ~700 sync getaddrinfo calls. Restored entries fall through to the stale-while-revalidate
+    // path on first lookup.
+    val dnsStore = SurgeDnsStore(appContext, surgeDns)
+
     // manages all the other connections separately from relays.
-    val okHttpClients =
+    val okHttpClients: DualHttpClientManager =
         DualHttpClientManager(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
             isMobileDataProvider = connManager.isMobileOrNull,
             keyCache = keyCache,
             scope = applicationIOScope,
+            dns = surgeDns,
+            // Transparently rewrites sha256-keyed HTTP requests to the local
+            // Blossom cache when the master toggle is on, the profile-pictures-only
+            // restriction is off, and the probe sees 127.0.0.1:24242 as available.
+            shouldBridgeBlossomCache = {
+                val settings = sessionManager.loggedInAccount()?.settings
+                val master = settings?.useLocalBlossomCache?.value ?: false
+                val profileOnly = settings?.localBlossomCacheProfilePicturesOnly?.value ?: false
+                master && !profileOnly && localBlossomCacheProbe.available.value
+            },
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
@@ -282,6 +328,7 @@ class AppModules(
             proxyPortProvider = torManager.activePortOrNull,
             isMobileDataProvider = connManager.isMobileOrNull,
             scope = applicationIOScope,
+            dns = surgeDns,
         )
 
     // Resolves `.bit` (Namecoin) relay hostnames to their underlying real wss:// endpoint
@@ -419,6 +466,10 @@ class AppModules(
             }
     }
 
+    val localBlossomCacheProbe by lazy {
+        LocalBlossomCacheProbe(roleBasedHttpClientBuilder)
+    }
+
     val blossomResolver by lazy {
         Log.d("AppModules", "BlossomServerResolver Init")
         BlossomServerResolver(
@@ -435,6 +486,14 @@ class AppModules(
                 }
             },
             httpClientBuilder = roleBasedHttpClientBuilder,
+            useLocalBlossomCache = {
+                sessionManager
+                    .loggedInAccount()
+                    ?.settings
+                    ?.useLocalBlossomCache
+                    ?.value ?: false
+            },
+            localCacheProbe = localBlossomCacheProbe,
         )
     }
 
@@ -454,6 +513,11 @@ class AppModules(
     // EventNotificationConsumer. Sources: FCM, UnifiedPush, Pokey, active relay
     // subscriptions, and NotificationRelayService.
     val notificationDispatcher = NotificationDispatcher(appContext, applicationIOScope)
+
+    // Local store for posts the user has scheduled to publish later. Backed by a
+    // single JSON file under the app's private filesDir; read by ScheduledPostWorker.
+    val scheduledPostStore =
+        ScheduledPostStore(File(appContext.filesDir, ScheduledPostStore.FILE_NAME))
 
     // Organizes cache clearing
     val trimmingService by
@@ -524,6 +588,22 @@ class AppModules(
     fun initiate(appContext: Context) {
         Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
 
+        // Restore the persisted DNS cache before any networking starts. Lookups that fire
+        // before this completes fall through to the sync resolver path (existing behavior);
+        // once restored, every previously-seen host hits the stale-while-revalidate path
+        // instead of blocking on getaddrinfo.
+        applicationIOScope.launch {
+            dnsStore.load()
+        }
+
+        // Periodically flush the DNS cache. Saves are skipped when nothing has changed.
+        applicationIOScope.launch {
+            while (true) {
+                delay(5 * 60 * 1000L)
+                dnsStore.save()
+            }
+        }
+
         applicationIOScope.launch {
             // loads main account quickly.
             LocalPreferences.loadAccountConfigFromEncryptedStorage()
@@ -557,6 +637,12 @@ class AppModules(
         // starts observing LocalCache for notification-worthy events
         notificationDispatcher.start()
 
+        // Schedule the scheduled-posts worker (periodic + one-time catch-up).
+        // Runs independently of the always-on notification setting so scheduled
+        // posts still fire when always-on notifications are disabled.
+        ScheduledPostWorker.schedule(appContext)
+        ScheduledPostWorker.scheduleCatchUp(appContext)
+
         // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {
             sessionManager.accountContent.collectLatest { state ->
@@ -566,6 +652,37 @@ class AppModules(
                     alwaysOnNotificationServiceManager.stop()
                 }
             }
+        }
+
+        // Evict the BlossomServerResolver URL cache whenever either local-cache
+        // toggle flips or the probe transitions up/down so stale entries don't
+        // outlive the underlying decision.
+        applicationIOScope.launch {
+            sessionManager.accountContent.collectLatest { state ->
+                if (state is AccountState.LoggedIn) {
+                    merge(
+                        state.account.settings.useLocalBlossomCache
+                            .drop(1),
+                        state.account.settings.localBlossomCacheProfilePicturesOnly
+                            .drop(1),
+                    ).collect {
+                        blossomResolver.uriToUrlCache.evictAll()
+                        blossomResolver.blossomHitCache.cache.evictAll()
+                        localBlossomCacheProbe.invalidate()
+                    }
+                }
+            }
+        }
+        applicationIOScope.launch {
+            localBlossomCacheProbe.available.drop(1).collect {
+                blossomResolver.uriToUrlCache.evictAll()
+                blossomResolver.blossomHitCache.cache.evictAll()
+            }
+        }
+        // Warm the local-cache probe so the very first image load doesn't pay
+        // the loopback round-trip cost.
+        applicationIOScope.launch {
+            localBlossomCacheProbe.isAvailable()
         }
 
         // Warms the video cache off the main thread. SimpleCache's constructor opens a SQLite
@@ -588,12 +705,17 @@ class AppModules(
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
         PlaybackServiceClient.shutdown()
         alwaysOnNotificationServiceManager.stop()
+        // Best-effort flush before the scope is cancelled. Android rarely calls onTerminate in
+        // production, but when it does we get one last chance to persist the cache.
+        runCatching { dnsStore.save() }
         applicationIOScope.cancel("Application onTerminate $appContext")
         accountsCache.clear()
     }
 
     fun trim() {
         applicationIOScope.launch {
+            // Backgrounding is a natural moment to flush the DNS cache.
+            dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
             trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
         }

@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoI
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
@@ -125,7 +126,7 @@ fun RenderMeetingSpaceEventInner(
 
         CrossfadeIfEnabled(targetState = status, label = "MeetingSpaceStatus", accountViewModel = accountViewModel) {
             when (it) {
-                MeetingSpaceStatusTag.STATUS.OPEN -> {
+                MeetingSpaceStatusTag.STATUS.LIVE -> {
                     MeetingSpaceOpenFlag()
                 }
 
@@ -133,7 +134,7 @@ fun RenderMeetingSpaceEventInner(
                     MeetingSpacePrivateFlag()
                 }
 
-                MeetingSpaceStatusTag.STATUS.CLOSED -> {
+                MeetingSpaceStatusTag.STATUS.ENDED -> {
                     MeetingSpaceClosedFlag()
                 }
 
@@ -170,14 +171,14 @@ fun RenderMeetingSpaceEventInner(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.End,
     ) {
-        if (status == MeetingSpaceStatusTag.STATUS.CLOSED) {
+        if (status == MeetingSpaceStatusTag.STATUS.ENDED) {
             recording?.let {
                 ListenToRecordingButton(url = it, accountViewModel = accountViewModel)
             }
         } else {
             com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.JoinNestButton(
                 event = noteEvent,
-                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     }
@@ -529,8 +530,11 @@ fun MeetingSpaceClosedFlag() {
  * "Live now" once the moment passes).
  */
 @Composable
-fun MeetingSpacePlannedFlag(startsUnixSec: Long?) {
-    Column(horizontalAlignment = Alignment.End) {
+fun MeetingSpacePlannedFlag(
+    startsUnixSec: Long?,
+    horizontalAlignment: Alignment.Horizontal = Alignment.End,
+) {
+    Column(horizontalAlignment = horizontalAlignment, verticalArrangement = SpacedBy5dp) {
         Text(
             text = stringRes(id = R.string.meeting_space_planned_tag),
             color = Color.White,

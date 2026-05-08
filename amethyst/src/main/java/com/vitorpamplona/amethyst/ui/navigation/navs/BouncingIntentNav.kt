@@ -39,6 +39,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KClass
 
+private const val NOSTR_URI_PREFIX = "nostr:"
+
 /**
  * INav for screens that live inside a free-standing Activity (no Compose
  * NavHost in scope) and need to dispatch navigation requests back to
@@ -127,31 +129,31 @@ class BouncingIntentNav(
     private fun routeToBouncingUri(route: Route): String? =
         when (route) {
             is Route.Profile -> {
-                "nostr:" + NPub.create(route.id)
+                NOSTR_URI_PREFIX + NPub.create(route.id)
             }
 
             is Route.Note -> {
-                "nostr:" + NEvent.create(route.id, null, null, null)
+                NOSTR_URI_PREFIX + NEvent.create(route.id, null, null, null)
             }
 
             is Route.EventRedirect -> {
-                "nostr:" + NEvent.create(route.id, null, null, null)
+                NOSTR_URI_PREFIX + NEvent.create(route.id, null, null, null)
             }
 
             is Route.Hashtag -> {
-                "nostr:hashtag?id=" + route.hashtag
+                NOSTR_URI_PREFIX + "hashtag?id=" + route.hashtag
             }
 
             is Route.LiveActivityChannel -> {
-                "nostr:" + NAddress.create(route.kind, route.pubKeyHex, route.dTag, null)
+                NOSTR_URI_PREFIX + NAddress.create(route.kind, route.pubKeyHex, route.dTag, null)
             }
 
             is Route.Community -> {
-                "nostr:" + NAddress.create(route.kind, route.pubKeyHex, route.dTag, null)
+                NOSTR_URI_PREFIX + NAddress.create(route.kind, route.pubKeyHex, route.dTag, null)
             }
 
             is Route.PublicChatChannel -> {
-                "nostr:" + NEvent.create(route.id, null, ChannelCreateEvent.KIND, null)
+                NOSTR_URI_PREFIX + NEvent.create(route.id, null, ChannelCreateEvent.KIND, null)
             }
 
             else -> {

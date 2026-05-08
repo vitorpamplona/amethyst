@@ -75,6 +75,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -87,7 +88,9 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
@@ -377,7 +380,9 @@ private fun DialogContent(
 
                             ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = sharePopupExpanded, myContent, onDismiss = { sharePopupExpanded.value = false })
                         }
+                    }
 
+                    if (myContent is MediaUrlImage || myContent is MediaLocalImage || myContent is MediaUrlPdf) {
                         if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {
                             val localContext = LocalContext.current
 
@@ -447,22 +452,33 @@ private fun showToastOnMain(
     }
 }
 
-private suspend fun saveMediaToGallery(
+internal suspend fun saveMediaToGallery(
     content: BaseMediaContent,
     localContext: Context,
     accountViewModel: AccountViewModel,
 ) {
     val isImage = content is MediaUrlImage || content is MediaLocalImage
+    val isPdf = content is MediaUrlPdf
 
-    val success = if (isImage) R.string.image_saved_to_the_gallery else R.string.video_saved_to_the_gallery
-    val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
+    val success =
+        when {
+            isImage -> R.string.image_saved_to_the_gallery
+            isPdf -> R.string.pdf_saved_to_the_gallery
+            else -> R.string.video_saved_to_the_gallery
+        }
+    val failure =
+        when {
+            isImage -> R.string.failed_to_save_the_image
+            isPdf -> R.string.failed_to_save_the_pdf
+            else -> R.string.failed_to_save_the_video
+        }
 
     if (content is MediaUrlContent) {
         MediaSaverToDisk.downloadAndSave(
             content.url,
             mimeType = content.mimeType,
             okHttpClient = {
-                if (isImage) {
+                if (isImage || isPdf) {
                     accountViewModel.httpClientBuilder.okHttpClientForImage(it)
                 } else {
                     accountViewModel.httpClientBuilder.okHttpClientForVideo(it)
@@ -552,6 +568,11 @@ private fun RenderImageOrVideo(
                     }
 
                 val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+                val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
+                val bridgedUrl =
+                    remember(content.url, useLocalBlossomBridge) {
+                        content.toCoilModel(useLocalBlossomBridge)
+                    }
 
                 val modifier =
                     if (ratio != null) {
@@ -562,7 +583,7 @@ private fun RenderImageOrVideo(
 
                 Box(modifier, contentAlignment = Alignment.Center) {
                     VideoViewInner(
-                        videoUri = content.url,
+                        videoUri = bridgedUrl,
                         mimeType = content.mimeType,
                         aspectRatio = ratio,
                         title = content.description,

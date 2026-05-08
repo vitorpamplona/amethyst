@@ -172,7 +172,7 @@ class BleNostrServer(
         if (success) {
             currentChunkIndex++
         } else {
-            Log.e("BleNostrServer", "Failed to notify chunk $currentChunkIndex to ${peer.deviceUuid}")
+            Log.e("BleNostrServer") { "Failed to notify chunk $currentChunkIndex to ${peer.deviceUuid}" }
         }
     }
 }

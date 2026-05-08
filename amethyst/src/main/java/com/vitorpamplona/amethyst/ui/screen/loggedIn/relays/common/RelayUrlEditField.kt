@@ -98,9 +98,16 @@ fun RelayUrlEditFieldPreview() {
                 override val results: Flow<List<BasicRelaySetupInfo>> =
                     MutableStateFlow(suggestions)
 
-                override fun processInput(input: String) {}
+                override fun processInput(input: String) {
+                    // No-op: this anonymous IRelaySuggestionState is preview-only and
+                    // serves the static suggestions flow above. Live input filtering
+                    // would only matter in an interactive run, which a @Preview never
+                    // reaches.
+                }
 
-                override fun reset() {}
+                override fun reset() {
+                    // No-op: see processInput above.
+                }
             }
         }
 

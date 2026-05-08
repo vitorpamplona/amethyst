@@ -35,9 +35,19 @@ import java.util.concurrent.TimeUnit
 class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
     val userAgent: String,
+    private val dns: SurgeDns,
+    /**
+     * Returns `true` when sha256-keyed HTTP requests should be transparently
+     * rewritten to the local Blossom cache (master toggle on, profile-pictures-only
+     * restriction off, probe up). When `null`, the interceptor is disabled —
+     * useful for tests or pre-configuration call sites.
+     */
+    val shouldBridgeBlossomCache: (() -> Boolean)? = null,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
+    private val blossomCacheRedirect =
+        shouldBridgeBlossomCache?.let { LocalBlossomCacheRedirectInterceptor(it) }
 
     // Most images/videos in a feed come from a small set of hosts (e.g. a single
     // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests
@@ -63,10 +73,14 @@ class OkHttpClientFactory(
             .Builder()
             .dispatcher(dispatcher)
             .connectionPool(connectionPool)
-            .eventListenerFactory(MediaCallEventListenerFactory(dispatcher, connectionPool))
+            .dns(dns)
+            .eventListenerFactory(MediaCallEventListenerFactory(dispatcher, connectionPool, dns))
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
+            .apply {
+                blossomCacheRedirect?.let { addInterceptor(it) }
+            }
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)
             .build()

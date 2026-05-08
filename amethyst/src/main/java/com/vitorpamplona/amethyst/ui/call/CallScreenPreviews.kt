@@ -48,6 +48,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
+private const val LABEL_HANG_UP = "Hang up"
+private const val LABEL_CALLING = "Calling…"
+
 // ---- Shared building blocks for previews ----
 
 @Composable
@@ -172,7 +175,7 @@ private fun PreviewCallControls(
             shape = CircleShape,
             modifier = Modifier.size(64.dp),
         ) {
-            Icon(MaterialSymbols.CallEnd, "Hang up", tint = Color.White, modifier = Modifier.size(32.dp))
+            Icon(MaterialSymbols.CallEnd, LABEL_HANG_UP, tint = Color.White, modifier = Modifier.size(32.dp))
         }
     }
 }
@@ -207,7 +210,7 @@ private fun PreviewCallInProgress(
                 shape = CircleShape,
                 modifier = Modifier.size(64.dp),
             ) {
-                Icon(MaterialSymbols.CallEnd, "Hang up", tint = Color.White, modifier = Modifier.size(32.dp))
+                Icon(MaterialSymbols.CallEnd, LABEL_HANG_UP, tint = Color.White, modifier = Modifier.size(32.dp))
             }
         }
     }
@@ -217,7 +220,7 @@ private fun PreviewCallInProgress(
 @Composable
 fun PreviewCallingScreen() {
     ThemeComparisonColumn {
-        PreviewCallInProgress("Alice", "Calling\u2026")
+        PreviewCallInProgress("Alice", LABEL_CALLING)
     }
 }
 
@@ -242,7 +245,7 @@ fun PreviewCallingGroupScreen() {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Alice, Bob +1", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Calling\u2026", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+                Text(LABEL_CALLING, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(48.dp))
                 FloatingActionButton(
                     onClick = {},
@@ -250,7 +253,7 @@ fun PreviewCallingGroupScreen() {
                     shape = CircleShape,
                     modifier = Modifier.size(64.dp),
                 ) {
-                    Icon(MaterialSymbols.CallEnd, "Hang up", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Icon(MaterialSymbols.CallEnd, LABEL_HANG_UP, tint = Color.White, modifier = Modifier.size(32.dp))
                 }
             }
         }
@@ -580,7 +583,7 @@ fun PreviewPipCallUI() {
         ) {
             Icon(MaterialSymbols.Person, contentDescription = null, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Calling\u2026", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(LABEL_CALLING, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

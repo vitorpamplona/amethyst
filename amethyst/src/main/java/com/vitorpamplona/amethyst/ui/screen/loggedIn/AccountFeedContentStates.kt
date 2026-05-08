@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.dal.FollowPacksFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeEverythingFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.dal.LiveStreamsFeedFilter
@@ -72,6 +73,7 @@ class AccountFeedContentStates(
     val homeLive = ChannelFeedContentState(HomeLiveFilter(account), scope)
     val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache)
     val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache)
+    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account), scope, LocalCache)
 
     val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache)
     val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache)
@@ -139,6 +141,7 @@ class AccountFeedContentStates(
         homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)
+        homeEverything.updateFeedWith(newNotes)
 
         dmKnown.updateFeedWith(newNotes)
         dmNew.updateFeedWith(newNotes)
@@ -186,6 +189,7 @@ class AccountFeedContentStates(
         homeLive.deleteFromFeed(newNotes)
         homeNewThreads.deleteFromFeed(newNotes)
         homeReplies.deleteFromFeed(newNotes)
+        homeEverything.deleteFromFeed(newNotes)
 
         dmKnown.updateFeedWith(newNotes)
         dmNew.updateFeedWith(newNotes)

@@ -33,7 +33,10 @@ class NestsListenerCatalogTest {
         override val state: StateFlow<NestsListenerState> =
             MutableStateFlow<NestsListenerState>(NestsListenerState.Idle).asStateFlow()
 
-        override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = throw UnsupportedOperationException("not under test")
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle = throw UnsupportedOperationException("not under test")
 
         // Intentionally does NOT override subscribeCatalog so the
         // interface's default body fires.

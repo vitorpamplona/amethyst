@@ -173,9 +173,20 @@ class QuicWebTransportSessionState(
         return s
     }
 
-    /** Open a new client-initiated unidirectional WebTransport stream. */
-    suspend fun openUniStream(): QuicStream {
-        val s = connection.openUniStream()
+    /**
+     * Open a new client-initiated unidirectional WebTransport stream.
+     *
+     * If [bestEffort] is true, the underlying QUIC stream's send buffer
+     * drops lost ranges instead of retransmitting (see
+     * [com.vitorpamplona.quic.stream.QuicStream.bestEffort]). The
+     * WT_UNI_STREAM prefix bytes are themselves enqueued onto that
+     * buffer, so a lost prefix-only packet won't be retransmitted
+     * either — fine for the moq-lite group-stream case where the
+     * whole stream is ephemeral, since the peer would treat it as
+     * truncated either way.
+     */
+    suspend fun openUniStream(bestEffort: Boolean = false): QuicStream {
+        val s = connection.openUniStream(bestEffort = bestEffort)
         s.send.enqueue(encodeWtUniStreamPrefix(connectStreamId))
         driver.wakeup()
         return s

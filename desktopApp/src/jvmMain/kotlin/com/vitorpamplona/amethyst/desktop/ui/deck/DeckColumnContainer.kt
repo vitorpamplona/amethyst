@@ -46,11 +46,13 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.ui.ArticleEditorScreen
 import com.vitorpamplona.amethyst.desktop.ui.ArticleReaderScreen
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
+import com.vitorpamplona.amethyst.desktop.ui.CustomFeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.DraftsScreen
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
@@ -208,6 +210,7 @@ internal fun RootContent(
     onNavigateToArticle: (String) -> Unit = {},
     onNavigateToEditor: (String?) -> Unit = {},
     onNavigateToRelays: () -> Unit = {},
+    onOpenFeedsDrawer: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
 
@@ -226,6 +229,7 @@ internal fun RootContent(
                 onNavigateToThread = onNavigateToThread,
                 onZapFeedback = onZapFeedback,
                 onNavigateToRelays = onNavigateToRelays,
+                onOpenFeedsDrawer = onOpenFeedsDrawer,
             )
         }
 
@@ -333,6 +337,7 @@ internal fun RootContent(
                 torStatus = torState.status,
                 torSettings = torState.settings,
                 onTorSettingsChanged = torState.onSettingsChanged,
+                namecoinPreferences = LocalNamecoinPreferences.current,
             )
         }
 
@@ -427,6 +432,18 @@ internal fun RootContent(
                 initialQuery = "#${columnType.tag}",
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
+            )
+        }
+
+        is DeckColumnType.CustomFeed -> {
+            CustomFeedScreen(
+                feedId = columnType.feedId,
+                relayManager = relayManager,
+                localCache = localCache,
+                subscriptionsCoordinator = subscriptionsCoordinator,
+                onNavigateToProfile = onNavigateToProfile,
+                onNavigateToThread = onNavigateToThread,
+                onZapFeedback = onZapFeedback,
             )
         }
     }

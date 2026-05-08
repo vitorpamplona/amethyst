@@ -135,6 +135,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.blurhash
 import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
+import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
@@ -195,6 +196,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -488,6 +490,9 @@ class Account(
     val liveLiveStreamsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLiveStreamsFollowList)
     val liveLiveStreamsFollowListsPerRelay = OutboxLoaderState(liveLiveStreamsFollowLists, cache, scope).flow
 
+    val liveNestsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNestsFollowList)
+    val liveNestsFollowListsPerRelay = OutboxLoaderState(liveNestsFollowLists, cache, scope).flow
+
     val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
     val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
 
@@ -518,6 +523,14 @@ class Account(
 
     suspend fun updateSendKind0EventsToLocalRelay(send: Boolean): Boolean {
         if (settings.changeSendKind0EventsToLocalRelay(send)) {
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
+    suspend fun updateDisableClientTag(disable: Boolean): Boolean {
+        if (settings.updateDisableClientTag(disable)) {
             sendNewAppSpecificData()
             return true
         }
@@ -977,7 +990,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -998,7 +1011,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
                     }
                 }
             }
@@ -1009,6 +1022,10 @@ class Account(
         }
 
         if (event is MeetingSpaceEvent) {
+            relayList.addAll(event.allRelayUrls())
+        }
+
+        if (event is MeetingRoomEvent) {
             relayList.addAll(event.allRelayUrls())
         }
 
@@ -1038,7 +1055,7 @@ class Account(
                     client
                         .fetchFirst(
                             filters =
-                                note.relays.associateWith { relay ->
+                                note.relays.associateWith { _ ->
                                     listOf(
                                         Filter(
                                             kinds = listOf(host.kind),
@@ -2539,6 +2556,7 @@ class Account(
         hash: String?,
         mimeType: String?,
         thumbhash: String? = null,
+        image: String? = null,
     ) {
         val template =
             ProfileGalleryEntryEvent.build(url) {
@@ -2548,6 +2566,7 @@ class Account(
                 dim?.let { dimension(it) }
                 blurhash?.let { blurhash(it) }
                 thumbhash?.let { galleryThumbhash(it) }
+                image?.let { image(it) }
             }
 
         val event = signer.sign(template)
@@ -2755,6 +2774,19 @@ class Account(
         sendMyPublicAndPrivateOutbox(blockPeopleList.showUser(pubkeyHex))
         sendMyPublicAndPrivateOutbox(muteList.showUser(pubkeyHex))
         hiddenUsers.showUser(pubkeyHex)
+    }
+
+    suspend fun showUsers(pubkeys: List<HexKey>) {
+        if (pubkeys.isEmpty()) return
+        sendMyPublicAndPrivateOutbox(blockPeopleList.showUsers(pubkeys))
+        sendMyPublicAndPrivateOutbox(muteList.showUsers(pubkeys))
+        pubkeys.forEach { hiddenUsers.showUser(it) }
+    }
+
+    suspend fun showWords(words: List<String>) {
+        if (words.isEmpty()) return
+        sendMyPublicAndPrivateOutbox(blockPeopleList.showWords(words))
+        sendMyPublicAndPrivateOutbox(muteList.showWords(words))
     }
 
     suspend fun requestDVMContentDiscovery(
@@ -3084,7 +3116,7 @@ class Account(
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
-    suspend fun sendNestsServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
+    suspend fun sendNestsServersList(servers: List<com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 
     suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
 

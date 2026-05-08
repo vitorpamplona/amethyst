@@ -65,10 +65,10 @@ class HomeLiveFilter(
         val fifteenMinsAgo = limitTime()
 
         val list =
-            LocalCache.ephemeralChannels.filter { id, channel ->
+            LocalCache.ephemeralChannels.filter { _, channel ->
                 shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
             } +
-                LocalCache.liveChatChannels.filter { id, channel ->
+                LocalCache.liveChatChannels.filter { _, channel ->
                     shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
                 }
 
@@ -81,7 +81,7 @@ class HomeLiveFilter(
         timeLimit: Long,
     ): Boolean =
         channel.notes
-            .filter { key, value ->
+            .filter { _, value ->
                 acceptableChatEvent(value, filterParams, timeLimit)
             }.isNotEmpty()
 
@@ -103,8 +103,18 @@ class HomeLiveFilter(
             return true
         }
 
+        // Audio-room presence (kind-10312) lives in `presenceNotes`,
+        // not `notes`. Check it separately so a follow broadcasting in
+        // a Nest still surfaces the bubble even if no chat happened.
+        val hasPresence =
+            channel.presenceNotes
+                .filter { _, note ->
+                    acceptableChatEvent(note, filterParams, timeLimit)
+                }.isNotEmpty()
+        if (hasPresence) return true
+
         return channel.notes
-            .filter { key, value ->
+            .filter { _, value ->
                 acceptableChatEvent(value, filterParams, timeLimit)
             }.isNotEmpty()
     }
@@ -239,7 +249,7 @@ class HomeLiveFilter(
             LocalCache.getAddressableNoteIfExists(roomAddress)?.event as? MeetingSpaceEvent
                 ?: return false
         val status = room.status()
-        return status == MeetingSpaceStatusTag.STATUS.OPEN ||
+        return status == MeetingSpaceStatusTag.STATUS.LIVE ||
             status == MeetingSpaceStatusTag.STATUS.PRIVATE
     }
 
@@ -275,10 +285,22 @@ class HomeLiveFilter(
     ): Int {
         var count = 0
 
-        channel.notes.forEach { key, value ->
+        channel.notes.forEach { _, value ->
             val author = value.author
             if (author != null) {
                 if (followingSet == null || author.pubkeyHex in followingSet) {
+                    count++
+                }
+            }
+        }
+
+        // Audio-room presence is indexed separately from `notes`. Add
+        // its author count so audio-room hosts/speakers still factor
+        // into the follow-participation sort even when they haven't
+        // chatted in the room.
+        if (channel is LiveActivitiesChannel) {
+            channel.presenceNotes.forEach { authorHex, _ ->
+                if (followingSet == null || authorHex in followingSet) {
                     count++
                 }
             }

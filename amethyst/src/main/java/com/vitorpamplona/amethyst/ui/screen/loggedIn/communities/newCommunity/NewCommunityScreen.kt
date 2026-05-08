@@ -65,14 +65,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -497,7 +496,7 @@ private fun SelectedModeratorRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            ModeratorSecondaryLine(user)
+            Nip05OrPubkeyLine(user)
         }
 
         if (isOwner) {
@@ -520,31 +519,6 @@ private fun SelectedModeratorRow(
             }
         }
     }
-}
-
-@Composable
-private fun ModeratorSecondaryLine(user: User) {
-    val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
-
-    val text =
-        when (val state = nip05StateMetadata) {
-            is Nip05State.Exists -> {
-                val name = state.nip05.name
-                if (name == "_") state.nip05.domain else "$name@${state.nip05.domain}"
-            }
-
-            else -> {
-                user.pubkeyDisplayHex()
-            }
-        }
-
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
 }
 
 // --- Relays ------------------------------------------------------------------------------------

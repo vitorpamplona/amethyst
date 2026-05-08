@@ -48,7 +48,7 @@ open class NIP90ContentDiscoveryResponseFilter(
 
         latestNote =
             LocalCache.notes.maxOrNullOf(
-                filter = { idHex: String, note: Note ->
+                filter = { _: String, note: Note ->
                     acceptableEvent(note)
                 },
                 comparator = CreatedAtComparator,

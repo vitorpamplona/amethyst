@@ -23,20 +23,14 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.AccountFollowsLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
-import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to logged-in accounts.
 @Stable
@@ -47,24 +41,20 @@ class AccountQueryState(
 )
 
 /**
- * This assembler loads everything eech account needs.
+ * Always-on account loaders: metadata, gift wraps, drafts, inbox-relay
+ * notifications, marmot group events. Foreground-only loaders live in
+ * [AccountForegroundFilterAssembler].
  */
 @Stable
 class AccountFilterAssembler(
     client: INostrClient,
-    cache: LocalCache,
-    authenticator: IAuthStatus,
-    failureTracker: RelayOfflineTracker,
-    scope: CoroutineScope,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
     val group =
         listOf(
             AccountMetadataEoseManager(client, ::allKeys),
-            AccountFollowsLoaderSubAssembler(client, cache, scope, authenticator, failureTracker, ::allKeys),
             AccountGiftWrapsEoseManager(client, ::allKeys),
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
-            AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),
             MarmotGroupEventsEoseManager(client, ::allKeys),
         )
 

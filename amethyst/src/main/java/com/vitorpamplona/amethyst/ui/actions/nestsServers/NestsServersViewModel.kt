@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomServersViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,10 +34,12 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Edit-buffer for the user's audio-room (NIP-53 / nests) MoQ server
- * list. Mirror of [BlossomServersViewModel] scoped down to a plain
- * `List<String>` of base URLs since nests servers don't have a
- * "selected default" concept (clients pick the first entry when
- * starting a new space).
+ * list. Mirror of [BlossomServersViewModel] but every entry carries
+ * **two** URLs (the moq-relay WebTransport endpoint and the moq-auth
+ * sidecar base URL) — those are the two values that end up in the
+ * kind-30312 `streaming` and `auth` tags. The deployed nostrnests
+ * reference puts these on different hosts, so we cannot collapse them
+ * into a single URL.
  *
  * The flow:
  *   1. [init] binds the [AccountViewModel].
@@ -52,7 +55,7 @@ class NestsServersViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
-    private val _servers = MutableStateFlow<List<NestsServer>>(emptyList())
+    private val _servers = MutableStateFlow<List<NestsServerEntry>>(emptyList())
     val servers = _servers.asStateFlow()
     private var isModified = false
 
@@ -67,31 +70,41 @@ class NestsServersViewModel : ViewModel() {
         isModified = false
         val current = account.nestsServers.flow.value
         _servers.update {
-            current.map { url -> NestsServer(displayHostName(url), url) }
+            current.map { it.toEntry() }
         }
     }
 
-    fun addServer(url: String) {
-        val normalised =
-            try {
-                Rfc3986.normalize(url.trim())
-            } catch (_: Throwable) {
-                url.trim()
-            }
-        if (normalised.isBlank()) return
-        val entry = NestsServer(displayHostName(normalised), normalised)
-        if (_servers.value.any { it.baseUrl == entry.baseUrl }) return
+    /**
+     * Add a server pair. Both URLs go on the wire as the third element
+     * of the kind-10112 `server` tag (relay first, auth second). The
+     * recommended-list "Add" button supplies both; the manual "Add a
+     * server" field also asks for both.
+     */
+    fun addServer(
+        relay: String,
+        auth: String,
+    ) {
+        val normalisedRelay = normalize(relay)
+        val normalisedAuth = normalize(auth)
+        if (normalisedRelay.isBlank() || normalisedAuth.isBlank()) return
+        val entry =
+            NestsServerEntry(
+                name = displayHostName(normalisedRelay),
+                relay = normalisedRelay,
+                auth = normalisedAuth,
+            )
+        if (_servers.value.any { it.relay == entry.relay }) return
         _servers.update { it + entry }
         isModified = true
     }
 
-    fun addServerList(urls: List<String>) {
-        urls.forEach { addServer(it) }
+    fun addServerList(servers: List<NestsServerEntry>) {
+        servers.forEach { addServer(it.relay, it.auth) }
     }
 
-    fun removeServer(baseUrl: String) {
+    fun removeServer(relay: String) {
         val before = _servers.value
-        val after = before.filterNot { it.baseUrl == baseUrl }
+        val after = before.filterNot { it.relay == relay }
         if (after.size != before.size) {
             _servers.update { after }
             isModified = true
@@ -108,25 +121,45 @@ class NestsServersViewModel : ViewModel() {
     fun save() {
         if (!isModified) return
         accountViewModel.launchSigner {
-            account.sendNestsServersList(_servers.value.map { it.baseUrl })
+            account.sendNestsServersList(_servers.value.map { NestsServer(relay = it.relay, auth = it.auth) })
             refresh()
         }
     }
 
+    private fun normalize(url: String): String =
+        try {
+            Rfc3986.normalize(url.trim())
+        } catch (_: Throwable) {
+            url.trim()
+        }
+
     private fun displayHostName(url: String): String =
         try {
-            Rfc3986.host(url).removePrefix("moq.").removePrefix("nests.")
+            Rfc3986
+                .host(url)
+                .removePrefix("moq-auth.")
+                .removePrefix("moq.")
+                .removePrefix("nests.")
         } catch (_: Throwable) {
             url
         }
+
+    private fun NestsServer.toEntry() =
+        NestsServerEntry(
+            name = displayHostName(relay),
+            relay = relay,
+            auth = auth,
+        )
 }
 
 /**
  * Display-friendly entry for [NestsServersViewModel].
  *   - [name] — short host label (e.g. `nostrnests.com`)
- *   - [baseUrl] — exact bytes that go on the wire (`https://moq.nostrnests.com`)
+ *   - [relay] — moq-relay WebTransport URL (`https://moq.nostrnests.com:4443`)
+ *   - [auth] — moq-auth sidecar base URL (`https://moq-auth.nostrnests.com`)
  */
-data class NestsServer(
+data class NestsServerEntry(
     val name: String,
-    val baseUrl: String,
+    val relay: String,
+    val auth: String,
 )

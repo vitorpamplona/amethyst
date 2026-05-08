@@ -25,7 +25,6 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
-import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +40,6 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
         // schemes + known extensions — BUD-10 blossom URIs have neither, so
         // without an explicit mimeType HLS playlists get routed to
         // ProgressiveMediaSource and fail.
-        @OptIn(UnstableApi::class)
         internal fun toExoPlayerMimeType(
             mimeType: String?,
             videoUri: String? = null,

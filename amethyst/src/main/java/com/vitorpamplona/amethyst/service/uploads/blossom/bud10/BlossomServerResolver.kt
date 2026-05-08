@@ -41,6 +41,8 @@ class BlossomServerResolver(
     val loggedInUsers: () -> List<HexKey>,
     val blossomServers: (Set<Address>) -> List<Flow<BlossomServersEvent>>,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
+    val useLocalBlossomCache: () -> Boolean = { false },
+    val localCacheProbe: LocalBlossomCacheProbe? = null,
 ) {
     val blossomHitCache: ServerHeadCache = ServerHeadCache()
     val uriToUrlCache = LruCache<String, BlossomUriServer>(200)
@@ -70,6 +72,10 @@ class BlossomServerResolver(
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun findServersInner(uriStr: String): BlossomUriServer? {
         val uri = BlossomUri.parse(uriStr) ?: return null
+
+        if (useLocalBlossomCache() && localCacheProbe?.isAvailable() == true) {
+            return BlossomUriServer(uri, uri.toLocalCacheUrl(LocalBlossomCacheProbe.LOCAL_CACHE_BASE))
+        }
 
         val expectedMimeType = mimeTypeMap[uri.extension]
         val filename = uri.filename()

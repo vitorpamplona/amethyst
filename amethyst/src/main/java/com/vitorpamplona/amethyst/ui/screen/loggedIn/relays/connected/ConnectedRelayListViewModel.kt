@@ -39,7 +39,7 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
                 val reqs = Amethyst.instance.client.activeRequests(it)
 
                 val users = mutableSetOf<HexKey>()
-                reqs.forEach { id, filters ->
+                reqs.forEach { _, filters ->
                     filters.forEach { filter ->
                         val isReportFilter = filter.kinds?.size == 1 && filter.kinds?.firstOrNull() == ReportEvent.KIND
                         if (!isReportFilter) {

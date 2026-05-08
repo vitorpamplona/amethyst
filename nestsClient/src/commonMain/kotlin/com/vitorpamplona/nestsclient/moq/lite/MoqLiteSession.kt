@@ -22,15 +22,18 @@ package com.vitorpamplona.nestsclient.moq.lite
 
 import com.vitorpamplona.nestsclient.moq.MoqCodecException
 import com.vitorpamplona.nestsclient.moq.MoqWriter
+import com.vitorpamplona.nestsclient.trace.NestsTrace
+import com.vitorpamplona.nestsclient.trace.jsonStr
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
@@ -65,7 +68,14 @@ import kotlinx.coroutines.sync.withLock
  * layout.
  */
 class MoqLiteSession internal constructor(
-    private val transport: WebTransportSession,
+    /**
+     * `internal` (not `private`) so test code in the same module can
+     * downcast to a platform [WebTransportSession] (typically
+     * `QuicWebTransportSession`) and read diagnostic flow-control
+     * counters from the underlying QUIC connection. Production code
+     * paths inside this file continue to use `transport` as before.
+     */
+    internal val transport: WebTransportSession,
     private val scope: CoroutineScope,
 ) {
     private val state = Mutex()
@@ -87,8 +97,22 @@ class MoqLiteSession internal constructor(
      */
     private var announceWatchJob: Job? = null
 
-    /** Single active publisher per session (moq-lite doesn't model multi-broadcast publishers). */
-    private var activePublisher: PublisherStateImpl? = null
+    /**
+     * Active publishers on this session. moq-lite models a broadcast as
+     * `(suffix, set-of-tracks)`; the relay multiplexes Subscribe
+     * messages to whichever publisher claims the requested track. We
+     * allow N concurrent publishers per session as long as they share
+     * the same suffix (= same broadcast) and have distinct tracks.
+     *
+     * The nests audio room use case needs at least two: `audio/data`
+     * for Opus frames and `catalog.json` for the broadcast metadata
+     * the canonical kixelated/moq watcher subscribes to first to
+     * discover what's available. Without the catalog the broadcast is
+     * invisible to the JS reference watcher (the browser-side nests
+     * web client) — Amethyst-to-Amethyst kept working only because
+     * both sides hardcoded the audio track name and skipped discovery.
+     */
+    private val activePublishers: MutableList<PublisherStateImpl> = mutableListOf()
 
     @Volatile private var closed: Boolean = false
 
@@ -110,21 +134,66 @@ class MoqLiteSession internal constructor(
         bidi.write(Varint.encode(MoqLiteControlType.Announce.code))
         bidi.write(MoqLiteCodec.encodeAnnouncePlease(MoqLiteAnnouncePlease(prefix)))
 
-        val updates = MutableSharedFlow<MoqLiteAnnounce>(replay = 0, extraBufferCapacity = 64)
+        // replay=64, DROP_OLDEST: announces emitted before the
+        // caller's `collect` attaches MUST NOT be dropped — that's
+        // the late-attach race that left `_announcedSpeakers` empty
+        // in production receiver logs even after a clear Active
+        // arrived (the session-internal pumpAnnounceWatch beat the
+        // VM-level `observeAnnounces` to subscribing, then the
+        // VM-level bidi's pump emitted to a SharedFlow with no
+        // collector yet, and the prior `replay=0` silently dropped
+        // it). Replay buffer covers up to 64 distinct announces —
+        // far more than nests rooms have speakers — and DROP_OLDEST
+        // means the bidi pump never has to suspend on emit, so
+        // backpressure can't propagate up into the QUIC read loop.
+        val updates =
+            MutableSharedFlow<MoqLiteAnnounce>(
+                replay = 64,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
+        Log.d("NestRx") { "session.announce(prefix='$prefix') bidi opened, pump launching (replayCap=64)" }
+        NestsTrace.emit("announce_bidi_opened") { "\"prefix\":${jsonStr(prefix)}" }
         val pump =
             scope.launch {
                 val buffer = MoqLiteFrameBuffer()
+                var chunkCount = 0
+                var emitCount = 0
                 try {
                     bidi.incoming().collect { chunk ->
+                        chunkCount += 1
                         buffer.push(chunk)
                         while (true) {
                             val payload = buffer.readSizePrefixed() ?: break
-                            updates.emit(MoqLiteCodec.decodeAnnounce(payload))
+                            val decoded = MoqLiteCodec.decodeAnnounce(payload)
+                            emitCount += 1
+                            Log.d("NestRx") {
+                                "session.announce(prefix='$prefix') bidi pump emit #$emitCount " +
+                                    "status=${decoded.status} suffix='${decoded.suffix.take(12)}' " +
+                                    "(chunks=$chunkCount)"
+                            }
+                            NestsTrace.emit("announce_pump_emit") {
+                                "\"prefix\":${jsonStr(prefix)}," +
+                                    "\"emit_count\":$emitCount," +
+                                    "\"status\":${jsonStr(decoded.status.toString())}," +
+                                    "\"suffix\":${jsonStr(decoded.suffix)}," +
+                                    "\"chunks\":$chunkCount"
+                            }
+                            updates.emit(decoded)
                         }
+                    }
+                    Log.w("NestRx") { "session.announce(prefix='$prefix') bidi.incoming() ended naturally (chunks=$chunkCount, emits=$emitCount)" }
+                    NestsTrace.emit("announce_bidi_ended_naturally") {
+                        "\"prefix\":${jsonStr(prefix)},\"chunks\":$chunkCount,\"emits\":$emitCount"
                     }
                 } catch (ce: CancellationException) {
                     throw ce
-                } catch (_: Throwable) {
+                } catch (t: Throwable) {
+                    Log.w("NestRx") { "announce(prefix='$prefix'): bidi.incoming() threw ${t::class.simpleName}: ${t.message} (chunks=$chunkCount, emits=$emitCount)" }
+                    NestsTrace.emit("announce_bidi_threw") {
+                        "\"prefix\":${jsonStr(prefix)},\"chunks\":$chunkCount,\"emits\":$emitCount," +
+                            "\"error\":${jsonStr(t::class.simpleName ?: "?")}," +
+                            "\"message\":${jsonStr(t.message ?: "")}"
+                    }
                     // Flow terminated (peer FIN or transport close).
                     // The Announce stream's emit-side just stops; consumers
                     // see an end-of-flow.
@@ -192,40 +261,169 @@ class MoqLiteSession internal constructor(
                 endGroup = endGroup,
             )
         val bidi = transport.openBidiStream()
-        bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
-        bidi.write(MoqLiteCodec.encodeSubscribe(request))
 
-        // Single long-running collector pump for the bidi's response
-        // side. Reads the SubscribeResponse, then keeps collecting
-        // until the peer FINs (or scope is cancelled, or
-        // handle.unsubscribe() FINs our side and the relay echoes).
-        // The flow completion IS the moq-lite-03 signal that the
-        // publisher has disconnected mid-broadcast — Lite-03 has no
-        // explicit "publisher gone" message; bidi close is it.
-        // Without this watch, the frames Channel below would never
-        // close on remote disconnect, and any consumer collecting
-        // from the wrapper-level [MoqLiteSubscribeHandle.frames]
-        // flow would sit silent indefinitely after a publisher
-        // cycle even though the relay is happy to serve a fresh
-        // subscribe under the same broadcast suffix.
+        // Single long-running collector for the bidi's whole lifetime.
+        // The collector parses the SubscribeResponse inline, signals it
+        // via [responseDeferred], then continues draining the bidi
+        // until the peer FINs (publisher disconnect under moq-lite
+        // Lite-03) or the transport tears down. On collector exit,
+        // the frames channel is closed so the consumer's
+        // `frames.consumeAsFlow()` ends naturally.
         //
-        // Why a single pump (vs separate response read + death
-        // watch): the underlying QUIC stream's `incoming` is
-        // backed by `Channel<ByteArray>.consumeAsFlow()` — which
-        // CANCELS the channel when the first collect ends. A second
-        // collect on a fresh `bidi.incoming()` Flow would see an
-        // already-cancelled channel and fire prematurely. Keeping
-        // one collect alive sidesteps that entirely.
-        // moq-lite's subscribe-response is a single size-prefixed
-        // message on the response side of the bidi. Read incoming
-        // chunks into a buffer until the buffer holds a full payload,
-        // then stop. We don't need a separate collector pump because
-        // post-Ok the bidi is idle (group data flows on its own uni
-        // streams).
-        val responseBuffer = MoqLiteFrameBuffer()
-        val responsePayload = readSubscribeResponseFromBidi(bidi.incoming(), responseBuffer, id)
-        when (val resp = MoqLiteCodec.decodeSubscribeResponse(responsePayload)) {
+        // Why one collector (vs separate response read + lifetime
+        // watch): the underlying QUIC stream's `incoming` is backed
+        // by `Channel<ByteArray>.consumeAsFlow()` which CANCELS the
+        // channel when the first collect ends. A second collect on a
+        // fresh `bidi.incoming()` Flow would see the already-cancelled
+        // channel and fire prematurely.
+        //
+        // Why we need a lifetime watch at all: pumpAnnounceWatch only
+        // closes frames when the relay actively sends Announce(Ended).
+        // A silent transport black-hole never reaches that path; without
+        // a per-subscription bidi watch, consumers would hang forever
+        // on dead UDP paths.
+        val frames = Channel<MoqLiteFrame>(capacity = DEFAULT_FRAME_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        val responseDeferred = CompletableDeferred<MoqLiteCodec.SubscribeResponse>()
+
+        // Pre-register the subscription BEFORE launching the collector
+        // AND before the SUBSCRIBE goes on the wire. The order matters
+        // for two reasons:
+        //
+        //   1. Collector race (original reason): if the publisher FINs
+        //      the bidi immediately after sending Ok, the collector's
+        //      exit-cleanup races subscribe()'s post-await registration
+        //      — collector exits, runs `remove(id)` against an empty
+        //      map, no-ops; subscribe() then inserts; the frames
+        //      channel is now in the map with no live collector to
+        //      close it on transport tear-down. Consumer hangs
+        //      forever. Pre-registering means the collector's
+        //      idempotent remove+close cleanup always finds and
+        //      closes the frames channel, regardless of timing.
+        //
+        //   2. First-group race (audit fix #3): the relay can open
+        //      the first group's uni stream BEFORE our subscribe()
+        //      continuation re-enters [state] to register `id`. If
+        //      the SUBSCRIBE bytes hit the wire before the map entry
+        //      lands, [drainOneGroup] looks the id up against an
+        //      empty map and silently drops the frame. Registering
+        //      the id before writing the SUBSCRIBE closes the
+        //      window — by the time the relay can have parsed the
+        //      message and opened a uni stream in response, the map
+        //      already has our entry.
+        val sub =
+            ListenerSubscription(
+                id = id,
+                request = request,
+                bidi = bidi,
+                frames = frames,
+            )
+        state.withLock {
+            subscriptionsBySubscribeId[id] = sub
+            if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
+        }
+        Log.d("NestRx") { "SUBSCRIBE send id=$id broadcast='$broadcast' track='$track' maxLatencyMs=$maxLatencyMillis" }
+        NestsTrace.emit("subscribe_send") {
+            "\"id\":$id,\"broadcast\":${jsonStr(broadcast)},\"track\":${jsonStr(track)}," +
+                "\"max_latency_ms\":$maxLatencyMillis"
+        }
+        // Now that the subscription is registered, push the SUBSCRIBE
+        // bytes. If `bidi.write` throws (transport torn down, peer
+        // reset) we'd otherwise leave an orphaned map entry whose
+        // frames channel never closes — the response collector hasn't
+        // been launched yet so its idempotent cleanup wouldn't run.
+        // Roll back explicitly on throw.
+        try {
+            bidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            bidi.write(MoqLiteCodec.encodeSubscribe(request))
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "SUBSCRIBE write failed id=$id: ${t::class.simpleName}: ${t.message}" }
+            state.withLock { subscriptionsBySubscribeId.remove(id) }
+            frames.close()
+            runCatching { bidi.finish() }
+            throw t
+        }
+
+        scope.launch {
+            val responseBuffer = MoqLiteFrameBuffer()
+            var responseParsed = false
+            // typeCode hoisted outside the collect lambda — `readVarint`
+            // advances `pos` permanently while `readSizePrefixed` rolls
+            // its own length-varint back on incomplete-body but does NOT
+            // roll back the type-code that's already been consumed. If
+            // the response chunks split between type and body (possible
+            // under MTU pressure / fragmentation), a per-tick `val
+            // typeCode = readVarint()` would read the body's size
+            // prefix as the type code on the next chunk and misframe
+            // the response. Mirrors the same fix in [handleInboundBidi].
+            var typeCode: Long? = null
+            try {
+                bidi.incoming().collect { chunk ->
+                    if (!responseParsed) {
+                        responseBuffer.push(chunk)
+                        if (typeCode == null) typeCode = responseBuffer.readVarint()
+                        val tc = typeCode ?: return@collect
+                        val body = responseBuffer.readSizePrefixed() ?: return@collect
+                        val out = MoqWriter()
+                        out.writeVarint(tc)
+                        out.writeVarint(body.size.toLong())
+                        out.writeBytes(body)
+                        val resp = MoqLiteCodec.decodeSubscribeResponse(out.toByteArray())
+                        responseDeferred.complete(resp)
+                        responseParsed = true
+                    }
+                    // Post-response chunks are silently discarded —
+                    // moq-lite leaves the bidi idle post-Ok. The signal
+                    // we care about is the flow's natural completion.
+                }
+            } catch (ce: CancellationException) {
+                if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(ce)
+                throw ce
+            } catch (t: Throwable) {
+                Log.w("NestRx") { "SUBSCRIBE bidi collector threw id=$id: ${t::class.simpleName}: ${t.message}" }
+                if (!responseDeferred.isCompleted) responseDeferred.completeExceptionally(t)
+            }
+            if (!responseDeferred.isCompleted) {
+                responseDeferred.completeExceptionally(
+                    MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id"),
+                )
+            }
+            // Idempotent: if subscribe() unwound on a Dropped response
+            // (or any throw from await), it already removed the
+            // subscription before throwing. Either way: remove + close.
+            val removed = state.withLock { subscriptionsBySubscribeId.remove(id) }
+            if (removed != null) {
+                Log.w("NestRx") { "SUBSCRIBE bidi exited, closing frames id=$id broadcast='${removed.request.broadcast}' track='${removed.request.track}'" }
+                NestsTrace.emit("subscribe_bidi_exited") {
+                    "\"id\":$id,\"broadcast\":${jsonStr(removed.request.broadcast)}," +
+                        "\"track\":${jsonStr(removed.request.track)}"
+                }
+            }
+            removed?.frames?.close()
+        }
+
+        val resp =
+            try {
+                responseDeferred.await()
+            } catch (t: Throwable) {
+                state.withLock { subscriptionsBySubscribeId.remove(id) }
+                frames.close()
+                runCatching { bidi.finish() }
+                throw t
+            }
+        when (resp) {
             is MoqLiteCodec.SubscribeResponse.Dropped -> {
+                Log.w("NestRx") {
+                    "SUBSCRIBE_DROP id=$id broadcast='$broadcast' track='$track' " +
+                        "errCode=${resp.drop.errorCode} reason='${resp.drop.reasonPhrase}'"
+                }
+                NestsTrace.emit("subscribe_drop") {
+                    "\"id\":$id,\"broadcast\":${jsonStr(broadcast)},\"track\":${jsonStr(track)}," +
+                        "\"err_code\":${resp.drop.errorCode}," +
+                        "\"reason\":${jsonStr(resp.drop.reasonPhrase)}"
+                }
+                state.withLock { subscriptionsBySubscribeId.remove(id) }
+                frames.close()
+                runCatching { bidi.finish() }
                 throw MoqLiteSubscribeException(
                     "publisher rejected subscribe id=$id: errorCode=${resp.drop.errorCode} " +
                         "reason='${resp.drop.reasonPhrase}'",
@@ -233,18 +431,9 @@ class MoqLiteSession internal constructor(
             }
 
             is MoqLiteCodec.SubscribeResponse.Ok -> {
-                val frames = Channel<MoqLiteFrame>(capacity = DEFAULT_FRAME_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-                val sub =
-                    ListenerSubscription(
-                        id = id,
-                        request = request,
-                        ok = resp.ok,
-                        bidi = bidi,
-                        frames = frames,
-                    )
-                state.withLock {
-                    subscriptionsBySubscribeId[id] = sub
-                    if (groupPump == null) groupPump = scope.launch { pumpUniStreams() }
+                Log.d("NestRx") { "SUBSCRIBE_OK id=$id broadcast='$broadcast' track='$track'" }
+                NestsTrace.emit("subscribe_ok") {
+                    "\"id\":$id,\"broadcast\":${jsonStr(broadcast)},\"track\":${jsonStr(track)}"
                 }
                 return MoqLiteSubscribeHandle(
                     id = id,
@@ -321,6 +510,12 @@ class MoqLiteSession internal constructor(
     private suspend fun pumpAnnounceWatch(handle: MoqLiteAnnouncesHandle) {
         try {
             handle.updates.collect { update ->
+                Log.d("NestRx") { "ANNOUNCE update status=${update.status} suffix='${update.suffix}' hops=${update.hops}" }
+                NestsTrace.emit("announce_watch_update") {
+                    "\"status\":${jsonStr(update.status.toString())}," +
+                        "\"suffix\":${jsonStr(update.suffix)}," +
+                        "\"hops\":${update.hops}"
+                }
                 if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
                 val targets =
                     state.withLock {
@@ -328,6 +523,13 @@ class MoqLiteSession internal constructor(
                             .filter { it.request.broadcast == update.suffix }
                             .toList()
                     }
+                if (targets.isNotEmpty()) {
+                    Log.w("NestRx") { "ANNOUNCE Ended for suffix='${update.suffix}' → closing ${targets.size} subscription(s): ${targets.map { "id=${it.id} track='${it.request.track}'" }}" }
+                    NestsTrace.emit("announce_watch_ended_closing_subs") {
+                        "\"suffix\":${jsonStr(update.suffix)}," +
+                            "\"closed_count\":${targets.size}"
+                    }
+                }
                 for (sub in targets) {
                     // Just close the frames channel — the
                     // wrapper-level collect of `frames.consumeAsFlow()`
@@ -343,9 +545,11 @@ class MoqLiteSession internal constructor(
                     runCatching { sub.bidi.finish() }
                 }
             }
+            Log.w("NestRx") { "ANNOUNCE pump: updates flow ended naturally" }
         } catch (ce: kotlinx.coroutines.CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "ANNOUNCE pump threw ${t::class.simpleName}: ${t.message}" }
             // Announce bidi died — same best-effort fallback.
         } finally {
             runCatching { handle.close() }
@@ -363,24 +567,43 @@ class MoqLiteSession internal constructor(
      * One pump per session — started lazily on the first subscribe.
      */
     private suspend fun pumpUniStreams() {
+        Log.d("NestRx") { "pumpUniStreams started" }
+        NestsTrace.emit("uni_pump_started")
+        var streamCount = 0L
         try {
-            transport.incomingUniStreams().collect { stream ->
-                scope.launch { drainOneGroup(stream) }
+            // coroutineScope binds each per-stream drain to this pump's
+            // job — when the pump is cancelled (session close), every
+            // drain is cancelled with it instead of leaking as a
+            // sibling on the outer [scope] until the transport's flow
+            // independently errors out.
+            kotlinx.coroutines.coroutineScope {
+                transport.incomingUniStreams().collect { stream ->
+                    val n = ++streamCount
+                    launch { drainOneGroup(stream, n) }
+                }
             }
+            Log.w("NestRx") { "pumpUniStreams: incomingUniStreams flow ended naturally after $streamCount streams" }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "pumpUniStreams ended after $streamCount streams with ${t::class.simpleName}: ${t.message}" }
             // Transport closed — subscriptions will surface end-of-flow
             // via their own bidi pumps as well.
         }
     }
 
-    private suspend fun drainOneGroup(stream: com.vitorpamplona.nestsclient.transport.WebTransportReadStream) {
+    private suspend fun drainOneGroup(
+        stream: com.vitorpamplona.nestsclient.transport.WebTransportReadStream,
+        streamSeq: Long,
+    ) {
         val buffer = MoqLiteFrameBuffer()
         var typeRead = false
         var subscribeId: Long = -1L
         var groupSequence: Long = -1L
         var headerRead = false
+        var frameCount = 0
+        var droppedNoSub = 0
+        var trySendFailures = 0
         try {
             stream.incoming().collect { chunk ->
                 buffer.push(chunk)
@@ -397,27 +620,48 @@ class MoqLiteSession internal constructor(
                     subscribeId = hdr.subscribeId
                     groupSequence = hdr.sequence
                     headerRead = true
+                    Log.d("NestRx") { "drainOneGroup#$streamSeq header subId=$subscribeId groupSeq=$groupSequence" }
+                    NestsTrace.emit("group_header") {
+                        "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence"
+                    }
                 }
                 while (true) {
                     val frame = buffer.readSizePrefixed() ?: break
                     val sub = state.withLock { subscriptionsBySubscribeId[subscribeId] }
-                    if (sub != null) {
-                        sub.frames.trySend(
-                            MoqLiteFrame(
-                                groupSequence = groupSequence,
-                                payload = frame,
-                            ),
-                        )
+                    if (sub == null) {
+                        droppedNoSub += 1
+                    } else {
+                        val sent =
+                            sub.frames.trySend(
+                                MoqLiteFrame(
+                                    groupSequence = groupSequence,
+                                    payload = frame,
+                                ),
+                            )
+                        if (!sent.isSuccess) trySendFailures += 1
                     }
+                    frameCount += 1
                     // If the subscription has been closed already we
                     // silently drop the frame — the publisher hasn't
                     // observed the unsubscribe yet (its uni streams
                     // are independent of our bidi FIN).
                 }
             }
+            Log.d("NestRx") { "drainOneGroup#$streamSeq FIN subId=$subscribeId groupSeq=$groupSequence frames=$frameCount droppedNoSub=$droppedNoSub trySendFail=$trySendFailures" }
+            NestsTrace.emit("group_fin") {
+                "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence," +
+                    "\"frames\":$frameCount,\"dropped_no_sub\":$droppedNoSub,\"try_send_fail\":$trySendFailures"
+            }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestRx") { "drainOneGroup#$streamSeq threw subId=$subscribeId groupSeq=$groupSequence frames=$frameCount: ${t::class.simpleName}: ${t.message}" }
+            NestsTrace.emit("group_threw") {
+                "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence," +
+                    "\"frames\":$frameCount," +
+                    "\"error\":${jsonStr(t::class.simpleName ?: "?")}," +
+                    "\"message\":${jsonStr(t.message ?: "")}"
+            }
             // Stream errored / FIN'd. Nothing to do — the next group
             // arrives on a fresh uni stream.
         }
@@ -452,20 +696,49 @@ class MoqLiteSession internal constructor(
      *   - we open uni streams ourselves to push group data
      *     (`session.open_uni()`)
      *
-     * Only one [publish] is supported per session for now. Calling
-     * [publish] twice on the same session is rejected with [IllegalStateException].
+     * Multiple [publish] calls are supported on the same session as
+     * long as every call shares the same `broadcastSuffix` (you publish
+     * one broadcast per session, with multiple tracks) and uses a
+     * distinct `track`. Re-publishing the same `(suffix, track)` pair
+     * or mixing different suffixes is rejected with
+     * [IllegalStateException].
+     *
+     * @param startSequence first group sequence the publisher will
+     *   assign. Defaults to 0 for fresh broadcasts. The hot-swap path
+     *   in [com.vitorpamplona.nestsclient.MoqLiteNestsSpeaker.openPublisherForHotSwap]
+     *   passes the previous publisher's
+     *   [MoqLitePublisherHandle.nextSequence] so the new session's
+     *   group lineage continues monotonically across JWT refreshes —
+     *   kixelated/hang's `Container.Consumer.#run` drops any group
+     *   with `sequence < #active`, so a reset to 0 after a recycle
+     *   silences the watcher until `#active` rolls over.
      */
-    suspend fun publish(broadcastSuffix: String): MoqLitePublisherHandle {
+    suspend fun publish(
+        broadcastSuffix: String,
+        track: String,
+        startSequence: Long = 0L,
+    ): MoqLitePublisherHandle {
         ensureOpen()
+        require(startSequence >= 0L) { "startSequence must be >= 0, got $startSequence" }
         val normalised = MoqLitePath.normalize(broadcastSuffix)
         val publisher: PublisherStateImpl
         state.withLock {
             check(!closed) { "session is closed" }
-            check(activePublisher == null) {
-                "MoqLiteSession.publish called twice — only one broadcast per session is supported"
+            val existingSuffix = activePublishers.firstOrNull()?.suffix
+            check(existingSuffix == null || existingSuffix == normalised) {
+                "MoqLiteSession.publish suffix mismatch: existing='$existingSuffix', new='$normalised'. " +
+                    "moq-lite models one broadcast per session — open a new session for a different broadcast."
             }
-            publisher = PublisherStateImpl(suffix = normalised)
-            activePublisher = publisher
+            check(activePublishers.none { it.track == track }) {
+                "MoqLiteSession.publish called twice for the same track '$track' on suffix '$normalised'."
+            }
+            publisher =
+                PublisherStateImpl(
+                    suffix = normalised,
+                    track = track,
+                    startSequence = startSequence,
+                )
+            activePublishers += publisher
             // Lazy launch — the inbound-bidi pump needs to keep running
             // for the lifetime of any active publisher.
             if (bidiPump == null) bidiPump = scope.launch { pumpInboundBidis() }
@@ -483,18 +756,38 @@ class MoqLiteSession internal constructor(
      */
     private suspend fun pumpInboundBidis() {
         try {
-            transport.incomingBidiStreams().collect { bidi ->
-                scope.launch { handleInboundBidi(bidi) }
+            // Bind each per-bidi handler to this pump's job (see
+            // [pumpUniStreams]'s identical comment) so they don't outlive
+            // bidiPump.cancelAndJoin() in [close].
+            kotlinx.coroutines.coroutineScope {
+                transport.incomingBidiStreams().collect { bidi ->
+                    launch { handleInboundBidi(bidi) }
+                }
             }
         } catch (ce: CancellationException) {
             throw ce
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Log.w("NestTx") { "pumpInboundBidis ended with ${t::class.simpleName}: ${t.message}" }
             // Transport closed.
         }
     }
 
     private suspend fun handleInboundBidi(bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream) {
-        val publisher = state.withLock { activePublisher } ?: return
+        // Snapshot of publishers at bidi-arrival time. All publishers
+        // on a single session share a suffix (enforced in [publish]),
+        // so the Announce response is the same regardless of which
+        // publisher we route the bidi to. Subscribe responses pick the
+        // publisher whose `track` matches `sub.track`.
+        val publishersSnapshot = state.withLock { activePublishers.toList() }
+        if (publishersSnapshot.isEmpty()) return
+        // Designated publisher for Announce-bidi ownership: the first
+        // one. The Active/Ended pair is keyed off the broadcast
+        // SUFFIX (not per track), so emitting it once via one
+        // publisher matches the single-broadcast model the relay
+        // expects. All publishers close together in [close], so
+        // there's no risk of one closing while the announce bidi
+        // stays alive on another.
+        val announcePublisher = publishersSnapshot.first()
 
         // Single long-running collector for the bidi's full lifetime.
         // Pre-fix this dispatch was split into a `firstOrNull()` to
@@ -519,6 +812,16 @@ class MoqLiteSession internal constructor(
         var typeCode: Long? = null
         var dispatched = false
         var inboundSub: MoqLiteSubscribe? = null
+        // Track which publisher this bidi was routed to so the peer-FIN
+        // cleanup at the bottom calls removeInboundSubscription on the
+        // right one. `inboundAnnouncePublisher` is currently unused for
+        // cleanup (announce bidis live until publisher.close fires
+        // Ended), but we keep the assignment for symmetry / future
+        // explicit teardown.
+        var inboundSubPublisher: PublisherStateImpl? = null
+
+        @Suppress("UNUSED_VARIABLE")
+        var inboundAnnouncePublisher: PublisherStateImpl? = null
         try {
             bidi.incoming().collect { chunk ->
                 buffer.push(chunk)
@@ -536,7 +839,7 @@ class MoqLiteSession internal constructor(
                             val pleasePayload = buffer.readSizePrefixed() ?: return@collect
                             val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload)
                             val emittedSuffix =
-                                MoqLitePath.stripPrefix(please.prefix, publisher.suffix) ?: publisher.suffix
+                                MoqLitePath.stripPrefix(please.prefix, announcePublisher.suffix) ?: announcePublisher.suffix
                             bidi.write(
                                 MoqLiteCodec.encodeAnnounce(
                                     MoqLiteAnnounce(
@@ -546,13 +849,65 @@ class MoqLiteSession internal constructor(
                                     ),
                                 ),
                             )
-                            publisher.registerAnnounceBidi(bidi, emittedSuffix)
+                            announcePublisher.registerAnnounceBidi(bidi, emittedSuffix)
+                            // Routed to publisher that owns the announce bidi for the lifecycle
+                            // — for the multi-track use case (audio + catalog), all share one
+                            // suffix and one announce bidi pointing at the first publisher.
+                            inboundAnnouncePublisher = announcePublisher
+                            Log.d("NestTx") { "ANNOUNCE inbound prefix='${please.prefix}' → emitted Active suffix='$emittedSuffix' (publisher.suffix='${announcePublisher.suffix}')" }
                             dispatched = true
                         }
 
                         MoqLiteControlType.Subscribe -> {
                             val subPayload = buffer.readSizePrefixed() ?: return@collect
                             val sub = MoqLiteCodec.decodeSubscribe(subPayload)
+                            // Find the publisher that claims this track. With the
+                            // single-track-per-publisher model, only one match is possible.
+                            val targetPublisher = publishersSnapshot.firstOrNull { it.track == sub.track }
+                            if (targetPublisher == null) {
+                                // Reply SubscribeDrop with a TRACK_DOES_NOT_EXIST
+                                // error code BEFORE we FIN — without this the
+                                // peer's response wait resolves only on
+                                // bidi-FIN with no indication WHY (looks
+                                // identical to "publisher disappeared mid-
+                                // subscribe"). Drop carries the error code +
+                                // reason phrase the watcher can log /
+                                // surface, and matches what kixelated's
+                                // `rs/moq-lite/src/lite/subscribe.rs`
+                                // expects for an unrecognised track on a
+                                // live broadcast.
+                                Log.w("NestTx") {
+                                    "SUBSCRIBE inbound id=${sub.id} track='${sub.track}' has no matching publisher " +
+                                        "on this session (have ${publishersSnapshot.map { it.track }}) — replying SubscribeDrop"
+                                }
+                                runCatching {
+                                    bidi.write(
+                                        MoqLiteCodec.encodeSubscribeDrop(
+                                            MoqLiteSubscribeDrop(
+                                                errorCode = MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST,
+                                                reasonPhrase =
+                                                    "track '${sub.track}' is not published on this broadcast " +
+                                                        "(available: ${publishersSnapshot.joinToString(",") { it.track }})",
+                                            ),
+                                        ),
+                                    )
+                                    bidi.finish()
+                                }
+                                dispatched = true
+                                return@collect
+                            }
+                            Log.d("NestTx") { "SUBSCRIBE inbound id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' (publisher track='${targetPublisher.track}')" }
+                            // Register the subscription BEFORE sending Ok so the
+                            // peer's observation of Ok is a happens-after of
+                            // `inboundSubs += sub`. Otherwise on dispatchers that
+                            // resume the peer's `bidi.incoming().first()`
+                            // continuation before this coroutine's continuation
+                            // (notably Windows under Dispatchers.Default), the
+                            // peer's first `publisher.send` after Ok races the
+                            // registration and observes an empty subscriber set.
+                            targetPublisher.registerInboundSubscription(sub)
+                            inboundSub = sub
+                            inboundSubPublisher = targetPublisher
                             bidi.write(
                                 MoqLiteCodec.encodeSubscribeOk(
                                     MoqLiteSubscribeOk(
@@ -564,14 +919,72 @@ class MoqLiteSession internal constructor(
                                     ),
                                 ),
                             )
-                            publisher.registerInboundSubscription(sub)
-                            inboundSub = sub
                             dispatched = true
                         }
 
-                        else -> {
-                            // Lite-03 treats Session/Fetch/Probe as
-                            // separate flows; we don't implement them.
+                        MoqLiteControlType.Probe -> {
+                            // Subscriber-opened bidi asking us (the
+                            // publisher) for a bitrate hint. Per
+                            // `lite/probe.rs:Lite03+`, the publisher
+                            // writes one or more size-prefixed
+                            // `Probe { bitrate: u62 }` messages on
+                            // this bidi. We're a fixed-rate Opus
+                            // publisher, so emit a single hint and
+                            // FIN our write side — the peer treats
+                            // FIN as "no further updates" rather than
+                            // an error. Better than the old behaviour
+                            // of FINing without writing anything,
+                            // which left the subscriber's ABR
+                            // estimator with no signal.
+                            runCatching {
+                                bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = NESTS_AUDIO_BITRATE_HINT_BPS)))
+                                bidi.finish()
+                            }
+                            dispatched = true
+                        }
+
+                        MoqLiteControlType.Fetch -> {
+                            // Subscriber-opened bidi requesting a
+                            // historical group (`lite/fetch.rs`).
+                            // Audio rooms are live-only — we have no
+                            // group history to serve. FINing the
+                            // write side without any reply is the
+                            // spec-clean way to signal "no groups
+                            // available"; the subscriber's wait on
+                            // its receive side resolves to
+                            // end-of-stream and it falls back to a
+                            // live Subscribe. Ignoring inbound bytes
+                            // (the request body) is fine: we don't
+                            // need to know which group was requested
+                            // because we couldn't serve any of them.
+                            runCatching { bidi.finish() }
+                            dispatched = true
+                        }
+
+                        MoqLiteControlType.Session -> {
+                            // ControlType=0 was the Lite-01/02 setup
+                            // exchange. Lite-03 doesn't use it; if a
+                            // legacy peer sends one, FIN cleanly so
+                            // their bidi resolves rather than hanging.
+                            runCatching { bidi.finish() }
+                            dispatched = true
+                        }
+
+                        MoqLiteControlType.Goaway -> {
+                            // Relay's graceful-shutdown signal — see
+                            // [MoqLiteControlType.Goaway]. We don't
+                            // act on the migration request today
+                            // (no body decode, no preferred-relay
+                            // failover); the `connectReconnecting*`
+                            // wrappers' transport-loss reconnect path
+                            // already handles the eventual hard
+                            // disconnect, so all this arm needs to do
+                            // is recognise the type code and FIN
+                            // cleanly instead of treating it as an
+                            // unknown control. Logged so a relay-
+                            // initiated migration shows up in logcat
+                            // rather than as a mystery silent reconnect.
+                            Log.w("NestRx") { "Goaway received from relay — FIN bidi (no migration handler today)" }
                             runCatching { bidi.finish() }
                             dispatched = true
                         }
@@ -593,7 +1006,11 @@ class MoqLiteSession internal constructor(
         // groups off this dead subscriber. Announce bidis are
         // owned by the publisher state for sending Ended on
         // publisher-close — we don't remove them here.
-        inboundSub?.let { publisher.removeInboundSubscription(it) }
+        val sub = inboundSub
+        val pub = inboundSubPublisher
+        if (sub != null && pub != null) {
+            pub.removeInboundSubscription(sub)
+        }
     }
 
     /**
@@ -605,65 +1022,51 @@ class MoqLiteSession internal constructor(
         subscribeId: Long,
         sequence: Long,
     ): com.vitorpamplona.nestsclient.transport.WebTransportWriteStream {
+        // Group streams use reliable QUIC delivery to match the
+        // moq-lite reference (kixelated/moq-rs `serve_group` writes
+        // reliable streams; bestEffort is not a moq-lite concept).
+        // The previous shape opened with `bestEffort=true`, which
+        // caused `:quic`'s `SendBuffer.markLost` to drop lost ranges
+        // without retransmit AND without RESET_STREAM — leaving the
+        // peer's stream-reassembly buffer permanently wedged at the
+        // hole boundary. The watcher's `Group.readFrame` parks until
+        // the relay's 30 s `MAX_GROUP_AGE` ages the broadcast queue
+        // out, manifesting as a 30 s silent dropout per lost packet
+        // on lossy networks. Reliable delivery costs marginal extra
+        // bandwidth on retransmits (a lost STREAM range arriving 50–
+        // 150 ms late still falls inside hang's default ~200 ms
+        // jitter buffer) and avoids the dropout entirely.
         val uni = transport.openUniStream()
+        // Mirror moq-rs `Publisher::serve_group`
+        // (`rs/moq-lite/src/lite/publisher.rs`): newer groups get higher
+        // priority so the QUIC writer drains fresh audio first when
+        // retransmits queue up under loss. Saturating cast guards a
+        // theoretical broadcast that runs long enough for `sequence` to
+        // exceed Int.MAX_VALUE (≈ 71 years at 1 group/sec); defensive only.
+        uni.setPriority(sequence.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))
         return uni
-    }
-
-    /**
-     * Read a size-prefixed payload from a bidi, seeded with whatever's
-     * already in [buffer] (the ControlType byte may have arrived with
-     * extra bytes). Used internally by the publisher inbound dispatch.
-     */
-    private suspend fun readSizePrefixedFromBidiInto(
-        incoming: kotlinx.coroutines.flow.Flow<ByteArray>,
-        buffer: MoqLiteFrameBuffer,
-    ): ByteArray {
-        // Try the buffer first — first chunk often contains the whole
-        // body since moq-lite messages are small and arrive as single
-        // QUIC sends.
-        buffer.readSizePrefixed()?.let { return it }
-        var done: ByteArray? = null
-        try {
-            incoming.collect { chunk ->
-                buffer.push(chunk)
-                buffer.readSizePrefixed()?.let {
-                    done = it
-                    throw EarlyExit
-                }
-            }
-        } catch (_: EarlyExit) {
-            // expected
-        } catch (ce: CancellationException) {
-            throw ce
-        }
-        return done
-            ?: throw MoqCodecException("incoming bidi closed before a complete size-prefixed body arrived")
-    }
-
-    private object EarlyExit : RuntimeException() {
-        private fun readResolve(): Any = EarlyExit
-
-        override fun fillInStackTrace(): Throwable = this
     }
 
     suspend fun close() {
         if (closed) return
         closed = true
         val toClose: List<ListenerSubscription>
-        val publisherToClose: PublisherStateImpl?
+        val publishersToClose: List<PublisherStateImpl>
         state.withLock {
             toClose = subscriptionsBySubscribeId.values.toList()
             subscriptionsBySubscribeId.clear()
-            publisherToClose = activePublisher
-            activePublisher = null
+            publishersToClose = activePublishers.toList()
+            activePublishers.clear()
         }
         for (sub in toClose) {
             runCatching { sub.bidi.finish() }
             sub.frames.close()
         }
-        runCatching { publisherToClose?.close() }
+        for (p in publishersToClose) {
+            runCatching { p.close() }
+        }
         groupPump?.cancelAndJoin()
         bidiPump?.cancelAndJoin()
         runCatching { transport.close() }
@@ -673,71 +1076,9 @@ class MoqLiteSession internal constructor(
         check(!closed) { "MoqLiteSession is closed" }
     }
 
-    /**
-     * Read a moq-lite-03 SubscribeResponse off the bidi response side.
-     * The wire format is `[type_varint][body_size_varint][body_bytes]`
-     * — type lives OUTSIDE the size prefix (see
-     * `rs/moq-lite/src/lite/subscribe.rs::SubscribeResponse::encode`).
-     *
-     * Walks chunks into [buffer] until both the type discriminator and
-     * the size-prefixed body have arrived, then returns the contiguous
-     * `type+size+body` byte slab so [MoqLiteCodec.decodeSubscribeResponse]
-     * can parse it self-contained.
-     *
-     * Throws [MoqLiteSubscribeException] if the bidi closes before a
-     * full message arrives — that's the relay rejecting the subscribe
-     * with FIN instead of a SubscribeDrop reply.
-     */
-    private suspend fun readSubscribeResponseFromBidi(
-        incoming: kotlinx.coroutines.flow.Flow<ByteArray>,
-        buffer: MoqLiteFrameBuffer,
-        id: Long,
-    ): ByteArray {
-        // Snapshot the buffer's pos before each varint so we can roll
-        // back if not enough bytes have arrived yet — without this, a
-        // partial varint advances `pos` and the next chunk's bytes
-        // can't reconstitute it.
-        var typeCode: Long? = null
-        var body: ByteArray? = null
-        try {
-            // Some bytes may already be buffered (extra arrived with a
-            // prior message); try first without waiting for new chunks.
-            typeCode = buffer.readVarint()
-            if (typeCode != null) body = buffer.readSizePrefixed()
-            if (body != null) throw EarlyExit
-            incoming.collect { chunk ->
-                buffer.push(chunk)
-                if (typeCode == null) typeCode = buffer.readVarint()
-                if (typeCode != null && body == null) body = buffer.readSizePrefixed()
-                if (body != null) throw EarlyExit
-            }
-        } catch (_: EarlyExit) {
-            // expected
-        } catch (ce: CancellationException) {
-            throw ce
-        }
-        if (typeCode == null) {
-            throw MoqLiteSubscribeException("subscribe stream FIN before reply for id=$id")
-        }
-        if (body == null) {
-            throw MoqLiteSubscribeException(
-                "subscribe stream FIN mid-body for id=$id (type=$typeCode)",
-            )
-        }
-        // Re-emit the contiguous `[type][size][body]` slab so
-        // [MoqLiteCodec.decodeSubscribeResponse] can parse it
-        // self-contained.
-        val out = MoqWriter()
-        out.writeVarint(typeCode!!)
-        out.writeVarint(body!!.size.toLong())
-        out.writeBytes(body!!)
-        return out.toByteArray()
-    }
-
     private class ListenerSubscription(
         val id: Long,
         val request: MoqLiteSubscribe,
-        val ok: MoqLiteSubscribeOk,
         val bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
         val frames: Channel<MoqLiteFrame>,
     )
@@ -745,21 +1086,70 @@ class MoqLiteSession internal constructor(
     /**
      * Publisher state. Tracks the announce bidis the relay opened to us
      * + the inbound subscriptions a relay (or peer) opened against our
-     * broadcast, and owns the current group's uni stream.
+     * broadcast for [track], and owns the current group's uni stream.
+     *
+     * Per moq-lite Lite-03 a publisher is responsible for one
+     * `(broadcast, track)` tuple — the relay multiplexes multiple
+     * tracks per broadcast by routing each inbound SUBSCRIBE to the
+     * publisher whose track field matches. Subs whose `sub.track`
+     * doesn't match this publisher's [track] are intentionally
+     * ignored so a listener subscribing to e.g. `catalog.json` while
+     * we're only publishing `audio/data` doesn't accidentally hijack
+     * the audio routing — see [registerInboundSubscription] for the
+     * filter and the bug history below.
+     *
+     * Bug history (`nestsClient/plans/2026-05-04-publisher-track-routing.md`):
+     * before this filter, [openNextGroupLocked] keyed each group
+     * stream off `inboundSubs.first()`. When a listener opened both a
+     * `catalog.json` subscribe and an `audio/data` subscribe, whichever
+     * arrived first won the routing race — and because the catalog
+     * SUBSCRIBE typically races ahead of the audio one by a few ms,
+     * every Opus frame ended up on the catalog stream. Listeners saw
+     * a perpetually-spinning speaker avatar with no audio.
      *
      * `gate` serialises access to per-group state so concurrent
      * `send` / `startGroup` / `endGroup` / `close` can't race.
      */
     private inner class PublisherStateImpl(
         override val suffix: String,
+        internal val track: String,
+        startSequence: Long,
     ) : MoqLitePublisherHandle {
         private val gate = Mutex()
         private val announceBidis = mutableListOf<AnnounceBidiEntry>()
         private val inboundSubs = mutableListOf<MoqLiteSubscribe>()
         private var currentGroup: GroupOutbound? = null
-        private var nextSequence: Long = 0L
+
+        // `@Volatile` so the hot-swap caller can read this from outside
+        // the publisher's gate (see [MoqLitePublisherHandle.nextSequence]
+        // kdoc). Mutation happens only inside [openNextGroupLocked]
+        // (which holds [gate]); the volatile guarantees a cross-thread
+        // read sees the latest write without contending the gate.
+        @Volatile
+        private var nextSequenceField: Long = startSequence
+
+        override val nextSequence: Long
+            get() = nextSequenceField
+
+        // Diagnostic: throttled counter for "send returned false" logs so a
+        // long no-subscriber window doesn't flood logcat at 50 Hz.
+        private val sendNoSubLogCount =
+            java.util.concurrent.atomic
+                .AtomicLong(0L)
 
         @Volatile private var publisherClosed = false
+
+        /**
+         * Caller-installed hook fired once per accepted inbound
+         * SUBSCRIBE — see [MoqLitePublisherHandle.setOnNewSubscriber].
+         * Read-and-fire happens OUTSIDE [gate] to avoid deadlocking on
+         * the hook's own calls to [send] / [endGroup].
+         */
+        @Volatile private var onNewSubscriberHook: (suspend () -> Unit)? = null
+
+        override fun setOnNewSubscriber(hook: (suspend () -> Unit)?) {
+            onNewSubscriberHook = hook
+        }
 
         suspend fun registerAnnounceBidi(
             bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
@@ -775,9 +1165,29 @@ class MoqLiteSession internal constructor(
         }
 
         suspend fun registerInboundSubscription(sub: MoqLiteSubscribe) {
+            // Capture the hook INSIDE the lock — guarantees the hook
+            // observes a fully-registered subscriber when it fires —
+            // but invoke it OUTSIDE so a hook that calls [send] /
+            // [endGroup] doesn't deadlock on the same gate.
+            var hookToFire: (suspend () -> Unit)? = null
             gate.withLock {
-                if (publisherClosed) return
+                if (publisherClosed) {
+                    Log.w("NestTx") { "SUBSCRIBE inbound rejected (publisher closed) id=${sub.id} track='${sub.track}'" }
+                    return
+                }
+                if (sub.track != track) {
+                    Log.w("NestTx") { "SUBSCRIBE inbound track mismatch id=${sub.id} sub.track='${sub.track}' publisher.track='$track' — ignored" }
+                    return
+                }
                 inboundSubs += sub
+                hookToFire = onNewSubscriberHook
+                Log.d("NestTx") { "SUBSCRIBE registered id=${sub.id} broadcast='${sub.broadcast}' track='${sub.track}' inboundSubs.size=${inboundSubs.size}" }
+            }
+            // Launch on the session's scope so the hook outlives the
+            // bidi pump's per-bidi coroutine if it's slow (e.g. a
+            // catalog send blocked on transport backpressure).
+            hookToFire?.let { hook ->
+                scope.launch { runCatching { hook.invoke() } }
             }
         }
 
@@ -794,6 +1204,7 @@ class MoqLiteSession internal constructor(
             gate.withLock {
                 if (publisherClosed) return
                 if (!inboundSubs.remove(sub)) return
+                Log.w("NestTx") { "SUBSCRIBE removed (peer FIN/error) id=${sub.id} track='${sub.track}' inboundSubs.size=${inboundSubs.size}" }
                 runCatching { currentGroup?.uni?.finish() }
                 currentGroup = null
             }
@@ -809,11 +1220,43 @@ class MoqLiteSession internal constructor(
 
         override suspend fun send(payload: ByteArray): Boolean {
             gate.withLock {
-                if (publisherClosed) return false
-                if (inboundSubs.isEmpty()) return false
+                if (publisherClosed) {
+                    if (sendNoSubLogCount.getAndIncrement() % SEND_LOG_THROTTLE == 0L) {
+                        Log.w("NestTx") { "send returning false — publisher closed (count=${sendNoSubLogCount.get()})" }
+                    }
+                    return false
+                }
+                if (inboundSubs.isEmpty()) {
+                    if (sendNoSubLogCount.getAndIncrement() % SEND_LOG_THROTTLE == 0L) {
+                        Log.w("NestTx") { "send returning false — no inboundSubs (count=${sendNoSubLogCount.get()}, payload=${payload.size}B)" }
+                    }
+                    return false
+                }
                 val group = currentGroup ?: openNextGroupLocked().also { currentGroup = it }
-                val framed = Varint.encode(payload.size.toLong()) + payload
-                runCatching { group.uni.write(framed) }
+                // Single-allocation framing: write the varint length
+                // directly into a buffer sized for `varint + payload`,
+                // then copy the payload after it. The previous shape
+                // (`Varint.encode(...) + payload`) allocated twice per
+                // Opus frame — once for the varint, once for the `+`
+                // concatenation — at 50 fps × N speakers that's measurable
+                // young-gen pressure on the audio hot path.
+                val payloadSize = payload.size
+                val varintLen = Varint.size(payloadSize.toLong())
+                val framed = ByteArray(varintLen + payloadSize)
+                Varint.writeTo(payloadSize.toLong(), framed, 0)
+                payload.copyInto(framed, varintLen)
+                val writeResult = runCatching { group.uni.write(framed) }
+                if (writeResult.isFailure) {
+                    // The uni stream errored (peer reset, transport closed,
+                    // FIN'd by removeInboundSubscription). Drop the dead
+                    // stream so the next send opens a fresh group instead of
+                    // re-trying on a corpse, and surface the failure to the
+                    // caller — the prior contract of "always true on
+                    // not-muted" silently masked publisher disconnects.
+                    runCatching { group.uni.finish() }
+                    currentGroup = null
+                    return false
+                }
             }
             return true
         }
@@ -856,7 +1299,7 @@ class MoqLiteSession internal constructor(
             runCatching { groupToFinish?.uni?.finish() }
             // Detach from the session so a subsequent `publish` can run.
             state.withLock {
-                if (activePublisher === this) activePublisher = null
+                activePublishers.remove(this@PublisherStateImpl)
             }
         }
 
@@ -870,8 +1313,18 @@ class MoqLiteSession internal constructor(
             // expected to be small (1 in nests's listener-per-room
             // model), so this is fine.
             val sub = inboundSubs.first()
-            val sequence = nextSequence++
-            val uni = openGroupStream(subscribeId = sub.id, sequence = sequence)
+            val sequence = nextSequenceField
+            nextSequenceField = sequence + 1L
+            val uni =
+                try {
+                    openGroupStream(subscribeId = sub.id, sequence = sequence)
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    Log.w("NestTx") { "openGroupStream threw subId=${sub.id} seq=$sequence: ${t::class.simpleName}: ${t.message}" }
+                    throw t
+                }
+            Log.d("NestTx") { "openGroupStream subId=${sub.id} seq=$sequence" }
             return GroupOutbound(sequence = sequence, uni = uni)
         }
     }
@@ -889,6 +1342,19 @@ class MoqLiteSession internal constructor(
     companion object {
         /** moq-lite priority byte midpoint — neutral default. */
         const val DEFAULT_PRIORITY: Int = 0x80
+
+        /**
+         * Bitrate hint (bits/sec) we report on inbound moq-lite Probe
+         * bidis as a publisher. Mirrors the upper-bound of an Opus
+         * voice profile at 48 kHz mono, ≈32 kbps. Subscriber-side ABR
+         * estimators use this to size their forward queue; we emit the
+         * single hint and FIN since our encoder runs at a fixed bitrate.
+         */
+        const val NESTS_AUDIO_BITRATE_HINT_BPS: Long = 32_000L
+
+        // Diagnostic: log "send returned false" once every N invocations.
+        // At 50 fps and N=50 → ≤ 1 log/sec for a sustained no-sub window.
+        private const val SEND_LOG_THROTTLE: Long = 50L
 
         /**
          * Per-subscription channel buffer for inbound frames. 128 audio
@@ -910,107 +1376,4 @@ class MoqLiteSession internal constructor(
             pumpScope: CoroutineScope,
         ): MoqLiteSession = MoqLiteSession(transport, pumpScope)
     }
-}
-
-/**
- * One frame received from a subscription. moq-lite's wire format
- * carries no per-frame envelope beyond the size; [groupSequence] is
- * pulled from the group header so consumers can detect group rollover
- * (e.g. for keyframe boundaries).
- */
-data class MoqLiteFrame(
-    val groupSequence: Long,
-    val payload: ByteArray,
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is MoqLiteFrame) return false
-        return groupSequence == other.groupSequence && payload.contentEquals(other.payload)
-    }
-
-    override fun hashCode(): Int = 31 * groupSequence.hashCode() + payload.contentHashCode()
-}
-
-/**
- * Active subscription handle returned by [MoqLiteSession.subscribe].
- * [frames] emits every frame the publisher pushes; [unsubscribe]
- * FINs the bidi to signal "no longer interested" (moq-lite has no
- * UNSUBSCRIBE message — FIN is the protocol).
- */
-class MoqLiteSubscribeHandle internal constructor(
-    val id: Long,
-    val ok: MoqLiteSubscribeOk,
-    val frames: Flow<MoqLiteFrame>,
-    private val unsubscribeAction: suspend () -> Unit,
-) {
-    suspend fun unsubscribe() = unsubscribeAction()
-}
-
-/**
- * Active announce-discovery handle returned by [MoqLiteSession.announce].
- * [updates] emits every [MoqLiteAnnounce] update the relay streams
- * back; [close] FINs the bidi to stop receiving updates.
- */
-class MoqLiteAnnouncesHandle internal constructor(
-    val updates: Flow<MoqLiteAnnounce>,
-    private val close: suspend () -> Unit,
-) {
-    suspend fun close() = close.invoke()
-}
-
-/** Thrown when subscribe is rejected (Drop) or the response stream dies. */
-class MoqLiteSubscribeException(
-    message: String,
-    cause: Throwable? = null,
-) : RuntimeException(message, cause)
-
-/**
- * Active publisher handle returned by [MoqLiteSession.publish].
- *
- * Lifecycle:
- *   1. Call [startGroup] (or [send] which auto-starts a fresh group on
- *      first call) to begin pushing frames for one Opus group.
- *   2. Call [send] for each frame (one Opus packet = one frame).
- *   3. Call [endGroup] to FIN the current group's uni stream and start
- *      a fresh group on the next [send]. Group rollover is the
- *      publisher's call — typically every N seconds or every keyframe.
- *   4. Call [close] when the broadcast ends — sends `Announce(Ended)`
- *      on every active announce bidi and FINs every group stream.
- */
-interface MoqLitePublisherHandle {
-    /**
-     * The broadcast suffix this publisher claimed at [MoqLiteSession.publish].
-     * Always normalised per [MoqLitePath].
-     */
-    val suffix: String
-
-    /**
-     * Start a new group. Allocates a fresh sequence id and opens a new
-     * uni stream pre-loaded with `DataType=Group + GroupHeader`. Idempotent
-     * — calling [startGroup] when the previous group hasn't been ended
-     * is treated as an implicit [endGroup] then a new start.
-     */
-    suspend fun startGroup()
-
-    /**
-     * Push one [payload] (one Opus packet) as a `varint(size) + payload`
-     * frame on the current group's uni stream. Auto-starts a group if
-     * none is active.
-     *
-     * Returns false if no inbound subscriber is currently attached.
-     * Subscriber-less sends silently drop on the wire — the relay keeps
-     * the publisher's announce active either way, so unmute is
-     * sample-accurate.
-     */
-    suspend fun send(payload: ByteArray): Boolean
-
-    /** FIN the current group's uni stream. The next [send] starts a fresh group. */
-    suspend fun endGroup()
-
-    /**
-     * Stop publishing. Sends `Announce(Ended)` on every active announce
-     * bidi, FINs the current group, and releases all per-publisher
-     * resources. Idempotent.
-     */
-    suspend fun close()
 }

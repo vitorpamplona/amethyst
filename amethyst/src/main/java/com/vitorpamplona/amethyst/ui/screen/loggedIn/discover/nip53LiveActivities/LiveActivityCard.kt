@@ -140,9 +140,9 @@ fun RenderLiveActivityThumb(
                     participants = noteEvent.participants().toImmutableList(),
                     status =
                         when (noteEvent.status()) {
-                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.OPEN -> StatusTag.STATUS.LIVE
+                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.LIVE -> StatusTag.STATUS.LIVE
                             com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.PRIVATE -> StatusTag.STATUS.PLANNED
-                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.CLOSED -> StatusTag.STATUS.ENDED
+                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.ENDED -> StatusTag.STATUS.ENDED
                             else -> null
                         },
                     starts = null,

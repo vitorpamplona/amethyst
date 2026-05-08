@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
@@ -94,7 +95,7 @@ class NostrNestsReconnectingListenerInteropTest {
                     roomId = "rec-${System.currentTimeMillis()}",
                 )
 
-            val httpClient = OkHttpNestsClient()
+            val httpClient = OkHttpNestsClient { OkHttpClient() }
             val transport =
                 QuicWebTransportFactory(
                     certificateValidator = PermissiveCertificateValidator(),
@@ -118,6 +119,7 @@ class NostrNestsReconnectingListenerInteropTest {
                             speakerPubkeyHex = pubkey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 InteropDebug.assertSpeakerReached(scope, "Connected", speaker.state.value)
@@ -213,7 +215,7 @@ class NostrNestsReconnectingListenerInteropTest {
                     roomId = "swap-${System.currentTimeMillis()}",
                 )
 
-            val httpClient = OkHttpNestsClient()
+            val httpClient = OkHttpNestsClient { OkHttpClient() }
             val transport =
                 QuicWebTransportFactory(
                     certificateValidator = PermissiveCertificateValidator(),
@@ -245,6 +247,7 @@ class NostrNestsReconnectingListenerInteropTest {
                             speakerPubkeyHex = pubkey,
                             captureFactory = { capture },
                             encoderFactory = { encoder },
+                            framesPerGroup = 1,
                         )
                     }
                 val broadcast = speaker.startBroadcasting()
@@ -450,7 +453,7 @@ class NostrNestsReconnectingListenerInteropTest {
                     roomId = "lst-pub-cycle-${System.currentTimeMillis()}",
                 )
 
-            val httpClient = OkHttpNestsClient()
+            val httpClient = OkHttpNestsClient { OkHttpClient() }
             val transport =
                 QuicWebTransportFactory(
                     certificateValidator = PermissiveCertificateValidator(),
@@ -495,6 +498,7 @@ class NostrNestsReconnectingListenerInteropTest {
                                     speakerPubkeyHex = pubkey,
                                     captureFactory = captureFactory,
                                     encoderFactory = { encoder },
+                                    framesPerGroup = 1,
                                 )
                             },
                         )

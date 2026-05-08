@@ -55,6 +55,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Drives [NestViewModel] with a fake [NestsListenerConnector] and
@@ -72,6 +73,16 @@ import kotlin.test.assertTrue
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NestViewModelTest {
+    // Tracks every VM created by `newViewModel` so each test can dispose them
+    // before runTest exits. `connect()` starts an infinite cliff-detector
+    // loop in viewModelScope; without an explicit teardown that loop spins
+    // forever under runTest's virtual scheduler and the test wedges until
+    // the real-time runTest deadline (60 s × N tests => :commons:jvmTest
+    // hangs). [runVmTest] wraps each test body with a finally that calls
+    // `disconnect()` (which cancels cliffDetectorJob via teardown()) so the
+    // scheduler can become idle and runTest can return.
+    private val createdVms = mutableListOf<NestViewModel>()
+
     @BeforeTest
     fun setupMainDispatcher() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -79,12 +90,34 @@ class NestViewModelTest {
 
     @AfterTest
     fun resetMainDispatcher() {
+        // Belt-and-braces: if a test crashes before its finally runs, this
+        // still tears down so the next test starts clean.
+        createdVms.forEach { runCatching { it.disconnect() } }
+        createdVms.clear()
         Dispatchers.resetMain()
     }
 
+    /**
+     * Test wrapper that guarantees every VM created via [newViewModel] is
+     * disconnected before [runTest] tries to drain the test scheduler. The
+     * 10-second [runTest] timeout is a safety net — a healthy test in this
+     * class finishes in milliseconds; if we trip the timeout it almost
+     * certainly means a new code path is leaving viewModelScope coroutines
+     * running and needs its own teardown call.
+     */
+    private fun runVmTest(body: suspend TestScope.() -> Unit) =
+        runTest(timeout = 10.seconds) {
+            try {
+                body()
+            } finally {
+                createdVms.forEach { runCatching { it.disconnect() } }
+                createdVms.clear()
+            }
+        }
+
     @Test
     fun connectShowsConnectingThenConnected() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             val vm = newViewModel { fakeListener }
 
@@ -103,7 +136,7 @@ class NestViewModelTest {
 
     @Test
     fun listenerFailedSurfacesAsUiFailed() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             val vm = newViewModel { fakeListener }
 
@@ -117,7 +150,7 @@ class NestViewModelTest {
 
     @Test
     fun connectorThrowsBecomesUiFailed() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { throw NestsException("dns blew up") }
 
             vm.connect()
@@ -129,7 +162,7 @@ class NestViewModelTest {
 
     @Test
     fun setMutedFlipsUiStateAndIsRetained() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { FakeNestsListener() }
 
             assertFalse(vm.uiState.value.isMuted)
@@ -141,7 +174,7 @@ class NestViewModelTest {
 
     @Test
     fun onStageNowDefaultsTrueAndSetOnStageFlipsIt() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { FakeNestsListener() }
 
             // Defaults to true so a freshly-joined speaker advertises
@@ -156,7 +189,7 @@ class NestViewModelTest {
 
     @Test
     fun onPresenceEventPopulatesPresencesMapAndDedupesByPubkey() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { FakeNestsListener() }
 
             val alice = "a".repeat(64)
@@ -187,7 +220,7 @@ class NestViewModelTest {
 
     @Test
     fun evictStalePresencesDropsOldPeers() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { FakeNestsListener() }
             val alice = "a".repeat(64)
             val bob = "b".repeat(64)
@@ -219,7 +252,7 @@ class NestViewModelTest {
 
     @Test
     fun onChatEventAccumulatesMessagesSortedByCreatedAt() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { FakeNestsListener() }
             val alice = "a".repeat(64)
 
@@ -255,7 +288,7 @@ class NestViewModelTest {
 
     @Test
     fun onChatEventDedupesByEventId() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { FakeNestsListener() }
             val alice = "a".repeat(64)
             val msg =
@@ -281,18 +314,24 @@ class NestViewModelTest {
 
     @Test
     fun onReactionEventGroupsByTargetAndEvictsOnTick() =
-        runTest {
+        runVmTest {
             val vm = newViewModel { FakeNestsListener() }
             val alice = "a".repeat(64)
             val bob = "b".repeat(64)
+
+            // Vary id per reaction so the dedup gate doesn't collapse
+            // distinct kind-7s; the relay-replay dedup case has its own
+            // assertion below.
+            var nextId = 1
 
             fun rxn(
                 from: String,
                 to: String,
                 content: String,
                 createdAt: Long,
+                id: String = "%064x".format(nextId++),
             ) = com.vitorpamplona.quartz.nip25Reactions.ReactionEvent(
-                id = "0".repeat(64),
+                id = id,
                 pubKey = from,
                 createdAt = createdAt,
                 tags = arrayOf(arrayOf("a", "30312:host:room"), arrayOf("p", to)),
@@ -305,14 +344,22 @@ class NestViewModelTest {
             vm.onReactionEvent(rxn(alice, bob, "👏", 105L), nowSec = 105L)
             assertEquals(2, vm.recentReactions.value[bob]!!.size)
 
-            // Tick advances past the window — both reactions evicted.
+            // LocalCache.observeEvents re-emits the full matching list
+            // on every cache mutation; the same kind-7 must collapse
+            // into one overlay entry instead of stacking on each replay.
+            val replayed = rxn(alice, bob, "🔥", 100L, id = "f".repeat(64))
+            vm.onReactionEvent(replayed, nowSec = 105L)
+            vm.onReactionEvent(replayed, nowSec = 105L)
+            assertEquals(3, vm.recentReactions.value[bob]!!.size)
+
+            // Tick advances past the window — all reactions evicted.
             vm.evictReactions(olderThanSec = 200L)
             assertEquals(emptyMap(), vm.recentReactions.value)
         }
 
     @Test
     fun onKickFlipsWasKickedAndDisconnects() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             val vm = newViewModel { fakeListener }
             vm.connect()
@@ -329,7 +376,7 @@ class NestViewModelTest {
 
     @Test
     fun onKickIsIdempotent() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             val vm = newViewModel { fakeListener }
             vm.connect()
@@ -363,7 +410,7 @@ class NestViewModelTest {
 
     @Test
     fun connectIsIdempotentWhileConnecting() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             var connectCalls = 0
             val vm =
@@ -381,7 +428,7 @@ class NestViewModelTest {
 
     @Test
     fun disconnectReturnsToIdleAndClosesListener() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             val vm = newViewModel { fakeListener }
 
@@ -397,7 +444,7 @@ class NestViewModelTest {
 
     @Test
     fun connectingStepMapsThroughToUiStep() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             val vm = newViewModel { fakeListener }
 
@@ -415,7 +462,7 @@ class NestViewModelTest {
 
     @Test
     fun speakingNowClearsOnTeardown() =
-        runTest {
+        runVmTest {
             val fakeListener = FakeNestsListener()
             val vm = newViewModel { fakeListener }
 
@@ -441,8 +488,8 @@ class NestViewModelTest {
         NestViewModel(
             httpClient = NoopNestsClient,
             transport = NoopWebTransportFactory,
-            decoderFactory = { NoopOpusDecoder },
-            playerFactory = { NoopAudioPlayer() },
+            decoderFactory = { _, _ -> NoopOpusDecoder },
+            playerFactory = { _, _ -> NoopAudioPlayer() },
             signer = NoopSigner,
             room = ROOM_CONFIG,
             connector =
@@ -452,7 +499,7 @@ class NestViewModelTest {
             // Wire to the test's backgroundScope so close calls run during
             // the test rather than escaping to the real GlobalScope.
             cleanupScope = backgroundScope,
-        )
+        ).also { createdVms.add(it) }
 
     private class FakeNestsListener : NestsListener {
         private val mutable = MutableStateFlow<NestsListenerState>(NestsListenerState.Idle)
@@ -464,7 +511,10 @@ class NestViewModelTest {
             mutable.value = s
         }
 
-        override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle = error("subscribeSpeaker not exercised in these tests — see NestPlayerTest in :nestsClient")
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle = error("subscribeSpeaker not exercised in these tests — see NestPlayerTest in :nestsClient")
 
         override suspend fun close() {
             closeCallCount++

@@ -29,6 +29,19 @@ data class Nip05Id(
 ) {
     fun toValue(): String = assemble(name, domain)
 
+    /**
+     * Renders the address for users to read. When [name] is `"_"`, NIP-05
+     * specifies the address should display as just the domain. Use this in UI;
+     * use [toValue] for network lookups and storage.
+     */
+    fun toDisplayValue(): String = if (name == "_") domain else assemble(name, domain)
+
+    /**
+     * False when [name] is the NIP-05 wildcard `"_"`; use to gate rendering of
+     * the local part when name and domain are shown as separate widgets.
+     */
+    fun hasLocalPart(): Boolean = name != "_"
+
     fun toUserUrl(): String = userUrl(name, domain)
 
     fun toDomainUrl(): String = domainUrl(domain)

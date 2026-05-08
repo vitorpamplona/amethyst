@@ -22,9 +22,10 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import kotlin.test.assertEquals
 
-suspend fun <T : Event> EventStore.assertQuery(
+suspend fun <T : Event> IEventStore.assertQuery(
     expected: T?,
     filter: Filter,
 ) {
@@ -40,7 +41,7 @@ suspend fun <T : Event> EventStore.assertQuery(
     }
 }
 
-suspend fun <T : Event> EventStore.assertQuery(
+suspend fun <T : Event> IEventStore.assertQuery(
     expected: List<T>,
     filter: Filter,
 ) {

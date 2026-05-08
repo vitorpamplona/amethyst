@@ -167,6 +167,41 @@ class NestsConnectTest {
         )
     }
 
+    @Test
+    fun parseEndpoint_handles_IPv6_authorities() {
+        // No port — naive `lastIndexOf(':')` would find a colon inside
+        // the address; the bracket-aware path keeps `[::1]` whole.
+        assertEquals(
+            "[::1]" to "/moq",
+            parseEndpoint("https://[::1]/moq"),
+        )
+        assertEquals(
+            "[2001:db8::1]:4443" to "/moq",
+            parseEndpoint("https://[2001:db8::1]:4443/moq"),
+        )
+        // Default-port stripping still applies on bracketed authorities.
+        assertEquals(
+            "[::1]" to "/",
+            parseEndpoint("https://[::1]:443/"),
+        )
+    }
+
+    @Test
+    fun buildRelayConnectTarget_percent_encodes_path_unsafe_chars() {
+        // A malicious or careless `d` tag containing `?`, `#`, ` ` etc.
+        // would otherwise truncate the URL path and shove the JWT into
+        // the wrong slot. Encoding keeps the namespace literal in path
+        // position; the relay URL-decodes before comparing to claim root.
+        val (authority, path) =
+            buildRelayConnectTarget(
+                endpoint = "https://relay.example.com/moq",
+                namespace = "nests/30312:0123:room?weird#frag",
+                token = "tok-abc",
+            )
+        assertEquals("relay.example.com", authority)
+        assertEquals("/nests/30312:0123:room%3Fweird%23frag?jwt=tok-abc", path)
+    }
+
     // ---------------------------------------------------------- fakes
 
     private class FakeNestsClient(

@@ -65,17 +65,37 @@ data class BlossomUri(
             append(sha256)
             append('.')
             append(extension)
-            val params =
-                buildList {
-                    servers.forEach { add("xs=${percentEncodeQueryValue(it)}") }
-                    authors.forEach { add("as=$it") }
-                    this@BlossomUri.size?.let { add("sz=$it") }
-                }
-            if (params.isNotEmpty()) {
-                append('?')
-                append(params.joinToString("&"))
-            }
+            appendQueryString()
         }
+
+    /**
+     * Builds an HTTP URL pointing at a local Blossom cache that proxies
+     * upstream using the same `xs`/`as`/`sz` hints as the canonical URI.
+     *
+     * @param base the cache base URL, e.g. `http://127.0.0.1:24242`.
+     */
+    fun toLocalCacheUrl(base: String): String =
+        buildString {
+            append(base.removeSuffix("/"))
+            append('/')
+            append(sha256)
+            append('.')
+            append(extension)
+            appendQueryString()
+        }
+
+    private fun StringBuilder.appendQueryString() {
+        val params =
+            buildList {
+                servers.forEach { add("xs=${percentEncodeQueryValue(it)}") }
+                authors.forEach { add("as=$it") }
+                this@BlossomUri.size?.let { add("sz=$it") }
+            }
+        if (params.isNotEmpty()) {
+            append('?')
+            append(params.joinToString("&"))
+        }
+    }
 
     companion object {
         private const val SCHEME = "blossom:"

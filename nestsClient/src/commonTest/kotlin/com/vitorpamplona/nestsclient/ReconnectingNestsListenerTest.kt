@@ -28,15 +28,19 @@ import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -104,7 +108,10 @@ class ReconnectingNestsListenerTest {
         val subscribeCount: Int get() = _subscribeCount.get()
         val unsubscribeCount: Int get() = _unsubscribeCount.get()
 
-        override suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle {
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle {
             val id = _subscribeCount.incrementAndGet().toLong()
             return SubscribeHandle(
                 subscribeId = id,
@@ -175,22 +182,70 @@ class ReconnectingNestsListenerTest {
 
                 val handle = reconnecting.subscribeSpeaker("speaker-pubkey")
 
+                // Signal when the consumer has actually subscribed to
+                // the outer frames flow. The wrapper's frames SharedFlow
+                // is replay=0, so an emit before the consumer registers
+                // its subscription is silently dropped — observed on
+                // macOS where the async coroutine isn't scheduled
+                // before the test thread races into the first emit.
+                val consumerSubscribed = CompletableDeferred<Unit>()
+
+                // Counter for frames the consumer has actually observed.
+                // Needed to break the FRAME1-delivery race: emit() into
+                // first.frames is non-suspending and just enqueues into
+                // the pump's slot. If we trigger a session swap before
+                // the pump's collect lambda runs (`frames.emit(it)` to
+                // the wrapper), collectLatest cancels iteration 1 mid-
+                // resume and FRAME1 is lost — consumer ends with 1/2
+                // frames and the async's withTimeout fires. The
+                // collector is single-coroutine so a plain StateFlow
+                // update is safe; the test thread reads it via .first.
+                val consumerProgress = MutableStateFlow(0)
+
+                // The wrapper backs handle.objects with a SharedFlow
+                // (frames.asSharedFlow); the cast lets us use
+                // SharedFlow.onSubscription, which fires AFTER the
+                // collector is registered (Flow.onStart fires before).
+                @Suppress("UNCHECKED_CAST")
+                val objectsAsShared = handle.objects as SharedFlow<MoqObject>
                 val collected =
                     scope.async {
                         withTimeout(5_000L) {
-                            handle.objects.take(2).toList()
+                            objectsAsShared
+                                .onSubscription { consumerSubscribed.complete(Unit) }
+                                .take(2)
+                                .onEach { consumerProgress.value += 1 }
+                                .toList()
                         }
                     }
 
-                // Wait for the pump to actually subscribe to the first
-                // session before we emit / fail. With Dispatchers.Default
-                // the pumpJob's collectLatest doesn't run synchronously
-                // off the launch site — yielding here lets it advance.
+                withTimeout(5_000L) { consumerSubscribed.await() }
+
+                // Wait for the pump to actually subscribe to first.frames
+                // before we emit upstream. first.subscribeCount is
+                // incremented inside opener(first) — BEFORE the pump
+                // reaches `handle.objects.collect` — so subscribeCount
+                // alone doesn't prove the pump is listening.
+                // subscriptionCount on first.frames flips to 1 only once
+                // the pump's collect actually registers.
                 withTimeout(5_000L) {
-                    while (first.subscribeCount == 0) kotlinx.coroutines.delay(5)
+                    first.frames.subscriptionCount.first { it > 0 }
                 }
 
                 first.frames.emit(frame(byteArrayOf(0x01)))
+
+                // Wait for FRAME1 to traverse pump → wrapper.frames →
+                // consumer collector. Without this sync the next
+                // `first.fail(...)` can race ahead and trigger
+                // collectLatest cancellation of pump-iteration-1 while
+                // FRAME1 is still queued in first.frames; the cancel
+                // interrupts the pump's resume before its lambda runs
+                // and FRAME1 never reaches the wrapper. Consumer then
+                // observes only FRAME2 (1 frame ≠ take(2)) and the
+                // async's withTimeout fires after 5 s.
+                withTimeout(5_000L) {
+                    consumerProgress.first { it >= 1 }
+                }
 
                 // Force a reconnect: fail the first listener, the
                 // orchestrator opens the next one.
@@ -198,11 +253,12 @@ class ReconnectingNestsListenerTest {
                 // Both ScriptedListeners report the same `room` and
                 // `negotiatedMoqVersion`, so we can't differentiate
                 // first.Connected from second.Connected via state alone.
-                // The actual postcondition we care about — the pump
-                // re-issued the subscription against the new session —
-                // is observable directly via second.subscribeCount.
+                // The pump re-issuing the subscription against the new
+                // session is observable via second.frames.subscriptionCount
+                // (same rationale as first.frames above — wait for the
+                // collect, not just the subscribeSpeaker call).
                 withTimeout(5_000L) {
-                    while (second.subscribeCount == 0) kotlinx.coroutines.delay(5)
+                    second.frames.subscriptionCount.first { it > 0 }
                 }
 
                 second.frames.emit(frame(byteArrayOf(0x02)))
@@ -251,11 +307,18 @@ class ReconnectingNestsListenerTest {
 
                 val handle = reconnecting.subscribeSpeaker("speaker-pubkey")
 
-                // Wait until the pump opened the underlying subscription —
-                // collectLatest schedules the inner block on a child of
-                // scope, so it runs after we yield.
+                // Wait until the pump opened the underlying subscription
+                // AND committed liveHandleRef. subscribeCount alone
+                // increments inside opener(first), which runs BEFORE
+                // the pump sets liveHandleRef + starts collecting from
+                // first.frames. If we unsubscribe while liveHandleRef
+                // is still null the inner unsubscribe never fires and
+                // the assertion below hangs/fails on macOS.
+                // first.frames.subscriptionCount flips to 1 only once
+                // the pump's collect actually registers, which is
+                // strictly after liveHandleRef.set(handle).
                 withTimeout(5_000L) {
-                    while (first.subscribeCount == 0) kotlinx.coroutines.yield()
+                    first.frames.subscriptionCount.first { it > 0 }
                 }
                 assertTrue(first.subscribeCount >= 1, "pump should have opened the underlying sub")
 

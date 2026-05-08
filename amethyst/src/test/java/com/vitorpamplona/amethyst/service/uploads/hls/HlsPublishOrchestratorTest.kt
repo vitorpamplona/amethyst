@@ -374,6 +374,64 @@ class HlsPublishOrchestratorTest {
     }
 
     @Test
+    fun posterUrlFromUploadPosterClosureLandsOnEveryImeta() {
+        val captured = mutableListOf<HlsVideoEventTemplate>()
+        val canned = CannedUploader()
+        val orchestrator =
+            HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
+                runUpload = fakeRunUpload(),
+                buildUploader = { canned },
+                uploadMaster = fakeUploadMaster(canned),
+                signAndPublish = { tpl ->
+                    captured += tpl
+                    "event-id"
+                },
+                uploadPoster = { _ -> "https://cdn.test/poster.jpg" },
+            )
+
+        runBlocking { orchestrator.publish(newRequest()) }
+
+        val template = (captured.single() as HlsVideoEventTemplate.Horizontal).template
+        val imetas = template.tags.filter { it.isNotEmpty() && it[0] == "imeta" }
+        assertTrue("expected at least one imeta", imetas.isNotEmpty())
+        imetas.forEach { imeta ->
+            val flat = imeta.joinToString("|")
+            assertTrue("imeta missing poster: $flat", flat.contains("image https://cdn.test/poster.jpg"))
+        }
+    }
+
+    @Test
+    fun posterFailureDoesNotAbortPublish() {
+        val captured = mutableListOf<HlsVideoEventTemplate>()
+        val canned = CannedUploader()
+        val orchestrator =
+            HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
+                runUpload = fakeRunUpload(),
+                buildUploader = { canned },
+                uploadMaster = fakeUploadMaster(canned),
+                signAndPublish = { tpl ->
+                    captured += tpl
+                    "event-id"
+                },
+                uploadPoster = { _ -> throw RuntimeException("decode failed") },
+            )
+
+        runBlocking { orchestrator.publish(newRequest()) }
+
+        // Publish still succeeded despite poster failure
+        assertTrue(orchestrator.state.value is HlsPublishState.Success)
+        // And the imetas have no `image ` property
+        val template = (captured.single() as HlsVideoEventTemplate.Horizontal).template
+        val imetas = template.tags.filter { it.isNotEmpty() && it[0] == "imeta" }
+        imetas.forEach { imeta ->
+            val flat = imeta.joinToString("|")
+            assertTrue("imeta unexpectedly carries image after poster failure: $flat", !flat.contains("image "))
+        }
+    }
+
+    @Test
     fun resetRestoresIdleState() {
         val orchestrator =
             HlsPublishOrchestrator(

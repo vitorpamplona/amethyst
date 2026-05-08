@@ -66,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
@@ -86,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
@@ -148,20 +150,26 @@ fun ZoomableContentView(
             sourceBounds = coordinates.boundsInWindow()
         }
 
+    val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
+
     when (content) {
         is MediaUrlImage -> {
             val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            val bridgedUrl =
+                remember(content.url, useLocalBlossomBridge) {
+                    content.toCoilModel(useLocalBlossomBridge)
+                }
             ContentWarningGate(
                 isSensitive = content.contentWarning != null,
                 reasons = setOfNotNull(content.contentWarning),
-                preloadUrls = listOf(content.url),
+                preloadUrls = listOf(bridgedUrl),
                 accountViewModel = accountViewModel,
                 modifier = mediaSizingModifier(ratio, contentScale),
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 if (content.isGif()) {
                     GifVideoView(
-                        videoUri = content.url,
+                        videoUri = bridgedUrl,
                         contentDescription = content.description,
                         dimensions = content.dim,
                         blurhash = content.blurhash,
@@ -187,6 +195,10 @@ fun ZoomableContentView(
 
         is MediaUrlVideo -> {
             val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            val bridgedUrl =
+                remember(content.url, useLocalBlossomBridge) {
+                    content.toCoilModel(useLocalBlossomBridge)
+                }
             ContentWarningGate(
                 isSensitive = content.contentWarning != null,
                 reasons = setOfNotNull(content.contentWarning),
@@ -200,7 +212,7 @@ fun ZoomableContentView(
                     contentAlignment = Alignment.Center,
                 ) {
                     VideoView(
-                        videoUri = content.url,
+                        videoUri = bridgedUrl,
                         mimeType = content.mimeType,
                         title = content.description,
                         artworkUri = content.artworkUri,
@@ -465,17 +477,22 @@ fun UrlImageView(
         }
 
     val context = LocalContext.current
+    val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
+    val bridgedUrl =
+        remember(content.url, useLocalBlossomBridge) {
+            content.toCoilModel(useLocalBlossomBridge)
+        }
     val imageModel =
         if (fullResolution) {
-            remember(content.url, context) {
+            remember(bridgedUrl, context) {
                 ImageRequest
                     .Builder(context)
-                    .data(content.url)
+                    .data(bridgedUrl)
                     .size(Size.ORIGINAL)
                     .build()
             }
         } else {
-            content.url
+            bridgedUrl
         }
 
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
@@ -914,6 +931,21 @@ fun ShareMediaAction(
                             onDismiss()
                         }
                     }
+                    if (content is MediaUrlPdf && videoUri != null && !videoUri.startsWith("file")) {
+                        val appContext = LocalContext.current.applicationContext
+                        M3ActionRow(icon = MaterialSymbols.Download, text = stringRes(R.string.download_to_phone)) {
+                            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                saveMediaToGallery(content, appContext, accountViewModel)
+                            }
+                            Toast
+                                .makeText(
+                                    appContext,
+                                    stringRes(appContext, R.string.media_download_has_started_toast),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            onDismiss()
+                        }
+                    }
                     postNostrUri?.let {
                         M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
                             scope.launch {
@@ -925,7 +957,11 @@ fun ShareMediaAction(
                             if (videoUri != null) {
                                 val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                                 if (n19 != null) {
-                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType)
+                                    // Forward the imeta poster so HLS gallery entries have a decodable
+                                    // still — the .m3u8 URL itself is a text manifest. Only
+                                    // MediaUrlVideo carries an artworkUri.
+                                    val posterUrl = (content as? MediaUrlVideo)?.artworkUri
+                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType, image = posterUrl)
                                     accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                                 }
                             }
@@ -1164,9 +1200,15 @@ private suspend fun shareLocalVideoFile(
 private fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
-    Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
-        val (hashBytes, _) = sha256StreamWithCount(snapshot.data.toFile().inputStream())
-        return hashBytes.toHexKey() == content.hash
+    val keys = mutableListOf(content.url)
+    val bridged = content.toCoilModel(true)
+    if (bridged != content.url) keys.add(bridged)
+
+    for (key in keys) {
+        Amethyst.instance.diskCache.openSnapshot(key)?.use { snapshot ->
+            val (hashBytes, _) = sha256StreamWithCount(snapshot.data.toFile().inputStream())
+            return hashBytes.toHexKey() == content.hash
+        }
     }
 
     return null

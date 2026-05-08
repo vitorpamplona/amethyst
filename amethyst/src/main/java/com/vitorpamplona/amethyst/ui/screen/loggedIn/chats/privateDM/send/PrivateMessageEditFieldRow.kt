@@ -126,7 +126,7 @@ fun PrivateMessageEditFieldRow(
     }
 
     channelScreenModel.uploadState?.let { uploading ->
-        uploading.multiOrchestrator?.let { selectedFiles ->
+        uploading.multiOrchestrator?.let { _ ->
             RoomChatFileUploadDialog(
                 channelScreenModel = channelScreenModel,
                 state = uploading,

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasourc
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -38,5 +38,5 @@ fun FollowPackFeedFilterAssemblerSubscription(
             FollowPackFeedQueryState(pack, accountViewModel.account)
         }
 
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().followPacks)
+    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().followPacks)
 }

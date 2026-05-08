@@ -126,7 +126,19 @@ class MoqReader(
 }
 
 /** Thrown when an encoded MoQ frame is malformed or truncated. */
-class MoqCodecException(
+open class MoqCodecException(
     message: String,
     cause: Throwable? = null,
 ) : RuntimeException(message, cause)
+
+/**
+ * Thrown when a MoQ control frame uses a type code we don't recognise but
+ * is otherwise well-framed (length-prefixed, fully buffered). Carries the
+ * full frame size so the caller's pump can skip just this message and
+ * keep parsing the next one — versus a generic [MoqCodecException] which
+ * means "this byte stream is corrupted, drop everything".
+ */
+class MoqUnknownTypeException(
+    val typeCode: Long,
+    val bytesConsumed: Int,
+) : MoqCodecException("unknown MoQ message type: 0x${typeCode.toString(16)}")

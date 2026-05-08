@@ -103,10 +103,10 @@ fun AllMediaBody(blossomServersViewModel: BlossomServersViewModel) {
             }
             itemsIndexed(
                 it,
-                key = { index: Int, server: ServerName ->
+                key = { _: Int, server: ServerName ->
                     "Proposed" + server.baseUrl
                 },
-            ) { index, server ->
+            ) { _, server ->
                 MediaServerEntry(
                     serverEntry = server,
                     isAmethystDefault = true,
@@ -143,10 +143,10 @@ fun LazyListScope.renderMediaServerList(
     } else {
         itemsIndexed(
             mediaServersState,
-            key = { index: Int, server: ServerName ->
+            key = { _: Int, server: ServerName ->
                 keyType + server.baseUrl
             },
-        ) { index, entry ->
+        ) { _, entry ->
             MediaServerEntry(
                 serverEntry = entry,
                 onAddOrDelete = {

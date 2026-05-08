@@ -153,9 +153,16 @@ object MoqLiteCodec {
         typeCode: Long,
         body: MoqWriter,
     ): ByteArray {
-        val out = MoqWriter()
+        // Inline the size-prefix wrap so we don't allocate body→ByteArray
+        // and a separate wrapper buffer just to copy them into `out`. The
+        // earlier shape (`out.writeBytes(wrapSizePrefixed(body))`) made
+        // three ByteArrays per response — varintless small frames don't
+        // matter, but this is on the publisher's reply path and the
+        // pattern is cheap to fix.
+        val payload = body.toByteArray()
+        val out = MoqWriter(payload.size + 16)
         out.writeVarint(typeCode)
-        out.writeBytes(wrapSizePrefixed(body))
+        out.writeLengthPrefixedBytes(payload)
         return out.toByteArray()
     }
 
@@ -242,6 +249,20 @@ object MoqLiteCodec {
         val bitrate = r.readVarint()
         ensureFullyConsumed(r, "Probe")
         return MoqLiteProbe(bitrate = bitrate)
+    }
+
+    /**
+     * Encode a single Lite-03 Probe message body
+     * (`lite/probe.rs` — `bitrate: u62` only; `rtt` is Lite-04+).
+     * The publisher writes these size-prefixed onto a Probe bidi the
+     * subscriber opened, advertising the publisher's expected
+     * bandwidth. Wrapping (size prefix) is the caller's responsibility,
+     * matching [encodeAnnouncePlease] / [encodeAnnounce].
+     */
+    fun encodeProbe(probe: MoqLiteProbe): ByteArray {
+        val body = MoqWriter()
+        body.writeVarint(probe.bitrate)
+        return wrapSizePrefixed(body)
     }
 
     // ---------------- internals ----------------

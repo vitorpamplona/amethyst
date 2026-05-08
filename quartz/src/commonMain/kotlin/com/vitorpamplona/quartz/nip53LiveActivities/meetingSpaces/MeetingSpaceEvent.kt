@@ -65,7 +65,7 @@ class MeetingSpaceEvent(
 
     fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parseEnum))
 
-    fun isLive() = status() != StatusTag.STATUS.CLOSED
+    fun isLive() = status() != StatusTag.STATUS.ENDED
 
     fun service() = tags.firstNotNullOfOrNull(ServiceUrlTag::parse)
 
@@ -119,8 +119,8 @@ class MeetingSpaceEvent(
     fun participants() = tags.mapNotNull(ParticipantTag::parse)
 
     fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
-        if (eventStatus != StatusTag.STATUS.CLOSED && createdAt < TimeUtils.eightHoursAgo()) {
-            StatusTag.STATUS.CLOSED
+        if (eventStatus != StatusTag.STATUS.ENDED && createdAt < TimeUtils.eightHoursAgo()) {
+            StatusTag.STATUS.ENDED
         } else {
             eventStatus
         }

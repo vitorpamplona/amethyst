@@ -44,6 +44,7 @@ import java.net.Proxy
 class MediaCallEventListener(
     private val dispatcher: Dispatcher,
     private val connectionPool: ConnectionPool,
+    private val dns: SurgeDns,
 ) : EventListener() {
     private var callStartNanos = 0L
     private var dnsStartNanos = 0L
@@ -122,6 +123,16 @@ class MediaCallEventListener(
         call: Call,
         error: IOException?,
     ) {
+        val host = call.request().url.host
+
+        // The whole call failed (after OkHttp exhausted every address from the DNS lookup).
+        // Drop the cached entry so the next attempt re-resolves instead of trying the same
+        // dead IPs for up to 24h. Per-attempt connectFailed isn't enough — a multi-A-record
+        // host can have one bad IP and OkHttp will recover by trying the next one.
+        if (error != null) {
+            dns.invalidate(host)
+        }
+
         val totalMs = (System.nanoTime() - callStartNanos) / 1_000_000
         val isSlow = totalMs >= SLOW_CALL_THRESHOLD_MS
         val wasQueued = queuedAtStart > 0
@@ -129,7 +140,6 @@ class MediaCallEventListener(
         if (error == null && !isSlow && !wasQueued && !isDebug) return
 
         val ttfbMs = if (responseHeadersNanos > 0) (responseHeadersNanos - callStartNanos) / 1_000_000 else -1L
-        val host = call.request().url.host
         val reuseTag = if (connectionReused) "reused" else "new"
 
         val msg =
@@ -169,6 +179,7 @@ class MediaCallEventListener(
 class MediaCallEventListenerFactory(
     private val dispatcher: Dispatcher,
     private val connectionPool: ConnectionPool,
+    private val dns: SurgeDns,
 ) : EventListener.Factory {
-    override fun create(call: Call): EventListener = MediaCallEventListener(dispatcher, connectionPool)
+    override fun create(call: Call): EventListener = MediaCallEventListener(dispatcher, connectionPool, dns)
 }

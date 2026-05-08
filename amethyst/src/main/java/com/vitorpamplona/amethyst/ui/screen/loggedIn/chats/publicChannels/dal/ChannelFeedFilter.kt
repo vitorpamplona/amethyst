@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 
 class ChannelFeedFilter(
     val channel: Channel,
@@ -38,25 +37,12 @@ class ChannelFeedFilter(
     override fun changesFlow() = channel.changesFlow()
 
     // returns the last Note of each user.
-    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { key, it -> isChatEvent(it) && account.isAcceptable(it) })
+    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { _, it -> account.isAcceptable(it) })
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> =
         newItems
-            .filter { channel.notes.containsKey(it.idHex) && isChatEvent(it) && account.isAcceptable(it) }
+            .filter { channel.notes.containsKey(it.idHex) && account.isAcceptable(it) }
             .toSet()
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
-
-    /**
-     * Reject non-chat events that get attached to a [Channel] for other
-     * surfaces. The current case: kind-10312
-     * [MeetingRoomPresenceEvent]s land in `channel.notes` so the home
-     * live-bubble can detect a follow broadcasting in a Nest
-     * (HomeLiveFilter scans channel.notes); they have no chat content
-     * and would otherwise render as an empty card in the chat panel.
-     *
-     * Anything else is passed through — chat messages, zaps, raids,
-     * clips, channel-create / metadata events all belong here.
-     */
-    private fun isChatEvent(note: Note): Boolean = note.event !is MeetingRoomPresenceEvent
 }

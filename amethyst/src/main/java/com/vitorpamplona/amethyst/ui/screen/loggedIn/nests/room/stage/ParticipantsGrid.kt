@@ -57,7 +57,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -93,6 +95,16 @@ private val MAX_RING_WIDTH = 7.dp
 // fades to 0 when not speaking.
 private val MAX_GLOW_RADIUS = 12.dp
 
+// Detached green ring drawn around a speaking avatar with a clear
+// gap to the profile picture, so the "is talking" signal reads from
+// across the room without overpowering the face. Only rendered while
+// `isSpeaking` is true; pulses with the live audio level. Drawn via
+// drawBehind to avoid affecting layout bounds — the gap + ring fit
+// inside the GRID_SPACING between cells.
+private val OUTER_RING_GAP = 5.dp
+private val OUTER_RING_WIDTH = 2.5.dp
+private val OUTER_RING_MAX_WIDTH = 4.dp
+
 // Cap badge sizes so they stay legible without dominating the avatar
 // at 100.dp. The 0.42 ratio was tuned for ~48.dp avatars (giving
 // ~20.dp badges); without a cap, scaling to 100.dp produces 42.dp
@@ -126,6 +138,10 @@ private val STAGE_MAX_HEIGHT = 320.dp
  *
  * When [members] is empty, renders an "Waiting for speakers…" hint
  * instead so the strip stays visually anchored.
+ *
+ * [bottomBar] is rendered inside the same Surface, below the grid —
+ * used to anchor speaker controls to the stage card so they only
+ * appear when the local user is on stage.
  */
 @Composable
 internal fun StageGrid(
@@ -140,6 +156,7 @@ internal fun StageGrid(
     myPubkey: String? = null,
     onTapSelf: (() -> Unit)? = null,
     listenerCount: Int = 0,
+    bottomBar: (@Composable () -> Unit)? = null,
 ) {
     // Float currently-speaking members to the top so the listener can
     // see who they're hearing without scrolling. sortedBy is stable in
@@ -193,32 +210,33 @@ internal fun StageGrid(
             }
             if (members.isEmpty()) {
                 EmptyStageHint()
-                return@Column
-            }
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(STAGE_CELL_MIN),
-                modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),
-                horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
-                verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
-            ) {
-                items(items = sortedMembers, key = { it.pubkey }) { member ->
-                    val isSelf = myPubkey != null && member.pubkey == myPubkey
-                    MemberCell(
-                        member = member,
-                        avatarSize = STAGE_AVATAR,
-                        isSpeaking = member.pubkey in speakingNow,
-                        audioLevel = audioLevels[member.pubkey] ?: 0f,
-                        isConnecting = member.pubkey in connectingSpeakers,
-                        showMicBadge = true,
-                        reactions = reactionsByPubkey[member.pubkey].orEmpty(),
-                        accountViewModel = accountViewModel,
-                        onLongPressParticipant = onLongPressParticipant,
-                        isSelf = isSelf,
-                        onTapSelf = if (isSelf) onTapSelf else null,
-                        modifier = Modifier.animateItem(),
-                    )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(STAGE_CELL_MIN),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = STAGE_MAX_HEIGHT),
+                    horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
+                    verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
+                ) {
+                    items(items = sortedMembers, key = { it.pubkey }) { member ->
+                        val isSelf = myPubkey != null && member.pubkey == myPubkey
+                        MemberCell(
+                            member = member,
+                            avatarSize = STAGE_AVATAR,
+                            isSpeaking = member.pubkey in speakingNow,
+                            audioLevel = audioLevels[member.pubkey] ?: 0f,
+                            isConnecting = member.pubkey in connectingSpeakers,
+                            showMicBadge = true,
+                            reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                            accountViewModel = accountViewModel,
+                            onLongPressParticipant = onLongPressParticipant,
+                            isSelf = isSelf,
+                            onTapSelf = if (isSelf) onTapSelf else null,
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
                 }
             }
+            bottomBar?.invoke()
         }
     }
 }
@@ -281,6 +299,7 @@ internal fun AudienceGrid(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     onLongPressParticipant: ((String) -> Unit)? = null,
+    onTapParticipant: ((String) -> Unit)? = null,
     myPubkey: String? = null,
 ) {
     if (members.isEmpty()) {
@@ -323,6 +342,7 @@ internal fun AudienceGrid(
                 reactions = emptyList(),
                 accountViewModel = accountViewModel,
                 onLongPressParticipant = onLongPressParticipant,
+                onTapParticipant = onTapParticipant,
                 isSelf = myPubkey != null && member.pubkey == myPubkey,
                 modifier = Modifier.animateItem(),
             )
@@ -343,6 +363,7 @@ private fun MemberCell(
     onLongPressParticipant: ((String) -> Unit)?,
     isSelf: Boolean = false,
     onTapSelf: (() -> Unit)? = null,
+    onTapParticipant: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val mutedRingColor = MaterialTheme.colorScheme.error
@@ -355,10 +376,15 @@ private fun MemberCell(
     // Both color and width crossfade so going idle → speaking → idle
     // doesn't snap; the color animates from Transparent through the
     // speaking green and the width tracks the live peak amplitude.
+    // A speaker on stage with mic-mute on emits kind-10312 with
+    // `publishing=0, muted=1` (deployed nostrnests semantics — see
+    // EGG-04 / NestRoomPresencePublisher), so the muted ring must NOT
+    // gate on `publishing`; muting would otherwise hide the very
+    // indicator it was supposed to surface.
     val targetRingColor =
         when {
             isSpeaking -> NEST_SPEAKING_COLOR
-            showMicBadge && member.publishing && member.muted == true -> mutedRingColor
+            showMicBadge && member.muted == true -> mutedRingColor
             else -> Color.Transparent
         }
     val targetRingWidth =
@@ -378,17 +404,35 @@ private fun MemberCell(
         targetValue = if (isSpeaking) (clampedLevel * 0.45f) else 0f,
         label = "speaker-ring-glow-alpha",
     )
+    // Detached outer ring: stays at full opacity while speaking so the
+    // signal is unmistakable, fades out when speech stops. Stroke width
+    // tracks audio level for an extra liveness cue on top of the inner
+    // border ring.
+    val animatedOuterRingAlpha by animateFloatAsState(
+        targetValue = if (isSpeaking) 1f else 0f,
+        label = "speaker-outer-ring-alpha",
+    )
+    val animatedOuterRingWidth by animateDpAsState(
+        targetValue =
+            if (isSpeaking) {
+                OUTER_RING_WIDTH + (clampedLevel * (OUTER_RING_MAX_WIDTH - OUTER_RING_WIDTH).value).dp
+            } else {
+                0.dp
+            },
+        label = "speaker-outer-ring-width",
+    )
+    // Reserve enough space around the avatar Box to fit the outer ring
+    // and glow halo. Without this padding the rings clip against the
+    // surrounding Surface / LazyVerticalGrid bounds (most visibly at
+    // the top edge for the first row, where the stage card's rounded
+    // corner cuts into the glow). The glow extends up to MAX_GLOW_RADIUS
+    // past the avatar; the outer ring extends OUTER_RING_GAP +
+    // OUTER_RING_MAX_WIDTH past it.
+    val ringPadding =
+        maxOf(MAX_GLOW_RADIUS.value, (OUTER_RING_GAP + OUTER_RING_MAX_WIDTH).value).dp
     val avatarModifier =
         Modifier
-            .drawBehind {
-                if (animatedGlowAlpha <= 0.001f) return@drawBehind
-                val baseRadius = size.minDimension / 2f
-                val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
-                drawCircle(
-                    color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
-                    radius = baseRadius + extra,
-                )
-            }.border(animatedRingWidth, animatedRingColor, CircleShape)
+            .border(animatedRingWidth, animatedRingColor, CircleShape)
             .let { if (member.absent) it.alpha(0.5f) else it }
     val user =
         remember(member.pubkey) {
@@ -403,66 +447,77 @@ private fun MemberCell(
             onLongPressParticipant?.let { cb -> { hex: String -> cb(hex) } }
         }
     // Self-cell tap shortcut: tap your own avatar to toggle mic-mute
-    // when broadcasting. For other cells we leave tap unhandled so
-    // the existing nav-to-profile path stays consistent (and there's
-    // nothing visually different from a non-clickable avatar).
+    // when broadcasting. For non-self cells, [onTapParticipant] (if
+    // provided) routes the tap to the per-participant context sheet —
+    // used by the audience grid so a host can promote an audience
+    // member to the stage with a single tap, matching the existing
+    // long-press affordance.
     val onClick =
-        if (isSelf && onTapSelf != null) {
-            remember(onTapSelf) { { _: String -> onTapSelf() } }
-        } else {
-            null
+        when {
+            isSelf && onTapSelf != null -> {
+                remember(onTapSelf) { { _: String -> onTapSelf() } }
+            }
+
+            !isSelf && onTapParticipant != null -> {
+                remember(member.pubkey, onTapParticipant) { { hex: String -> onTapParticipant(hex) } }
+            }
+
+            else -> {
+                null
+            }
         }
     val selfTint = if (isSelf) MaterialTheme.colorScheme.primary else Color.Unspecified
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            ClickableUserPicture(
-                baseUserHex = member.pubkey,
-                size = avatarSize,
-                accountViewModel = accountViewModel,
-                modifier = avatarModifier,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            )
-            if (isConnecting) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(avatarSize - 8.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            val role = member.role
-            if (role == ROLE.HOST || role == ROLE.MODERATOR) {
-                RoleBadge(
-                    role = role,
-                    modifier = Modifier.align(Alignment.TopStart),
-                )
-            }
-            if (member.handRaised) {
-                HandRaiseBadge(
-                    modifier = Modifier.align(Alignment.TopEnd),
-                )
-            }
-            if (showMicBadge && member.publishing) {
-                MicStateBadge(
+        // Outer Box paints the glow halo + detached outer ring on a
+        // canvas that's bigger than the avatar by [ringPadding]. The
+        // inner Box keeps its tight-to-avatar bounds so badge corner
+        // alignment (TopStart, TopEnd, BottomCenter, BottomEnd) still
+        // tracks the avatar circle, not the padded outer area.
+        Box(
+            modifier =
+                Modifier.drawBehind {
+                    val avatarRadiusPx = avatarSize.toPx() / 2f
+                    val cx = size.width / 2f
+                    val cy = size.height / 2f
+                    if (animatedGlowAlpha > 0.001f) {
+                        val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
+                        drawCircle(
+                            color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
+                            radius = avatarRadiusPx + extra,
+                            center = Offset(cx, cy),
+                        )
+                    }
+                    if (animatedOuterRingAlpha > 0.001f && animatedOuterRingWidth > 0.dp) {
+                        val strokePx = animatedOuterRingWidth.toPx()
+                        val ringRadius = avatarRadiusPx + OUTER_RING_GAP.toPx() + strokePx / 2f
+                        drawCircle(
+                            color = NEST_SPEAKING_COLOR.copy(alpha = animatedOuterRingAlpha),
+                            radius = ringRadius,
+                            center = Offset(cx, cy),
+                            style = Stroke(width = strokePx),
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier.padding(ringPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                AvatarAndBadges(
+                    member = member,
+                    avatarSize = avatarSize,
+                    accountViewModel = accountViewModel,
+                    avatarModifier = avatarModifier,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    isConnecting = isConnecting,
+                    showMicBadge = showMicBadge,
                     isSpeaking = isSpeaking,
-                    isMuted = member.muted == true,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
-            // Reactions float over the avatar's bottom-right corner so
-            // a 👏 burst no longer pushes the username down and reflows
-            // neighbouring cells. The mic badge sits at BottomCenter,
-            // so BottomEnd + a small outward offset keeps them clear.
-            if (reactions.isNotEmpty()) {
-                SpeakerReactionOverlay(
                     reactions = reactions,
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset(x = 6.dp, y = 6.dp),
                 )
             }
         }
@@ -473,6 +528,76 @@ private fun MemberCell(
             textAlign = TextAlign.Center,
             accountViewModel = accountViewModel,
         )
+    }
+}
+
+@Composable
+private fun AvatarAndBadges(
+    member: RoomMember,
+    avatarSize: Dp,
+    accountViewModel: AccountViewModel,
+    avatarModifier: Modifier,
+    onClick: ((String) -> Unit)?,
+    onLongClick: ((String) -> Unit)?,
+    isConnecting: Boolean,
+    showMicBadge: Boolean,
+    isSpeaking: Boolean,
+    reactions: List<RoomReaction>,
+) {
+    Box(contentAlignment = Alignment.Center) {
+        ClickableUserPicture(
+            baseUserHex = member.pubkey,
+            size = avatarSize,
+            accountViewModel = accountViewModel,
+            modifier = avatarModifier,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+        if (isConnecting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(avatarSize - 8.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        val role = member.role
+        if (role == ROLE.HOST || role == ROLE.MODERATOR) {
+            RoleBadge(
+                role = role,
+                modifier = Modifier.align(Alignment.TopStart),
+            )
+        }
+        if (member.handRaised) {
+            HandRaiseBadge(
+                modifier = Modifier.align(Alignment.TopEnd),
+            )
+        }
+        // Show the mic badge for any on-stage speaker that has
+        // an audio state to surface — currently broadcasting
+        // (`publishing=1`) OR mic-muted (`muted=1, publishing=0`).
+        // Gating only on `publishing` would hide the muted icon
+        // the moment the user mutes, which is exactly when it's
+        // supposed to appear.
+        if (showMicBadge && (member.publishing || member.muted == true)) {
+            MicStateBadge(
+                isSpeaking = isSpeaking,
+                isMuted = member.muted == true,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+        // Reactions float over the avatar's bottom-right corner so
+        // a 👏 burst no longer pushes the username down and reflows
+        // neighbouring cells. The mic badge sits at BottomCenter,
+        // so BottomEnd + a small outward offset keeps them clear.
+        if (reactions.isNotEmpty()) {
+            SpeakerReactionOverlay(
+                reactions = reactions,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 6.dp, y = 6.dp),
+            )
+        }
     }
 }
 

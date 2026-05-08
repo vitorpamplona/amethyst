@@ -22,8 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -37,7 +38,6 @@ import com.google.accompanist.adaptive.TwoPane
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -73,8 +73,8 @@ fun MessagesTwoPane(
     val act = LocalContext.current.getActivity()
     val displayFeatures = calculateDisplayFeatures(act)
 
-    DisappearingScaffold(
-        isInvertedLayout = false,
+    Scaffold(
+        modifier = Modifier.imePadding(),
         topBar = {
             UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
         },
@@ -88,11 +88,10 @@ fun MessagesTwoPane(
                 }
             }
         },
-        accountViewModel = accountViewModel,
     ) { padding ->
         TwoPane(
             first = {
-                Box(Modifier.fillMaxSize().systemBarsPadding(), contentAlignment = Alignment.BottomEnd) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
                     ChatroomList(
                         knownFeedContentState,
                         newFeedContentState,
@@ -106,7 +105,7 @@ fun MessagesTwoPane(
                 }
             },
             second = {
-                Box(Modifier.fillMaxSize().systemBarsPadding()) {
+                Box(Modifier.fillMaxSize().padding(padding)) {
                     twoPaneNav.innerNav.value?.let {
                         if (it is Route.Room) {
                             ChatroomView(

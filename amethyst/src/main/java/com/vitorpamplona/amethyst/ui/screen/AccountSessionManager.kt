@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.Account
@@ -29,14 +30,14 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -140,8 +141,11 @@ class AccountSessionManager(
                     externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
                 )
             } else if (key.startsWith("nsec")) {
+                val privHex =
+                    decodePrivateKeyAsHexOrNull(key)
+                        ?: throw Exception("Invalid nsec key")
                 AccountSettings(
-                    keyPair = KeyPair(privKey = key.bechToBytes()),
+                    keyPair = KeyPair(privKey = privHex.hexToByteArray()),
                     transientAccount = transientAccount,
                 )
             } else if (key.contains(" ") && Nip06().isValidMnemonic(key)) {
@@ -331,6 +335,12 @@ class AccountSessionManager(
         accountInfo: AccountInfo,
         routeBuilder: ((account: Account) -> Route?)? = null,
     ) {
+        // The Nest audio-room activity reads the active AccountViewModel
+        // through a process-singleton bridge. Drop the previous user's
+        // ref before swapping so a stale ref can't survive into the new
+        // session — see [NestBridge].
+        com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
+            .clear()
         localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(routeBuilder)
     }
@@ -350,15 +360,27 @@ class AccountSessionManager(
 
     fun logOff(accountInfo: AccountInfo) {
         scope.launch(Dispatchers.IO) {
+            val hex = decodePublicKeyAsHexOrNull(accountInfo.npub)
+            if (hex == null) {
+                Log.e("Logoff", "Cannot decode npub for account being logged off; aborting cleanup")
+                return@launch
+            }
             if (accountInfo.npub == currentAccountNPub()) {
+                // Drop the Nest bridge ref before tearing down the
+                // current account so the audio-room activity can't
+                // pick up a stale AccountViewModel — see [NestBridge].
+                com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
+                    .clear()
                 // log off and relogin with the 0 account
                 localPreferences.deleteAccount(accountInfo)
-                accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
+                accountsCache.removeAccount(hex)
+                Amethyst.instance.scheduledPostStore.removeForAccount(hex)
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
                 localPreferences.deleteAccount(accountInfo)
-                accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
+                accountsCache.removeAccount(hex)
+                Amethyst.instance.scheduledPostStore.removeForAccount(hex)
             }
         }
     }

@@ -44,6 +44,8 @@ import java.time.format.DateTimeFormatter
  *   - paints the result with ANSI colour when stdout is a TTY (disabled
  *     by `NO_COLOR`, forced on by `CLICOLOR_FORCE`).
  */
+private const val EMPTY_LABEL = "(empty)"
+
 object Output {
     enum class Mode { TEXT, JSON }
 
@@ -137,7 +139,7 @@ object Output {
                             .append(coloredKey)
                             .append(":")
                             .append(padding)
-                        out.append(' ').append(color.dim("(empty)")).append('\n')
+                        out.append(' ').append(color.dim(EMPTY_LABEL)).append('\n')
                     } else {
                         out.append(prefix).append(coloredKey).append(":\n")
                         renderMapBody(out, v, "$prefix  ", color)
@@ -190,7 +192,7 @@ object Output {
                             .append(prefix)
                             .append(dash)
                             .append(' ')
-                            .append(color.dim("(empty)"))
+                            .append(color.dim(EMPTY_LABEL))
                             .append('\n')
                         continue
                     }
@@ -224,7 +226,7 @@ object Output {
                                             .append(':')
                                             .append(rPad)
                                             .append(' ')
-                                            .append(color.dim("(empty)"))
+                                            .append(color.dim(EMPTY_LABEL))
                                             .append('\n')
                                     } else {
                                         out.append("$prefix  ").append(color.bold(rKey)).append(":\n")

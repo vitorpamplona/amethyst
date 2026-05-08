@@ -130,8 +130,8 @@ fun CashuPreviewPreview() {
     ThemeComparisonColumn {
         CashuPreviewNew(
             token = CashuToken("token", "mint", 32400, listOf()),
-            melt = { token, context, onDone -> },
-            toast = { title, message -> },
+            melt = { _, _, _ -> },
+            toast = { _, _ -> },
         )
     }
 }

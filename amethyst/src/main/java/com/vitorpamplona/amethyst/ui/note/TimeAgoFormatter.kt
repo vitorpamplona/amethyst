@@ -241,6 +241,92 @@ fun dateFormatter(
     }
 }
 
+/**
+ * Builds the full "Last seen ..." sentence shown on profiles and similar UI.
+ *
+ * Unlike [timeAgo], which can return a bare absolute date string (e.g. "Jan 14")
+ * for older timestamps, this function always returns a self-contained, grammatical
+ * description such as:
+ *
+ *   - "Last seen 5 minutes ago"
+ *   - "Last seen 2 hours ago"
+ *   - "Last seen 3 days ago"
+ *   - "Last seen 2 weeks ago"
+ *   - "Last seen on Jul 27, 2024 (9 months ago)"
+ *   - "Last seen on Jan 14, 2024 (1 year ago)"
+ *
+ * The duration component uses sensible units (seconds/minutes/hours/days/weeks/months/years)
+ * and pluralizes via Android plural resources. For anything older than a week we also
+ * include the absolute date so users see exactly when the activity happened.
+ */
+fun lastSeenSentence(
+    time: Long?,
+    context: Context,
+): String {
+    if (time == null) return ""
+    if (time == 0L) return stringRes(context, R.string.last_seen_never)
+
+    val nowSec = TimeUtils.now()
+    val diff = nowSec - time
+
+    // Negative drift (clock skew, future timestamp) — treat as "just now".
+    if (diff < TimeUtils.ONE_MINUTE) {
+        return stringRes(context, R.string.last_seen_just_now)
+    }
+
+    val resources = context.resources
+
+    // Recent: render purely as a relative duration.
+    if (diff < TimeUtils.ONE_WEEK) {
+        val durationText =
+            when {
+                diff < TimeUtils.ONE_HOUR -> {
+                    val n = (diff / TimeUtils.ONE_MINUTE).toInt()
+                    resources.getQuantityString(R.plurals.duration_minutes, n, n)
+                }
+
+                diff < TimeUtils.ONE_DAY -> {
+                    val n = (diff / TimeUtils.ONE_HOUR).toInt()
+                    resources.getQuantityString(R.plurals.duration_hours, n, n)
+                }
+
+                else -> {
+                    val n = (diff / TimeUtils.ONE_DAY).toInt()
+                    resources.getQuantityString(R.plurals.duration_days, n, n)
+                }
+            }
+        return stringRes(context, R.string.last_seen, durationText)
+    }
+
+    // Older than a week: include absolute date plus a coarse relative duration.
+    val durationText =
+        when {
+            diff < TimeUtils.ONE_MONTH -> {
+                val n = (diff / TimeUtils.ONE_WEEK).toInt()
+                resources.getQuantityString(R.plurals.duration_weeks, n, n)
+            }
+
+            diff < TimeUtils.ONE_YEAR -> {
+                val n = (diff / TimeUtils.ONE_MONTH).toInt().coerceAtLeast(1)
+                resources.getQuantityString(R.plurals.duration_months, n, n)
+            }
+
+            else -> {
+                val n = (diff / TimeUtils.ONE_YEAR).toInt().coerceAtLeast(1)
+                resources.getQuantityString(R.plurals.duration_years, n, n)
+            }
+        }
+
+    if (locale != Locale.getDefault()) {
+        locale = Locale.getDefault()
+        yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+        monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+    }
+    val dateText = yearFormatter.format(time * 1000)
+
+    return stringRes(context, R.string.last_seen_on_date, dateText, durationText)
+}
+
 fun timeAgoShort(
     mills: Long?,
     stringForNow: String,

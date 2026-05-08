@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -46,5 +46,5 @@ fun EventFinderFilterAssemblerSubscription(
             EventFinderQueryState(note, account)
         }
 
-    KeyDataSourceSubscription(state, dataSource)
+    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }

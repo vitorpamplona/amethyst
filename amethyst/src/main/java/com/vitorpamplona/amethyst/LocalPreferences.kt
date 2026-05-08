@@ -95,6 +95,8 @@ private object PrefKeys {
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
+    const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
+    const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
@@ -105,6 +107,7 @@ private object PrefKeys {
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_PUBLIC_CHATS_FOLLOW_LIST = "defaultPublicChatsFollowList"
     const val DEFAULT_LIVE_STREAMS_FOLLOW_LIST = "defaultLiveStreamsFollowList"
+    const val DEFAULT_NESTS_FOLLOW_LIST = "defaultNestsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
     const val DEFAULT_BADGES_FOLLOW_LIST = "defaultBadgesFollowList"
@@ -345,6 +348,8 @@ object LocalPreferences {
                     )
 
                     putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
+                    putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
+                    putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
 
                     putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
                     putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
@@ -357,6 +362,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
                     putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
+                    putString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNestsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
                     putString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBadgesFollowList.value))
@@ -511,6 +517,8 @@ object LocalPreferences {
                     Log.d("LocalPreferences") { "Load account from file $npub - keys ready" }
 
                     val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
+                    val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
+                    val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
@@ -618,6 +626,8 @@ object LocalPreferences {
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServer.await(),
                         stripLocationOnUpload = stripLocationOnUpload,
+                        useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
+                        localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
                         defaultHomeFollowList = MutableStateFlow(followListPrefs.home),
                         defaultStoriesFollowList = MutableStateFlow(followListPrefs.stories),
                         defaultNotificationFollowList = MutableStateFlow(followListPrefs.notification),
@@ -628,6 +638,7 @@ object LocalPreferences {
                         defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
                         defaultPublicChatsFollowList = MutableStateFlow(followListPrefs.publicChats),
                         defaultLiveStreamsFollowList = MutableStateFlow(followListPrefs.liveStreams),
+                        defaultNestsFollowList = MutableStateFlow(followListPrefs.nests),
                         defaultLongsFollowList = MutableStateFlow(followListPrefs.longs),
                         defaultArticlesFollowList = MutableStateFlow(followListPrefs.articles),
                         defaultBadgesFollowList = MutableStateFlow(followListPrefs.badges),
@@ -697,6 +708,7 @@ object LocalPreferences {
         val shorts: TopFilter,
         val publicChats: TopFilter,
         val liveStreams: TopFilter,
+        val nests: TopFilter,
         val longs: TopFilter,
         val articles: TopFilter,
         val badges: TopFilter,
@@ -717,6 +729,7 @@ object LocalPreferences {
             shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
             publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),
             liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),
+            nests = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, null), TopFilter.Global),
             longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
             articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
             badges = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, null), TopFilter.Mine),

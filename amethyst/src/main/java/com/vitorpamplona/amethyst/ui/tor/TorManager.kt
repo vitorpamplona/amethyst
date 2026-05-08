@@ -27,15 +27,21 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.launch
 
 /**
  * There should be only one instance of the Tor binding per app.
@@ -43,20 +49,53 @@ import kotlinx.coroutines.flow.transformLatest
  * Tor will connect as soon as status is listened to.
  */
 class TorManager(
-    torPrefs: TorSharedPreferences,
+    private val torPrefs: TorSharedPreferences,
     app: Context,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
 ) {
     val service = TorService(app)
+
+    /**
+     * In-memory only — when true, the manager emits [TorServiceStatus.Off] regardless of
+     * the persisted [TorType]. Cleared on process death, on network change, and on any
+     * user-initiated change to [TorType].
+     */
+    val sessionBypass = MutableStateFlow(false)
+
+    /**
+     * Epoch-millis of the user's most recent "Use regular connection" choice, persisted
+     * across cold starts. While [APPROVAL_REMEMBER_MS] hasn't elapsed, a stuck-connecting
+     * timeout silently flips [sessionBypass] without re-prompting.
+     */
+    @Volatile private var lastBypassApprovalMs: Long = 0L
+
+    init {
+        scope.launch(Dispatchers.IO) {
+            lastBypassApprovalMs = torPrefs.loadLastBypassApprovalMs()
+        }
+
+        // Any user-initiated change to torType clears the in-memory bypass so the
+        // explicit user action wins over the implicit override.
+        torPrefs.value.torType
+            .drop(1)
+            .onEach { sessionBypass.value = false }
+            .launchIn(scope)
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val status =
         combine(
             torPrefs.value.torType,
             torPrefs.value.externalSocksPort,
-        ) { torType, externalSocksPort ->
-            Pair(torType, externalSocksPort)
-        }.transformLatest { (torType, externalSocksPort) ->
+            sessionBypass,
+        ) { torType, externalSocksPort, bypass ->
+            Triple(torType, externalSocksPort, bypass)
+        }.transformLatest { (torType, externalSocksPort, bypass) ->
+            if (bypass) {
+                service.stop()
+                emit(TorServiceStatus.Off)
+                return@transformLatest
+            }
             when (torType) {
                 TorType.INTERNAL -> {
                     service.start()
@@ -97,7 +136,64 @@ class TorManager(
                 (status.value as? TorServiceStatus.Active)?.port,
             )
 
+    /**
+     * Emits true after [BOOTSTRAP_TIMEOUT_MS] of continuous [TorServiceStatus.Connecting]
+     * (and we are not already bypassing). When the user has approved a bypass within the
+     * last [APPROVAL_REMEMBER_MS] this auto-flips [sessionBypass] silently and stays at
+     * false; otherwise it emits true so the UI can show the prompt.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val connectionFailure: StateFlow<Boolean> =
+        status
+            .transformLatest { s ->
+                if (s is TorServiceStatus.Connecting) {
+                    emit(false)
+                    delay(BOOTSTRAP_TIMEOUT_MS)
+                    if (rememberedApprovalActive()) {
+                        sessionBypass.value = true
+                        emit(false)
+                    } else {
+                        emit(true)
+                    }
+                } else {
+                    emit(false)
+                }
+            }.stateIn(
+                scope,
+                SharingStarted.WhileSubscribed(2000),
+                false,
+            )
+
+    fun rememberedApprovalActive(): Boolean {
+        val ts = lastBypassApprovalMs
+        return ts > 0 && (System.currentTimeMillis() - ts) < APPROVAL_REMEMBER_MS
+    }
+
+    /** Called when the user picks "Use regular connection". Starts a fresh 1-hour window. */
+    fun approveBypassForOneHour() {
+        val now = System.currentTimeMillis()
+        lastBypassApprovalMs = now
+        sessionBypass.value = true
+        scope.launch(Dispatchers.IO) {
+            torPrefs.saveLastBypassApprovalMs(now)
+        }
+    }
+
+    /**
+     * Re-attempt Tor on this session — used on network change. Does not clear the
+     * remembered-approval window: if Tor stays stuck, we will silently bypass again
+     * after the timeout fires.
+     */
+    fun clearSessionBypass() {
+        sessionBypass.value = false
+    }
+
     fun isSocksReady() = status.value is TorServiceStatus.Active
 
     fun socksPort(): Int = (status.value as? TorServiceStatus.Active)?.port ?: 17392
+
+    companion object {
+        const val BOOTSTRAP_TIMEOUT_MS: Long = 60_000L
+        const val APPROVAL_REMEMBER_MS: Long = 60L * 60L * 1000L
+    }
 }

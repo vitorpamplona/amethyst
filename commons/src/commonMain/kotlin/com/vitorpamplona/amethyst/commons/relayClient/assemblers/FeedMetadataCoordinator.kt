@@ -36,7 +36,10 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Coordinates metadata and reactions loading for feed items.
@@ -243,6 +246,58 @@ class FeedMetadataCoordinator(
             filter,
             tag = "note-reactions",
         )
+    }
+
+    /**
+     * Fast-path: batched metadata subscription for visible-viewport authors.
+     * Bypasses rate limiter. Single filter with all authors. Closes after EOSE.
+     */
+    fun loadMetadataBatched(
+        pubkeys: List<HexKey>,
+        timeoutMs: Long = 5_000L,
+    ) {
+        val newPubkeys = pubkeys.filter { it !in queuedPubkeys }.distinct()
+        if (newPubkeys.isEmpty()) return
+        queuedPubkeys.addAll(newPubkeys)
+
+        scope.launch {
+            val filter =
+                Filter(
+                    kinds = listOf(MetadataEvent.KIND),
+                    authors = newPubkeys.take(100),
+                    limit = newPubkeys.size,
+                )
+            val filterMap = indexRelays.associateWith { listOf(filter) }
+            val subId = newSubId()
+            val eoseReceived = mutableSetOf<NormalizedRelayUrl>()
+            val allEose = CompletableDeferred<Unit>()
+
+            val listener =
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        onEvent?.invoke(event, relay)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        eoseReceived.add(relay)
+                        if (eoseReceived.size >= indexRelays.size) {
+                            allEose.complete(Unit)
+                        }
+                    }
+                }
+
+            client.subscribe(subId, filterMap, listener)
+            withTimeoutOrNull(timeoutMs) { allEose.await() }
+            client.unsubscribe(subId)
+        }
     }
 
     /**

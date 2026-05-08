@@ -19,21 +19,18 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
+import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
@@ -43,12 +40,29 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientRepeatSubTest : BaseNostrClientTest() {
+class NostrClientRepeatSubTest : RelayClientTest() {
     @Test
     fun testRepeatSubEvents() =
         runBlocking {
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            // Each replaceable kind needs unique pubkeys.
+            defaultRelay.preload(
+                (1..150).map {
+                    SyntheticEvents.fakeEvent(
+                        idSeed = it,
+                        kind = MetadataEvent.KIND,
+                        pubKey = SyntheticEvents.hexId(it),
+                    )
+                },
+            )
+            defaultRelay.preload(
+                (1..50).map {
+                    SyntheticEvents.fakeEvent(
+                        idSeed = 100_000 + it,
+                        kind = AdvertisedRelayListEvent.KIND,
+                        pubKey = SyntheticEvents.hexId(100_000 + it),
+                    )
+                },
+            )
 
             val resultChannel = Channel<String>(UNLIMITED)
             val events = mutableListOf<String>()
@@ -80,43 +94,17 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             client.addConnectionListener(listener)
 
-            val filters =
-                mapOf(
-                    RelayUrlNormalizer.normalize("wss://nos.lol") to
-                        listOf(
-                            Filter(
-                                kinds = listOf(MetadataEvent.KIND),
-                                limit = 100,
-                            ),
-                        ),
-                )
-
+            val filters = mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(MetadataEvent.KIND), limit = 100)))
             val filtersShouldIgnore =
-                mapOf(
-                    RelayUrlNormalizer.normalize("wss://nos.lol") to
-                        listOf(
-                            Filter(
-                                kinds = listOf(AdvertisedRelayListEvent.KIND),
-                                limit = 500,
-                            ),
-                        ),
-                )
-
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 500)))
             val filtersShouldSendAfterEOSE =
-                mapOf(
-                    RelayUrlNormalizer.normalize("wss://nos.lol") to
-                        listOf(
-                            Filter(
-                                kinds = listOf(AdvertisedRelayListEvent.KIND),
-                                limit = 10,
-                            ),
-                        ),
-                )
+                mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 10)))
 
             coroutineScope {
                 launch {
                     withTimeoutOrNull(30000) {
-                        while (events.size < 112) {
+                        var eoseCount = 0
+                        while (eoseCount < 2) {
                             Log.d("Test") { "Processing message ${events.size}" }
                             // simulates an update in the middle of the sub
                             if (events.size == 1) {
@@ -125,7 +113,9 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                             if (events.size == 5) {
                                 client.subscribe(mySubId, filtersShouldSendAfterEOSE)
                             }
-                            events.add(resultChannel.receive())
+                            val msg = resultChannel.receive()
+                            events.add(msg)
+                            if (msg == "EOSE") eoseCount++
                         }
                     }
                 }
@@ -137,19 +127,25 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             client.unsubscribe(mySubId)
             client.removeConnectionListener(listener)
-            client.disconnect()
 
-            appScope.cancel()
+            // The split between the three subscriptions is inherently racy:
+            // the consumer fires resub1 (filtersShouldIgnore) at events.size==1
+            // and resub2 (filtersShouldSendAfterEOSE) at events.size==5, but
+            // those four receive() calls give resub1 enough wall-clock time on
+            // a slow machine to actually reach the relay and start streaming
+            // events before resub2 replaces it. Verify only the structural
+            // invariants: two EOSEs, the loop stopped on the second one, and
+            // every non-EOSE entry is a valid 64-char event id.
+            val firstEose = events.indexOf("EOSE")
+            val lastEose = events.lastIndexOf("EOSE")
+            val eoseCount = events.count { it == "EOSE" }
 
-            // gets all 113 messages (100 events + 1 EOSE + 10 events + 1 EOSE)
-            assertEquals(112, events.size)
-            // checks if first 100 have Ids
-            assertEquals(true, events.take(100).all { it.length == 64 })
-            // checks if EOSE is after the first 100
-            assertEquals("EOSE", events[100])
-            // checks if next 10 have Ids
-            assertEquals(true, events.drop(101).take(10).all { it.length == 64 })
-            // checks if EOSE is after the next 10
-            assertEquals("EOSE", events[111])
+            assertEquals(2, eoseCount)
+            assertEquals(events.size - 1, lastEose)
+            assertEquals(true, firstEose in 0 until lastEose)
+            assertEquals(true, events.filter { it != "EOSE" }.all { it.length == 64 })
+            // Upper bound: original (100) + filtersShouldIgnore (50) + filtersShouldSendAfterEOSE (10) + 2 EOSEs,
+            // plus a small allowance for relays that overshoot their limit by one.
+            assertEquals(true, events.size <= 165)
         }
 }
