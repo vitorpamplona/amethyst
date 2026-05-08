@@ -60,6 +60,27 @@ python run.py -d -i amethyst -s aioquic -t handshake,chacha20 --log-dir ./logs
 
 Inspect `./logs/<run>/client_qlog/*.qlog` in qvis when something breaks.
 
+### macOS gotcha — upstream `certs.sh` patch (auto-applied)
+
+`run-matrix.sh` step 1a rewrites `LC_CTYPE=C tr` → `LC_ALL=C tr` in
+the upstream `certs.sh`. macOS BSD `tr` chokes on `/dev/urandom` with
+`tr: Illegal byte sequence` when only `LC_CTYPE` is set; `LC_ALL` wins
+in the locale-precedence chain and silences it. Without this, the
+`amplificationlimit` testcase aborts at cert generation, and every
+test sequenced after it in `TESTCASES_QUIC`
+(`handshakeloss`, `transferloss`, `handshakecorruption`,
+`transfercorruption`, `ipv6`, `v2`, `rebind-port`, `rebind-addr`,
+`connectionmigration`, plus the goodput/crosstraffic measurements)
+silently never runs. The matrix prints the post-mortem summary
+showing only the 12 testcases that ran before the abort, which looks
+deceptively complete.
+
+The patch is idempotent and is re-applied on every clone of the
+runner (the fix is a working-tree edit to `../quic-interop-runner/`,
+not a fork). If you ever delete `../quic-interop-runner/` and
+re-clone manually, run `quic/interop/run-matrix.sh` once first or
+apply the same `sed` by hand. Upstream PR not yet filed.
+
 ## Phase ladder (excerpt — full plan in conversation)
 
 | Phase | Goal | Tests | Exit criterion |

@@ -66,6 +66,26 @@ if [ ! -d "$RUNNER_DIR" ]; then
     git clone --depth 1 https://github.com/quic-interop/quic-interop-runner.git "$RUNNER_DIR"
 fi
 
+# 1a. Patch upstream certs.sh for macOS BSD `tr`. The upstream uses
+# `LC_CTYPE=C tr -dc '[:alnum:]' </dev/urandom` which on macOS still
+# trips "tr: Illegal byte sequence" — LC_CTYPE alone doesn't override
+# the runtime LC_ALL when LC_ALL is unset/inherited weirdly. The
+# `amplificationlimit` testcase is the only one that exercises this
+# loop (chain length > 1 → fakedns SAN inflation), but if it aborts,
+# the runner aborts the whole matrix BEFORE any test after
+# `amplificationlimit` in TESTCASES_QUIC runs (handshakeloss /
+# transferloss / rebind-* / etc. all silently skipped). The fix is
+# `LC_ALL=C` instead. Idempotent: a second run is a no-op once
+# already-patched. macOS `sed -i` requires the empty-extension arg.
+if grep -q 'LC_CTYPE=C tr -dc' "$RUNNER_DIR/certs.sh" 2>/dev/null; then
+    echo "==> patching certs.sh (LC_CTYPE=C → LC_ALL=C for macOS tr compatibility)"
+    if $is_macos; then
+        sed -i '' 's/LC_CTYPE=C tr -dc/LC_ALL=C tr -dc/' "$RUNNER_DIR/certs.sh"
+    else
+        sed -i 's/LC_CTYPE=C tr -dc/LC_ALL=C tr -dc/' "$RUNNER_DIR/certs.sh"
+    fi
+fi
+
 # 2. venv + Python deps. Prefer 3.13 — pyshark (the runner's pcap parser)
 # trips on 3.14's asyncio.get_event_loop() removal. Fall back to whatever
 # `python3` resolves to if 3.13 isn't installed.
