@@ -32,9 +32,11 @@ import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
 import com.vitorpamplona.quic.frame.NewConnectionIdFrame
+import com.vitorpamplona.quic.frame.PathChallengeFrame
 import com.vitorpamplona.quic.frame.PathResponseFrame
 import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.ResetStreamFrame
+import com.vitorpamplona.quic.frame.RetireConnectionIdFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.encodeFrames
@@ -960,6 +962,26 @@ private fun appendFlowControlUpdates(
     while (conn.pendingPathChallengePayloads.isNotEmpty()) {
         val data = conn.pendingPathChallengePayloads.removeFirst()
         frames += PathResponseFrame(data)
+    }
+
+    // RFC 9000 §9 client-initiated path validation. Drain any
+    // PATH_CHALLENGE the [PathValidator] has queued — including
+    // re-queued ones from the loss dispatcher. Each emission
+    // records a [RecoveryToken.PathChallenge] so loss recovery
+    // can decide to retransmit (the validator's own 3 * PTO
+    // budget is the ultimate timeout per RFC 9000 §8.2.4).
+    while (conn.pathValidator.pendingChallenges.isNotEmpty()) {
+        val payload = conn.pathValidator.pendingChallenges.removeFirst()
+        frames += PathChallengeFrame(payload)
+        tokens += RecoveryToken.PathChallenge(payload)
+    }
+
+    // RFC 9000 §19.16 RETIRE_CONNECTION_ID. Drain pending retires;
+    // the dispatcher re-queues on loss until the peer ACKs.
+    while (conn.pathValidator.pendingRetireSequences.isNotEmpty()) {
+        val seq = conn.pathValidator.pendingRetireSequences.removeFirst()
+        frames += RetireConnectionIdFrame(seq)
+        tokens += RecoveryToken.RetireConnectionId(seq)
     }
 
     // NEW_CONNECTION_ID retransmits. No application path emits these

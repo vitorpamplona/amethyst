@@ -135,6 +135,8 @@ class RecoveryTokenTest {
                     is RecoveryToken.ResetStream -> "rs:${it.streamId}:${it.errorCode}:${it.finalSize}"
                     is RecoveryToken.StopSending -> "ss:${it.streamId}:${it.errorCode}"
                     is RecoveryToken.NewConnectionId -> "ncid:${it.sequenceNumber}"
+                    is RecoveryToken.PathChallenge -> "pc"
+                    is RecoveryToken.RetireConnectionId -> "rcid:${it.sequenceNumber}"
                 }
             }
         assertEquals(

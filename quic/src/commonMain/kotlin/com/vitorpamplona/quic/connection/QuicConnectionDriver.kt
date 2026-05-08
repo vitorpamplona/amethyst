@@ -362,7 +362,56 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
         conn.streamsLock.withLock {
             conn.requeueAllInflightStreamData()
             conn.requeueAllInflightCrypto(EncryptionLevel.APPLICATION)
+            // RFC 9000 §9 client-initiated path validation. After
+            // [PATH_PROBE_PTO_THRESHOLD] consecutive PTOs without
+            // any inbound ACK we suspect the path is dead (NAT
+            // rebind, route flap, dead peer). If the peer has
+            // issued spare CIDs via NEW_CONNECTION_ID, rotate to
+            // one and emit a PATH_CHALLENGE on the new DCID. The
+            // validator only triggers on the FIRST crossing of
+            // the threshold per validation cycle — the
+            // [PathValidator] internally rejects re-entry while
+            // [PathValidationState.Validating] holds.
+            //
+            // Also check the §8.2.4 budget on any in-flight
+            // validation: 3*PTO since the challenge went out
+            // without a matching response means the new path is
+            // also dead — abandon and let the next PTO try with
+            // another CID (or surface the failure to the higher
+            // layer).
+            val nowMillis =
+                kotlin.time.Clock.System
+                    .now()
+                    .toEpochMilliseconds()
+            val maxAckDelayMs =
+                if (conn.application.sendProtection != null) {
+                    conn.peerTransportParameters?.maxAckDelay ?: 0L
+                } else {
+                    0L
+                }
+            val ptoBaseMs = conn.lossDetection.ptoBaseMs(maxAckDelayMs).coerceAtLeast(1L)
+            conn.checkPathValidationTimeoutLocked(nowMillis)
+            if (conn.consecutivePtoCount >= PATH_PROBE_PTO_THRESHOLD) {
+                conn.triggerPathMigrationLocked(nowMillis = nowMillis, currentPtoMillis = ptoBaseMs)
+            }
         }
     }
     conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
 }
+
+/**
+ * RFC 9000 §9 / §10.1.2 — number of consecutive PTOs we tolerate on
+ * the active path before assuming it's dead and probing a new one.
+ * The QUIC RFC doesn't pin a specific value (the spec only says "an
+ * endpoint that has previously discovered a particular path
+ * works"); 2 matches Firefox neqo's `PATH_PROBE_PTO_THRESHOLD`
+ * default and Chrome's behavior. Picking 1 is too aggressive
+ * (single dropped packet trips a rotation); 4+ is too late (user
+ * notices the silence).
+ *
+ * Once the threshold is crossed, [handlePtoFired] calls into
+ * [QuicConnection.triggerPathMigrationLocked] which is itself
+ * idempotent — a second crossing while validation is already in
+ * flight is a no-op.
+ */
+internal const val PATH_PROBE_PTO_THRESHOLD: Int = 2
