@@ -264,6 +264,15 @@ private fun CommunityFormScreen(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+
+                HorizontalDivider()
+
+                SectionHeader(R.string.new_community_rules_section)
+                CommunityRulesEditorSection(
+                    model = model,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
     }

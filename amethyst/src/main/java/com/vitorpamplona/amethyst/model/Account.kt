@@ -230,6 +230,10 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -1237,6 +1241,41 @@ class Account(
                 rules = rules,
                 relays = relays,
                 dTag = dTag,
+            )
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+        return signedEvent
+    }
+
+    /**
+     * Publishes a sibling NIP-9A `kind:34551` rules document for a community we just
+     * (or previously) defined with [sendCommunityDefinition]. The event is signed by
+     * the community owner and addresses the definition through its `a` tag, sharing
+     * the same `dTag` so it replaces in place when re-edited.
+     */
+    suspend fun sendCommunityRules(
+        communityDTag: String,
+        kindRules: List<KindRuleTag>,
+        pubkeyRules: List<PubkeyRuleTag> = emptyList(),
+        wotGates: List<WotTag> = emptyList(),
+        maxEventSize: Int? = null,
+        minRulesCreatedAt: Long? = null,
+    ): CommunityRulesEvent? {
+        if (!isWriteable()) return null
+
+        val communityAddress = ATag(CommunityDefinitionEvent.KIND, signer.pubKey, communityDTag, null)
+
+        val template =
+            CommunityRulesEvent.build(
+                dTag = communityDTag,
+                communityAddress = communityAddress,
+                kindRules = kindRules,
+                pubkeyRules = pubkeyRules,
+                wotGates = wotGates,
+                maxEventSize = maxEventSize,
+                minRulesCreatedAt = minRulesCreatedAt,
             )
         val signedEvent = signer.sign(template)
 
