@@ -77,100 +77,57 @@ fun FeedsDrawerTab(
     var editingFeed by remember { mutableStateOf<FeedDefinition?>(null) }
     var deletingFeed by remember { mutableStateOf<FeedDefinition?>(null) }
 
-    // Author search state — hoisted here because AlertDialog can't run LaunchedEffect
-    var authorQuery by remember { mutableStateOf("") }
-    var authorLocal by remember {
-        mutableStateOf(emptyList<com.vitorpamplona.amethyst.commons.model.User>())
-    }
-    var authorRelay by remember {
-        mutableStateOf(emptyList<com.vitorpamplona.amethyst.commons.model.User>())
-    }
-    var authorSearching by remember { mutableStateOf(false) }
-
-    LaunchedEffect(authorQuery) {
-        if (authorQuery.length < 2 || localCache == null) {
-            authorLocal = emptyList()
-            authorRelay = emptyList()
-            authorSearching = false
-            return@LaunchedEffect
-        }
-        kotlinx.coroutines.delay(300)
-        val results = localCache.findUsersStartingWith(authorQuery, 10)
-        authorLocal = results
-
-        if (relayManager != null) {
-            // Use all connected relays — some support NIP-50 search
-            val relays = relayManager.connectedRelays.value
-            if (relays.isNotEmpty()) {
-                authorSearching = true
-                authorRelay = emptyList()
-                val ch = kotlinx.coroutines.channels.Channel<com.vitorpamplona.amethyst.commons.model.User>(64)
-                val subId =
-                    com.vitorpamplona.amethyst.desktop.subscriptions
-                        .generateSubId("author-search")
-                relayManager.subscribe(
-                    subId = subId,
-                    filters =
-                        listOf(
-                            com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
-                                .searchPeople(authorQuery, 30),
-                        ),
-                    relays = relays,
-                    listener =
-                        object : com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener {
-                            override fun onEvent(
-                                event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                                isLive: Boolean,
-                                relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
-                                forFilters: List<com.vitorpamplona.quartz.nip01Core.relay.filters.Filter>?,
-                            ) {
-                                if (event is com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent) {
-                                    localCache.consumeMetadata(event)
-                                    localCache.getUserIfExists(event.pubKey)?.let {
-                                        ch.trySend(it)
-                                    }
-                                }
-                            }
-
-                            override fun onEose(
-                                relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
-                                forFilters: List<com.vitorpamplona.quartz.nip01Core.relay.filters.Filter>?,
-                            ) {
-                                ch.close()
-                            }
-
-                            override fun onClosed(
-                                message: String,
-                                relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
-                                forFilters: List<com.vitorpamplona.quartz.nip01Core.relay.filters.Filter>?,
-                            ) {
-                                ch.close()
-                            }
-                        },
-                )
-                try {
-                    kotlinx.coroutines.withTimeoutOrNull(8000) {
-                        for (user in ch) {
-                            if (authorRelay.none { it.pubkeyHex == user.pubkeyHex }) {
-                                authorRelay = authorRelay + user
-                            }
-                        }
-                    }
-                } finally {
-                    authorSearching = false
-                    relayManager.unsubscribe(subId)
-                }
+    // Author search — same pattern as NewDmDialog: SearchBarState + rememberSubscription
+    val searchState =
+        remember(localCache) {
+            localCache?.let {
+                com.vitorpamplona.amethyst.commons.viewmodels
+                    .SearchBarState(it, scope)
             }
         }
+    val authorQuery = searchState?.searchText?.collectAsState()?.value ?: ""
+    val authorLocal = searchState?.cachedUserResults?.collectAsState()?.value ?: emptyList()
+    val authorRelay = searchState?.relaySearchResults?.collectAsState()?.value ?: emptyList()
+    val authorSearching = searchState?.isSearchingRelays?.collectAsState()?.value ?: false
+
+    // NIP-50 relay search — fires when local cache has few results (same as NewDmDialog)
+    if (relayManager != null && searchState != null) {
+        val relayStatuses by relayManager.relayStatuses.collectAsState()
+        val connectedRelays = relayStatuses.keys
+
+        com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription(
+            connectedRelays,
+            authorQuery,
+            authorLocal.size,
+            relayManager = relayManager,
+        ) {
+            if (connectedRelays.isEmpty()) return@rememberSubscription null
+            if (!searchState.shouldSearchRelays) return@rememberSubscription null
+
+            searchState.startRelaySearch()
+            com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription(
+                relays = connectedRelays,
+                searchQuery = authorQuery,
+                limit = 30,
+                onEvent = { event, _, _, _ ->
+                    if (event is com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent &&
+                        localCache != null
+                    ) {
+                        localCache.consumeMetadata(event)
+                        localCache.getUserIfExists(event.pubKey)?.let {
+                            searchState.addRelaySearchResult(it)
+                        }
+                    }
+                },
+                onEose = { _, _ -> searchState.endRelaySearch() },
+            )
+        }
     }
 
-    // Reset search state when dialogs close
+    // Reset search when dialogs close
     LaunchedEffect(showBuilder, editingFeed) {
         if (!showBuilder && editingFeed == null) {
-            authorQuery = ""
-            authorLocal = emptyList()
-            authorRelay = emptyList()
-            authorSearching = false
+            searchState?.clearSearch()
         }
     }
 
@@ -179,7 +136,7 @@ fun FeedsDrawerTab(
         FeedBuilderDialog(
             localCache = localCache,
             authorQuery = authorQuery,
-            onAuthorQueryChange = { authorQuery = it },
+            onAuthorQueryChange = { searchState?.updateSearchText(it) },
             authorSuggestions = authorLocal,
             authorRelayResults = authorRelay,
             authorSearching = authorSearching,
@@ -197,7 +154,7 @@ fun FeedsDrawerTab(
             initial = feed,
             localCache = localCache,
             authorQuery = authorQuery,
-            onAuthorQueryChange = { authorQuery = it },
+            onAuthorQueryChange = { searchState?.updateSearchText(it) },
             authorSuggestions = authorLocal,
             authorRelayResults = authorRelay,
             authorSearching = authorSearching,
