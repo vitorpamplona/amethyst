@@ -253,15 +253,21 @@ class ScheduledPostStore(
         try {
             mapper.writeValue(tmp, ScheduledPostFile(version = 1, posts = snapshot))
             if (!tmp.renameTo(storageFile)) {
-                storageFile.delete()
+                if (!storageFile.delete()) {
+                    Log.w(TAG) { "Failed to delete existing $storageFile before rename retry" }
+                }
                 if (!tmp.renameTo(storageFile)) {
                     Log.e(TAG, "Failed to rename $tmp to $storageFile")
-                    tmp.delete()
+                    if (!tmp.delete()) {
+                        Log.w(TAG) { "Failed to clean up temp file $tmp after rename failure" }
+                    }
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to persist scheduled posts to $storageFile", e)
-            tmp.delete()
+            if (!tmp.delete()) {
+                Log.w(TAG) { "Failed to clean up temp file $tmp after persist exception" }
+            }
         }
     }
 
