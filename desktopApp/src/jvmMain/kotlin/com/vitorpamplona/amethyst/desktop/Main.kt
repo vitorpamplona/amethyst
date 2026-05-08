@@ -935,6 +935,14 @@ fun App(
                             val account = accountState as AccountState.LoggedIn
                             val nwcConnection by accountManager.nwcConnection.collectAsState()
 
+                            // Lazy-load Namecoin services — almost never used, no need to keep in
+                            // memory from the start (matches Android lazy pattern)
+                            val namecoinPreferences = remember { DesktopNamecoinPreferences() }
+                            val namecoinService =
+                                remember {
+                                    DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+                                }
+
                             // Load NWC connection on first composition
                             LaunchedEffect(Unit) {
                                 accountManager.loadNwcConnection()
@@ -956,6 +964,8 @@ fun App(
                                             onRestartApp()
                                         },
                                     ),
+                                LocalNamecoinPreferences provides namecoinPreferences,
+                                LocalNamecoinService provides namecoinService,
                             ) {
                                 MainContent(
                                     layoutMode = layoutMode,
