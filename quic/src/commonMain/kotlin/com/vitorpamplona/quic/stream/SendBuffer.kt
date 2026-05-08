@@ -591,6 +591,23 @@ class SendBuffer(
         }
         dataLen -= advanceInt
         flushedFloor += advance
+        // Shrink the backing buffer when a transient burst has been fully
+        // drained. Without this, a stream that ever held N bytes pins
+        // `data.size = N` for the rest of the connection — long-tail
+        // memory retention. Trigger when:
+        //   * the buffer is large enough to bother (above the doubling
+        //     floor of 64 bytes) AND
+        //   * live data fits in 1/4 of the allocation (capacity is
+        //     ≥ 4× live size).
+        // Shrink to twice the live size (or [SHRINK_FLOOR_BYTES],
+        // whichever is larger) to leave headroom for the next push
+        // without re-doubling immediately.
+        if (data.size > SHRINK_FLOOR_BYTES && dataLen * 4 < data.size) {
+            val newCap = maxOf(SHRINK_FLOOR_BYTES, dataLen * 2)
+            if (newCap < data.size) {
+                data = data.copyOf(newCap)
+            }
+        }
     }
 
     /**
@@ -612,6 +629,17 @@ class SendBuffer(
             while (newCap < needed) newCap *= 2
             data = data.copyOf(newCap)
         }
+    }
+
+    private companion object {
+        /**
+         * Backing-buffer floor below which [advanceFlushedFloorIfPossible]
+         * does NOT shrink. Below this size the doubling-on-grow is so
+         * cheap that shrinking would be a wash; above it, transient
+         * bursts that bloat the buffer to MiBs leave a long-tail
+         * memory footprint we want to release.
+         */
+        const val SHRINK_FLOOR_BYTES: Int = 4096
     }
 
     /**

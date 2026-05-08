@@ -183,10 +183,27 @@ object LongHeaderPacket {
         val packet = bytes.copyOfRange(packetStart, packetEnd)
         val localPnOffset = pnOffset - packetStart
 
-        // Step 1: unmask the first byte so we can read pnLen.
-        val firstByteMask = if ((first and 0x80) != 0) 0x0F else 0x1F
-        packet[0] = (first xor (mask[0].toInt() and firstByteMask)).toByte()
-        val pnLen = ((packet[0].toInt() and 0xFF) and 0x03) + 1
+        // Step 1: unmask the first byte so we can read pnLen. The
+        // long-header form bit (0x80) was already validated above (we
+        // wouldn't be in this function otherwise), so the first-byte
+        // mask is fixed at 0x0F — pre-fix the conditional `if (form == 1)`
+        // path was dead code.
+        packet[0] = (first xor (mask[0].toInt() and 0x0F)).toByte()
+        val unmaskedFirst = packet[0].toInt() and 0xFF
+        // RFC 9000 §17.2: long header layout is `1|1|T|T|R|R|P|P` —
+        // the two reserved bits at 0x0C MUST be zero after HP unmasking.
+        // A peer that sets either bit is in protocol violation. The
+        // form-bit (0x80) and fixed-bit (0x40) are not header-protected,
+        // so they're already correct; we skip the AEAD here on
+        // reserved-bit set rather than letting a malformed-but-AEAD-OK
+        // packet drift our state.
+        if ((unmaskedFirst and 0x0C) != 0) {
+            throw com.vitorpamplona.quic.QuicProtocolViolationException(
+                "PROTOCOL_VIOLATION: long-header reserved bits set " +
+                    "(0x${unmaskedFirst.toString(16)})",
+            )
+        }
+        val pnLen = (unmaskedFirst and 0x03) + 1
 
         // Step 2: unmask exactly `pnLen` packet-number bytes.
         for (i in 0 until pnLen) {

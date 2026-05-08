@@ -72,6 +72,22 @@ fun feedDatagram(
     datagram: ByteArray,
     nowMillis: Long,
 ) {
+    try {
+        feedDatagramInner(conn, datagram, nowMillis)
+    } catch (e: com.vitorpamplona.quic.QuicProtocolViolationException) {
+        // RFC 9000 §17.2 / §17.3.1: peer set reserved bits in the
+        // header after HP unmask (or a similar invariant violation
+        // bubbled out of the parse path). Spec MUST close with
+        // PROTOCOL_VIOLATION.
+        conn.markClosedExternally(e.message ?: "PROTOCOL_VIOLATION")
+    }
+}
+
+private fun feedDatagramInner(
+    conn: QuicConnection,
+    datagram: ByteArray,
+    nowMillis: Long,
+) {
     var offset = 0
     while (offset < datagram.size) {
         val first = datagram[offset].toInt() and 0xFF

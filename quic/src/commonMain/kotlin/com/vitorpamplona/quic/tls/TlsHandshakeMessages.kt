@@ -77,6 +77,13 @@ data class TlsServerHello(
             val cipherSuite = r.readUint16()
             r.readByte() // legacy_compression_method = 0
             val extensions = TlsExtension.decodeList(r)
+            // RFC 8446 §4.1.3: ServerHello body ends with the extensions
+            // block. Any trailing bytes are a malformed handshake message.
+            if (r.remaining != 0) {
+                throw QuicCodecException(
+                    "ServerHello has ${r.remaining} trailing bytes after extensions",
+                )
+            }
             return TlsServerHello(random, sessionId, cipherSuite, extensions)
         }
     }
@@ -92,14 +99,38 @@ data class TlsEncryptedExtensions(
     val alpn: ByteArray?
         get() =
             extensions.firstOrNull { it.type == TlsConstants.EXT_ALPN }?.data?.let {
-                // ALPN response carries a single protocol_name<1..2^8-1> inside protocols<3..2^16-1>
+                // ALPN response carries EXACTLY one protocol_name<1..2^8-1>
+                // inside protocols<3..2^16-1> per RFC 7301 §3.1. Reject
+                // multi-name responses — a server that returns more than
+                // one is in protocol violation, and silently picking the
+                // first masks an interop bug.
                 val r = QuicReader(it)
-                r.skip(2) // outer length
-                r.readTlsOpaque1()
+                val outerLen = r.readUint16()
+                if (outerLen != r.remaining) {
+                    throw QuicCodecException(
+                        "ALPN extension outerLen=$outerLen does not match remaining ${r.remaining}",
+                    )
+                }
+                val name = r.readTlsOpaque1()
+                if (r.remaining != 0) {
+                    throw QuicCodecException(
+                        "ALPN response carries multiple protocol names (RFC 7301 §3.1 forbids)",
+                    )
+                }
+                name
             }
 
     companion object {
-        fun decodeBody(r: QuicReader): TlsEncryptedExtensions = TlsEncryptedExtensions(TlsExtension.decodeList(r))
+        fun decodeBody(r: QuicReader): TlsEncryptedExtensions {
+            val extensions = TlsExtension.decodeList(r)
+            // RFC 8446 §4.3.1: EE body is exactly the extensions block.
+            if (r.remaining != 0) {
+                throw QuicCodecException(
+                    "EncryptedExtensions has ${r.remaining} trailing bytes",
+                )
+            }
+            return TlsEncryptedExtensions(extensions)
+        }
     }
 }
 
@@ -115,6 +146,17 @@ data class TlsCertificateChain(
         fun decodeBody(r: QuicReader): TlsCertificateChain {
             val ctx = r.readTlsOpaque1()
             val listLen = r.readUint24()
+            // Pre-fix: a malformed peer setting `listLen` larger than the
+            // remaining body bytes caused `end = r.position + listLen` to
+            // point past `r.limit`. The while-loop then ran on garbage
+            // until each `readTlsOpaque*` ran off the end and threw —
+            // delivering corrupt cert blobs to certs[] before that
+            // happened. Bound `end` against `r.limit` up front.
+            if (listLen > r.remaining) {
+                throw QuicCodecException(
+                    "Certificate listLen=$listLen exceeds remaining body ${r.remaining}",
+                )
+            }
             val end = r.position + listLen
             val certs = mutableListOf<ByteArray>()
             while (r.position < end) {
@@ -122,6 +164,14 @@ data class TlsCertificateChain(
                 // skip per-certificate extensions (length-prefixed)
                 r.readTlsOpaque2()
                 certs += cert
+            }
+            // RFC 8446 §4.4.2: the certificate_list ends at exactly `end`;
+            // if a per-cert extensions length pushed us past it, the cert
+            // chain is malformed and we MUST close.
+            if (r.position != end) {
+                throw QuicCodecException(
+                    "Certificate listLen mismatch: position=${r.position} expected=$end",
+                )
             }
             return TlsCertificateChain(ctx, certs)
         }

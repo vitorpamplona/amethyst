@@ -291,3 +291,17 @@ class QuicCodecException(
     message: String,
     cause: Throwable? = null,
 ) : RuntimeException(message, cause)
+
+/**
+ * Peer protocol violation that mandates connection close per RFC 9000 / 9001.
+ * Distinct from [QuicCodecException] (which is also "drop the packet" for
+ * AEAD-failed inputs) — a [QuicProtocolViolationException] means the peer
+ * sent something well-formed enough to AEAD-decrypt but inconsistent with
+ * the wire spec, so the connection MUST be closed with PROTOCOL_VIOLATION.
+ *
+ * Typical sources: reserved-bit-set in the unmasked QUIC header
+ * (RFC 9000 §17.2 / §17.3.1).
+ */
+class QuicProtocolViolationException(
+    message: String,
+) : RuntimeException(message)
