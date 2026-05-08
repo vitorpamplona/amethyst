@@ -53,7 +53,7 @@ class QlogObserverTest {
         runBlocking {
             val client = handshakedClient(QlogObserver.NoOp)
             // Drive a tiny operation post-handshake.
-            client.lock.withLock {
+            client.lifecycleLock.withLock {
                 // No-op — just confirm we can still take the lock.
                 assertEquals(QuicConnection.Status.CONNECTED, client.status)
             }
@@ -141,7 +141,7 @@ class QlogObserverTest {
                     0x00, // pn byte
                     0x00, // payload byte (will fail AEAD)
                 )
-            client.lock.withLock {
+            client.streamsLock.withLock {
                 feedDatagram(client, garbage, nowMillis = 1L)
             }
             val drops = recorder.events.filter { it.name == "packetDropped" }
