@@ -190,7 +190,54 @@ class QuicConnectionDriver(
                         drainOutbound(connection, nowMillis())
                     } ?: break
                 socket.send(out)
+                // RFC 9002 §6.2.4 probe budget: when the PTO timer
+                // fired we set `pendingProbePackets = 2`; consume one
+                // slot per probe-bearing datagram. If budget remains,
+                // re-requeue inflight CRYPTO / STREAM bytes so the
+                // next drainOutbound iteration has payload to probe
+                // with. The loop's own break-on-null then terminates
+                // naturally if there's nothing left to requeue (e.g.
+                // a connection with no inflight data — the first
+                // probe is a bare PING, the second slot harmlessly
+                // expires with no follow-up datagram).
+                //
+                // Decrementing AFTER socket.send (not before) ensures
+                // a non-PTO drain — wakeup-driven, no probe budget
+                // outstanding — leaves the field at 0 untouched. The
+                // post-decrement check uses `> 0` (not `>= 0`) so
+                // we only requeue while another probe is still owed.
+                if (connection.pendingProbePackets > 0) {
+                    connection.pendingProbePackets--
+                    if (connection.pendingProbePackets > 0) {
+                        // Two cooperating signals for the next probe:
+                        //   (a) requeue inflight CRYPTO / STREAM data so a
+                        //       payload-bearing probe can fire (preferred —
+                        //       a CRYPTO retransmit also covers the
+                        //       ack-eliciting requirement);
+                        //   (b) re-arm `pendingPing` for the no-data fallback
+                        //       (CRYPTO already ACK'd or never in flight, e.g.
+                        //       handshake-confirmed connections idling
+                        //       between transfers). Without (b), the writer
+                        //       suppresses the second probe entirely because
+                        //       `pendingPing` is one-shot — the first probe
+                        //       cleared it. The writer's own
+                        //       `collectHandshakeLevelFrames` still
+                        //       suppresses the PING when a CRYPTO frame
+                        //       lands in the same packet, so this never
+                        //       wastes a frame on top of a retransmit.
+                        requeueInflightForProbe(connection)
+                        connection.pendingPing = true
+                    }
+                }
             }
+            // Defence-in-depth: if the inner loop exited with budget
+            // still unconsumed (e.g. drainOutbound returned null on
+            // the very first iteration because nothing was inflight
+            // — only `pendingPing` would have been set, and it can
+            // be cleared by the writer without an outbound emission
+            // when no level has send keys), zero it out so the next
+            // wakeup-driven drain doesn't accidentally re-requeue.
+            connection.pendingProbePackets = 0
             // Use the loss-detection's PTO calculation in BOTH the pre- and
             // post-first-RTT-sample regimes. Pre-sample, smoothed_rtt =
             // INITIAL_RTT_MS so ptoBaseMs returns
@@ -344,6 +391,35 @@ class QuicConnectionDriver(
  */
 internal suspend fun handlePtoFired(conn: QuicConnection) {
     conn.pendingPing = true
+    requeueInflightForProbe(conn)
+    // RFC 9002 §6.2.4: the spec allows up to 2 ack-eliciting packets
+    // per PTO. The first probe falls out of the next drain naturally
+    // (we just requeued); the send loop watches [pendingProbePackets]
+    // and re-requeues for the second probe. Set AFTER the requeue so
+    // a concurrent reader of the field doesn't see "budget set,
+    // nothing requeued yet" — the requeue is what makes the budget
+    // meaningful.
+    conn.pendingProbePackets = 2
+    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
+}
+
+/**
+ * Move any sent-but-not-ACK'd CRYPTO / STREAM bytes back onto the
+ * retransmit queue at every active encryption level so the next
+ * [drainOutbound] re-emits them. Used by both [handlePtoFired] (the
+ * initial PTO requeue) and the send loop's RFC 9002 §6.2.4 probe
+ * budget (the re-requeue between the first and second probe
+ * datagram). Idempotent on levels with nothing inflight, so calling
+ * it for already-ACKed or already-discarded levels is harmless.
+ *
+ * The level walk mirrors [handlePtoFired]'s original inline
+ * sequence: Handshake first (most-recent CRYPTO), then Initial
+ * (oldest), then Application (1-RTT STREAM data + post-handshake
+ * CRYPTO). The application branch holds [QuicConnection.streamsLock]
+ * because [QuicConnection.requeueAllInflightStreamData] iterates
+ * `streamsList`, which `openBidiStream` mutates under the same lock.
+ */
+internal suspend fun requeueInflightForProbe(conn: QuicConnection) {
     if (conn.handshake.sendProtection != null && !conn.handshake.keysDiscarded) {
         conn.requeueAllInflightCrypto(EncryptionLevel.HANDSHAKE)
     }

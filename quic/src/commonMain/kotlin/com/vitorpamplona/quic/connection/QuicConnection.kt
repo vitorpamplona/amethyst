@@ -574,6 +574,32 @@ class QuicConnection(
     internal var consecutivePtoCount: Int = 0
 
     /**
+     * RFC 9002 §6.2.4 probe budget. Set to 2 each time the PTO timer
+     * fires (`handlePtoFired`); decremented by the driver's send loop
+     * after each probe-bearing datagram leaves the socket. Between
+     * sends the loop re-requeues any inflight CRYPTO / STREAM bytes
+     * via [requeueInflightForProbe] so the next [drainOutbound] has
+     * payload to probe with.
+     *
+     * Why two and not one: under heavy consecutive packet loss
+     * (`amplificationlimit` interop scenario drops 6 client→server
+     * packets in a row, `handshakeloss` / `handshakecorruption` drop
+     * ~30% with burst=3), single-packet probes need 6 PTO doublings
+     * (~19s) to land one datagram. Strict server-side
+     * handshake-progress watchdogs (quic-go, msquic) tear the
+     * connection down at ~10s of silence regardless of our
+     * `max_idle_timeout`. Two probes per PTO halves recovery to
+     * ~3 PTO rounds (~5s) and keeps these servers from giving up.
+     *
+     * `@Volatile`: the send loop reads/writes from a background
+     * coroutine that may be on a different IO worker thread than
+     * the PTO timer's setter. JLS allows long-tearing on 32-bit
+     * JVMs without volatile.
+     */
+    @Volatile
+    internal var pendingProbePackets: Int = 0
+
+    /**
      * Optional supplier of underlying UDP-socket counters. Wired by the
      * platform-specific driver since `UdpSocket`'s counters are
      * JVM-side fields the commonMain side can't see directly.

@@ -167,6 +167,120 @@ class PtoCryptoRetransmitTest {
             )
         }
 
+    @Test
+    fun ptoEmitsTwoProbePacketsPerRfc9002() =
+        runBlocking {
+            // RFC 9002 §6.2.4: a PTO probe SHOULD send up to 2
+            // ack-eliciting packets at the encryption level with
+            // unacknowledged data. Halves recovery time across
+            // consecutive drops — the `amplificationlimit` interop
+            // scenario drops 6 client→server packets in a row, so
+            // two probes per PTO collapse the recovery window from
+            // ~19s (six PTO doublings, single packet each) to ~5s
+            // (three rounds, two packets each). Strict server-side
+            // handshake-progress watchdogs (quic-go, msquic) tear
+            // the connection down at ~10s of silence regardless of
+            // our budget, so the half-time matters for landing in
+            // their tolerance.
+            //
+            // This test drives the EXACT helpers the send loop calls
+            // — [handlePtoFired] (initial PTO requeue + budget=2)
+            // followed by [requeueInflightForProbe] (the re-requeue
+            // step the loop performs between probe-bearing drains).
+            // If anyone unwires the budget or the re-requeue, this
+            // test breaks.
+            val client = newClientWithStartedHandshake()
+
+            val firstDrain = drainOutbound(client, nowMillis = 1L)
+            assertNotNull(firstDrain, "first drain emits the ClientHello datagram")
+
+            val firstSent =
+                client.initial.sentPackets.entries.firstOrNull { entry ->
+                    entry.value.tokens.any { it is RecoveryToken.Crypto }
+                }
+            assertNotNull(firstSent, "Initial-level SentPacket must carry a Crypto token")
+            val firstCrypto =
+                firstSent.value.tokens
+                    .filterIsInstance<RecoveryToken.Crypto>()
+                    .single()
+
+            // PTO fires.
+            handlePtoFired(client)
+            assertEquals(
+                2,
+                client.pendingProbePackets,
+                "handlePtoFired must seed [pendingProbePackets]=2 per RFC 9002 §6.2.4",
+            )
+
+            // Probe 1: drain consumes the requeued CRYPTO. Send loop
+            // decrements the budget and re-requeues for probe 2.
+            val probe1 = drainOutbound(client, nowMillis = 2L)
+            assertNotNull(probe1, "probe 1 must produce a datagram")
+            assertTrue(
+                probe1.size >= 1200,
+                "probe 1 carries Initial → padded to ≥ 1200 (got ${probe1.size})",
+            )
+            client.pendingProbePackets--
+            requeueInflightForProbe(client)
+
+            // Probe 2: a SECOND independent datagram with the same
+            // CRYPTO bytes at the same offset, allocated a fresh PN.
+            val probe2 = drainOutbound(client, nowMillis = 3L)
+            assertNotNull(probe2, "probe 2 must produce a SECOND datagram (RFC 9002 §6.2.4)")
+            assertTrue(
+                probe2.size >= 1200,
+                "probe 2 also Initial-bearing → padded to ≥ 1200 (got ${probe2.size})",
+            )
+            client.pendingProbePackets--
+
+            // Both probes must contain the original ClientHello CRYPTO
+            // at offset 0. Their wire bytes will differ (different PN
+            // → different AEAD nonce → different ciphertext) but the
+            // decrypted CRYPTO payload matches.
+            val firstFrames = decodeInitialFrames(firstDrain, client)
+            val probe1Frames = decodeInitialFrames(probe1, client)
+            val probe2Frames = decodeInitialFrames(probe2, client)
+            val firstHello =
+                firstFrames.filterIsInstance<CryptoFrame>().single { it.offset == firstCrypto.offset }
+            val probe1Hello =
+                probe1Frames.filterIsInstance<CryptoFrame>().firstOrNull { it.offset == firstCrypto.offset }
+            val probe2Hello =
+                probe2Frames.filterIsInstance<CryptoFrame>().firstOrNull { it.offset == firstCrypto.offset }
+            assertNotNull(probe1Hello, "probe 1 must carry CRYPTO at offset 0 — bare PING is not enough")
+            assertNotNull(probe2Hello, "probe 2 must ALSO carry CRYPTO at offset 0 (RFC 9002 §6.2.4)")
+            assertTrue(
+                probe1Hello.data.contentEquals(firstHello.data),
+                "probe 1 replays the original ClientHello bytes",
+            )
+            assertTrue(
+                probe2Hello.data.contentEquals(firstHello.data),
+                "probe 2 replays the SAME original ClientHello bytes (re-requeue preserves them)",
+            )
+
+            // The two probes must use DISTINCT packet numbers — same
+            // PN twice in the same encryption-level space would be
+            // RFC 9000 §17.2.5.1 protocol violation, and was the
+            // root cause of the picoquic-retry diagnostic earlier
+            // this session.
+            val sentPNs =
+                client.initial.sentPackets.keys
+                    .filter { it != firstSent.key }
+                    .toSet()
+            assertEquals(
+                2,
+                sentPNs.size,
+                "two probes must consume two distinct PNs (got $sentPNs)",
+            )
+
+            // After both probes, no more inflight CRYPTO to re-requeue
+            // → next drain returns null. The send loop's break path.
+            val tail = drainOutbound(client, nowMillis = 4L)
+            assertTrue(
+                tail == null || tail.isEmpty(),
+                "no third probe — budget exhausted (got ${tail?.size} bytes)",
+            )
+        }
+
     /**
      * Decode an Initial-level long-header packet from a freshly-drained
      * datagram and return its frames. We open with the client's own
