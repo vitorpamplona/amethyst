@@ -29,7 +29,9 @@ class IMetaTagBuilder(
         key: String,
         value: String,
     ): IMetaTagBuilder {
-        properties.getOrPut(key) { mutableListOf() }.add(value)
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) return this
+        properties.getOrPut(key) { mutableListOf() }.add(trimmed)
         return this
     }
 
