@@ -114,7 +114,19 @@ class LocalBlossomCacheRedirectInterceptorTest {
         val captured = mutableListOf<String>()
         val response = interceptor.intercept(fakeChain("https://nostr.build/i/cache/$sha.webp", captured))
         assertEquals(
-            "http://127.0.0.1:24242/$sha.webp?xs=https%3A%2F%2Fnostr.build",
+            "http://127.0.0.1:24242/$sha.webp?xs=https%3A%2F%2Fnostr.build%2Fi%2Fcache",
+            captured.single(),
+        )
+        response.close()
+    }
+
+    @Test
+    fun bridgeOnPreservesNostrBuildPathPrefix() {
+        val interceptor = LocalBlossomCacheRedirectInterceptor { true }
+        val captured = mutableListOf<String>()
+        val response = interceptor.intercept(fakeChain("https://cdn.nostr.build/i/$sha.jpg", captured))
+        assertEquals(
+            "http://127.0.0.1:24242/$sha.jpg?xs=https%3A%2F%2Fcdn.nostr.build%2Fi",
             captured.single(),
         )
         response.close()

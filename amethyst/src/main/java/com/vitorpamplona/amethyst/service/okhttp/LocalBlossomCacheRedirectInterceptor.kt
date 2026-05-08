@@ -61,24 +61,40 @@ class LocalBlossomCacheRedirectInterceptor(
         val host = url.host
         if (host == LOCAL_CACHE_HOST || host.equals("localhost", ignoreCase = true)) return null
 
-        val (sha, ext) = findSha256AndExtensionInPath(url) ?: return null
-        val originalHostBase = "${url.scheme}://$host" + if (url.port != HttpUrl.defaultPort(url.scheme)) ":${url.port}" else ""
+        val (shaSegmentIndex, sha, ext) = findSha256AndExtensionInPath(url) ?: return null
+        val serverBase = buildServerBase(url, shaSegmentIndex)
 
         return "$LOCAL_CACHE_BASE/$sha.$ext"
             .toHttpUrl()
             .newBuilder()
-            .addQueryParameter("xs", originalHostBase)
+            .addQueryParameter("xs", serverBase)
             .build()
     }
 
-    private fun findSha256AndExtensionInPath(url: HttpUrl): Pair<String, String>? {
-        for (segment in url.pathSegments) {
-            val match = SHA256_SEGMENT_REGEX.find(segment) ?: continue
+    private fun findSha256AndExtensionInPath(url: HttpUrl): Triple<Int, String, String>? {
+        url.pathSegments.forEachIndexed { index, segment ->
+            val match = SHA256_SEGMENT_REGEX.find(segment) ?: return@forEachIndexed
             val sha = match.value.lowercase()
             val ext = guessExtensionFrom(segment, sha) ?: "bin"
-            return sha to ext
+            return Triple(index, sha, ext)
         }
         return null
+    }
+
+    /**
+     * Builds the URL prefix that the local cache should append `/<sha>` to.
+     * Preserves any path prefix the upstream CDN uses (e.g. `/i` for
+     * `https://cdn.nostr.build/i/<sha>`) so the cache can fetch the blob
+     * from its actual location on miss.
+     */
+    private fun buildServerBase(
+        url: HttpUrl,
+        shaSegmentIndex: Int,
+    ): String {
+        val origin = "${url.scheme}://${url.host}" + if (url.port != HttpUrl.defaultPort(url.scheme)) ":${url.port}" else ""
+        if (shaSegmentIndex == 0) return origin
+        val prefixSegments = url.pathSegments.subList(0, shaSegmentIndex)
+        return "$origin/" + prefixSegments.joinToString("/")
     }
 
     private fun guessExtensionFrom(

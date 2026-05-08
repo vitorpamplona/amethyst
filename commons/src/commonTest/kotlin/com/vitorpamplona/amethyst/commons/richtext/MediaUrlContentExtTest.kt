@@ -61,7 +61,21 @@ class MediaUrlContentExtTest {
     fun bridgeOnRewritesPlainHttpsUrl() {
         val image = MediaUrlImage(url = "https://nostr.build/i/abc/$sha.jpg", hash = sha)
         val result = image.toCoilModel(useLocalBlossomBridge = true)
-        assertEquals("blossom:$sha.jpg?xs=https://nostr.build", result)
+        assertEquals("blossom:$sha.jpg?xs=https://nostr.build/i/abc", result)
+    }
+
+    @Test
+    fun bridgeOnPreservesNostrBuildPathPrefix() {
+        val image = MediaUrlImage(url = "https://cdn.nostr.build/i/$sha.jpg", hash = sha)
+        val result = image.toCoilModel(useLocalBlossomBridge = true)
+        assertEquals("blossom:$sha.jpg?xs=https://cdn.nostr.build/i", result)
+    }
+
+    @Test
+    fun bridgeOnFlatBlossomPathYieldsHostOnlyXs() {
+        val image = MediaUrlImage(url = "https://blossom.primal.net/$sha.jpg", hash = sha)
+        val result = image.toCoilModel(useLocalBlossomBridge = true)
+        assertEquals("blossom:$sha.jpg?xs=https://blossom.primal.net", result)
     }
 
     @Test
@@ -134,8 +148,17 @@ class MediaUrlContentExtTest {
         val url = "https://nostr.build/i/$sha.jpg"
         val authorPub = "a8f3721a0dc1b4d5c12f4cc7c54ae14071eb9c1b4f9b2cf0d4ab22c0e9f0c7e5"
         assertEquals(
-            "http://127.0.0.1:24242/$sha.jpg?xs=https%3A%2F%2Fnostr.build&as=$authorPub",
+            "http://127.0.0.1:24242/$sha.jpg?xs=https%3A%2F%2Fnostr.build%2Fi&as=$authorPub",
             bridgeProfilePictureUrl(url, useBridge = true, authorPubKey = authorPub),
+        )
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlPreservesNostrBuildPath() {
+        val url = "https://cdn.nostr.build/i/$sha.jpg"
+        assertEquals(
+            "http://127.0.0.1:24242/$sha.jpg?xs=https%3A%2F%2Fcdn.nostr.build%2Fi",
+            bridgeProfilePictureUrl(url, useBridge = true),
         )
     }
 

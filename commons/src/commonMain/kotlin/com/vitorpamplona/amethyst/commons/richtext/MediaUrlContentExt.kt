@@ -76,11 +76,11 @@ fun bridgeProfilePictureUrl(
 
     val sha = extractSha256FromUrlPath(url) ?: return url
     val ext = guessExtension(url, null)
-    val hostBase = extractHostBase(url) ?: return url
+    val serverBase = extractServerBase(url, sha) ?: return url
 
     val params =
         buildList {
-            add("xs=${percentEncode(hostBase)}")
+            add("xs=${percentEncode(serverBase)}")
             authorPubKey
                 ?.lowercase()
                 ?.takeIf { sha256HexRegex.matches(it) }
@@ -110,7 +110,7 @@ private fun bridgeUrl(
             ?: return url
 
     val ext = guessExtension(url, mimeType)
-    val hostBase = extractHostBase(url) ?: return url
+    val serverBase = extractServerBase(url, sha) ?: return url
 
     val authors =
         authorPubKey
@@ -122,7 +122,7 @@ private fun bridgeUrl(
     return BlossomUri(
         sha256 = sha,
         extension = ext,
-        servers = listOf(hostBase),
+        servers = listOf(serverBase),
         authors = authors,
         size = null,
     ).toUriString()
@@ -170,6 +170,35 @@ private fun guessExtension(
     }
 
     return "bin"
+}
+
+/**
+ * Returns the URL prefix that the local Blossom cache should append `/<sha>`
+ * to in order to reach the original blob, preserving any path prefix the
+ * upstream CDN uses (e.g. `https://cdn.nostr.build/i` for nostr.build's
+ * `/i/<sha>` scheme). Falls back to scheme+host when the sha can't be
+ * located in the path.
+ */
+private fun extractServerBase(
+    url: String,
+    sha: String,
+): String? {
+    val pathPart = url.substringBefore('?').substringBefore('#')
+    val schemeEnd = pathPart.indexOf("://")
+    if (schemeEnd < 0) return null
+    val hostStart = schemeEnd + 3
+    if (hostStart >= pathPart.length) return null
+
+    val shaIndex = pathPart.indexOf(sha, ignoreCase = true)
+    if (shaIndex >= 0) {
+        // Anchor on the slash immediately preceding the sha so the cache
+        // can append "/<sha>" verbatim per the local-blossom-cache spec.
+        val slashBeforeSha = pathPart.lastIndexOf('/', shaIndex - 1)
+        if (slashBeforeSha > hostStart - 1) {
+            return pathPart.substring(0, slashBeforeSha)
+        }
+    }
+    return extractHostBase(pathPart)
 }
 
 private fun extractHostBase(url: String): String? {
