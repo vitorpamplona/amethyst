@@ -40,11 +40,18 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 class NostrSignerWithClientTag(
     val inner: NostrSigner,
     val clientTag: Array<String>,
+    val disabled: () -> Boolean = { false },
 ) : NostrSigner(inner.pubKey) {
     constructor(
         inner: NostrSigner,
         clientName: String,
     ) : this(inner, ClientTag.assemble(clientName))
+
+    constructor(
+        inner: NostrSigner,
+        clientName: String,
+        disabled: () -> Boolean,
+    ) : this(inner, ClientTag.assemble(clientName), disabled)
 
     constructor(
         inner: NostrSigner,
@@ -60,7 +67,12 @@ class NostrSignerWithClientTag(
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): T = inner.sign(createdAt, kind, appendClientTag(tags), content)
+    ): T =
+        if (disabled()) {
+            inner.sign(createdAt, kind, tags, content)
+        } else {
+            inner.sign(createdAt, kind, appendClientTag(tags), content)
+        }
 
     override suspend fun nip04Encrypt(
         plaintext: String,
