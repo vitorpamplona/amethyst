@@ -56,6 +56,12 @@ private const val EXIT_OK = 0
 private const val EXIT_FAIL = 1
 private const val EXIT_UNSUPPORTED = 127
 
+// Sentinel rendered for null/empty env-var values in boot-line logging.
+private const val UNSET_LABEL = "(unset)"
+
+// IANA ALPN identifier for HTTP/0.9-over-QUIC used by quic-interop-runner.
+private const val ALPN_HQ_INTEROP = "hq-interop"
+
 private const val HANDSHAKE_TIMEOUT_SEC = 10L
 
 // Multiconnect's per-iteration handshake timeout. The runner's
@@ -120,11 +126,11 @@ fun main() {
         System.err.println(
             "[boot] DEBUG=1; writerDebugEnabled=true; build_id=" +
                 "${com.vitorpamplona.quic.connection.WRITER_DEBUG_BUILD_ID}; " +
-                "TESTCASE=${System.getenv("TESTCASE") ?: "(unset)"}; " +
-                "ROLE=${System.getenv("ROLE") ?: "(unset)"}",
+                "TESTCASE=${System.getenv("TESTCASE") ?: UNSET_LABEL}; " +
+                "ROLE=${System.getenv("ROLE") ?: UNSET_LABEL}",
         )
     } else {
-        System.err.println("[boot] DEBUG=${debugEnv ?: "(unset)"} writerDebugEnabled=false")
+        System.err.println("[boot] DEBUG=${debugEnv ?: UNSET_LABEL} writerDebugEnabled=false")
     }
 
     val role = System.getenv("ROLE") ?: "client"
@@ -150,8 +156,8 @@ fun main() {
         System.err.println("testcase:       $testcase")
         System.err.println("requests:       $requests")
         System.err.println("downloads dir:  ${downloadsDir.absolutePath} (exists=${downloadsDir.isDirectory})")
-        System.err.println("sslkeylogfile:  ${keyLogPath ?: "(unset)"}")
-        System.err.println("qlogdir:        ${qlogDir?.absolutePath ?: "(unset)"}")
+        System.err.println("sslkeylogfile:  ${keyLogPath ?: UNSET_LABEL}")
+        System.err.println("qlogdir:        ${qlogDir?.absolutePath ?: UNSET_LABEL}")
     }
 
     val cipherSuites =
@@ -367,7 +373,7 @@ internal enum class Alpn(
      *  on a fresh bidi stream, server returns the body, FIN both sides. No
      *  control stream, no QPACK, no SETTINGS. Used for handshake / chacha20 /
      *  transfer / loss-variant testcases. */
-    HQ_INTEROP("hq-interop".encodeToByteArray()),
+    HQ_INTEROP(ALPN_HQ_INTEROP.encodeToByteArray()),
 }
 
 private fun runTransferTest(
@@ -478,7 +484,7 @@ private fun runTransferTest(
                         Http3GetClient(conn, driver).also { it.init(scope) }
                     }
 
-                    "hq-interop" -> {
+                    ALPN_HQ_INTEROP -> {
                         HqInteropGetClient(conn, driver)
                     }
 
@@ -934,7 +940,7 @@ private suspend fun runOneResumptionConnection(
                 Http3GetClient(conn, driver).also { it.init(scope) }
             }
 
-            "hq-interop" -> {
+            ALPN_HQ_INTEROP -> {
                 HqInteropGetClient(conn, driver)
             }
 
@@ -1111,7 +1117,7 @@ private fun runMulticonnectTest(
                             Http3GetClient(conn, driver).also { it.init(scope) }
                         }
 
-                        "hq-interop" -> {
+                        ALPN_HQ_INTEROP -> {
                             HqInteropGetClient(conn, driver)
                         }
 
