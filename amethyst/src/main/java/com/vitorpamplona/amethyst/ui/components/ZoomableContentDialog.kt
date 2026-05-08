@@ -75,6 +75,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -89,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
@@ -566,6 +568,11 @@ private fun RenderImageOrVideo(
                     }
 
                 val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+                val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
+                val bridgedUrl =
+                    remember(content.url, useLocalBlossomBridge) {
+                        content.toCoilModel(useLocalBlossomBridge)
+                    }
 
                 val modifier =
                     if (ratio != null) {
@@ -576,7 +583,7 @@ private fun RenderImageOrVideo(
 
                 Box(modifier, contentAlignment = Alignment.Center) {
                     VideoViewInner(
-                        videoUri = content.url,
+                        videoUri = bridgedUrl,
                         mimeType = content.mimeType,
                         aspectRatio = ratio,
                         title = content.description,

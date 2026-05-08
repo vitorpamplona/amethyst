@@ -151,4 +151,76 @@ class BlossomUriTest {
         assertEquals(listOf(server1, server2), result.servers)
         assertEquals(size, result.size)
     }
+
+    @Test
+    fun toLocalCacheUrlMinimal() {
+        val uri =
+            BlossomUri(
+                sha256 = sha256,
+                extension = "jpg",
+                servers = emptyList(),
+                authors = emptyList(),
+                size = null,
+            )
+        assertEquals(
+            "http://127.0.0.1:24242/$sha256.jpg",
+            uri.toLocalCacheUrl("http://127.0.0.1:24242"),
+        )
+    }
+
+    @Test
+    fun toLocalCacheUrlIncludesHints() {
+        val uri =
+            BlossomUri(
+                sha256 = sha256,
+                extension = "mp4",
+                servers = listOf("https://cdn.example.com", "https://backup.example.com"),
+                authors = listOf(authorPubkey),
+                size = 1048576L,
+            )
+        // BlossomUri.percentEncodeQueryValue lets `:` and `/` through unencoded
+        // since they're safe in a query value as long as `&`/`=`/`#` are absent.
+        assertEquals(
+            "http://127.0.0.1:24242/$sha256.mp4" +
+                "?xs=https://cdn.example.com" +
+                "&xs=https://backup.example.com" +
+                "&as=$authorPubkey" +
+                "&sz=1048576",
+            uri.toLocalCacheUrl("http://127.0.0.1:24242"),
+        )
+    }
+
+    @Test
+    fun toLocalCacheUrlEncodesAmpersandInServer() {
+        val uri =
+            BlossomUri(
+                sha256 = sha256,
+                extension = "jpg",
+                servers = listOf("https://x.example.com/path?a=1&b=2"),
+                authors = emptyList(),
+                size = null,
+            )
+        // & and = inside the server URL must be encoded so they don't break the query.
+        assertEquals(
+            "http://127.0.0.1:24242/$sha256.jpg" +
+                "?xs=https://x.example.com/path?a%3D1%26b%3D2",
+            uri.toLocalCacheUrl("http://127.0.0.1:24242"),
+        )
+    }
+
+    @Test
+    fun toLocalCacheUrlStripsTrailingSlash() {
+        val uri =
+            BlossomUri(
+                sha256 = sha256,
+                extension = "jpg",
+                servers = emptyList(),
+                authors = emptyList(),
+                size = null,
+            )
+        assertEquals(
+            "http://127.0.0.1:24242/$sha256.jpg",
+            uri.toLocalCacheUrl("http://127.0.0.1:24242/"),
+        )
+    }
 }

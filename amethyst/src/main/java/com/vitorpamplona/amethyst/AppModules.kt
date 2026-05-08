@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
@@ -111,6 +112,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
@@ -216,7 +218,7 @@ class AppModules(
     val dnsStore = SurgeDnsStore(appContext, surgeDns)
 
     // manages all the other connections separately from relays.
-    val okHttpClients =
+    val okHttpClients: DualHttpClientManager =
         DualHttpClientManager(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
@@ -224,6 +226,15 @@ class AppModules(
             keyCache = keyCache,
             scope = applicationIOScope,
             dns = surgeDns,
+            // Transparently rewrites sha256-keyed HTTP requests to the local
+            // Blossom cache when the master toggle is on, the profile-pictures-only
+            // restriction is off, and the probe sees 127.0.0.1:24242 as available.
+            shouldBridgeBlossomCache = {
+                val settings = sessionManager.loggedInAccount()?.settings
+                val master = settings?.useLocalBlossomCache?.value ?: false
+                val profileOnly = settings?.localBlossomCacheProfilePicturesOnly?.value ?: false
+                master && !profileOnly && localBlossomCacheProbe.available.value
+            },
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
@@ -412,6 +423,10 @@ class AppModules(
             }
     }
 
+    val localBlossomCacheProbe by lazy {
+        LocalBlossomCacheProbe(roleBasedHttpClientBuilder)
+    }
+
     val blossomResolver by lazy {
         Log.d("AppModules", "BlossomServerResolver Init")
         BlossomServerResolver(
@@ -428,6 +443,14 @@ class AppModules(
                 }
             },
             httpClientBuilder = roleBasedHttpClientBuilder,
+            useLocalBlossomCache = {
+                sessionManager
+                    .loggedInAccount()
+                    ?.settings
+                    ?.useLocalBlossomCache
+                    ?.value ?: false
+            },
+            localCacheProbe = localBlossomCacheProbe,
         )
     }
 
@@ -586,6 +609,37 @@ class AppModules(
                     alwaysOnNotificationServiceManager.stop()
                 }
             }
+        }
+
+        // Evict the BlossomServerResolver URL cache whenever either local-cache
+        // toggle flips or the probe transitions up/down so stale entries don't
+        // outlive the underlying decision.
+        applicationIOScope.launch {
+            sessionManager.accountContent.collectLatest { state ->
+                if (state is AccountState.LoggedIn) {
+                    merge(
+                        state.account.settings.useLocalBlossomCache
+                            .drop(1),
+                        state.account.settings.localBlossomCacheProfilePicturesOnly
+                            .drop(1),
+                    ).collect {
+                        blossomResolver.uriToUrlCache.evictAll()
+                        blossomResolver.blossomHitCache.cache.evictAll()
+                        localBlossomCacheProbe.invalidate()
+                    }
+                }
+            }
+        }
+        applicationIOScope.launch {
+            localBlossomCacheProbe.available.drop(1).collect {
+                blossomResolver.uriToUrlCache.evictAll()
+                blossomResolver.blossomHitCache.cache.evictAll()
+            }
+        }
+        // Warm the local-cache probe so the very first image load doesn't pay
+        // the loopback round-trip cost.
+        applicationIOScope.launch {
+            localBlossomCacheProbe.isAvailable()
         }
 
         // Warms the video cache off the main thread. SimpleCache's constructor opens a SQLite

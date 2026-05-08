@@ -425,6 +425,7 @@ private fun RenderOptionAfterVote(
                     backgroundColor,
                     baseNote.idHex + poolOption.descriptor,
                     baseNote.toNostrUri(),
+                    baseNote.author?.pubkeyHex,
                     accountViewModel,
                     nav,
                 )

@@ -62,6 +62,7 @@ fun RenderRegularTextNote(
                     backgroundColor = bgColor,
                     id = note.idHex,
                     callbackUri = note.toNostrUri(),
+                    authorPubKey = note.author?.pubkeyHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

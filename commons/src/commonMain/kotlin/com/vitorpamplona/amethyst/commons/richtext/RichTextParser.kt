@@ -50,6 +50,7 @@ class RichTextParser {
         eventTags: Map<String, IMetaTag>,
         description: String?,
         callbackUri: String? = null,
+        authorPubKey: String? = null,
     ): MediaUrlContent? {
         val frags = Nip54InlineMetadata().parse(fullUrl)
 
@@ -87,6 +88,7 @@ class RichTextParser {
                 uri = callbackUri,
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
+                authorPubKey = authorPubKey,
             )
         } else if (isVideo) {
             MediaUrlVideo(
@@ -99,6 +101,7 @@ class RichTextParser {
                 uri = callbackUri,
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
+                authorPubKey = authorPubKey,
             )
         } else if (isPdf) {
             MediaUrlPdf(
@@ -110,6 +113,7 @@ class RichTextParser {
                 uri = callbackUri,
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
+                authorPubKey = authorPubKey,
             )
         } else {
             null
@@ -160,16 +164,17 @@ class RichTextParser {
         content: String,
         tags: ImmutableListOfLists<String>,
         callbackUri: String?,
+        authorPubKey: String? = null,
     ): RichTextViewerState {
         val imetas = tags.lists.imetasByUrl()
         val urlSet = UrlParser().parseValidUrls(content)
 
         val mediaContents =
             urlSet.withScheme.mapNotNull { fullUrl ->
-                createMediaContent(fullUrl, imetas, content, callbackUri)
+                createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
             } +
                 urlSet.withoutScheme.mapNotNull { fullUrl ->
-                    createMediaContent(fullUrl, imetas, content, callbackUri)
+                    createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
                 }
 
         val mediaForPager = mediaContents.associateBy { it.url }

@@ -140,6 +140,7 @@ fun RichTextViewer(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
+    authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -147,7 +148,7 @@ fun RichTextViewer(
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
         } else {
-            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
+            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav)
         }
     }
 }
@@ -347,11 +348,12 @@ private fun RenderRegular(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
+    authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     if (canPreview) {
-        RenderRegular(content, tags, callbackUri) { paragraph, state, spaceWidth, modifier ->
+        RenderRegular(content, tags, callbackUri, authorPubKey) { paragraph, state, spaceWidth, modifier ->
             if (paragraph is ImageGalleryParagraph) {
                 ImageGallery(
                     images = paragraph,
@@ -375,7 +377,7 @@ private fun RenderRegular(
             }
         }
     } else {
-        RenderRegular(content, tags, callbackUri) { paragraph, state, spaceWidth, modifier ->
+        RenderRegular(content, tags, callbackUri, authorPubKey) { paragraph, state, spaceWidth, modifier ->
             RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
                 RenderWordWithoutPreview(
                     word,
@@ -412,9 +414,10 @@ fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
     callbackUri: String? = null,
+    authorPubKey: String? = null,
     renderParagraph: @Composable (ParagraphState, state: RichTextViewerState, Dp, modifier: Modifier) -> Unit,
 ) {
-    val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags, callbackUri)) }
+    val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags, callbackUri, authorPubKey)) }
 
     val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
 
