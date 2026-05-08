@@ -32,6 +32,8 @@ import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
 import com.vitorpamplona.quic.frame.NewConnectionIdFrame
 import com.vitorpamplona.quic.frame.NewTokenFrame
+import com.vitorpamplona.quic.frame.PathChallengeFrame
+import com.vitorpamplona.quic.frame.PathResponseFrame
 import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
@@ -301,26 +303,75 @@ private fun feedShortHeaderPacket(
         return
     }
 
-    val keysToUse: PacketProtection
+    // Build an ordered list of (keys, rotateOnSuccess) candidates and
+    // try AEAD against each in order. The list shape depends on whether
+    // the peer's KEY_PHASE bit matches our current phase:
+    //
+    //   match → [current keys] (no rotation possible)
+    //   mismatch → [previous keys (if any), next-phase keys (if derivable)]
+    //
+    // The mismatch path tries `previousReceiveProtection` FIRST because
+    // a reordered packet from before the last rotation is by far the
+    // common case (the reorder window is short, on the order of a few
+    // RTTs). If those keys decrypt the packet, we use them and don't
+    // commit. If they fail (genuine consecutive rotation — peer
+    // rotated AGAIN, KEY_PHASE wraps back to its prior value), we
+    // fall through to deriving next-phase keys against the
+    // already-rolled-forward `appReceiveSecret`. Two AEAD attempts on
+    // a mismatched-phase packet are OK; KEY_PHASE mismatch is rare
+    // (at most once per a-billion-packets in normal usage), and the
+    // failed first attempt is cheap (single AEAD seal-verify on a
+    // small payload).
+    //
+    // Pre-fix the parser routed every mismatch packet UNCONDITIONALLY
+    // through previousReceiveProtection if non-null, with no
+    // fallback. After two consecutive rotations the prior-keys path
+    // would always be the wrong keys, AEAD-fail, and the connection
+    // would silently wedge — `KeyUpdatePeerInitiatedTest`'s
+    // `twoConsecutiveRotationsCommitCorrectly` was disabled with a
+    // KNOWN-LIMITATION comment for this reason.
+    val parsed: ShortHeaderPacket.ParseResult?
     val rotateOnSuccess: PacketProtection?
-    when {
-        peek.keyPhase == conn.currentReceiveKeyPhase -> {
-            keysToUse = live
+    if (peek.keyPhase == conn.currentReceiveKeyPhase) {
+        parsed =
+            ShortHeaderPacket.parseAndDecrypt(
+                bytes = datagram,
+                offset = offset,
+                dcidLen = conn.sourceConnectionId.length,
+                aead = live.aead,
+                key = live.key,
+                iv = live.iv,
+                hp = live.hp,
+                hpKey = live.hpKey,
+                largestReceivedInSpace = state.pnSpace.largestReceived,
+            )
+        rotateOnSuccess = null
+    } else {
+        // Try previous-phase first (reorder path). null result here
+        // means the packet wasn't from before the last rotation —
+        // fall through to next-phase derivation.
+        val priorTry =
+            conn.previousReceiveProtection?.let { prev ->
+                ShortHeaderPacket.parseAndDecrypt(
+                    bytes = datagram,
+                    offset = offset,
+                    dcidLen = conn.sourceConnectionId.length,
+                    aead = prev.aead,
+                    key = prev.key,
+                    iv = prev.iv,
+                    hp = prev.hp,
+                    hpKey = prev.hpKey,
+                    largestReceivedInSpace = state.pnSpace.largestReceived,
+                )
+            }
+        if (priorTry != null) {
+            parsed = priorTry
             rotateOnSuccess = null
-        }
-
-        // Reordered packet from before our last rotation — try the
-        // retained previous keys. Reordering window is small but real
-        // for paths with non-trivial RTT.
-        conn.previousReceiveProtection != null -> {
-            keysToUse = conn.previousReceiveProtection!!
-            rotateOnSuccess = null
-        }
-
-        // Peer just rotated. Derive next-phase keys and prepare to commit
-        // if AEAD succeeds. Failure path is the same as a corrupted /
-        // unauthenticated packet — silent drop.
-        else -> {
+        } else {
+            // Peer rotated (possibly for a 2nd time). Derive next-phase
+            // keys against the rolled-forward `appReceiveSecret` and
+            // try AEAD. On success we commit the rotation; on failure
+            // it's a bona-fide corrupt / unauthenticated packet.
             val nextPhase = conn.deriveNextPhaseReceiveKeys()
             if (nextPhase == null) {
                 conn.qlogObserver.onPacketDropped(
@@ -329,23 +380,21 @@ private fun feedShortHeaderPacket(
                 )
                 return
             }
-            keysToUse = nextPhase
+            parsed =
+                ShortHeaderPacket.parseAndDecrypt(
+                    bytes = datagram,
+                    offset = offset,
+                    dcidLen = conn.sourceConnectionId.length,
+                    aead = nextPhase.aead,
+                    key = nextPhase.key,
+                    iv = nextPhase.iv,
+                    hp = nextPhase.hp,
+                    hpKey = nextPhase.hpKey,
+                    largestReceivedInSpace = state.pnSpace.largestReceived,
+                )
             rotateOnSuccess = nextPhase
         }
     }
-
-    val parsed =
-        ShortHeaderPacket.parseAndDecrypt(
-            bytes = datagram,
-            offset = offset,
-            dcidLen = conn.sourceConnectionId.length,
-            aead = keysToUse.aead,
-            key = keysToUse.key,
-            iv = keysToUse.iv,
-            hp = keysToUse.hp,
-            hpKey = keysToUse.hpKey,
-            largestReceivedInSpace = state.pnSpace.largestReceived,
-        )
     if (parsed == null) {
         conn.qlogObserver.onPacketDropped(
             "AEAD auth failed or header parse failed at level APPLICATION",
@@ -513,6 +562,24 @@ private fun dispatchFrames(
                     )
                     return
                 }
+                // Phantom-stream guard: drop STREAM frames the peer
+                // retransmitted on a stream we've already retired. Without
+                // this, the next line would mint a fresh QuicStream object
+                // and re-deliver duplicate bytes to the application
+                // (worse, on a SERVER_UNI stream it would also bump
+                // peerInitiatedUniCount and trigger a spurious
+                // MAX_STREAMS_UNI emission). The frame is still
+                // ack-eliciting — we set ackEliciting above — so our
+                // ACK goes out and the peer's loss-detector backs off.
+                // Stays inside the StreamFrame handler so other frame
+                // types (RESET_STREAM, MAX_STREAM_DATA, STOP_SENDING)
+                // on retired ids gracefully fall through their existing
+                // streamByIdLocked == null branches as no-ops.
+                if (conn.isStreamIdRetiredLocked(frame.streamId) &&
+                    conn.streamByIdLocked(frame.streamId) == null
+                ) {
+                    continue
+                }
                 val stream = conn.getOrCreatePeerStreamLocked(frame.streamId)
                 // RFC 9000 §4.1: peer MUST NOT send beyond the limit we advertised.
                 // The connection-level kill protects against unbounded memory
@@ -642,6 +709,39 @@ private fun dispatchFrames(
                 // RFC 9000 §13.2.1: NEW_CONNECTION_ID is ack-eliciting. We
                 // don't support migration but still need to ACK to keep
                 // peer's loss-recovery happy.
+                ackEliciting = true
+            }
+
+            is PathChallengeFrame -> {
+                // RFC 9000 §8.2.2 — peer is validating that a path is
+                // alive. We MUST echo the SAME 8-byte payload in a
+                // PATH_RESPONSE on the path the challenge arrived on.
+                // The writer drains [pendingPathChallengePayloads] on the next
+                // application-level packet build.
+                //
+                // Common practical trigger: server-side path
+                // validation after our connection-id rotation, OR
+                // post-NAT-rebind probing. Without responding the
+                // server may declare the path dead within a few RTTs
+                // and tear the connection down — visible to users as
+                // a sudden audio cut on a phone that briefly
+                // switched cells.
+                //
+                // RFC 9000 §13.2.1: PATH_CHALLENGE is ack-eliciting.
+                // The PATH_RESPONSE we queue here is itself
+                // ack-eliciting; the regular ACK path covers both.
+                ackEliciting = true
+                conn.queuePathResponseLocked(frame.data)
+            }
+
+            is PathResponseFrame -> {
+                // RFC 9000 §13.2.1: PATH_RESPONSE is ack-eliciting.
+                // We don't yet issue PATH_CHALLENGE ourselves (that's
+                // the client-initiated migration path, out of scope
+                // for the first-pass landing here), so any PATH_RESPONSE
+                // we receive is necessarily for a challenge we never
+                // sent — drop it after marking ack-eliciting so the
+                // outbound ACK still goes out.
                 ackEliciting = true
             }
 

@@ -301,14 +301,81 @@ class QuicConnection(
     /**
      * Round-4 perf #10: parallel insertion-ordered list of streams so the
      * writer's round-robin scan can index by position without
-     * `streams.entries.toList()` allocating per drain. Streams are only ever
-     * added (no removal in the current model), so the two stay in sync as
-     * long as `getOrCreatePeerStreamLocked` and `openBidi/UniStream` append
-     * to both.
+     * `streams.entries.toList()` allocating per drain. Mutated in lockstep
+     * with [streams] under [streamsLock]:
+     *  - [openBidiStreamLocked] / [openUniStreamLocked] /
+     *    [getOrCreatePeerStreamLocked] append.
+     *  - [retireFullyDoneStreamsLocked] removes entries whose stream has
+     *    flipped [QuicStream.isFullyRetired] = true. The retire pass
+     *    folds the receive-side high-water mark into
+     *    [retiredStreamsRecvBytes] so the writer's MAX_DATA accounting
+     *    in `appendFlowControlUpdates` doesn't regress when a retired
+     *    stream's `receive.contiguousEnd()` drops out of the iteration.
+     *
+     * Without retirement, the moq-lite audio-rooms path leaks one
+     * QuicStream per Opus frame for the lifetime of the session — the
+     * stream-cliff investigation in
+     * `nestsClient/plans/2026-05-01-quic-stream-cliff-investigation.md`
+     * pegs steady-state churn at ~50 streams/sec, so a 3-hour room
+     * accumulates ~540 000 entries before retirement was wired.
      */
     private val streamsList = mutableListOf<QuicStream>()
     private var nextLocalBidiIndex: Long = 0L
     private var nextLocalUniIndex: Long = 0L
+
+    /**
+     * Cumulative `receive.contiguousEnd()` from streams that have been
+     * removed by [retireFullyDoneStreamsLocked]. Folded into the writer's
+     * `totalRecvAdvanced` accumulator so MAX_DATA continues to advertise
+     * the *connection-lifetime* receive high-water mark even after the
+     * contributing streams have been dropped from [streamsList]. Without
+     * this, retiring N streams that each delivered K bytes would silently
+     * regress the advertised connection-level credit by N*K, eventually
+     * starving the peer once `advertisedMaxData` was tripped past.
+     *
+     * Caller of any read/write must hold [streamsLock].
+     */
+    internal var retiredStreamsRecvBytes: Long = 0L
+        private set
+
+    /**
+     * Cumulative count of streams ever removed by
+     * [retireFullyDoneStreamsLocked]. Diagnostic-only; tests that drive
+     * stream churn use this to assert retirement actually fired (rather
+     * than relying on `streamsList.size` alone, which can shrink because
+     * a soak loop happened to drain the same workload it just enqueued).
+     *
+     * Caller of any read/write must hold [streamsLock].
+     */
+    internal var retiredStreamsCount: Long = 0L
+        private set
+
+    /**
+     * FIFO ring of recently-retired stream IDs. The parser consults
+     * this in [getOrCreatePeerStreamLocked] to drop duplicate STREAM
+     * frames the peer might retransmit on a stream we've already torn
+     * down — without this guard, a retransmit (which can happen if our
+     * ACK of the FIN frame was lost and the peer's loss detector
+     * re-fired) would create a fresh QuicStream object, deliver
+     * duplicate bytes to the application, and bump
+     * [peerInitiatedUniCount] a second time.
+     *
+     * Bounded at [RETIRED_STREAM_ID_RING_SIZE] entries. Eviction is
+     * FIFO so a long-running session never grows this set unbounded —
+     * at moq-lite churn rates of ~50 streams/sec, the ring covers the
+     * last ~80 seconds of retired IDs, far longer than the peer's
+     * loss-detection retransmit window (a small multiple of RTT).
+     *
+     * Out-of-bounds duplicate retransmits (extremely rare — would need
+     * the peer's ACK to be lost AND our retransmit not arriving for
+     * many seconds) fall through to the existing
+     * "create-and-immediately-retire" path, which is the previous
+     * pre-guard behavior and merely costs a re-iteration.
+     *
+     * Caller of any read/write must hold [streamsLock].
+     */
+    private val retiredStreamIdsOrder = ArrayDeque<Long>()
+    private val retiredStreamIdSet = HashSet<Long>()
 
     /**
      * Peer-advertised concurrent bidirectional stream cap. Initialised from
@@ -412,6 +479,31 @@ class QuicConnection(
      */
     internal val pendingNewConnectionId:
         MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId> = HashMap()
+
+    /**
+     * RFC 9000 §8.2.2: queue of inbound PATH_CHALLENGE payloads we
+     * still owe a PATH_RESPONSE for. Each entry is the EXACT 8 bytes
+     * the peer challenged with — the response MUST echo them
+     * unchanged. The writer drains this queue on the next
+     * application-level packet build, emitting one PATH_RESPONSE
+     * per entry until empty.
+     *
+     * Bounded at [MAX_PENDING_PATH_RESPONSES] to defend against an
+     * attacker spamming PATH_CHALLENGE frames to exhaust memory.
+     * Excess challenges are dropped; the protocol allows it (a peer
+     * that doesn't get a response just retries).
+     *
+     * RFC 9000 §8.2.1 nuance: the response MUST go out on the
+     * incoming-packet's path. We model a single path today (one
+     * UDP socket per connection — see [com.vitorpamplona.quic.transport.UdpSocket]'s
+     * "no migration" kdoc), so "path the challenge arrived on" is
+     * trivially "the only path." When client-initiated migration
+     * lands, this queue grows to remember which path each entry
+     * belongs to.
+     *
+     * Caller must hold [streamsLock] for any read/write.
+     */
+    internal val pendingPathChallengePayloads: ArrayDeque<ByteArray> = ArrayDeque()
 
     /**
      * RFC 9002 RTT estimator + loss-detection algorithm. Single
@@ -1281,6 +1373,14 @@ class QuicConnection(
         val wasClosed = status == Status.CLOSED
         if (status != Status.CLOSED) status = Status.CLOSED
         if (!wasClosed) {
+            // First-call wins for [closeReason] so the highest-quality
+            // diagnostic is preserved when several teardown paths race
+            // (e.g. read loop's `socket.receive() == null` finally fires
+            // a moment before the send loop's `socket.send` throw catch
+            // block does). Without this, downstream observers like
+            // `ReconnectingNestsListener.terminalAwait` see a closed
+            // connection but no human-readable cause for the failure.
+            closeReason = reason
             // "remote" covers both peer-initiated CONNECTION_CLOSE and
             // local invariant violations (CID mismatch, frame decode
             // failure) that the parser surfaces as markClosedExternally.
@@ -1685,10 +1785,134 @@ class QuicConnection(
     /**
      * Insertion-ordered list view used by the writer's round-robin scan.
      * Stays in sync with [streams] because the only mutation paths
-     * (openBidi/UniStream, getOrCreatePeerStreamLocked) append to both. No
-     * remove path exists today; if/when one is added it MUST update both.
+     * (openBidi/UniStream, getOrCreatePeerStreamLocked,
+     * retireFullyDoneStreamsLocked) update both.
      */
     internal fun streamsListLocked(): List<QuicStream> = streamsList
+
+    /**
+     * Walk [streamsList] once and remove every stream whose
+     * [QuicStream.isFullyRetired] flag is true. Drops the entry from both
+     * [streamsList] and [streams]. Receive-side high-water marks fold
+     * into [retiredStreamsRecvBytes] so the writer's connection-level
+     * MAX_DATA accounting continues to see the lifetime total.
+     *
+     * Returns the number of streams removed in this pass.
+     *
+     * Caller MUST hold [streamsLock]. The writer drains under
+     * `streamsLock`, so calling this from the top of `buildApplicationPacket`
+     * is the natural place — it runs once per send pass, sees the latest
+     * FIN/RESET ACK state from the parser's just-finished processing, and
+     * the iteration order matches the writer's per-pass round-robin
+     * (so the rotation cursor doesn't accidentally point at a hole).
+     *
+     * Why retirement is safe even though the QUIC spec requires the peer
+     * to deliver retransmits if its ACK never reached us:
+     *  - SEND side waits for `finAcked` / `resetAcked`, i.e. the peer has
+     *    already confirmed receipt of our FIN. After that point the peer
+     *    will not re-send anything on the stream.
+     *  - RECEIVE side waits for the parser to have pushed every byte to
+     *    the application's incoming Channel ([ReceiveBuffer.isFullyRead]).
+     *    Retired stream IDs are recorded in [retiredStreamIdSet] so a
+     *    duplicate STREAM frame the peer retransmits (because its own
+     *    loss-detection fired before our ACK arrived) is dropped at
+     *    [getOrCreatePeerStreamLocked] rather than minting a phantom
+     *    stream that delivers duplicate bytes to the application.
+     */
+    internal fun retireFullyDoneStreamsLocked(): Int {
+        if (streamsList.isEmpty()) return 0
+        var removed = 0
+        val it = streamsList.iterator()
+        while (it.hasNext()) {
+            val stream = it.next()
+            if (!stream.isFullyRetired) continue
+            // Fold the per-stream receive high-water into the cumulative
+            // counter BEFORE we drop it — once we lose the reference the
+            // writer can no longer reconstruct the contribution.
+            retiredStreamsRecvBytes += stream.receive.contiguousEnd()
+            // Defence-in-depth: ensure the application-side incoming
+            // channel is closed even if the parser somehow missed the
+            // closeIncoming call (e.g. a stream that finished via
+            // resetAcked never having received any STREAM frame at all).
+            // closeIncoming is idempotent.
+            stream.closeIncoming()
+            // Record the id so a peer retransmit on this stream gets
+            // dropped instead of recreating a phantom stream. FIFO
+            // ring with bounded size — ancient retired IDs eventually
+            // age out, but the eviction window is far larger than the
+            // peer's plausible retransmit horizon.
+            recordRetiredStreamIdLocked(stream.streamId)
+            streams.remove(stream.streamId)
+            it.remove()
+            removed++
+        }
+        if (removed > 0) {
+            retiredStreamsCount += removed.toLong()
+            // The writer's round-robin cursor is a position in
+            // [streamsList], so a removal that crossed the cursor would
+            // make the next drain pass skip a tier. Reset to 0 — the
+            // round-robin is just a fairness hint, not a semantic
+            // requirement.
+            streamRoundRobinStart = 0
+        }
+        return removed
+    }
+
+    /**
+     * Add [streamId] to the retired-IDs ring. FIFO eviction once the
+     * ring is at [RETIRED_STREAM_ID_RING_SIZE] entries — the oldest
+     * entry is removed from both the ordered deque and the lookup
+     * set in lockstep. Idempotent on duplicate adds (the
+     * [retireFullyDoneStreamsLocked] caller already drops the stream
+     * from `streams` before this fires, so a duplicate add can only
+     * happen if a caller manually re-records — defensive `add` skip
+     * keeps the ring entries unique without the cost of a fresh
+     * dedup pass).
+     *
+     * Caller must hold [streamsLock].
+     */
+    private fun recordRetiredStreamIdLocked(streamId: Long) {
+        if (retiredStreamIdSet.add(streamId)) {
+            retiredStreamIdsOrder.addLast(streamId)
+            while (retiredStreamIdsOrder.size > RETIRED_STREAM_ID_RING_SIZE) {
+                val evicted = retiredStreamIdsOrder.removeFirst()
+                retiredStreamIdSet.remove(evicted)
+            }
+        }
+    }
+
+    /**
+     * Queue a PATH_RESPONSE for the given [challengeData]. Called by
+     * the parser when a PATH_CHALLENGE arrives. Idempotent on
+     * duplicate challenges (peer retransmit) — the writer drains
+     * each entry exactly once, so an over-eager peer that sends
+     * many PATH_CHALLENGEs gets many PATH_RESPONSEs (RFC 9000 §8.2
+     * permits this; the spec just requires at-least-one).
+     *
+     * The queue is bounded at [MAX_PENDING_PATH_RESPONSES]; excess
+     * entries are silently dropped (the protocol allows the peer
+     * to time out and retry).
+     *
+     * Caller must hold [streamsLock].
+     */
+    internal fun queuePathResponseLocked(challengeData: ByteArray) {
+        if (pendingPathChallengePayloads.size >= MAX_PENDING_PATH_RESPONSES) return
+        // The parser produces a fresh ByteArray per PATH_CHALLENGE
+        // (see [com.vitorpamplona.quic.Buffer.QuicReader.readBytes],
+        // which `copyOfRange`s a slice off the inbound payload), so
+        // we can keep the reference directly without a defensive
+        // copy.
+        pendingPathChallengePayloads.addLast(challengeData)
+    }
+
+    /**
+     * True if [streamId] has been retired *and* is still inside the
+     * ring's eviction window. Used by [QuicConnectionParser] to drop
+     * STREAM frames the peer retransmits on already-retired streams.
+     *
+     * Caller must hold [streamsLock].
+     */
+    internal fun isStreamIdRetiredLocked(streamId: Long): Boolean = streamId in retiredStreamIdSet
 
     /** Caller must hold [lock]. Pending datagram queue for the driver's send loop. */
     internal fun pendingDatagramsLocked(): ArrayDeque<ByteArray> = pendingDatagrams
@@ -1879,6 +2103,37 @@ class QuicConnection(
          * audio/video, fresh frames matter more than stale ones.
          */
         const val MAX_INCOMING_DATAGRAM_QUEUE: Int = 256
+
+        /**
+         * Capacity of the retired-stream-IDs ring used by
+         * [recordRetiredStreamIdLocked] / [isStreamIdRetiredLocked].
+         * Sized so the ring covers ≥ 80 seconds of retirement at
+         * moq-lite's ~50 streams/sec churn rate, far longer than any
+         * plausible peer retransmit window (a small multiple of RTT
+         * — at the absolute worst tens of seconds on lossy mobile
+         * networks). Older retired IDs eviction-fall-through to the
+         * existing create-and-immediately-retire path, which is
+         * functionally correct, just with one extra round of work
+         * per duplicate.
+         *
+         * Memory: 4 096 × (8 bytes Long key + ~32 bytes HashSet
+         * overhead + 8 bytes ArrayDeque slot) ≈ 200 KB. Trivial vs
+         * the per-stream object size we're saving by retiring.
+         */
+        const val RETIRED_STREAM_ID_RING_SIZE: Int = 4_096
+
+        /**
+         * Bound on the [pendingPathChallengePayloads] queue. RFC 9000 §8.2
+         * doesn't cap PATH_CHALLENGE rate, so a malicious peer could
+         * spam them to exhaust our memory. 64 entries × 8 bytes = 512 B
+         * worst case — trivial to absorb but tight enough that an
+         * attacker can't pin 100 MB by flooding.
+         *
+         * Excess challenges are dropped; the spec allows it (a peer
+         * that doesn't see a response will retransmit on the next
+         * PTO if path validation matters to them).
+         */
+        const val MAX_PENDING_PATH_RESPONSES: Int = 64
     }
 }
 

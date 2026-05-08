@@ -32,6 +32,7 @@ import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
 import com.vitorpamplona.quic.frame.NewConnectionIdFrame
+import com.vitorpamplona.quic.frame.PathResponseFrame
 import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.ResetStreamFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
@@ -575,6 +576,18 @@ private fun buildApplicationPacket(
     // ServerHello has been processed.
     val use1Rtt = state.sendProtection != null
     val proto = state.sendProtection ?: conn.zeroRttSendProtection ?: return null
+    // Drop fully-settled streams BEFORE iterating so we don't waste a
+    // round-robin slot on a stream with nothing to send and no receive
+    // bookkeeping pending. Run this once per drain (at the top of the
+    // application-level path, the only level where streams exist) under
+    // the same `streamsLock` the rest of the drain holds — see
+    // [QuicConnection.retireFullyDoneStreamsLocked] for the safety
+    // argument. The cumulative receive bytes from removed streams fold
+    // into `appendFlowControlUpdates` below so MAX_DATA stays correct.
+    // Safe to call on the 0-RTT path too: no stream can be fully
+    // settled mid-handshake (peer hasn't ACK'd anything yet), so the
+    // walk is a no-op.
+    conn.retireFullyDoneStreamsLocked()
     val frames = mutableListOf<Frame>()
     // Tokens collected in lock-step with [frames]: each retransmittable
     // frame contributes a [RecoveryToken] so the [SentPacket] recorded
@@ -937,6 +950,18 @@ private fun appendFlowControlUpdates(
         }
     }
 
+    // PATH_RESPONSE — drain every pending challenge response in one
+    // pass. RFC 9000 §13.3 is silent on retransmission for
+    // PATH_RESPONSE: it's NOT in the ack-eliciting-and-retransmittable
+    // class, so we don't track tokens for these. If the response
+    // packet is lost, the peer's next PATH_CHALLENGE retry queues a
+    // fresh entry here and we respond again. The peer is responsible
+    // for retrying its challenge until it sees a matching response.
+    while (conn.pendingPathChallengePayloads.isNotEmpty()) {
+        val data = conn.pendingPathChallengePayloads.removeFirst()
+        frames += PathResponseFrame(data)
+    }
+
     // NEW_CONNECTION_ID retransmits. No application path emits these
     // initially today (connection-ID rotation isn't wired); the map
     // is populated only by the loss dispatcher, so this branch only
@@ -957,7 +982,15 @@ private fun appendFlowControlUpdates(
     }
 
     val cfg = conn.config
-    var totalRecvAdvanced = 0L
+    // Seed with the cumulative receive high-water mark from streams that
+    // [QuicConnection.retireFullyDoneStreamsLocked] has already dropped
+    // — the writer's connection-level MAX_DATA threshold uses the
+    // *lifetime* total, so retired streams must keep contributing even
+    // after their per-object `receive.contiguousEnd()` is no longer
+    // reachable. Without this seed, retiring K bytes of streams would
+    // silently regress the advertised credit by K and eventually starve
+    // the peer once the running total fell behind `advertisedMaxData`.
+    var totalRecvAdvanced = conn.retiredStreamsRecvBytes
     // Round-4 perf #9 + round-5 #9: walk the streams via the index-friendly
     // list view (no `entries.toList()` allocation), and only do per-stream
     // window/threshold work for streams flagged by the parser since the last

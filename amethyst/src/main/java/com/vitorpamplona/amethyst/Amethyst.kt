@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst
 
 import android.app.Application
 import com.vitorpamplona.amethyst.service.logging.Logging
+import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 
@@ -40,6 +41,17 @@ class Amethyst : Application() {
         super.onCreate()
         Log.d("AmethystApp") { "onCreate $this" }
         instance = AppModules(this)
+
+        // After-background foreground recycle: when the app returns to
+        // the foreground after spending more than ~5 s in the
+        // background, publish a network-change event so every active
+        // NestViewModel recycles its underlying QUIC session. Covers
+        // the case where Android reclaims our UDP socket FD while
+        // backgrounded — the connectivity callback in
+        // `NestForegroundService` doesn't fire there because the
+        // network itself is still up. See `AppForegroundRecycleHook`'s
+        // kdoc for the threshold rationale.
+        registerActivityLifecycleCallbacks(AppForegroundRecycleHook())
 
         if (isDebug) {
             Logging.setup()
