@@ -423,7 +423,6 @@
     <string name="scheduled_posts_logout_toast_zero">Desconectado</string>
     <plurals name="scheduled_posts_logout_toast">
         <item quantity="one">Desconectado · %d post agendado excluído</item>
-        <item quantity="many">Desconectado · %d posts agendados excluídos</item>
         <item quantity="other">Desconectado · %d posts agendados excluídos</item>
     </plurals>
     <string name="scheduled_posts_notification_sent_title">Post agendado publicado</string>
@@ -441,7 +440,6 @@
     <string name="scheduled_posts_status_cancelled">Cancelado</string>
     <plurals name="scheduled_posts_logout_warning">
         <item quantity="one">Você tem %d post agendado que ainda não foi publicado. Sair excluirá esse post permanentemente.</item>
-        <item quantity="many">Você tem %d posts agendados que ainda não foram publicados. Sair excluirá esses posts permanentemente.</item>
         <item quantity="other">Você tem %d posts agendados que ainda não foram publicados. Sair excluirá esses posts permanentemente.</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_queued">

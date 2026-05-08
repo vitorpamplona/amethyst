@@ -423,7 +423,6 @@
     <string name="scheduled_posts_at_time_past">%1$s · %2$s ezelőtt</string>
     <string name="scheduled_posts_day_tomorrow">Holnap</string>
     <string name="scheduled_posts_logout_toast_zero">Kijelentkezve</string>
-    <string name="scheduled_posts_logout_toast">Ön kijelentkezett · %1$d ütemezett bejegyzés törölve</string>
     <string name="scheduled_posts_notification_sent_title">Ütemezett bejegyzés közzétéve</string>
     <string name="scheduled_posts_notification_failed_title">Nem sikerült közzétenni egy ütemezett bejegyzést</string>
     <string name="app_notification_scheduled_posts_channel_name">Ütemezett bejegyzések</string>
@@ -437,7 +436,6 @@
     <string name="scheduled_posts_status_failed">Sikertelen</string>
     <string name="scheduled_posts_status_sent">Elküldve</string>
     <string name="scheduled_posts_status_cancelled">Megszakitva</string>
-    <string name="scheduled_posts_logout_warning">Önnek %1$d ütemezett bejegyzése van, amelyeket még nem tett közzé. Kijelentkezés esetén ezek véglegesen törlődnek.</string>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="one">%d sorbaállítva</item>
         <item quantity="other">%d sorbaállítva</item>

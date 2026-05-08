@@ -423,7 +423,6 @@
     <string name="scheduled_posts_at_time_past">%1$s · %2$s 前</string>
     <string name="scheduled_posts_day_tomorrow">明天</string>
     <string name="scheduled_posts_logout_toast_zero">已退出登录</string>
-    <string name="scheduled_posts_logout_toast">已退出登录 删除了 %1$d 个定时帖</string>
     <string name="scheduled_posts_notification_sent_title">发布了定时帖</string>
     <string name="scheduled_posts_notification_failed_title">未能发布定时帖</string>
     <string name="app_notification_scheduled_posts_channel_name">定时帖</string>
@@ -437,7 +436,6 @@
     <string name="scheduled_posts_status_failed">失败</string>
     <string name="scheduled_posts_status_sent">已发送</string>
     <string name="scheduled_posts_status_cancelled">已取消</string>
-    <string name="scheduled_posts_logout_warning">您有尚未发布的 %1$d 个定时帖。退出登录将永久删除它们。</string>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="other">%d 个已加入队列</item>
     </plurals>
