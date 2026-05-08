@@ -134,7 +134,7 @@ class MediaUrlContentExtTest {
         val url = "https://nostr.build/i/$sha.jpg"
         val authorPub = "a8f3721a0dc1b4d5c12f4cc7c54ae14071eb9c1b4f9b2cf0d4ab22c0e9f0c7e5"
         assertEquals(
-            "blossom:$sha.jpg?xs=https://nostr.build&as=$authorPub",
+            "http://127.0.0.1:24242/$sha.jpg?xs=https%3A%2F%2Fnostr.build&as=$authorPub",
             bridgeProfilePictureUrl(url, useBridge = true, authorPubKey = authorPub),
         )
     }
@@ -143,5 +143,11 @@ class MediaUrlContentExtTest {
     fun bridgeProfilePictureUrlNoShaInPathReturnsOriginal() {
         val url = "https://nostr.build/avatar.jpg"
         assertEquals(url, bridgeProfilePictureUrl(url, useBridge = true))
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlBlossomUriReturnedUnchanged() {
+        val uri = "blossom:$sha.jpg?xs=https://nostr.build"
+        assertEquals(uri, bridgeProfilePictureUrl(uri, useBridge = true))
     }
 }

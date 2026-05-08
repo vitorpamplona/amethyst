@@ -49,29 +49,48 @@ fun MediaUrlContent.toCoilModel(useLocalBlossomBridge: Boolean): String =
     )
 
 /**
- * Bridge entry point for raw URL strings (e.g. profile pictures) where the
- * hash isn't available on a structured model. Tries to recover the sha256
- * from the URL path itself; falls back to the original URL when no hash
- * can be determined.
+ * Bridge entry point for raw URL strings (e.g. profile pictures) that go
+ * through a Coil fetcher routed by type (`ProfilePictureUrl`) and therefore
+ * bypass [com.vitorpamplona.quartz.nipB7Blossom.BlossomUri] processing
+ * entirely.
  *
- * @param authorPubKey 64-char lowercase hex pubkey to send as `as=` so the
- *                     local cache can consult that author's BUD-03 server list.
+ * Returns a direct `http://127.0.0.1:24242/<sha>.<ext>?xs=<host>&as=<pubkey>`
+ * URL so the request can flow through `NetworkFetcher` unchanged. Falls
+ * back to the original URL when no sha256 can be recovered from the path
+ * or when the bridge is off.
+ *
+ * @param localCacheBase the local Blossom cache origin (default `http://127.0.0.1:24242`).
+ * @param authorPubKey 64-char lowercase hex pubkey appended as `as=` so the
+ *                     cache can consult that author's BUD-03 server list on miss.
  */
 fun bridgeProfilePictureUrl(
     url: String?,
     useBridge: Boolean,
     authorPubKey: String? = null,
+    localCacheBase: String = DEFAULT_LOCAL_CACHE_BASE,
 ): String? {
     if (url == null) return null
-    return bridgeUrl(
-        url = url,
-        useBridge = useBridge,
-        explicitHash = null,
-        mimeType = null,
-        authorPubKey = authorPubKey,
-        skipBridge = false,
-    )
+    if (!useBridge) return url
+    if (url.startsWith("blossom:", ignoreCase = true)) return url
+    if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) return url
+
+    val sha = extractSha256FromUrlPath(url) ?: return url
+    val ext = guessExtension(url, null)
+    val hostBase = extractHostBase(url) ?: return url
+
+    val params =
+        buildList {
+            add("xs=${percentEncode(hostBase)}")
+            authorPubKey
+                ?.lowercase()
+                ?.takeIf { sha256HexRegex.matches(it) }
+                ?.let { add("as=$it") }
+        }
+
+    return "${localCacheBase.removeSuffix("/")}/$sha.$ext?${params.joinToString("&")}"
 }
+
+const val DEFAULT_LOCAL_CACHE_BASE = "http://127.0.0.1:24242"
 
 private fun bridgeUrl(
     url: String,
@@ -107,6 +126,21 @@ private fun bridgeUrl(
         authors = authors,
         size = null,
     ).toUriString()
+}
+
+private fun percentEncode(input: String): String {
+    val sb = StringBuilder(input.length)
+    for (c in input) {
+        if (c.isLetterOrDigit() || c in "-._~") {
+            sb.append(c)
+        } else {
+            for (b in c.toString().encodeToByteArray()) {
+                sb.append('%')
+                sb.append((b.toInt() and 0xFF).toString(16).padStart(2, '0').uppercase())
+            }
+        }
+    }
+    return sb.toString()
 }
 
 private fun extractSha256FromUrlPath(url: String): String? {
