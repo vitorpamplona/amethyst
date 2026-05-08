@@ -179,9 +179,44 @@ sealed class RecoveryToken {
     ) : RecoveryToken()
 
     /**
+     * `PATH_CHALLENGE` frame we emitted as part of client-initiated
+     * path validation (RFC 9000 §8.2 / §9). Carries the same 8-byte
+     * payload the writer put on the wire so the loss dispatcher can
+     * decide whether the validation attempt should be considered
+     * failed or retransmitted.
+     *
+     * RFC 9000 §13.2.1 lists PATH_CHALLENGE as ack-eliciting; §8.2.4
+     * says path validation MUST NOT exceed `3 * PTO` of waiting before
+     * the path is declared failed. The connection-side dispatcher
+     * checks the [com.vitorpamplona.quic.connection.PathValidator]
+     * state — if validation has already moved on (succeeded, failed,
+     * or abandoned), the lost token is dropped silently.
+     */
+    data class PathChallenge(
+        val data: ByteArray,
+    ) : RecoveryToken() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is PathChallenge) return false
+            return data.contentEquals(other.data)
+        }
+
+        override fun hashCode(): Int = data.contentHashCode()
+    }
+
+    /**
+     * `RETIRE_CONNECTION_ID` frame we emitted (RFC 9000 §19.16).
+     * Reliable per §13.3 — peer must learn that we've stopped using
+     * the connection ID, otherwise it keeps the routing entry forever.
+     */
+    data class RetireConnectionId(
+        val sequenceNumber: Long,
+    ) : RecoveryToken()
+
+    /**
      * `NEW_CONNECTION_ID` frame we sent (RFC 9000 §19.15). Reliable
-     * per §13.3. Same scaffolding-only status — connection-ID
-     * rotation isn't wired today.
+     * per §13.3. Same scaffolding-only status — client-issued
+     * connection IDs aren't yet emitted by `:quic`.
      */
     data class NewConnectionId(
         val sequenceNumber: Long,

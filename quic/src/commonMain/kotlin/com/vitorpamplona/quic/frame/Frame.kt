@@ -314,6 +314,25 @@ class NewConnectionIdFrame(
 }
 
 /**
+ * RFC 9000 §19.16 — RETIRE_CONNECTION_ID frame. Tells the peer to
+ * stop using one of the connection IDs it issued. Carries the
+ * sequence number from the corresponding [NewConnectionIdFrame].
+ *
+ * The client side emits this when it rotates to a new DCID
+ * post-handshake (see RFC 9000 §9 client-initiated migration): once
+ * the new path is validated, the previously-active CID is retired
+ * so the server can free the routing entry.
+ */
+class RetireConnectionIdFrame(
+    val sequenceNumber: Long,
+) : Frame() {
+    override fun encode(out: QuicWriter) {
+        out.writeByte(FrameType.RETIRE_CONNECTION_ID.toInt())
+        out.writeVarint(sequenceNumber)
+    }
+}
+
+/**
  * RFC 9000 §19.17 — PATH_CHALLENGE frame, used for path validation
  * (§8.2). The 8-byte [data] payload is opaque random bytes the
  * sender uses to bind a PATH_RESPONSE back to a specific
@@ -489,7 +508,7 @@ fun decodeFrames(data: ByteArray): List<Frame> {
             }
 
             type == FrameType.RETIRE_CONNECTION_ID -> {
-                r.readVarint()
+                out += RetireConnectionIdFrame(r.readVarint())
             }
 
             type == FrameType.PATH_CHALLENGE -> {

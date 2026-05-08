@@ -160,6 +160,51 @@ interface QlogObserver {
     )
 
     /**
+     * RFC 9000 §9 client-initiated path validation just sent its
+     * first `PATH_CHALLENGE` for [newCidSequence] (the sequence
+     * number of the peer-issued connection ID we'll use on the new
+     * path). qvis renders this as a path-validation milestone.
+     */
+    fun onPathValidationStarted(newCidSequence: Long) = Unit
+
+    /**
+     * The peer echoed our PATH_CHALLENGE payload — validation
+     * succeeded. The writer has now switched to the new DCID and
+     * a `RETIRE_CONNECTION_ID` for the prior sequence is queued.
+     */
+    fun onPathValidationSucceeded(newCidSequence: Long) = Unit
+
+    /**
+     * Path validation was abandoned because more than `3 * PTO`
+     * elapsed without a matching `PATH_RESPONSE` (RFC 9000
+     * §8.2.4). Caller may retry with another CID or surface the
+     * failure as a connection close.
+     */
+    fun onPathValidationFailed(newCidSequence: Long) = Unit
+
+    /**
+     * A connection ID belonging to [keyType] (`"local"` for our
+     * source CID, `"peer"` for the peer-issued destination CID)
+     * just became active — i.e. the writer / parser will start
+     * using it for outbound / inbound packets respectively.
+     */
+    fun onConnectionIdActivated(
+        keyType: String,
+        sequenceNumber: Long,
+        connectionId: ByteArray,
+    ) = Unit
+
+    /**
+     * A connection ID was retired (RFC 9000 §19.16 — either we
+     * sent RETIRE_CONNECTION_ID for a peer-issued CID, or the
+     * peer asked us to retire one of ours).
+     */
+    fun onConnectionIdRetired(
+        keyType: String,
+        sequenceNumber: Long,
+    ) = Unit
+
+    /**
      * No-op observer. Default for production callers — every method
      * is an empty body that the JIT inlines. No allocation, no I/O.
      */

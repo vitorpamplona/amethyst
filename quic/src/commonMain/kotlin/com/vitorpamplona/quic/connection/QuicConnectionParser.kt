@@ -36,6 +36,7 @@ import com.vitorpamplona.quic.frame.PathChallengeFrame
 import com.vitorpamplona.quic.frame.PathResponseFrame
 import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.ResetStreamFrame
+import com.vitorpamplona.quic.frame.RetireConnectionIdFrame
 import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.decodeFrames
@@ -716,10 +717,23 @@ private fun dispatchFrames(
             }
 
             is NewConnectionIdFrame -> {
-                // RFC 9000 §13.2.1: NEW_CONNECTION_ID is ack-eliciting. We
-                // don't support migration but still need to ACK to keep
-                // peer's loss-recovery happy.
+                // RFC 9000 §13.2.1: NEW_CONNECTION_ID is ack-eliciting.
+                // §19.15 + §5.1.2: store the offered CID + stateless
+                // reset token in the [PathValidator] pool so the
+                // client-initiated migration path (RFC 9000 §9) can
+                // pick one when the active path stops receiving
+                // ACKs. Also enforces `retire_prior_to` semantics
+                // and queues RETIRE_CONNECTION_ID for any cached
+                // entry whose sequence number falls below the new
+                // watermark. Peer protocol violations close the
+                // connection upstream.
                 ackEliciting = true
+                conn.applyPeerNewConnectionIdLocked(
+                    sequenceNumber = frame.sequenceNumber,
+                    retirePriorTo = frame.retirePriorTo,
+                    connectionId = frame.connectionId,
+                    statelessResetToken = frame.statelessResetToken,
+                )
             }
 
             is PathChallengeFrame -> {
@@ -746,13 +760,26 @@ private fun dispatchFrames(
 
             is PathResponseFrame -> {
                 // RFC 9000 §13.2.1: PATH_RESPONSE is ack-eliciting.
-                // We don't yet issue PATH_CHALLENGE ourselves (that's
-                // the client-initiated migration path, out of scope
-                // for the first-pass landing here), so any PATH_RESPONSE
-                // we receive is necessarily for a challenge we never
-                // sent — drop it after marking ack-eliciting so the
-                // outbound ACK still goes out.
+                // §8.2.2: if the payload matches our outstanding
+                // PATH_CHALLENGE, validation succeeded — the writer
+                // is told to start stamping the new DCID and a
+                // RETIRE_CONNECTION_ID for the old sequence number
+                // is queued (RFC 9000 §9.5). Mismatched payloads
+                // (no outstanding challenge OR an attacker echoing
+                // random bytes) are silently ignored after the ACK.
                 ackEliciting = true
+                conn.applyPeerPathResponseLocked(frame.data)
+            }
+
+            is RetireConnectionIdFrame -> {
+                // RFC 9000 §13.2.1: RETIRE_CONNECTION_ID is
+                // ack-eliciting. §19.16: peer is asking us to
+                // retire one of OUR source CIDs. We only ever
+                // issued sequence 0 (the SCID we picked at
+                // connection start); any seq > 0 is a protocol
+                // violation per §19.16, closes the connection.
+                ackEliciting = true
+                conn.applyPeerRetireConnectionIdLocked(frame.sequenceNumber)
             }
 
             is ConnectionCloseFrame -> {

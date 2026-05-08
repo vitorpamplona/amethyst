@@ -350,6 +350,12 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
     if (conn.initial.sendProtection != null && !conn.initial.keysDiscarded) {
         conn.requeueAllInflightCrypto(EncryptionLevel.INITIAL)
     }
+    // Bug-6 fix: increment BEFORE the threshold check. With the
+    // pre-fix ordering and threshold=2, the rotation actually fired
+    // on the 3rd PTO (count went 0→1→2 before check). Now the count
+    // matches the constant's natural reading: "after 2 consecutive
+    // PTOs with no progress, trigger migration on the 2nd PTO firing."
+    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
     // Once 1-RTT keys are installed, PTO must also retransmit application
     // data — STREAM bytes that were sent but never ACK'd. Without this,
     // a single corrupted/lost 1-RTT packet (especially the first one
@@ -362,7 +368,58 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
         conn.streamsLock.withLock {
             conn.requeueAllInflightStreamData()
             conn.requeueAllInflightCrypto(EncryptionLevel.APPLICATION)
+            // RFC 9000 §9 client-initiated path validation. After
+            // [PATH_PROBE_PTO_THRESHOLD] consecutive PTOs without
+            // any inbound ACK we suspect the path is dead (NAT
+            // rebind, route flap, dead peer). If the peer has
+            // issued spare CIDs via NEW_CONNECTION_ID, rotate to
+            // one and emit a PATH_CHALLENGE on the new DCID. The
+            // validator only triggers on the FIRST crossing of
+            // the threshold per validation cycle — the
+            // [PathValidator] internally rejects re-entry while
+            // [PathValidationState.Validating] holds.
+            //
+            // Also check the §8.2.4 budget on any in-flight
+            // validation: 3*PTO since the challenge went out
+            // without a matching response means the new path is
+            // also dead — abandon and let the next PTO try with
+            // another CID (or surface the failure to the higher
+            // layer).
+            //
+            // Bug-5 fix: use [conn.nowMillis] so a test-injected
+            // virtual clock takes effect. The pre-fix shape called
+            // [Clock.System.now()] directly, ignoring the
+            // connection's clock supplier and breaking timing
+            // assertions in unit tests.
+            val nowMillis = conn.nowMillis()
+            val maxAckDelayMs = conn.peerTransportParameters?.maxAckDelay ?: 0L
+            val ptoBaseMs = conn.lossDetection.ptoBaseMs(maxAckDelayMs).coerceAtLeast(1L)
+            conn.checkPathValidationTimeoutLocked(nowMillis)
+            if (conn.consecutivePtoCount >= PATH_PROBE_PTO_THRESHOLD) {
+                conn.triggerPathMigrationLocked(nowMillis = nowMillis, currentPtoMillis = ptoBaseMs)
+            }
         }
     }
-    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
 }
+
+/**
+ * RFC 9000 §9 / §10.1.2 — number of consecutive PTOs we tolerate on
+ * the active path before assuming it's dead and probing a new one.
+ * The QUIC RFC doesn't pin a specific value (the spec only says "an
+ * endpoint that has previously discovered a particular path
+ * works"); 2 matches Firefox neqo's `PATH_PROBE_PTO_THRESHOLD`
+ * default and Chrome's behavior. Picking 1 is too aggressive
+ * (single dropped packet trips a rotation); 4+ is too late (user
+ * notices the silence).
+ *
+ * The check in [handlePtoFired] runs AFTER the consecutive-PTO
+ * counter is incremented, so the threshold value is the count of
+ * PTOs that fired without an inbound ACK arriving in between.
+ * With value 2 migration triggers on the 2nd consecutive PTO.
+ *
+ * Once the threshold is crossed, [handlePtoFired] calls into
+ * [QuicConnection.triggerPathMigrationLocked] which is itself
+ * idempotent — a second crossing while validation is already in
+ * flight is a no-op.
+ */
+internal const val PATH_PROBE_PTO_THRESHOLD: Int = 2
