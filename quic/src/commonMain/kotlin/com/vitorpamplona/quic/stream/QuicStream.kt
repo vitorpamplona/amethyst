@@ -220,13 +220,26 @@ class QuicStream(
      * (two app threads racing the writer's clear-after-emit).
      */
     fun resetStream(errorCode: Long) {
-        if (resetState != null) return
-        resetState =
-            ResetState(
-                errorCode = errorCode,
-                finalSize = send.nextOffset,
-            )
-        resetEmitPending = true
+        // Synchronized atomic compare-and-set: pre-fix the
+        // `if (resetState != null) return` plus the assignment was
+        // racy. Two concurrent callers (e.g. the application aborting
+        // a request while STOP_SENDING from the peer triggers our own
+        // resetStream from the parser) could both observe null and
+        // both write — the second write would clobber the first
+        // errorCode while [resetEmitPending] was already set. The
+        // writer would then emit a RESET_STREAM with whichever
+        // errorCode landed last, possibly different from what the
+        // application asked for. The synchronized block makes
+        // first-call-wins genuinely first-call-wins.
+        synchronized(this) {
+            if (resetState != null) return
+            resetState =
+                ResetState(
+                    errorCode = errorCode,
+                    finalSize = send.nextOffset,
+                )
+            resetEmitPending = true
+        }
     }
 
     /**
@@ -244,9 +257,12 @@ class QuicStream(
      * original frame already on the wire).
      */
     fun stopSending(errorCode: Long) {
-        if (stopSendingState != null) return
-        stopSendingState = StopSendingState(errorCode = errorCode)
-        stopSendingEmitPending = true
+        // Same atomic-CAS rationale as [resetStream].
+        synchronized(this) {
+            if (stopSendingState != null) return
+            stopSendingState = StopSendingState(errorCode = errorCode)
+            stopSendingEmitPending = true
+        }
     }
 
     /**

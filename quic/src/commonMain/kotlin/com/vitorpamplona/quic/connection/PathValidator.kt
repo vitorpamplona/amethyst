@@ -430,7 +430,15 @@ class PathValidator(
         currentPtoMillis: Long,
     ): PathMigrationResult {
         if (state is PathValidationState.Validating) return PathMigrationResult.AlreadyInProgress
-        val (seq, entry) = unusedCids.entries.firstOrNull() ?: return PathMigrationResult.NoSpareCid
+        // Pick the SMALLEST sequence number, not insertion order. The
+        // peer is allowed (RFC 9000 §19.15) to issue NEW_CONNECTION_ID
+        // out of sequence — e.g. retransmits arriving after newer
+        // higher-seq offers. LinkedHashMap iteration is by insertion,
+        // so the prior `firstOrNull` would pick whichever offer landed
+        // first, not the lowest seq. Picking the smallest preserves
+        // RFC's expected ordering (lower seq retired first) and lines
+        // up with what other clients (quicly, neqo) do.
+        val (seq, entry) = unusedCids.entries.minByOrNull { it.key } ?: return PathMigrationResult.NoSpareCid
         unusedCids.remove(seq)
         val payload =
             challengePayloadFactory().also {
@@ -580,7 +588,16 @@ class PathValidator(
      */
     fun forceRotateToHigherSequence(): ForcedRotationResult? {
         if (activeCidSequence >= retirePriorToWatermark) return null
-        val (seq, entry) = unusedCids.entries.firstOrNull() ?: return ForcedRotationResult.NoSpareCid
+        // Pick the smallest seq above the watermark — see
+        // [tryStartValidation]'s rationale. LinkedHashMap is insertion-
+        // ordered, not seq-ordered, so a peer that retransmits an old
+        // offer can shift the "first" entry away from the actual
+        // smallest.
+        val (seq, entry) =
+            unusedCids.entries
+                .filter { it.key >= retirePriorToWatermark }
+                .minByOrNull { it.key }
+                ?: return ForcedRotationResult.NoSpareCid
         unusedCids.remove(seq)
         val priorSeq = activeCidSequence
         queueRetireSequence(priorSeq)

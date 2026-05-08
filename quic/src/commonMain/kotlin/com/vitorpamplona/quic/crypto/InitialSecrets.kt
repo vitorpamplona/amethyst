@@ -37,7 +37,14 @@ package com.vitorpamplona.quic.crypto
  * protection epoch.
  */
 object InitialSecrets {
-    val V1_INITIAL_SALT: ByteArray =
+    /**
+     * RFC 9001 §5.2 fixed Initial-secret salt for QUIC v1. Private + only
+     * read internally by [derive] — pre-fix the constant was a public
+     * mutable [ByteArray] that any caller could stomp on (or that any
+     * stack trace / `toString()` could leak). Crypto material doesn't
+     * need to be reachable outside the derive path.
+     */
+    private val V1_INITIAL_SALT: ByteArray =
         byteArrayOf(
             0x38.toByte(),
             0x76.toByte(),

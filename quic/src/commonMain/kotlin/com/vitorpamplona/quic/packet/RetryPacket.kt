@@ -107,8 +107,13 @@ data class RetryPacket(
             )
         }
 
-        /** RFC 9001 §5.8 — fixed retry-integrity AES-128-GCM key for QUIC v1. */
-        val V1_RETRY_KEY: ByteArray =
+        /**
+         * RFC 9001 §5.8 — fixed retry-integrity AES-128-GCM key for QUIC v1.
+         * Private — only read by [computeIntegrityTag] inside this file.
+         * Pre-fix exposing the public mutable [ByteArray] let any caller
+         * stomp on it or surface it via reflection / `toString()`.
+         */
+        private val V1_RETRY_KEY: ByteArray =
             byteArrayOf(
                 0xbe.toByte(),
                 0x0c.toByte(),
@@ -128,8 +133,11 @@ data class RetryPacket(
                 0x4e.toByte(),
             )
 
-        /** RFC 9001 §5.8 — fixed retry-integrity AES-128-GCM nonce for QUIC v1. */
-        val V1_RETRY_NONCE: ByteArray =
+        /**
+         * RFC 9001 §5.8 — fixed retry-integrity AES-128-GCM nonce for QUIC v1.
+         * Private; same rationale as [V1_RETRY_KEY].
+         */
+        private val V1_RETRY_NONCE: ByteArray =
             byteArrayOf(
                 0x46.toByte(),
                 0x15.toByte(),

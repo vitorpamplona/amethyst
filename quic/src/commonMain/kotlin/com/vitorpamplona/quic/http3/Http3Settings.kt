@@ -63,9 +63,61 @@ data class Http3Settings(
                         "duplicate HTTP/3 SETTINGS id 0x${id.toString(16)}",
                     )
                 }
+                // RFC 9114 §7.2.4.1 / RFC 9204 §5: per-id range checks.
+                // A peer that advertises e.g. `MAX_FIELD_SECTION_SIZE =
+                // 2^60` could otherwise drive the encoder into
+                // unbounded heap (we'd emit headers up to that cap in a
+                // single allocation). Bounds chosen to comfortably
+                // exceed any legitimate value while staying inside
+                // [Int.MAX_VALUE] for safe `.toInt()` casts at use
+                // sites.
+                validateValue(id, value)
                 map[id] = value
             }
             return Http3Settings(map)
+        }
+
+        /**
+         * Reject obviously-malicious SETTINGS values per the relevant
+         * RFCs. Negative varints are already impossible (varint is
+         * unsigned), but we double-check defensively.
+         */
+        private fun validateValue(
+            id: Long,
+            value: Long,
+        ) {
+            if (value < 0L) {
+                throw com.vitorpamplona.quic.QuicCodecException(
+                    "negative HTTP/3 SETTINGS value for id 0x${id.toString(16)}: $value",
+                )
+            }
+            // Per-id sanity caps. Unknown ids fall through (RFC 9114
+            // §7.2.4.1 says unknown SETTINGS MUST be ignored, but we
+            // still bound the value to avoid attacker-controlled
+            // long-tail allocation if any consumer ever uses the
+            // unknown id directly).
+            val cap: Long =
+                when (id) {
+                    Http3SettingsId.QPACK_MAX_TABLE_CAPACITY -> 1L shl 30
+
+                    // 1 GiB
+                    Http3SettingsId.MAX_FIELD_SECTION_SIZE -> 1L shl 30
+
+                    Http3SettingsId.QPACK_BLOCKED_STREAMS -> 65535L
+
+                    Http3SettingsId.ENABLE_CONNECT_PROTOCOL -> 1L
+
+                    Http3SettingsId.H3_DATAGRAM -> 1L
+
+                    Http3SettingsId.ENABLE_WEBTRANSPORT -> 1L
+
+                    else -> 1L shl 32 // generic cap for unknown ids
+                }
+            if (value > cap) {
+                throw com.vitorpamplona.quic.QuicCodecException(
+                    "HTTP/3 SETTINGS id 0x${id.toString(16)} value $value exceeds cap $cap",
+                )
+            }
         }
     }
 }
