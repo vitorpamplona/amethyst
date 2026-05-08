@@ -281,6 +281,10 @@ fun ReadsScreen(
                     null
                 }
             }
+
+            FeedMode.CUSTOM -> {
+                null
+            }
         }
     }
 
