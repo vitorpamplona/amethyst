@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.namecoin
+package com.vitorpamplona.amethyst.desktop.service.namecoin
 
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
@@ -34,27 +34,34 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.net.SocketFactory
 
 /**
- * Application-level singleton for Namecoin name resolution.
+ * Desktop application-level singleton for Namecoin name resolution.
  *
- * Thread-safe, lifecycle-aware, and designed for integration
- * into Amethyst's existing `ServiceManager` infrastructure.
+ * Same functionality as the Android `NamecoinNameService` but instantiated
+ * directly (no Koin/Hilt DI). Uses plain JVM sockets (no Tor support on
+ * Desktop yet).
  */
-class NamecoinNameService(
-    electrumxClient: ElectrumXClient,
+class DesktopNamecoinNameService(
+    private val preferencesProvider: () -> NamecoinSettings = { NamecoinSettings.DEFAULT },
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Custom server list (user-configurable)
-    @Volatile
-    private var customServers: List<ElectrumxServer> = emptyList()
+    private val electrumxClient =
+        ElectrumXClient(
+            socketFactory = { SocketFactory.getDefault() },
+        )
 
     private val resolver =
         NamecoinNameResolver(
             electrumxClient = electrumxClient,
-            serverListProvider = { customServers.ifEmpty { DEFAULT_ELECTRUMX_SERVERS } },
+            serverListProvider = {
+                val settings = preferencesProvider()
+                settings.toElectrumxServers() ?: DEFAULT_ELECTRUMX_SERVERS
+            },
         )
+
     private val cache = NamecoinLookupCache()
 
     // ── Public API ─────────────────────────────────────────────────────
@@ -69,11 +76,9 @@ class NamecoinNameService(
      * @return [NamecoinNostrResult] or null
      */
     suspend fun resolve(identifier: String): NamecoinNostrResult? {
-        // Check cache first
         val cached = cache.get(identifier)
         if (cached != null) return cached.result
 
-        // Perform lookup
         val result = resolver.resolve(identifier)
         cache.put(identifier, result)
         return result
@@ -92,15 +97,6 @@ class NamecoinNameService(
 
     /**
      * Verify that a Namecoin name maps to the expected pubkey.
-     *
-     * This is the Namecoin equivalent of NIP-05 verification:
-     * given a pubkey from a kind-0 event and a `nip05` value
-     * ending in `.bit`, check that the Namecoin blockchain
-     * confirms the mapping.
-     *
-     * @param nip05Address The nip05 field value, e.g. "alice@example.bit"
-     * @param expectedPubkeyHex The pubkey from the kind-0 event
-     * @return true if the Namecoin name resolves to the expected pubkey
      */
     suspend fun verifyNip05(
         nip05Address: String,
@@ -135,16 +131,6 @@ class NamecoinNameService(
             }
         }
         return state
-    }
-
-    /**
-     * Configure custom ElectrumX servers.
-     *
-     * Users who run their own ElectrumX instance can add it here
-     * for better privacy and reliability.
-     */
-    fun setCustomServers(servers: List<ElectrumxServer>) {
-        customServers = servers
     }
 
     /**

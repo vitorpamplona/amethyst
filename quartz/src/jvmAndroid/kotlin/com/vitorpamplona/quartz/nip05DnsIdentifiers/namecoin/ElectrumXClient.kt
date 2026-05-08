@@ -457,7 +457,8 @@ class ElectrumXClient(
     /**
      * Parse a Namecoin name and value from a verbose transaction response.
      *
-     * Scans each output for a NAME_UPDATE script (starts with OP_3 = 0x53),
+     * Scans each output for a NAME_UPDATE (OP_3 = 0x53) or NAME_FIRSTUPDATE
+     * (OP_2 = 0x52) script,
      * then extracts the name and value from the script's push data.
      */
     private fun parseNameFromTransaction(
@@ -482,8 +483,10 @@ class ElectrumXClient(
                     ?.content
                     ?: continue
 
-            // NAME_UPDATE scripts start with OP_3 (0x53)
-            if (!scriptHex.startsWith("53")) continue
+            // NAME_UPDATE scripts start with OP_3 (0x53);
+            // NAME_FIRSTUPDATE scripts start with OP_2 (0x52). Both carry the
+            // current value at the time of that on-chain operation.
+            if (!scriptHex.startsWith("53") && !scriptHex.startsWith("52")) continue
 
             val scriptBytes = hexToBytes(scriptHex)
             val parsed = parseNameScript(scriptBytes) ?: continue
@@ -510,13 +513,21 @@ class ElectrumXClient(
      * @return Pair of (name, value) as strings, or null if parsing fails
      */
     private fun parseNameScript(script: ByteArray): Pair<String, String>? {
-        if (script.isEmpty() || script[0] != OP_NAME_UPDATE) return null
+        if (script.isEmpty()) return null
+        val op = script[0]
+        if (op != OP_NAME_UPDATE && op != OP_NAME_FIRSTUPDATE) return null
 
         var pos = 1
 
         // Read name
         val (nameBytes, newPos1) = readPushData(script, pos) ?: return null
         pos = newPos1
+
+        // FIRSTUPDATE has an extra <rand> push between name and value; skip it.
+        if (op == OP_NAME_FIRSTUPDATE) {
+            val (_, newPos2) = readPushData(script, pos) ?: return null
+            pos = newPos2
+        }
 
         // Read value
         val (valueBytes, _) = readPushData(script, pos) ?: return null
@@ -815,6 +826,7 @@ class ElectrumXClient(
         const val NAME_EXPIRE_DEPTH = 36_000
 
         // Namecoin script opcodes
+        private const val OP_NAME_FIRSTUPDATE: Byte = 0x52 // OP_2 repurposed by Namecoin
         private const val OP_NAME_UPDATE: Byte = 0x53 // OP_3 repurposed by Namecoin
         private const val OP_2DROP: Byte = 0x6d
         private const val OP_DROP: Byte = 0x75

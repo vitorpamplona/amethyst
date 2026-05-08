@@ -18,6 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.namecoin
+package com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin
 
-typealias NamecoinSettings = com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
+
+/**
+ * Observable state for a Namecoin resolution in progress.
+ */
+sealed class NamecoinResolveState {
+    data object Loading : NamecoinResolveState()
+
+    data class Resolved(
+        val result: NamecoinNostrResult,
+    ) : NamecoinResolveState()
+
+    data object NotFound : NamecoinResolveState()
+
+    data class Error(
+        val message: String,
+    ) : NamecoinResolveState()
+}

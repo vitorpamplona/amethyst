@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.feeds.custom.canBecomeFeed
 import com.vitorpamplona.amethyst.commons.feeds.custom.toFeedDefinition
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SavedSearch
@@ -89,6 +90,8 @@ import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.SearchFilterFactory
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
@@ -103,6 +106,8 @@ import com.vitorpamplona.amethyst.desktop.ui.search.AdvancedSearchPanel
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.launch
 
@@ -155,6 +160,60 @@ fun SearchScreen(
 
     // Bech32 parsing (immediate, no debounce)
     val bech32Results = remember(displayText) { parseSearchInput(displayText) }
+
+    // Namecoin resolution
+    val namecoinService = LocalNamecoinService.current
+    val namecoinPrefs = LocalNamecoinPreferences.current
+    val namecoinEnabled =
+        namecoinPrefs
+            ?.settings
+            ?.collectAsState()
+            ?.value
+            ?.enabled ?: false
+    val isNamecoinQuery =
+        remember(displayText) {
+            displayText.isNotBlank() && NamecoinNameResolver.isNamecoinIdentifier(displayText.trim())
+        }
+
+    var namecoinState by remember { mutableStateOf<NamecoinResolveState?>(null) }
+
+    // Resolve Namecoin identifiers with cancellation of stale lookups.
+    // Uses resolveDetailed() which returns typed outcomes instead of throwing,
+    // so we get proper NotFound/Expired/ServersUnreachable states.
+    LaunchedEffect(displayText, namecoinEnabled) {
+        if (!namecoinEnabled || !isNamecoinQuery || namecoinService == null) {
+            namecoinState = null
+            return@LaunchedEffect
+        }
+        namecoinState = NamecoinResolveState.Loading
+        val outcome = namecoinService.resolveDetailed(displayText.trim())
+        namecoinState =
+            when (outcome) {
+                is NamecoinResolveOutcome.Success -> {
+                    NamecoinResolveState.Resolved(outcome.result)
+                }
+
+                is NamecoinResolveOutcome.NameNotFound -> {
+                    NamecoinResolveState.NotFound
+                }
+
+                is NamecoinResolveOutcome.NoNostrField -> {
+                    NamecoinResolveState.Error("Name exists but has no Nostr pubkey")
+                }
+
+                is NamecoinResolveOutcome.ServersUnreachable -> {
+                    NamecoinResolveState.Error("ElectrumX servers unreachable — check your connection or try again")
+                }
+
+                is NamecoinResolveOutcome.InvalidIdentifier -> {
+                    NamecoinResolveState.Error("Invalid Namecoin identifier")
+                }
+
+                is NamecoinResolveOutcome.Timeout -> {
+                    NamecoinResolveState.Error("Resolution timed out — servers may be slow, try again")
+                }
+            }
+    }
 
     // Skip people search when query specifies kinds that don't include profile (kind 0)
     val shouldSearchPeople =
@@ -543,8 +602,78 @@ fun SearchScreen(
             Spacer(Modifier.height(16.dp))
 
             // Results
+
+            // Namecoin results (shown before everything else when query looks like a Namecoin id)
+            if (isNamecoinQuery && namecoinState != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Namecoin lookup",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    )
+                    when (val ncState = namecoinState) {
+                        is NamecoinResolveState.Loading -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                LinearProgressIndicator(modifier = Modifier.width(120.dp))
+                                Text(
+                                    "Resolving ${displayText.trim()}...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        is NamecoinResolveState.Resolved -> {
+                            SearchResultCard(
+                                result =
+                                    SearchResult.UserResult(
+                                        pubKeyHex = ncState.result.pubkey,
+                                        displayId = "${ncState.result.namecoinName} → ${ncState.result.pubkey.take(12)}...",
+                                    ),
+                                onNavigateToProfile = onNavigateToProfile,
+                                onNavigateToThread = onNavigateToThread,
+                                onNavigateToHashtag = onNavigateToHashtag,
+                            )
+                            if (ncState.result.relays.isNotEmpty()) {
+                                Text(
+                                    "Relays: ${ncState.result.relays.joinToString(", ")}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
+                        }
+
+                        is NamecoinResolveState.NotFound -> {
+                            Text(
+                                "Name not found on Namecoin blockchain",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+
+                        is NamecoinResolveState.Error -> {
+                            Text(
+                                "Resolution error: ${ncState.message}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+
+                        null -> {}
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
             val hasAnyResults =
-                bech32Results.isNotEmpty() || peopleResults.isNotEmpty() || noteResults.isNotEmpty()
+                bech32Results.isNotEmpty() || peopleResults.isNotEmpty() || noteResults.isNotEmpty() ||
+                    (namecoinState is NamecoinResolveState.Resolved)
 
             if (bech32Results.isNotEmpty()) {
                 // Show bech32 results (exact lookup)
