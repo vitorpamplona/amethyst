@@ -88,6 +88,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
@@ -261,7 +262,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.SortedSet
-import java.util.concurrent.ConcurrentHashMap
 
 interface ILocalCache {
     fun markAsSeen(
@@ -290,7 +290,15 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     val deletionIndex = DeletionIndex()
 
-    val observables = ConcurrentHashMap<Observable, Observable>(10)
+    /**
+     * Inverted index over the active [Observable]s. New events fan
+     * out only to observers whose filter actually narrows on a field
+     * the event carries (author, kind, single-letter tag), instead
+     * of waking every observer per event. Predicate-only observers
+     * (no underlying [Filter]) live in the unindexed pool and still
+     * see every event.
+     */
+    val observables = FilterIndex<Observable>()
 
     fun Filter.match(note: Note): Boolean {
         val event = note.event
@@ -361,10 +369,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             newFilter.init()
 
-            observables[newFilter] = newFilter
+            observables.register(filter, newFilter)
 
             awaitClose {
-                observables.remove(newFilter)
+                observables.unregister(newFilter)
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
@@ -377,10 +385,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             cachedFilter.init()
 
-            observables.put(cachedFilter, cachedFilter)
+            observables.register(filter, cachedFilter)
 
             awaitClose {
-                observables.remove(cachedFilter)
+                observables.unregister(cachedFilter)
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
@@ -402,14 +410,28 @@ object LocalCache : ILocalCache, ICacheProvider {
                     trySend(it)
                 }
 
-            observables.put(newFilter, newFilter)
+            // Unindexed: predicate is opaque, the index can't narrow.
+            // Caller is delivered every event and runs the predicate.
+            observables.registerUnindexed(newFilter)
 
             awaitClose {
-                observables.remove(newFilter)
+                observables.unregister(newFilter)
             }
         }
 
-    fun <T : Event> observeNewEvents(filter: Filter): Flow<T> = observeNewEvents(filter::match)
+    fun <T : Event> observeNewEvents(filter: Filter): Flow<T> =
+        callbackFlow {
+            val newFilter =
+                NewEventMatchingFilter<T>(filter::match) {
+                    trySend(it)
+                }
+
+            observables.register(filter, newFilter)
+
+            awaitClose {
+                observables.unregister(newFilter)
+            }
+        }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
@@ -2514,22 +2536,21 @@ object LocalCache : ILocalCache, ICacheProvider {
     private fun refreshNewNoteObservers(newNote: Note) {
         val event = newNote.event as Event
 
-        val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { _, u ->
-                u.new(event, newNote)
-            }
-
-        observables.forEach(observableBiConsumer)
+        // Index-driven fanout: only observers whose filter narrows
+        // on a field this event carries (or that registered as
+        // unindexed) get woken up. The match check inside each
+        // observer's `new()` still enforces negative constraints.
+        for (observer in observables.candidatesFor(event)) {
+            observer.new(event, newNote)
+        }
         live.newNote(newNote)
     }
 
     private fun refreshDeletedNoteObservers(newNote: Note) {
-        val observableBiConsumer =
-            java.util.function.BiConsumer<Observable, Observable> { _, u ->
-                u.remove(newNote)
-            }
-
-        observables.forEach(observableBiConsumer)
+        // Deletes don't have a filterable shape — every observer
+        // might hold this note in its result set, so iterate them
+        // all. The index doesn't help here.
+        observables.forEach { it.remove(newNote) }
         live.removedNote(newNote)
     }
 

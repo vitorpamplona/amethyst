@@ -24,6 +24,7 @@ import com.vitorpamplona.quic.crypto.Aes128Gcm
 import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
+import com.vitorpamplona.quic.crypto.expandLabel
 import com.vitorpamplona.quic.frame.AckFrame
 import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
@@ -96,6 +97,42 @@ class InMemoryQuicPipe(
     private var serverHandshakeTx: PacketProtection? = null
     private var serverApplicationRx: PacketProtection? = null
     private var serverApplicationTx: PacketProtection? = null
+
+    /**
+     * Mirror of the client's `application.sendProtection` for the
+     * pipe's TX side. The key-update test rotates this forward
+     * (HKDF-Expand-Label "quic ku") so the pipe can emit a packet
+     * encrypted with the next-phase keys, exercising the client's
+     * peer-initiated rotation path. Stays null until the handshake
+     * completes; updated in lockstep with [serverApplicationTx]
+     * by [installServerSecretsAfterHandshakeBegin] and rolled
+     * forward by [rotateServerApplicationKeys].
+     */
+    private var serverSendApplicationSecret: ByteArray? = null
+
+    /**
+     * Cipher suite negotiated by [tlsServer]. Cached after the
+     * handshake completes so [rotateServerApplicationKeys] doesn't
+     * have to re-query the TLS object on every rotation.
+     */
+    private var serverApplicationCipherSuite: Int = 0
+
+    /**
+     * Stashed pre-rotation TX keys, so the test can re-emit a
+     * "reordered" packet on the OLD keys after a rotation has
+     * committed. Without this, the reorder-window check (RFC 9001
+     * §6.1: client retains [previousReceiveProtection] until the
+     * reorder window closes) would have nothing to exercise.
+     * Updated by [rotateServerApplicationKeys].
+     */
+    private var serverApplicationTxPrior: PacketProtection? = null
+
+    /**
+     * Tracks the server's send-side key-phase bit. Flipped by
+     * [rotateServerApplicationKeys] so [buildServerApplicationDatagram]
+     * can stamp the right value into the short-header.
+     */
+    private var serverSendKeyPhase: Boolean = false
 
     private val initialPnSpace = PacketNumberSpaceState()
     private val handshakePnSpace = PacketNumberSpaceState()
@@ -226,6 +263,8 @@ class InMemoryQuicPipe(
         serverHandshakeTx = packetProtectionFromSecret(cipher, tlsServer.serverHandshakeSecret!!)
         serverApplicationRx = packetProtectionFromSecret(cipher, tlsServer.clientApplicationSecret!!)
         serverApplicationTx = packetProtectionFromSecret(cipher, tlsServer.serverApplicationSecret!!)
+        serverSendApplicationSecret = tlsServer.serverApplicationSecret
+        serverApplicationCipherSuite = cipher
     }
 
     /** Build a single datagram from the server containing whatever it owes the client. */
@@ -293,6 +332,87 @@ class InMemoryQuicPipe(
                 dcid = client.sourceConnectionId,
                 packetNumber = pn,
                 payload = payload,
+                keyPhase = serverSendKeyPhase,
+            ),
+            proto.aead,
+            proto.key,
+            proto.iv,
+            proto.hp,
+            proto.hpKey,
+            largestAckedInSpace = applicationPnSpace.largestReceived,
+        )
+    }
+
+    /**
+     * Test-only: roll the server's TX-side application keys forward by
+     * one phase (RFC 9001 §6.1) and stash the prior keys on
+     * [serverApplicationTxPrior] so a follow-up call to
+     * [buildServerApplicationDatagramWithPriorKeys] can simulate a
+     * reordered packet from before the rotation.
+     *
+     * After this call, the next [buildServerApplicationDatagram] will
+     * emit a packet whose KEY_PHASE bit is the rotated value and
+     * whose AEAD nonce/key are HKDF-derived off the next-phase
+     * secret. The pipe also tracks its own send-phase bit, so we
+     * model the realistic case where the server (peer) rotates its
+     * own send keys and the client mirrors on receive.
+     *
+     * Throws if called before the handshake completes.
+     */
+    fun rotateServerApplicationKeys() {
+        val curSecret =
+            checkNotNull(serverSendApplicationSecret) {
+                "rotateServerApplicationKeys called before handshake completed"
+            }
+        val cs = serverApplicationCipherSuite
+        check(cs != 0) { "negotiated cipher suite not yet recorded" }
+        val nextSecret = expandLabel(curSecret, "quic ku", curSecret.size)
+        val nextProto = packetProtectionFromSecret(cipherSuite = cs, secret = nextSecret)
+        val live =
+            checkNotNull(serverApplicationTx) {
+                "rotateServerApplicationKeys called before serverApplicationTx installed"
+            }
+        // RFC 9001 §6.1 — HP key is NOT updated on rotation; carry the
+        // existing one forward.
+        val rotated =
+            PacketProtection(
+                aead = nextProto.aead,
+                key = nextProto.key,
+                iv = nextProto.iv,
+                hp = live.hp,
+                hpKey = live.hpKey,
+            )
+        serverApplicationTxPrior = live
+        serverApplicationTx = rotated
+        serverSendApplicationSecret = nextSecret
+        serverSendKeyPhase = !serverSendKeyPhase
+    }
+
+    /**
+     * Test-only: build a server application packet using the
+     * pre-rotation keys captured by [rotateServerApplicationKeys].
+     * Used to drive the reorder-window code path in the parser
+     * ([com.vitorpamplona.quic.connection.feedShortHeaderPacket]'s
+     * `previousReceiveProtection != null` branch) — the client
+     * MUST decrypt this packet with [QuicConnection.previousReceiveProtection]
+     * even after committing the rotation, because in the real network
+     * a reordered packet from before the rotation can arrive after
+     * the rotation-triggering packet.
+     *
+     * Returns null if no prior keys have been stashed (i.e.
+     * [rotateServerApplicationKeys] hasn't been called yet).
+     */
+    fun buildServerApplicationDatagramWithPriorKeys(frames: List<com.vitorpamplona.quic.frame.Frame>): ByteArray? {
+        val proto = serverApplicationTxPrior ?: return null
+        val pn = applicationPnSpace.allocateOutbound()
+        val payload = encodeFrames(frames)
+        return ShortHeaderPacket.build(
+            com.vitorpamplona.quic.packet.ShortHeaderPlaintextPacket(
+                dcid = client.sourceConnectionId,
+                packetNumber = pn,
+                payload = payload,
+                // Prior phase is the inverse of the current one.
+                keyPhase = !serverSendKeyPhase,
             ),
             proto.aead,
             proto.key,

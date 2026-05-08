@@ -42,6 +42,8 @@ tasks.withType<Test>().configureEach {
     // perf.LoadBenchmark tests opt in. Off by default — load tests
     // are noisy and slow.
     systemProperty("runLoadBenchmark", System.getProperty("runLoadBenchmark") ?: "false")
+    System.getProperty("fanoutScalingEvents")?.let { systemProperty("fanoutScalingEvents", it) }
+    System.getProperty("fanoutScalingSubs")?.let { systemProperty("fanoutScalingSubs", it) }
     // Show println output from test JVM so the benchmark numbers are
     // actually visible without grepping the report XML.
     testLogging {
