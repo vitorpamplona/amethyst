@@ -443,13 +443,13 @@
         <item quantity="other">%d ve frontě</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · 1 do 1 h</item>
+        <item quantity="one"> · %d do 1 h</item>
         <item quantity="few"> · %d do 1 h</item>
         <item quantity="many"> · %d do 1 h</item>
         <item quantity="other"> · %d do 1 h</item>
     </plurals>
     <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">na 1 relay</item>
+        <item quantity="one">na %d relay</item>
         <item quantity="few">na %d relaye</item>
         <item quantity="many">na %d relayů</item>
         <item quantity="other">na %d relayů</item>

@@ -446,11 +446,11 @@ anz der Bedingungen ist erforderlich</string>
         <item quantity="other">%d in Warteschlange</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · 1 fällig in 1 Std.</item>
+        <item quantity="one"> · %d fällig in 1 Std.</item>
         <item quantity="other"> · %d fällig in 1 Std.</item>
     </plurals>
     <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">an 1 Relay</item>
+        <item quantity="one">an %d Relay</item>
         <item quantity="other">an %d Relays</item>
     </plurals>
     <string name="scheduled_posts_event_id_copied">Beitrags-ID kopiert</string>
