@@ -398,6 +398,17 @@
     <string name="migrate_bookmarks_button">移动全部到新书签</string>
     <string name="migrate_bookmarks_success">书签迁移成功</string>
     <string name="drafts">草稿</string>
+    <string name="scheduled_posts">定时帖子</string>
+    <string name="schedule_post">计划</string>
+    <string name="schedule_post_time_label">计划的时间</string>
+    <string name="schedule_post_helper">帖子发布时间计划时间的 ~15 分钟内。</string>
+    <string name="schedule_post_pick_time">选择计划时间</string>
+    <string name="schedule_post_pick_label">选择计划项目…</string>
+    <string name="schedule_post_publishes_in">在 %1$s 内发布</string>
+    <string name="schedule_post_was_due">%1$s 前到期</string>
+    <string name="schedule_post_picker_time_title">时间</string>
+    <string name="schedule_post_button_add">定时帖</string>
+    <string name="schedule_post_button_remove">取消时间安排</string>
     <string name="polls">投票</string>
     <string name="open_polls">开启</string>
     <string name="closed_polls">已关闭</string>
