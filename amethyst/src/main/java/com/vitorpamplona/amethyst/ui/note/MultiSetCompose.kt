@@ -550,6 +550,7 @@ fun CrossfadeToDisplayComment(
             backgroundColor,
             comment,
             null,
+            null,
             accountViewModel,
             nav,
         )

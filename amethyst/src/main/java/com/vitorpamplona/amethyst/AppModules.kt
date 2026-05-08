@@ -110,6 +110,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
@@ -588,19 +589,22 @@ class AppModules(
             }
         }
 
-        // Evict the BlossomServerResolver URL cache whenever the local-cache
+        // Evict the BlossomServerResolver URL cache whenever either local-cache
         // toggle flips or the probe transitions up/down so stale entries don't
         // outlive the underlying decision.
         applicationIOScope.launch {
             sessionManager.accountContent.collectLatest { state ->
                 if (state is AccountState.LoggedIn) {
-                    state.account.settings.useLocalBlossomCache
-                        .drop(1)
-                        .collect {
-                            blossomResolver.uriToUrlCache.evictAll()
-                            blossomResolver.blossomHitCache.cache.evictAll()
-                            localBlossomCacheProbe.invalidate()
-                        }
+                    merge(
+                        state.account.settings.useLocalBlossomCache
+                            .drop(1),
+                        state.account.settings.localBlossomCacheProfilePicturesOnly
+                            .drop(1),
+                    ).collect {
+                        blossomResolver.uriToUrlCache.evictAll()
+                        blossomResolver.blossomHitCache.cache.evictAll()
+                        localBlossomCacheProbe.invalidate()
+                    }
                 }
             }
         }

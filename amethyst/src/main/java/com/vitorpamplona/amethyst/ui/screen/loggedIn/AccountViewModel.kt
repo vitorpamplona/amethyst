@@ -189,13 +189,32 @@ class AccountViewModel(
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
     /**
-     * `true` when both the per-account toggle is enabled AND the local
-     * Blossom cache HEAD probe currently sees `127.0.0.1:24242` as
-     * available. UI call sites use this to decide whether to convert plain
-     * http(s) URLs (with imeta sha256) into `blossom:` URIs so the request
-     * routes through the local cache.
+     * `true` when feed/note media (images and videos in `MediaUrlContent`)
+     * should be routed through the local Blossom cache. Requires the master
+     * toggle on, the probe up, AND the profile-pictures-only restriction
+     * to be off.
      */
     val useLocalBlossomBridge: StateFlow<Boolean> =
+        try {
+            combine(
+                account.settings.useLocalBlossomCache,
+                account.settings.localBlossomCacheProfilePicturesOnly,
+                Amethyst.instance.localBlossomCacheProbe.available,
+            ) { toggle, profileOnly, probeUp -> toggle && probeUp && !profileOnly }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                false,
+            )
+        } catch (e: UninitializedPropertyAccessException) {
+            MutableStateFlow(false)
+        }
+
+    /**
+     * `true` when profile pictures should be routed through the local
+     * Blossom cache. Requires only the master toggle and the probe to be
+     * up; the profile-pictures-only restriction does not gate this flow.
+     */
+    val useLocalBlossomBridgeForProfilePics: StateFlow<Boolean> =
         try {
             combine(
                 account.settings.useLocalBlossomCache,
@@ -206,7 +225,6 @@ class AccountViewModel(
                 false,
             )
         } catch (e: UninitializedPropertyAccessException) {
-            // Mock/test instances don't initialise Amethyst.instance.
             MutableStateFlow(false)
         }
 

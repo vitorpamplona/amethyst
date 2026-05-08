@@ -42,6 +42,7 @@ abstract class MediaUrlContent(
     val uri: String? = null,
     val mimeType: String? = null,
     thumbhash: String? = null,
+    val authorPubKey: String? = null,
 ) : BaseMediaContent(description, dim, blurhash, thumbhash)
 
 @Immutable
@@ -55,7 +56,8 @@ open class MediaUrlImage(
     val contentWarning: String? = null,
     mimeType: String? = null,
     thumbhash: String? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash)
+    authorPubKey: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
 
 class EncryptedMediaUrlImage(
     url: String,
@@ -70,7 +72,8 @@ class EncryptedMediaUrlImage(
     val encryptionKey: ByteArray,
     val encryptionNonce: ByteArray,
     thumbhash: String? = null,
-) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType, thumbhash)
+    authorPubKey: String? = null,
+) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType, thumbhash, authorPubKey)
 
 @Immutable
 open class MediaUrlPdf(
@@ -82,7 +85,8 @@ open class MediaUrlPdf(
     uri: String? = null,
     mimeType: String? = null,
     thumbhash: String? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash)
+    authorPubKey: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
 
 @Immutable
 open class MediaUrlVideo(
@@ -98,7 +102,8 @@ open class MediaUrlVideo(
     mimeType: String? = null,
     thumbhash: String? = null,
     val isLiveStream: Boolean = false,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash)
+    authorPubKey: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
 
 @Immutable
 class EncryptedMediaUrlVideo(
@@ -116,7 +121,8 @@ class EncryptedMediaUrlVideo(
     val encryptionKey: ByteArray,
     val encryptionNonce: ByteArray,
     thumbhash: String? = null,
-) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType, thumbhash)
+    authorPubKey: String? = null,
+) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType, thumbhash, authorPubKey = authorPubKey)
 
 @Immutable
 abstract class MediaPreloadedContent(

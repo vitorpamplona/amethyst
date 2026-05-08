@@ -33,11 +33,15 @@ object CachedRichTextParser {
         content: String,
         tags: ImmutableListOfLists<String>,
         callbackUri: String?,
+        authorPubKey: String?,
     ): Int {
         var result = content.hashCode()
         result = 31 * result + tags.lists.hashCode()
         if (callbackUri != null) {
             result = 31 * result + callbackUri.hashCode()
+        }
+        if (authorPubKey != null) {
+            result = 31 * result + authorPubKey.hashCode()
         }
         return result
     }
@@ -46,19 +50,21 @@ object CachedRichTextParser {
         content: String,
         tags: ImmutableListOfLists<String>,
         callbackUri: String? = null,
-    ): RichTextViewerState? = richTextCache[hashCodeCache(content, tags, callbackUri)]
+        authorPubKey: String? = null,
+    ): RichTextViewerState? = richTextCache[hashCodeCache(content, tags, callbackUri, authorPubKey)]
 
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>,
         callbackUri: String? = null,
+        authorPubKey: String? = null,
     ): RichTextViewerState {
-        val key = hashCodeCache(content, tags, callbackUri)
+        val key = hashCodeCache(content, tags, callbackUri, authorPubKey)
         val cached = richTextCache[key]
         return if (cached != null) {
             cached
         } else {
-            val newUrls = RichTextParser().parseText(content, tags, callbackUri)
+            val newUrls = RichTextParser().parseText(content, tags, callbackUri, authorPubKey)
             richTextCache.put(key, newUrls)
             newUrls
         }

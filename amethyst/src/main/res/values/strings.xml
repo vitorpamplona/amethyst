@@ -810,6 +810,8 @@
     <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>
     <string name="local_blossom_cache_detected">Local cache detected on port 24242.</string>
     <string name="local_blossom_cache_not_detected">Local cache not detected on port 24242.</string>
+    <string name="local_blossom_cache_profile_pics_only">Only cache profile pictures</string>
+    <string name="local_blossom_cache_profile_pics_only_caption">Restrict the local cache to profile pictures. Feed images and videos will be fetched directly from the original servers.</string>
 
     <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>

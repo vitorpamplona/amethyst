@@ -150,6 +150,7 @@ class AccountSettings(
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -407,6 +408,13 @@ class AccountSettings(
     fun changeUseLocalBlossomCache(enabled: Boolean) {
         if (useLocalBlossomCache.value != enabled) {
             useLocalBlossomCache.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeLocalBlossomCacheProfilePicturesOnly(enabled: Boolean) {
+        if (localBlossomCacheProfilePicturesOnly.value != enabled) {
+            localBlossomCacheProfilePicturesOnly.tryEmit(enabled)
             saveAccountSettings()
         }
     }

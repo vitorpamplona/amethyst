@@ -90,4 +90,58 @@ class MediaUrlContentExtTest {
         val result = image.toCoilModel(useLocalBlossomBridge = true)
         assertTrue(result.startsWith("blossom:$sha.jpg?xs="), "expected lowercase sha, got $result")
     }
+
+    @Test
+    fun authorPubKeyAddedAsAsParam() {
+        val authorPub = "a8f3721a0dc1b4d5c12f4cc7c54ae14071eb9c1b4f9b2cf0d4ab22c0e9f0c7e5"
+        val image =
+            MediaUrlImage(
+                url = "https://cdn.example.com/foo.jpg",
+                hash = sha,
+                authorPubKey = authorPub,
+            )
+        val result = image.toCoilModel(useLocalBlossomBridge = true)
+        assertEquals("blossom:$sha.jpg?xs=https://cdn.example.com&as=$authorPub", result)
+    }
+
+    @Test
+    fun invalidAuthorPubKeyDropped() {
+        val image =
+            MediaUrlImage(
+                url = "https://cdn.example.com/foo.jpg",
+                hash = sha,
+                authorPubKey = "not-a-pubkey",
+            )
+        val result = image.toCoilModel(useLocalBlossomBridge = true)
+        assertEquals("blossom:$sha.jpg?xs=https://cdn.example.com", result)
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlNullReturnsNull() {
+        assertEquals(null, bridgeProfilePictureUrl(null, useBridge = true))
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlOffReturnsOriginal() {
+        assertEquals(
+            "https://cdn.example.com/avatar.jpg",
+            bridgeProfilePictureUrl("https://cdn.example.com/avatar.jpg", useBridge = false),
+        )
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlExtractsShaFromPath() {
+        val url = "https://nostr.build/i/$sha.jpg"
+        val authorPub = "a8f3721a0dc1b4d5c12f4cc7c54ae14071eb9c1b4f9b2cf0d4ab22c0e9f0c7e5"
+        assertEquals(
+            "blossom:$sha.jpg?xs=https://nostr.build&as=$authorPub",
+            bridgeProfilePictureUrl(url, useBridge = true, authorPubKey = authorPub),
+        )
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlNoShaInPathReturnsOriginal() {
+        val url = "https://nostr.build/avatar.jpg"
+        assertEquals(url, bridgeProfilePictureUrl(url, useBridge = true))
+    }
 }

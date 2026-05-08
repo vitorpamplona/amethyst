@@ -23,38 +23,96 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 
 private val sha256HexRegex = Regex("[0-9a-f]{64}")
+private val sha256InPathRegex = Regex("(?<![0-9a-fA-F])[0-9a-fA-F]{64}(?![0-9a-fA-F])")
 
 /**
  * Converts this media content into a Coil/ExoPlayer-friendly model string.
  *
  * When the local-Blossom-cache bridge is active and the content has a
- * known sha256 hash, returns a `blossom:<sha256>.<ext>?xs=<originalHostBase>`
- * URI. The Coil pipeline will recognise the scheme and route the request
- * through `BlossomServerResolver`, which in turn short-circuits to the
- * local cache at `127.0.0.1:24242`.
+ * known sha256 hash, returns a `blossom:<sha256>.<ext>?xs=<originalHostBase>&as=<authorPubKey>`
+ * URI. The Coil pipeline recognises the scheme and routes the request
+ * through `BlossomServerResolver`, which short-circuits to the local cache
+ * at `127.0.0.1:24242`.
  *
  * Otherwise (bridge off, no hash, hash invalid, already a `blossom:` URI,
  * or a live stream) returns the original URL unchanged so today's
  * direct-to-CDN behaviour is preserved.
  */
-fun MediaUrlContent.toCoilModel(useLocalBlossomBridge: Boolean): String {
-    if (!useLocalBlossomBridge) return url
-    if (this is MediaUrlVideo && isLiveStream) return url
-    val sha = hash?.lowercase() ?: return url
-    if (!sha256HexRegex.matches(sha)) return url
+fun MediaUrlContent.toCoilModel(useLocalBlossomBridge: Boolean): String =
+    bridgeUrl(
+        url = url,
+        useBridge = useLocalBlossomBridge,
+        explicitHash = hash,
+        mimeType = mimeType,
+        authorPubKey = authorPubKey,
+        skipBridge = this is MediaUrlVideo && isLiveStream,
+    )
+
+/**
+ * Bridge entry point for raw URL strings (e.g. profile pictures) where the
+ * hash isn't available on a structured model. Tries to recover the sha256
+ * from the URL path itself; falls back to the original URL when no hash
+ * can be determined.
+ *
+ * @param authorPubKey 64-char lowercase hex pubkey to send as `as=` so the
+ *                     local cache can consult that author's BUD-03 server list.
+ */
+fun bridgeProfilePictureUrl(
+    url: String?,
+    useBridge: Boolean,
+    authorPubKey: String? = null,
+): String? {
+    if (url == null) return null
+    return bridgeUrl(
+        url = url,
+        useBridge = useBridge,
+        explicitHash = null,
+        mimeType = null,
+        authorPubKey = authorPubKey,
+        skipBridge = false,
+    )
+}
+
+private fun bridgeUrl(
+    url: String,
+    useBridge: Boolean,
+    explicitHash: String?,
+    mimeType: String?,
+    authorPubKey: String?,
+    skipBridge: Boolean,
+): String {
+    if (!useBridge || skipBridge) return url
     if (url.startsWith("blossom:", ignoreCase = true)) return url
     if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) return url
 
+    val sha =
+        explicitHash?.lowercase()?.takeIf { sha256HexRegex.matches(it) }
+            ?: extractSha256FromUrlPath(url)
+            ?: return url
+
     val ext = guessExtension(url, mimeType)
     val hostBase = extractHostBase(url) ?: return url
+
+    val authors =
+        authorPubKey
+            ?.lowercase()
+            ?.takeIf { sha256HexRegex.matches(it) }
+            ?.let { listOf(it) }
+            ?: emptyList()
 
     return BlossomUri(
         sha256 = sha,
         extension = ext,
         servers = listOf(hostBase),
-        authors = emptyList(),
+        authors = authors,
         size = null,
     ).toUriString()
+}
+
+private fun extractSha256FromUrlPath(url: String): String? {
+    val pathPart = url.substringBefore('?').substringBefore('#')
+    val match = sha256InPathRegex.find(pathPart) ?: return null
+    return match.value.lowercase()
 }
 
 private fun guessExtension(

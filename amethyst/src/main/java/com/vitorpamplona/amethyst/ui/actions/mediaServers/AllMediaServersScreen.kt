@@ -124,7 +124,10 @@ fun MediaServersScaffold(
 private fun LocalBlossomCacheToggle(accountViewModel: AccountViewModel) {
     val enabled by accountViewModel.account.settings.useLocalBlossomCache
         .collectAsStateWithLifecycle()
-    val probeAvailable by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
+    val profilePicturesOnly by accountViewModel.account.settings.localBlossomCacheProfilePicturesOnly
+        .collectAsStateWithLifecycle()
+    val probeAvailable by accountViewModel.useLocalBlossomBridgeForProfilePics
+        .collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -161,6 +164,31 @@ private fun LocalBlossomCacheToggle(accountViewModel: AccountViewModel) {
                 checked = enabled,
                 onCheckedChange = { accountViewModel.account.settings.changeUseLocalBlossomCache(it) },
             )
+        }
+
+        if (enabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringRes(id = R.string.local_blossom_cache_profile_pics_only),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = stringRes(id = R.string.local_blossom_cache_profile_pics_only_caption),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.grayText,
+                    )
+                }
+                Switch(
+                    checked = profilePicturesOnly,
+                    onCheckedChange = {
+                        accountViewModel.account.settings.changeLocalBlossomCacheProfilePicturesOnly(it)
+                    },
+                )
+            }
         }
     }
 }

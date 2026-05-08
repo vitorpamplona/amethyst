@@ -53,6 +53,7 @@ fun TranslatableRichTextViewer(
     backgroundColor: MutableState<Color>,
     id: String,
     callbackUri: String? = null,
+    authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -70,6 +71,7 @@ fun TranslatableRichTextViewer(
             backgroundColor,
             id,
             callbackUri,
+            authorPubKey,
             accountViewModel,
             nav,
         )
