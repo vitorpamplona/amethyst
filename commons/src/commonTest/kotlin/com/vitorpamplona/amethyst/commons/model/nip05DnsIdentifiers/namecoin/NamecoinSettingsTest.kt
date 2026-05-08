@@ -116,12 +116,14 @@ class NamecoinSettingsTest {
 
     @Test
     fun `returns parsed list for valid custom servers`() {
-        val settings = NamecoinSettings(
-            customServers = listOf(
-                "server1.com:50006",
-                "server2.onion:50001:tcp",
-            ),
-        )
+        val settings =
+            NamecoinSettings(
+                customServers =
+                    listOf(
+                        "server1.com:50006",
+                        "server2.onion:50001:tcp",
+                    ),
+            )
         val servers = settings.toElectrumxServers()
         assertNotNull(servers)
         assertEquals(2, servers!!.size)
@@ -134,13 +136,15 @@ class NamecoinSettingsTest {
 
     @Test
     fun `skips invalid entries in custom server list`() {
-        val settings = NamecoinSettings(
-            customServers = listOf(
-                "valid.com:50006",
-                "invalid", // no port
-                "also-invalid:abc", // non-numeric port
-            ),
-        )
+        val settings =
+            NamecoinSettings(
+                customServers =
+                    listOf(
+                        "valid.com:50006",
+                        "invalid", // no port
+                        "also-invalid:abc", // non-numeric port
+                    ),
+            )
         val servers = settings.toElectrumxServers()
         assertNotNull(servers)
         assertEquals(1, servers!!.size)

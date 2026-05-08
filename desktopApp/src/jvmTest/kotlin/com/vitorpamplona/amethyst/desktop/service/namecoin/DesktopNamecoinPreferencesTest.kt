@@ -57,71 +57,77 @@ class DesktopNamecoinPreferencesTest {
     }
 
     @Test
-    fun `setEnabled persists and updates flow`() = runBlocking {
-        namecoinPrefs.setEnabled(false)
-        assertFalse(namecoinPrefs.current.enabled)
-        assertFalse(namecoinPrefs.settings.value.enabled)
+    fun `setEnabled persists and updates flow`() =
+        runBlocking {
+            namecoinPrefs.setEnabled(false)
+            assertFalse(namecoinPrefs.current.enabled)
+            assertFalse(namecoinPrefs.settings.value.enabled)
 
-        // Verify persistence by creating a new instance with the same prefs node
-        val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
-        assertFalse(reloaded.current.enabled)
-    }
-
-    @Test
-    fun `addServer persists and updates flow`() = runBlocking {
-        namecoinPrefs.addServer("example.com:50006")
-        assertEquals(listOf("example.com:50006"), namecoinPrefs.current.customServers)
-        assertTrue(namecoinPrefs.current.hasCustomServers)
-
-        // Verify persistence
-        val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
-        assertEquals(listOf("example.com:50006"), reloaded.current.customServers)
-    }
+            // Verify persistence by creating a new instance with the same prefs node
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertFalse(reloaded.current.enabled)
+        }
 
     @Test
-    fun `addServer ignores blank strings`() = runBlocking {
-        namecoinPrefs.addServer("")
-        namecoinPrefs.addServer("   ")
-        assertTrue(namecoinPrefs.current.customServers.isEmpty())
-    }
+    fun `addServer persists and updates flow`() =
+        runBlocking {
+            namecoinPrefs.addServer("example.com:50006")
+            assertEquals(listOf("example.com:50006"), namecoinPrefs.current.customServers)
+            assertTrue(namecoinPrefs.current.hasCustomServers)
+
+            // Verify persistence
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertEquals(listOf("example.com:50006"), reloaded.current.customServers)
+        }
 
     @Test
-    fun `addServer ignores duplicates`() = runBlocking {
-        namecoinPrefs.addServer("example.com:50006")
-        namecoinPrefs.addServer("example.com:50006")
-        assertEquals(1, namecoinPrefs.current.customServers.size)
-    }
+    fun `addServer ignores blank strings`() =
+        runBlocking {
+            namecoinPrefs.addServer("")
+            namecoinPrefs.addServer("   ")
+            assertTrue(namecoinPrefs.current.customServers.isEmpty())
+        }
 
     @Test
-    fun `removeServer persists and updates flow`() = runBlocking {
-        namecoinPrefs.addServer("server1.com:50006")
-        namecoinPrefs.addServer("server2.com:50001:tcp")
-        assertEquals(2, namecoinPrefs.current.customServers.size)
-
-        namecoinPrefs.removeServer("server1.com:50006")
-        assertEquals(listOf("server2.com:50001:tcp"), namecoinPrefs.current.customServers)
-
-        // Verify persistence
-        val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
-        assertEquals(listOf("server2.com:50001:tcp"), reloaded.current.customServers)
-    }
+    fun `addServer ignores duplicates`() =
+        runBlocking {
+            namecoinPrefs.addServer("example.com:50006")
+            namecoinPrefs.addServer("example.com:50006")
+            assertEquals(1, namecoinPrefs.current.customServers.size)
+        }
 
     @Test
-    fun `reset restores defaults`() = runBlocking {
-        namecoinPrefs.setEnabled(false)
-        namecoinPrefs.addServer("example.com:50006")
-        assertFalse(namecoinPrefs.current.enabled)
-        assertTrue(namecoinPrefs.current.hasCustomServers)
+    fun `removeServer persists and updates flow`() =
+        runBlocking {
+            namecoinPrefs.addServer("server1.com:50006")
+            namecoinPrefs.addServer("server2.com:50001:tcp")
+            assertEquals(2, namecoinPrefs.current.customServers.size)
 
-        namecoinPrefs.reset()
-        assertTrue(namecoinPrefs.current.enabled)
-        assertFalse(namecoinPrefs.current.hasCustomServers)
+            namecoinPrefs.removeServer("server1.com:50006")
+            assertEquals(listOf("server2.com:50001:tcp"), namecoinPrefs.current.customServers)
 
-        // Verify persistence
-        val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
-        assertTrue(reloaded.current.enabled)
-        assertFalse(reloaded.current.hasCustomServers)
-    }
+            // Verify persistence
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertEquals(listOf("server2.com:50001:tcp"), reloaded.current.customServers)
+        }
+
+    @Test
+    fun `reset restores defaults`() =
+        runBlocking {
+            namecoinPrefs.setEnabled(false)
+            namecoinPrefs.addServer("example.com:50006")
+            assertFalse(namecoinPrefs.current.enabled)
+            assertTrue(namecoinPrefs.current.hasCustomServers)
+
+            namecoinPrefs.reset()
+            assertTrue(namecoinPrefs.current.enabled)
+            assertFalse(namecoinPrefs.current.hasCustomServers)
+
+            // Verify persistence
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertTrue(reloaded.current.enabled)
+            assertFalse(reloaded.current.hasCustomServers)
+        }
 
     @Test
     fun `customServersOrNull returns null when empty`() {
@@ -129,29 +135,31 @@ class DesktopNamecoinPreferencesTest {
     }
 
     @Test
-    fun `customServersOrNull returns parsed servers when configured`() = runBlocking {
-        namecoinPrefs.addServer("example.com:50006")
-        val servers = namecoinPrefs.customServersOrNull
-        assertEquals(1, servers?.size)
-        assertEquals("example.com", servers?.first()?.host)
-        assertEquals(50006, servers?.first()?.port)
-        assertTrue(servers?.first()?.useSsl == true)
-    }
+    fun `customServersOrNull returns parsed servers when configured`() =
+        runBlocking {
+            namecoinPrefs.addServer("example.com:50006")
+            val servers = namecoinPrefs.customServersOrNull
+            assertEquals(1, servers?.size)
+            assertEquals("example.com", servers?.first()?.host)
+            assertEquals(50006, servers?.first()?.port)
+            assertTrue(servers?.first()?.useSsl == true)
+        }
 
     @Test
-    fun `round-trip multiple operations`() = runBlocking {
-        namecoinPrefs.setEnabled(true)
-        namecoinPrefs.addServer("server1.com:50006")
-        namecoinPrefs.addServer("onion.onion:50001:tcp")
-        namecoinPrefs.setEnabled(false)
-        namecoinPrefs.removeServer("server1.com:50006")
+    fun `round-trip multiple operations`() =
+        runBlocking {
+            namecoinPrefs.setEnabled(true)
+            namecoinPrefs.addServer("server1.com:50006")
+            namecoinPrefs.addServer("onion.onion:50001:tcp")
+            namecoinPrefs.setEnabled(false)
+            namecoinPrefs.removeServer("server1.com:50006")
 
-        val settings = namecoinPrefs.current
-        assertFalse(settings.enabled)
-        assertEquals(listOf("onion.onion:50001:tcp"), settings.customServers)
+            val settings = namecoinPrefs.current
+            assertFalse(settings.enabled)
+            assertEquals(listOf("onion.onion:50001:tcp"), settings.customServers)
 
-        // Verify full persistence round-trip
-        val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
-        assertEquals(settings, reloaded.current)
-    }
+            // Verify full persistence round-trip
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertEquals(settings, reloaded.current)
+        }
 }

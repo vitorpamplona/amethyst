@@ -31,13 +31,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,6 +61,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -92,12 +90,25 @@ import java.util.concurrent.TimeUnit
  */
 private sealed class ImportState {
     data object Idle : ImportState()
+
     data object ResolvingIdentifier : ImportState()
-    data class IdentifierResolved(val pubkey: String) : ImportState()
+
+    data class IdentifierResolved(
+        val pubkey: String,
+    ) : ImportState()
+
     data object FetchingFollowList : ImportState()
-    data class FollowListLoaded(val sourcePubkey: String) : ImportState()
-    data class Error(val message: String) : ImportState()
+
+    data class FollowListLoaded(
+        val sourcePubkey: String,
+    ) : ImportState()
+
+    data class Error(
+        val message: String,
+    ) : ImportState()
+
     data object Publishing : ImportState()
+
     data object Done : ImportState()
 }
 
@@ -123,10 +134,12 @@ private suspend fun resolveNip05Http(identifier: String): String? {
     val url = "https://$domain/.well-known/nostr.json?name=$encodedName"
     return withContext(Dispatchers.IO) {
         try {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(10, TimeUnit.SECONDS)
-                .build()
+            val client =
+                OkHttpClient
+                    .Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(10, TimeUnit.SECONDS)
+                    .build()
             val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
             response.use { resp ->
@@ -201,119 +214,127 @@ fun ImportFollowListDialog(
 
             relayManager.subscribe(
                 subId = subId,
-                filters = listOf(
-                    Filter(
-                        kinds = listOf(ContactListEvent.KIND),
-                        authors = listOf(pubkey),
-                        limit = 1,
+                filters =
+                    listOf(
+                        Filter(
+                            kinds = listOf(ContactListEvent.KIND),
+                            authors = listOf(pubkey),
+                            limit = 1,
+                        ),
                     ),
-                ),
                 relays = relays,
-                listener = object : SubscriptionListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        if (event.kind == ContactListEvent.KIND && !receivedContactList) {
-                            receivedContactList = true
-                            val contactList = ContactListEvent(
-                                event.id,
-                                event.pubKey,
-                                event.createdAt,
-                                event.tags,
-                                event.content,
-                                event.sig,
-                            )
-                            val follows = contactList.unverifiedFollowKeySet()
+                listener =
+                    object : SubscriptionListener {
+                        override fun onEvent(
+                            event: Event,
+                            isLive: Boolean,
+                            relay: NormalizedRelayUrl,
+                            forFilters: List<Filter>?,
+                        ) {
+                            if (event.kind == ContactListEvent.KIND && !receivedContactList) {
+                                receivedContactList = true
+                                val contactList =
+                                    ContactListEvent(
+                                        event.id,
+                                        event.pubKey,
+                                        event.createdAt,
+                                        event.tags,
+                                        event.content,
+                                        event.sig,
+                                    )
+                                val follows = contactList.unverifiedFollowKeySet()
 
-                            // Dispatch state updates to main thread (relay callbacks
-                            // run on arbitrary threads; Compose state is not thread-safe)
-                            scope.launch(Dispatchers.Main) {
-                                followEntries.clear()
-                                followEntries.addAll(
-                                    follows.map { FollowEntry(pubkey = it, selected = true) },
-                                )
-                                importState = ImportState.FollowListLoaded(sourcePubkey = pubkey)
-                            }
+                                // Dispatch state updates to main thread (relay callbacks
+                                // run on arbitrary threads; Compose state is not thread-safe)
+                                scope.launch(Dispatchers.Main) {
+                                    followEntries.clear()
+                                    followEntries.addAll(
+                                        follows.map { FollowEntry(pubkey = it, selected = true) },
+                                    )
+                                    importState = ImportState.FollowListLoaded(sourcePubkey = pubkey)
+                                }
 
-                            // Clean up the contact list subscription
-                            try {
-                                relayManager.unsubscribe(subId)
-                            } catch (_: Exception) {}
-                            activeSubscriptions.remove(subId)
+                                // Clean up the contact list subscription
+                                try {
+                                    relayManager.unsubscribe(subId)
+                                } catch (_: Exception) {
+                                }
+                                activeSubscriptions.remove(subId)
 
-                            // Start fetching metadata for display names
-                            if (follows.isNotEmpty()) {
-                                val metaSubId = "import-meta-${System.currentTimeMillis()}"
-                                activeSubscriptions.add(metaSubId)
-                                relayManager.subscribe(
-                                    subId = metaSubId,
-                                    filters = listOf(
-                                        Filter(
-                                            kinds = listOf(MetadataEvent.KIND),
-                                            authors = follows,
-                                            limit = follows.size,
-                                        ),
-                                    ),
-                                    listener = object : SubscriptionListener {
-                                        override fun onEvent(
-                                            event: Event,
-                                            isLive: Boolean,
-                                            relay: NormalizedRelayUrl,
-                                            forFilters: List<Filter>?,
-                                        ) {
-                                            if (event.kind == MetadataEvent.KIND) {
-                                                val bestName = try {
-                                                    val metaJson = jacksonObjectMapper().readTree(event.content)
-                                                    metaJson.get("display_name")?.asText()?.takeIf { it.isNotBlank() }
-                                                        ?: metaJson.get("name")?.asText()?.takeIf { it.isNotBlank() }
-                                                } catch (_: Exception) {
-                                                    null
-                                                }
-                                                if (bestName != null) {
-                                                    // Dispatch to main thread
-                                                    scope.launch(Dispatchers.Main) {
-                                                        val idx = followEntries.indexOfFirst { it.pubkey == event.pubKey }
-                                                        if (idx >= 0) {
-                                                            followEntries[idx] = followEntries[idx].copy(displayName = bestName)
+                                // Start fetching metadata for display names
+                                if (follows.isNotEmpty()) {
+                                    val metaSubId = "import-meta-${System.currentTimeMillis()}"
+                                    activeSubscriptions.add(metaSubId)
+                                    relayManager.subscribe(
+                                        subId = metaSubId,
+                                        filters =
+                                            listOf(
+                                                Filter(
+                                                    kinds = listOf(MetadataEvent.KIND),
+                                                    authors = follows,
+                                                    limit = follows.size,
+                                                ),
+                                            ),
+                                        listener =
+                                            object : SubscriptionListener {
+                                                override fun onEvent(
+                                                    event: Event,
+                                                    isLive: Boolean,
+                                                    relay: NormalizedRelayUrl,
+                                                    forFilters: List<Filter>?,
+                                                ) {
+                                                    if (event.kind == MetadataEvent.KIND) {
+                                                        val bestName =
+                                                            try {
+                                                                val metaJson = jacksonObjectMapper().readTree(event.content)
+                                                                metaJson.get("display_name")?.asText()?.takeIf { it.isNotBlank() }
+                                                                    ?: metaJson.get("name")?.asText()?.takeIf { it.isNotBlank() }
+                                                            } catch (_: Exception) {
+                                                                null
+                                                            }
+                                                        if (bestName != null) {
+                                                            // Dispatch to main thread
+                                                            scope.launch(Dispatchers.Main) {
+                                                                val idx = followEntries.indexOfFirst { it.pubkey == event.pubKey }
+                                                                if (idx >= 0) {
+                                                                    followEntries[idx] = followEntries[idx].copy(displayName = bestName)
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
+
+                                                override fun onEose(
+                                                    relay: NormalizedRelayUrl,
+                                                    forFilters: List<Filter>?,
+                                                ) {
+                                                    // Metadata is best-effort; don't close early
+                                                    // as multiple relays may have different metadata
+                                                }
+                                            },
+                                    )
+
+                                    // Clean up metadata subscription after 20s
+                                    scope.launch {
+                                        delay(20_000)
+                                        if (metaSubId in activeSubscriptions) {
+                                            try {
+                                                relayManager.unsubscribe(metaSubId)
+                                            } catch (_: Exception) {
                                             }
+                                            activeSubscriptions.remove(metaSubId)
                                         }
-
-                                        override fun onEose(
-                                            relay: NormalizedRelayUrl,
-                                            forFilters: List<Filter>?,
-                                        ) {
-                                            // Metadata is best-effort; don't close early
-                                            // as multiple relays may have different metadata
-                                        }
-                                    },
-                                )
-
-                                // Clean up metadata subscription after 20s
-                                scope.launch {
-                                    delay(20_000)
-                                    if (metaSubId in activeSubscriptions) {
-                                        try {
-                                            relayManager.unsubscribe(metaSubId)
-                                        } catch (_: Exception) {}
-                                        activeSubscriptions.remove(metaSubId)
                                     }
                                 }
                             }
                         }
-                    }
 
-                    override fun onEose(
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                    }
-                },
+                        override fun onEose(
+                            relay: NormalizedRelayUrl,
+                            forFilters: List<Filter>?,
+                        ) {
+                        }
+                    },
             )
 
             // Timeout: if no contact list received after 15s, show error
@@ -322,7 +343,8 @@ fun ImportFollowListDialog(
                 if (importState is ImportState.FetchingFollowList) {
                     try {
                         relayManager.unsubscribe(subId)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    }
                     activeSubscriptions.remove(subId)
                     if (followEntries.isEmpty()) {
                         importState = ImportState.Error("No follow list found for this user. They may not have published a contact list.")
@@ -418,11 +440,12 @@ fun ImportFollowListDialog(
         scope.launch {
             try {
                 val contactTags = selected.map { ContactTag(it.pubkey) }
-                val newContactList = ContactListEvent.createFromScratch(
-                    followUsers = contactTags,
-                    relayUse = null,
-                    signer = account.signer,
-                )
+                val newContactList =
+                    ContactListEvent.createFromScratch(
+                        followUsers = contactTags,
+                        relayUse = null,
+                        signer = account.signer,
+                    )
                 relayManager.broadcastToAll(newContactList)
                 importState = ImportState.Done
             } catch (e: Exception) {
@@ -457,9 +480,10 @@ fun ImportFollowListDialog(
                 Spacer(Modifier.height(16.dp))
 
                 // Input field + Resolve button (shown in Idle and Error states)
-                val showInput = importState is ImportState.Idle ||
-                    importState is ImportState.Error ||
-                    importState is ImportState.ResolvingIdentifier
+                val showInput =
+                    importState is ImportState.Idle ||
+                        importState is ImportState.Error ||
+                        importState is ImportState.ResolvingIdentifier
                 if (showInput) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -478,17 +502,19 @@ fun ImportFollowListDialog(
                             placeholder = { Text("npub1..., alice@example.com, d/alice") },
                             singleLine = true,
                             isError = importState is ImportState.Error,
-                            supportingText = (importState as? ImportState.Error)?.let { err ->
-                                { Text(err.message, color = MaterialTheme.colorScheme.error) }
-                            },
-                            modifier = Modifier.weight(1f).onPreviewKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
-                                    resolveIdentifier()
-                                    true
-                                } else {
-                                    false
-                                }
-                            },
+                            supportingText =
+                                (importState as? ImportState.Error)?.let { err ->
+                                    { Text(err.message, color = MaterialTheme.colorScheme.error) }
+                                },
+                            modifier =
+                                Modifier.weight(1f).onPreviewKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                                        resolveIdentifier()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                },
                         )
                         Button(
                             onClick = { resolveIdentifier() },
@@ -566,7 +592,7 @@ fun ImportFollowListDialog(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Icon(
-                                    Icons.Default.Person,
+                                    MaterialSymbols.Person,
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -583,11 +609,12 @@ fun ImportFollowListDialog(
                                         "${entry.pubkey.take(12)}…${entry.pubkey.takeLast(8)}",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontFamily = FontFamily.Monospace,
-                                        color = if (entry.displayName != null) {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
+                                        color =
+                                            if (entry.displayName != null) {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
                                     )
                                 }
                             }
@@ -618,7 +645,7 @@ fun ImportFollowListDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
-                            Icons.Default.CheckCircle,
+                            MaterialSymbols.CheckCircle,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp),

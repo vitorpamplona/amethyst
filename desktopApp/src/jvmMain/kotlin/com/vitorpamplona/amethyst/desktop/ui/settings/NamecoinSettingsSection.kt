@@ -34,13 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -66,6 +60,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 
@@ -143,7 +139,7 @@ fun NamecoinSettingsSection(
                     ) {
                         TextButton(onClick = onReset) {
                             Icon(
-                                Icons.Default.Refresh,
+                                MaterialSymbols.Refresh,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -171,7 +167,7 @@ private fun NamecoinSectionHeader(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Default.Lock,
+                MaterialSymbols.Lock,
                 contentDescription = null,
                 tint = Color(0xFF4A90D9), // Namecoin blue
                 modifier = Modifier.size(22.dp),
@@ -219,12 +215,12 @@ private fun NamecoinActiveServersDisplay(settings: NamecoinSettings) {
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF4A90D9),
-                    modifier = Modifier
-                        .background(
-                            Color(0xFF4A90D9).copy(alpha = 0.1f),
-                            RoundedCornerShape(4.dp),
-                        )
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    modifier =
+                        Modifier
+                            .background(
+                                Color(0xFF4A90D9).copy(alpha = 0.1f),
+                                RoundedCornerShape(4.dp),
+                            ).padding(horizontal = 6.dp, vertical = 2.dp),
                 )
             } else {
                 Text(
@@ -237,8 +233,9 @@ private fun NamecoinActiveServersDisplay(settings: NamecoinSettings) {
         Spacer(Modifier.height(6.dp))
         servers.forEach { server ->
             NamecoinServerRow(
-                displayText = "${server.host}:${server.port}" +
-                    if (!server.useSsl) " (tcp)" else " (tls)",
+                displayText =
+                    "${server.host}:${server.port}" +
+                        if (!server.useSsl) " (tcp)" else " (tls)",
                 isActive = true,
             )
         }
@@ -266,9 +263,10 @@ private fun NamecoinCustomServersList(
         )
         servers.forEach { server ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -285,7 +283,7 @@ private fun NamecoinCustomServersList(
                     modifier = Modifier.size(28.dp),
                 ) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = "Remove server",
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(16.dp),
@@ -332,37 +330,41 @@ private fun NamecoinAddServerInput(onAdd: (String) -> Unit) {
             placeholder = { Text("host:port or host:port:tcp") },
             singleLine = true,
             isError = validationError != null,
-            supportingText = validationError?.let { err ->
-                { Text(err, color = MaterialTheme.colorScheme.error) }
-            },
-            modifier = Modifier
-                .weight(1f)
-                .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
-                        tryAdd()
-                        true
-                    } else {
-                        false
-                    }
+            supportingText =
+                validationError?.let { err ->
+                    { Text(err, color = MaterialTheme.colorScheme.error) }
                 },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                            tryAdd()
+                            true
+                        } else {
+                            false
+                        }
+                    },
             shape = RoundedCornerShape(8.dp),
-            textStyle = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = FontFamily.Monospace,
-            ),
+            textStyle =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                ),
         )
         Spacer(Modifier.width(8.dp))
         IconButton(
             onClick = { tryAdd() },
-            modifier = Modifier
-                .padding(top = 8.dp)
-                .size(40.dp)
-                .background(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    RoundedCornerShape(8.dp),
-                ),
+            modifier =
+                Modifier
+                    .padding(top = 8.dp)
+                    .size(40.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        RoundedCornerShape(8.dp),
+                    ),
         ) {
             Icon(
-                Icons.Default.Add,
+                MaterialSymbols.Add,
                 contentDescription = "Add server",
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -376,19 +378,21 @@ private fun NamecoinServerRow(
     isActive: Boolean,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = "•",
             fontSize = 10.sp,
-            color = if (isActive) {
-                Color(0xFF2E8B57)
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+            color =
+                if (isActive) {
+                    Color(0xFF2E8B57)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             modifier = Modifier.padding(end = 6.dp),
         )
         Text(

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.namecoin
 
-import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.prefs.Preferences
@@ -39,9 +39,10 @@ import java.util.prefs.Preferences
  * `serverListProvider` lambda).
  */
 class DesktopNamecoinPreferences(
-    private val prefs: Preferences = Preferences.userNodeForPackage(
-        DesktopNamecoinPreferences::class.java,
-    ),
+    private val prefs: Preferences =
+        Preferences.userNodeForPackage(
+            DesktopNamecoinPreferences::class.java,
+        ),
 ) {
     private val mapper = jacksonObjectMapper()
 
@@ -101,23 +102,23 @@ class DesktopNamecoinPreferences(
         }
     }
 
-    private fun loadFromDisk(): NamecoinSettings {
-        return try {
+    private fun loadFromDisk(): NamecoinSettings =
+        try {
             val enabled = prefs.getBoolean(KEY_ENABLED, true)
             val serversJson = prefs.get(KEY_CUSTOM_SERVERS, null)
-            val servers = if (serversJson != null) {
-                try {
-                    mapper.readValue<List<String>>(serversJson)
-                } catch (_: Exception) {
+            val servers =
+                if (serversJson != null) {
+                    try {
+                        mapper.readValue<List<String>>(serversJson)
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                } else {
                     emptyList()
                 }
-            } else {
-                emptyList()
-            }
             NamecoinSettings(enabled = enabled, customServers = servers)
         } catch (e: Exception) {
             System.err.println("NamecoinPrefs: Error reading preferences: ${e.message}")
             NamecoinSettings.DEFAULT
         }
-    }
 }

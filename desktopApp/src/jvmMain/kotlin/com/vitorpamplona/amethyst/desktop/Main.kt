@@ -89,6 +89,10 @@ import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
@@ -110,16 +114,10 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.param
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
-import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
-import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -1669,7 +1667,6 @@ fun RelaySettingsScreen(
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
                 modifier = Modifier.weight(1f),
             ) {
                 items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
