@@ -519,11 +519,15 @@ class QuicConnection(
      */
     internal val pathValidator: PathValidator =
         PathValidator(
-            initialActiveCidSequence = 0L,
+            // Cap the unused-CID buffer at the smaller of our own
+            // [activeConnectionIdLimit] (which we advertised to the
+            // peer in transport parameters) and the validator's hard
+            // [PathValidator.DEFAULT_MAX_UNUSED_CIDS] memory cap. A
+            // peer that issues more CIDs than we said we'd accept
+            // hits the cap and excess offers are dropped.
             maxUnusedCids =
                 config.activeConnectionIdLimit
                     .coerceAtMost(PathValidator.DEFAULT_MAX_UNUSED_CIDS.toLong())
-                    .coerceAtLeast(2L)
                     .toInt(),
         )
 
@@ -2000,60 +2004,99 @@ class QuicConnection(
             }
 
             is PathValidator.ValidationOutcome.Validated -> {
-                destinationConnectionId = ConnectionId(outcome.newConnectionIdBytes)
+                // Bug-7 fix: a valid PATH_RESPONSE proves the peer
+                // can reach us on the new path. Reset the PTO
+                // backoff so the send loop returns to baseline
+                // pacing instead of carrying a stale "many PTOs
+                // expired" multiplier into healthy traffic.
+                consecutivePtoCount = 0
                 qlogObserver.onPathValidationSucceeded(outcome.newSequence)
-                qlogObserver.onConnectionIdActivated("peer", outcome.newSequence, outcome.newConnectionIdBytes)
+                qlogObserver.onConnectionIdActivated("peer", outcome.newSequence, outcome.connectionId)
+                qlogObserver.onConnectionIdRetired("peer", outcome.retiredSequence)
                 pathValidator.acknowledgeTerminal()
+                // Note: the writer's `destinationConnectionId` was
+                // already swapped to [outcome.connectionId] inside
+                // [triggerPathMigrationLocked] (abrupt-migration
+                // model — the challenge itself MUST go out on the
+                // new path per RFC 9000 §9.3). On success there's
+                // nothing more to swap; we just confirm the
+                // promotion is durable by re-stamping (idempotent).
+                destinationConnectionId = ConnectionId(outcome.connectionId)
             }
         }
     }
 
     /**
      * RFC 9000 §19.16: peer asked us to retire one of our own
-     * source CIDs. Today we only ever issue one source CID at
-     * connection start (sequence 0), so any RETIRE_CONNECTION_ID
-     * the peer sends about a sequence > 0 references a CID we
-     * never issued — RFC 9000 says this is PROTOCOL_VIOLATION.
-     * Sequence 0 retire is also a violation per §19.16: "Receipt
-     * of a RETIRE_CONNECTION_ID frame containing a sequence number
-     * greater than any previously sent to the peer MUST be
-     * treated as a connection error of type PROTOCOL_VIOLATION."
+     * source CIDs.
+     *
+     * Two cases:
+     *  - Sequence > 0: we never issued anything beyond seq 0, so
+     *    this references a CID we never advertised. PROTOCOL_VIOLATION
+     *    per §19.16.
+     *  - Sequence == 0: peer is asking us to retire the SCID we
+     *    picked at connection start. Per RFC 9000 §5.1.1 we'd be
+     *    expected to have already issued a replacement via
+     *    NEW_CONNECTION_ID and switch the peer to it. We don't
+     *    issue our own NEW_CONNECTION_ID frames today, so we have
+     *    no replacement to give the peer. Closing the connection
+     *    surfaces this as a known limitation rather than continuing
+     *    against a peer that thinks we agreed to stop using our
+     *    only CID.
      *
      * Caller must hold [streamsLock].
      */
     internal fun applyPeerRetireConnectionIdLocked(sequenceNumber: Long) {
-        // We only issue sequence 0 today; any retire request beyond
-        // that references a CID we never advertised. This is a
-        // peer-side violation per §19.16.
         if (sequenceNumber > 0L) {
             markClosedExternally(
                 "PROTOCOL_VIOLATION: RETIRE_CONNECTION_ID seq=$sequenceNumber > any we issued (0)",
             )
+            return
         }
-        // Sequence 0 retire today means "stop using your initial
-        // SCID." We don't model client-issued CID rotation, so the
-        // request is silently honored at the protocol level (we
-        // never re-use the SCID in any new long-header packet —
-        // long headers are gone after handshake completion).
+        // Sequence 0: peer wants us off our initial SCID, but we
+        // haven't issued any replacements. Close — see kdoc above.
+        markClosedExternally(
+            "INTERNAL_ERROR: peer asked to retire our initial SCID but we have no replacement to offer",
+        )
     }
 
     /**
      * Try to start client-initiated path validation + DCID rotation
      * (RFC 9000 §9). Picks the lowest-sequence unused CID from the
-     * pool, queues a fresh PATH_CHALLENGE, and records the
-     * outstanding state. Returns the result so the caller can
-     * decide whether to retry later (e.g. on the next PTO if the
-     * pool was empty when this fired).
+     * pool, queues a fresh PATH_CHALLENGE, **swaps the writer's
+     * outbound DCID to the new CID**, and records the outstanding
+     * state. Returns the result so the caller can decide whether
+     * to retry later (e.g. on the next PTO if the pool was empty
+     * when this fired).
      *
-     * Caller must hold [streamsLock].
+     * Bug-1 fix — abrupt-migration model: the writer stamps a
+     * single connection-level [destinationConnectionId] onto every
+     * outbound short-header packet. To put the PATH_CHALLENGE on
+     * the new path (RFC 9000 §9.3) we rotate the DCID immediately
+     * here, not on validation success. The trigger condition
+     * ("path probably dead — N consecutive PTOs without ACKs")
+     * makes abrupt migration appropriate; we don't gain anything
+     * by holding the old DCID alongside. If validation later fails
+     * (3 * PTO timeout), [checkPathValidationTimeoutLocked]
+     * abandons the new CID without rolling back — by then the
+     * connection is in trouble and the next PTO either picks
+     * another spare CID or the connection idles out.
+     *
+     * Caller must hold [streamsLock]. Refuses to start before
+     * handshake confirmation per RFC 9000 §9.1 (returns
+     * [PathMigrationResult.NotConnected]).
      */
     internal fun triggerPathMigrationLocked(
         nowMillis: Long,
         currentPtoMillis: Long,
     ): PathMigrationResult {
+        if (!handshakeComplete || status != Status.CONNECTED) {
+            return PathMigrationResult.NotConnected
+        }
         val result = pathValidator.tryStartValidation(nowMillis, currentPtoMillis)
         if (result == PathMigrationResult.Started) {
             val validating = pathValidator.state as PathValidationState.Validating
+            destinationConnectionId = ConnectionId(validating.newConnectionId)
             qlogObserver.onPathValidationStarted(validating.newCidSequence)
         }
         return result
@@ -2073,16 +2116,22 @@ class QuicConnection(
     /**
      * Check whether an outstanding PATH_CHALLENGE has exceeded the
      * 3 * PTO budget (RFC 9000 §8.2.4). Called from the driver's
-     * PTO timer path. Returns true when validation just timed out
-     * — caller may surface that to qlog and decide to retry with
-     * another CID, or close the connection if the budget for
-     * retries is exhausted.
+     * PTO timer path. Returns true when validation just timed out.
+     *
+     * On timeout the validator queues the failed CID's sequence
+     * number into [PathValidator.pendingRetireSequences] (Bug-2
+     * fix) so the writer's next drain emits a
+     * RETIRE_CONNECTION_ID. Without this the peer keeps the
+     * routing entry forever — we promised by sending the challenge
+     * that we might use the CID, and §5.1.2 obligates us to
+     * retire it once we abandon it.
      *
      * Caller must hold [streamsLock].
      */
     internal fun checkPathValidationTimeoutLocked(nowMillis: Long): Boolean {
         val abandoned = pathValidator.checkValidationTimeout(nowMillis) ?: return false
         qlogObserver.onPathValidationFailed(abandoned.newCidSequence)
+        qlogObserver.onConnectionIdRetired("peer", abandoned.newCidSequence)
         pathValidator.acknowledgeTerminal()
         return true
     }

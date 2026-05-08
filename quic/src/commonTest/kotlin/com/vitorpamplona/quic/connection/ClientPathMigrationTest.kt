@@ -150,13 +150,21 @@ class ClientPathMigrationTest {
             drainOutbound(client, nowMillis = 0L)
 
             // Step 2 — application triggers migration. The validator picks
-            // sequence 1 and queues a PATH_CHALLENGE.
+            // sequence 1, queues a PATH_CHALLENGE, AND swaps the writer's
+            // outbound DCID immediately so the challenge goes out on the
+            // new path (Bug-1 fix — abrupt migration model per RFC 9000
+            // §9.3).
             val triggered = client.triggerPathMigration(nowMillis = 100L, currentPtoMillis = 1_000L)
             assertEquals(PathMigrationResult.Started, triggered)
             assertTrue(client.pathValidator.state is PathValidationState.Validating)
+            assertContentEquals(
+                newCidBytes,
+                client.destinationConnectionId.bytes,
+                "DCID must rotate at challenge time so PATH_CHALLENGE goes out on the new path",
+            )
 
             // Step 3 — the next outbound application packet must carry a
-            // PATH_CHALLENGE.
+            // PATH_CHALLENGE stamped with the NEW DCID.
             val challengeOut = drainOutbound(client, nowMillis = 100L)
             assertTrue(challengeOut != null, "client must emit a packet carrying PATH_CHALLENGE")
             val outboundFrames = pipe.decryptClientApplicationFrames(challengeOut)
@@ -171,9 +179,11 @@ class ClientPathMigrationTest {
                 )!!
             feedDatagram(client, response, nowMillis = 200L)
 
-            // Step 5 — DCID must have rotated to the new bytes; the prior
-            // sequence (0) must be queued for RETIRE_CONNECTION_ID.
-            assertContentEquals(newCidBytes, client.destinationConnectionId.bytes, "DCID must rotate to new bytes")
+            // Step 5 — validation succeeded; DCID is still the new bytes
+            // (already rotated at step 2), the prior sequence (0) is
+            // queued for RETIRE_CONNECTION_ID, and activeCidSequence now
+            // reflects the new sequence.
+            assertContentEquals(newCidBytes, client.destinationConnectionId.bytes)
             assertEquals(1L, client.pathValidator.activeCidSequence)
             assertTrue(
                 client.pathValidator.pendingRetireSequences.contains(0L),
@@ -197,36 +207,43 @@ class ClientPathMigrationTest {
         }
 
     @Test
-    fun pathResponseWithMismatchingPayloadDoesNotRotateDcid() =
+    fun pathResponseWithMismatchingPayloadKeepsValidatingAndDcid() =
         runBlocking {
             val (client, pipe) = newConnectedClient()
-            val originalDcid = client.destinationConnectionId
 
-            // Seed a spare CID and trigger migration.
+            // Seed a spare CID and trigger migration. Under abrupt
+            // migration the DCID rotates at trigger time, NOT at
+            // PATH_RESPONSE — so the post-trigger state is "DCID is
+            // already the new bytes; we're awaiting validation."
+            val newCid = ByteArray(8) { 0x01 }
             val offer =
                 pipe.buildServerApplicationDatagram(
                     listOf(
                         NewConnectionIdFrame(
                             sequenceNumber = 1L,
                             retirePriorTo = 0L,
-                            connectionId = ByteArray(8) { 0x01 },
+                            connectionId = newCid,
                             statelessResetToken = ByteArray(16) { 0x10 },
                         ),
                     ),
                 )!!
             feedDatagram(client, offer, nowMillis = 0L)
             client.triggerPathMigration(nowMillis = 100L, currentPtoMillis = 1_000L)
+            assertContentEquals(newCid, client.destinationConnectionId.bytes, "DCID rotates at challenge time")
             drainOutbound(client, nowMillis = 100L) // emit challenge, drop content
 
-            // Server replies with WRONG payload — must not rotate.
+            // Server replies with WRONG payload — validation must NOT
+            // succeed and the validator state must stay in Validating
+            // until the 3 * PTO timeout (or a correct response).
             val bogusResponse =
                 pipe.buildServerApplicationDatagram(
                     listOf(PathResponseFrame(ByteArray(8) { 0xFF.toByte() })),
                 )!!
             feedDatagram(client, bogusResponse, nowMillis = 200L)
 
-            assertEquals(originalDcid, client.destinationConnectionId, "mismatched response must NOT rotate DCID")
+            assertContentEquals(newCid, client.destinationConnectionId.bytes, "mismatched response must not undo the rotation")
             assertTrue(client.pathValidator.state is PathValidationState.Validating, "still validating")
+            assertEquals(0L, client.pathValidator.activeCidSequence, "active sequence still old until validation succeeds")
         }
 
     @Test
@@ -256,5 +273,81 @@ class ClientPathMigrationTest {
                 client.status == QuicConnection.Status.CLOSING || client.status == QuicConnection.Status.CLOSED,
                 "got ${client.status}",
             )
+        }
+
+    @Test
+    fun retireConnectionIdForSequenceZeroClosesConnection() =
+        runBlocking {
+            // Bug-3 regression: peer asking us to retire our initial
+            // SCID (seq 0) leaves us with no replacement to give them.
+            // We close rather than silently honoring — see
+            // [QuicConnection.applyPeerRetireConnectionIdLocked].
+            val (client, pipe) = newConnectedClient()
+            val packet = pipe.buildServerApplicationDatagram(listOf(RetireConnectionIdFrame(sequenceNumber = 0L)))!!
+            feedDatagram(client, packet, nowMillis = 0L)
+            assertTrue(
+                client.status == QuicConnection.Status.CLOSING || client.status == QuicConnection.Status.CLOSED,
+                "got ${client.status}; seq=0 retire must close because we have no replacement SCID",
+            )
+        }
+
+    @Test
+    fun pathResponseSuccessResetsConsecutivePtoCount() =
+        runBlocking {
+            // Bug-7 regression: a successful PATH_RESPONSE proves the
+            // peer can reach us on the new path. The consecutive-PTO
+            // counter must reset so the send loop's exponential
+            // backoff returns to baseline pacing instead of carrying
+            // a stale "many PTOs expired" multiplier.
+            val (client, pipe) = newConnectedClient()
+            val newCid = ByteArray(8) { 0x55 }
+            val token = ByteArray(16) { 0x66 }
+
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(
+                    listOf(NewConnectionIdFrame(1L, 0L, newCid, token)),
+                )!!,
+                nowMillis = 0L,
+            )
+            drainOutbound(client, nowMillis = 0L)
+
+            // Pretend we burned through 4 PTOs without progress.
+            client.consecutivePtoCount = 4
+            client.triggerPathMigration(nowMillis = 100L, currentPtoMillis = 1_000L)
+            val challengeOut = drainOutbound(client, nowMillis = 100L)!!
+            val challenge =
+                pipe.decryptClientApplicationFrames(challengeOut)!!.first { it is PathChallengeFrame }
+                    as PathChallengeFrame
+
+            // PATH_RESPONSE arrives with matching payload — Bug-7 fix
+            // resets the counter inside applyPeerPathResponseLocked.
+            feedDatagram(
+                client,
+                pipe.buildServerApplicationDatagram(listOf(PathResponseFrame(challenge.data.copyOf())))!!,
+                nowMillis = 200L,
+            )
+            assertEquals(0, client.consecutivePtoCount, "successful path validation must reset consecutivePtoCount")
+        }
+
+    @Test
+    fun triggerPathMigrationBeforeHandshakeReturnsNotConnected() =
+        runBlocking {
+            // Bug-4 regression: RFC 9000 §9.1 forbids initiating
+            // migration before the handshake is confirmed. The
+            // public API must refuse rather than silently misbehave.
+            val client =
+                QuicConnection(
+                    serverName = "example.test",
+                    config = QuicConnectionConfig(),
+                    tlsCertificateValidator =
+                        com.vitorpamplona.quic.tls
+                            .PermissiveCertificateValidator(),
+                )
+            // Connection is in HANDSHAKING state; no transport
+            // parameters have been parsed yet.
+            assertEquals(QuicConnection.Status.HANDSHAKING, client.status)
+            val result = client.triggerPathMigration(nowMillis = 0L, currentPtoMillis = 100L)
+            assertEquals(PathMigrationResult.NotConnected, result)
         }
 }

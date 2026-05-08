@@ -166,7 +166,7 @@ class PathValidatorTest {
         assertTrue(outcome is PathValidator.ValidationOutcome.Validated, "got $outcome")
         assertEquals(1L, outcome.newSequence)
         assertEquals(0L, outcome.retiredSequence)
-        assertContentEquals(ByteArray(8) { 0xAA.toByte() }, outcome.newConnectionIdBytes)
+        assertContentEquals(ByteArray(8) { 0xAA.toByte() }, outcome.connectionId)
         assertEquals(1L, v.activeCidSequence)
         assertTrue(v.state is PathValidationState.Succeeded)
         assertTrue(v.pendingRetireSequences.contains(0L), "old sequence must be queued for RETIRE_CONNECTION_ID")
@@ -191,7 +191,12 @@ class PathValidatorTest {
     }
 
     @Test
-    fun validationTimeoutAfter3PtoTransitionsToFailed() {
+    fun validationTimeoutAfter3PtoTransitionsToFailedAndRetiresFailedCid() {
+        // Bug-2 regression: on 3 * PTO timeout the failed CID's
+        // sequence MUST be queued for RETIRE_CONNECTION_ID.
+        // Without this the peer keeps the routing entry forever
+        // because we sent a packet with that DCID (the challenge)
+        // but never told them we abandoned it.
         val v = PathValidator(challengePayloadFactory = { ByteArray(8) { 0x44 } })
         v.recordPeerNewConnectionId(1L, 0L, ByteArray(8) { 0x01 }, ByteArray(16))
         val pto = 1_000L
@@ -203,6 +208,10 @@ class PathValidatorTest {
         assertEquals(1L, abandoned.newCidSequence)
         assertTrue(v.state is PathValidationState.Failed)
         assertEquals(1L, v.failedValidations)
+        assertTrue(
+            v.pendingRetireSequences.contains(1L),
+            "abandoned CID sequence must be queued for RETIRE_CONNECTION_ID — pending=${v.pendingRetireSequences}",
+        )
     }
 
     @Test

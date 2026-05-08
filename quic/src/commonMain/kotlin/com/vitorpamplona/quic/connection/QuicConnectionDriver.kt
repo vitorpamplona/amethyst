@@ -350,6 +350,12 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
     if (conn.initial.sendProtection != null && !conn.initial.keysDiscarded) {
         conn.requeueAllInflightCrypto(EncryptionLevel.INITIAL)
     }
+    // Bug-6 fix: increment BEFORE the threshold check. With the
+    // pre-fix ordering and threshold=2, the rotation actually fired
+    // on the 3rd PTO (count went 0→1→2 before check). Now the count
+    // matches the constant's natural reading: "after 2 consecutive
+    // PTOs with no progress, trigger migration on the 2nd PTO firing."
+    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
     // Once 1-RTT keys are installed, PTO must also retransmit application
     // data — STREAM bytes that were sent but never ACK'd. Without this,
     // a single corrupted/lost 1-RTT packet (especially the first one
@@ -379,16 +385,14 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
             // also dead — abandon and let the next PTO try with
             // another CID (or surface the failure to the higher
             // layer).
-            val nowMillis =
-                kotlin.time.Clock.System
-                    .now()
-                    .toEpochMilliseconds()
-            val maxAckDelayMs =
-                if (conn.application.sendProtection != null) {
-                    conn.peerTransportParameters?.maxAckDelay ?: 0L
-                } else {
-                    0L
-                }
+            //
+            // Bug-5 fix: use [conn.nowMillis] so a test-injected
+            // virtual clock takes effect. The pre-fix shape called
+            // [Clock.System.now()] directly, ignoring the
+            // connection's clock supplier and breaking timing
+            // assertions in unit tests.
+            val nowMillis = conn.nowMillis()
+            val maxAckDelayMs = conn.peerTransportParameters?.maxAckDelay ?: 0L
             val ptoBaseMs = conn.lossDetection.ptoBaseMs(maxAckDelayMs).coerceAtLeast(1L)
             conn.checkPathValidationTimeoutLocked(nowMillis)
             if (conn.consecutivePtoCount >= PATH_PROBE_PTO_THRESHOLD) {
@@ -396,7 +400,6 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
             }
         }
     }
-    conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
 }
 
 /**
@@ -408,6 +411,11 @@ internal suspend fun handlePtoFired(conn: QuicConnection) {
  * default and Chrome's behavior. Picking 1 is too aggressive
  * (single dropped packet trips a rotation); 4+ is too late (user
  * notices the silence).
+ *
+ * The check in [handlePtoFired] runs AFTER the consecutive-PTO
+ * counter is incremented, so the threshold value is the count of
+ * PTOs that fired without an inbound ACK arriving in between.
+ * With value 2 migration triggers on the 2nd consecutive PTO.
  *
  * Once the threshold is crossed, [handlePtoFired] calls into
  * [QuicConnection.triggerPathMigrationLocked] which is itself

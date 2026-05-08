@@ -83,7 +83,7 @@ sealed class PathValidationState {
     data class Validating(
         val challengeData: ByteArray,
         val newCidSequence: Long,
-        val newCidBytes: ByteArray,
+        val newConnectionId: ByteArray,
         val priorCidSequence: Long,
         val startedAtMillis: Long,
         val priorPtoMillis: Long,
@@ -93,7 +93,7 @@ sealed class PathValidationState {
             if (other !is Validating) return false
             return challengeData.contentEquals(other.challengeData) &&
                 newCidSequence == other.newCidSequence &&
-                newCidBytes.contentEquals(other.newCidBytes) &&
+                newConnectionId.contentEquals(other.newConnectionId) &&
                 priorCidSequence == other.priorCidSequence &&
                 startedAtMillis == other.startedAtMillis &&
                 priorPtoMillis == other.priorPtoMillis
@@ -102,7 +102,7 @@ sealed class PathValidationState {
         override fun hashCode(): Int {
             var h = challengeData.contentHashCode()
             h = 31 * h + newCidSequence.hashCode()
-            h = 31 * h + newCidBytes.contentHashCode()
+            h = 31 * h + newConnectionId.contentHashCode()
             h = 31 * h + priorCidSequence.hashCode()
             h = 31 * h + startedAtMillis.hashCode()
             h = 31 * h + priorPtoMillis.hashCode()
@@ -137,6 +137,14 @@ enum class PathMigrationResult {
      * pool. Caller should wait for fresh peer offers.
      */
     NoSpareCid,
+
+    /**
+     * Connection is not yet in CONNECTED state — RFC 9000 §9.1
+     * forbids initiating migration before the handshake is
+     * confirmed. Caller should drop the trigger; a fresh handshake
+     * doesn't need migration.
+     */
+    NotConnected,
 }
 
 /**
@@ -171,15 +179,6 @@ enum class PathMigrationResult {
  * are plain mutable collections.
  */
 class PathValidator(
-    /**
-     * Sequence number of the CID the writer is currently stamping
-     * into outbound short-header packets. Initial value 0 per RFC
-     * 9000 §5.1.1 — the DCID negotiated at handshake. After a
-     * successful validation [activeCidSequence] is the new
-     * sequence; the prior sequence is in `pendingRetireSequences`
-     * waiting to ride out as a RETIRE_CONNECTION_ID.
-     */
-    initialActiveCidSequence: Long = 0L,
     /**
      * Cap on the number of unused CIDs we'll buffer. Defaults to
      * the peer's `active_connection_id_limit` transport parameter,
@@ -222,7 +221,15 @@ class PathValidator(
     var retirePriorToWatermark: Long = 0L
         private set
 
-    var activeCidSequence: Long = initialActiveCidSequence
+    /**
+     * Sequence number of the CID the writer is currently stamping
+     * into outbound short-header packets. Starts at 0 per RFC 9000
+     * §5.1.1 — the DCID negotiated at handshake is implicitly
+     * sequence 0. Bumped to the new sequence after a successful
+     * [applyPathResponse]; the prior sequence is queued for
+     * RETIRE_CONNECTION_ID via [pendingRetireSequences].
+     */
+    var activeCidSequence: Long = 0L
         private set
 
     /**
@@ -231,7 +238,7 @@ class PathValidator(
      * next outbound application packet. Re-populated by the loss
      * dispatcher if our RETIRE_CONNECTION_ID was lost.
      */
-    val pendingRetireSequences: ArrayDeque<Long> = ArrayDeque()
+    internal val pendingRetireSequences: ArrayDeque<Long> = ArrayDeque()
 
     /**
      * Outbound `PATH_CHALLENGE` payloads the writer should drain on
@@ -240,7 +247,7 @@ class PathValidator(
      * (the writer also records a [com.vitorpamplona.quic.connection.recovery.RecoveryToken.PathChallenge]
      * so the loss dispatcher can decide to retransmit or abandon).
      */
-    val pendingChallenges: ArrayDeque<ByteArray> = ArrayDeque()
+    internal val pendingChallenges: ArrayDeque<ByteArray> = ArrayDeque()
 
     var state: PathValidationState = PathValidationState.Idle
         private set
@@ -276,25 +283,31 @@ class PathValidator(
      *
      * The semantics:
      *  - If [retirePriorTo] is greater than [sequenceNumber], that's
-     *    a §19.15 violation (the peer can't tell us to retire its
-     *    own brand-new CID).
-     *  - If [retirePriorTo] decreased, that's a §5.1.2 violation.
+     *    a §19.15 frame-encoding error (the peer can't tell us to
+     *    retire its own brand-new CID).
+     *  - If [retirePriorTo] is smaller than the current
+     *    [retirePriorToWatermark], it's clamped to the watermark
+     *    per §19.15 ("MUST be treated as the largest one it has
+     *    seen") — common with reordered NEW_CONNECTION_ID arrivals,
+     *    not a peer error.
      *  - If the new entry would push the pool past [maxUnusedCids],
-     *    return [Result.PoolFull] — the peer over-issued.
+     *    return [RecordResult.PoolFull] — the peer over-issued.
      *  - If [sequenceNumber] is below the current
-     *    [retirePriorToWatermark], the offer is already-retired and
-     *    we silently drop it (the caller MUST still queue a
-     *    RETIRE_CONNECTION_ID for it per §5.1.2).
+     *    [retirePriorToWatermark] (after clamp), the offer is
+     *    already-retired and we drop it after queuing a
+     *    RETIRE_CONNECTION_ID for it (§5.1.2).
      *  - Duplicate sequence number with matching CID/token is
-     *    idempotent ([Result.Duplicate]); a duplicate sequence with
-     *    DIFFERENT bytes is a §19.15 violation.
+     *    idempotent ([RecordResult.Duplicate]); a duplicate sequence
+     *    with DIFFERENT bytes is a §19.15 violation.
      *
      * Side effect on success: any cached entry whose sequence
-     * number is now below the new [retirePriorTo] is moved into
-     * [pendingRetireSequences] (we owe the peer a retire) and
-     * dropped from [unusedCids]. If the active CID itself is
-     * forced-retired, the active sequence is bumped (the caller
-     * must rotate the active CID — see [forceRetireActiveIfNeeded]).
+     * number is now below the new [retirePriorToWatermark] is moved
+     * into [pendingRetireSequences] and dropped from [unusedCids].
+     * Note that this routine does NOT force-retire the active CID
+     * if the watermark moves past [activeCidSequence] — that's the
+     * caller's responsibility (it requires picking a replacement
+     * from the pool and rotating the writer's DCID). See
+     * [QuicConnection.applyPeerNewConnectionIdLocked].
      */
     fun recordPeerNewConnectionId(
         sequenceNumber: Long,
@@ -385,15 +398,23 @@ class PathValidator(
     }
 
     /**
-     * Begin a fresh path-validation attempt. Picks the lowest-sequence
-     * unused CID, generates a random 8-byte challenge, queues both,
-     * and transitions [state] to [PathValidationState.Validating].
+     * Begin a fresh path-validation attempt. Picks the lowest-
+     * sequence unused CID, generates a random 8-byte challenge,
+     * queues the challenge in [pendingChallenges], and transitions
+     * [state] to [PathValidationState.Validating]. The selected
+     * CID is removed from the unused pool; on validation success
+     * [applyPathResponse] commits it (callers swap the writer's
+     * DCID), and on timeout [checkValidationTimeout] queues it
+     * for RETIRE_CONNECTION_ID so the peer can drop the routing
+     * entry.
      *
-     * Caller is responsible for waking the writer so the challenge
-     * actually goes out. The writer also stamps the new DCID into
-     * the next outbound short-header packet — see
-     * [QuicConnection.activatePendingValidatedCid] for the post-
-     * response promotion path.
+     * Caller is responsible for two follow-ups when this returns
+     * [PathMigrationResult.Started]:
+     *  1. Rotate the connection's `destinationConnectionId` to
+     *     [PathValidationState.Validating.newConnectionId] so the
+     *     PATH_CHALLENGE packet (and subsequent traffic, per the
+     *     abrupt-migration model) goes out on the new path.
+     *  2. Wake the send loop so the challenge actually leaves.
      */
     fun tryStartValidation(
         nowMillis: Long,
@@ -411,7 +432,7 @@ class PathValidator(
             PathValidationState.Validating(
                 challengeData = payload,
                 newCidSequence = seq,
-                newCidBytes = entry.connectionId,
+                newConnectionId = entry.connectionId,
                 priorCidSequence = activeCidSequence,
                 startedAtMillis = nowMillis,
                 priorPtoMillis = currentPtoMillis,
@@ -442,7 +463,7 @@ class PathValidator(
         successfulValidations += 1
         return ValidationOutcome.Validated(
             newSequence = current.newCidSequence,
-            newConnectionIdBytes = current.newCidBytes,
+            connectionId = current.newConnectionId,
             retiredSequence = priorSeq,
         )
     }
@@ -454,20 +475,20 @@ class PathValidator(
 
         data class Validated(
             val newSequence: Long,
-            val newConnectionIdBytes: ByteArray,
+            val connectionId: ByteArray,
             val retiredSequence: Long,
         ) : ValidationOutcome() {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (other !is Validated) return false
                 return newSequence == other.newSequence &&
-                    newConnectionIdBytes.contentEquals(other.newConnectionIdBytes) &&
+                    connectionId.contentEquals(other.connectionId) &&
                     retiredSequence == other.retiredSequence
             }
 
             override fun hashCode(): Int {
                 var h = newSequence.hashCode()
-                h = 31 * h + newConnectionIdBytes.contentHashCode()
+                h = 31 * h + connectionId.contentHashCode()
                 h = 31 * h + retiredSequence.hashCode()
                 return h
             }
@@ -481,12 +502,21 @@ class PathValidator(
      * surface a qlog event / decide whether to attempt another
      * rotation), or null if no validation is in progress / the
      * timer hasn't fired yet.
+     *
+     * On abandonment the new CID's sequence is queued for
+     * RETIRE_CONNECTION_ID. We probed with that CID — even though
+     * the peer never echoed our challenge, our challenge packet
+     * may have reached them and they've stamped routing state
+     * against the CID. Retiring it tells them they can drop that
+     * state. RFC 9000 §5.1.2: a connection ID that was used and
+     * then abandoned MUST be retired.
      */
     fun checkValidationTimeout(nowMillis: Long): PathValidationState.Validating? {
         val current = state as? PathValidationState.Validating ?: return null
         val elapsed = nowMillis - current.startedAtMillis
         val budget = (current.priorPtoMillis * VALIDATION_PTO_BUDGET_MULTIPLIER).coerceAtLeast(MIN_VALIDATION_BUDGET_MS)
         if (elapsed < budget) return null
+        queueRetireSequence(current.newCidSequence)
         state = PathValidationState.Failed
         failedValidations += 1
         return current
