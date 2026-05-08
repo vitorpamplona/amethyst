@@ -20,19 +20,24 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -105,119 +110,153 @@ fun SinglePaneLayout(
 
     Row(modifier = modifier.fillMaxSize()) {
         if (!isImmersive) {
-            NavigationRail(
-                modifier = Modifier.width(80.dp).fillMaxHeight(),
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                // macOS: push rail items below the traffic lights.
-                header = { Spacer(Modifier.height(titleBarInsetTop)) },
+            // Custom navigation rail with a scrollable items area so all pinned
+            // screens (Home, Reads, Notifications, ...) remain reachable when
+            // the window is short. Bottom status indicators stay anchored.
+            //
+            // We don't use Material3 `NavigationRail` directly here because its
+            // internal `Column` is not scrollable — when there are more pinned
+            // items than fit vertically, items at the bottom of the list (and
+            // the "More" button) get clipped on small windows. We replicate the
+            // rail's container styling via NavigationRailItemDefaults so item
+            // visuals are unchanged.
+            val railScrollState = rememberScrollState()
+            val pinnedScreens by pinnedNavBarState.pinnedScreens.collectAsState()
+            val torState = LocalTorState.current
+            val allAccountsState by accountManager.allAccounts.collectAsState()
+            val singlePaneScope = rememberCoroutineScope()
+            var showAddAccountDialog by remember { mutableStateOf(false) }
+
+            Column(
+                modifier =
+                    Modifier
+                        .width(80.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
             ) {
-                val pinnedScreens by pinnedNavBarState.pinnedScreens.collectAsState()
-                pinnedScreens.forEach { screenType ->
-                    // Rename "Home" to "Feeds" in the nav rail
-                    val label = if (screenType == DeckColumnType.HomeFeed) "Feeds" else screenType.title()
+                // macOS: push rail items below the traffic lights.
+                Spacer(Modifier.height(titleBarInsetTop))
+
+                // Scrollable region for pinned screens + "More" launcher.
+                // Takes all remaining space above the fixed bottom controls
+                // (weight(1f)) and scrolls vertically when items overflow.
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(railScrollState),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top,
+                ) {
+                    pinnedScreens.forEach { screenType ->
+                        // Rename "Home" to "Feeds" in the nav rail
+                        val label = if (screenType == DeckColumnType.HomeFeed) "Feeds" else screenType.title()
+                        NavigationRailItem(
+                            selected = currentColumnType == screenType && navStack.isEmpty(),
+                            onClick = {
+                                singlePaneState.navigate(screenType)
+                                navState.clear()
+                            },
+                            icon = {
+                                Icon(
+                                    screenType.icon(),
+                                    contentDescription = label,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            },
+                            label = {
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            colors = NavigationRailItemDefaults.colors(),
+                        )
+                    }
+
                     NavigationRailItem(
-                        selected = currentColumnType == screenType && navStack.isEmpty(),
-                        onClick = {
-                            singlePaneState.navigate(screenType)
-                            navState.clear()
-                        },
+                        selected = false,
+                        onClick = onOpenAppDrawer,
                         icon = {
                             Icon(
-                                screenType.icon(),
-                                contentDescription = label,
+                                MaterialSymbols.Apps,
+                                contentDescription = "App Drawer",
                                 modifier = Modifier.size(22.dp),
                             )
                         },
                         label = {
                             Text(
-                                label,
+                                "More",
                                 style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
                             )
                         },
+                        colors = NavigationRailItemDefaults.colors(),
                     )
                 }
 
-                NavigationRailItem(
-                    selected = false,
-                    onClick = onOpenAppDrawer,
-                    icon = {
-                        Icon(
-                            MaterialSymbols.Apps,
-                            contentDescription = "App Drawer",
-                            modifier = Modifier.size(22.dp),
-                        )
-                    },
-                    label = {
-                        Text(
-                            "More",
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                        )
-                    },
-                )
+                // Fixed bottom controls — always visible regardless of how
+                // many items are in the scrollable region above.
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                ) {
+                    // Relay health — shows elapsed time since last event (hidden when <30s)
+                    RelayHealthIndicator(
+                        lastEventReceivedAt = lastRelayEventAt,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
 
-                Spacer(Modifier.weight(1f))
+                    BunkerHeartbeatIndicator(
+                        signerConnectionState = signerConnectionState,
+                        lastPingTimeSec = lastPingTimeSec,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
 
-                // Relay health — shows elapsed time since last event (hidden when <30s)
-                RelayHealthIndicator(
-                    lastEventReceivedAt = lastRelayEventAt,
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
+                    TorStatusIndicator(
+                        status = torState.status,
+                        onClick = {
+                            singlePaneState.navigate(DeckColumnType.Settings)
+                            navState.clear()
+                        },
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
 
-                BunkerHeartbeatIndicator(
-                    signerConnectionState = signerConnectionState,
-                    lastPingTimeSec = lastPingTimeSec,
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
-
-                // Tor status
-                val torState = LocalTorState.current
-                TorStatusIndicator(
-                    status = torState.status,
-                    onClick = {
-                        singlePaneState.navigate(DeckColumnType.Settings)
-                        navState.clear()
-                    },
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
-
-                // Account switcher — at very bottom of rail
-                val allAccountsState by accountManager.allAccounts.collectAsState()
-                val singlePaneScope = rememberCoroutineScope()
-                var showAddAccountDialog by remember { mutableStateOf(false) }
-
-                AccountSwitcherDropdown(
-                    activeNpub = accountManager.currentAccount()?.npub,
-                    allAccounts = allAccountsState,
-                    localCache = localCache,
-                    onSwitchAccount = { npub ->
-                        singlePaneScope.launch(Dispatchers.IO) {
-                            accountManager.switchAccount(npub)
-                        }
-                    },
-                    onAddAccount = { showAddAccountDialog = true },
-                    onRemoveAccount = { npub ->
-                        singlePaneScope.launch(Dispatchers.IO) {
-                            accountManager.removeAccountFromStorage(npub)
-                        }
-                    },
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-
-                if (showAddAccountDialog) {
-                    AddAccountDialog(
-                        accountManager = accountManager,
-                        onDismiss = { showAddAccountDialog = false },
-                        onAccountAdded = {
-                            showAddAccountDialog = false
+                    AccountSwitcherDropdown(
+                        activeNpub = accountManager.currentAccount()?.npub,
+                        allAccounts = allAccountsState,
+                        localCache = localCache,
+                        onSwitchAccount = { npub ->
                             singlePaneScope.launch(Dispatchers.IO) {
-                                accountManager.refreshAccountList()
+                                accountManager.switchAccount(npub)
                             }
                         },
+                        onAddAccount = { showAddAccountDialog = true },
+                        onRemoveAccount = { npub ->
+                            singlePaneScope.launch(Dispatchers.IO) {
+                                accountManager.removeAccountFromStorage(npub)
+                            }
+                        },
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
+            }
+
+            if (showAddAccountDialog) {
+                AddAccountDialog(
+                    accountManager = accountManager,
+                    onDismiss = { showAddAccountDialog = false },
+                    onAccountAdded = {
+                        showAddAccountDialog = false
+                        singlePaneScope.launch(Dispatchers.IO) {
+                            accountManager.refreshAccountList()
+                        }
+                    },
+                )
             }
         }
 
