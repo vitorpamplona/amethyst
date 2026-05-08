@@ -16,7 +16,13 @@ if [[ ! -d "$RUNNER_LOGS" ]]; then
     exit 1
 fi
 
-RUN_DIR="$(ls -1dt "$RUNNER_LOGS"/run-* 2>/dev/null | head -n 1 || true)"
+RUN_DIR=""
+while IFS= read -r candidate; do
+    if [[ -d "$candidate" ]]; then
+        RUN_DIR="$candidate"
+        break
+    fi
+done < <(ls -1dt "$RUNNER_LOGS"/run-* 2>/dev/null)
 if [[ -z "$RUN_DIR" ]]; then
     echo "no run-* dirs under $RUNNER_LOGS" >&2
     exit 1
