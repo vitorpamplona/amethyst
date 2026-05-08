@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayReward
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
+import com.vitorpamplona.amethyst.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
@@ -836,6 +837,7 @@ fun NoteBody(
             Spacer(modifier = HalfDoubleVertSpacer)
             DisplayZapSplits(noteEvent, false, accountViewModel, nav)
         }
+        StaleRelayHint(baseNote)
     }
 }
 
