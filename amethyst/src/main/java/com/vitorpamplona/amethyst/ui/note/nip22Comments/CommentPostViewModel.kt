@@ -71,6 +71,7 @@ import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
@@ -96,6 +97,8 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
@@ -113,6 +116,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -150,6 +154,17 @@ open class CommentPostViewModel :
     )
 
     var notifying by mutableStateOf<List<User>?>(null)
+
+    // NIP-9A: latest community rules document for the community we're posting into.
+    // Null when the reply target is not a community, or no rules have been observed yet.
+    var communityRules: CommunityRulesEvent? by mutableStateOf(null)
+        private set
+    private var rulesObserverJob: Job? = null
+
+    // NIP-9A: latest validation outcome for the current draft.
+    // Null = no violation (or rules not yet known); non-null = first violation found.
+    var validationResult: CommunityRulesValidator.Violation? by mutableStateOf(null)
+        private set
 
     override val message = TextFieldState()
 
@@ -243,6 +258,90 @@ open class CommentPostViewModel :
     open fun reply(post: Note) {
         this.replyingTo = post
         this.externalIdentity = (post.event as? CommentEvent)?.scope()
+        observeCommunityRules(post)
+    }
+
+    /**
+     * Subscribes to the latest [CommunityRulesEvent] when [target] is a NIP-72
+     * community, and clears the rules state otherwise. Re-evaluates the current
+     * draft against any rules that arrive (NIP-9A composer-side validation).
+     */
+    private fun observeCommunityRules(target: Note) {
+        rulesObserverJob?.cancel()
+        rulesObserverJob = null
+        communityRules = null
+        validationResult = null
+
+        val targetEvent = target.event as? CommunityDefinitionEvent ?: return
+        val communityAddress = targetEvent.addressTag()
+        val authors = targetEvent.moderatorKeys()
+
+        val filter =
+            Filter(
+                kinds = listOf(CommunityRulesEvent.KIND),
+                authors = authors.sorted(),
+                tags = mapOf("a" to listOf(communityAddress)),
+                limit = 5,
+            )
+
+        rulesObserverJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                LocalCache.observeEvents<CommunityRulesEvent>(filter).collectLatest { events ->
+                    val latest =
+                        events
+                            .filter { it.communityAddress() == communityAddress }
+                            .maxByOrNull { it.createdAt }
+                    communityRules = latest
+                    revalidateDraft()
+                }
+            }
+    }
+
+    /**
+     * Runs the NIP-9A validator against the current draft and updates
+     * [validationResult]. Web-of-trust gates and per-day quota checks are deferred
+     * to a follow-up (see NIP-9A track), so [postsTodayByKind] and `wot` are null
+     * here; the validator skips those checks cleanly.
+     */
+    private fun revalidateDraft() {
+        val rules = communityRules
+        if (rules == null) {
+            validationResult = null
+            return
+        }
+
+        if (!::account.isInitialized) return
+
+        validationResult =
+            validateDraft(
+                rules = rules,
+                author = account.signer.pubKey,
+                draftContent = message.text.toString(),
+            )
+    }
+
+    companion object {
+        /**
+         * Pure helper that runs the NIP-9A validator for a `kind:1111` reply with
+         * [draftContent]. Sizes are estimated from the content bytes; tags add bytes,
+         * so this can under-count on the boundary, but relays still enforce the real
+         * cap. Good enough for a pre-send preview.
+         *
+         * Web-of-trust gates and per-day quota lookups are deferred to a follow-up;
+         * see the NIP-9A track in the issue tracker.
+         */
+        internal fun validateDraft(
+            rules: CommunityRulesEvent,
+            author: String,
+            draftContent: String,
+        ): CommunityRulesValidator.Violation? =
+            CommunityRulesValidator(rules).validate(
+                author = author,
+                kind = CommentEvent.KIND,
+                sizeBytes = draftContent.toByteArray(Charsets.UTF_8).size,
+                postsTodayByKind = null,
+                wot = null,
+            )
     }
 
     open fun quote(quote: Note) {
@@ -316,6 +415,7 @@ open class CommentPostViewModel :
                 replyingTo = LocalCache.getOrCreateNote(it)
             }
         }
+        replyingTo?.let { observeCommunityRules(it) }
 
         wantsToAddGeoHash = draftEvent.hasGeohashes()
 
@@ -588,6 +688,11 @@ open class CommentPostViewModel :
 
         message.setTextAndPlaceCursorAtEnd("")
 
+        rulesObserverJob?.cancel()
+        rulesObserverJob = null
+        communityRules = null
+        validationResult = null
+
         replyingTo = null
         externalIdentity = null
 
@@ -630,6 +735,7 @@ open class CommentPostViewModel :
 
     override fun onMessageChanged() {
         urlPreviews.update(message.text.toString())
+        revalidateDraft()
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
@@ -707,7 +813,8 @@ open class CommentPostViewModel :
             !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
-            multiOrchestrator == null
+            multiOrchestrator == null &&
+            validationResult == null
 
     fun insertAtCursor(newElement: String) {
         message.insertUrlAtCursor(newElement)

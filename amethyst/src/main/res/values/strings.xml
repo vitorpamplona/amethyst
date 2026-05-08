@@ -2772,4 +2772,13 @@
     <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
     <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
     <string name="gif">Gif</string>
+    <!-- NIP-9A community rules composer-side validation. -->
+    <string name="community_rules_violation_icon">Community rule violation</string>
+    <string name="community_rules_violation_author_denied">You are on this community\'s deny-list. Posts will not be accepted.</string>
+    <string name="community_rules_violation_kind_not_allowed">This community does not accept events of kind %1$d.</string>
+    <string name="community_rules_violation_kind_size_exceeded">Draft is %1$d bytes; this community caps this kind at %2$d bytes.</string>
+    <string name="community_rules_violation_max_size_exceeded">Draft is %1$d bytes; this community caps events at %2$d bytes.</string>
+    <string name="community_rules_violation_quota_exceeded">You have already posted %1$d events of this kind today (limit %2$d).</string>
+    <string name="community_rules_violation_wot_gate_failed">You don\'t pass this community\'s web-of-trust requirements.</string>
+    <string name="community_rules_violation_stale_rules">The latest community rules document was rejected as stale.</string>
 </resources>
