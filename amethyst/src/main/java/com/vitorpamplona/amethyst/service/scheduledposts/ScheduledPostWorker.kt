@@ -198,15 +198,14 @@ class ScheduledPostWorker(
     ): Int {
         val deadline = System.currentTimeMillis() + OK_TIMEOUT_SEC * 1000
         while (System.currentTimeMillis() < deadline) {
-            val pending = client.pendingPublishRelaysFor(eventId)
             // null means the outbox dropped the entry — every relay either OK'd
             // or hit the discard cap (replaced/pow/deleted/invalid). Treat as full ack.
-            if (pending == null) return totalRelays
+            val pending = client.pendingPublishRelaysFor(eventId) ?: return totalRelays
             val acked = totalRelays - pending.size
             if (acked > 0) return acked
             delay(OK_POLL_MS)
         }
-        val pending = client.pendingPublishRelaysFor(eventId)
-        return if (pending == null) totalRelays else totalRelays - pending.size
+        val pending = client.pendingPublishRelaysFor(eventId) ?: return totalRelays
+        return totalRelays - pending.size
     }
 }
