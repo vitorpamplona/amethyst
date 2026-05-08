@@ -764,7 +764,25 @@ fun App(
             .setup()
     }
 
-    val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
+    // Namecoin services. Hoisted to App() scope (rather than constructed
+    // lazily inside the LoggedIn branch) so [DesktopRelayConnectionManager]
+    // can share the same [BitRelayResolver] for `.bit` relay-URL rewriting
+    // and TLSA pinning. Both `DesktopNamecoinPreferences` and
+    // `DesktopNamecoinNameService` are cheap to construct (no network or
+    // disk I/O until first use), so eager construction is fine.
+    val namecoinPreferences = remember { DesktopNamecoinPreferences() }
+    val namecoinService =
+        remember {
+            DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+        }
+
+    val relayManager =
+        remember(httpClient, namecoinService) {
+            DesktopRelayConnectionManager(
+                httpClient = httpClient,
+                bitRelayResolver = namecoinService.bitRelayResolver,
+            )
+        }
     val nip11Fetcher = remember { Nip11Fetcher() }
 
     // Start 1Hz metrics snapshot for relay dashboard
@@ -933,13 +951,10 @@ fun App(
                             val account = accountState as AccountState.LoggedIn
                             val nwcConnection by accountManager.nwcConnection.collectAsState()
 
-                            // Lazy-load Namecoin services — almost never used, no need to keep in
-                            // memory from the start (matches Android lazy pattern)
-                            val namecoinPreferences = remember { DesktopNamecoinPreferences() }
-                            val namecoinService =
-                                remember {
-                                    DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
-                                }
+                            // [namecoinPreferences] and [namecoinService] are hoisted to
+                            // App() scope (above) so the relay manager can share the same
+                            // BitRelayResolver. They're still provided through the same
+                            // CompositionLocals from there.
 
                             // Load NWC connection on first composition
                             LaunchedEffect(Unit) {

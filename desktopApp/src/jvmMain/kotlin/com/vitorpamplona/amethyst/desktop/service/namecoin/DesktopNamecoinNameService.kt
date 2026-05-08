@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.service.namecoin
 
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.BitRelayResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
@@ -63,6 +64,16 @@ class DesktopNamecoinNameService(
         )
 
     private val cache = NamecoinLookupCache()
+
+    /**
+     * Resolves `.bit` Nostr relay hostnames to their underlying real
+     * `wss://` endpoints (and their TLSA / `.onion` records) via the same
+     * [resolver] used by the NIP-05 identity path. Sharing the resolver
+     * means both code paths hit the same in-memory cache, so a `.bit`
+     * relay reconnect doesn't pay an extra ElectrumX round-trip when its
+     * NIP-05 identity has already been looked up (and vice versa).
+     */
+    val bitRelayResolver: BitRelayResolver = BitRelayResolver(nameResolver = resolver)
 
     // ── Public API ─────────────────────────────────────────────────────
 
