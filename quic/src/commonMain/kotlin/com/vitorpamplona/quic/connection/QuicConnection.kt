@@ -503,7 +503,7 @@ class QuicConnection(
      *
      * Caller must hold [streamsLock] for any read/write.
      */
-    internal val pendingPathResponses: ArrayDeque<ByteArray> = ArrayDeque()
+    internal val pendingPathChallengePayloads: ArrayDeque<ByteArray> = ArrayDeque()
 
     /**
      * RFC 9002 RTT estimator + loss-detection algorithm. Single
@@ -1896,12 +1896,13 @@ class QuicConnection(
      * Caller must hold [streamsLock].
      */
     internal fun queuePathResponseLocked(challengeData: ByteArray) {
-        if (pendingPathResponses.size >= MAX_PENDING_PATH_RESPONSES) return
-        // Defensive copy: the parser hands us a slice of the inbound
-        // packet's plaintext payload, which the parser may free /
-        // reuse after we return. Copying preserves the bytes for the
-        // writer to encode later.
-        pendingPathResponses.addLast(challengeData.copyOf())
+        if (pendingPathChallengePayloads.size >= MAX_PENDING_PATH_RESPONSES) return
+        // The parser produces a fresh ByteArray per PATH_CHALLENGE
+        // (see [com.vitorpamplona.quic.Buffer.QuicReader.readBytes],
+        // which `copyOfRange`s a slice off the inbound payload), so
+        // we can keep the reference directly without a defensive
+        // copy.
+        pendingPathChallengePayloads.addLast(challengeData)
     }
 
     /**
@@ -2122,7 +2123,7 @@ class QuicConnection(
         const val RETIRED_STREAM_ID_RING_SIZE: Int = 4_096
 
         /**
-         * Bound on the [pendingPathResponses] queue. RFC 9000 §8.2
+         * Bound on the [pendingPathChallengePayloads] queue. RFC 9000 §8.2
          * doesn't cap PATH_CHALLENGE rate, so a malicious peer could
          * spam them to exhaust our memory. 64 entries × 8 bytes = 512 B
          * worst case — trivial to absorb but tight enough that an

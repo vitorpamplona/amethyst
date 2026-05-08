@@ -24,8 +24,6 @@ import com.vitorpamplona.quic.frame.PingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.stream.StreamId
-import com.vitorpamplona.quic.tls.InProcessTlsServer
-import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -356,47 +354,9 @@ class KeyUpdatePeerInitiatedTest {
         return null
     }
 
+    // Default caps (16/16 streams, 1 MiB data) — the rotation tests
+    // don't push much traffic; small caps keep the pipe handshake fast.
     private fun newConnectedClient(): Pair<QuicConnection, InMemoryQuicPipe> =
-        runBlocking {
-            val client =
-                QuicConnection(
-                    serverName = "keyupdate.test",
-                    config =
-                        QuicConnectionConfig(
-                            initialMaxStreamsBidi = 16,
-                            initialMaxStreamsUni = 16,
-                            initialMaxData = 1L * 1024 * 1024,
-                            initialMaxStreamDataBidiLocal = 64L * 1024,
-                            initialMaxStreamDataBidiRemote = 64L * 1024,
-                            initialMaxStreamDataUni = 64L * 1024,
-                        ),
-                    tlsCertificateValidator = PermissiveCertificateValidator(),
-                )
-            val serverScid = ConnectionId.random(8)
-            val tlsServer =
-                InProcessTlsServer(
-                    transportParameters =
-                        TransportParameters(
-                            initialMaxData = 1L * 1024 * 1024,
-                            initialMaxStreamDataBidiLocal = 64L * 1024,
-                            initialMaxStreamDataBidiRemote = 64L * 1024,
-                            initialMaxStreamDataUni = 64L * 1024,
-                            initialMaxStreamsBidi = 16,
-                            initialMaxStreamsUni = 16,
-                            initialSourceConnectionId = serverScid.bytes,
-                            originalDestinationConnectionId = client.destinationConnectionId.bytes,
-                        ).encode(),
-                )
-            val pipe =
-                InMemoryQuicPipe(
-                    client = client,
-                    initialDcid = client.destinationConnectionId.bytes,
-                    serverScid = serverScid,
-                    tlsServer = tlsServer,
-                )
-            client.start()
-            pipe.drive(maxRounds = 16)
-            assertEquals(QuicConnection.Status.CONNECTED, client.status)
-            client to pipe
-        }
+        com.vitorpamplona.quic.connection
+            .newConnectedClient()
 }

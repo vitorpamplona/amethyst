@@ -957,8 +957,8 @@ private fun appendFlowControlUpdates(
     // packet is lost, the peer's next PATH_CHALLENGE retry queues a
     // fresh entry here and we respond again. The peer is responsible
     // for retrying its challenge until it sees a matching response.
-    while (conn.pendingPathResponses.isNotEmpty()) {
-        val data = conn.pendingPathResponses.removeFirst()
+    while (conn.pendingPathChallengePayloads.isNotEmpty()) {
+        val data = conn.pendingPathChallengePayloads.removeFirst()
         frames += PathResponseFrame(data)
     }
 

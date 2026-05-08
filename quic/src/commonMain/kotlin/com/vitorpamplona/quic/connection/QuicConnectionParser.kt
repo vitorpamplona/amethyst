@@ -716,7 +716,7 @@ private fun dispatchFrames(
                 // RFC 9000 §8.2.2 — peer is validating that a path is
                 // alive. We MUST echo the SAME 8-byte payload in a
                 // PATH_RESPONSE on the path the challenge arrived on.
-                // The writer drains [pendingPathResponses] on the next
+                // The writer drains [pendingPathChallengePayloads] on the next
                 // application-level packet build.
                 //
                 // Common practical trigger: server-side path

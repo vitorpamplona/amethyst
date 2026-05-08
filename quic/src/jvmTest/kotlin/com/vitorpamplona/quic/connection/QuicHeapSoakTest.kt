@@ -22,8 +22,6 @@ package com.vitorpamplona.quic.connection
 
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.stream.StreamId
-import com.vitorpamplona.quic.tls.InProcessTlsServer
-import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -215,47 +213,13 @@ class QuicHeapSoakTest {
         }
     }
 
+    // moq-lite-shaped fixture (matches StreamRetirementSoakTest's
+    // shape) — large peer-uni cap so the heap canary can churn 90 K
+    // streams in a 30-min run without bumping the cap.
     private fun newConnectedClient(): Pair<QuicConnection, InMemoryQuicPipe> =
-        runBlocking {
-            val client =
-                QuicConnection(
-                    serverName = "soak.test",
-                    config =
-                        QuicConnectionConfig(
-                            initialMaxStreamsBidi = 4096,
-                            initialMaxStreamsUni = 65_536,
-                            initialMaxData = 16L * 1024 * 1024,
-                            initialMaxStreamDataBidiLocal = 64L * 1024,
-                            initialMaxStreamDataBidiRemote = 64L * 1024,
-                            initialMaxStreamDataUni = 64L * 1024,
-                        ),
-                    tlsCertificateValidator = PermissiveCertificateValidator(),
-                )
-            val serverScid = ConnectionId.random(8)
-            val tlsServer =
-                InProcessTlsServer(
-                    transportParameters =
-                        TransportParameters(
-                            initialMaxData = 16L * 1024 * 1024,
-                            initialMaxStreamDataBidiLocal = 64L * 1024,
-                            initialMaxStreamDataBidiRemote = 64L * 1024,
-                            initialMaxStreamDataUni = 64L * 1024,
-                            initialMaxStreamsBidi = 4096,
-                            initialMaxStreamsUni = 65_536,
-                            initialSourceConnectionId = serverScid.bytes,
-                            originalDestinationConnectionId = client.destinationConnectionId.bytes,
-                        ).encode(),
-                )
-            val pipe =
-                InMemoryQuicPipe(
-                    client = client,
-                    initialDcid = client.destinationConnectionId.bytes,
-                    serverScid = serverScid,
-                    tlsServer = tlsServer,
-                )
-            client.start()
-            pipe.drive(maxRounds = 16)
-            assertEquals(QuicConnection.Status.CONNECTED, client.status)
-            client to pipe
-        }
+        com.vitorpamplona.quic.connection.newConnectedClient(
+            maxStreamsBidi = 4096,
+            maxStreamsUni = 65_536,
+            maxData = 16L * 1024 * 1024,
+        )
 }

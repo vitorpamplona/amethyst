@@ -24,8 +24,6 @@ import com.vitorpamplona.quic.frame.PathChallengeFrame
 import com.vitorpamplona.quic.frame.PathResponseFrame
 import com.vitorpamplona.quic.frame.decodeFrames
 import com.vitorpamplona.quic.frame.encodeFrames
-import com.vitorpamplona.quic.tls.InProcessTlsServer
-import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -181,7 +179,7 @@ class PathValidationTest {
     fun pathResponseQueueIsBoundedAgainstChallengeFlood() =
         runBlocking {
             // Defence-in-depth: an attacker spamming PATH_CHALLENGE
-            // shouldn't pin arbitrary memory in our pendingPathResponses
+            // shouldn't pin arbitrary memory in our pendingPathChallengePayloads
             // queue. Cap is MAX_PENDING_PATH_RESPONSES (64); excess
             // challenges are silently dropped — the protocol allows
             // it (peer would retransmit on PTO if a response actually
@@ -212,39 +210,8 @@ class PathValidationTest {
             assertEquals(QuicConnection.Status.CONNECTED, client.status)
         }
 
+    // Default caps — path validation tests don't open streams.
     private fun newConnectedClient(): Pair<QuicConnection, InMemoryQuicPipe> =
-        runBlocking {
-            val client =
-                QuicConnection(
-                    serverName = "path.test",
-                    config = QuicConnectionConfig(),
-                    tlsCertificateValidator = PermissiveCertificateValidator(),
-                )
-            val serverScid = ConnectionId.random(8)
-            val tlsServer =
-                InProcessTlsServer(
-                    transportParameters =
-                        TransportParameters(
-                            initialMaxData = 1L * 1024 * 1024,
-                            initialMaxStreamDataBidiLocal = 64L * 1024,
-                            initialMaxStreamDataBidiRemote = 64L * 1024,
-                            initialMaxStreamDataUni = 64L * 1024,
-                            initialMaxStreamsBidi = 16,
-                            initialMaxStreamsUni = 16,
-                            initialSourceConnectionId = serverScid.bytes,
-                            originalDestinationConnectionId = client.destinationConnectionId.bytes,
-                        ).encode(),
-                )
-            val pipe =
-                InMemoryQuicPipe(
-                    client = client,
-                    initialDcid = client.destinationConnectionId.bytes,
-                    serverScid = serverScid,
-                    tlsServer = tlsServer,
-                )
-            client.start()
-            pipe.drive(maxRounds = 16)
-            assertEquals(QuicConnection.Status.CONNECTED, client.status)
-            client to pipe
-        }
+        com.vitorpamplona.quic.connection
+            .newConnectedClient()
 }
