@@ -98,6 +98,11 @@ object ScheduledPostNotifier {
                 tapIntent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
+        val notificationManager = NotificationManagerCompat.from(context)
+        // POST_NOTIFICATIONS is runtime-granted on Android 13+; bail out
+        // explicitly so lint doesn't flag the notify() call and so a denied
+        // user doesn't see a misleading no-op log.
+        if (!notificationManager.areNotificationsEnabled()) return
         val builder =
             NotificationCompat
                 .Builder(context, channelId)
@@ -110,8 +115,11 @@ object ScheduledPostNotifier {
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setAutoCancel(true)
                 .setWhen(System.currentTimeMillis())
-        // Silently no-ops on Android 13+ if POST_NOTIFICATIONS isn't granted.
-        NotificationManagerCompat.from(context).notify(notId, builder.build())
+        try {
+            notificationManager.notify(notId, builder.build())
+        } catch (_: SecurityException) {
+            // Race: permission revoked between the check above and notify().
+        }
     }
 
     private fun ensureChannel(context: Context) {
