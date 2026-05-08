@@ -62,7 +62,16 @@ private const val UNSET_LABEL = "(unset)"
 // IANA ALPN identifier for HTTP/0.9-over-QUIC used by quic-interop-runner.
 private const val ALPN_HQ_INTEROP = "hq-interop"
 
-private const val HANDSHAKE_TIMEOUT_SEC = 10L
+// Bumped 10 → 30 to survive the `amplificationlimit` testcase. The
+// runner drops client→server packets 2–7 (six in a row), so we have
+// to PTO our way past six exponentially-spaced retransmits before
+// the eighth packet finally gets through (≈19s of doublings:
+// 0.3+0.6+1.2+2.4+4.8+9.6). At the old 10s budget we declared
+// handshake_failed mid-recovery and the test failed against
+// quic-go/picoquic/msquic. 30s matches the multiconnect budget for
+// the same RFC 9002 PTO reasoning. Normal-case handshakes still
+// complete in well under a second; this only affects the floor.
+private const val HANDSHAKE_TIMEOUT_SEC = 30L
 
 // Multiconnect's per-iteration handshake timeout. The runner's
 // handshakeloss / handshakecorruption tests run 50 sequential
