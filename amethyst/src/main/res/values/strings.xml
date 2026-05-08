@@ -168,6 +168,8 @@
     <string name="pronouns">Pronouns</string>
     <string name="ln_address">LN Address</string>
     <string name="ln_url_outdated">LN URL (outdated)</string>
+    <string name="stale_relay_hint_label">Source relays may be stale</string>
+    <string name="stale_relay_hint_icon_description">Stale relay warning</string>
     <string name="download_to_phone">Save to Phone</string>
     <string name="save_to_gallery">Save to Gallery</string>
     <string name="image_saved_to_the_gallery">Image saved to the phone\'s photo gallery</string>
