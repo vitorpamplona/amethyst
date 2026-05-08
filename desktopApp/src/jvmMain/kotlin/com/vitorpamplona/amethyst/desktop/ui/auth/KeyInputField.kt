@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.ui.auth
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
@@ -85,7 +86,11 @@ fun KeyInputField(
         isError = errorMessage != null,
         supportingText =
             errorMessage?.let {
-                { Text(it, color = MaterialTheme.colorScheme.error) }
+                {
+                    SelectionContainer {
+                        Text(it, color = MaterialTheme.colorScheme.error)
+                    }
+                }
             },
     )
 }
