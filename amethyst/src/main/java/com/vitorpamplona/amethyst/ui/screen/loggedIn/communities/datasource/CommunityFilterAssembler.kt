@@ -35,6 +35,7 @@ class CommunityFilterAssembler(
     val group =
         listOf(
             CommunityFeedFilterSubAssembler(client, ::allKeys),
+            CommunityRulesFilterSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

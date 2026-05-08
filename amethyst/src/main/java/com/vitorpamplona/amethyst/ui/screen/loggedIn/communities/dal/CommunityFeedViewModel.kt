@@ -29,7 +29,13 @@ import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 class CommunityFeedViewModel(
     val note: AddressableNote,
     val account: Account,
-) : AndroidFeedViewModel(CommunityFeedFilter(note, account)) {
+) : AndroidFeedViewModel(
+        CommunityFeedFilter(
+            note,
+            account,
+            hideRulesViolations = account.settings.hideCommunityRulesViolations.value,
+        ),
+    ) {
     class Factory(
         val note: AddressableNote,
         val account: Account,
