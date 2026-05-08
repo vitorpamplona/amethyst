@@ -135,7 +135,12 @@ class AccountCacheState(
         val cached = accounts.value[signer.pubKey]
         if (cached != null) return cached
 
-        val signerWithClientTag = NostrSignerWithClientTag(signer, CLIENT_TAG_NAME)
+        val signerWithClientTag =
+            NostrSignerWithClientTag(
+                inner = signer,
+                clientName = CLIENT_TAG_NAME,
+                disabled = { accountSettings.disableClientTag },
+            )
 
         val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}").apply { mkdirs() }
 

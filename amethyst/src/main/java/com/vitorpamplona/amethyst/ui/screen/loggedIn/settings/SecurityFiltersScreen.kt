@@ -372,6 +372,21 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
         }
 
         SettingsRow(
+            R.string.disable_client_tag_title,
+            R.string.disable_client_tag_explainer,
+        ) {
+            var disableClientTag by remember { mutableStateOf(accountViewModel.account.settings.disableClientTag) }
+
+            Switch(
+                checked = disableClientTag,
+                onCheckedChange = {
+                    disableClientTag = it
+                    accountViewModel.account.settings.changeDisableClientTag(it)
+                },
+            )
+        }
+
+        SettingsRow(
             R.string.show_sensitive_content_title,
             R.string.show_sensitive_content_explainer,
         ) {
