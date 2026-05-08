@@ -48,11 +48,21 @@ fun encodeCloseSessionCapsule(
     errorCode: Int = 0,
     reason: String = "",
 ): ByteArray {
+    val reasonBytes = reason.encodeToByteArray()
+    // Symmetric with the decoder: draft-ietf-webtrans-http3 §5 caps the
+    // reason string at 8192 bytes. Catching this on encode means a local
+    // bug doesn't ship a capsule the peer must reject.
+    require(reasonBytes.size <= MAX_WT_CLOSE_REASON_BYTES) {
+        "WT_CLOSE_SESSION reason exceeds $MAX_WT_CLOSE_REASON_BYTES bytes (${reasonBytes.size})"
+    }
     val body = QuicWriter()
     body.writeUint32(errorCode)
-    body.writeBytes(reason.encodeToByteArray())
+    body.writeBytes(reasonBytes)
     return encodeCapsule(WtCapsuleType.WT_CLOSE_SESSION, body.toByteArray())
 }
+
+/** draft-ietf-webtrans-http3 §5 cap on the reason string in WT_CLOSE_SESSION. */
+const val MAX_WT_CLOSE_REASON_BYTES: Int = 8192
 
 /** Parsed WT_CLOSE_SESSION capsule. */
 data class WtCloseSession(
@@ -64,10 +74,21 @@ data class WtCloseSession(
  * Stateful capsule reader. Capsules on the WT CONNECT bidi stream are
  * `(varint type)(varint length)(body)`. Feed bytes via [push]; drain
  * complete capsules via [next].
+ *
+ * Memory safety: pending unparsed bytes are capped at [maxPendingBytes]
+ * and per-capsule body size is capped at [maxCapsuleBodyBytes]. A peer
+ * that streams a partial capsule prefix (or advertises a 4 GiB length)
+ * cannot pin unbounded heap.
  */
-class CapsuleReader {
+class CapsuleReader(
+    private val maxPendingBytes: Int = DEFAULT_MAX_PENDING_BYTES,
+    private val maxCapsuleBodyBytes: Int = DEFAULT_MAX_CAPSULE_BODY_BYTES,
+) {
     private var buf: ByteArray = ByteArray(0)
     private var pos: Int = 0
+
+    /** Bytes currently buffered awaiting a complete capsule. Diagnostic. */
+    val bufferedBytes: Int get() = buf.size - pos
 
     fun push(bytes: ByteArray) {
         if (bytes.isEmpty()) return
@@ -75,6 +96,14 @@ class CapsuleReader {
         if (pos * 2 > buf.size) {
             buf = buf.copyOfRange(pos, buf.size)
             pos = 0
+        }
+        val newPending = (buf.size - pos).toLong() + bytes.size.toLong()
+        if (newPending > maxPendingBytes) {
+            throw com.vitorpamplona.quic.QuicCodecException(
+                "WT capsule reader buffer would exceed cap " +
+                    "($newPending > $maxPendingBytes); peer is streaming a partial " +
+                    "capsule without delivering the body",
+            )
         }
         val combined = ByteArray(buf.size + bytes.size)
         buf.copyInto(combined, 0)
@@ -97,8 +126,10 @@ class CapsuleReader {
                 .decode(buf, typeEnd) ?: return null
         val bodyStart = typeEnd + lenRes.bytesConsumed
         val len = lenRes.value
-        if (len < 0 || len > Int.MAX_VALUE.toLong()) {
-            throw com.vitorpamplona.quic.QuicCodecException("capsule length out of range: $len")
+        if (len < 0 || len > maxCapsuleBodyBytes.toLong()) {
+            throw com.vitorpamplona.quic.QuicCodecException(
+                "capsule length out of range: $len (cap $maxCapsuleBodyBytes)",
+            )
         }
         val bodyEnd = bodyStart + len.toInt()
         if (bodyEnd > buf.size) return null
@@ -136,5 +167,17 @@ class CapsuleReader {
                 typeRes.value to body
             }
         }
+    }
+
+    companion object {
+        /** Per-stream pending-capsule cap (1 MiB). */
+        const val DEFAULT_MAX_PENDING_BYTES: Int = 1 shl 20
+
+        /**
+         * Per-capsule body cap (64 KiB). The largest legitimate capsule
+         * we expect is WT_CLOSE_SESSION (≤ [MAX_WT_CLOSE_REASON_BYTES] +
+         * 4 bytes); 64 KiB is generous headroom for future capsule types.
+         */
+        const val DEFAULT_MAX_CAPSULE_BODY_BYTES: Int = 64 * 1024
     }
 }

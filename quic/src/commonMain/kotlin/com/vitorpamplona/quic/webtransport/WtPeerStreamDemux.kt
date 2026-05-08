@@ -82,8 +82,20 @@ class WtPeerStreamDemux(
      * can leave this null.
      */
     private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver? = null,
+    /**
+     * Cap on the number of peer-initiated streams that may queue here
+     * waiting for the application to consume them. Pre-fix this was
+     * `Channel.UNLIMITED` — a peer that opens streams faster than the
+     * application drains could pin one [StrippedWtStream] (and its
+     * captured `chunkChannel`) per stream id, indefinitely. Bounded
+     * buffer + suspending `send` propagates backpressure: when the app
+     * is slow, [route] suspends inside [emitStripped] before launching
+     * any further per-stream work, which in turn lets QUIC's per-conn
+     * `MAX_STREAMS_*` accounting throttle the peer.
+     */
+    private val readyStreamsBuffer: Int = DEFAULT_READY_STREAMS_BUFFER,
 ) {
-    private val readyStreams = Channel<StrippedWtStream>(Channel.UNLIMITED)
+    private val readyStreams = Channel<StrippedWtStream>(readyStreamsBuffer)
 
     @Volatile
     var peerSettings: Http3Settings? = null
@@ -134,7 +146,16 @@ class WtPeerStreamDemux(
         kotlinx.coroutines.coroutineScope {
             val pending = ArrayDeque<ByteArray>()
             val flowIterator = stream.incoming
-            val chunkChannel = Channel<ByteArray>(Channel.UNLIMITED)
+            // Bounded suspending channel — pre-fix `UNLIMITED` let a
+            // single misbehaving peer stream pin gigabytes of heap when
+            // the consumer (the application) couldn't keep up. With a
+            // bounded buffer + suspending `send`, the collector below
+            // back-pressures the QuicStream's incoming flow — which in
+            // turn delays our outbound MAX_STREAM_DATA grants and
+            // throttles the peer at the QUIC layer. The fixed size is
+            // small (64 chunks ≈ ~64 KiB at typical packet payloads):
+            // anything bigger just delays the back-pressure signal.
+            val chunkChannel = Channel<ByteArray>(CHUNK_CHANNEL_BUFFER)
             val collector =
                 launch {
                     try {
@@ -289,7 +310,7 @@ class WtPeerStreamDemux(
         }
     }
 
-    private fun emitStripped(
+    private suspend fun emitStripped(
         stream: QuicStream,
         pending: ArrayDeque<ByteArray>,
         chunkChannel: Channel<ByteArray>,
@@ -324,7 +345,14 @@ class WtPeerStreamDemux(
                     driver?.wakeup()
                 }
             }
-        readyStreams.trySend(
+        // Suspending send instead of `trySend` so a slow application
+        // back-pressures the demux instead of silently dropping the
+        // stream. With a bounded buffer ([readyStreamsBuffer]),
+        // [readyStreams.send] suspends when the app hasn't drained,
+        // which keeps `route()` busy and (combined with [process]'s
+        // `scope.launch`) lets the next peer stream wait its turn
+        // rather than spawning a coroutine for every offered id.
+        readyStreams.send(
             StrippedWtStream(
                 streamId = stream.streamId,
                 isUnidirectional = isUni,
@@ -333,6 +361,14 @@ class WtPeerStreamDemux(
                 finish = finish,
             ),
         )
+    }
+
+    companion object {
+        /** Default cap on queued peer-initiated streams (1024). */
+        const val DEFAULT_READY_STREAMS_BUFFER: Int = 1024
+
+        /** Per-stream chunk-channel capacity (64). */
+        internal const val CHUNK_CHANNEL_BUFFER: Int = 64
     }
 }
 

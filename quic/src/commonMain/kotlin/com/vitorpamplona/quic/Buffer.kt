@@ -203,6 +203,9 @@ class QuicReader(
     }
 
     fun skip(n: Int) {
+        if (n < 0) {
+            throw QuicCodecException("skip with negative count: $n")
+        }
         require(n)
         pos += n
     }
@@ -248,6 +251,14 @@ class QuicReader(
     }
 
     fun readBytes(n: Int): ByteArray {
+        // Translate a negative `n` (e.g. an attacker-controlled length
+        // that wrapped through `.toInt()`) into a typed
+        // [QuicCodecException] instead of `IllegalArgumentException`
+        // from `copyOfRange`. Bounds-checking via [require] still kicks
+        // in for positive `n` past `end`.
+        if (n < 0) {
+            throw QuicCodecException("readBytes with negative count: $n")
+        }
         require(n)
         val out = src.copyOfRange(pos, pos + n)
         pos += n

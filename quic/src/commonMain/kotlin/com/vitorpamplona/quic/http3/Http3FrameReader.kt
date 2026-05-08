@@ -36,10 +36,26 @@ import com.vitorpamplona.quic.Varint
  * Unknown frame types (per RFC 9114 §9 — "frame types in the format and intent
  * not recognized SHOULD be ignored") are surfaced as [Http3Frame.Unknown] so
  * the caller can decide policy. SETTINGS, HEADERS, DATA are typed.
+ *
+ * Memory safety:
+ *  * Pending buffered bytes are capped at [maxPendingBytes]; a peer that
+ *    streams a partial-frame prefix without ever delivering the body
+ *    cannot pin unbounded heap. Exceeding the cap throws
+ *    [QuicCodecException], which the caller surfaces as a connection
+ *    error.
+ *  * Per-frame body length is capped by [maxFrameBodyBytes]. A peer that
+ *    advertises a 2 GiB length on the wire is rejected before the
+ *    `ByteArray(len.toInt())` allocation.
  */
-class Http3FrameReader {
+class Http3FrameReader(
+    private val maxPendingBytes: Int = DEFAULT_MAX_PENDING_BYTES,
+    private val maxFrameBodyBytes: Int = DEFAULT_MAX_FRAME_BODY_BYTES,
+) {
     private var buf: ByteArray = ByteArray(0)
     private var pos: Int = 0
+
+    /** Bytes currently buffered awaiting a complete frame. Diagnostic; tests use this. */
+    val bufferedBytes: Int get() = buf.size - pos
 
     fun push(bytes: ByteArray) {
         if (bytes.isEmpty()) return
@@ -49,6 +65,14 @@ class Http3FrameReader {
         if (pos * 2 > buf.size) {
             buf = buf.copyOfRange(pos, buf.size)
             pos = 0
+        }
+        val newPending = (buf.size - pos).toLong() + bytes.size.toLong()
+        if (newPending > maxPendingBytes) {
+            throw QuicCodecException(
+                "HTTP/3 frame reader buffer would exceed cap " +
+                    "($newPending > $maxPendingBytes); peer is streaming a partial " +
+                    "frame without delivering the body — likely H3_EXCESSIVE_LOAD",
+            )
         }
         val combined = ByteArray(buf.size + bytes.size)
         buf.copyInto(combined, 0)
@@ -63,8 +87,10 @@ class Http3FrameReader {
         val lenRes = Varint.decode(buf, typeEnd) ?: return null
         val bodyStart = typeEnd + lenRes.bytesConsumed
         val len = lenRes.value
-        if (len < 0 || len > Int.MAX_VALUE.toLong()) {
-            throw QuicCodecException("HTTP/3 frame length out of range: $len")
+        if (len < 0 || len > maxFrameBodyBytes.toLong()) {
+            throw QuicCodecException(
+                "HTTP/3 frame length out of range: $len (cap $maxFrameBodyBytes)",
+            )
         }
         val bodyEnd = bodyStart + len.toInt()
         if (bodyEnd > buf.size) return null // not all body bytes present yet
@@ -77,6 +103,28 @@ class Http3FrameReader {
             Http3FrameType.GOAWAY -> Http3Frame.Goaway(body)
             else -> Http3Frame.Unknown(typeRes.value, body)
         }
+    }
+
+    companion object {
+        /**
+         * Default cap on pending unparsed bytes (1 MiB). This is the
+         * "frame in flight but body not yet complete" headroom — more
+         * than enough for a legitimate HEADERS / SETTINGS / WT capsule
+         * preamble plus a single in-progress DATA chunk, far less than
+         * the heap a hostile peer could pin.
+         */
+        const val DEFAULT_MAX_PENDING_BYTES: Int = 1 shl 20
+
+        /**
+         * Default cap on a single HTTP/3 frame body (16 MiB). Exceeds
+         * any plausible HEADERS payload (RFC 9114 only ever expects
+         * tens of KiB) and any legitimate per-frame DATA chunk that
+         * fits inside QUIC's per-packet payload budget. Setting this
+         * lower than [DEFAULT_MAX_PENDING_BYTES] would require
+         * splitting; setting it equal keeps the two caps aligned for
+         * single-frame stalls.
+         */
+        const val DEFAULT_MAX_FRAME_BODY_BYTES: Int = 16 shl 20
     }
 }
 

@@ -45,14 +45,27 @@ object WtDatagram {
         return w.toByteArray()
     }
 
-    /** Returns (quarterStreamId * 4, payload). Returns null on truncation. */
+    /** Returns (quarterStreamId * 4, payload). Returns null on truncation or out-of-range quarter id. */
     fun decode(bytes: ByteArray): Decoded? {
         val r = Varint.decode(bytes, 0) ?: return null
         if (r.bytesConsumed > bytes.size) return null
+        // QUIC stream ids are bounded by 2^62 - 1 (RFC 9000 §16). The
+        // quarter id is the actual stream id divided by 4, so a valid
+        // wire value is at most (2^62 - 1) / 4. Anything larger is
+        // either malformed or a deliberate attempt to overflow `r.value
+        // * 4` past `Long.MAX_VALUE` and have it wrap into a small
+        // signed value that matches our expected session id — which
+        // would let an off-path peer feed forged datagrams to the
+        // application bypassing the session-id check in
+        // [QuicWebTransportSessionState.pollIncomingDatagram].
+        if (r.value < 0 || r.value > MAX_VALID_QUARTER_ID) return null
         val sessionId = r.value * 4
         val payload = bytes.copyOfRange(r.bytesConsumed, bytes.size)
         return Decoded(sessionId, payload)
     }
+
+    /** (2^62 - 1) / 4 — see [decode]. */
+    internal const val MAX_VALID_QUARTER_ID: Long = ((1L shl 62) - 1L) / 4L
 
     data class Decoded(
         val sessionStreamId: Long,
