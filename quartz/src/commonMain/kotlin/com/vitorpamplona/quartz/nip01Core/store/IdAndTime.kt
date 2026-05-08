@@ -18,37 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay
+package com.vitorpamplona.quartz.nip01Core.store
 
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-class DefaultContentTypeInterceptor(
-    private val userAgentHeader: String,
-) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest: Request = chain.request()
-        val requestWithUserAgent: Request =
-            originalRequest
-                .newBuilder()
-                .header("User-Agent", userAgentHeader)
-                .build()
-        return chain.proceed(requestWithUserAgent)
-    }
-}
-
-open class BaseNostrClientTest {
-    companion object {
-        val rootClient =
-            OkHttpClient
-                .Builder()
-                .followRedirects(true)
-                .followSslRedirects(true)
-                .addInterceptor(DefaultContentTypeInterceptor("Amethyst/v1.05"))
-                .build()
-        val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
-    }
-}
+/**
+ * Lightweight projection of an event used by NIP-77 negentropy: just
+ * the two fields the reconciliation library indexes — `created_at`
+ * and the 32-byte event id.
+ *
+ * Returned by [IEventStore.snapshotIdsForNegentropy] so the relay can
+ * build a [com.vitorpamplona.negentropy.storage.StorageVector] without
+ * materialising full [com.vitorpamplona.quartz.nip01Core.core.Event]
+ * objects (content, tags, sig). For a 1 M-event snapshot this drops
+ * peak heap from ~1 GB to ~40 MB — strfry's `MemoryView` parity.
+ */
+data class IdAndTime(
+    val createdAt: Long,
+    val id: HexKey,
+)

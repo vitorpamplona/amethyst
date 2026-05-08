@@ -180,8 +180,30 @@ class QuicLossDetection {
     }
 
     companion object {
-        /** RFC 9002 §6.2.2 default initial RTT before a sample arrives. */
-        const val INITIAL_RTT_MS: Long = 333L
+        /**
+         * Initial RTT before the first sample arrives. RFC 9002 §6.2.2
+         * specifies a 333ms default but explicitly says "designs SHOULD
+         * allow it to be configurable". 100ms matches Chrome and
+         * Firefox/neqo's defaults — typical paths are 30–80ms, and the
+         * lower estimate gives faster PTO retransmits during the first
+         * round-trip when no real RTT sample exists yet.
+         *
+         * Why this matters for interop: PTO duration is
+         * `smoothed_rtt + max(4*rttvar, 1ms) + max_ack_delay`, doubled
+         * per consecutive PTO. With INITIAL_RTT=333 the very first
+         * retransmit is at +999ms, then 2s, 4s, 8s — only ~5 attempts
+         * fit in a 30s loss-recovery budget. With 100ms the first
+         * retransmit is at +300ms, then 600ms, 1.2s, 2.4s — twice as
+         * many attempts before the budget runs out. The handshakeloss /
+         * handshakecorruption multiconnect tests at 30% drop need every
+         * PTO opportunity to land 50 successful handshakes within the
+         * runner's 300s testcase budget.
+         *
+         * Spurious retransmits on slower paths are the trade-off, but
+         * they're harmless (peer dedupes via packet number) and the
+         * smoothed RTT updates within one round-trip on first ACK.
+         */
+        const val INITIAL_RTT_MS: Long = 100L
 
         /** RFC 9002 §6.1.1 packet-reordering threshold (number of PNs). */
         const val PACKET_THRESHOLD: Long = 3L

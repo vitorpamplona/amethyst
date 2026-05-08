@@ -1152,6 +1152,8 @@ class AccountViewModel(
 
     fun updateWarnReports(warnReports: Boolean) = launchSigner { account.updateWarnReports(warnReports) }
 
+    fun updateDisableClientTag(disable: Boolean) = launchSigner { account.updateDisableClientTag(disable) }
+
     fun updateFilterSpam(filterSpam: Boolean) =
         launchSigner {
             if (account.updateFilterSpam(filterSpam)) {

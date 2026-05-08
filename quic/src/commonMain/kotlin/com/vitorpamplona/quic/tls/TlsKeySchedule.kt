@@ -59,10 +59,69 @@ class TlsKeySchedule(
     var serverApplicationSecret: ByteArray? = null
         private set
 
+    /**
+     * RFC 8446 §7.1 — `client_early_traffic_secret`, derived from the
+     * early secret + transcript-up-to-and-including-ClientHello. Used to
+     * encrypt 0-RTT packets the client sends before ServerHello arrives.
+     * Only non-null on resumption-with-early-data connections.
+     */
+    var clientEarlyTrafficSecret: ByteArray? = null
+        private set
+
+    /**
+     * RFC 8446 §7.1 resumption master secret. Derived AFTER client Finished
+     * is sent (transcript = CH..client.Finished). Used as the input keying
+     * material for the [resumptionPsk] computation when the server later
+     * issues a NewSessionTicket — that PSK is the value the client offers
+     * back via the pre_shared_key extension on the next connection.
+     *
+     * Derived lazily by [deriveResumption] which the QUIC layer calls right
+     * after handing the client Finished bytes off to the writer. The TLS
+     * layer caches the secret here so multiple NewSessionTickets (servers
+     * routinely send a few) all derive PSKs from the same base.
+     */
+    var resumptionMasterSecret: ByteArray? = null
+        private set
+
     /** Step 1: derive the Early Secret. PSK is all-zeros for non-resumption. */
     fun deriveEarly() {
         val zeros = ByteArray(32)
         earlySecret = HKDF.extract(zeros, zeros)
+    }
+
+    /**
+     * Step 1' (resumption path): derive the Early Secret from a PSK rather
+     * than zeros. The QUIC layer calls this on resumed connections when
+     * the caller passes in a [TlsResumptionState] from a prior connection.
+     * For non-resumption [deriveEarly] is the equivalent zero-keyed call.
+     *
+     * RFC 8446 §7.1: `Early Secret = HKDF-Extract(0, PSK)` — salt is
+     * zeros, IKM is the PSK. [HKDF.extract]'s signature is
+     * `extract(IKM, salt)` (despite the misleading first-parameter name
+     * in the Quartz Hkdf class — the IMPLEMENTATION uses the second
+     * arg as the MAC key per RFC 5869), so the call is
+     * `extract(psk, zeros)`. The non-PSK [deriveEarly] passes zeros for
+     * both so the order didn't matter there.
+     */
+    fun deriveEarlyFromPsk(psk: ByteArray) {
+        val zeros = ByteArray(32)
+        earlySecret = HKDF.extract(psk, zeros)
+    }
+
+    /**
+     * Derive the client early-data traffic secret. RFC 8446 §7.1:
+     *
+     *   client_early_traffic_secret = Derive-Secret(Early Secret,
+     *       "c e traffic", H(ClientHello))
+     *
+     * Caller passes the post-ClientHello transcript hash explicitly so
+     * the schedule doesn't have to track which transcript snapshot is
+     * needed (this is the binder-substituted ClientHello, exactly the
+     * bytes the server will hash on its side).
+     */
+    fun deriveEarlyTraffic(transcriptAfterClientHello: ByteArray) {
+        val es = earlySecret ?: error("call deriveEarlyFromPsk first")
+        clientEarlyTrafficSecret = deriveSecret(es, "c e traffic", transcriptAfterClientHello)
     }
 
     /** Step 2: derive Handshake Secret using ECDHE shared secret. */
@@ -94,6 +153,55 @@ class TlsKeySchedule(
         clientApplicationSecret = deriveSecret(ms, "c ap traffic", transcriptHash)
         serverApplicationSecret = deriveSecret(ms, "s ap traffic", transcriptHash)
     }
+
+    /**
+     * Step 6 (resumption path): derive [resumptionMasterSecret] from the
+     * Master Secret + transcript-up-to-client-Finished. RFC 8446 §7.1:
+     *
+     *     resumption_master_secret = Derive-Secret(Master, "res master",
+     *                                              H(CH..client_Finished))
+     *
+     * Caller passes the post-Finished transcript hash explicitly so the
+     * key schedule doesn't have to track which transcript snapshot it
+     * needs (the schedule's [transcript] holds the latest, but only if
+     * the caller appended client Finished before calling — which the
+     * TlsClient does in its [TlsClient.handleServerFinished] just-after-
+     * Finished branch).
+     */
+    fun deriveResumption(transcriptAfterClientFinished: ByteArray) {
+        val ms = masterSecret ?: error("call deriveMaster first")
+        resumptionMasterSecret = deriveSecret(ms, "res master", transcriptAfterClientFinished)
+    }
+}
+
+/**
+ * RFC 8446 §4.6.1 — derive the per-ticket PSK from the
+ * [TlsKeySchedule.resumptionMasterSecret] plus the server-supplied
+ * `ticket_nonce`. The same `resumption_master_secret` can issue many
+ * PSKs (one per NewSessionTicket); each one is keyed off its nonce.
+ *
+ *   PSK = HKDF-Expand-Label(resumption_master_secret, "resumption",
+ *                           ticket_nonce, Hash.length)
+ *
+ * Hash.length is 32 for SHA-256 — the only hash the QUIC v1 cipher
+ * suites use.
+ */
+fun resumptionPsk(
+    resumptionMasterSecret: ByteArray,
+    ticketNonce: ByteArray,
+): ByteArray = HKDF.expandLabel(resumptionMasterSecret, "resumption", ticketNonce, 32)
+
+/**
+ * RFC 8446 §4.2.11.2 — the binder finished_key, derived from the early
+ * secret. The PSK extension's binder is HMAC(finished_key,
+ * transcript_hash_up_to_partial_CH).
+ *
+ *     binder_key   = Derive-Secret(early_secret, "res binder", H(""))
+ *     finished_key = HKDF-Expand-Label(binder_key, "finished", "", 32)
+ */
+fun pskBinderFinishedKey(earlySecret: ByteArray): ByteArray {
+    val binderKey = deriveSecret(earlySecret, "res binder", EMPTY_SHA256)
+    return expandLabel(binderKey, "finished", 32)
 }
 
 /**

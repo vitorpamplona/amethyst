@@ -145,3 +145,60 @@ fun encodeAlpn(protocols: List<ByteArray>): ByteArray {
     }
     return w.toByteArray()
 }
+
+/**
+ * Encode the `pre_shared_key` extension body with a single PSK identity
+ * and a placeholder binder (zeros). RFC 8446 §4.2.11. The caller MUST
+ * substitute the real binder bytes into the trailing 32 bytes of the
+ * encoded ClientHello AFTER hashing the partial CH up to the binder
+ * field — see [pskBinderHashRangeEnd] for the offset.
+ *
+ * One identity, one binder, SHA-256 (binder is 32 bytes). Wire layout:
+ *
+ *   identities<7..2^16-1>:
+ *     opaque identity<1..2^16-1>;        // ticket bytes
+ *     uint32 obfuscated_ticket_age;
+ *   binders<33..2^16-1>:
+ *     opaque PskBinderEntry<32..255>;    // 32 zero bytes for now
+ */
+fun encodePreSharedKeyPlaceholder(
+    ticket: ByteArray,
+    obfuscatedTicketAge: Long,
+): ByteArray {
+    val w = QuicWriter()
+    w.withUint16Length {
+        // identities list
+        writeTlsOpaque2(ticket)
+        writeUint32(obfuscatedTicketAge.toInt())
+    }
+    w.withUint16Length {
+        // binders list — one PskBinderEntry of 32 zero bytes
+        writeTlsOpaque1(ByteArray(BINDER_BYTES))
+    }
+    return w.toByteArray()
+}
+
+/**
+ * Encode the `early_data` extension body. In a ClientHello the body is
+ * empty (the extension's mere presence signals "I'm sending 0-RTT
+ * data"). In a NewSessionTicket the body is `uint32 max_early_data_size`.
+ * In an EncryptedExtensions message the body is empty (server's
+ * acceptance signal). We only emit the empty form (ClientHello side).
+ *
+ * RFC 8446 §4.2.10. Trailing position requirement: it goes WITH the
+ * pre_shared_key extension in the ClientHello extensions list — we put
+ * it just before pre_shared_key for symmetry with what aioquic / picoquic
+ * emit.
+ */
+fun encodeEarlyDataEmpty(): ByteArray = ByteArray(0)
+
+/** RFC 8446 §4.2.11.2 — SHA-256 binder size for our cipher suites. */
+const val BINDER_BYTES: Int = 32
+
+/**
+ * Trailing-byte count of the encoded binders field in a one-PSK-identity
+ * ClientHello: `[uint16 outer_length][uint8 inner_length][32 binder bytes]`
+ * = 35. The transcript hash for binder computation is the ClientHello
+ * bytes excluding this trailing region.
+ */
+const val BINDERS_TRAILING_BYTES: Int = 2 + 1 + BINDER_BYTES

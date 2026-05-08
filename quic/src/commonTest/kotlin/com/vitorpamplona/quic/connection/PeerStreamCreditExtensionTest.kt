@@ -94,7 +94,7 @@ class PeerStreamCreditExtensionTest {
             // Simulate the relay opening uni streams to us. SERVER_UNI
             // stream IDs use the encoding `index << 2 | 0x3`. Two streams
             // (cap=4, half-window=2) is the threshold for a refresh.
-            client.lock
+            client.streamsLock
                 .let {
                     // Acquire under lock since getOrCreatePeerStreamLocked requires it.
                     it
@@ -103,7 +103,7 @@ class PeerStreamCreditExtensionTest {
             kotlinx.coroutines.sync
                 .Mutex()
                 .let { /* noop: silence unused-import linter */ }
-            client.lock.let { l ->
+            client.streamsLock.let { l ->
                 kotlinx.coroutines.runBlocking {
                     l.lock()
                     try {
@@ -179,7 +179,7 @@ class PeerStreamCreditExtensionTest {
 
             // Open 10 peer streams — half-window for cap=100 is 50, so
             // we're well below the threshold.
-            client.lock.let { l ->
+            client.streamsLock.let { l ->
                 kotlinx.coroutines.runBlocking {
                     l.lock()
                     try {

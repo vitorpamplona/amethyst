@@ -72,6 +72,13 @@ interface INostrClient : AutoCloseable {
         relayList: Set<NormalizedRelayUrl>,
     )
 
+    /**
+     * Returns the relays that have not yet acknowledged [eventId] with an OK,
+     * or null if the event is not tracked (never published, or already fully done).
+     * Use to poll for delivery confirmation after [publish].
+     */
+    fun pendingPublishRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>?
+
     fun addConnectionListener(listener: RelayConnectionListener)
 
     fun removeConnectionListener(listener: RelayConnectionListener)
@@ -122,6 +129,8 @@ class EmptyNostrClient : INostrClient {
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
     ) { }
+
+    override fun pendingPublishRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>? = null
 
     override fun addConnectionListener(listener: RelayConnectionListener) {}
 

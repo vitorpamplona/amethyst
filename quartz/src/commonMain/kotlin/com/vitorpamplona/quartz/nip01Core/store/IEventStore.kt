@@ -41,6 +41,42 @@ interface IEventStore : AutoCloseable {
 
     suspend fun transaction(body: ITransaction.() -> Unit)
 
+    /**
+     * Per-row outcome from [batchInsert]. The OK frame on the wire is
+     * built from this — `Accepted` becomes `OK true`, `Rejected.reason`
+     * becomes the false reason. NIP-01 says OK pairs to its EVENT by
+     * id, not by order, so callers may dispatch outcomes in any order.
+     */
+    sealed class InsertOutcome {
+        data object Accepted : InsertOutcome()
+
+        data class Rejected(
+            val reason: String,
+        ) : InsertOutcome()
+    }
+
+    /**
+     * Bulk insert in a single transaction with per-row error isolation.
+     * Returns one outcome per input event in the same order.
+     *
+     * Implementations must isolate per-row failures so one bad event
+     * doesn't roll back the others (SQLite uses SAVEPOINTs). If the
+     * outer commit itself fails, every entry in the returned list is
+     * `Rejected` with the commit-failure reason.
+     *
+     * Default impl runs each insert in its own transaction — correct
+     * but loses the group-commit win. SQLite overrides this.
+     */
+    suspend fun batchInsert(events: List<Event>): List<InsertOutcome> =
+        events.map { event ->
+            try {
+                insert(event)
+                InsertOutcome.Accepted
+            } catch (e: Throwable) {
+                InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+            }
+        }
+
     suspend fun <T : Event> query(filter: Filter): List<T>
 
     suspend fun <T : Event> query(filters: List<Filter>): List<T>
@@ -58,6 +94,38 @@ interface IEventStore : AutoCloseable {
     suspend fun count(filter: Filter): Int
 
     suspend fun count(filters: List<Filter>): Int
+
+    /**
+     * NIP-77 negentropy snapshot. Returns `(created_at, id)` pairs
+     * for every event matching [filters], with no content/tags/sig
+     * decode. Used by the server-side reconciliation path to build a
+     * `StorageVector` without materialising full [Event] objects —
+     * ~40 B/entry instead of ~1 KB/entry. Order is unspecified;
+     * negentropy's `seal()` re-sorts.
+     *
+     * If [maxEntries] is non-null, the implementation may return up
+     * to `maxEntries + 1` entries; the caller compares the result
+     * size to detect overflow (matching strfry's `maxSyncEvents`
+     * guard). The +1 sentinel lets the caller distinguish "exactly
+     * capped" from "too many to fit".
+     *
+     * Default implementation falls back to the full-decode path so
+     * non-SQLite stores stay correct; SQLite overrides with a direct
+     * `SELECT id, created_at` against the `query_by_created_at_id`
+     * index. Honors the same filter semantics as [query] including
+     * any `limit`.
+     */
+    suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int? = null,
+    ): List<IdAndTime> {
+        val all = query<Event>(filters).map { IdAndTime(it.createdAt, it.id) }
+        return if (maxEntries != null && all.size > maxEntries + 1) {
+            all.subList(0, maxEntries + 1)
+        } else {
+            all
+        }
+    }
 
     suspend fun delete(filter: Filter)
 

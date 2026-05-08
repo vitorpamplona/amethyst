@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
 import com.vitorpamplona.amethyst.service.ai.WritingResult
 import com.vitorpamplona.amethyst.service.ai.WritingTone
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
@@ -304,6 +305,10 @@ open class ShortNotePostViewModel :
 
     // Anonymous Reply
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // Scheduled posting: epoch seconds (UTC) when the post should be published.
+    // Null = post immediately on Send (existing behavior).
+    var scheduledForSec by mutableStateOf<Long?>(null)
 
     // AI Writing Help for testing
     private val useMockAi = false
@@ -829,7 +834,40 @@ open class ShortNotePostViewModel :
 
         val version = draftTag.current
         val anonymous = wantsAnonymousPost
+        val scheduledFor = scheduledForSec
         cancel()
+
+        if (scheduledFor != null && !anonymous) {
+            // Re-stamp the template with created_at = scheduled time so the post,
+            // when published later, shows up at its scheduled moment in feeds
+            // rather than as N minutes/hours old (= compose time).
+            val rescheduledTemplate =
+                EventTemplate<Event>(
+                    createdAt = scheduledFor,
+                    kind = template.kind,
+                    tags = template.tags,
+                    content = template.content,
+                )
+            val (event, relays, extras) = accountViewModel.account.createPostEvent(rescheduledTemplate, extraNotesToBroadcast)
+            Amethyst.instance.scheduledPostStore.add(
+                ScheduledPost(
+                    id =
+                        java.util.UUID
+                            .randomUUID()
+                            .toString(),
+                    accountPubkey = event.pubKey,
+                    signedEventJson = event.toJson(),
+                    relayUrls = relays.map { it.url },
+                    extraEventsJson = extras.map { it.toJson() },
+                    publishAtSec = scheduledFor,
+                    createdAtSec = System.currentTimeMillis() / 1000,
+                ),
+            )
+            accountViewModel.launchSigner {
+                accountViewModel.account.deleteDraftIgnoreErrors(version)
+            }
+            return
+        }
 
         if (anonymous) {
             accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
@@ -1197,6 +1235,7 @@ open class ShortNotePostViewModel :
         wantsExclusiveGeoPost = false
         wantsSecretEmoji = false
         wantsAnonymousPost = false
+        scheduledForSec = null
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.value = TextFieldValue("")

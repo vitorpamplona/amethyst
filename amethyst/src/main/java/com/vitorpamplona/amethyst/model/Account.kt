@@ -529,6 +529,14 @@ class Account(
         return false
     }
 
+    suspend fun updateDisableClientTag(disable: Boolean): Boolean {
+        if (settings.updateDisableClientTag(disable)) {
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
     suspend fun updateFilterSpam(filterSpam: Boolean): Boolean {
         if (settings.updateFilterSpam(filterSpam)) {
             if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {

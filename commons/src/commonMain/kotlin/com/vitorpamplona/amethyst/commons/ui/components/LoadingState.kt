@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +67,11 @@ fun LoadingState(
 
 /**
  * A centered empty state with title, optional description, and optional refresh action.
+ *
+ * The optional `description` is wrapped in a [SelectionContainer] so users can
+ * select and copy it. `EmptyState` is reused as the in-feed error renderer
+ * (e.g. "Error loading feed" with the underlying error in `description`), so
+ * making the description selectable lets users copy error text for reporting.
  */
 @Composable
 fun EmptyState(
@@ -89,11 +95,13 @@ fun EmptyState(
         )
         if (description != null) {
             Spacer(Modifier.height(8.dp))
-            Text(
-                description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            )
+            SelectionContainer {
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
         }
         if (onRefresh != null) {
             Spacer(Modifier.height(16.dp))
@@ -106,6 +114,9 @@ fun EmptyState(
 
 /**
  * A centered error state with message and optional retry action.
+ *
+ * The error `message` is wrapped in a [SelectionContainer] so users can select
+ * and copy it — useful for reporting bugs or pasting error text into a search.
  */
 @Composable
 fun ErrorState(
@@ -121,11 +132,13 @@ fun ErrorState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
+        SelectionContainer {
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         if (onRetry != null) {
             Spacer(Modifier.height(16.dp))
             Button(onClick = onRetry) {

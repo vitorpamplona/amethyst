@@ -329,7 +329,7 @@ private fun OnStageIdleControls(
     TalkButton(
         onClick = {
             if (context.hasMicPermission()) {
-                viewModel.startBroadcast(speakerPubkeyHex, initialMuted = true)
+                viewModel.startBroadcast(speakerPubkeyHex, initialMuted = false)
             } else {
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }

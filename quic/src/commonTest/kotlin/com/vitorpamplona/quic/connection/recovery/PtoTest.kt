@@ -35,15 +35,19 @@ class PtoTest {
     @Test
     fun ptoBeforeFirstRttSample_usesInitialDefault() {
         val ld = QuicLossDetection()
-        // Before any sample: smoothed_rtt = 333, rttvar = 333/2 = 166.
-        // PTO = 333 + max(4*166, 1) + 0 = 333 + 664 = 997.
-        assertEquals(997L, ld.ptoBaseMs(maxAckDelayMs = 0L))
+        // Before any sample: smoothed_rtt = INITIAL_RTT_MS, rttvar = INITIAL_RTT_MS/2.
+        // PTO = smoothed_rtt + max(4*rttvar, 1) + 0
+        //     = INITIAL_RTT_MS + 4*(INITIAL_RTT_MS/2)
+        //     = INITIAL_RTT_MS * 3.
+        val initRtt = QuicLossDetection.INITIAL_RTT_MS
+        assertEquals(initRtt * 3L, ld.ptoBaseMs(maxAckDelayMs = 0L))
     }
 
     @Test
     fun ptoIncludesMaxAckDelay() {
         val ld = QuicLossDetection()
-        assertEquals(997L + 25L, ld.ptoBaseMs(maxAckDelayMs = 25L))
+        val initRtt = QuicLossDetection.INITIAL_RTT_MS
+        assertEquals(initRtt * 3L + 25L, ld.ptoBaseMs(maxAckDelayMs = 25L))
     }
 
     @Test

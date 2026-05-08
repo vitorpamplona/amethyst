@@ -114,6 +114,7 @@ private fun PreloadFor(
         NavBarItem.BOOKMARKS,
         NavBarItem.WEB_BOOKMARKS,
         NavBarItem.DRAFTS,
+        NavBarItem.SCHEDULED_POSTS,
         NavBarItem.INTEREST_SETS,
         NavBarItem.EMOJI_PACKS,
         NavBarItem.WALLET,

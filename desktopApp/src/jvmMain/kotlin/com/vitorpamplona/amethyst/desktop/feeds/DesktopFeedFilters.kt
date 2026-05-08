@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.feeds
 
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrder
@@ -96,6 +97,60 @@ class DesktopFollowingFeedFilter(
             isFeedNote(it.event) && it.author?.pubkeyHex in follows
         }
     }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder).deduplicateReposts()
+
+    override fun limit(): Int = 2500
+}
+
+/**
+ * Custom feed filter: matches events based on FeedSource.Filter criteria.
+ * Excludes are applied client-side (relay can't express NOT filters).
+ */
+class DesktopCustomFeedFilter(
+    private val cache: DesktopLocalCache,
+    private val feedId: String,
+    private val source: FeedSource.Filter,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "custom-$feedId"
+
+    private fun matchesSource(note: Note): Boolean {
+        val event = note.event ?: return false
+        if (!isFeedNote(event)) return false
+
+        // Kind filter
+        if (source.kinds.isNotEmpty() && event.kind !in source.kinds) return false
+
+        // Author filter (if specified, note must be from one of these authors)
+        if (source.authors.isNotEmpty() && note.author?.pubkeyHex !in source.authors) return false
+
+        // Hashtag filter (if specified, event must contain at least one)
+        if (source.hashtags.isNotEmpty()) {
+            val eventTags =
+                event.tags
+                    .filter { it.size >= 2 && it[0] == "t" }
+                    .map { it[1].lowercase() }
+            if (source.hashtags.none { it.lowercase() in eventTags }) return false
+        }
+
+        // Exclusions
+        if (source.excludeAuthors.isNotEmpty() && note.author?.pubkeyHex in source.excludeAuthors) return false
+        if (source.excludeKeywords.isNotEmpty()) {
+            val content = event.content.lowercase()
+            if (source.excludeKeywords.any { content.contains(it.lowercase()) }) return false
+        }
+
+        return true
+    }
+
+    override fun feed(): List<Note> =
+        cache.notes
+            .filterIntoSet { _, note -> matchesSource(note) }
+            .sortedWith(DefaultFeedOrder)
+            .deduplicateReposts()
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { matchesSource(it) }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder).deduplicateReposts()
 

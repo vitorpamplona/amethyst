@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui
 import android.content.Context
 import android.util.LruCache
 import androidx.annotation.DrawableRes
+import androidx.annotation.PluralsRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalConfiguration
@@ -130,6 +131,15 @@ fun stringRes(
             *args,
         )
 }
+
+// Plural resolver for non-composable scope (e.g. onClick callbacks). Not cached:
+// the resolved string varies by `count` quantity and the resourceCache is keyed by id.
+fun pluralStringRes(
+    ctx: Context,
+    @PluralsRes id: Int,
+    count: Int,
+    vararg formatArgs: Any?,
+): String = ctx.resources.getQuantityString(id, count, *formatArgs)
 
 /**
  * This cache can only be used if the painter is the only copy on the screen

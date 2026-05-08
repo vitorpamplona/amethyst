@@ -1,5 +1,22 @@
 # QUIC stream cliff against nostrnests.com — investigation plan
 
+**⚠️ Recommendation 2 (cadence tuning) was overridden 4 days
+later.** Subsequent two-phone production tests on
+`claude/fix-nests-audio-receiver-HCgOY` (commit `a36ccb569`,
+2026-05-05) showed `framesPerGroup = 5` itself cliffs after ~13 s
+on the same production deployment, just slower than `framesPerGroup
+= 1`'s 3 s. Production now defaults to `framesPerGroup = 50`
+(1 stream/sec). The interop tests still pin `5` because the local
+`moq-relay 0.10.25 --auth-public ""` minimal setup hits a *different*
+cliff (per-stream byte volume) at 50.
+
+Both values are correct in their own environments. See
+`nestsClient/plans/2026-05-07-framespergroup-reconciliation.md`
+for the full reconciliation. A planned re-run of the HCgOY field
+tests against the current production deployment is queued in
+`nestsClient/plans/2026-05-07-framespergroup-production-rerun.md`
+to settle whether the two rigs can converge.
+
 **Status: PRODUCTION-FIXED via two-layer fix.** The investigation closed
 with one true bug fix in `:quic` and one tuning change in
 `NestMoqLiteBroadcaster`. A third layer — exposing moq-lite's
@@ -340,3 +357,11 @@ report `received < N` due to from-latest semantics.
    version ships either a config knob or a fix for the per-subscriber
    forward starvation. The 100 ms late-join initial gap is the only
    remaining audio-quality tradeoff from the current mitigation.
+
+   **Update 2026-05-05:** the value did NOT stay at `5` — HCgOY field
+   tests overrode it to `50`. See the banner at the top of this
+   doc. The "reset to 1" follow-up still applies in spirit (use the
+   smallest value that doesn't cliff) but the right value is now
+   data-dependent on whichever production deployment is being
+   targeted. Tracked in
+   `nestsClient/plans/2026-05-07-framespergroup-production-rerun.md`.

@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -137,6 +138,7 @@ fun DeckColumnType.category(): ScreenCategory =
         is DeckColumnType.Profile,
         is DeckColumnType.Thread,
         is DeckColumnType.Article,
+        is DeckColumnType.CustomFeed,
         -> ScreenCategory.SOCIAL
     }
 
@@ -153,6 +155,7 @@ fun DeckColumnType.param(): String? =
         is DeckColumnType.Hashtag -> tag
         is DeckColumnType.Editor -> draftSlug
         is DeckColumnType.Article -> addressTag
+        is DeckColumnType.CustomFeed -> feedId
         else -> null
     }
 
@@ -180,6 +183,7 @@ val LAUNCHABLE_SCREENS: List<DeckColumnType> =
 enum class AppDrawerTab {
     SCREENS,
     WORKSPACES,
+    FEEDS,
 }
 
 // -- State --
@@ -284,6 +288,10 @@ private class AppDrawerState {
                         onDismiss()
                     }
                 }
+
+                AppDrawerTab.FEEDS -> {
+                    // Feed selection handled by FeedsDrawerTab's own click handlers
+                }
             }
         }
     }
@@ -309,12 +317,18 @@ fun AppDrawer(
     onSwitchWorkspace: (Workspace) -> Unit,
     onSelectScreen: (DeckColumnType) -> Unit,
     onDismiss: () -> Unit,
+    initialTab: AppDrawerTab? = null,
 ) {
     val state = remember { AppDrawerState() }
     val searchFocusRequester = remember { FocusRequester() }
     val allWorkspaces by workspaceManager.workspaces.collectAsState()
     val filteredWs by remember(allWorkspaces, state.searchQuery) {
         derivedStateOf { state.filteredWorkspaces(allWorkspaces) }
+    }
+
+    // Set initial tab if specified
+    LaunchedEffect(initialTab) {
+        if (initialTab != null) state.switchTab(initialTab)
     }
 
     LaunchedEffect(Unit) {
@@ -449,6 +463,22 @@ fun AppDrawer(
                                     workspaceManager = workspaceManager,
                                     onSwitchWorkspace = {
                                         onSwitchWorkspace(it)
+                                        onDismiss()
+                                    },
+                                    onDismiss = onDismiss,
+                                )
+                            }
+
+                            AppDrawerTab.FEEDS -> {
+                                FeedsDrawerTab(
+                                    onSelectFeed = { feedDef ->
+                                        onSelectScreen(
+                                            DeckColumnType.CustomFeed(
+                                                feedId = feedDef.id,
+                                                feedName = feedDef.name,
+                                                feedEmoji = feedDef.emoji,
+                                            ),
+                                        )
                                         onDismiss()
                                     },
                                     onDismiss = onDismiss,
@@ -1099,6 +1129,14 @@ private fun UnifiedSearchResults(
     val activeIndex by workspaceManager.activeIndex.collectAsState()
     val allWorkspaces by workspaceManager.workspaces.collectAsState()
 
+    val feedRepo = LocalFeedRepository.current
+    val allFeeds by feedRepo.feeds.collectAsState()
+    val filteredFeeds =
+        allFeeds.filter { feed ->
+            feed.name.contains(state.searchQuery, ignoreCase = true) ||
+                feed.emoji.contains(state.searchQuery)
+        }
+
     LazyColumn(Modifier.padding(8.dp)) {
         // Workspace results first
         if (filteredWs.isNotEmpty()) {
@@ -1147,6 +1185,46 @@ private fun UnifiedSearchResults(
                 }
             }
         }
+        // Feed results
+        if (filteredFeeds.isNotEmpty()) {
+            stickyHeader {
+                Text(
+                    "Feeds",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            items(filteredFeeds, key = { "feed-${it.id}" }) { feed ->
+                Surface(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            .clickable {
+                                onSelectScreen(
+                                    DeckColumnType.CustomFeed(feed.id, feed.name, feed.emoji),
+                                )
+                                onDismiss()
+                            },
+                    tonalElevation = 0.dp,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(feed.emoji.ifEmpty { "\uD83D\uDCCB" }, style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.width(12.dp))
+                        Text(feed.name, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+
         // Screen results below
         if (state.filteredScreens.isNotEmpty()) {
             stickyHeader {

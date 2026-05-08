@@ -96,6 +96,54 @@ class ObservableEventStore(
         _changes.emit(StoreChange.Insert(event))
     }
 
+    override suspend fun batchInsert(events: List<Event>): List<IEventStore.InsertOutcome> {
+        // Split into ephemeral (no-store) and persistable, delegate the
+        // persistable subset to the inner store's batched path so we
+        // keep the group-commit win, then merge outcomes back in input
+        // order. Already-expired ephemerals are dropped (matching
+        // [insert]). Accepted events are emitted on [_changes] only
+        // after the inner batch returns, so a commit failure that
+        // converts everything to Rejected suppresses the emits.
+        if (events.isEmpty()) return emptyList()
+
+        val outcomes = arrayOfNulls<IEventStore.InsertOutcome>(events.size)
+        val persistableIndices = ArrayList<Int>(events.size)
+        val persistable = ArrayList<Event>(events.size)
+        for (i in events.indices) {
+            val event = events[i]
+            if (event.kind.isEphemeral()) {
+                outcomes[i] =
+                    if (event.isExpired()) {
+                        IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
+                    } else {
+                        IEventStore.InsertOutcome.Accepted
+                    }
+            } else {
+                persistableIndices.add(i)
+                persistable.add(event)
+            }
+        }
+
+        if (persistable.isNotEmpty()) {
+            val innerOutcomes = inner.batchInsert(persistable)
+            for (j in persistable.indices) {
+                outcomes[persistableIndices[j]] = innerOutcomes[j]
+            }
+        }
+
+        for (i in events.indices) {
+            if (outcomes[i] is IEventStore.InsertOutcome.Accepted) {
+                _changes.emit(StoreChange.Insert(events[i]))
+            }
+        }
+
+        // Every index in `events.indices` was populated above (either
+        // from the ephemeral pre-pass or the `inner.batchInsert`
+        // result), so no nulls remain. `requireNoNulls()` enforces
+        // that with a runtime check instead of an unchecked cast.
+        return outcomes.requireNoNulls().asList()
+    }
+
     override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) {
         val accepted = ArrayList<Event>()
         inner.transaction {
@@ -140,6 +188,11 @@ class ObservableEventStore(
     override suspend fun count(filter: Filter): Int = inner.count(filter)
 
     override suspend fun count(filters: List<Filter>): Int = inner.count(filters)
+
+    override suspend fun snapshotIdsForNegentropy(
+        filters: List<Filter>,
+        maxEntries: Int?,
+    ): List<IdAndTime> = inner.snapshotIdsForNegentropy(filters, maxEntries)
 
     override suspend fun delete(filter: Filter) {
         inner.delete(filter)

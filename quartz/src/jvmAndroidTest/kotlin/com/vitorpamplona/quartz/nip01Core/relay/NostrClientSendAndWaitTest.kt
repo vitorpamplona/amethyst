@@ -19,47 +19,31 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
+
+import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NostrClientSendAndWaitTest : BaseNostrClientTest() {
+class NostrClientSendAndWaitTest : RelayClientTest() {
     @Test
     fun testSendAndWaitForResponse() =
         runBlocking {
-            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
-
             val randomSigner = NostrSignerInternal(KeyPair())
-
             val event = randomSigner.sign(TextNoteEvent.build("Hello World"))
 
-            val resultDamus =
-                client.publishAndConfirm(
-                    event = event,
-                    relayList = setOf("wss://nostr.bitcoiner.social".normalizeRelayUrl()),
-                )
+            val relayA = "ws://127.0.0.1:7771/".normalizeRelayUrl()
+            val relayB = "ws://127.0.0.1:7772/".normalizeRelayUrl()
 
-            val resultNos =
-                client.publishAndConfirm(
-                    event = event,
-                    relayList = setOf("wss://nos.lol".normalizeRelayUrl()),
-                )
+            val resultA = client.publishAndConfirm(event = event, relayList = setOf(relayA))
+            val resultB = client.publishAndConfirm(event = event, relayList = setOf(relayB))
 
-            client.disconnect()
-            appScope.cancel()
-
-            assertEquals(true, resultDamus)
-            assertEquals(true, resultNos)
+            assertEquals(true, resultA)
+            assertEquals(true, resultB)
         }
 }

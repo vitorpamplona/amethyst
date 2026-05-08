@@ -112,6 +112,8 @@ class CoordinatorPipelineTest {
             relayList: Set<NormalizedRelayUrl>,
         ) {}
 
+        override fun pendingPublishRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>? = null
+
         override fun addConnectionListener(listener: RelayConnectionListener) {}
 
         override fun removeConnectionListener(listener: RelayConnectionListener) {}

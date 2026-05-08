@@ -27,7 +27,7 @@ import kotlinx.serialization.Serializable
 
 @Stable
 @Serializable
-class Nip11RelayInformation(
+data class Nip11RelayInformation(
     val id: String? = null,
     val name: String? = null,
     val description: String? = null,
@@ -59,7 +59,7 @@ class Nip11RelayInformation(
 
     @Stable
     @Serializable
-    class RelayInformationFee(
+    data class RelayInformationFee(
         val amount: Int? = null,
         val unit: String? = null,
         val period: Int? = null,
@@ -68,7 +68,7 @@ class Nip11RelayInformation(
 
     @Stable
     @Serializable
-    class RelayInformationFees(
+    data class RelayInformationFees(
         val admission: List<RelayInformationFee>? = null,
         val subscription: List<RelayInformationFee>? = null,
         val publication: List<RelayInformationFee>? = null,
@@ -76,7 +76,7 @@ class Nip11RelayInformation(
 
     @Stable
     @Serializable
-    class RelayInformationLimitation(
+    data class RelayInformationLimitation(
         val max_message_length: Int? = null,
         val max_subscriptions: Int? = null,
         val max_filters: Int? = null,
@@ -96,7 +96,7 @@ class Nip11RelayInformation(
 
     @Stable
     @Serializable
-    class RelayInformationRetentionData(
+    data class RelayInformationRetentionData(
         val kinds: ArrayList<Int>? = null,
         val time: Int? = null,
         val count: Int? = null,

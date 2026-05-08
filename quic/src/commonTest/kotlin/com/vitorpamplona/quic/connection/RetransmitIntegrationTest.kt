@@ -69,7 +69,7 @@ class RetransmitIntegrationTest {
             //    ACK'd by reordering — its PN < largestAckedPn -
             //    PACKET_THRESHOLD ⇒ declared lost.
             val futurePn = msuPn + 4L
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 // Inject a phantom SentPacket at futurePn so the loss
                 // detector has a credible "newly acked" reference, then
@@ -102,7 +102,7 @@ class RetransmitIntegrationTest {
                 // 5. Dispatch lost tokens — pendingMaxStreamsUni gets set.
                 client.onTokensLost(lostMsuPacket.tokens)
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             assertEquals(
                 capAfterFirstDrain,
@@ -148,24 +148,24 @@ class RetransmitIntegrationTest {
 
             // Second bump: open more peer-uni streams to cross the
             // (already extended) threshold again.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.getOrCreatePeerStreamLocked(StreamId.build(StreamId.Kind.SERVER_UNI, 2))
                 client.getOrCreatePeerStreamLocked(StreamId.build(StreamId.Kind.SERVER_UNI, 3))
                 client.getOrCreatePeerStreamLocked(StreamId.build(StreamId.Kind.SERVER_UNI, 4))
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             runCatching { drainOutbound(client, nowMillis = 2L) }
             val secondCap = client.advertisedMaxStreamsUni
             assertTrue(secondCap > firstCap, "second drain must advertise a still-higher cap; saw $firstCap → $secondCap")
 
             // Now declare the FIRST emit lost via direct dispatch.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensLost(listOf(RecoveryToken.MaxStreamsUni(maxStreams = firstCap)))
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             // Supersede check: firstCap != advertisedMaxStreamsUni (now == secondCap),
             // so pending must remain null.
@@ -216,12 +216,12 @@ class RetransmitIntegrationTest {
 
     private fun crossPeerUniHalfWindow(client: QuicConnection) =
         runBlocking {
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.getOrCreatePeerStreamLocked(StreamId.build(StreamId.Kind.SERVER_UNI, 0))
                 client.getOrCreatePeerStreamLocked(StreamId.build(StreamId.Kind.SERVER_UNI, 1))
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
         }
 }

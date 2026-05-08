@@ -93,12 +93,12 @@ class ResetStopSendingEmitTest {
                     .single()
 
             // Simulate loss.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensLost(listOf(token))
                 client.application.sentPackets.remove(firstEntry.key)
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             // Per-stream emit-pending should be re-flagged.
             assertTrue(stream.resetEmitPending, "loss must re-flag resetEmitPending")
@@ -137,21 +137,21 @@ class ResetStopSendingEmitTest {
                     .single()
 
             // ACK first.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensAcked(listOf(token))
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             assertEquals(true, stream.resetAcked)
             assertEquals(false, stream.resetEmitPending)
 
             // Now a stale loss notification arrives. Defensive: drop.
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensLost(listOf(token))
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             assertEquals(false, stream.resetEmitPending, "stale loss after ACK must not re-flag emit-pending")
         }
@@ -248,11 +248,11 @@ class ResetStopSendingEmitTest {
                     connectionId = byteArrayOf(1, 2, 3, 4),
                     statelessResetToken = ByteArray(16) { it.toByte() },
                 )
-            client.lock.lock()
+            client.streamsLock.lock()
             try {
                 client.onTokensLost(listOf(token))
             } finally {
-                client.lock.unlock()
+                client.streamsLock.unlock()
             }
             assertEquals(token, client.pendingNewConnectionId[1L])
 

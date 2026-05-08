@@ -139,7 +139,7 @@ fun debugState(context: Context) {
     Log.d(
         STATE_DUMP_TAG,
         "Observables: " +
-            LocalCache.observables.size,
+            LocalCache.observables.size(),
     )
 
     Log.d(

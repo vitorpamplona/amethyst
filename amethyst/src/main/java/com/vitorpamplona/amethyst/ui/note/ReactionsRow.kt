@@ -82,6 +82,7 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -128,6 +129,7 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
@@ -346,6 +348,8 @@ fun PayReaction(
     val authorPubkey = baseNote.author?.pubkeyHex ?: return
     val address = remember(authorPubkey) { PaymentTargetsEvent.createAddress(authorPubkey) }
     val context = LocalContext.current
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     LoadAddressableNote(address, accountViewModel) { note ->
         val targets = remember(note) { (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList() }
@@ -392,6 +396,16 @@ fun PayReaction(
                                     } catch (e: Exception) {
                                         if (e is kotlinx.coroutines.CancellationException) throw e
                                         errorMessage = stringRes(context, R.string.no_payment_app_found)
+                                    }
+                                },
+                            )
+                            M3ActionRow(
+                                icon = MaterialSymbols.ContentCopy,
+                                text = stringRes(R.string.copy_to_clipboard),
+                                onClick = {
+                                    expanded = false
+                                    scope.launch {
+                                        clipboardManager.setText(target.authority)
                                     }
                                 },
                             )

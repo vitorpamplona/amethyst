@@ -97,8 +97,10 @@ class QuicLossDetectionTest {
     @Test
     fun lossDelay_floor() {
         val ld = QuicLossDetection()
-        // Initial: smoothed=333, latest=333. Loss delay = 333*9/8 = 374.
-        assertEquals(374L, ld.lossDelayMs())
+        // Initial: smoothed=INITIAL_RTT_MS, latest=INITIAL_RTT_MS.
+        // Loss delay = max_rtt * 9/8 = INITIAL_RTT_MS * 9 / 8.
+        val initRtt = QuicLossDetection.INITIAL_RTT_MS
+        assertEquals(initRtt * 9L / 8L, ld.lossDelayMs())
     }
 
     @Test
