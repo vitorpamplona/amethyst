@@ -880,6 +880,43 @@ class MoqLiteSession internal constructor(
                         MoqLiteControlType.Subscribe -> {
                             val subPayload = buffer.readSizePrefixed() ?: return@collect
                             val sub = MoqLiteCodec.decodeSubscribe(subPayload)
+                            // Validate the requested broadcast matches our
+                            // session's publisher suffix BEFORE matching
+                            // tracks — a peer subscribing under the wrong
+                            // broadcast must not be able to siphon our audio
+                            // by guessing a track name. Both sides have
+                            // already path-normalised at the codec wire
+                            // boundary (`MoqLiteCodec.decodeSubscribe` calls
+                            // `MoqLitePath.normalize`), so a direct equality
+                            // is sufficient. Reject with
+                            // BROADCAST_DOES_NOT_EXIST so the peer sees a
+                            // typed error code rather than a silent FIN.
+                            // Publishers in `publishersSnapshot` all share
+                            // the same suffix (enforced by
+                            // [MoqLiteSession.publish]), so checking the
+                            // first is equivalent to checking all.
+                            val ourSuffix = announcePublisher.suffix
+                            if (sub.broadcast != ourSuffix) {
+                                Log.w("NestTx") {
+                                    "SUBSCRIBE inbound id=${sub.id} broadcast='${sub.broadcast}' does not match " +
+                                        "publisher.suffix='$ourSuffix' — replying SubscribeDrop"
+                                }
+                                runCatching {
+                                    bidi.write(
+                                        MoqLiteCodec.encodeSubscribeDrop(
+                                            MoqLiteSubscribeDrop(
+                                                errorCode = MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST,
+                                                reasonPhrase =
+                                                    "broadcast '${sub.broadcast}' is not published on this session " +
+                                                        "(we publish '$ourSuffix')",
+                                            ),
+                                        ),
+                                    )
+                                    bidi.finish()
+                                }
+                                dispatched = true
+                                return@collect
+                            }
                             // Find the publisher that claims this track. With the
                             // single-track-per-publisher model, only one match is possible.
                             val targetPublisher = publishersSnapshot.firstOrNull { it.track == sub.track }

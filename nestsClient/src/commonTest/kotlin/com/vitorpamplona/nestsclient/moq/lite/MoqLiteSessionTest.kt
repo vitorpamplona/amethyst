@@ -571,6 +571,49 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun publisher_replies_subscribeDrop_when_broadcast_does_not_match() =
+        runBlocking {
+            // Lite-03 audit M5: when the relay opens a Subscribe bidi
+            // whose `broadcast` field doesn't match our publisher's
+            // suffix, the publisher MUST reply SubscribeDrop with the
+            // BROADCAST_DOES_NOT_EXIST code rather than route OUR audio
+            // to the wrong subscriber. Pre-fix we matched on `track`
+            // only and would happily send Opus frames to a peer who
+            // subscribed under any broadcast string they liked.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 11L,
+                        broadcast = "wrongPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+
+            val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
+            val resp = MoqLiteCodec.decodeSubscribeResponse(ackChunk)
+            val dropped = resp as MoqLiteCodec.SubscribeResponse.Dropped
+            assertEquals(MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST, dropped.drop.errorCode)
+            kotlin.test.assertContains(dropped.drop.reasonPhrase, "wrongPubkey")
+            kotlin.test.assertContains(dropped.drop.reasonPhrase, "speakerPubkey")
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_replies_subscribeDrop_when_track_is_not_published() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()

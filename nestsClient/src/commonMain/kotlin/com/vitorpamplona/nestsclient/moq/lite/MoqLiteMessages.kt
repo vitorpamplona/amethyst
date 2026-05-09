@@ -156,6 +156,20 @@ object MoqLiteSubscribeDropCode {
      * `com.vitorpamplona.nestsclient.moq.ErrorCode.TRACK_DOES_NOT_EXIST`.
      */
     const val TRACK_DOES_NOT_EXIST: Long = 0x04L
+
+    /**
+     * The publisher does not serve this broadcast at all. Sent for a
+     * subscribe whose `broadcast` field doesn't match the suffix we
+     * published under on this session. Distinct from
+     * [TRACK_DOES_NOT_EXIST] (which means "we publish this broadcast
+     * but not under that track name") so the watcher can tell apart
+     * "wrong room" from "wrong rendition". Mirrors the IETF
+     * `com.vitorpamplona.nestsclient.moq.ErrorCode.TRACK_NAMESPACE_DOES_NOT_EXIST`
+     * conceptually — moq-lite's flatter path model collapses
+     * namespace/track into broadcast/track, but the same "not found
+     * at this level" semantic applies.
+     */
+    const val BROADCAST_DOES_NOT_EXIST: Long = 0x05L
 }
 
 /**
