@@ -337,16 +337,30 @@ class TlsClient(
                 // offer X25519, the only group nests + most servers accept), so
                 // any HRR is a hard failure.
                 if (sh.random.contentEquals(HELLO_RETRY_REQUEST_RANDOM)) {
-                    throw QuicCodecException("HelloRetryRequest received but not supported")
+                    // RFC 8446 §4.1.4 — HRR follows the standard handshake
+                    // failure path on our side.
+                    throw com.vitorpamplona.quic.TlsAlertException(
+                        alertCode = TlsConstants.ALERT_HANDSHAKE_FAILURE,
+                        message = "HelloRetryRequest received but not supported (we offer X25519 only)",
+                    )
                 }
                 if (sh.negotiatedVersion != TlsConstants.VERSION_TLS_1_3) {
-                    throw QuicCodecException("server did not negotiate TLS 1.3")
+                    // RFC 8446 §6.2 — wrong version is `protocol_version = 70`.
+                    throw com.vitorpamplona.quic.TlsAlertException(
+                        alertCode = TlsConstants.ALERT_PROTOCOL_VERSION,
+                        message = "server did not negotiate TLS 1.3 (got 0x${sh.negotiatedVersion.toString(16)})",
+                    )
                 }
                 val cipher = sh.cipherSuite
                 if (cipher != TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256 &&
                     cipher != TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256
                 ) {
-                    throw QuicCodecException("server picked unsupported cipher 0x${cipher.toString(16)}")
+                    // RFC 8446 §6.2 — server picked something we didn't offer
+                    // → `illegal_parameter = 47`.
+                    throw com.vitorpamplona.quic.TlsAlertException(
+                        alertCode = TlsConstants.ALERT_ILLEGAL_PARAMETER,
+                        message = "server picked unsupported cipher 0x${cipher.toString(16)}",
+                    )
                 }
                 negotiatedCipherSuite = cipher
                 serverKeyShare = sh.serverKeyShareX25519
@@ -432,8 +446,11 @@ class TlsClient(
                 // proceed with HTTP/3 code paths assuming h3.
                 val alpn = ee.alpn
                 if (alpn != null && !offeredAlpns.any { it.contentEquals(alpn) }) {
-                    throw QuicCodecException(
-                        "server selected ALPN '${alpn.decodeToString()}' which we did not offer",
+                    // RFC 7301 §3.2 + RFC 8446 §6.2: a server picking an
+                    // unknown ALPN is `no_application_protocol = 120`.
+                    throw com.vitorpamplona.quic.TlsAlertException(
+                        alertCode = TlsConstants.ALERT_NO_APPLICATION_PROTOCOL,
+                        message = "server selected ALPN '${alpn.decodeToString()}' which we did not offer",
                     )
                 }
                 negotiatedAlpn = alpn
@@ -452,7 +469,20 @@ class TlsClient(
                 when (type) {
                     TlsConstants.HS_CERTIFICATE -> {
                         val cert = TlsCertificateChain.decodeBody(bodyReader)
-                        certificateValidator.validateChain(cert.certificates, serverName)
+                        try {
+                            certificateValidator.validateChain(cert.certificates, serverName)
+                        } catch (t: Throwable) {
+                            // RFC 8446 §6.2 — `bad_certificate = 42`. The
+                            // validator's own message (e.g. "PKIX path
+                            // building failed") becomes the close reason
+                            // so the application support log shows what
+                            // went wrong.
+                            throw com.vitorpamplona.quic.TlsAlertException(
+                                alertCode = TlsConstants.ALERT_BAD_CERTIFICATE,
+                                message = "certificate chain validation failed: ${t.message ?: t::class.simpleName}",
+                                cause = t,
+                            )
+                        }
                         transcript.append(msg)
                         state = State.WAITING_CERTIFICATE_VERIFY
                     }
@@ -490,7 +520,18 @@ class TlsClient(
                 if (type != TlsConstants.HS_CERTIFICATE_VERIFY) throw QuicCodecException("expected CertificateVerify, got type=$type")
                 val cv = TlsCertificateVerify.decodeBody(bodyReader)
                 val transcriptHash = transcript.snapshot()
-                certificateValidator.verifySignature(cv.signatureAlgorithm, cv.signature, transcriptHash)
+                try {
+                    certificateValidator.verifySignature(cv.signatureAlgorithm, cv.signature, transcriptHash)
+                } catch (t: Throwable) {
+                    // RFC 8446 §4.4.3 — bad CertificateVerify signature is
+                    // `decrypt_error = 51` (used for any failure to verify
+                    // a handshake-time signature or MAC).
+                    throw com.vitorpamplona.quic.TlsAlertException(
+                        alertCode = TlsConstants.ALERT_DECRYPT_ERROR,
+                        message = "CertificateVerify signature failed: ${t.message ?: t::class.simpleName}",
+                        cause = t,
+                    )
+                }
                 transcript.append(msg)
                 state = State.WAITING_SERVER_FINISHED
             }
@@ -550,8 +591,16 @@ class TlsClient(
                     }
 
                     TlsConstants.HS_KEY_UPDATE -> {
-                        throw QuicCodecException(
-                            "TLS KeyUpdate received but rotation not implemented; closing connection",
+                        // RFC 9001 §6: TLS KeyUpdate messages MUST NOT be sent
+                        // over QUIC. Reception MUST be treated as a connection
+                        // error of type 0x010a (CRYPTO_ERROR with TLS alert
+                        // "unexpected_message"). QUIC has its own KEY_PHASE-bit
+                        // rotation mechanism (RFC 9001 §6.1) which our
+                        // [QuicConnection.initiateKeyUpdate] / [commitKeyUpdate]
+                        // path drives instead.
+                        throw com.vitorpamplona.quic.TlsAlertException(
+                            alertCode = TlsConstants.ALERT_UNEXPECTED_MESSAGE,
+                            message = "RFC 9001 §6: TLS KeyUpdate forbidden over QUIC; use QUIC key rotation instead",
                         )
                     }
 
@@ -576,7 +625,13 @@ class TlsClient(
         // Verify server Finished MAC over transcript-up-to-CertificateVerify (or up to EE for PSK).
         val expected = finishedVerifyData(keySchedule.serverHandshakeSecret!!, transcript.snapshot())
         if (!expected.contentEqualsConstantTime(finished.verifyData)) {
-            throw QuicCodecException("server Finished MAC mismatch")
+            // RFC 8446 §6.2 — bad Finished MAC is `decrypt_error = 51`
+            // (covers anything that fails handshake-message integrity
+            // verification).
+            throw com.vitorpamplona.quic.TlsAlertException(
+                alertCode = TlsConstants.ALERT_DECRYPT_ERROR,
+                message = "server Finished MAC mismatch",
+            )
         }
         transcript.append(msg)
 

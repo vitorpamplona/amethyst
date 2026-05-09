@@ -47,6 +47,10 @@ class JcaChaCha20Poly1305Aead(
     override val nonceLength = 12
     override val tagLength = 16
 
+    // RFC 9001 §B.1 limits — same as commonMain `ChaCha20Poly1305Aead`.
+    override val confidentialityLimit: Long = (1L shl 62)
+    override val integrityLimit: Long = 1L shl 36
+
     private val keySpec = SecretKeySpec(key, "ChaCha20")
     private val encryptCipher: Cipher = Cipher.getInstance("ChaCha20-Poly1305")
     private val decryptCipher: Cipher = Cipher.getInstance("ChaCha20-Poly1305")

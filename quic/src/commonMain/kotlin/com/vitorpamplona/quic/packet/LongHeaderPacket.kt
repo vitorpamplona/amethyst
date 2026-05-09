@@ -164,6 +164,13 @@ object LongHeaderPacket {
         val r = QuicReader(bytes, offset)
         val first = r.readByte()
         if ((first and 0x80) == 0) return null // not a long header — silently drop
+        // RFC 9000 §17.2: the fixed-bit (0x40) MUST be 1 in a v1 long-header
+        // packet. Packets with 0 here are not valid v1 packets and MUST be
+        // discarded. Version Negotiation (§17.2.1) is the one exception
+        // (its fixed-bit is unconstrained), but VN is detected upstream in
+        // [feedDatagram] before we get here, so any path that reaches
+        // parseAndDecrypt is required to have fixed-bit=1.
+        if ((first and 0x40) == 0) return null
         val typeBits = (first ushr 4) and 0x03
         val type = LongHeaderType.fromTypeBits(typeBits)
         val version = r.readUint32().toInt()

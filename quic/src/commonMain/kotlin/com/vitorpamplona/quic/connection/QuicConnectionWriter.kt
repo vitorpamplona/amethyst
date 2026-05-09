@@ -93,6 +93,11 @@ fun drainOutbound(
         conn.closingDrainSignal.complete(Unit)
         return datagram
     }
+    // RFC 9000 §10.2.2: in the draining state we MUST NOT send any
+    // further packets. The driver's send-loop timer transitions the
+    // status to CLOSED once the 3 * PTO grace elapses; until then
+    // drainOutbound returns null on every call.
+    if (conn.status == QuicConnection.Status.DRAINING) return null
 
     // Bug-A fix: drive the §8.2.4 3*PTO validation budget on every
     // drain, not just on PTO expiration. The peer ACKs PATH_CHALLENGE
@@ -544,14 +549,19 @@ private fun buildLongHeaderFromFrames(
     // map insert below overwrites the prior entry, so the recorded
     // SentPacket reflects the final padded packet's size — correct
     // for retransmit purposes.
+    val ackEliciting = isAckEliciting(frames)
     state.sentPackets[pn] =
         SentPacket(
             packetNumber = pn,
             sentAtMillis = nowMillis,
-            ackEliciting = isAckEliciting(frames),
+            ackEliciting = ackEliciting,
             sizeBytes = packet.size,
             tokens = tokens,
         )
+    // RFC 9000 §10.1.1: an ack-eliciting outbound packet resets the
+    // idle timer. (Non-ack-eliciting packets — pure ACK or PADDING-only
+    // — do NOT reset.)
+    if (ackEliciting) conn.lastActivityMs = nowMillis
     emitQlogSent(conn, level, pn, packet.size, frames)
     return packet
 }
@@ -664,9 +674,36 @@ private fun buildApplicationPacket(
     // stream and MAX_DATA at the connection level.
     appendFlowControlUpdates(conn, frames, tokens)
 
-    // Pending datagrams
+    // Pending datagrams. RFC 9221 §3 enforcement:
+    //   - if the peer didn't advertise `max_datagram_frame_size` (or
+    //     advertised 0), DATAGRAM MUST NOT be sent — drop with diagnostic;
+    //   - if the encoded frame would exceed the peer's advertised
+    //     `max_datagram_frame_size` (frame type byte + length varint +
+    //     payload), drop with diagnostic.
+    // Pre-fix the writer emitted DATAGRAM regardless and let
+    // spec-conformant peers close the connection with PROTOCOL_VIOLATION.
+    val peerDatagramCap = conn.peerTransportParameters?.maxDatagramFrameSize ?: 0L
     while (conn.pendingDatagramsLocked().isNotEmpty()) {
         val payload = conn.pendingDatagramsLocked().removeFirst()
+        if (peerDatagramCap <= 0L) {
+            conn.qlogObserver.onPacketDropped(
+                "outbound DATAGRAM dropped — peer did not advertise max_datagram_frame_size",
+                payload.size,
+            )
+            continue
+        }
+        // Frame total = 1 byte type (0x31) + varint(payload.size) + payload.
+        val frameSize =
+            1 +
+                com.vitorpamplona.quic.Varint
+                    .size(payload.size.toLong()) + payload.size
+        if (frameSize > peerDatagramCap) {
+            conn.qlogObserver.onPacketDropped(
+                "outbound DATAGRAM dropped — frame size $frameSize > peer cap $peerDatagramCap",
+                payload.size,
+            )
+            continue
+        }
         frames += DatagramFrame(payload, explicitLength = true)
         if (frames.size >= 16) break
     }
@@ -866,14 +903,42 @@ private fun buildApplicationPacket(
                 )
             }
         }
+    val ackEliciting = isAckEliciting(frames)
     state.sentPackets[pn] =
         SentPacket(
             packetNumber = pn,
             sentAtMillis = nowMillis,
-            ackEliciting = isAckEliciting(frames),
+            ackEliciting = ackEliciting,
             sizeBytes = sizeBytes.getOrNull()?.size ?: 0,
             tokens = tokens.toList(),
         )
+    // RFC 9000 §10.1.1: an ack-eliciting outbound packet resets the
+    // idle timer. (Non-ack-eliciting packets — pure ACK or PADDING-only
+    // — do NOT reset.)
+    if (ackEliciting) conn.lastActivityMs = nowMillis
+    // RFC 9001 §6.6 / §B.1 confidentiality limit. Track per-key
+    // encryption count for the active 1-RTT send key. At half the
+    // AEAD's confidentiality limit we soft-trigger a key update; at
+    // the limit we close the connection if rotation hasn't completed.
+    if (sizeBytes.isSuccess) {
+        conn.aeadEncryptCount += 1L
+        val limit = proto.aead.confidentialityLimit
+        if (!conn.aeadKeyUpdateRequested && conn.aeadEncryptCount >= limit / 2L) {
+            // Soft trigger — try to rotate. initiateKeyUpdate is a
+            // no-op if a previous rotation is still in flight, so the
+            // latch only flips on the first successful initiation.
+            conn.aeadKeyUpdateRequested = true
+            conn.initiateKeyUpdate()
+        }
+        if (conn.aeadEncryptCount >= limit) {
+            // Hard limit — rotation didn't complete in time. RFC 9001
+            // §6.6 mandates closing rather than continuing to encrypt
+            // under a key whose confidentiality is no longer assured.
+            conn.markClosedExternally(
+                "AEAD_LIMIT_REACHED: 1-RTT encryption count ${conn.aeadEncryptCount} >= confidentiality limit $limit",
+            )
+        }
+    }
     sizeBytes.getOrNull()?.let { built ->
         emitQlogSent(conn, EncryptionLevel.APPLICATION, pn, built.size, frames)
     }

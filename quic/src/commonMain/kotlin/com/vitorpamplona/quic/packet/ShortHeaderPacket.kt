@@ -130,6 +130,11 @@ object ShortHeaderPacket {
         if (offset >= bytes.size) return null
         val first = bytes[offset].toInt() and 0xFF
         if ((first and 0x80) != 0) return null
+        // RFC 9000 §17.3: short-header fixed-bit (0x40) MUST be 1. Packets
+        // with 0 here are not valid v1 packets and MUST be discarded. The
+        // bit is not header-protected (HP only XORs the low 5 bits), so we
+        // check it on the raw byte before paying for HP unmask + AEAD.
+        if ((first and 0x40) == 0) return null
         val pnOffset = offset + 1 + dcidLen
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
@@ -162,6 +167,9 @@ object ShortHeaderPacket {
         if (offset >= bytes.size) return null
         val first = bytes[offset].toInt() and 0xFF
         if ((first and 0x80) != 0) return null
+        // RFC 9000 §17.3: short-header fixed-bit (0x40) MUST be 1. Packets
+        // with 0 here are not valid v1 packets and MUST be discarded.
+        if ((first and 0x40) == 0) return null
         val pnOffset = offset + 1 + dcidLen
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null

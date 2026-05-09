@@ -129,6 +129,35 @@ class QuicStream(
         internal set
 
     /**
+     * RFC 9000 §4.1: highest stream offset (offset + length) ever seen
+     * on an inbound STREAM or RESET_STREAM frame. Used by
+     * [QuicConnection]'s connection-level flow-control accounting —
+     * the spec requires the receiver to compare the SUM across all
+     * streams of "largest received offset" against the advertised
+     * `initial_max_data` / latest MAX_DATA, NOT the contiguous read
+     * frontier. The writer's MAX_DATA threshold logic still uses the
+     * cheaper contiguous-end approximation; this field is purely the
+     * enforcement signal on receive.
+     */
+    @Volatile
+    internal var receiveHighestOffset: Long = 0L
+
+    /**
+     * RFC 9000 §3.2 receive-side state: true once a `RESET_STREAM` for
+     * this stream has been delivered by the peer. Subsequent inbound
+     * STREAM frames on this id are invalid (the receive side is in the
+     * "Reset Recvd" terminal state) and must close the connection with
+     * STREAM_STATE_ERROR.
+     *
+     * Kept distinct from the local-side [resetState] (which tracks OUR
+     * RESET_STREAM emission). Both can exist simultaneously: a bidi
+     * stream can be reset by the peer's send side (this flag) while we
+     * separately reset our own send side.
+     */
+    @Volatile
+    internal var peerResetReceived: Boolean = false
+
+    /**
      * Marker the parser sets whenever [receive.contiguousEnd] advances; the
      * writer's appendFlowControlUpdates consumes it to skip streams that
      * haven't received any new bytes since the last MAX_STREAM_DATA emission.

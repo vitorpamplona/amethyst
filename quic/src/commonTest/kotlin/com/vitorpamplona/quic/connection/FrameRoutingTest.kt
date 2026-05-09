@@ -187,11 +187,13 @@ class FrameRoutingTest {
         // Order matters: CCF first, stream frame second.
         val packet = pipe.buildServerApplicationDatagram(listOf(ccf, streamFrame))!!
         feedDatagram(client, packet, nowMillis = 0L)
-        assertEquals(QuicConnection.Status.CLOSED, client.status)
-        // The dispatcher MUST have stopped at CCF; no peer stream materialised.
-        // (We can't easily query this directly, but the behavioural assertion
-        // is the close-status — pre-fix the StreamFrame would have created
-        // a phantom stream after close.)
+        // RFC 9000 §10.2.2: peer's CONNECTION_CLOSE puts us in DRAINING
+        // (was CLOSED pre-DRAINING-implementation; the spec-mandated
+        // 3 * PTO grace is held by the driver's send loop and flips to
+        // CLOSED once it elapses). The "no phantom stream" assertion
+        // still holds — DRAINING blocks frame dispatch the same way
+        // CLOSED did.
+        assertEquals(QuicConnection.Status.DRAINING, client.status)
     }
 
     @Test
