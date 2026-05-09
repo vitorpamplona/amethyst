@@ -77,24 +77,24 @@ class MoqLiteSession internal constructor(
      */
     internal val transport: WebTransportSession,
     private val scope: CoroutineScope,
-    /**
-     * Wire-format version this session speaks. Selected at
-     * WebTransport CONNECT time via the
-     * `wt-available-protocols` / `wt-protocol` exchange (see
-     * [com.vitorpamplona.nestsclient.transport.WebTransportSession.negotiatedSubProtocol]).
-     * Defaults to [MoqLiteVersion.LITE_03] for backward compat with
-     * call sites that don't pass an explicit version (most tests +
-     * the legacy single-version factory). Production
-     * `connectNestsListener` / `connectNestsSpeaker` pass the
-     * resolved version from the negotiated ALPN.
-     *
-     * The version selects between the version-conditional codec
-     * branches in [MoqLiteCodec] for `Announce.hops`,
-     * `AnnouncePlease.excludeHop`, and `Probe.rtt`. All other
-     * messages are wire-identical between the two versions.
-     */
-    val version: MoqLiteVersion = MoqLiteVersion.LITE_03,
 ) {
+    /**
+     * Wire-format version this session speaks. Derived from the
+     * WebTransport ALPN the server selected via
+     * `wt-available-protocols` / `wt-protocol`
+     * ([WebTransportSession.negotiatedSubProtocol]); falls back to
+     * [MoqLiteVersion.LITE_03] when the server didn't echo
+     * `wt-protocol` or echoed something we don't recognise (older
+     * single-protocol deployments / forward-compat).
+     *
+     * Selects between the version-conditional codec branches in
+     * [MoqLiteCodec] for `Announce.hops`, `AnnouncePlease.excludeHop`,
+     * and `Probe.rtt`. All other messages are wire-identical between
+     * the two versions. Tests drive this via
+     * `FakeWebTransport.pair(negotiatedSubProtocol = …)`.
+     */
+    val version: MoqLiteVersion =
+        MoqLiteVersion.fromAlpn(transport.negotiatedSubProtocol) ?: MoqLiteVersion.LITE_03
     private val state = Mutex()
     private val subscriptionsBySubscribeId: MutableMap<Long, ListenerSubscription> = HashMap()
     private var nextSubscribeId: Long = 0L
@@ -883,6 +883,31 @@ class MoqLiteSession internal constructor(
         }
     }
 
+    /**
+     * Reject an inbound Subscribe with a typed error code. Writes the
+     * `SubscribeDrop` body so a watcher that decodes the application
+     * message sees the typed reason, then `RESET_STREAM(errorCode)`s
+     * the bidi so a watcher inspecting only the QUIC layer also sees
+     * the same code (audit M3 — Lite-03 conveys errors via
+     * RESET_STREAM, distinguishing "publisher rejected" from
+     * "publisher gracefully shut down" / FIN). Errors during the
+     * write/reset are swallowed: the bidi is already on its way out.
+     */
+    private suspend fun rejectSubscribe(
+        bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream,
+        errorCode: Long,
+        reason: String,
+    ) {
+        runCatching {
+            bidi.write(
+                MoqLiteCodec.encodeSubscribeDrop(
+                    MoqLiteSubscribeDrop(errorCode = errorCode, reasonPhrase = reason),
+                ),
+            )
+            bidi.reset(errorCode)
+        }
+    }
+
     private suspend fun handleInboundBidi(bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream) {
         // Single long-running collector for the bidi's full lifetime.
         // Pre-fix this dispatch was split into a `firstOrNull()` to
@@ -1031,28 +1056,13 @@ class MoqLiteSession internal constructor(
                                     "SUBSCRIBE inbound id=${sub.id} broadcast='${sub.broadcast}' does not match " +
                                         "publisher.suffix='$ourSuffix' — replying SubscribeDrop+RESET"
                                 }
-                                runCatching {
-                                    bidi.write(
-                                        MoqLiteCodec.encodeSubscribeDrop(
-                                            MoqLiteSubscribeDrop(
-                                                errorCode = MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST,
-                                                reasonPhrase =
-                                                    "broadcast '${sub.broadcast}' is not published on this session " +
-                                                        "(we publish '$ourSuffix')",
-                                            ),
-                                        ),
-                                    )
-                                    // Lite-03 conveys errors on any stream via
-                                    // `RESET_STREAM(application_error_code)` (audit
-                                    // M3). The Drop body is the application-level
-                                    // signal; the reset is the QUIC-level signal
-                                    // that carries the same code, distinguishing
-                                    // "publisher rejected this subscribe" from
-                                    // "publisher gracefully shut down" (which
-                                    // would be a plain FIN). Pre-fix we FINed,
-                                    // overlapping the two semantics.
-                                    bidi.reset(MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST)
-                                }
+                                rejectSubscribe(
+                                    bidi = bidi,
+                                    errorCode = MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST,
+                                    reason =
+                                        "broadcast '${sub.broadcast}' is not published on this session " +
+                                            "(we publish '$ourSuffix')",
+                                )
                                 dispatched = true
                                 return@collect
                             }
@@ -1060,38 +1070,17 @@ class MoqLiteSession internal constructor(
                             // single-track-per-publisher model, only one match is possible.
                             val targetPublisher = publishersSnapshot.firstOrNull { it.track == sub.track }
                             if (targetPublisher == null) {
-                                // Reply SubscribeDrop with a TRACK_DOES_NOT_EXIST
-                                // error code BEFORE we RESET — without this the
-                                // peer's response wait resolves only on
-                                // bidi tear-down with no indication WHY (looks
-                                // identical to "publisher disappeared mid-
-                                // subscribe"). Drop carries the error code +
-                                // reason phrase the watcher can log /
-                                // surface, and matches what kixelated's
-                                // `rs/moq-lite/src/lite/subscribe.rs`
-                                // expects for an unrecognised track on a
-                                // live broadcast. RESET (audit M3) replaces
-                                // the prior FIN: Lite-03 conveys errors via
-                                // RESET_STREAM, distinguishing "publisher
-                                // rejected" from "publisher gracefully shut
-                                // down."
                                 Log.w("NestTx") {
                                     "SUBSCRIBE inbound id=${sub.id} track='${sub.track}' has no matching publisher " +
                                         "on this session (have ${publishersSnapshot.map { it.track }}) — replying SubscribeDrop+RESET"
                                 }
-                                runCatching {
-                                    bidi.write(
-                                        MoqLiteCodec.encodeSubscribeDrop(
-                                            MoqLiteSubscribeDrop(
-                                                errorCode = MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST,
-                                                reasonPhrase =
-                                                    "track '${sub.track}' is not published on this broadcast " +
-                                                        "(available: ${publishersSnapshot.joinToString(",") { it.track }})",
-                                            ),
-                                        ),
-                                    )
-                                    bidi.reset(MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST)
-                                }
+                                rejectSubscribe(
+                                    bidi = bidi,
+                                    errorCode = MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST,
+                                    reason =
+                                        "track '${sub.track}' is not published on this broadcast " +
+                                            "(available: ${publishersSnapshot.joinToString(",") { it.track }})",
+                                )
                                 dispatched = true
                                 return@collect
                             }
@@ -1286,8 +1275,8 @@ class MoqLiteSession internal constructor(
         // groups of any LOWER-priority track via the high byte.
         // Production sessions cycle on JWT refresh every 9 min, so the
         // wrap is defensive only.
-        val seq23 = sequence.coerceAtMost(0x7F_FFFFL).toInt() and 0x007F_FFFF
-        val packedPriority = ((trackPriority and 0xFF) shl 23) or seq23
+        val seqLow = sequence.coerceAtMost(SEQ_MAX.toLong()).toInt() and SEQ_MASK
+        val packedPriority = ((trackPriority and 0xFF) shl SEQ_BITS) or seqLow
         uni.setPriority(packedPriority)
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))
@@ -1608,6 +1597,19 @@ class MoqLiteSession internal constructor(
         const val DEFAULT_TRACK_PRIORITY: Int = 0x80
 
         /**
+         * Bit layout for the QUIC stream priority value packed by
+         * [openGroupStream]. Bit 31 is reserved as the sign bit (so
+         * the writer's signed `sortedByDescending` orders correctly);
+         * bits 30..23 carry [DEFAULT_TRACK_PRIORITY]-family
+         * `trackPriority u8`; bits 22..0 carry the low [SEQ_BITS] of
+         * the group sequence. See the kdoc on [openGroupStream] for
+         * the full rationale.
+         */
+        private const val SEQ_BITS: Int = 23
+        private const val SEQ_MASK: Int = 0x007F_FFFF
+        private const val SEQ_MAX: Int = SEQ_MASK
+
+        /**
          * Bitrate hint (bits/sec) we report on inbound moq-lite Probe
          * bidis as a publisher. Mirrors the upper-bound of an Opus
          * voice profile at 48 kHz mono, ≈32 kbps. Subscriber-side ABR
@@ -1638,7 +1640,6 @@ class MoqLiteSession internal constructor(
         fun client(
             transport: WebTransportSession,
             pumpScope: CoroutineScope,
-            version: MoqLiteVersion = MoqLiteVersion.LITE_03,
-        ): MoqLiteSession = MoqLiteSession(transport, pumpScope, version)
+        ): MoqLiteSession = MoqLiteSession(transport, pumpScope)
     }
 }

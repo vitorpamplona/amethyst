@@ -109,20 +109,19 @@ suspend fun connectNestsListener(
 
     // moq-lite has NO setup message — the WebTransport handshake itself
     // is the handshake. Version (Lite-03 vs Lite-04) is selected by the
-    // ALPN exchange (`wt-available-protocols` / `wt-protocol`); fall
-    // back to Lite-03 if the server didn't echo `wt-protocol` (older
-    // single-protocol deployments).
-    val moqVersion = resolveMoqLiteVersion(webTransport.negotiatedSubProtocol)
+    // ALPN exchange (`wt-available-protocols` / `wt-protocol`) and
+    // surfaced via [MoqLiteSession.version]; the session itself derives
+    // it from `transport.negotiatedSubProtocol`.
     val moq =
         try {
-            MoqLiteSession.client(webTransport, scope, moqVersion)
+            MoqLiteSession.client(webTransport, scope)
         } catch (t: Throwable) {
             runCatching { webTransport.close(0, "moq-lite session init failed") }
             state.value = NestsListenerState.Failed("moq-lite session init failed: ${t.message}", t)
             return failedListener(state)
         }
 
-    state.value = NestsListenerState.Connected(room, versionCode(moqVersion))
+    state.value = NestsListenerState.Connected(room, versionCode(moq.version))
     return MoqLiteNestsListener(
         session = moq,
         mutableState = state,
@@ -144,21 +143,6 @@ const val MOQ_LITE_03_VERSION: Long = 0x6D71_6C03L
  * bytes.
  */
 const val MOQ_LITE_04_VERSION: Long = 0x6D71_6C04L
-
-/**
- * Resolve the [MoqLiteVersion] to use for a session given the ALPN
- * the WebTransport server selected (or `null` if the server didn't
- * echo `wt-protocol`, e.g. older single-protocol deployments).
- *
- * Falls back to [MoqLiteVersion.LITE_03] when the negotiated value
- * is unknown or absent — every nostrnests deployment supports
- * Lite-03, so this stays safe under any of:
- *   - server is older than draft-13 (no `wt-protocol` echo)
- *   - server picked something we don't recognise (e.g. a future
- *     `moq-lite-05`)
- *   - client offered only one protocol
- */
-internal fun resolveMoqLiteVersion(negotiatedSubProtocol: String?): MoqLiteVersion = MoqLiteVersion.fromAlpn(negotiatedSubProtocol) ?: MoqLiteVersion.LITE_03
 
 /** Map a [MoqLiteVersion] to its synthetic [MOQ_LITE_03_VERSION]-family code. */
 internal fun versionCode(version: MoqLiteVersion): Long =
@@ -273,18 +257,18 @@ suspend fun connectNestsSpeaker(
     state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.MoqHandshake)
 
     // moq-lite has NO setup message. Same logic as the listener path —
-    // version is selected by the ALPN exchange.
-    val moqVersion = resolveMoqLiteVersion(webTransport.negotiatedSubProtocol)
+    // version is selected by the ALPN exchange and derived inside
+    // [MoqLiteSession.version].
     val moq =
         try {
-            MoqLiteSession.client(webTransport, scope, moqVersion)
+            MoqLiteSession.client(webTransport, scope)
         } catch (t: Throwable) {
             runCatching { webTransport.close(0, "moq-lite session init failed") }
             state.value = NestsSpeakerState.Failed("moq-lite session init failed: ${t.message}", t)
             return failedSpeaker(state)
         }
 
-    state.value = NestsSpeakerState.Connected(room, versionCode(moqVersion))
+    state.value = NestsSpeakerState.Connected(room, versionCode(moq.version))
     return MoqLiteNestsSpeaker(
         session = moq,
         speakerPubkeyHex = speakerPubkeyHex,

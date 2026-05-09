@@ -78,10 +78,11 @@ class StrippedWtStream(
     /**
      * Send `STOP_SENDING(applicationErrorCode)` on the receive half
      * (RFC 9000 §3.5) — asks the peer to RESET its corresponding
-     * send side. Always non-null on streams surfaced here: every
-     * stripped stream has a read side. First call wins.
+     * send side. Non-null because every stripped stream surfaced
+     * here has a read side; the demux always wires it. First call
+     * wins.
      */
-    val stopSending: (suspend (errorCode: Long) -> Unit)? = null,
+    val stopSending: suspend (errorCode: Long) -> Unit,
 )
 
 /**

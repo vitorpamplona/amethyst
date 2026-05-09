@@ -352,8 +352,13 @@ class MoqLiteSessionTest {
             // client-side announce-watch flow surfaces them
             // unchanged. Pre-fix the codec was Lite-03-only and
             // would have read the count and discarded the IDs.
-            val (clientSide, serverSide) = FakeWebTransport.pair()
-            val session = MoqLiteSession.client(clientSide, pumpScope, MoqLiteVersion.LITE_04)
+            // Drive the negotiated sub-protocol via the fake so the
+            // session derives `version = LITE_04` itself (matching the
+            // production path, where `MoqLiteSession.version` reads
+            // through `transport.negotiatedSubProtocol`).
+            val (clientSide, serverSide) =
+                FakeWebTransport.pair(negotiatedSubProtocol = MoqLiteAlpn.LITE_04)
+            val session = MoqLiteSession.client(clientSide, pumpScope)
             assertEquals(MoqLiteVersion.LITE_04, session.version)
 
             val peer =

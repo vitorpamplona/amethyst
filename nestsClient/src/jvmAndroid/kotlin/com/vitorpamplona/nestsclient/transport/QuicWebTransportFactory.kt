@@ -470,14 +470,7 @@ private class StrippedWtReadStreamAdapter(
     override fun incoming(): Flow<ByteArray> = stripped.data
 
     override suspend fun stopSending(errorCode: Long) {
-        // Demux unconditionally wires `stopSending` for every surfaced
-        // stream — the contract in `StrippedWtStream` is "non-null on
-        // streams with a read side", which is true here. The `?:`
-        // fallback exists only to defend against a future demux bug
-        // that forgets to wire it; Unit is a safe no-op for tests
-        // that mock a stripped stream without a real receiver.
-        val ss = stripped.stopSending ?: return
-        ss(errorCode)
+        stripped.stopSending(errorCode)
     }
 }
 
@@ -522,8 +515,7 @@ private class StrippedWtBidiStreamAdapter(
     }
 
     override suspend fun stopSending(errorCode: Long) {
-        val ss = stripped.stopSending ?: return
-        ss(errorCode)
+        stripped.stopSending(errorCode)
     }
 
     /**
