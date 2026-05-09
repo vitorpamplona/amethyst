@@ -108,10 +108,8 @@ class AndroidMarmotMessageStore(
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
                 val file = messagesFile(nostrGroupId)
-                if (file.exists()) {
-                    if (!file.delete()) {
-                        Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
-                    }
+                if (file.exists() && !file.delete()) {
+                    Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
                 }
             }
         }

@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.toImmutableList
 
 @Composable
@@ -35,8 +34,6 @@ fun FileServerSelectionRow(
     selectedServer: ServerName?,
     onSelect: (ServerName) -> Unit,
 ) {
-    val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
-
     val fileServerOptions =
         remember(fileServers) {
             fileServers

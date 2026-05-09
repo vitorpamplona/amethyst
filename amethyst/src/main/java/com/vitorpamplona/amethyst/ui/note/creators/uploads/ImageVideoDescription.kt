@@ -438,7 +438,7 @@ fun ImageVideoDescription(
                         .padding(vertical = 10.dp),
                 enabled = !isUploading,
                 onClick = {
-                    val effectiveStripMetadata = if (isVideoWithCompression) false else stripMetadata
+                    val effectiveStripMetadata = !isVideoWithCompression && stripMetadata
                     onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec, effectiveStripMetadata, convertGifToMp4)
                 },
                 shape = QuoteBorder,

@@ -382,59 +382,59 @@ private fun DialogContent(
                         }
                     }
 
-                    if (myContent is MediaUrlImage || myContent is MediaLocalImage || myContent is MediaUrlPdf) {
-                        if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {
-                            val localContext = LocalContext.current
+                    val isPdfOrStaticImage = myContent is MediaUrlImage || myContent is MediaLocalImage || myContent is MediaUrlPdf
+                    val isNotLiveStream = myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)
+                    if (isPdfOrStaticImage && isNotLiveStream) {
+                        val localContext = LocalContext.current
 
-                            val scope = rememberCoroutineScope()
+                        val scope = rememberCoroutineScope()
 
-                            val writeStoragePermissionState =
-                                rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                                    if (isGranted) {
-                                        scope.launch {
-                                            saveMediaToGallery(myContent, localContext, accountViewModel)
-                                        }
-                                        scope.launch {
-                                            Toast
-                                                .makeText(
-                                                    localContext,
-                                                    stringRes(localContext, R.string.media_download_has_started_toast),
-                                                    Toast.LENGTH_SHORT,
-                                                ).show()
-                                        }
+                        val writeStoragePermissionState =
+                            rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
+                                if (isGranted) {
+                                    scope.launch {
+                                        saveMediaToGallery(myContent, localContext, accountViewModel)
+                                    }
+                                    scope.launch {
+                                        Toast
+                                            .makeText(
+                                                localContext,
+                                                stringRes(localContext, R.string.media_download_has_started_toast),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
                                     }
                                 }
-
-                            OutlinedButton(
-                                onClick = {
-                                    if (
-                                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                                        writeStoragePermissionState.status.isGranted
-                                    ) {
-                                        scope.launch(Dispatchers.IO) {
-                                            saveMediaToGallery(myContent, localContext, accountViewModel)
-                                        }
-                                        scope.launch {
-                                            Toast
-                                                .makeText(
-                                                    localContext,
-                                                    stringRes(localContext, R.string.media_download_has_started_toast),
-                                                    Toast.LENGTH_SHORT,
-                                                ).show()
-                                        }
-                                    } else {
-                                        writeStoragePermissionState.launchPermissionRequest()
-                                    }
-                                },
-                                contentPadding = PaddingValues(horizontal = Size5dp),
-                                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                            ) {
-                                Icon(
-                                    symbol = MaterialSymbols.Download,
-                                    modifier = Size20Modifier,
-                                    contentDescription = stringRes(R.string.download_to_phone),
-                                )
                             }
+
+                        OutlinedButton(
+                            onClick = {
+                                if (
+                                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                                    writeStoragePermissionState.status.isGranted
+                                ) {
+                                    scope.launch(Dispatchers.IO) {
+                                        saveMediaToGallery(myContent, localContext, accountViewModel)
+                                    }
+                                    scope.launch {
+                                        Toast
+                                            .makeText(
+                                                localContext,
+                                                stringRes(localContext, R.string.media_download_has_started_toast),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                    }
+                                } else {
+                                    writeStoragePermissionState.launchPermissionRequest()
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = Size5dp),
+                            colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.Download,
+                                modifier = Size20Modifier,
+                                contentDescription = stringRes(R.string.download_to_phone),
+                            )
                         }
                     }
                 }
