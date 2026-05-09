@@ -423,6 +423,18 @@ private fun feedShortHeaderPacket(
             "AEAD auth failed or header parse failed at level APPLICATION",
             datagram.size - offset,
         )
+        // RFC 9001 §6.6 / §B.1 integrity limit. A 1-RTT packet that
+        // failed AEAD verification counts as a forgery attempt against
+        // the active receive key. Closing here prevents an attacker
+        // from grinding through the integrity-limit-many forgeries
+        // searching for a key recovery on the underlying AEAD.
+        conn.aeadDecryptFailureCount += 1L
+        val limit = live.aead.integrityLimit
+        if (conn.aeadDecryptFailureCount >= limit) {
+            conn.markClosedExternally(
+                "AEAD_LIMIT_REACHED: 1-RTT decrypt-failure count ${conn.aeadDecryptFailureCount} >= integrity limit $limit",
+            )
+        }
         return
     }
     // AEAD succeeded with the candidate next-phase keys → commit the

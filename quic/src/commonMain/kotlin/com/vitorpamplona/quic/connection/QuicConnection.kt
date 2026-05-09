@@ -500,6 +500,46 @@ class QuicConnection(
     internal var connectionInboundOffsetSum: Long = 0L
 
     /**
+     * RFC 9001 §6.6 / §B.1: per-key encryption count for the active
+     * 1-RTT send key. The writer increments this on each
+     * application-level packet it builds. When the count reaches the
+     * AEAD's `confidentialityLimit` we MUST initiate a key update
+     * before the next packet (else AEAD security degrades). The
+     * counter resets to 0 every time the send key phase rotates.
+     *
+     * Initial / Handshake levels share their keys briefly enough that
+     * the limit isn't reachable, so we only track 1-RTT.
+     */
+    @Volatile
+    internal var aeadEncryptCount: Long = 0L
+
+    /**
+     * RFC 9001 §6.6 / §B.1: count of failed AEAD verifications on
+     * the active 1-RTT receive key. Each `parseAndDecrypt` that
+     * returns null at APPLICATION level bumps this. When it reaches
+     * the AEAD's `integrityLimit` we MUST close the connection with
+     * AEAD_LIMIT_REACHED.
+     *
+     * Resets every time the receive key phase rotates. The integrity
+     * limit for AES-128-GCM (2^52) is unreachable in practice; for
+     * ChaCha20-Poly1305 (2^36) it's reachable only by a determined
+     * attacker spamming forged packets — close in either case is
+     * spec-mandated.
+     */
+    @Volatile
+    internal var aeadDecryptFailureCount: Long = 0L
+
+    /**
+     * Soft-trigger latch for [aeadEncryptCount]. Set true once we've
+     * called [initiateKeyUpdate] in response to crossing the soft
+     * threshold (half the confidentiality limit). Prevents repeatedly
+     * firing key-updates while the in-progress one is still pending.
+     * Cleared when the rotation actually completes (counter resets).
+     */
+    @Volatile
+    internal var aeadKeyUpdateRequested: Boolean = false
+
+    /**
      * Cumulative count of peer-initiated unidirectional streams we've
      * accepted (incremented in [getOrCreatePeerStreamLocked]). Compared
      * against [advertisedMaxStreamsUni] by the writer to decide whether
@@ -1952,6 +1992,13 @@ class QuicConnection(
                 currentSendKeyPhase = !currentSendKeyPhase
             }
         }
+        // RFC 9001 §6.6 limits are PER-KEY: every rotation resets both
+        // the encrypt count (now using fresh send keys) and the
+        // decrypt-failure count (fresh receive keys mean prior failures
+        // can't accumulate further toward the integrity limit).
+        aeadEncryptCount = 0L
+        aeadDecryptFailureCount = 0L
+        aeadKeyUpdateRequested = false
         qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
         qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
     }
@@ -2039,6 +2086,10 @@ class QuicConnection(
         currentReceiveKeyPhase = !currentReceiveKeyPhase
         currentSendKeyPhase = !currentSendKeyPhase
         keyUpdateInProgress = true
+        // RFC 9001 §6.6 per-key counters reset on rotation (see commitKeyUpdate).
+        aeadEncryptCount = 0L
+        aeadDecryptFailureCount = 0L
+        aeadKeyUpdateRequested = false
         qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
         qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
         return true

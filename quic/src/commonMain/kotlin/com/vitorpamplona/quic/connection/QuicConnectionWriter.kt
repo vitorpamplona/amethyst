@@ -911,6 +911,29 @@ private fun buildApplicationPacket(
     // idle timer. (Non-ack-eliciting packets — pure ACK or PADDING-only
     // — do NOT reset.)
     if (ackEliciting) conn.lastActivityMs = nowMillis
+    // RFC 9001 §6.6 / §B.1 confidentiality limit. Track per-key
+    // encryption count for the active 1-RTT send key. At half the
+    // AEAD's confidentiality limit we soft-trigger a key update; at
+    // the limit we close the connection if rotation hasn't completed.
+    if (sizeBytes.isSuccess) {
+        conn.aeadEncryptCount += 1L
+        val limit = proto.aead.confidentialityLimit
+        if (!conn.aeadKeyUpdateRequested && conn.aeadEncryptCount >= limit / 2L) {
+            // Soft trigger — try to rotate. initiateKeyUpdate is a
+            // no-op if a previous rotation is still in flight, so the
+            // latch only flips on the first successful initiation.
+            conn.aeadKeyUpdateRequested = true
+            conn.initiateKeyUpdate()
+        }
+        if (conn.aeadEncryptCount >= limit) {
+            // Hard limit — rotation didn't complete in time. RFC 9001
+            // §6.6 mandates closing rather than continuing to encrypt
+            // under a key whose confidentiality is no longer assured.
+            conn.markClosedExternally(
+                "AEAD_LIMIT_REACHED: 1-RTT encryption count ${conn.aeadEncryptCount} >= confidentiality limit $limit",
+            )
+        }
+    }
     sizeBytes.getOrNull()?.let { built ->
         emitQlogSent(conn, EncryptionLevel.APPLICATION, pn, built.size, frames)
     }
