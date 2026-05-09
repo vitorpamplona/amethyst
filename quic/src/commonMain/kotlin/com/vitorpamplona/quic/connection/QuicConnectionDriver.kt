@@ -31,6 +31,8 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Owns the UDP socket and runs the read + send loops for a [QuicConnection].
@@ -48,6 +50,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * and [QuicConnection.openBidiStream]/[com.vitorpamplona.quic.stream.SendBuffer.enqueue])
  * call [wakeup] to nudge the send loop.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class QuicConnectionDriver(
     val connection: QuicConnection,
     private val socket: UdpSocket,
@@ -94,17 +97,20 @@ class QuicConnectionDriver(
      * to poll `connection.status == CLOSED` and trust that the rest of
      * the cleanup eventually settled.
      */
-    internal val closeTeardownJob: Job? get() = closeJob
+    internal val closeTeardownJob: Job? get() = closeJob.load()
 
     /**
      * Round-5 concurrency #5: close() guard. A second concurrent invocation
      * (e.g. session close + read-loop death close racing) used to launch a
      * parallel teardown that called scope.cancel() and socket.close() while
-     * the first close was mid-joinAll. We now memoize the teardown Job so
-     * the second caller awaits the first's completion instead.
+     * the first close was mid-joinAll. We memoize the teardown Job so the
+     * second caller awaits the first's completion instead.
+     *
+     * Lock-free CAS replaces the previous `synchronized(this)` double-checked
+     * init: the close path is single-shot ("first writer wins"), which is
+     * exactly what `compareAndSet` expresses.
      */
-    @Volatile
-    private var closeJob: Job? = null
+    private val closeJob: AtomicReference<Job?> = AtomicReference(null)
 
     fun start() {
         connection.start()
@@ -365,38 +371,45 @@ class QuicConnectionDriver(
         // second concurrent caller (which is common: session.close() and
         // read-loop death both race to close()) awaits the same Job rather
         // than launching a parallel teardown.
-        if (closeJob != null) return
-        synchronized(this) {
-            if (closeJob != null) return
-            closeJob =
-                parentScope.launch {
-                    connection.close(0L, "")
-                    wakeup()
-                    val send = sendJob
-                    // Bounded wait for the send loop to flush CONNECTION_CLOSE.
-                    // We don't want to hang forever if the writer is wedged —
-                    // the timeout is the upper bound on how long close() blocks.
-                    withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
-                        // Spin until the writer has actually drained the queued
-                        // close. The CLOSING-status check transitions to CLOSED
-                        // once drainOutbound builds the CONNECTION_CLOSE packet.
-                        while (connection.status == QuicConnection.Status.CLOSING) {
-                            kotlinx.coroutines.delay(1)
-                        }
+        if (closeJob.load() != null) return
+        // Build the teardown coroutine LAZY so we can race-test the CAS
+        // without paying for a launched-and-cancelled Job on the loser.
+        val teardown =
+            parentScope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                connection.close(0L, "")
+                wakeup()
+                val send = sendJob
+                // Bounded wait for the send loop to flush CONNECTION_CLOSE.
+                // We don't want to hang forever if the writer is wedged —
+                // the timeout is the upper bound on how long close() blocks.
+                withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
+                    // Spin until the writer has actually drained the queued
+                    // close. The CLOSING-status check transitions to CLOSED
+                    // once drainOutbound builds the CONNECTION_CLOSE packet.
+                    while (connection.status == QuicConnection.Status.CLOSING) {
+                        kotlinx.coroutines.delay(1)
                     }
-                    // Now flip to CLOSED so both loops exit their while-guards.
-                    connection.markClosedExternally("driver close requested")
-                    wakeup()
-                    // Wait for both loops to actually exit — joinAll won't
-                    // return until the in-flight socket.send() completes.
-                    withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
-                        listOfNotNull(readJob, send).joinAll()
-                    }
-                    // Final teardown — cancel guarantees both jobs are done
-                    // before we close the socket.
-                    scope.cancel()
-                    socket.close()
                 }
+                // Now flip to CLOSED so both loops exit their while-guards.
+                connection.markClosedExternally("driver close requested")
+                wakeup()
+                // Wait for both loops to actually exit — joinAll won't
+                // return until the in-flight socket.send() completes.
+                withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
+                    listOfNotNull(readJob, send).joinAll()
+                }
+                // Final teardown — cancel guarantees both jobs are done
+                // before we close the socket.
+                scope.cancel()
+                socket.close()
+            }
+        if (closeJob.compareAndSet(null, teardown)) {
+            teardown.start()
+        } else {
+            // A concurrent close() already installed the teardown Job; drop
+            // ours without ever starting it. The winner's Job runs, this
+            // call is a no-op (matching the original idempotent contract).
+            teardown.cancel()
         }
     }
 

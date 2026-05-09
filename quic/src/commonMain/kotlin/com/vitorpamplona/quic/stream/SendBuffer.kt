@@ -60,9 +60,14 @@ package com.vitorpamplona.quic.stream
  * send loop under the connection mutex; [markAcked] / [markLost] run on
  * the parser path also under the connection mutex. The two execution
  * paths are NOT serialised by a shared lock, so all internal state is
- * mutated under `synchronized(this)`. Even the cheap getters
- * ([readableBytes], [sentOffset], [finPending], [finSent]) take the
- * monitor so a writer pre-flight check can't observe torn state.
+ * mutated under `synchronized(this)`. Single-field reads
+ * ([nextOffset], [sentOffset], [finPending], [finSent], [finAcked])
+ * use `@Volatile` backing fields and bypass the monitor — they cannot
+ * tear (Boolean is single-byte; Long writes happen inside the
+ * synchronized block on JVM/Android, where `@Volatile Long` is
+ * atomic). [readableBytes] still synchronizes because its formula
+ * combines two fields and would otherwise observe a transient
+ * negative value if read mid-`takeChunk`.
  *
  * # FIN
  *
@@ -105,6 +110,7 @@ class SendBuffer(
     private var flushedFloor: Long = 0L
 
     /** Logical offset just past the last byte. Advances on [enqueue]. */
+    @Volatile
     private var _nextOffset: Long = 0L
 
     /**
@@ -115,6 +121,7 @@ class SendBuffer(
      *
      * Invariant: `flushedFloor <= nextSendOffset <= nextOffset`.
      */
+    @Volatile
     private var nextSendOffset: Long = 0L
 
     /**
@@ -151,14 +158,19 @@ class SendBuffer(
      */
     private var retransmitTotalBytes: Long = 0L
 
+    @Volatile
     private var _finPending: Boolean = false
+
+    @Volatile
     private var _finSent: Boolean = false
+
+    @Volatile
     private var _finAcked: Boolean = false
 
-    val nextOffset: Long get() = synchronized(this) { _nextOffset }
-    val finPending: Boolean get() = synchronized(this) { _finPending }
-    val finSent: Boolean get() = synchronized(this) { _finSent }
-    val finAcked: Boolean get() = synchronized(this) { _finAcked }
+    val nextOffset: Long get() = _nextOffset
+    val finPending: Boolean get() = _finPending
+    val finSent: Boolean get() = _finSent
+    val finAcked: Boolean get() = _finAcked
 
     /**
      * Bytes the writer would emit on the next [takeChunk] before any
@@ -183,7 +195,7 @@ class SendBuffer(
      * the high-water mark of *fresh* sends only, not the cumulative
      * retransmit volume.
      */
-    val sentOffset: Long get() = synchronized(this) { nextSendOffset }
+    val sentOffset: Long get() = nextSendOffset
 
     fun enqueue(bytes: ByteArray) {
         if (bytes.isEmpty()) return
