@@ -502,6 +502,62 @@ class NamecoinImportTest {
             )
         }
 
+    @Test
+    fun `NIP-05 lookup surfaces MalformedRecord with parser detail when value is broken JSON`() =
+        runTest {
+            // Real-world failure mode: a hand-built `name_update` with one
+            // closing brace short of balanced ends up published as broken
+            // JSON. The publisher then sees "name not found / no nostr
+            // field" and chases a phantom bug. Surface the parser's
+            // diagnostic so they know the value itself is the problem.
+            val truncated =
+                """{"ip":"1.2.3.4","nostr":{"names":{"_":"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"}}""".trimIndent()
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/broken", truncated)
+                }
+            val resolver = NamecoinNameResolver(client, lookupTimeoutMs = 1_000L)
+            val outcome = resolver.resolveDetailed("_@broken.bit")
+            assertTrue(
+                "expected MalformedRecord, got $outcome",
+                outcome is NamecoinResolveOutcome.MalformedRecord,
+            )
+            outcome as NamecoinResolveOutcome.MalformedRecord
+            assertEquals("d/broken", outcome.name)
+            // Don't pin the exact parser text — different kotlinx.serialization
+            // versions phrase it differently. Just require it's a non-empty
+            // diagnostic.
+            assertTrue(
+                "error must be a non-empty diagnostic: ${outcome.error}",
+                outcome.error.isNotBlank(),
+            )
+        }
+
+    @Test
+    fun `NIP-05 lookup surfaces MalformedRecord when top-level value is a JSON array`() =
+        runTest {
+            // Top-level non-object values (arrays, primitives, null) are
+            // not valid Domain Name Objects per ifa-0001. They should be
+            // rejected with a useful diagnostic, not collapsed into
+            // NoNostrField (which implies the JSON parsed fine).
+            val client =
+                FakeElectrumXClient().apply {
+                    register("d/arr", """["not","an","object"]""")
+                }
+            val resolver = NamecoinNameResolver(client, lookupTimeoutMs = 1_000L)
+            val outcome = resolver.resolveDetailed("_@arr.bit")
+            assertTrue(
+                "expected MalformedRecord, got $outcome",
+                outcome is NamecoinResolveOutcome.MalformedRecord,
+            )
+            outcome as NamecoinResolveOutcome.MalformedRecord
+            assertEquals("d/arr", outcome.name)
+            assertTrue(
+                "error must mention the unexpected top-level shape: ${outcome.error}",
+                outcome.error.contains("expected JSON object", ignoreCase = true),
+            )
+        }
+
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private fun parse(s: String): JsonObject = json.parseToJsonElement(s).jsonObject
