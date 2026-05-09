@@ -534,6 +534,43 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun publisher_skips_announce_when_announce_please_prefix_does_not_match() =
+        runBlocking {
+            // Lite-03 audit M4: when the relay opens an Announce bidi
+            // with a non-empty prefix that doesn't match our broadcast
+            // suffix, the publisher MUST NOT emit Active under the
+            // requested prefix (or under our own suffix) — kixelated's
+            // `rs/moq-lite/src/lite/announce.rs::Producer` only emits
+            // for matching prefixes. Pre-fix we'd fall through the
+            // `null` branch of `MoqLitePath.stripPrefix` and announce
+            // ourselves anyway. Verified here by FINing the bidi
+            // cleanly without writing any Announce body.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+
+            // Relay opens Announce bidi with a non-matching prefix.
+            val relayBidi = serverSide.openBidiStream()
+            relayBidi.write(Varint.encode(MoqLiteControlType.Announce.code))
+            relayBidi.write(
+                MoqLiteCodec.encodeAnnouncePlease(
+                    MoqLiteAnnouncePlease(prefix = "differentRoom"),
+                ),
+            )
+
+            // The bidi MUST end with no body (peer FIN), and
+            // `relayBidi.incoming().toList()` therefore returns empty.
+            // Use a generous timeout so a slow fake doesn't false-pass
+            // by hanging instead of FINing.
+            val chunks = withTimeout(2_000) { relayBidi.incoming().toList() }
+            assertEquals(emptyList(), chunks, "non-matching prefix must FIN without writing any Announce body")
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_replies_subscribeDrop_when_track_is_not_published() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()

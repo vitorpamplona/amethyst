@@ -838,8 +838,27 @@ class MoqLiteSession internal constructor(
                         MoqLiteControlType.Announce -> {
                             val pleasePayload = buffer.readSizePrefixed() ?: return@collect
                             val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload)
-                            val emittedSuffix =
-                                MoqLitePath.stripPrefix(please.prefix, announcePublisher.suffix) ?: announcePublisher.suffix
+                            // Per moq-lite Lite-03 (`rs/moq-lite/src/lite/announce.rs`),
+                            // a publisher MUST only emit Active for broadcasts whose
+                            // path starts with the requested prefix. If our suffix
+                            // doesn't match, FIN cleanly without writing any
+                            // Announce — the relay/peer sees an empty announce
+                            // stream and moves on. Pre-fix we'd fall through the
+                            // `null` branch of stripPrefix and falsely emit
+                            // `Active(suffix=ourFullSuffix)`, advertising under a
+                            // prefix the subscriber didn't ask for. Production
+                            // never bit because the relay always asks for
+                            // `prefix=""`, but a future peer-to-peer or
+                            // namespace-scoped subscriber would see a ghost.
+                            val emittedSuffix = MoqLitePath.stripPrefix(please.prefix, announcePublisher.suffix)
+                            if (emittedSuffix == null) {
+                                Log.w("NestTx") {
+                                    "ANNOUNCE inbound prefix='${please.prefix}' does not match publisher.suffix='${announcePublisher.suffix}' — FIN without Active"
+                                }
+                                runCatching { bidi.finish() }
+                                dispatched = true
+                                return@collect
+                            }
                             bidi.write(
                                 MoqLiteCodec.encodeAnnounce(
                                     MoqLiteAnnounce(
