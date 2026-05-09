@@ -343,6 +343,55 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun publisher_subscribeOk_narrows_startGroup_to_next_sequence() =
+        runBlocking {
+            // Lite-03 audit L2: when accepting a SUBSCRIBE, the publisher
+            // narrows the SubscribeOk's `startGroup` from the subscriber's
+            // request to its own [MoqLitePublisherHandle.nextSequence],
+            // communicating the exact sequence the next group will
+            // carry. Particularly useful for hot-swap continuations
+            // (publisher seeded with a non-zero startSequence).
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher =
+                session.publish(
+                    broadcastSuffix = "speakerPubkey",
+                    track = "audio/data",
+                    startSequence = 100L,
+                )
+
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 5L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        // Subscriber asks "from latest" — publisher is
+                        // free to narrow.
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+
+            val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
+            val resp = MoqLiteCodec.decodeSubscribeResponse(ackChunk)
+            val ok = (resp as MoqLiteCodec.SubscribeResponse.Ok).ok
+            assertEquals(100L, ok.startGroup, "publisher narrows startGroup to its nextSequence")
+            // endGroup stays null — live broadcast has no end in sight.
+            assertEquals(null, ok.endGroup)
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_startSequence_seeds_first_group_for_hot_swap_continuation() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()

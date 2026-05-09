@@ -1028,17 +1028,33 @@ class MoqLiteSession internal constructor(
                             targetPublisher.registerInboundSubscription(sub)
                             inboundSub = sub
                             inboundSubPublisher = targetPublisher
+                            // Audit L2: narrow `startGroup` to the
+                            // publisher's [MoqLitePublisherHandle.nextSequence]
+                            // — the exact sequence of the next group we'll
+                            // open. Spec lets the publisher narrow the
+                            // subscriber's bounds; pre-fix we always echoed
+                            // `null/null`, which loses the diagnostic
+                            // information of "which group are you about to
+                            // start sending?" Useful for hot-swap
+                            // continuations where `nextSequence` is non-zero
+                            // (the seeded `startSequence` from the previous
+                            // session). `endGroup` stays null because we're
+                            // a live broadcast with no end in sight; the
+                            // subscriber's request `endGroup` is honoured
+                            // implicitly when the publisher closes.
+                            val narrowedStart = targetPublisher.nextSequence
                             bidi.write(
                                 MoqLiteCodec.encodeSubscribeOk(
                                     MoqLiteSubscribeOk(
                                         priority = sub.priority,
                                         ordered = sub.ordered,
                                         maxLatencyMillis = sub.maxLatencyMillis,
-                                        startGroup = null,
+                                        startGroup = narrowedStart,
                                         endGroup = null,
                                     ),
                                 ),
                             )
+                            Log.d("NestTx") { "SUBSCRIBE_OK id=${sub.id} narrowed startGroup=$narrowedStart" }
                             dispatched = true
                         }
 
