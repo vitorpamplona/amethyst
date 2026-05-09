@@ -223,7 +223,7 @@ class SendBuffer(
                 }
                 addToInFlight(Range(retransmitHead.offset, take, fin))
                 if (fin) _finSent = true
-                return@synchronized Chunk(retransmitHead.offset, payload, fin)
+                return@synchronized Chunk(retransmitHead.offset, payload, fin, isRetransmit = true)
             }
 
             // 2. Fresh bytes.
@@ -237,14 +237,14 @@ class SendBuffer(
                 val finForThis = _finPending && !_finSent && nextSendOffset == _nextOffset
                 addToInFlight(Range(offset, take, finForThis))
                 if (finForThis) _finSent = true
-                return@synchronized Chunk(offset, payload, finForThis)
+                return@synchronized Chunk(offset, payload, finForThis, isRetransmit = false)
             }
 
             // 3. FIN-only.
             if (_finPending && !_finSent) {
                 _finSent = true
                 addToInFlight(Range(nextSendOffset, 0L, true))
-                return@synchronized Chunk(nextSendOffset, ByteArray(0), true)
+                return@synchronized Chunk(nextSendOffset, ByteArray(0), true, isRetransmit = false)
             }
             null
         }
@@ -591,6 +591,23 @@ class SendBuffer(
         }
         dataLen -= advanceInt
         flushedFloor += advance
+        // Shrink the backing buffer when a transient burst has been fully
+        // drained. Without this, a stream that ever held N bytes pins
+        // `data.size = N` for the rest of the connection — long-tail
+        // memory retention. Trigger when:
+        //   * the buffer is large enough to bother (above the doubling
+        //     floor of 64 bytes) AND
+        //   * live data fits in 1/4 of the allocation (capacity is
+        //     ≥ 4× live size).
+        // Shrink to twice the live size (or [SHRINK_FLOOR_BYTES],
+        // whichever is larger) to leave headroom for the next push
+        // without re-doubling immediately.
+        if (data.size > SHRINK_FLOOR_BYTES && dataLen * 4 < data.size) {
+            val newCap = maxOf(SHRINK_FLOOR_BYTES, dataLen * 2)
+            if (newCap < data.size) {
+                data = data.copyOf(newCap)
+            }
+        }
     }
 
     /**
@@ -614,6 +631,17 @@ class SendBuffer(
         }
     }
 
+    private companion object {
+        /**
+         * Backing-buffer floor below which [advanceFlushedFloorIfPossible]
+         * does NOT shrink. Below this size the doubling-on-grow is so
+         * cheap that shrinking would be a wash; above it, transient
+         * bursts that bloat the buffer to MiBs leave a long-tail
+         * memory footprint we want to release.
+         */
+        const val SHRINK_FLOOR_BYTES: Int = 4096
+    }
+
     /**
      * One contiguous offset range tracked by the buffer's bookkeeping.
      * [length] is `Long` to match QUIC's offset arithmetic — practical
@@ -625,21 +653,36 @@ class SendBuffer(
         val fin: Boolean,
     )
 
+    /**
+     * One emit-able STREAM chunk. [isRetransmit] distinguishes a chunk
+     * pulled off the retransmit queue (path 1 of [takeChunk]) from a
+     * fresh-bytes emission (path 2/3). Connection-level flow control
+     * (RFC 9000 §4.1) caps cumulative *new* bytes — retransmits MUST
+     * NOT consume additional credit, so the writer reads this flag and
+     * skips `sendConnectionFlowConsumed += data.size` when it's true.
+     * Without the distinction a single round of loss recovery on a
+     * long stream eventually exhausts credit and stalls the connection.
+     */
     data class Chunk(
         val offset: Long,
         val data: ByteArray,
         val fin: Boolean,
+        val isRetransmit: Boolean = false,
     ) {
         // ByteArray needs explicit equality.
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Chunk) return false
-            return offset == other.offset && fin == other.fin && data.contentEquals(other.data)
+            return offset == other.offset &&
+                fin == other.fin &&
+                isRetransmit == other.isRetransmit &&
+                data.contentEquals(other.data)
         }
 
         override fun hashCode(): Int {
             var result = offset.hashCode()
             result = 31 * result + fin.hashCode()
+            result = 31 * result + isRetransmit.hashCode()
             result = 31 * result + data.contentHashCode()
             return result
         }

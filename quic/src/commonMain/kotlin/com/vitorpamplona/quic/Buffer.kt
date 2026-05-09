@@ -203,6 +203,9 @@ class QuicReader(
     }
 
     fun skip(n: Int) {
+        if (n < 0) {
+            throw QuicCodecException("skip with negative count: $n")
+        }
         require(n)
         pos += n
     }
@@ -248,6 +251,14 @@ class QuicReader(
     }
 
     fun readBytes(n: Int): ByteArray {
+        // Translate a negative `n` (e.g. an attacker-controlled length
+        // that wrapped through `.toInt()`) into a typed
+        // [QuicCodecException] instead of `IllegalArgumentException`
+        // from `copyOfRange`. Bounds-checking via [require] still kicks
+        // in for positive `n` past `end`.
+        if (n < 0) {
+            throw QuicCodecException("readBytes with negative count: $n")
+        }
         require(n)
         val out = src.copyOfRange(pos, pos + n)
         pos += n
@@ -280,3 +291,17 @@ class QuicCodecException(
     message: String,
     cause: Throwable? = null,
 ) : RuntimeException(message, cause)
+
+/**
+ * Peer protocol violation that mandates connection close per RFC 9000 / 9001.
+ * Distinct from [QuicCodecException] (which is also "drop the packet" for
+ * AEAD-failed inputs) — a [QuicProtocolViolationException] means the peer
+ * sent something well-formed enough to AEAD-decrypt but inconsistent with
+ * the wire spec, so the connection MUST be closed with PROTOCOL_VIOLATION.
+ *
+ * Typical sources: reserved-bit-set in the unmasked QUIC header
+ * (RFC 9000 §17.2 / §17.3.1).
+ */
+class QuicProtocolViolationException(
+    message: String,
+) : RuntimeException(message)

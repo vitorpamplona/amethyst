@@ -94,4 +94,27 @@ class HuffmanRfc7541Test {
         val decoded = QpackHuffman.decode(encoded).decodeToString()
         assertEquals("https://www.example.com", decoded)
     }
+
+    @Test
+    fun length_30_codes_decode_correctly() {
+        // RFC 7541 Appendix B: symbols 10 (LF), 13 (CR), 22 (DC2) all use
+        // 30-bit codes. Hand-encoded with two trailing pad-1 bits so the
+        // total spans exactly 4 bytes. Pre-fix the [codesByLen] range
+        // accidentally excluded length 30 and these three bytes were
+        // silently rejected as "invalid Huffman bit stream".
+        // sym 10 (LF):  code 0x3FFFFFFC | (pad 11) → FF FF FF F3
+        // sym 13 (CR):  code 0x3FFFFFFD | (pad 11) → FF FF FF F7
+        // sym 22 (DC2): code 0x3FFFFFFE | (pad 11) → FF FF FF FB
+        val cases =
+            listOf(
+                10 to byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xF3.toByte()),
+                13 to byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xF7.toByte()),
+                22 to byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFB.toByte()),
+            )
+        for ((sym, encoded) in cases) {
+            val decoded = QpackHuffman.decode(encoded)
+            assertEquals(1, decoded.size, "sym=$sym")
+            assertEquals(sym.toByte(), decoded[0], "sym=$sym")
+        }
+    }
 }

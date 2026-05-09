@@ -223,6 +223,13 @@ class QuicWebTransportSessionState(
         connection.streamById(connectStreamId)?.let {
             it.send.enqueue(encodeCloseSessionCapsule(errorCode, reason))
             it.send.finish()
+            // Wake the driver BEFORE asking it to close — otherwise
+            // [driver.close] may short-circuit the send loop before our
+            // newly-enqueued WT_CLOSE_SESSION capsule + FIN drain to
+            // the wire. The peer would then see an abrupt UDP-level
+            // tear-down instead of the graceful WT close, and any
+            // application-error-code we wanted to deliver is lost.
+            driver.wakeup()
         }
         driver.close()
         // Round-5 concurrency #1: cancel the WT scope so the demux pump

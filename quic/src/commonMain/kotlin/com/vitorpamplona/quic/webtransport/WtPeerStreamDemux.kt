@@ -82,8 +82,20 @@ class WtPeerStreamDemux(
      * can leave this null.
      */
     private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver? = null,
+    /**
+     * Cap on the number of peer-initiated streams that may queue here
+     * waiting for the application to consume them. Pre-fix this was
+     * `Channel.UNLIMITED` — a peer that opens streams faster than the
+     * application drains could pin one [StrippedWtStream] (and its
+     * captured `chunkChannel`) per stream id, indefinitely. Bounded
+     * buffer + suspending `send` propagates backpressure: when the app
+     * is slow, [route] suspends inside [emitStripped] before launching
+     * any further per-stream work, which in turn lets QUIC's per-conn
+     * `MAX_STREAMS_*` accounting throttle the peer.
+     */
+    private val readyStreamsBuffer: Int = DEFAULT_READY_STREAMS_BUFFER,
 ) {
-    private val readyStreams = Channel<StrippedWtStream>(Channel.UNLIMITED)
+    private val readyStreams = Channel<StrippedWtStream>(readyStreamsBuffer)
 
     @Volatile
     var peerSettings: Http3Settings? = null
@@ -113,6 +125,21 @@ class WtPeerStreamDemux(
     var peerGoawayProtocolError: String? = null
         private set
 
+    /**
+     * Surface RFC 9114 §7.2 frame-validation violations the
+     * [Http3FrameReader] catches (H3_FRAME_UNEXPECTED, H3_MISSING_SETTINGS,
+     * forbidden reserved types). The route()-level `catch (_: Throwable)`
+     * cancels the per-stream collector but doesn't propagate the
+     * underlying [com.vitorpamplona.quic.QuicCodecException]'s message
+     * upstream — without this field a buggy server would just see
+     * "stream stops being read" with no diagnostic. Stays null until a
+     * violation is observed; the QUIC-layer caller polls it and closes
+     * the connection on non-null.
+     */
+    @Volatile
+    var peerH3ProtocolError: String? = null
+        private set
+
     val incomingStrippedStreams: Flow<StrippedWtStream> = readyStreams.consumeAsFlow()
 
     /**
@@ -134,7 +161,16 @@ class WtPeerStreamDemux(
         kotlinx.coroutines.coroutineScope {
             val pending = ArrayDeque<ByteArray>()
             val flowIterator = stream.incoming
-            val chunkChannel = Channel<ByteArray>(Channel.UNLIMITED)
+            // Bounded suspending channel — pre-fix `UNLIMITED` let a
+            // single misbehaving peer stream pin gigabytes of heap when
+            // the consumer (the application) couldn't keep up. With a
+            // bounded buffer + suspending `send`, the collector below
+            // back-pressures the QuicStream's incoming flow — which in
+            // turn delays our outbound MAX_STREAM_DATA grants and
+            // throttles the peer at the QUIC layer. The fixed size is
+            // small (64 chunks ≈ ~64 KiB at typical packet payloads):
+            // anything bigger just delays the back-pressure signal.
+            val chunkChannel = Channel<ByteArray>(CHUNK_CHANNEL_BUFFER)
             val collector =
                 launch {
                     try {
@@ -225,13 +261,25 @@ class WtPeerStreamDemux(
         pending: ArrayDeque<ByteArray>,
         chunkChannel: Channel<ByteArray>,
     ) {
-        val reader = Http3FrameReader()
+        val reader = Http3FrameReader(context = Http3FrameReader.StreamContext.CONTROL)
         // Push whatever we already buffered.
-        while (pending.isNotEmpty()) reader.push(pending.removeFirst())
-        consumeFrames(reader)
-        for (chunk in chunkChannel) {
-            reader.push(chunk)
+        try {
+            while (pending.isNotEmpty()) reader.push(pending.removeFirst())
             consumeFrames(reader)
+            for (chunk in chunkChannel) {
+                reader.push(chunk)
+                consumeFrames(reader)
+            }
+        } catch (e: com.vitorpamplona.quic.QuicCodecException) {
+            // RFC 9114 §7.2 frame-validation throws (H3_FRAME_UNEXPECTED /
+            // H3_MISSING_SETTINGS / reserved type) land here. Record the
+            // diagnostic so the QUIC layer / application can close the
+            // connection deliberately instead of having the route() catch
+            // silently swallow the message. Idempotent on duplicate hits.
+            if (peerH3ProtocolError == null) {
+                peerH3ProtocolError = e.message ?: "HTTP/3 protocol violation on CONTROL stream"
+            }
+            throw e
         }
     }
 
@@ -289,7 +337,7 @@ class WtPeerStreamDemux(
         }
     }
 
-    private fun emitStripped(
+    private suspend fun emitStripped(
         stream: QuicStream,
         pending: ArrayDeque<ByteArray>,
         chunkChannel: Channel<ByteArray>,
@@ -324,7 +372,14 @@ class WtPeerStreamDemux(
                     driver?.wakeup()
                 }
             }
-        readyStreams.trySend(
+        // Suspending send instead of `trySend` so a slow application
+        // back-pressures the demux instead of silently dropping the
+        // stream. With a bounded buffer ([readyStreamsBuffer]),
+        // [readyStreams.send] suspends when the app hasn't drained,
+        // which keeps `route()` busy and (combined with [process]'s
+        // `scope.launch`) lets the next peer stream wait its turn
+        // rather than spawning a coroutine for every offered id.
+        readyStreams.send(
             StrippedWtStream(
                 streamId = stream.streamId,
                 isUnidirectional = isUni,
@@ -333,6 +388,14 @@ class WtPeerStreamDemux(
                 finish = finish,
             ),
         )
+    }
+
+    companion object {
+        /** Default cap on queued peer-initiated streams (1024). */
+        const val DEFAULT_READY_STREAMS_BUFFER: Int = 1024
+
+        /** Per-stream chunk-channel capacity (64). */
+        internal const val CHUNK_CHANNEL_BUFFER: Int = 64
     }
 }
 

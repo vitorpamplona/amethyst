@@ -55,6 +55,7 @@ class AckTracker {
             val r = ranges[i]
             if (packetNumber > r.endInclusive + 1) {
                 ranges.add(i, LongRange(packetNumber, packetNumber))
+                trimToMaxRanges()
                 return
             }
             if (packetNumber == r.endInclusive + 1) {
@@ -80,6 +81,25 @@ class AckTracker {
             }
         }
         ranges += LongRange(packetNumber, packetNumber)
+        trimToMaxRanges()
+    }
+
+    /**
+     * Cap [ranges] at [MAX_STORED_RANGES] by dropping the oldest entries
+     * (the smallest PNs, at the tail of the descending list). Without
+     * this a peer that sends a continuous stream of sparse PNs (every
+     * other one, alternating-bit pattern) inflates the range list
+     * unboundedly until the encoded ACK frame no longer fits in a
+     * packet. The trade-off is that the very oldest ranges become
+     * implicitly "unknown to us"; if the peer retransmits a packet from
+     * an evicted range we'll re-deliver it and the deduplication is
+     * downstream's problem (per-stream offset bookkeeping). Spurious
+     * retransmits on truly ancient PNs are negligible in practice.
+     */
+    private fun trimToMaxRanges() {
+        while (ranges.size > MAX_STORED_RANGES) {
+            ranges.removeAt(ranges.lastIndex)
+        }
     }
 
     fun hasUnackedAckEliciting(): Boolean = ackElicitingPending
@@ -143,8 +163,15 @@ class AckTracker {
             val len = ranges[i].endInclusive - ranges[i].start
             rest += AckRange(gap, len)
         }
-        val ackDelayMicros = (nowMillis - largestRecvTimeMillis) * 1000L
-        val ackDelay = (ackDelayMicros ushr ackDelayExponent).coerceAtLeast(0L)
+        // Clamp ≥ 0 BEFORE the shift, not after: `ushr` on a negative
+        // Long produces a giant positive value that the peer's RTT
+        // estimator would interpret as a multi-hour delay, poisoning
+        // its smoothed_rtt below min_rtt. Clock can move backwards if
+        // [nowMillis] is wallclock-derived (NTP step) — even though we
+        // default to a monotonic source, the ctor allows a custom
+        // supplier and tests inject virtual clocks.
+        val rawDelayMicros = (nowMillis - largestRecvTimeMillis).coerceAtLeast(0L) * 1000L
+        val ackDelay = rawDelayMicros ushr ackDelayExponent
         ackElicitingPending = false
         return AckFrame(
             largestAcknowledged = largest,
@@ -152,5 +179,15 @@ class AckTracker {
             firstAckRange = firstRangeLength,
             additionalRanges = rest,
         )
+    }
+
+    companion object {
+        /**
+         * Cap on stored disjoint ranges. 64 is far above any healthy-link
+         * count (a single in-order receive needs 1 range; tens of
+         * reorders per second push that to 4–8). Above this we evict
+         * oldest first.
+         */
+        const val MAX_STORED_RANGES: Int = 64
     }
 }

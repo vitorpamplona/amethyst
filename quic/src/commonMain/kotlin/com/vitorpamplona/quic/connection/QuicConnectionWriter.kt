@@ -762,8 +762,15 @@ private fun buildApplicationPacket(
                             fin = chunk.fin,
                         )
                     packetBudget -= chunk.data.size + 32
-                    connBudget -= chunk.data.size
-                    conn.sendConnectionFlowConsumed += chunk.data.size
+                    // RFC 9000 §4.1: connection-level flow credit caps
+                    // cumulative *new* bytes only — retransmits MUST
+                    // NOT debit further. Pre-fix every retransmit
+                    // chunk re-debited credit, eventually starving the
+                    // connection on lossy paths after a few PTO rounds.
+                    if (!chunk.isRetransmit) {
+                        connBudget -= chunk.data.size
+                        conn.sendConnectionFlowConsumed += chunk.data.size
+                    }
                 }
             }
             tierStart = tierEnd

@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.quic.http3
 
+import com.vitorpamplona.quic.QuicCodecException
+import com.vitorpamplona.quic.QuicWriter
 import com.vitorpamplona.quic.webtransport.encodeHeadersFrame
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -89,5 +92,56 @@ class Http3FrameReaderTest {
         assertTrue(second is Http3Frame.Data)
         assertContentEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04), second.body)
         assertNull(r.next())
+    }
+
+    @Test
+    fun control_stream_first_frame_must_be_settings() {
+        // RFC 9114 §7.2.4: first CONTROL-stream frame is SETTINGS or
+        // H3_MISSING_SETTINGS. A peer that opens a CONTROL stream and
+        // immediately sends GOAWAY is malformed.
+        val r = Http3FrameReader(context = Http3FrameReader.StreamContext.CONTROL)
+        val w = QuicWriter()
+        w.writeVarint(Http3FrameType.GOAWAY)
+        w.writeVarint(0L)
+        r.push(w.toByteArray())
+        assertFailsWith<QuicCodecException> { r.next() }
+    }
+
+    @Test
+    fun control_stream_rejects_data_frame() {
+        // RFC 9114 §7.2.1: DATA frames are forbidden on the control stream.
+        val r = Http3FrameReader(context = Http3FrameReader.StreamContext.CONTROL)
+        // Settings first (legal), then DATA (illegal).
+        r.push(buildClientWebTransportSettings().encodeFrame())
+        assertTrue(r.next() is Http3Frame.Settings)
+        val w = QuicWriter()
+        w.writeVarint(Http3FrameType.DATA)
+        w.writeVarint(0L)
+        r.push(w.toByteArray())
+        assertFailsWith<QuicCodecException> { r.next() }
+    }
+
+    @Test
+    fun request_stream_rejects_settings_frame() {
+        // RFC 9114 §7.2.4: SETTINGS forbidden on request streams.
+        val r = Http3FrameReader(context = Http3FrameReader.StreamContext.REQUEST)
+        r.push(buildClientWebTransportSettings().encodeFrame())
+        assertFailsWith<QuicCodecException> { r.next() }
+    }
+
+    @Test
+    fun reserved_frame_types_are_rejected() {
+        // RFC 9114 §7.2.8: types 0x02, 0x06, 0x08, 0x09 are reserved
+        // and MUST be treated as connection error.
+        for (forbidden in longArrayOf(0x02L, 0x06L, 0x08L, 0x09L)) {
+            val r = Http3FrameReader(context = Http3FrameReader.StreamContext.REQUEST)
+            val w = QuicWriter()
+            w.writeVarint(forbidden)
+            w.writeVarint(0L)
+            r.push(w.toByteArray())
+            assertFailsWith<QuicCodecException>("type 0x${forbidden.toString(16)} must be rejected") {
+                r.next()
+            }
+        }
     }
 }

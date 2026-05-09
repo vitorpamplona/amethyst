@@ -165,10 +165,23 @@ actual class UdpSocket private constructor(
                     channel.setOption(StandardSocketOptions.IP_TOS, ECT0_TOS_BITS)
                 }
                 channel.bind(InetSocketAddress(0)) // ephemeral
-                // We use receive()/send(addr) instead of channel.connect() so that
-                // sendDatagram-style flows can still be implemented on the same
-                // socket if we ever need them. For the pure client use-case this
-                // is identical in latency.
+                // RFC 9000 §9 / defence-in-depth: connect() asks the kernel
+                // to filter inbound datagrams to those from [remote]. Without
+                // this any host on the network can spoof our 4-tuple and
+                // force us to attempt AEAD decryption on garbage — each
+                // failed packet costs a `Cipher.init` + AAD/decrypt + tag
+                // check, and a successful unauthenticated stateless reset
+                // forgery would terminate our connection. With connect(),
+                // the kernel rejects mismatched-source datagrams before
+                // they reach userspace.
+                //
+                // We connect AFTER bind so the ephemeral local port is
+                // chosen first, then the destination is associated. Pure
+                // client semantics — `quic` doesn't currently support
+                // server-side or connection migration to a new remote IP
+                // (path validation rotates DCIDs on the SAME 4-tuple), so
+                // pinning the socket to one remote is a strict win.
+                channel.connect(remote)
                 UdpSocket(channel, remote)
             }
     }
