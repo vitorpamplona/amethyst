@@ -669,9 +669,36 @@ private fun buildApplicationPacket(
     // stream and MAX_DATA at the connection level.
     appendFlowControlUpdates(conn, frames, tokens)
 
-    // Pending datagrams
+    // Pending datagrams. RFC 9221 §3 enforcement:
+    //   - if the peer didn't advertise `max_datagram_frame_size` (or
+    //     advertised 0), DATAGRAM MUST NOT be sent — drop with diagnostic;
+    //   - if the encoded frame would exceed the peer's advertised
+    //     `max_datagram_frame_size` (frame type byte + length varint +
+    //     payload), drop with diagnostic.
+    // Pre-fix the writer emitted DATAGRAM regardless and let
+    // spec-conformant peers close the connection with PROTOCOL_VIOLATION.
+    val peerDatagramCap = conn.peerTransportParameters?.maxDatagramFrameSize ?: 0L
     while (conn.pendingDatagramsLocked().isNotEmpty()) {
         val payload = conn.pendingDatagramsLocked().removeFirst()
+        if (peerDatagramCap <= 0L) {
+            conn.qlogObserver.onPacketDropped(
+                "outbound DATAGRAM dropped — peer did not advertise max_datagram_frame_size",
+                payload.size,
+            )
+            continue
+        }
+        // Frame total = 1 byte type (0x31) + varint(payload.size) + payload.
+        val frameSize =
+            1 +
+                com.vitorpamplona.quic.Varint
+                    .size(payload.size.toLong()) + payload.size
+        if (frameSize > peerDatagramCap) {
+            conn.qlogObserver.onPacketDropped(
+                "outbound DATAGRAM dropped — frame size $frameSize > peer cap $peerDatagramCap",
+                payload.size,
+            )
+            continue
+        }
         frames += DatagramFrame(payload, explicitLength = true)
         if (frames.size >= 16) break
     }

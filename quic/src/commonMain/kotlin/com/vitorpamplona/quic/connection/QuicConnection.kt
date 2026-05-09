@@ -1132,6 +1132,42 @@ class QuicConnection(
             )
             return
         }
+        // RFC 9000 §18.2 bounds checks. A peer that violates these is in
+        // protocol violation and the connection MUST close with
+        // TRANSPORT_PARAMETER_ERROR.
+        //
+        //  - max_udp_payload_size: minimum 1200 (the §14 datagram size
+        //    floor). A smaller value would force fragmented Initials,
+        //    which our writer can't produce.
+        //  - ack_delay_exponent: maximum 20. Beyond that, the
+        //    `ackDelay << exponent` shift in the parser overflows even
+        //    with the clamp.
+        //  - active_connection_id_limit: minimum 2. A value < 2 leaves
+        //    the peer no spare CID to migrate to.
+        tp.maxUdpPayloadSize?.let { v ->
+            if (v < 1200L) {
+                markClosedExternally(
+                    "TRANSPORT_PARAMETER_ERROR: max_udp_payload_size $v < 1200",
+                )
+                return
+            }
+        }
+        tp.ackDelayExponent?.let { v ->
+            if (v > 20L) {
+                markClosedExternally(
+                    "TRANSPORT_PARAMETER_ERROR: ack_delay_exponent $v > 20",
+                )
+                return
+            }
+        }
+        tp.activeConnectionIdLimit?.let { v ->
+            if (v < 2L) {
+                markClosedExternally(
+                    "TRANSPORT_PARAMETER_ERROR: active_connection_id_limit $v < 2",
+                )
+                return
+            }
+        }
         peerTransportParameters = tp
         qlogObserver.onTransportParametersSet("remote", peerTransportParametersSummary(tp))
         sendConnectionFlowCredit = tp.initialMaxData ?: 0L

@@ -86,6 +86,15 @@ data class Http3Settings(
             id: Long,
             value: Long,
         ) {
+            // RFC 9114 §7.2.4.1: SETTINGS identifiers in the HTTP/2 range
+            // (0x02, 0x03, 0x04, 0x05) are reserved to prevent confusion
+            // with HTTP/2 settings — receipt MUST be a connection error of
+            // type H3_SETTINGS_ERROR. Pre-fix we accepted them silently.
+            if (id == 0x02L || id == 0x03L || id == 0x04L || id == 0x05L) {
+                throw com.vitorpamplona.quic.QuicCodecException(
+                    "H3_SETTINGS_ERROR: reserved HTTP/2 SETTINGS id 0x${id.toString(16)}",
+                )
+            }
             if (value < 0L) {
                 throw com.vitorpamplona.quic.QuicCodecException(
                     "negative HTTP/3 SETTINGS value for id 0x${id.toString(16)}: $value",

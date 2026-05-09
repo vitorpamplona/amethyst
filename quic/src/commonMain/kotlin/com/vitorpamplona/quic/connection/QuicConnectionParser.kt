@@ -550,8 +550,19 @@ private fun dispatchFrames(
                     // before consuming. Per RFC 9000 §18.2 the exponent is
                     // 0..20; we further clamp ackDelay so the shift never
                     // overflows (`ackDelay <= Long.MAX_VALUE >>> exponent`).
-                    val rawExponent = conn.config.ackDelayExponent
-                    val exponent = rawExponent.coerceIn(0L, 20L).toInt()
+                    //
+                    // RFC 9000 §13.2.5: a received ACK is decoded using the
+                    // PEER's `ack_delay_exponent`, not ours. Pre-handshake
+                    // peer params haven't arrived yet — fall back to the
+                    // default of 3 per §18.2. Coercion below ensures even
+                    // a malicious peer that smuggles a >20 value through
+                    // the §18.2 bounds check (e.g. on a connection where
+                    // the peer-params bounds enforcement is bypassed by a
+                    // race) can't desync our RTT estimator.
+                    val peerExponent =
+                        conn.peerTransportParameters?.ackDelayExponent
+                            ?: TransportParameterDefaults.ACK_DELAY_EXPONENT
+                    val exponent = peerExponent.coerceIn(0L, 20L).toInt()
                     val maxAckDelayPreShift =
                         if (exponent == 0) Long.MAX_VALUE else Long.MAX_VALUE ushr exponent
                     val safeAckDelay = frame.ackDelay.coerceIn(0L, maxAckDelayPreShift)

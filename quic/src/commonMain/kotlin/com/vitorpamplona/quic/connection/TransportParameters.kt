@@ -53,6 +53,23 @@ object TransportParameterId {
 }
 
 /**
+ * RFC 9000 §18.2 default values for parameters that are NOT advertised
+ * by the peer. Surfacing them as constants so the parser / writer can
+ * use them as the "peer didn't tell us" fallback without each call site
+ * hard-coding the numeric default.
+ */
+object TransportParameterDefaults {
+    /** §18.2: default `ack_delay_exponent` is 3 if not advertised. */
+    const val ACK_DELAY_EXPONENT: Long = 3L
+
+    /** §18.2: default `max_ack_delay` is 25 ms if not advertised. */
+    const val MAX_ACK_DELAY_MS: Long = 25L
+
+    /** §18.2: default `active_connection_id_limit` is 2 if not advertised. */
+    const val ACTIVE_CONNECTION_ID_LIMIT: Long = 2L
+}
+
+/**
  * QUIC transport parameters as exchanged inside the TLS QUIC transport_params
  * extension.
  *
