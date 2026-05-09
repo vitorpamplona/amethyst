@@ -54,6 +54,11 @@ data class HlsVideoPublishInput(
     // (gallery thumbnails, previews) have a still to render — the .m3u8 playlist itself is a
     // text manifest that can't be decoded as an image frame.
     val posterUrl: String? = null,
+    // Blurhash + thumbhash derived once from the same poster bitmap. Threaded into every imeta
+    // so receiving clients can render an instant low-res placeholder before the poster JPEG
+    // finishes loading. Per-rendition values would be redundant — the source frame is the same.
+    val blurhash: String? = null,
+    val thumbhash: String? = null,
 )
 
 sealed class HlsVideoEventTemplate {
@@ -96,6 +101,8 @@ object HlsVideoEventBuilder {
                 dimension = masterDimension,
                 alt = input.alt,
                 image = posterImage,
+                blurhash = input.blurhash,
+                thumbhash = input.thumbhash,
             )
 
         val renditionMetas =
@@ -115,6 +122,8 @@ object HlsVideoEventBuilder {
                     size = combinedMetadata?.size?.toInt(),
                     dimension = DimensionTag(summary.width, summary.height),
                     image = posterImage,
+                    blurhash = input.blurhash,
+                    thumbhash = input.thumbhash,
                 )
             }
 

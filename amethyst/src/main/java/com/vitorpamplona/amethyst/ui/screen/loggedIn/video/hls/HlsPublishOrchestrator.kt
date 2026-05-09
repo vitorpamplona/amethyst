@@ -56,6 +56,18 @@ data class HlsPublishRequest(
 )
 
 /**
+ * Poster JPEG upload result. Carries the public URL plus blurhash/thumbhash derived from the
+ * same poster pixels, so every imeta in the published NIP-71 event can render an instant
+ * low-res placeholder. All three fields share a single source frame; per-rendition variants
+ * would be redundant.
+ */
+data class HlsPosterUpload(
+    val url: String,
+    val blurhash: String? = null,
+    val thumbhash: String? = null,
+)
+
+/**
  * Orchestrates the transcode → upload → build → publish pipeline for a single HLS video publish.
  * Delegates transcoding and segment/media-playlist upload plumbing to the library's
  * [com.davotoula.lightcompressor.hls.HlsUploadHelper] via the injected [runUpload] closure, then
@@ -81,7 +93,7 @@ class HlsPublishOrchestrator(
     // uploader, returning the public URL. Returns null if poster generation isn't possible
     // (unsupported source, decode failure, no readable frame). Failures here must NOT fail
     // the whole publish — the orchestrator catches and continues without a poster.
-    private val uploadPoster: suspend (HlsBlobUploader) -> String? = { _ -> null },
+    private val uploadPoster: suspend (HlsBlobUploader) -> HlsPosterUpload? = { _ -> null },
 ) {
     val state: StateFlow<HlsPublishState> = _state
 
@@ -208,7 +220,7 @@ class HlsPublishOrchestrator(
             // previews) have a still to render. Tolerate failure: skip the poster rather than
             // failing the entire publish, since the user has already paid the cost of the long
             // segment uploads.
-            val posterUrl =
+            val posterResult =
                 try {
                     uploadPoster(uploader)
                 } catch (e: CancellationException) {
@@ -230,7 +242,9 @@ class HlsPublishOrchestrator(
                         description = request.description,
                         durationSeconds = request.durationSeconds,
                         contentWarning = contentWarningOrNull(request),
-                        posterUrl = posterUrl,
+                        posterUrl = posterResult?.url,
+                        blurhash = posterResult?.blurhash,
+                        thumbhash = posterResult?.thumbhash,
                     ),
                 )
             val eventId = signAndPublish(template)

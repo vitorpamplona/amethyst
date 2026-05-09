@@ -28,6 +28,7 @@ import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsUploadHelper
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.getThumbnail
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
@@ -108,8 +109,9 @@ fun createProductionHlsPublishOrchestrator(
     )
 
 /**
- * Extracts a still frame from the source video at [uri], encodes it as JPEG, and uploads it
- * via [uploader]. Returns the public URL on success or null if any step fails (unsupported
+ * Extracts a still frame from the source video at [uri], encodes it as JPEG, computes blurhash +
+ * thumbhash from the same JPEG bytes, and uploads it via [uploader]. Returns an [HlsPosterUpload]
+ * carrying the public URL plus the two hashes on success, or null if any step fails (unsupported
  * source, no readable frame, encode/upload error). The orchestrator treats null as "publish
  * without a poster" — failure here must never abort the publish.
  */
@@ -117,11 +119,24 @@ private suspend fun generateAndUploadPoster(
     context: Context,
     uri: Uri,
     uploader: HlsBlobUploader,
-): String? {
+): HlsPosterUpload? {
     val posterFile = extractPosterToTempFile(context, uri) ?: return null
     return try {
+        // Read once: hash from the same bytes we upload, so the hashes describe the exact
+        // JPEG receiving clients will fetch via the imeta `image` URL.
+        val posterBytes = posterFile.readBytes()
+        val hashes =
+            runCatching {
+                PreviewMetadataCalculator.computeFromBytes(posterBytes, POSTER_CONTENT_TYPE, null)
+            }.onFailure { Log.w(TAG) { "uploadPoster: blurhash/thumbhash compute failed: ${it.message}" } }
+                .getOrNull()
         val result = uploader.upload(posterFile, POSTER_CONTENT_TYPE) { _, _ -> }
-        result.url
+        val url = result.url ?: return null
+        HlsPosterUpload(
+            url = url,
+            blurhash = hashes?.blurhash?.blurhash,
+            thumbhash = hashes?.thumbhash?.thumbhash,
+        )
     } finally {
         if (!posterFile.delete()) {
             Log.w(TAG) { "uploadPoster: failed to delete temp file ${posterFile.absolutePath}" }

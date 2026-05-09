@@ -30,6 +30,7 @@ import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPosterUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishRequest
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishState
@@ -387,7 +388,7 @@ class HlsPublishOrchestratorTest {
                     captured += tpl
                     "event-id"
                 },
-                uploadPoster = { _ -> "https://cdn.test/poster.jpg" },
+                uploadPoster = { _ -> HlsPosterUpload("https://cdn.test/poster.jpg") },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
