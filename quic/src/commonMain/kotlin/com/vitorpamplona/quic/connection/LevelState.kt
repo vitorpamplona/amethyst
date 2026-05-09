@@ -86,6 +86,21 @@ class LevelState {
     var largestAckedSentTimeMs: Long? = null
 
     /**
+     * RFC 9002 §6.1.2 timer-driven loss-detection deadline for this
+     * encryption level. Absolute monotonic time at which the next
+     * earliest in-flight sub-largest packet will cross the time
+     * threshold. The driver's send loop uses
+     * `min(nextLossTimeMs across levels, ptoDeadline)` as its wakeup
+     * deadline so tail-loss recovery doesn't wait for the next ACK
+     * or PTO. Null when no sub-largest packets are in flight (or
+     * before the first ACK arrives).
+     *
+     * Updated by [com.vitorpamplona.quic.connection.QuicConnectionParser]
+     * each time a fresh ACK runs `detectAndRemoveLost`.
+     */
+    var nextLossTimeMs: Long? = null
+
+    /**
      * RFC 9001 §4.9: latches true once [discardKeys] runs. Used by
      * the writer / parser to short-circuit operations on a discarded
      * level (parser already drops packets via the
@@ -131,6 +146,7 @@ class LevelState {
         sentPackets.clear()
         largestAckedPn = null
         largestAckedSentTimeMs = null
+        nextLossTimeMs = null
         keysDiscarded = true
     }
 
@@ -163,6 +179,7 @@ class LevelState {
         sentPackets.clear()
         largestAckedPn = null
         largestAckedSentTimeMs = null
+        nextLossTimeMs = null
         keysDiscarded = false
         this.sendProtection = sendProtection
         this.receiveProtection = receiveProtection
@@ -204,6 +221,7 @@ class LevelState {
         sentPackets.clear()
         largestAckedPn = null
         largestAckedSentTimeMs = null
+        nextLossTimeMs = null
         keysDiscarded = false
         this.sendProtection = sendProtection
         this.receiveProtection = receiveProtection

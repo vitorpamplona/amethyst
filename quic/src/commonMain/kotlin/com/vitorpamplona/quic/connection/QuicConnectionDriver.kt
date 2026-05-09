@@ -268,16 +268,76 @@ class QuicConnectionDriver(
                     .coerceAtLeast(1L)
             val backoff = (1L shl connection.consecutivePtoCount.coerceAtMost(6))
             val ptoMillis = (ptoBaseMs * backoff).coerceAtMost(60_000L)
-            // Suspend until either: a wakeup arrives, or the PTO timer expires.
+            // RFC 9002 §6.1.2 timer-driven loss detection: take the
+            // earliest of (PTO deadline, next-loss-time across levels).
+            // Without this, tail loss waits for the PTO instead of the
+            // shorter `9/8 * max_rtt` time threshold — visible to the
+            // user as a recovery delay equal to the PTO minus that
+            // threshold (often ~5x worse than necessary on lossy
+            // links). A null nextLossTime contributes nothing.
+            val nowForLossTimer = nowMillis()
+            val nextLossDelta =
+                listOfNotNull(
+                    connection.initial.nextLossTimeMs,
+                    connection.handshake.nextLossTimeMs,
+                    connection.application.nextLossTimeMs,
+                ).minOrNull()?.let { (it - nowForLossTimer).coerceAtLeast(0L) }
+            val sleepMillis =
+                if (nextLossDelta != null && nextLossDelta < ptoMillis) nextLossDelta else ptoMillis
+            // Suspend until either: a wakeup arrives, or the timer expires.
             val woke =
-                withTimeoutOrNull(ptoMillis) {
+                withTimeoutOrNull(sleepMillis) {
                     sendWakeup.receive()
                     Unit
                 }
             if (woke == null) {
-                handlePtoFired(connection)
+                // Distinguish loss-timer expiry from PTO expiry. A
+                // loss-timer wake just runs `detectAndRemoveLost`
+                // across the levels — newly time-threshold-lost
+                // packets get their tokens re-queued for retransmit on
+                // the next drain. A PTO wake additionally bumps the
+                // consecutive-PTO counter and arms the probe budget.
+                val pickedLossTimer = nextLossDelta != null && nextLossDelta < ptoMillis
+                if (pickedLossTimer) {
+                    handleLossTimerFired(connection)
+                } else {
+                    handlePtoFired(connection)
+                }
             }
         }
+    }
+
+    /**
+     * RFC 9002 §6.1.2 timer-driven loss detection. Re-runs
+     * `detectAndRemoveLost` across each encryption level; any newly
+     * time-threshold-lost packets dispatch their tokens to the
+     * pending retransmit queues, and the next drain emits them.
+     * Cheaper than [handlePtoFired] because no probe budget /
+     * exponential backoff is needed — the peer ACKs that fix the
+     * loss state arrive on their normal cadence.
+     */
+    private fun handleLossTimerFired(conn: QuicConnection) {
+        val nowMs = conn.nowMillis()
+        runLossDetectionForLevel(conn, conn.initial, EncryptionLevel.INITIAL, nowMs)
+        runLossDetectionForLevel(conn, conn.handshake, EncryptionLevel.HANDSHAKE, nowMs)
+        runLossDetectionForLevel(conn, conn.application, EncryptionLevel.APPLICATION, nowMs)
+    }
+
+    private fun runLossDetectionForLevel(
+        conn: QuicConnection,
+        state: LevelState,
+        level: EncryptionLevel,
+        nowMs: Long,
+    ) {
+        val largest = state.largestAckedPn ?: return
+        val result = conn.lossDetection.detectAndRemoveLost(state.sentPackets, largest, nowMs)
+        for (lostPacket in result.lost) {
+            conn.onTokensLost(lostPacket.tokens)
+        }
+        if (result.lost.isNotEmpty()) {
+            conn.qlogObserver.onLossDetected(level, result.lost.map { it.packetNumber })
+        }
+        state.nextLossTimeMs = result.nextLossTimeMs
     }
 
     /**

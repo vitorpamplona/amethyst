@@ -549,7 +549,7 @@ private fun dispatchFrames(
                     conn.consecutivePtoCount = 0
                 }
                 state.largestAckedPn?.let { largestAckedPn ->
-                    val lost =
+                    val result =
                         conn.lossDetection.detectAndRemoveLost(
                             sentPackets = state.sentPackets,
                             largestAckedPn = largestAckedPn,
@@ -558,12 +558,18 @@ private fun dispatchFrames(
                     // Step 6: dispatch each lost packet's tokens to the
                     // matching pending* field. The supersede check (lost
                     // value still == advertised) lives inside onTokensLost.
-                    for (lostPacket in lost) {
+                    for (lostPacket in result.lost) {
                         conn.onTokensLost(lostPacket.tokens)
                     }
-                    if (lost.isNotEmpty()) {
-                        conn.qlogObserver.onLossDetected(level, lost.map { it.packetNumber })
+                    if (result.lost.isNotEmpty()) {
+                        conn.qlogObserver.onLossDetected(level, result.lost.map { it.packetNumber })
                     }
+                    // RFC 9002 §6.1.2 timer-driven loss detection. Record
+                    // the earliest pending time-threshold deadline so the
+                    // driver's send loop can wake at that instant rather
+                    // than waiting for the next inbound ACK or PTO. Set
+                    // null when no sub-largest packets remain in flight.
+                    state.nextLossTimeMs = result.nextLossTimeMs
                 }
             }
 

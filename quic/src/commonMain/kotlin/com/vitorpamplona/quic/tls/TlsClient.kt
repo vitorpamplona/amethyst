@@ -358,15 +358,32 @@ class TlsClient(
                 val pskExt = sh.extensions.firstOrNull { it.type == TlsConstants.EXT_PRE_SHARED_KEY }
                 if (resumption != null) {
                     if (pskExt == null) {
-                        // We offered PSK but server picked full-handshake.
-                        // Plumbing for the fallback path (clear early secret,
-                        // re-run binder-less ClientHello transcript) is real
-                        // work; for now hard-fail. In production we'd want
-                        // to handle gracefully — for the runner's resumption
-                        // testcase the server MUST accept or the test fails
-                        // anyway, so this gate isn't load-bearing.
-                        throw QuicCodecException(
-                            "server rejected PSK; full-handshake fallback not implemented",
+                        // We offered PSK but the server picked full-
+                        // handshake. RFC 8446 §4.2.11 lets the server
+                        // do this freely (rate limit, ticket aged out,
+                        // policy mismatch). Recovering in-place
+                        // requires:
+                        //   1. Discarding the early secret derived
+                        //      from the resumption PSK.
+                        //   2. Rebuilding the transcript without the
+                        //      `pre_shared_key` extension or its
+                        //      binder bytes.
+                        //   3. Replaying the post-ClientHello derivation
+                        //      with the new transcript.
+                        // Each step is touchy enough that a
+                        // subtly-wrong transcript hash would land us on
+                        // a successful handshake with wrong keys, which
+                        // is harder to debug than a hard failure. We
+                        // surface a typed [PskRejectedException] so
+                        // application-layer reconnect logic can drop
+                        // the cached resumption state and retry from
+                        // scratch — that path is correct by
+                        // construction (fresh ClientHello, no PSK
+                        // history). Production callers wrapping this
+                        // client SHOULD catch [PskRejectedException]
+                        // and retry without [resumption].
+                        throw PskRejectedException(
+                            "server rejected PSK; application must retry without resumption",
                         )
                     }
                     val r = QuicReader(pskExt.data)
@@ -587,6 +604,22 @@ class TlsClient(
         return negotiatedCipherSuite
     }
 }
+
+/**
+ * Thrown when the server returned a ServerHello without a `pre_shared_key`
+ * extension despite the client offering one in [TlsClient.resumption].
+ * The handshake cannot proceed in-place because the early secret + transcript
+ * were already shaped around the PSK; application-layer reconnect logic
+ * should catch this, drop the cached [TlsResumptionState], and retry the
+ * handshake from scratch. See the call site in
+ * [TlsClient.handleHandshakeMessage] for the full rationale.
+ *
+ * Distinct subclass of [QuicCodecException] so callers can selectively
+ * catch the recoverable case without swallowing genuine protocol errors.
+ */
+class PskRejectedException(
+    message: String,
+) : QuicCodecException(message)
 
 /** Callback interface so the QUIC layer can react to TLS-derived secrets. */
 interface TlsSecretsListener {

@@ -287,7 +287,7 @@ class QuicReader(
     }
 }
 
-class QuicCodecException(
+open class QuicCodecException(
     message: String,
     cause: Throwable? = null,
 ) : RuntimeException(message, cause)

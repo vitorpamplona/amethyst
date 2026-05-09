@@ -134,18 +134,30 @@ class QuicLossDetection {
      *       [largestAckedPn], OR
      *     - it was sent more than [lossDelayMs] ago.
      *
-     * Returns the list of lost packets in arbitrary order. Caller
-     * dispatches their [SentPacket.tokens] (step 6).
+     * Returns the list of lost packets PLUS the absolute monotonic
+     * time at which the next time-threshold loss will fire — if any
+     * surviving in-flight packet predates [largestAckedPn]. The
+     * caller schedules a timer at that instant so tail-loss recovery
+     * doesn't have to wait for the PTO. RFC 9002 §6.1.2 (loss-
+     * detection timer): without this, a quiet link's last few packets
+     * sit in `sentPackets` until either the PTO fires or fresh ACKs
+     * arrive. Returning [Result.nextLossTimeMs] = null means there's
+     * nothing left for the time-threshold to fire on.
      */
     fun detectAndRemoveLost(
         sentPackets: MutableMap<Long, SentPacket>,
         largestAckedPn: Long,
         nowMs: Long,
-    ): List<SentPacket> {
-        if (sentPackets.isEmpty()) return emptyList()
+    ): Result {
+        if (sentPackets.isEmpty()) return Result.EMPTY
         val lossDelay = lossDelayMs()
         val lossThresholdSentMs = nowMs - lossDelay
         val lost = mutableListOf<SentPacket>()
+        // Track the EARLIEST sentAtMillis among surviving sub-largest
+        // packets. The next loss-detection timer fires at
+        // `earliestSent + lossDelay` — the earliest moment any of
+        // them crosses the time threshold.
+        var earliestSentSubLargestMs = Long.MAX_VALUE
         val it = sentPackets.entries.iterator()
         while (it.hasNext()) {
             val (pn, pkt) = it.next()
@@ -155,9 +167,29 @@ class QuicLossDetection {
             if (packetThresholdLost || timeThresholdLost) {
                 lost += pkt
                 it.remove()
+            } else if (pkt.sentAtMillis < earliestSentSubLargestMs) {
+                earliestSentSubLargestMs = pkt.sentAtMillis
             }
         }
-        return lost
+        val nextLossTimeMs =
+            if (earliestSentSubLargestMs == Long.MAX_VALUE) null else earliestSentSubLargestMs + lossDelay
+        return Result(lost, nextLossTimeMs)
+    }
+
+    /**
+     * Outcome of [detectAndRemoveLost]. [lost] is the list of packets
+     * declared lost on this call (for retransmit dispatch);
+     * [nextLossTimeMs] is the absolute monotonic time at which the
+     * next earliest surviving sub-largest packet will cross the
+     * time threshold, or null if none remain.
+     */
+    data class Result(
+        val lost: List<SentPacket>,
+        val nextLossTimeMs: Long?,
+    ) {
+        companion object {
+            internal val EMPTY = Result(emptyList(), null)
+        }
     }
 
     /**
