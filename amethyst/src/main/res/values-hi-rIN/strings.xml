@@ -325,7 +325,7 @@
         \n\n यदि आप अपना पारणशब्द खो देते हैं, तो आप अपनी कुंचिका को पुनः प्राप्त नहीं कर सकते।
     </string>
     <string name="failed_to_encrypt_key">आपकी निजी कुंचिका का रहस्यीकरण असफल</string>
-    <string name="secret_key_copied_to_clipboard">गुप्त कुंचिका (एनसेक॰) की अनुकृति टाँकाफलक में किया गया।</string>
+    <string name="secret_key_copied_to_clipboard">गुप्त कुंचिका (एनसेक॰) की अनुकृति टाँकाफलक में की गई</string>
     <string name="copy_my_secret_key">मेरी गुप्त कुंचिका की अनुकृति करें</string>
     <string name="encrypt_and_copy_my_secret_key">मेरी गुप्त कुंचिका का रहस्यीकरण तथा अनुकृति करें</string>
     <string name="biometric_authentication_failed">प्रमाणीकरण असफल</string>
@@ -337,9 +337,9 @@
     <string name="badge_award_image">\"पदक पुरस्कार चित्र</string>
     <string name="new_badge_award_notif">आपको नया पदक पुरस्कार प्राप्त हुआ</string>
     <string name="award_granted_to">पदक पुरस्कार इनको दिया गया</string>
-    <string name="copied_note_text_to_clipboard">टीका लेख की अनुकृति किया गया टाँकाफलक में</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">लेखक का @npub का अनुकरण किया गया टाँकाफलक में</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">टीका विभेदक (@note1) का अनुकरण किया गया टाँकाफलक में</string>
+    <string name="copied_note_text_to_clipboard">टीका लेख की अनुकृति की गई टाँकाफलक में</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">लेखक के @npub की अनुकृति की गई टाँकाफलक में</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">टीका विभेदक (@note1) की अनुकृति की गई टाँकाफलक में</string>
     <string name="select_text_dialog_top">लेख चुनें</string>
     <string name="private_conversation_notification">"&lt;निजी संदेश का अरहस्यीकरण असफल&gt;\n\nआप का उल्लेख किया गया एक निजी / रहस्यीकृत संवाद में %1$s तथा %2$s के बीच।"</string>
     <string name="account_switch_add_account_dialog_title">नयी लेखा जोडें</string>
@@ -433,6 +433,7 @@
     <string name="scheduled_posts_status_failed">असफल</string>
     <string name="scheduled_posts_status_sent">भेजा गया</string>
     <string name="scheduled_posts_status_cancelled">निरस्त</string>
+    <string name="scheduled_posts_event_id_copied">टीका विभेदक की अनुकृति की गई</string>
     <string name="polls">मतदान</string>
     <string name="open_polls">खुला</string>
     <string name="closed_polls">अवरुद्ध</string>
@@ -457,6 +458,29 @@
     <string name="new_community_relay_marker_requests">अनुरोध</string>
     <string name="new_community_relay_marker_approvals">स्वीकृतियाँ</string>
     <string name="new_community_empty">कोई भी समुदाय इस छलनी के अनुकूल नहीं।</string>
+    <string name="new_community_rules_section">सत्यापन सम्भव नियम (विकल्पात्मक)</string>
+    <string name="new_community_rules_kinds_section">अनुमत घटना प्रकार</string>
+    <string name="new_community_rules_kind_short_text">छोटा लेख (१)</string>
+    <string name="new_community_rules_kind_long_form">दीर्घरूप लेख (३००२३)</string>
+    <string name="new_community_rules_kind_picture">चित्र पत्र (२०)</string>
+    <string name="new_community_rules_kind_video">चलचित्र पत्र (२१)</string>
+    <string name="new_community_rules_kind_short_video">छोटा चलचित्र (२२)</string>
+    <string name="new_community_rules_kind_comment">समुदाय टिप्पणी (११११)</string>
+    <string name="new_community_rules_kind_custom_label">विशिष्ट प्रकार</string>
+    <string name="new_community_rules_kind_add">प्रकार जोडें</string>
+    <string name="new_community_rules_limits_title">प्रकार %1$d की सीमाएँ</string>
+    <string name="new_community_rules_limits_max_bytes">अधिकतम घटना आकार (अष्टक)</string>
+    <string name="new_community_rules_limits_max_per_day">अधिकतम पत्र प्रति लेखक प्रति दिन</string>
+    <string name="new_community_rules_limits_unlimited">रिक्त छोड दें कोई सीमा नहीं तो</string>
+    <string name="new_community_rules_limits_save">सीमाओं का अभिलेखन</string>
+    <string name="new_community_rules_banned_section">प्रतिबन्धित प्रयोक्ता</string>
+    <string name="new_community_rules_banned_add">प्रतिबन्धित प्रयोक्ता जोडें</string>
+    <string name="new_community_rules_banned_placeholder">नाम एनपुब॰ अथवा निप॰०५</string>
+    <string name="new_community_rules_wot_section">विश्वासजाल द्वार (विकल्पात्मक)</string>
+    <string name="new_community_rules_wot_root">मूल एनपुब॰ अथवा षोडशांकरूप ख्याप्य कुंचिका</string>
+    <string name="new_community_rules_wot_depth">गहराई</string>
+    <string name="new_community_rules_wot_add">विश्वासजाल द्वार जोडें</string>
+    <string name="new_community_rules_max_event_size_section">वैश्विक अधिकतम घटना आकार (विकल्पात्मक)</string>
     <string name="received_badges">प्राप्त</string>
     <string name="my_badges">मेरा</string>
     <string name="awarded_badges">पुरस्कृत</string>
