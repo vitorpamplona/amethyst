@@ -1102,12 +1102,15 @@
     <string name="filter_spam_from_strangers_title">कचरालेख छलनी</string>
     <string name="filter_spam_from_strangers_explainer">अज्ञात लोगों से पत्र छिपाएँ जो निरन्तर 5 अथवा अधिक बार यथावत समान थे</string>
     <string name="disable_client_tag_title">मेरे घटनाओं में ग्राहक सूचक ना जोडें</string>
+    <string name="disable_client_tag_explainer">जब सक्षम अमेथिस्ट निप॰८९ ग्राहक सूचक नहीं जोडेगा आपके द्वारा प्रकाशित घटनाओं में।</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">सूचनाएँ प्राप्त होने पर चेतावनी दें</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र 5 अथवा अधिक बार सूचित हो आपके द्वारा अनुचरित लेखाओं से</string>
     <string name="show_sensitive_content_title">संवेदनशील विषयवस्तु दिखाएँ</string>
     <string name="show_sensitive_content_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र के लेखक ने उसे संवेदनशील चिह्नित किया</string>
     <string name="max_hashtag_limit_title">अधिकतम विषयसूचक प्रति पत्र</string>
     <string name="max_hashtag_limit_explainer">इससे अधिक विषयसूचक युक्त पत्रों को नहीं दिखाता। शून्य रखें अक्षम करने के लिए</string>
+    <string name="hide_community_rules_violations_title">समुदाय नियमों का उल्लंघन करनेवाले पत्रों को छुपाएँ</string>
+    <string name="hide_community_rules_violations_explainer">समुदाय सूचनावलियों से पत्र हटाएँ जब समदाय द्वारा निप॰९ए नियम अभिलेख प्रकाशित है तथा घटना उसका उल्लंघन करेगा। कोई प्रभाव नहीं जब समुदाय के कोई व्यवस्थित नियम नहीं।</string>
     <string name="new_reaction_symbol">नया प्रतिक्रिया चिह्न</string>
     <string name="no_reaction_type_setup_long_press_to_change">इस उपयोगकर्ता के लिए कोई प्रतिक्रिया प्रकार पूर्व चयनित नहीं। हृदयचिह्न घुण्डी पर दीर्घतः दबाएँ परिवर्तन करने के लिए</string>
     <string name="zapraiser">ज्सापोपार्जन योजना</string>
@@ -2529,4 +2532,12 @@
     <string name="emoji_private_explainer">निजी चित्राक्षर रहस्यीकृत रूप में रखे जाते हैं पुनःप्रसारकों में तथा केवल आप के लिए दृश्य हैं। आपके प्रतिक्रिया विकल्पसूची में उपस्थित होते हैं तथा \":\" स्वतःसम्पन्न सुविधा में सार्वजनिक चित्राक्षरों के जैसे ही।</string>
     <string name="gif">जिफ॰</string>
     <!-- NIP-9A community rules composer-side validation. -->
+    <string name="community_rules_violation_icon">समुदाय नियभ उल्लंघन</string>
+    <string name="community_rules_violation_author_denied">आप इस समुदाय के अस्वीकार सूची में हैं। पत्र स्वीकृत नहीं होगे।</string>
+    <string name="community_rules_violation_kind_not_allowed">इस समुदाय द्वारा %1$d प्रकार घटनाएँ स्वीकृत नहीं।</string>
+    <string name="community_rules_violation_kind_size_exceeded">पाण्डुलिपि %1$d अष्टक है। यह समुदाय इस प्रकार के घटनाओं को %2$d अष्टक पर सीमित करता है।</string>
+    <string name="community_rules_violation_max_size_exceeded">पाण्डुलिपि %1$d अष्टक है। यह समुदाय घटनाओं को %2$d अष्टक पर सीमित करता है।</string>
+    <string name="community_rules_violation_quota_exceeded">आप पहले से ही %1$d इस प्रकार के घटनाओं को प्रकाशित कर चुके है (सीमा %2$d)।</string>
+    <string name="community_rules_violation_wot_gate_failed">आप इस समुदाय के विश्वासजाल आवश्यकताओं को पार नहीं कर सके।</string>
+    <string name="community_rules_violation_stale_rules">समुदाय का नवीनतम नियम अभिलेख पुराना होने के कारण अस्वीकृत।</string>
 </resources>
