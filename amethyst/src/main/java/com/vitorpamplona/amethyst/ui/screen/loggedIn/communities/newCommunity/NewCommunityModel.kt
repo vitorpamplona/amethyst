@@ -41,11 +41,15 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -57,6 +61,40 @@ data class CommunityRelayEntry(
     val url: NormalizedRelayUrl,
     val marker: String? = null,
 )
+
+/**
+ * Editor-side draft of a NIP-9A `k` rule. Empty/null limit fields mean "no limit";
+ * they are dropped from the published tag.
+ */
+@Immutable
+data class KindRuleDraft(
+    val kind: Int,
+    val maxBytes: Int? = null,
+    val maxPerAuthorPerDay: Int? = null,
+) {
+    fun toTag(): KindRuleTag = KindRuleTag(kind, maxBytes, maxPerAuthorPerDay)
+}
+
+/**
+ * Editor-side draft of a NIP-9A `p` rule for a banned pubkey. v1 only writes
+ * `deny` policies; allow-listing is deferred to a follow-up.
+ */
+@Immutable
+data class BannedPubkeyDraft(
+    val pubkey: HexKey,
+    val role: String? = null,
+) {
+    fun toTag(): PubkeyRuleTag = PubkeyRuleTag(pubkey, PubkeyRuleTag.Policy.DENY, role)
+}
+
+/** Editor-side draft of a NIP-9A `wot` gate. */
+@Immutable
+data class WotGateDraft(
+    val rootPubkey: HexKey,
+    val depth: Int,
+) {
+    fun toTag(): WotTag = WotTag(rootPubkey, depth)
+}
 
 @Stable
 class NewCommunityModel : ViewModel() {
@@ -86,6 +124,14 @@ class NewCommunityModel : ViewModel() {
     // Moderator/Relay lists - backed by mutableStateListOf for direct Compose observation.
     val moderators = mutableStateListOf<User>()
     val relays = mutableStateListOf<CommunityRelayEntry>()
+
+    // NIP-9A structured rules - kept separate from the freeform `rules: String` text
+    // field above. When all four collections/values are empty, no kind:34551 event is
+    // published, so existing communities upgrade only when an owner opts in.
+    val kindRules = mutableStateListOf<KindRuleDraft>()
+    val bannedPubkeys = mutableStateListOf<BannedPubkeyDraft>()
+    val wotGates = mutableStateListOf<WotGateDraft>()
+    var maxEventSize by mutableStateOf<Int?>(null)
 
     fun init(account: Account) {
         if (this.account == account) return
@@ -173,6 +219,53 @@ class NewCommunityModel : ViewModel() {
             name.isNotBlank() &&
             description.isNotBlank()
 
+    /** Returns true when the editor has any structured NIP-9A rule worth publishing. */
+    fun hasStructuredRules(): Boolean =
+        kindRules.isNotEmpty() ||
+            bannedPubkeys.isNotEmpty() ||
+            wotGates.isNotEmpty() ||
+            maxEventSize != null
+
+    fun addKindRule(rule: KindRuleDraft) {
+        if (kindRules.none { it.kind == rule.kind }) {
+            kindRules.add(rule)
+        }
+    }
+
+    fun updateKindRule(
+        kind: Int,
+        update: (KindRuleDraft) -> KindRuleDraft,
+    ) {
+        val index = kindRules.indexOfFirst { it.kind == kind }
+        if (index >= 0) {
+            kindRules[index] = update(kindRules[index])
+        }
+    }
+
+    fun removeKindRule(kind: Int) {
+        kindRules.removeAll { it.kind == kind }
+    }
+
+    fun addBannedPubkey(entry: BannedPubkeyDraft) {
+        if (bannedPubkeys.none { it.pubkey == entry.pubkey }) {
+            bannedPubkeys.add(entry)
+        }
+    }
+
+    fun removeBannedPubkey(pubkey: HexKey) {
+        bannedPubkeys.removeAll { it.pubkey == pubkey }
+    }
+
+    fun addWotGate(entry: WotGateDraft) {
+        if (wotGates.none { it.rootPubkey == entry.rootPubkey && it.depth == entry.depth }) {
+            wotGates.add(entry)
+        }
+    }
+
+    fun removeWotGate(entry: WotGateDraft) {
+        wotGates.removeAll { it.rootPubkey == entry.rootPubkey && it.depth == entry.depth }
+    }
+
     @OptIn(ExperimentalUuidApi::class)
     fun publish(
         context: Context,
@@ -238,6 +331,19 @@ class NewCommunityModel : ViewModel() {
                         stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
                     )
                     return@launch
+                }
+
+                // Sibling NIP-9A rules document. Strictly opt-in: only published when
+                // the owner has set at least one structured rule. Reuses the same dTag
+                // so the rules event replaces in place across edits.
+                if (hasStructuredRules()) {
+                    myAccount.sendCommunityRules(
+                        communityDTag = dTag,
+                        kindRules = kindRules.map { it.toTag() },
+                        pubkeyRules = bannedPubkeys.map { it.toTag() },
+                        wotGates = wotGates.map { it.toTag() },
+                        maxEventSize = maxEventSize,
+                    )
                 }
 
                 // Auto-follow only on the create flow; editing doesn't change the follow set.
@@ -311,6 +417,42 @@ class NewCommunityModel : ViewModel() {
         multiOrchestrator = null
         moderators.clear()
         relays.clear()
+        kindRules.clear()
+        bannedPubkeys.clear()
+        wotGates.clear()
+        maxEventSize = null
         selectedServer = defaultServer()
     }
+
+    companion object {
+        /**
+         * Builds the `kindRules`/`pubkeyRules`/`wotGates` lists in the same order
+         * the publish path uses. Pure helper for unit testing — the publish() path
+         * touches an [Account] which can't be constructed in-process.
+         */
+        fun buildRulesPayload(
+            kindRules: List<KindRuleDraft>,
+            bannedPubkeys: List<BannedPubkeyDraft>,
+            wotGates: List<WotGateDraft>,
+            maxEventSize: Int?,
+        ): RulesPayload? {
+            if (kindRules.isEmpty() && bannedPubkeys.isEmpty() && wotGates.isEmpty() && maxEventSize == null) {
+                return null
+            }
+            return RulesPayload(
+                kindRules = kindRules.map { it.toTag() },
+                pubkeyRules = bannedPubkeys.map { it.toTag() },
+                wotGates = wotGates.map { it.toTag() },
+                maxEventSize = maxEventSize,
+            )
+        }
+    }
+
+    @Immutable
+    data class RulesPayload(
+        val kindRules: List<KindRuleTag>,
+        val pubkeyRules: List<PubkeyRuleTag>,
+        val wotGates: List<WotTag>,
+        val maxEventSize: Int?,
+    )
 }
