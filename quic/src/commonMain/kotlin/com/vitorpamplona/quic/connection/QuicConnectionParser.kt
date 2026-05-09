@@ -665,6 +665,19 @@ private fun dispatchFrames(
                     continue
                 }
                 val stream = conn.getOrCreatePeerStreamLocked(frame.streamId)
+                // RFC 9000 §3.2: once the peer has sent RESET_STREAM the
+                // receive side is in the "Reset Recvd" terminal state.
+                // Any subsequent STREAM frame on this id is a peer
+                // protocol violation — close with STREAM_STATE_ERROR.
+                // Pre-fix the bytes were silently absorbed, leaving the
+                // application with a phantom mid-reset stream that the
+                // peer believed was already dead.
+                if (stream.peerResetReceived) {
+                    conn.markClosedExternally(
+                        "STREAM_STATE_ERROR: stream ${frame.streamId} STREAM after RESET_STREAM",
+                    )
+                    return
+                }
                 // RFC 9000 §4.1: peer MUST NOT send beyond the limit we advertised.
                 // The connection-level kill protects against unbounded memory
                 // growth from a misbehaving peer.
@@ -868,6 +881,11 @@ private fun dispatchFrames(
                         return
                     }
                 }
+                // RFC 9000 §3.2: latch the receive-side terminal state so
+                // any subsequent STREAM frame on this id closes the
+                // connection with STREAM_STATE_ERROR (handled in the
+                // STREAM branch above).
+                target?.peerResetReceived = true
                 // Mark the peer's stream aborted and close our read side; the
                 // application sees a truncated incoming flow.
                 target?.closeIncoming()

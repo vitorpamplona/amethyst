@@ -143,6 +143,21 @@ class QuicStream(
     internal var receiveHighestOffset: Long = 0L
 
     /**
+     * RFC 9000 §3.2 receive-side state: true once a `RESET_STREAM` for
+     * this stream has been delivered by the peer. Subsequent inbound
+     * STREAM frames on this id are invalid (the receive side is in the
+     * "Reset Recvd" terminal state) and must close the connection with
+     * STREAM_STATE_ERROR.
+     *
+     * Kept distinct from the local-side [resetState] (which tracks OUR
+     * RESET_STREAM emission). Both can exist simultaneously: a bidi
+     * stream can be reset by the peer's send side (this flag) while we
+     * separately reset our own send side.
+     */
+    @Volatile
+    internal var peerResetReceived: Boolean = false
+
+    /**
      * Marker the parser sets whenever [receive.contiguousEnd] advances; the
      * writer's appendFlowControlUpdates consumes it to skip streams that
      * haven't received any new bytes since the last MAX_STREAM_DATA emission.
