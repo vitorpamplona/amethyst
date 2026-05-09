@@ -2295,4 +2295,5 @@
     <string name="emoji_private_badge">Privé-emoji</string>
     <string name="emoji_public_explainer">Openbare emoji\'s zijn zichtbaar voor iedereen en verschijnen in je reactiemenu en \":\" autocomplete-picker wanneer dit pakket in je emoji-lijst staat.</string>
     <string name="emoji_private_explainer">Privé-emoji\'s worden versleuteld opgeslagen op relays en zijn alleen zichtbaar voor jou. Ze verschijnen in je reactiemenu en \":\" autocomplete net als openbare emoji\'s.</string>
+    <!-- NIP-9A community rules composer-side validation. -->
 </resources>

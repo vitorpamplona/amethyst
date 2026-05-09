@@ -2520,4 +2520,5 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="emoji_public_explainer">Publiczne emotikony są widoczne dla wszystkich i pojawiają się w menu odezw oraz w oknie podpowiedzi \":\", jeśli ten pakiet znajduje się na liście emotikonów.</string>
     <string name="emoji_private_explainer">Prywatne emotikony są przechowywane zaszyfrowane na transmiterach i widoczne tylko dla Ciebie. Znajdują się w menu odzewów oraz w autouzupełnianiu po wpisaniu znaku „:” – tak samo jak emotikony publiczne.</string>
     <string name="gif">Gif</string>
+    <!-- NIP-9A community rules composer-side validation. -->
 </resources>
