@@ -1132,6 +1132,13 @@ private fun dispatchFrames(
                 // residual handshake CRYPTO bookkeeping that's no longer
                 // needed for the lifetime of the connection.
                 conn.handshake.discardKeys()
+                // RFC 9001 §4.1.2 — only NOW is the QUIC handshake
+                // considered confirmed at the client, gating
+                // 1-RTT key update + connection migration. The TLS-side
+                // `onHandshakeComplete` callback fires earlier (when
+                // Finished is derived), but the spec requires waiting
+                // for HANDSHAKE_DONE before either operation.
+                conn.markHandshakeConfirmed()
             }
 
             is PingFrame -> {

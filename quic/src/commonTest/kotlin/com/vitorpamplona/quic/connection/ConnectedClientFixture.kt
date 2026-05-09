@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quic.connection
 
+import com.vitorpamplona.quic.frame.HandshakeDoneFrame
 import com.vitorpamplona.quic.tls.InProcessTlsServer
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import kotlinx.coroutines.runBlocking
@@ -49,6 +50,17 @@ fun newConnectedClient(
     maxData: Long = 1L * 1024 * 1024,
     maxStreamData: Long = 64L * 1024,
     handshakeRounds: Int = 16,
+    /**
+     * Deliver a `HANDSHAKE_DONE` frame at the end of the handshake
+     * so the returned client matches the production "handshake
+     * confirmed" state (RFC 9001 §4.1.2). Tests that need to
+     * exercise the pre-confirmation window (gate around
+     * [QuicConnection.initiateKeyUpdate] and
+     * [QuicConnection.triggerPathMigration]) pass `false` to skip
+     * the delivery and assert against
+     * [QuicConnection.handshakeConfirmed] = false.
+     */
+    deliverHandshakeDone: Boolean = true,
 ): Pair<QuicConnection, InMemoryQuicPipe> =
     runBlocking {
         val client =
@@ -90,5 +102,18 @@ fun newConnectedClient(
         client.start()
         pipe.drive(maxRounds = handshakeRounds)
         assertEquals(QuicConnection.Status.CONNECTED, client.status)
+        if (deliverHandshakeDone) {
+            // Pre-2026-05-08 the fixture stopped at TLS-Finished and
+            // most tests didn't notice — the path-migration and
+            // key-update gates both fired off `handshakeComplete`,
+            // which flips at TLS-Finished. After the
+            // `handshakeConfirmed` split (driven by the keyupdate-
+            // vs-quinn bug, see `quic/plans/2026-05-08-keyupdate-vs-quinn.md`),
+            // both gates require HANDSHAKE_DONE — so the default
+            // fixture now matches the production "handshake
+            // confirmed" state.
+            val packet = pipe.buildServerApplicationDatagram(listOf(HandshakeDoneFrame()))!!
+            feedDatagram(client, packet, nowMillis = 0L)
+        }
         client to pipe
     }

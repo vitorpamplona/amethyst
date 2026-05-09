@@ -291,6 +291,31 @@ class QuicConnection(
         private set
 
     /**
+     * RFC 9001 §4.1.2 — at the CLIENT, the QUIC handshake is considered
+     * confirmed only when a `HANDSHAKE_DONE` frame is received from the
+     * server. NOT the same as [handshakeComplete] (which is the TLS-side
+     * "Finished derived" state, set inside [onHandshakeComplete]).
+     *
+     * Once confirmed, the client MAY:
+     *  - initiate a 1-RTT key update (RFC 9001 §6.1),
+     *  - initiate connection migration (RFC 9000 §9.1).
+     *
+     * Quinn (and other strict servers like quic-go / picoquic) close the
+     * connection with PROTOCOL_VIOLATION ("illegal packet: key update
+     * error") when a client rolls KEY_PHASE before HANDSHAKE_DONE has
+     * been delivered. The interop runner's `keyupdate` testcase against
+     * quinn flushed this — see
+     * `quic/plans/2026-05-08-keyupdate-vs-quinn.md`.
+     *
+     * Awaitable via [awaitHandshakeConfirmed].
+     */
+    @Volatile
+    var handshakeConfirmed: Boolean = false
+        private set
+
+    private val handshakeConfirmedSignal = CompletableDeferred<Unit>()
+
+    /**
      * Lock-split refactor (2026-05-08): @Volatile because the writer/parser
      * read this without acquiring [lifecycleLock] (the field is written
      * once at handshake completion, then immutable).
@@ -943,14 +968,53 @@ class QuicConnection(
     /**
      * Suspend until the handshake completes or fails. Throws if the connection
      * was closed before reaching CONNECTED.
+     *
+     * "Handshake completes" here is the TLS-side notion (Finished
+     * derived locally). For the QUIC-spec definition of "handshake
+     * confirmed" (HANDSHAKE_DONE received from the server, RFC 9001
+     * §4.1.2), use [awaitHandshakeConfirmed] — required before
+     * initiating a 1-RTT key update or connection migration.
      */
     suspend fun awaitHandshake() {
         handshakeDoneSignal.await()
     }
 
+    /**
+     * Suspend until the QUIC handshake is **confirmed** (RFC 9001
+     * §4.1.2: HANDSHAKE_DONE has been received), or until the
+     * connection terminates. Stricter than [awaitHandshake]: a peer
+     * that finishes TLS but never sends HANDSHAKE_DONE will leave
+     * `handshakeComplete = true` AND this still suspended. Required
+     * gate before:
+     *  - [initiateKeyUpdate] (RFC 9001 §6.1)
+     *  - [triggerPathMigration] (RFC 9000 §9.1)
+     *
+     * Cooperatively releases on connection close so callers don't
+     * hang forever when the peer drops mid-handshake.
+     */
+    suspend fun awaitHandshakeConfirmed() {
+        handshakeConfirmedSignal.await()
+    }
+
+    /**
+     * Called by the parser when a `HANDSHAKE_DONE` frame is processed
+     * (RFC 9000 §19.20). Idempotent — duplicate frames are silently
+     * tolerated per §19.20.
+     */
+    internal fun markHandshakeConfirmed() {
+        if (!handshakeConfirmed) {
+            handshakeConfirmed = true
+            handshakeConfirmedSignal.complete(Unit)
+        }
+    }
+
     /** Mark the handshake as failed (called when read loop dies, peer closes, or local close runs). */
     internal fun signalHandshakeFailed(cause: Throwable) {
         if (!handshakeDoneSignal.isCompleted) handshakeDoneSignal.completeExceptionally(cause)
+        // Don't leave [awaitHandshakeConfirmed] suspended forever when
+        // the connection drops before HANDSHAKE_DONE arrives — same
+        // semantics as [handshakeDoneSignal] on a failed handshake.
+        if (!handshakeConfirmedSignal.isCompleted) handshakeConfirmedSignal.completeExceptionally(cause)
     }
 
     val tls: TlsClient =
@@ -2099,11 +2163,16 @@ class QuicConnection(
      * and server".
      */
     fun initiateKeyUpdate(): Boolean {
-        // RFC 9001 §6.5: handshake MUST be confirmed before initiating
-        // a key update. We use [handshakeComplete] as the proxy —
-        // application keys are installed and the peer's HANDSHAKE_DONE
-        // has been processed.
-        if (!handshakeComplete) return false
+        // RFC 9001 §6.1 + §4.1.2: a client MUST NOT initiate a key
+        // update before the handshake is confirmed — i.e. before
+        // HANDSHAKE_DONE has been received from the server. Strict
+        // servers (quinn, quic-go, picoquic) close us with
+        // PROTOCOL_VIOLATION ("illegal packet: key update error")
+        // otherwise. [handshakeComplete] is the TLS-side flag (set
+        // when our TLS Finished is derived) which fires earlier
+        // than confirmation; [handshakeConfirmed] only flips once
+        // HANDSHAKE_DONE is processed by the parser.
+        if (!handshakeConfirmed) return false
         // RFC 9001 §6.4: MUST NOT initiate a subsequent rotation until
         // the previous one is confirmed. The parser clears this flag
         // when it observes an inbound packet that AEAD-decrypts under
@@ -2490,7 +2559,13 @@ class QuicConnection(
         nowMillis: Long,
         currentPtoMillis: Long,
     ): PathMigrationResult {
-        if (!handshakeComplete || status != Status.CONNECTED) {
+        // RFC 9000 §9.1: an endpoint MUST NOT initiate connection
+        // migration before the handshake is confirmed (RFC 9001
+        // §4.1.2 — HANDSHAKE_DONE received). [handshakeComplete] is
+        // the TLS-side flag (Finished derived) which fires earlier
+        // than confirmation; gating on [handshakeConfirmed] matches
+        // the spec.
+        if (!handshakeConfirmed || status != Status.CONNECTED) {
             return PathMigrationResult.NotConnected
         }
         val result = pathValidator.tryStartValidation(nowMillis, currentPtoMillis)

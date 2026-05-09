@@ -522,11 +522,25 @@ private fun runTransferTest(
             // (1-RTT keys derived) which is one ack ahead of HANDSHAKE_DONE
             // arriving.
             if (initiateKeyUpdate) {
-                withTimeoutOrNull(2_000L) {
-                    while (conn.status != QuicConnection.Status.CONNECTED) delay(10)
+                // RFC 9001 §6.1 + §4.1.2: client MUST wait for
+                // HANDSHAKE_DONE before rolling KEY_PHASE. quinn /
+                // quic-go / picoquic close us with PROTOCOL_VIOLATION
+                // ("illegal packet: key update error") if we update
+                // earlier. status == CONNECTED is too lenient — it
+                // flips when TLS Finished is derived (well before
+                // HANDSHAKE_DONE arrives), so we wait on the
+                // handshake-confirmed signal instead.
+                val confirmed =
+                    withTimeoutOrNull(2_000L) {
+                        conn.awaitHandshakeConfirmed()
+                        true
+                    } ?: false
+                if (!confirmed) {
+                    System.err.println("[boot] keyupdate: HANDSHAKE_DONE not received within 2s — skipping rotation")
+                } else {
+                    conn.initiateKeyUpdate()
+                    System.err.println("[boot] keyupdate: client initiated rotation to phase 1")
                 }
-                conn.initiateKeyUpdate()
-                System.err.println("[boot] keyupdate: client initiated rotation to phase 1")
             }
 
             val outcome =
