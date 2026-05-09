@@ -37,7 +37,9 @@ sealed class Route {
 
     @Serializable object Video : Route()
 
-    @Serializable object Discover : Route()
+    @Serializable data class Discover(
+        val initialTab: DiscoverTab? = null,
+    ) : Route()
 
     @Serializable data class Notification(
         val scrollToEventId: String? = null,
@@ -529,6 +531,17 @@ fun <T : Route> getRouteWithArguments(
     } else {
         null
     }
+}
+
+@Serializable
+enum class DiscoverTab {
+    FOLLOWS,
+    READS,
+    ALGOS,
+    LIVE,
+    COMMUNITY,
+    MARKETPLACE,
+    CHATS,
 }
 
 fun isSameRoute(

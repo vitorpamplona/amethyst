@@ -100,7 +100,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.DISCOVER,
                 labelRes = R.string.route_discover,
                 icon = MaterialSymbols.Sensors,
-                resolveRoute = { Route.Discover },
+                resolveRoute = { Route.Discover() },
             ),
         NavBarItem.NOTIFICATIONS to
             NavBarItemDef(
@@ -162,7 +162,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
             NavBarItemDef(
                 id = NavBarItem.FAVORITE_ALGO_FEEDS,
                 labelRes = R.string.favorite_dvms_title,
-                icon = MaterialSymbols.Star,
+                icon = MaterialSymbols.AutoAwesome,
                 resolveRoute = { Route.EditFavoriteAlgoFeeds },
             ),
         NavBarItem.EMOJI_PACKS to
@@ -286,6 +286,7 @@ val DefaultBottomBarItems: List<NavBarItem> =
         NavBarItem.VIDEO,
         NavBarItem.DISCOVER,
         NavBarItem.NOTIFICATIONS,
+        NavBarItem.FAVORITE_ALGO_FEEDS,
     )
 
 // Ordered membership lists for each drawer section. The drawer renders these by looking up

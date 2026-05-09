@@ -2138,8 +2138,10 @@
     <string name="add_dvm_to_favorites">Add feed algorithm to favorites</string>
     <string name="remove_dvm_from_favorites">Remove from favorites</string>
     <string name="favorite_dvms_title">Favorite Feed Algorithms</string>
-    <string name="favorite_dvms_explainer">Feed algorithms you starred here appear as filter chips on the Home feed. Open Discover to add more.</string>
-    <string name="favorite_dvms_empty">No favorite feed algorithms yet. Open Discover, tap one, and star it to add it here.</string>
+    <string name="favorite_dvms_explainer">Feed algorithms you star appear here and as filter chips on the Home feed.</string>
+    <string name="favorite_dvms_empty_headline">Pin your favorite algorithms</string>
+    <string name="favorite_dvms_empty_subtitle">Tap the button below to browse algorithms and star the ones you want to keep here.</string>
+    <string name="favorite_dvms_empty_cta">Add some feeds</string>
     <string name="dvm_home_status_requesting">Asking %1$s for a feed…</string>
     <string name="dvm_home_status_requesting_all">Asking your favorite feed algorithms for feeds…</string>
     <string name="dvm_home_status_processing">Processing your feed…</string>
