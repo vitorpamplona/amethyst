@@ -366,6 +366,16 @@ private class QuicBidiStreamAdapter(
         driver.wakeup()
     }
 
+    override suspend fun reset(errorCode: Long) {
+        stream.resetStream(errorCode)
+        driver.wakeup()
+    }
+
+    override suspend fun stopSending(errorCode: Long) {
+        stream.stopSending(errorCode)
+        driver.wakeup()
+    }
+
     override fun setPriority(priority: Int) {
         stream.priority = priority
     }
@@ -373,8 +383,14 @@ private class QuicBidiStreamAdapter(
 
 private class QuicReadStreamAdapter(
     private val stream: QuicStream,
+    private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = stream.incoming
+
+    override suspend fun stopSending(errorCode: Long) {
+        stream.stopSending(errorCode)
+        driver.wakeup()
+    }
 }
 
 /**
@@ -397,6 +413,11 @@ private class QuicUniWriteStreamAdapter(
         driver.wakeup()
     }
 
+    override suspend fun reset(errorCode: Long) {
+        stream.resetStream(errorCode)
+        driver.wakeup()
+    }
+
     override fun setPriority(priority: Int) {
         stream.priority = priority
     }
@@ -407,13 +428,24 @@ private class StrippedWtReadStreamAdapter(
     private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = stripped.data
+
+    override suspend fun stopSending(errorCode: Long) {
+        // Demux unconditionally wires `stopSending` for every surfaced
+        // stream — the contract in `StrippedWtStream` is "non-null on
+        // streams with a read side", which is true here. The `?:`
+        // fallback exists only to defend against a future demux bug
+        // that forgets to wire it; Unit is a safe no-op for tests
+        // that mock a stripped stream without a real receiver.
+        val ss = stripped.stopSending ?: return
+        ss(errorCode)
+    }
 }
 
 /**
  * Adapter for a peer-initiated bidi WT stream whose WT_BIDI_STREAM prefix
- * has been stripped. Routes [write] / [finish] through the demux's
- * driver-aware closures so application bytes actually leave the
- * connection.
+ * has been stripped. Routes [write] / [finish] / [reset] / [stopSending]
+ * through the demux's driver-aware closures so application bytes actually
+ * leave the connection.
  */
 private class StrippedWtBidiStreamAdapter(
     private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
@@ -440,13 +472,28 @@ private class StrippedWtBidiStreamAdapter(
         finish()
     }
 
+    override suspend fun reset(errorCode: Long) {
+        // Bidi streams have a send side we own, so `reset` is wired by
+        // the demux. Same defensive `?:` shape as in `write` / `finish`.
+        val r =
+            stripped.reset
+                ?: error("peer-initiated bidi stream has no reset — demux didn't wire one")
+        r(errorCode)
+    }
+
+    override suspend fun stopSending(errorCode: Long) {
+        val ss = stripped.stopSending ?: return
+        ss(errorCode)
+    }
+
     /**
      * No-op: peer-initiated bidi streams arrive through the demux as a
      * [com.vitorpamplona.quic.webtransport.StrippedWtStream] which exposes
-     * only `send`/`finish` closures, not the underlying [QuicStream]. The
-     * moq-lite priority use case targets locally-opened uni group streams
-     * only, so this path doesn't need to model priority — see the
-     * [WebTransportWriteStream.setPriority] contract.
+     * only `send`/`finish`/`reset`/`stopSending` closures, not the
+     * underlying [QuicStream]. The moq-lite priority use case targets
+     * locally-opened uni group streams only, so this path doesn't need
+     * to model priority — see the [WebTransportWriteStream.setPriority]
+     * contract.
      */
     override fun setPriority(priority: Int) = Unit
 }

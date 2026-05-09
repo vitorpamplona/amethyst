@@ -57,8 +57,40 @@ class FakeWebTransport private constructor(
         stateLock.withLock { check(open) { "session closed" } }
         val localToPeer = Channel<ByteArray>(Channel.BUFFERED)
         val peerToLocal = Channel<ByteArray>(Channel.BUFFERED)
-        val local = FakeBidiStream(write = localToPeer, read = peerToLocal)
-        val peer = FakeBidiStream(write = peerToLocal, read = localToPeer)
+        // Shared error-code cells: each side records its own reset()
+        // and stopSending() codes here so the peer can introspect.
+        // `localResetCell` records resets on `local.reset(code)` (=
+        // peer's `lastPeerResetCode`), and vice-versa.
+        val localResetCell =
+            java.util.concurrent.atomic
+                .AtomicLong(NO_CODE)
+        val peerResetCell =
+            java.util.concurrent.atomic
+                .AtomicLong(NO_CODE)
+        val localStopSendingCell =
+            java.util.concurrent.atomic
+                .AtomicLong(NO_CODE)
+        val peerStopSendingCell =
+            java.util.concurrent.atomic
+                .AtomicLong(NO_CODE)
+        val local =
+            FakeBidiStream(
+                write = localToPeer,
+                read = peerToLocal,
+                myResetCell = localResetCell,
+                myStopSendingCell = localStopSendingCell,
+                peerResetCell = peerResetCell,
+                peerStopSendingCell = peerStopSendingCell,
+            )
+        val peer =
+            FakeBidiStream(
+                write = peerToLocal,
+                read = localToPeer,
+                myResetCell = peerResetCell,
+                myStopSendingCell = peerStopSendingCell,
+                peerResetCell = localResetCell,
+                peerStopSendingCell = localStopSendingCell,
+            )
         // Send *peer* half to the other side's inbound queue.
         outboundBidiStreams.send(peer)
         return local
@@ -87,8 +119,20 @@ class FakeWebTransport private constructor(
         val priorityCell =
             java.util.concurrent.atomic
                 .AtomicInteger(0)
-        outboundUniStreams.send(FakeReadStream(pipe, priorityCell))
-        return ChannelWriteStream(pipe, priorityCell)
+        // Shared reset / stopSending cells. The writer (us) records its
+        // `reset(code)` call here; the peer-side reader exposes it via
+        // `FakeReadStream.lastResetCode`. Symmetric: the reader's
+        // `stopSending(code)` call lands in `stopSendingCell` so the
+        // writer (= moq-lite publisher tests) can assert the listener
+        // canceled with the expected code.
+        val resetCell =
+            java.util.concurrent.atomic
+                .AtomicLong(NO_CODE)
+        val stopSendingCell =
+            java.util.concurrent.atomic
+                .AtomicLong(NO_CODE)
+        outboundUniStreams.send(FakeReadStream(pipe, priorityCell, resetCell, stopSendingCell))
+        return ChannelWriteStream(pipe, priorityCell, resetCell, stopSendingCell)
     }
 
     override suspend fun sendDatagram(payload: ByteArray): Boolean {
@@ -161,6 +205,20 @@ class FakeWebTransport private constructor(
 class FakeBidiStream internal constructor(
     private val write: Channel<ByteArray>,
     private val read: Channel<ByteArray>,
+    /**
+     * Cell that records this side's `reset(code)` calls. Read by
+     * [lastResetCode] from the same side (rare — usually it's the
+     * peer's [peerResetCell] you want).
+     */
+    private val myResetCell: java.util.concurrent.atomic.AtomicLong? = null,
+    private val myStopSendingCell: java.util.concurrent.atomic.AtomicLong? = null,
+    /**
+     * Cell that records the *peer's* `reset(code)` calls (i.e.
+     * mirror of the peer's [myResetCell]). [lastPeerResetCode] reads
+     * this so tests can assert "the peer reset the bidi with code X."
+     */
+    private val peerResetCell: java.util.concurrent.atomic.AtomicLong? = null,
+    private val peerStopSendingCell: java.util.concurrent.atomic.AtomicLong? = null,
 ) : WebTransportBidiStream {
     override fun incoming(): Flow<ByteArray> = read.receiveAsFlow()
 
@@ -171,6 +229,40 @@ class FakeBidiStream internal constructor(
     override suspend fun finish() {
         write.close()
     }
+
+    override suspend fun reset(errorCode: Long) {
+        // First call wins, mirroring `:quic`'s `QuicStream.resetStream`
+        // contract. Subsequent reset/finish/write are silently
+        // dropped to keep the wire frame stable in the eyes of any
+        // test that reads `lastResetCode`.
+        myResetCell?.compareAndSet(NO_CODE, errorCode)
+        write.close()
+    }
+
+    override suspend fun stopSending(errorCode: Long) {
+        myStopSendingCell?.compareAndSet(NO_CODE, errorCode)
+        // The peer's send half is our receive half; close it so a
+        // collector sees end-of-flow.
+        read.close()
+    }
+
+    /**
+     * Code our side passed to [reset], or `null` if reset wasn't
+     * called. Mostly useful when a test holds the peer's reference;
+     * [lastPeerResetCode] is the more common assertion.
+     */
+    val lastResetCode: Long?
+        get() = myResetCell?.get()?.takeIf { it != NO_CODE }
+
+    /** Code the peer side passed to [reset], or `null` if not called. */
+    val lastPeerResetCode: Long?
+        get() = peerResetCell?.get()?.takeIf { it != NO_CODE }
+
+    val lastStopSendingCode: Long?
+        get() = myStopSendingCell?.get()?.takeIf { it != NO_CODE }
+
+    val lastPeerStopSendingCode: Long?
+        get() = peerStopSendingCell?.get()?.takeIf { it != NO_CODE }
 
     override fun setPriority(priority: Int) = Unit
 }
@@ -184,8 +276,32 @@ class FakeReadStream internal constructor(
      * uni-stream writer (e.g. tests that hand-roll a [Channel]).
      */
     private val priorityCell: java.util.concurrent.atomic.AtomicInteger? = null,
+    /**
+     * Optional shared cell that records the writer's `reset(code)`
+     * call. Exposed via [lastResetCode] so tests can assert the
+     * publisher reset its uni stream with the expected typed error.
+     */
+    private val resetCell: java.util.concurrent.atomic.AtomicLong? = null,
+    /**
+     * Optional shared cell that records this side's own
+     * `stopSending(code)` call. Exposed via [lastStopSendingCode]
+     * so the test can assert the listener actually fired the cancel.
+     */
+    private val stopSendingCell: java.util.concurrent.atomic.AtomicLong? = null,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = read.receiveAsFlow()
+
+    override suspend fun stopSending(errorCode: Long) {
+        // First-call-wins like the production path. Closing `read`
+        // here would race the production path's "publisher closes
+        // its write end" semantic — moq-lite calls `stopSending`
+        // when it's done caring about the bytes, but the publisher
+        // is still expected to finish what it was sending. We
+        // record the code without closing so a test that asserts
+        // `incoming().toList()` post-stopSending still sees any
+        // bytes the publisher had already enqueued.
+        stopSendingCell?.compareAndSet(NO_CODE, errorCode)
+    }
 
     /**
      * Last priority value the paired write side applied via
@@ -195,6 +311,17 @@ class FakeReadStream internal constructor(
      */
     val lastSetPriority: Int?
         get() = priorityCell?.get()
+
+    /**
+     * Code the peer-side writer passed to [WebTransportWriteStream.reset],
+     * or `null` if reset wasn't called.
+     */
+    val lastResetCode: Long?
+        get() = resetCell?.get()?.takeIf { it != NO_CODE }
+
+    /** Code we passed to [stopSending], or `null` if not called. */
+    val lastStopSendingCode: Long?
+        get() = stopSendingCell?.get()?.takeIf { it != NO_CODE }
 }
 
 /**
@@ -210,6 +337,8 @@ private class ChannelWriteStream(
      * stores each [setPriority] call so the peer can introspect.
      */
     private val priorityCell: java.util.concurrent.atomic.AtomicInteger? = null,
+    private val resetCell: java.util.concurrent.atomic.AtomicLong? = null,
+    private val stopSendingCell: java.util.concurrent.atomic.AtomicLong? = null,
 ) : WebTransportWriteStream {
     override suspend fun write(chunk: ByteArray) {
         channel.send(chunk)
@@ -219,7 +348,28 @@ private class ChannelWriteStream(
         channel.close()
     }
 
+    override suspend fun reset(errorCode: Long) {
+        // First-call-wins. We close the channel so the peer's
+        // receive flow ends — same shape as `finish` but with a
+        // typed error code recorded for the peer to introspect.
+        resetCell?.compareAndSet(NO_CODE, errorCode)
+        channel.close()
+    }
+
     override fun setPriority(priority: Int) {
         priorityCell?.set(priority)
     }
+
+    @Suppress("unused")
+    private val unusedStopSendingCellTether: java.util.concurrent.atomic.AtomicLong? = stopSendingCell
 }
+
+/**
+ * Sentinel for "no reset / stopSending code recorded yet" in the
+ * [java.util.concurrent.atomic.AtomicLong] cells used by [FakeBidiStream]
+ * and [FakeReadStream] / [ChannelWriteStream]. Real moq-lite codes are
+ * non-negative varints (RFC 9000 application error codes are u32
+ * unsigned-fitting-in-Long); `Long.MIN_VALUE` is safely outside that
+ * range.
+ */
+internal const val NO_CODE: Long = Long.MIN_VALUE
