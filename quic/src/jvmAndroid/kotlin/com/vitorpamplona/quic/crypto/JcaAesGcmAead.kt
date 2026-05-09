@@ -138,6 +138,74 @@ class JcaAesGcmAead(
             }
         }
 
+    /**
+     * JCA-native range overload: `Cipher.updateAAD(byte[], offset, len)`
+     * and `Cipher.doFinal(byte[], inputOffset, inputLen)` accept
+     * sub-ranges directly, so we skip the two `copyOfRange` calls the
+     * default impl would perform. Saves ~2 KB allocation per inbound
+     * packet on the audio-rooms hot path (one for `aad`, one for
+     * `ciphertext`, both sliced from a packet buffer that the caller
+     * already owns).
+     */
+    override fun openRange(
+        key: ByteArray,
+        nonce: ByteArray,
+        aad: ByteArray,
+        aadOffset: Int,
+        aadLength: Int,
+        ciphertext: ByteArray,
+        ciphertextOffset: Int,
+        ciphertextLength: Int,
+    ): ByteArray? =
+        synchronized(this) {
+            try {
+                decryptCipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+                decryptCipher.updateAAD(aad, aadOffset, aadLength)
+                decryptCipher.doFinal(ciphertext, ciphertextOffset, ciphertextLength)
+            } catch (_: GeneralSecurityException) {
+                null
+            }
+        }
+
+    /**
+     * JCA-native range overload for [seal]. Same nonce-reuse history +
+     * fresh-Cipher fallback as the whole-array [seal] path; the only
+     * difference is the offset+length pass-through to `updateAAD` /
+     * `doFinal`. Saves the slice allocations on the outbound hot path.
+     */
+    override fun sealRange(
+        key: ByteArray,
+        nonce: ByteArray,
+        aad: ByteArray,
+        aadOffset: Int,
+        aadLength: Int,
+        plaintext: ByteArray,
+        plaintextOffset: Int,
+        plaintextLength: Int,
+    ): ByteArray =
+        synchronized(this) {
+            val reuse = recentEncryptNonces.any { it.contentEquals(nonce) }
+            if (reuse) {
+                val fresh = Cipher.getInstance("AES/GCM/NoPadding")
+                fresh.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+                fresh.updateAAD(aad, aadOffset, aadLength)
+                fresh.doFinal(plaintext, plaintextOffset, plaintextLength)
+            } else {
+                try {
+                    encryptCipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+                    encryptCipher.updateAAD(aad, aadOffset, aadLength)
+                    val out = encryptCipher.doFinal(plaintext, plaintextOffset, plaintextLength)
+                    rememberEncryptNonce(nonce)
+                    out
+                } catch (t: Throwable) {
+                    if (recentEncryptNonces.lastOrNull()?.contentEquals(nonce) == true) {
+                        recentEncryptNonces.removeLast()
+                    }
+                    throw t
+                }
+            }
+        }
+
     private companion object {
         private const val NONCE_HISTORY_LIMIT = 8
     }

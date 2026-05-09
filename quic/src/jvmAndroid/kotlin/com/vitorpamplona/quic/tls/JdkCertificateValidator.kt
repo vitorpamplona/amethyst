@@ -248,9 +248,22 @@ class JdkCertificateValidator(
         val prefix = lhost.substring(0, lhost.length - suffix.length)
         if (prefix.isEmpty() || '.' in prefix) return false
         // RFC 6125 §6.4.3 — disallow wildcards in the public-suffix label.
-        // Heuristic: require ≥ 2 dots in the suffix (e.g. *.example.com is OK,
-        // *.com is not). Conservative; doesn't consult the actual PSL but
-        // matches what most browsers do for non-PSL-aware certs.
+        //
+        // KNOWN GAP: this heuristic counts dots in the suffix (≥ 2 → OK)
+        // and DOES NOT consult the actual public-suffix list. So it
+        // accepts `*.co.uk`, `*.github.io`, `*.s3.amazonaws.com`, etc.
+        // — multi-tenant TLDs whose effective TLD is multi-label. A
+        // CA that mis-issues such a wildcard could impersonate any
+        // co-tenant. The mitigation is partial: the WebPKI ecosystem
+        // already requires CAs to consult the PSL when issuing, so a
+        // rogue cert is unlikely to make it past CT logging — but if
+        // one does, our validation accepts it.
+        //
+        // Full fix requires shipping PSL data; deferred until the cost
+        // is justified by a higher-risk deployment. Production callers
+        // should rely on the OS / NetworkSecurityConfig pinning layer
+        // for sensitive endpoints rather than QUIC's built-in
+        // hostname check alone.
         val suffixDots = suffix.count { it == '.' }
         return suffixDots >= 2
     }
