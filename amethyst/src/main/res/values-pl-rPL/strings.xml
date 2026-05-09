@@ -30,6 +30,7 @@
     <string name="copy_text">Skopiuj tekst</string>
     <string name="copy_user_pubkey">Kopiuj identyfikator autora</string>
     <string name="copy_note_id">Kopiuj identyfikator wpisu</string>
+    <string name="copy_raw_json">Skopiuj surowy plik JSON</string>
     <string name="broadcast">Roześlij</string>
     <string name="timestamp_it">Znacznik czasowy</string>
     <string name="timestamp_pending">Znacznik czasowy: Oczekujące potwierdzenia</string>
@@ -157,6 +158,8 @@
     <string name="pronouns">Zaimki</string>
     <string name="ln_address">LN Adres</string>
     <string name="ln_url_outdated">Adres URL LN (nieaktualny)</string>
+    <string name="stale_relay_hint_label">Transmitery źródłowe mogą być nieaktualne</string>
+    <string name="stale_relay_hint_icon_description">Ostrzeżenie o nieaktualnym transmiterze</string>
     <string name="download_to_phone">Zapisz w telefonie</string>
     <string name="save_to_gallery">Zapisz w galerii</string>
     <string name="image_saved_to_the_gallery">Zdjęcie zostało zapisane w galerii</string>
@@ -489,6 +492,34 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="new_community_relay_marker_requests">Zapytania</string>
     <string name="new_community_relay_marker_approvals">Akceptacje</string>
     <string name="new_community_empty">Nie znaleziono społeczności spełniających te kryteria.</string>
+    <string name="new_community_rules_section">Zasady weryfikowalne (opcjonalne)</string>
+    <string name="new_community_rules_hint">Wspólnie ze społecznością publikuje dokument zawierający reguły w formacie nadającym się do odczytu maszynowego (NIP-9A). Klienci obsługujący ten standard blokują przed wysłaniem posty, które nie spełniają tych reguł.</string>
+    <string name="new_community_rules_kinds_section">Dozwolone rodzaje zdarzeń</string>
+    <string name="new_community_rules_kinds_hint">Kliknij, aby zezwolić na dany typ. Naciśnij i przytrzymaj dany typ, aby ustawić limit wielkości zdarzeń lub limit dziennych postów.</string>
+    <string name="new_community_rules_kind_short_text">Krótki tekst (1)</string>
+    <string name="new_community_rules_kind_long_form">Długi artykuł (30023)</string>
+    <string name="new_community_rules_kind_picture">Post zdjęciowy (20)</string>
+    <string name="new_community_rules_kind_video">Post wideo (21)</string>
+    <string name="new_community_rules_kind_short_video">Krótki film (22)</string>
+    <string name="new_community_rules_kind_comment">Komentarz Wspólnoty (1111)</string>
+    <string name="new_community_rules_kind_custom_label">Typ niestandardowy</string>
+    <string name="new_community_rules_kind_add">Dodaj typ</string>
+    <string name="new_community_rules_limits_title">Limity typu %1$d</string>
+    <string name="new_community_rules_limits_max_bytes">Maksymalny rozmiar zdarzenia (bajtów)</string>
+    <string name="new_community_rules_limits_max_per_day">Maksymalna ilość postów na autora dziennie</string>
+    <string name="new_community_rules_limits_unlimited">Pozostaw puste dla braku limitu</string>
+    <string name="new_community_rules_limits_save">Zapisz limity</string>
+    <string name="new_community_rules_banned_section">Zbanowani użytkownicy</string>
+    <string name="new_community_rules_banned_hint">Te klucze nie mogą publikować w społeczności.</string>
+    <string name="new_community_rules_banned_add">Dodaj zbanowanego użytkownika</string>
+    <string name="new_community_rules_banned_placeholder">Nazwa, npub lub NIP-05</string>
+    <string name="new_community_rules_wot_section">Brama zaufania (opcjonalnie)</string>
+    <string name="new_community_rules_wot_hint">Zezwól tylko autorom, osiągalnym z głównego klucza npub użytkownika root w ramach N przeskoków. Jeśli choć jedna brama zostanie przekroczona, uznaje się, że wszystkie zostały przekroczone.</string>
+    <string name="new_community_rules_wot_root">Klucz publiczny w formacie npub lub hex</string>
+    <string name="new_community_rules_wot_depth">Głębokość</string>
+    <string name="new_community_rules_wot_add">Dodaj bramę WoT</string>
+    <string name="new_community_rules_max_event_size_section">Maksymalna wielkość zdarzenia (opcjonalnie)</string>
+    <string name="new_community_rules_max_event_size_hint">Bajtów \u2014 zostaw puste dla braku globalnego limitu.</string>
     <string name="received_badges">Otrzymano</string>
     <string name="my_badges">Moje</string>
     <string name="awarded_badges">Przyznane</string>
@@ -1088,6 +1119,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor oznaczył wpis jako wrażliwy</string>
     <string name="max_hashtag_limit_title">Maks ilość hashtagów na post</string>
     <string name="max_hashtag_limit_explainer">Ukrywa posty zawierające więcej hashtagów niż ten limit. Ustaw wartość 0, aby wyłączyć tę funkcję</string>
+    <string name="hide_community_rules_violations_title">Ukryj posty, które naruszają zasady społeczności</string>
+    <string name="hide_community_rules_violations_explainer">Usuwa posty z kanałów społeczności, gdy społeczność opublikuje dokument zawierający zasady NIP-9A, a dane wydarzenie nie spełnia tych zasad. Nie ma to żadnego wpływu, jeśli społeczność nie posiada strukturyzowanych zasad.</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
@@ -2521,4 +2554,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="emoji_private_explainer">Prywatne emotikony są przechowywane zaszyfrowane na transmiterach i widoczne tylko dla Ciebie. Znajdują się w menu odzewów oraz w autouzupełnianiu po wpisaniu znaku „:” – tak samo jak emotikony publiczne.</string>
     <string name="gif">Gif</string>
     <!-- NIP-9A community rules composer-side validation. -->
+    <string name="community_rules_violation_icon">Naruszenie Zasad Społeczności</string>
+    <string name="community_rules_violation_author_denied">Jesteś na czarnej liście tej społeczności. Posty nie zostaną zaakceptowane.</string>
+    <string name="community_rules_violation_kind_not_allowed">Ta społeczność nie akceptuje zdarzeń typu %1$d.</string>
+    <string name="community_rules_violation_kind_size_exceeded">Wersja robocza ma %1$d bajtów; ta społeczność ogranicza ten typ do %2$d bajtów.</string>
+    <string name="community_rules_violation_max_size_exceeded">Projekt ma %1$d bajtów; ta społeczność ogranicza zdarzenia do %2$d bajtów.</string>
+    <string name="community_rules_violation_quota_exceeded">Dzisiaj opublikowałeś/aś %1$d zdarzeń tego typu (limit wynosi %2$d).</string>
+    <string name="community_rules_violation_wot_gate_failed">Nie spełniasz wymogów dotyczących rankingu zaufania tej społeczności.</string>
+    <string name="community_rules_violation_stale_rules">Najnowszy dokument zawierający zasady społeczności został odrzucony jako nieaktualny.</string>
 </resources>
