@@ -83,7 +83,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.collections.immutable.toImmutableList
@@ -320,31 +319,6 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
             placeholder = { Text(stringResource(R.string.hls_content_warning_reason_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-        )
-    }
-
-    Spacer(Modifier.height(8.dp))
-
-    // Draft-a-note-after-upload toggle — opens the existing short-note composer prefilled
-    // with the title, description and master playlist URL; the user edits and posts.
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.hls_draft_note_after_upload),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = stringResource(R.string.hls_draft_note_after_upload_explainer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(
-            checked = vm.draftNoteAfterUpload,
-            onCheckedChange = { vm.draftNoteAfterUpload = it },
         )
     }
 
@@ -686,53 +660,17 @@ private fun SuccessBody(
         )
         Spacer(Modifier.height(16.dp))
 
-        if (vm.draftNoteAfterUpload) {
-            Button(
-                onClick = {
-                    val draft = buildDraftNoteText(vm.title, vm.description, state.masterUrl)
-                    vm.reset()
-                    // Pop the HLS publish screen off the back stack as we open the composer,
-                    // so that after the user posts (or backs out of) the draft they land on
-                    // the screen they came from, not back on the HLS publish flow.
-                    nav.popUpTo(Route.NewShortNote(message = draft), Route.NewHlsVideo::class)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.hls_draft_note_button))
-            }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = {
-                    vm.reset()
-                    nav.popBack()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.hls_done))
-            }
-        } else {
-            Button(
-                onClick = {
-                    vm.reset()
-                    nav.popBack()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.hls_done))
-            }
+        Button(
+            onClick = {
+                vm.reset()
+                nav.popBack()
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.hls_done))
         }
     }
 }
-
-private fun buildDraftNoteText(
-    title: String,
-    description: String,
-    masterUrl: String,
-): String =
-    listOf(title, description, masterUrl)
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .joinToString("\n\n")
 
 @Composable
 private fun FailureBody(

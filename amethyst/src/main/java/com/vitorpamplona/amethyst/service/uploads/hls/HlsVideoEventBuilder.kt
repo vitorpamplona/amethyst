@@ -72,6 +72,20 @@ sealed class HlsVideoEventTemplate {
 }
 
 /**
+ * Result of [HlsVideoEventBuilder.build]. Exposes the unsigned NIP-71 [template] plus the
+ * resolved coordinates the caller needs to construct a matching kind:1 sibling note: the
+ * orientation [kind] (34235/34236), the addressable [dTag] (replayable into an `a` tag), and
+ * the master [masterDimension] (largest rendition's WxH) so the kind:1 imeta carries the same
+ * dim as the NIP-71 master imeta.
+ */
+data class HlsBuiltTemplate(
+    val template: HlsVideoEventTemplate,
+    val kind: Int,
+    val dTag: String,
+    val masterDimension: DimensionTag?,
+)
+
+/**
  * Assembles a NIP-71 VideoHorizontalEvent / VideoVerticalEvent template from an HLS upload
  * result. Orientation is decided from the first rendition's width/height: portrait
  * (height > width) selects kind 34236, otherwise 34235.
@@ -86,7 +100,7 @@ sealed class HlsVideoEventTemplate {
  */
 @OptIn(ExperimentalUuidApi::class)
 object HlsVideoEventBuilder {
-    fun build(input: HlsVideoPublishInput): HlsVideoEventTemplate {
+    fun build(input: HlsVideoPublishInput): HlsBuiltTemplate {
         val firstRendition = input.renditions.firstOrNull()
         val isVertical = firstRendition != null && firstRendition.height > firstRendition.width
 
@@ -131,24 +145,28 @@ object HlsVideoEventBuilder {
         val dTag = input.dTag ?: Uuid.random().toString()
         val createdAt = input.createdAt ?: TimeUtils.now()
 
-        return if (isVertical) {
-            HlsVideoEventTemplate.Vertical(
-                VideoVerticalEvent.build(input.description, dTag, createdAt) {
-                    videoIMetas(videoMetas)
-                    title(input.title)
-                    input.durationSeconds?.let { duration(it) }
-                    input.contentWarning?.let { contentWarning(it) }
-                },
-            )
-        } else {
-            HlsVideoEventTemplate.Horizontal(
-                VideoHorizontalEvent.build(input.description, dTag, createdAt) {
-                    videoIMetas(videoMetas)
-                    title(input.title)
-                    input.durationSeconds?.let { duration(it) }
-                    input.contentWarning?.let { contentWarning(it) }
-                },
-            )
-        }
+        val template =
+            if (isVertical) {
+                HlsVideoEventTemplate.Vertical(
+                    VideoVerticalEvent.build(input.description, dTag, createdAt) {
+                        videoIMetas(videoMetas)
+                        title(input.title)
+                        input.durationSeconds?.let { duration(it) }
+                        input.contentWarning?.let { contentWarning(it) }
+                    },
+                )
+            } else {
+                HlsVideoEventTemplate.Horizontal(
+                    VideoHorizontalEvent.build(input.description, dTag, createdAt) {
+                        videoIMetas(videoMetas)
+                        title(input.title)
+                        input.durationSeconds?.let { duration(it) }
+                        input.contentWarning?.let { contentWarning(it) }
+                    },
+                )
+            }
+
+        val kind = if (isVertical) VideoVerticalEvent.KIND else VideoHorizontalEvent.KIND
+        return HlsBuiltTemplate(template, kind, dTag, masterDimension)
     }
 }

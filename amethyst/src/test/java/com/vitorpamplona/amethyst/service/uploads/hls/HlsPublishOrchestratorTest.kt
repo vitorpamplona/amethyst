@@ -161,7 +161,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     publishedTemplates += tpl
                     "signed-event-id"
                 },
@@ -221,7 +221,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = capturingRunUpload,
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = {
+                signAndPublish = { _, _ ->
                     capturedDuringPublish += orchestrator.state.value
                     "event-id"
                 },
@@ -247,7 +247,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = { _, _, _ -> throw RuntimeException("decode failed") },
                 buildUploader = { CannedUploader() },
                 uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -267,7 +267,7 @@ class HlsPublishOrchestratorTest {
                     HlsBlobUploader { _, _, _ -> throw RuntimeException("server 500") }
                 },
                 uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -286,7 +286,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = { _, _ -> throw RuntimeException("master upload failed") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -305,7 +305,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { throw RuntimeException("relay rejected") },
+                signAndPublish = { _, _ -> throw RuntimeException("relay rejected") },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -325,7 +325,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     captured += tpl
                     "event-id"
                 },
@@ -363,7 +363,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(portrait),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     captured += tpl
                     "event-id"
                 },
@@ -384,7 +384,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     captured += tpl
                     "event-id"
                 },
@@ -412,7 +412,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     captured += tpl
                     "event-id"
                 },
@@ -440,7 +440,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = { _, _, _ -> throw RuntimeException("boom") },
                 buildUploader = { CannedUploader() },
                 uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }

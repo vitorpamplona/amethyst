@@ -64,7 +64,6 @@ open class NewHlsVideoViewModel : ViewModel() {
     var sensitiveContent by mutableStateOf(false)
     var contentWarningReason by mutableStateOf("")
     var useH265 by mutableStateOf(true)
-    var draftNoteAfterUpload by mutableStateOf(true)
     var selectedServer by mutableStateOf<ServerName?>(null)
 
     var selectedRenditionLabels by mutableStateOf(

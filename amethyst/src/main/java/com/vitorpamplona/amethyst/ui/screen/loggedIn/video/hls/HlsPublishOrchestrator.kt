@@ -31,10 +31,13 @@ import com.davotoula.lightcompressor.hls.Rendition
 import com.davotoula.lightcompressor.hls.SimpleHlsListener
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
+import com.vitorpamplona.amethyst.service.uploads.hls.HlsKind1SiblingBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoPublishInput
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,7 +91,15 @@ class HlsPublishOrchestrator(
     ) -> HlsUploadResult<MediaUploadResult>,
     private val buildUploader: (ServerName) -> HlsBlobUploader,
     private val uploadMaster: suspend (HlsBlobUploader, String) -> MediaUploadResult,
-    private val signAndPublish: suspend (HlsVideoEventTemplate) -> String,
+    // Signs and broadcasts the NIP-71 video event AND the kind:1 sibling note. The
+    // orchestrator hands the primary template plus a lazily-evaluated [buildSibling] closure
+    // that produces the kind:1 template — lazy so the orchestrator can capture the master
+    // metadata in scope without forcing kind:1 construction before the NIP-71 sign. Returns
+    // the NIP-71 event id.
+    private val signAndPublish: suspend (
+        primary: HlsVideoEventTemplate,
+        buildSibling: () -> EventTemplate<TextNoteEvent>,
+    ) -> String,
     // Generates a poster JPEG from the picked source video and uploads it via the supplied
     // uploader, returning the public URL. Returns null if poster generation isn't possible
     // (unsupported source, decode failure, no readable frame). Failures here must NOT fail
@@ -231,7 +242,7 @@ class HlsPublishOrchestrator(
                 }
 
             _state.value = HlsPublishState.Publishing
-            val template =
+            val built =
                 HlsVideoEventBuilder.build(
                     HlsVideoPublishInput(
                         renditions = uploadResult.renditions,
@@ -247,7 +258,19 @@ class HlsPublishOrchestrator(
                         thumbhash = posterResult?.thumbhash,
                     ),
                 )
-            val eventId = signAndPublish(template)
+            val buildSibling: () -> EventTemplate<TextNoteEvent> = {
+                HlsKind1SiblingBuilder.build(
+                    title = request.title,
+                    description = request.description,
+                    masterUrl = masterUrl,
+                    masterSha256 = masterUpload.sha256,
+                    masterDimension = built.masterDimension,
+                    posterUrl = posterResult?.url,
+                    blurhashValue = posterResult?.blurhash,
+                    thumbhashValue = posterResult?.thumbhash,
+                )
+            }
+            val eventId = signAndPublish(built.template, buildSibling)
 
             _state.value =
                 HlsPublishState.Success(

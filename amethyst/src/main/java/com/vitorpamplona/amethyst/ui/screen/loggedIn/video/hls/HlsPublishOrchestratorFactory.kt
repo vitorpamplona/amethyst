@@ -88,7 +88,7 @@ fun createProductionHlsPublishOrchestrator(
                 }
             }
         },
-        signAndPublish = { template ->
+        signAndPublish = { template, buildSibling ->
             val inner =
                 when (template) {
                     is HlsVideoEventTemplate.Horizontal -> template.template
@@ -96,6 +96,21 @@ fun createProductionHlsPublishOrchestrator(
                 }
             val signed = account.signer.sign(inner)
             account.sendAutomatic(signed)
+
+            // Auto-publish the kind:1 sibling note so receivers that don't speak NIP-71 still
+            // see a rich preview (poster + dim + blurhash/thumbhash) and can hop to the
+            // addressable form via the imeta + `a` tag. Publishing the sibling must not throw
+            // out of the orchestrator on signer failure; the NIP-71 event is already broadcast
+            // and surfacing as a partial success is more useful than a hard fail.
+            val siblingTemplate = buildSibling()
+            try {
+                val signedSibling = account.signer.sign(siblingTemplate)
+                account.sendAutomatic(signedSibling)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.w(TAG) { "kind:1 sibling sign/publish failed: ${e.message}" }
+            }
             signed.id
         },
         uploadPoster = { uploader ->
