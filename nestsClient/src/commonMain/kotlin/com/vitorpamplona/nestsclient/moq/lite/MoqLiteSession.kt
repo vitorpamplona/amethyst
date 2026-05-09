@@ -789,22 +789,6 @@ class MoqLiteSession internal constructor(
     }
 
     private suspend fun handleInboundBidi(bidi: com.vitorpamplona.nestsclient.transport.WebTransportBidiStream) {
-        // Snapshot of publishers at bidi-arrival time. All publishers
-        // on a single session share a suffix (enforced in [publish]),
-        // so the Announce response is the same regardless of which
-        // publisher we route the bidi to. Subscribe responses pick the
-        // publisher whose `track` matches `sub.track`.
-        val publishersSnapshot = state.withLock { activePublishers.toList() }
-        if (publishersSnapshot.isEmpty()) return
-        // Designated publisher for Announce-bidi ownership: the first
-        // one. The Active/Ended pair is keyed off the broadcast
-        // SUFFIX (not per track), so emitting it once via one
-        // publisher matches the single-broadcast model the relay
-        // expects. All publishers close together in [close], so
-        // there's no risk of one closing while the announce bidi
-        // stays alive on another.
-        val announcePublisher = publishersSnapshot.first()
-
         // Single long-running collector for the bidi's full lifetime.
         // Pre-fix this dispatch was split into a `firstOrNull()` to
         // peek the control byte + a `readSizePrefixedFromBidiInto`
@@ -850,6 +834,40 @@ class MoqLiteSession internal constructor(
                             runCatching { bidi.finish() }
                             return@collect
                         }
+                    // Read the publisher list FRESH at dispatch time
+                    // rather than at bidi-arrival time. Closes a window
+                    // where a publisher registered after the inbound
+                    // bidi opened but before its first chunk landed
+                    // wouldn't be visible to the dispatcher — pre-fix
+                    // we snapshotted the list at the top of
+                    // [handleInboundBidi], so the second-track publisher
+                    // (e.g. catalog after audio in [MoqLiteNestsSpeaker])
+                    // raced the relay's SUBSCRIBE bidi for that track
+                    // when registration happened in the ~few-ms gap.
+                    // Production never bit because both nests publishers
+                    // register before any subscriber arrives, but the
+                    // narrower contract is safer.
+                    //
+                    // All publishers on a single session share a suffix
+                    // (enforced in [publish]), so the Announce response
+                    // is the same regardless of which publisher we route
+                    // the bidi to. Subscribe responses pick the publisher
+                    // whose `track` matches `sub.track`.
+                    val publishersSnapshot = state.withLock { activePublishers.toList() }
+                    if (publishersSnapshot.isEmpty()) {
+                        runCatching { bidi.finish() }
+                        dispatched = true
+                        return@collect
+                    }
+                    // Designated publisher for Announce-bidi ownership:
+                    // the first one. The Active/Ended pair is keyed off
+                    // the broadcast SUFFIX (not per track), so emitting
+                    // it once via one publisher matches the single-
+                    // broadcast model the relay expects. All publishers
+                    // close together in [close], so there's no risk of
+                    // one closing while the announce bidi stays alive
+                    // on another.
+                    val announcePublisher = publishersSnapshot.first()
                     when (controlType) {
                         MoqLiteControlType.Announce -> {
                             val pleasePayload = buffer.readSizePrefixed() ?: return@collect
