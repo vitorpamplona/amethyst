@@ -201,6 +201,13 @@ fun SearchScreen(
                     NamecoinResolveState.Error("Name exists but has no Nostr pubkey")
                 }
 
+                is NamecoinResolveOutcome.MalformedRecord -> {
+                    // Surface the parser detail verbatim so the publisher
+                    // of the broken record can locate the bad byte
+                    // (kotlinx.serialization includes a column number).
+                    NamecoinResolveState.Error("Namecoin record JSON is malformed: ${outcome.error}")
+                }
+
                 is NamecoinResolveOutcome.ServersUnreachable -> {
                     NamecoinResolveState.Error("ElectrumX servers unreachable — check your connection or try again")
                 }
