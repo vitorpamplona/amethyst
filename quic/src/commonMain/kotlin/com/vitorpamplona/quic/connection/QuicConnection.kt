@@ -298,7 +298,30 @@ class QuicConnection(
     var peerTransportParameters: TransportParameters? = null
         internal set
 
-    enum class Status { HANDSHAKING, CONNECTED, CLOSING, CLOSED }
+    enum class Status {
+        HANDSHAKING,
+        CONNECTED,
+
+        /**
+         * RFC 9000 §10.2.1 closing period. We've sent a
+         * CONNECTION_CLOSE (or are about to); the writer flushes the
+         * close datagram and then the connection holds until the
+         * peer's last responses drain out of flight.
+         */
+        CLOSING,
+
+        /**
+         * RFC 9000 §10.2.2 draining period. We received a
+         * CONNECTION_CLOSE from the peer; we MUST NOT send any further
+         * packets and SHOULD discard inbound packets without
+         * processing. The state MUST persist for at least 3 * PTO
+         * before transitioning to fully [CLOSED] so the peer's
+         * retransmits can converge.
+         */
+        DRAINING,
+
+        CLOSED,
+    }
 
     /**
      * Lock-split refactor (2026-05-08): @Volatile so concurrent loops can
@@ -332,6 +355,16 @@ class QuicConnection(
      */
     @Volatile
     internal var lastActivityMs: Long = nowMillis()
+
+    /**
+     * RFC 9000 §10.2.2 draining-period deadline. Set by
+     * [enterDraining] to `now + 3 * PTO`; the driver's send loop
+     * folds it into the timeout and transitions to [Status.CLOSED]
+     * via [markClosedExternally] when it elapses. Null whenever the
+     * connection is not in [Status.DRAINING].
+     */
+    @Volatile
+    internal var drainingDeadlineMs: Long? = null
 
     /**
      * Non-suspend monitor protecting the atomic transition of
@@ -2489,6 +2522,60 @@ class QuicConnection(
     }
 
     /**
+     * RFC 9000 §10.2.2: enter the draining period after receiving a
+     * peer's CONNECTION_CLOSE. Sets [status] to [Status.DRAINING],
+     * records a `now + 3 * PTO` deadline at which the driver flips
+     * the connection to [Status.CLOSED]. While draining, the writer
+     * MUST NOT emit any packets; the read loop drops late inbound
+     * silently.
+     *
+     * For the application this is functionally equivalent to "closed"
+     * — `awaitIncoming*` returns null, new streams can't be opened —
+     * but the explicit DRAINING state lets observability tools (qlog,
+     * tests) see the spec-mandated grace period.
+     *
+     * Per §10.2.2 caller transitions ONLY from CONNECTED / HANDSHAKING.
+     * A second call (peer retransmits its CONNECTION_CLOSE) is a
+     * harmless no-op.
+     */
+    internal fun enterDraining(
+        reason: String,
+        nowMillis: Long,
+    ) {
+        val firstTransition =
+            synchronized(closeStateMonitor) {
+                if (status == Status.CLOSED || status == Status.DRAINING) return@synchronized false
+                closeReason = reason
+                status = Status.DRAINING
+                true
+            }
+        if (!firstTransition) return
+        // 3 * PTO deadline. Use the connection's `lossDetection.ptoBaseMs`
+        // for the post-handshake case (peer params have arrived); fall
+        // back to a small floor pre-handshake.
+        val maxAckDelay = peerTransportParameters?.maxAckDelay ?: 0L
+        val ptoBaseMs = lossDetection.ptoBaseMs(maxAckDelay).coerceAtLeast(1L)
+        drainingDeadlineMs = nowMillis + (ptoBaseMs * 3L).coerceAtLeast(MIN_DRAINING_PERIOD_MS)
+        // Wake any close()-awaiter so they don't sit on the
+        // `closingDrainSignal` for 3*PTO unnecessarily.
+        closingDrainSignal.complete(Unit)
+        qlogObserver.onConnectionClosed("remote", closeErrorCode, reason)
+        if (!handshakeComplete) {
+            signalHandshakeFailed(QuicConnectionClosedException("connection closed externally: $reason"))
+        }
+    }
+
+    /**
+     * RFC 9000 §10.2.2 draining-deadline check. Returns true once
+     * the 3 * PTO grace period has elapsed and the connection should
+     * be flipped to fully closed.
+     */
+    internal fun isDrainingExpired(nowMillis: Long): Boolean {
+        val deadline = drainingDeadlineMs ?: return false
+        return status == Status.DRAINING && nowMillis >= deadline
+    }
+
+    /**
      * RFC 9000 §10.3 stateless-reset detection. A peer that has lost
      * connection state (crash, restart, route change) signals so by
      * sending a "Stateless Reset" datagram — bytes that look like a
@@ -2822,6 +2909,14 @@ class QuicConnection(
     }
 
     companion object {
+        /**
+         * RFC 9000 §10.2.2 floor on the draining-period grace. The
+         * spec mandates "at least 3 * PTO" which can be vanishingly
+         * small pre-handshake. Floor at 100 ms so qlog observers and
+         * tests can see the DRAINING window.
+         */
+        const val MIN_DRAINING_PERIOD_MS: Long = 100L
+
         /**
          * Bound on the inbound datagram queue depth. RFC 9221 datagrams are
          * outside connection-level flow control, so without this cap a peer

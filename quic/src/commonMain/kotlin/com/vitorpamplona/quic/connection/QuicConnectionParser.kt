@@ -91,6 +91,13 @@ private fun feedDatagramInner(
     datagram: ByteArray,
     nowMillis: Long,
 ) {
+    // RFC 9000 §10.2.2: while in the DRAINING state, late inbound
+    // packets MUST be discarded silently. Same goes for CLOSED.
+    if (conn.status == QuicConnection.Status.DRAINING ||
+        conn.status == QuicConnection.Status.CLOSED
+    ) {
+        return
+    }
     // RFC 9000 §10.3 stateless-reset detection. A peer that has lost
     // connection state signals so by sending a datagram whose trailing
     // 16 bytes equal a stateless_reset_token we previously received.
@@ -1032,7 +1039,14 @@ private fun dispatchFrames(
                 // Audit-4 #13: any frames following CONNECTION_CLOSE in the
                 // same payload MUST NOT be dispatched — they could create
                 // streams or deliver bytes on an already-closed connection.
-                conn.markClosedExternally("peer CONNECTION_CLOSE: ${frame.reason}")
+                //
+                // RFC 9000 §10.2.2: enter the DRAINING state for 3 * PTO
+                // before transitioning to CLOSED. During draining we
+                // MUST NOT send packets and SHOULD discard inbound
+                // silently. The driver's send loop transitions to
+                // CLOSED when [QuicConnection.drainingDeadlineMs]
+                // elapses.
+                conn.enterDraining("peer CONNECTION_CLOSE: ${frame.reason}", nowMillis)
                 return
             }
 

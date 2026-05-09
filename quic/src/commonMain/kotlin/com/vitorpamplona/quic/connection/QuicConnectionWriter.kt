@@ -93,6 +93,11 @@ fun drainOutbound(
         conn.closingDrainSignal.complete(Unit)
         return datagram
     }
+    // RFC 9000 §10.2.2: in the draining state we MUST NOT send any
+    // further packets. The driver's send-loop timer transitions the
+    // status to CLOSED once the 3 * PTO grace elapses; until then
+    // drainOutbound returns null on every call.
+    if (conn.status == QuicConnection.Status.DRAINING) return null
 
     // Bug-A fix: drive the §8.2.4 3*PTO validation budget on every
     // drain, not just on PTO expiration. The peer ACKs PATH_CHALLENGE

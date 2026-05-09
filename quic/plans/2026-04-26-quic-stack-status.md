@@ -193,7 +193,7 @@ gates on the audio-rooms completion plan
 | 8 | 2026-05-06 | Path validation pass 1 + 2 | DCID rotation, retire-prior-to monotonicity, abrupt migration | all fixed |
 | 9 | 2026-05-07 | DoS hardening + reserved-bit checks + TLS bounds + SendBuffer shrink | bound peer-controlled buffers and channels | all fixed |
 | 10 | 2026-05-08 | Lock-split design + close-under-load + key-update PN gate | streamsLock + lifecycleLock split | all fixed; see [`2026-05-08-lock-split-design.md`](2026-05-08-lock-split-design.md) |
-| 11 | 2026-05-09 | Four-RFC compliance audit (4 parallel agents: 9000, 9001, 9002, 9221+9114+9204) | ~15 items, mostly receive-side validation gaps | catalogued in [§ RFC compliance gaps](#rfc-compliance-gaps-2026-05-09) below; both 🔴 High items (fixed-bit, idle timeout) fixed same-day |
+| 11 | 2026-05-09 | Four-RFC compliance audit (4 parallel agents: 9000, 9001, 9002, 9221+9114+9204) | ~15 items, mostly receive-side validation gaps | catalogued in [§ RFC compliance gaps](#rfc-compliance-gaps-2026-05-09) below; **all 🔴 High and all 🟡 Medium items resolved same-day across 7 commits** |
 
 Every fix carries an inline `audit-N #M` reference comment so the regression
 test → fix → comment chain is auditable. The whole audit corpus is in the
@@ -287,29 +287,29 @@ file:line evidence. Severity:
 
 | RFC § | Sev | Gap | Evidence |
 |---|---|---|---|
-| RFC 9000 §17.2 + §17.3 | ~~🔴~~ | ~~**Inbound fixed-bit (0x40) not validated** on long- or short-header receive.~~ **Resolved 2026-05-09** — both `LongHeaderPacket.parseAndDecrypt`, `ShortHeaderPacket.parseAndDecrypt`, and `ShortHeaderPacket.peekKeyPhase` now reject fixed-bit=0 packets per RFC §17.2 / §17.3 (silent discard). Tests in `FixedBitValidationTest`. |
-| RFC 9000 §10.1 | ~~🔴~~ | ~~**`max_idle_timeout` not enforced.**~~ **Resolved 2026-05-09** — `QuicConnection.lastActivityMs` updated on inbound packet receipt and outbound ack-eliciting send; `effectiveIdleTimeoutMs()` computes min(local, peer) with 3*PTO floor per §10.1; driver send-loop folds the deadline into its `withTimeoutOrNull` and silently closes via `markClosedExternally` per §10.2.1 on expiry. Tests in `IdleTimeoutTest` (8 cases). |
-| RFC 9000 §4.1 | 🟡 | **Connection-level inbound flow control missing.** Per-stream `receiveLimit` IS enforced (`QuicConnectionParser.kt:655`) — peer overshoot closes the connection. But the aggregate connection-level cap (matching what we advertised in `initial_max_data`) is not tracked on the receive side. | `QuicConnectionParser.kt:735-743` (only updates send-side credit on MAX_DATA) |
-| RFC 9000 §3 | 🟡 | **Stream state machine implicit, not validated.** The 10-state machine (Ready / Send / Data Sent / Data Recvd / Reset Sent / Reset Recvd × directions) is encoded as flags + buffer content. STREAM frames arriving after a RESET_STREAM are silently absorbed instead of raising STREAM_STATE_ERROR. (FIN-size mismatch *is* caught — `QuicConnectionParser.kt:672-685`.) | `QuicStream.kt:35-51` (no explicit state field) |
-| RFC 9000 §10.2 | 🟡 | **No DRAINING state.** Closing transitions go CONNECTED → CLOSING → CLOSED without the 3 × PTO hold the spec mandates. Late inbound packets after our own CONNECTION_CLOSE may not get a re-emitted close. | `QuicConnection.kt:301,1441-1531` (Status enum has no DRAINING) |
-| RFC 9000 §10.3 | 🟡 | **Stateless reset detection missing.** Tokens are stored in `PeerConnectionIdEntry` but no inbound matcher compares fail-to-decrypt datagrams against the token list. Spoofed peer-side resets look like noise. | `PathValidator.kt:35-43`; no consumer in parser |
-| RFC 9001 §6.6 | 🟡 | **AEAD invocation limit not tracked.** AES-128-GCM is bounded at 2^23 invocations (~8M packets). Past the limit, key rotation is mandatory. We don't count, don't rotate, don't close with AEAD_LIMIT_REACHED. ChaCha20 is effectively unbounded so less critical. | `Aead.kt`, `JcaAesGcmAead.kt` (no counter) |
+| RFC 9000 §17.2 + §17.3 | ~~🔴~~ | ~~**Inbound fixed-bit (0x40) not validated.**~~ **Resolved 2026-05-09** — both `LongHeaderPacket.parseAndDecrypt`, `ShortHeaderPacket.parseAndDecrypt`, and `ShortHeaderPacket.peekKeyPhase` now reject fixed-bit=0 packets per RFC §17.2 / §17.3 (silent discard). Tests in `FixedBitValidationTest`. |
+| RFC 9000 §10.1 | ~~🔴~~ | ~~**`max_idle_timeout` not enforced.**~~ **Resolved 2026-05-09** — `QuicConnection.lastActivityMs` updated on inbound packet receipt and outbound ack-eliciting send; `effectiveIdleTimeoutMs()` computes min(local, peer) with 3 × PTO floor per §10.1; driver send-loop folds the deadline into its `withTimeoutOrNull` and silently closes via `markClosedExternally` per §10.2.1 on expiry. Tests in `IdleTimeoutTest` (8 cases). |
+| RFC 9000 §4.1 | ~~🟡~~ | ~~**Connection-level inbound flow control missing.**~~ **Resolved 2026-05-09** — `QuicStream.receiveHighestOffset` + `QuicConnection.connectionInboundOffsetSum` track the §4.1 spec quantity (sum of largest-received-offset across streams). Parser closes with FLOW_CONTROL_ERROR when the sum exceeds `advertisedMaxData`. RESET_STREAM finalSize counted toward the limit per §4.5. Tests in `ConnectionLevelFlowControlTest`. |
+| RFC 9000 §3 | ~~🟡~~ | ~~**Stream state machine implicit, not validated.**~~ **Resolved 2026-05-09** — `QuicStream.peerResetReceived` latches when a RESET_STREAM arrives; the parser closes with STREAM_STATE_ERROR on any subsequent STREAM frame for the same id. (Other state transitions — FIN-size mismatch, illegal peer-initiated opens — were already caught.) Tests in `StreamAfterResetTest`. |
+| RFC 9000 §10.2 | ~~🟡~~ | ~~**No DRAINING state.**~~ **Resolved 2026-05-09** — `Status.DRAINING` added; parser routes peer's CONNECTION_CLOSE through `enterDraining` (sets status + 3 × PTO deadline) instead of immediate CLOSED. Driver folds the deadline into its send-loop sleep and flips to CLOSED on expiry. Late inbound during DRAINING is silently dropped at the top of `feedDatagramInner`. Tests in `DrainingStateTest`. |
+| RFC 9000 §10.3 | ~~🟡~~ | ~~**Stateless reset detection missing.**~~ **Resolved 2026-05-09** — `QuicConnection.isStatelessReset` checks the trailing 16 bytes of every short-header-form datagram against the peer's `statelessResetToken` AND every unused entry in `pathValidator`'s pool, in constant time per §10.3.1. On match, silently transitions to CLOSED. Tests in `StatelessResetDetectionTest`. |
+| RFC 9001 §6.6 | ~~🟡~~ | ~~**AEAD invocation limit not tracked.**~~ **Resolved 2026-05-09** — `Aead.confidentialityLimit` / `integrityLimit` properties surface the §B.1 values; `QuicConnection.aeadEncryptCount` / `aeadDecryptFailureCount` track per-key usage and reset on rotation. Writer triggers a key update at half the confidentiality limit and closes with AEAD_LIMIT_REACHED if rotation can't complete; parser closes if decrypt failures hit the integrity limit. Tests in `AeadInvocationLimitTest`. |
 
 ### Transport-parameter bounds
 
 | RFC § | Sev | Gap | Evidence |
 |---|---|---|---|
-| RFC 9000 §18.2 | 🟡 | **`max_udp_payload_size < 1200` not rejected.** Spec says minimum 1200; smaller values MUST close with TRANSPORT_PARAMETER_ERROR. | `TransportParameters.kt:165` (decode-only) |
-| RFC 9000 §18.2 | 🟡 | **`ack_delay_exponent > 20` not rejected.** Spec maximum is 20. | `TransportParameters.kt:166` (decode-only) |
-| RFC 9000 §18.2 | 🟡 | **`active_connection_id_limit < 2` not rejected.** Spec minimum is 2. (We already cap our own pool at the peer's value via `PathValidator.maxUnusedCids`, so the runtime risk is bounded — just no explicit error.) | `TransportParameters.kt:168`; `QuicConnection.kt:582` |
-| RFC 9000 §13.2.5 | 🟦 | **`ack_delay_exponent` decode uses our config, not peer's advertised value.** Default (3) matches both ends in practice, but a peer that advertises a non-default exponent gets misinterpreted ACK delays. The shift IS overflow-safe (`QuicConnectionParser.kt:540-553`), just keyed off the wrong side's parameter. | `QuicConnectionParser.kt:547` (uses `conn.config.ackDelayExponent`) |
+| RFC 9000 §18.2 | ~~🟡~~ | ~~**`max_udp_payload_size < 1200` not rejected.**~~ **Resolved 2026-05-09** — `applyPeerTransportParameters` closes with TRANSPORT_PARAMETER_ERROR. Tests in `TransportParameterBoundsTest`. |
+| RFC 9000 §18.2 | ~~🟡~~ | ~~**`ack_delay_exponent > 20` not rejected.**~~ **Resolved 2026-05-09** — same path. |
+| RFC 9000 §18.2 | ~~🟡~~ | ~~**`active_connection_id_limit < 2` not rejected.**~~ **Resolved 2026-05-09** — same path. |
+| RFC 9000 §13.2.5 | ~~🟦~~ | ~~**`ack_delay_exponent` decode uses our config, not peer's.**~~ **Resolved 2026-05-09** — parser now uses `peerTransportParameters?.ackDelayExponent` with the §18.2 default of 3 as fallback; defensive 0..20 coercion preserved. |
 
 ### HTTP/3 + DATAGRAM gaps
 
 | RFC § | Sev | Gap | Evidence |
 |---|---|---|---|
-| RFC 9114 §7.2.4.1 | 🟡 | **HTTP/2 reserved SETTINGS ids 0x02/0x03/0x04/0x05 not rejected.** RFC says receipt MUST close with H3_SETTINGS_ERROR. We accept and store. | `Http3Settings.kt:85-121` |
-| RFC 9221 §3 | 🟡 | **Outbound DATAGRAM size not gated by peer's `max_datagram_frame_size`.** Encoder will send oversize frames; spec-conformant peers will close with PROTOCOL_VIOLATION. | `Frame.kt:278-291` (no size check on send) |
+| RFC 9114 §7.2.4.1 | ~~🟡~~ | ~~**HTTP/2 reserved SETTINGS ids 0x02/0x03/0x04/0x05 not rejected.**~~ **Resolved 2026-05-09** — `Http3Settings.decodeBody` raises H3_SETTINGS_ERROR for ids 0x02..0x05. Tests in `Http3ReservedSettingsTest`. |
+| RFC 9221 §3 | ~~🟡~~ | ~~**Outbound DATAGRAM size not gated.**~~ **Resolved 2026-05-09** — writer drops outbound DATAGRAM frames when peer didn't advertise `max_datagram_frame_size` or when the encoded frame would exceed the advertised value. Diagnostic via `qlogObserver.onPacketDropped`. |
 | RFC 9114 §6.2.1 | 🟦 | **Closing the control stream surfaces a flag rather than auto-closing.** Spec says closing the control stream is H3_CLOSED_CRITICAL_STREAM. Caller must poll `peerH3ProtocolError` and close. | `Http3FrameReader.kt`; `WtPeerStreamDemux.kt` |
 
 ### TLS / error reporting cosmetics

@@ -298,11 +298,19 @@ class QuicConnectionDriver(
                 idleTimeoutMs?.let {
                     (connection.lastActivityMs + it - nowForLossTimer).coerceAtLeast(0L)
                 }
+            // RFC 9000 §10.2.2 draining-period deadline. Set when
+            // peer's CONNECTION_CLOSE arrives; we hold in DRAINING
+            // until 3 * PTO elapses, then transition to CLOSED.
+            val drainingDelta =
+                connection.drainingDeadlineMs?.let {
+                    (it - nowForLossTimer).coerceAtLeast(0L)
+                }
             val sleepMillis =
                 minOf(
                     ptoMillis,
                     nextLossDelta ?: Long.MAX_VALUE,
                     idleDelta ?: Long.MAX_VALUE,
+                    drainingDelta ?: Long.MAX_VALUE,
                 )
             // Suspend until either: a wakeup arrives, or the timer expires.
             val woke =
@@ -311,14 +319,22 @@ class QuicConnectionDriver(
                     Unit
                 }
             if (woke == null) {
-                // Distinguish idle-timeout / loss-timer / PTO expiry. An
-                // idle-timeout wake silently closes the connection per
-                // RFC 9000 §10.2.1 ("the connection enters the closing
-                // state silently — discarding the connection state
-                // without sending a CONNECTION_CLOSE frame"). A
-                // loss-timer wake just runs `detectAndRemoveLost`. A
-                // PTO wake additionally bumps the consecutive-PTO
-                // counter and arms the probe budget.
+                // Distinguish draining-deadline / idle-timeout /
+                // loss-timer / PTO expiry. RFC 9000 §10.2.2: the
+                // draining period transitions to fully CLOSED once
+                // 3 * PTO has elapsed since the peer's
+                // CONNECTION_CLOSE — gives the peer's last
+                // retransmits a chance to converge before we discard
+                // state. Idle-timeout fires per §10.2.1 ("silently
+                // closes — discarding the connection state without
+                // sending a CONNECTION_CLOSE frame"). A loss-timer
+                // wake just runs `detectAndRemoveLost`. A PTO wake
+                // additionally bumps the consecutive-PTO counter and
+                // arms the probe budget.
+                if (connection.isDrainingExpired(nowMillis())) {
+                    connection.markClosedExternally("draining period elapsed")
+                    continue
+                }
                 if (idleTimeoutMs != null && connection.isIdleTimedOut(nowMillis())) {
                     connection.markClosedExternally(
                         "idle timeout ($idleTimeoutMs ms with no activity)",
