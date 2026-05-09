@@ -293,30 +293,54 @@ object QpackHuffman {
         )
 
     /**
-     * Lookup tables grouped by code length. `byLength[L]` is a HashMap from
-     * `code` (an Int up to 30 bits) to `symbol` (0..255) for all symbols
-     * whose Huffman code is exactly L bits long. Lengths used in the table
-     * range from 5 to 30. We omit the EOS (length 30, code 0x3FFFFFFF) since
-     * it must never appear in valid input.
+     * Lookup tables grouped by code length. For each length L in 5..30,
+     * [codesByLen]\[L\] holds the codes ascending and [symsByLen]\[L\]
+     * the matching symbol indices in lock-step — binary-search by the
+     * candidate Int gives the symbol with no boxing. Pre-fix this was
+     * `Array<HashMap<Int, Int>>` keyed by boxed `Integer`: every
+     * decoded character allocated a fresh `Integer` for the
+     * `candidate` plus a fresh `Integer` return wrapper, dominating
+     * GC pressure on every QPACK header decode. We omit the EOS
+     * (length 30, code 0x3FFFFFFF) since it must never appear in
+     * valid input.
      */
-    private val byLength: Array<HashMap<Int, Int>> = buildLookupByLength()
+    private val codesByLen: Array<IntArray>
+    private val symsByLen: Array<IntArray>
 
     /** Sorted ascending list of distinct code lengths actually used by the table. */
-    private val lengths: IntArray = byLength.indices.filter { byLength[it].isNotEmpty() }.toIntArray()
+    private val lengths: IntArray
 
-    private fun buildLookupByLength(): Array<HashMap<Int, Int>> {
-        val out = Array(31) { HashMap<Int, Int>() }
-        for (sym in 0..255) {
-            val code = table[sym][0]
-            val len = table[sym][1]
-            out[len][code] = sym
+    init {
+        // Allocate slots for lengths up to and including 30 (RFC 7541's
+        // longest non-EOS code is 30 bits — symbols 10/13/22 — plus EOS
+        // itself which we exclude by iterating 0..255 below).
+        val codes = Array(31) { IntArray(0) }
+        val syms = Array(31) { IntArray(0) }
+        for (len in 5..30) {
+            // Collect all symbols whose code length equals `len`, sorted
+            // by code so we can binary-search at decode time. Iterating
+            // 0..255 (not 0..256) silently excludes EOS, the only
+            // length-30 entry that must never appear in valid input.
+            val pairs = (0..255).filter { table[it][1] == len }.map { it to table[it][0] }
+            val sorted = pairs.sortedBy { it.second }
+            codes[len] = IntArray(sorted.size) { sorted[it].second }
+            syms[len] = IntArray(sorted.size) { sorted[it].first }
         }
-        return out
+        codesByLen = codes
+        symsByLen = syms
+        lengths = (5..30).filter { codesByLen[it].isNotEmpty() }.toIntArray()
     }
 
     /** Decode a Huffman-encoded byte sequence into a UTF-8 string. */
     fun decode(encoded: ByteArray): ByteArray {
-        val result = ArrayList<Byte>(encoded.size * 2) // rough upper bound
+        // Output is a growable ByteArray rather than ArrayList<Byte>:
+        // the latter boxes every emitted byte through `java.lang.Byte`,
+        // which on a 64-bit JVM is ~16 bytes of wrapper per output byte.
+        // Pre-grow to ~2× input as a rough upper bound; ASCII-heavy
+        // headers compress to ~62% with HPACK Huffman, so 2× input is
+        // an overestimate and we rarely need to grow.
+        var out = ByteArray(maxOf(8, encoded.size * 2))
+        var outPos = 0
         var bitBuf = 0L
         var bitsAvailable = 0
         var i = 0
@@ -333,9 +357,12 @@ object QpackHuffman {
             for (len in lengths) {
                 if (len > bitsAvailable) break
                 val candidate = ((bitBuf ushr (bitsAvailable - len)) and ((1L shl len) - 1)).toInt()
-                val sym = byLength[len][candidate]
-                if (sym != null) {
-                    result.add(sym.toByte())
+                val codes = codesByLen[len]
+                val pos = codes.binarySearch(candidate)
+                if (pos >= 0) {
+                    val sym = symsByLen[len][pos]
+                    if (outPos == out.size) out = out.copyOf(out.size * 2)
+                    out[outPos++] = sym.toByte()
                     bitsAvailable -= len
                     bitBuf = bitBuf and ((1L shl bitsAvailable) - 1)
                     matched = true
@@ -354,6 +381,6 @@ object QpackHuffman {
                 throw QuicCodecException("invalid Huffman bit stream")
             }
         }
-        return result.toByteArray()
+        return if (outPos == out.size) out else out.copyOf(outPos)
     }
 }
