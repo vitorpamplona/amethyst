@@ -2295,9 +2295,6 @@
     <string name="hls_view_note">Zobrazit poznámku</string>
     <string name="hls_done">Hotovo</string>
     <string name="hls_try_again">Zkusit znovu</string>
-    <string name="hls_draft_note_after_upload">Vytvořit poznámku po nahrání</string>
-    <string name="hls_draft_note_after_upload_explainer">Otevře editor poznámky předvyplněný titulkem, popisem a odkazem na video, abyste ho mohli upravit před odesláním.</string>
-    <string name="hls_draft_note_button">Vytvořit poznámku</string>
     <string name="pack_actions_dialog_title">Akce balíčku</string>
     <string name="list_actions_dialog_title">Akce seznamu</string>
     <string name="bookmark_item_actions_dialog_title">Akce záložky</string>

@@ -2270,9 +2270,6 @@
     <string name="hls_view_note">Visa anteckning</string>
     <string name="hls_done">Klar</string>
     <string name="hls_try_again">Försök igen</string>
-    <string name="hls_draft_note_after_upload">Utkast till anteckning efter uppladdning</string>
-    <string name="hls_draft_note_after_upload_explainer">Öppnar anteckningskompositören förifylld med titel, beskrivning och videolänk så att du kan justera den innan publicering.</string>
-    <string name="hls_draft_note_button">Utkast till anteckning</string>
     <string name="pack_actions_dialog_title">Paketåtgärder</string>
     <string name="list_actions_dialog_title">Liståtgärder</string>
     <string name="bookmark_item_actions_dialog_title">Bokmärkesåtgärder</string>

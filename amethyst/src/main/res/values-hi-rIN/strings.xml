@@ -2317,9 +2317,6 @@
     <string name="hls_view_note">टीका देखें</string>
     <string name="hls_done">हो गया</string>
     <string name="hls_try_again">पुनः प्रयास करें</string>
-    <string name="hls_draft_note_after_upload">टीका सम्पादन आरोहण पश्चात</string>
-    <string name="hls_draft_note_after_upload_explainer">टीका सम्पादक खोलें शीर्षक विवरण तथा दृश्याभिलेख योजक जानकारी से पूर्वयुक्त जिसे आप शोधन कर सकते है प्रकाशन पूर्व।</string>
-    <string name="hls_draft_note_button">टीका सम्पादन</string>
     <string name="pack_actions_dialog_title">पोटली कार्य</string>
     <string name="list_actions_dialog_title">सूची कार्य</string>
     <string name="bookmark_item_actions_dialog_title">स्मर्त्तव्यचिह्न कार्य</string>

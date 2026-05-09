@@ -2339,9 +2339,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="hls_view_note">Zobacz publikację</string>
     <string name="hls_done">Gotowe</string>
     <string name="hls_try_again">Spróbuj ponownie</string>
-    <string name="hls_draft_note_after_upload">Szkic publikacji po wgraniu</string>
-    <string name="hls_draft_note_after_upload_explainer">Otwórz edytor publikacji z gotowym tytułem, opisem i linkiem do filmu, abyś mógł wprowadzić zmiany przed opublikowaniem.</string>
-    <string name="hls_draft_note_button">Szkic publikacji</string>
     <string name="pack_actions_dialog_title">Akcje pakietu</string>
     <string name="list_actions_dialog_title">Akcje listy</string>
     <string name="bookmark_item_actions_dialog_title">Akcje zakładki</string>

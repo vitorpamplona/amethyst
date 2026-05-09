@@ -2275,9 +2275,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="hls_view_note">Notiz anzeigen</string>
     <string name="hls_done">Fertig</string>
     <string name="hls_try_again">Erneut versuchen</string>
-    <string name="hls_draft_note_after_upload">Notiz nach Upload entwerfen</string>
-    <string name="hls_draft_note_after_upload_explainer">Öffnet den Notiz-Editor mit Titel, Beschreibung und Video-Link vorausgefüllt, damit du sie vor dem Posten anpassen kannst.</string>
-    <string name="hls_draft_note_button">Notiz entwerfen</string>
     <string name="pack_actions_dialog_title">Paket-Aktionen</string>
     <string name="list_actions_dialog_title">Listenaktionen</string>
     <string name="bookmark_item_actions_dialog_title">Lesezeichen-Aktionen</string>
