@@ -91,14 +91,11 @@ class HlsPublishOrchestrator(
     ) -> HlsUploadResult<MediaUploadResult>,
     private val buildUploader: (ServerName) -> HlsBlobUploader,
     private val uploadMaster: suspend (HlsBlobUploader, String) -> MediaUploadResult,
-    // Signs and broadcasts the NIP-71 video event AND the kind:1 sibling note. The
-    // orchestrator hands the primary template plus a lazily-evaluated [buildSibling] closure
-    // that produces the kind:1 template — lazy so the orchestrator can capture the master
-    // metadata in scope without forcing kind:1 construction before the NIP-71 sign. Returns
-    // the NIP-71 event id.
+    // Signs and broadcasts the NIP-71 video event AND the kind:1 sibling note. Returns the
+    // NIP-71 event id.
     private val signAndPublish: suspend (
         primary: HlsVideoEventTemplate,
-        buildSibling: () -> EventTemplate<TextNoteEvent>,
+        sibling: EventTemplate<TextNoteEvent>,
     ) -> String,
     // Generates a poster JPEG from the picked source video and uploads it via the supplied
     // uploader, returning the public URL. Returns null if poster generation isn't possible
@@ -258,7 +255,7 @@ class HlsPublishOrchestrator(
                         thumbhash = posterResult?.thumbhash,
                     ),
                 )
-            val buildSibling: () -> EventTemplate<TextNoteEvent> = {
+            val sibling =
                 HlsKind1SiblingBuilder.build(
                     title = request.title,
                     description = request.description,
@@ -266,11 +263,10 @@ class HlsPublishOrchestrator(
                     masterSha256 = masterUpload.sha256,
                     masterDimension = built.masterDimension,
                     posterUrl = posterResult?.url,
-                    blurhashValue = posterResult?.blurhash,
-                    thumbhashValue = posterResult?.thumbhash,
+                    blurhash = posterResult?.blurhash,
+                    thumbhash = posterResult?.thumbhash,
                 )
-            }
-            val eventId = signAndPublish(built.template, buildSibling)
+            val eventId = signAndPublish(built.template, sibling)
 
             _state.value =
                 HlsPublishState.Success(

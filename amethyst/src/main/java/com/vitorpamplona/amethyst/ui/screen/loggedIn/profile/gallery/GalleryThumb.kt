@@ -40,13 +40,13 @@ import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
-import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isHlsMimeType
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.model.Note
@@ -68,19 +68,6 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
-
-// Mirrors the canonical HLS-playlist mime list used in MediaItemCache.toExoPlayerMimeType.
-// Kept inline rather than extracting a shared helper for one read-side caller.
-private fun isHlsMimeType(mimeType: String?): Boolean =
-    when (mimeType?.lowercase()) {
-        HlsContentTypes.HLS_PLAYLIST,
-        "application/x-mpegurl",
-        "audio/x-mpegurl",
-        "audio/mpegurl",
-        -> true
-
-        else -> false
-    }
 
 @Composable
 fun GalleryThumbnail(

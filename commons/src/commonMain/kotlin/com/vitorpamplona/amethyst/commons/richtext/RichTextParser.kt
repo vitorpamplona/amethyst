@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.utils.Log
@@ -64,7 +65,12 @@ class RichTextParser {
 
         if (contentType != null) {
             isImage = contentType.startsWith("image/")
-            isVideo = contentType.startsWith("video/") || contentType.startsWith("audio/")
+            // HLS playlists are advertised with a non-`video/*` MIME (`application/vnd.apple.mpegurl`
+            // and three legacy aliases). Without these, an imeta-described `.m3u8` falls into the
+            // null bucket below and the renderer drops back to a plain hyperlink — even though
+            // the matching extension would have routed it to MediaUrlVideo. Mirror the canonical
+            // list used by MediaItemCache.toExoPlayerMimeType / GalleryThumb.isHlsMimeType.
+            isVideo = contentType.startsWith("video/") || contentType.startsWith("audio/") || isHlsMimeType(contentType)
             isPdf = contentType.startsWith("application/pdf")
         } else if (fullUrl.startsWith("data:")) {
             isImage = fullUrl.startsWith("data:image/")
@@ -99,6 +105,10 @@ class RichTextParser {
                 dim = frags[DimensionTag.TAG_NAME]?.let { DimensionTag.parse(it) } ?: tags[DimensionTag.TAG_NAME]?.firstOrNull()?.let { DimensionTag.parse(it) },
                 contentWarning = frags[ContentWarningTag.TAG_NAME] ?: tags[ContentWarningTag.TAG_NAME]?.firstOrNull(),
                 uri = callbackUri,
+                // Poster URL from the imeta's `image` property — downstream gallery-add reads
+                // this as the entry's `image` tag so the gallery thumbnail can render the
+                // poster JPEG instead of falling back to the blurhash placeholder.
+                artworkUri = frags[ImageTag.TAG_NAME] ?: tags[ImageTag.TAG_NAME]?.firstOrNull(),
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
@@ -455,6 +465,17 @@ class RichTextParser {
         fun isVideoUrl(url: String): Boolean {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
             return videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+        }
+
+        // Mirrors the canonical HLS-playlist MIME list also kept in MediaItemCache.toExoPlayerMimeType.
+        // Called per URL during feed render — uses `equals(ignoreCase)` instead of `lowercase()` to
+        // avoid a per-call String allocation on the common non-HLS path.
+        fun isHlsMimeType(mimeType: String?): Boolean {
+            if (mimeType == null) return false
+            return mimeType.equals("application/vnd.apple.mpegurl", ignoreCase = true) ||
+                mimeType.equals("application/x-mpegurl", ignoreCase = true) ||
+                mimeType.equals("audio/x-mpegurl", ignoreCase = true) ||
+                mimeType.equals("audio/mpegurl", ignoreCase = true)
         }
 
         fun isPdfUrl(url: String): Boolean {

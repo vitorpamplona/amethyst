@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
@@ -88,7 +89,7 @@ fun createProductionHlsPublishOrchestrator(
                 }
             }
         },
-        signAndPublish = { template, buildSibling ->
+        signAndPublish = { template, sibling ->
             val inner =
                 when (template) {
                     is HlsVideoEventTemplate.Horizontal -> template.template
@@ -97,16 +98,12 @@ fun createProductionHlsPublishOrchestrator(
             val signed = account.signer.sign(inner)
             account.sendAutomatic(signed)
 
-            // Auto-publish the kind:1 sibling note so receivers that don't speak NIP-71 still
-            // see a rich preview (poster + dim + blurhash/thumbhash) and can hop to the
-            // addressable form via the imeta + `a` tag. Publishing the sibling must not throw
-            // out of the orchestrator on signer failure; the NIP-71 event is already broadcast
-            // and surfacing as a partial success is more useful than a hard fail.
-            val siblingTemplate = buildSibling()
+            // Sibling-publish failure is a soft warning: the NIP-71 event already landed, so a
+            // partial success is more useful than a hard fail.
             try {
-                val signedSibling = account.signer.sign(siblingTemplate)
+                val signedSibling = account.signer.sign(sibling)
                 account.sendAutomatic(signedSibling)
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 Log.w(TAG) { "kind:1 sibling sign/publish failed: ${e.message}" }
@@ -141,10 +138,14 @@ private suspend fun generateAndUploadPoster(
         // JPEG receiving clients will fetch via the imeta `image` URL.
         val posterBytes = posterFile.readBytes()
         val hashes =
-            runCatching {
+            try {
                 PreviewMetadataCalculator.computeFromBytes(posterBytes, POSTER_CONTENT_TYPE, null)
-            }.onFailure { Log.w(TAG) { "uploadPoster: blurhash/thumbhash compute failed: ${it.message}" } }
-                .getOrNull()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG) { "uploadPoster: blurhash/thumbhash compute failed: ${e.message}" }
+                null
+            }
         val result = uploader.upload(posterFile, POSTER_CONTENT_TYPE) { _, _ -> }
         val url = result.url ?: return null
         HlsPosterUpload(
@@ -185,6 +186,8 @@ private suspend fun extractPosterToTempFile(
                 }
                 throw e
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG) { "extractPosterToTempFile: failed for $uri — ${e.message}" }
             null

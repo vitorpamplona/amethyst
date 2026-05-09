@@ -54,9 +54,7 @@ data class HlsVideoPublishInput(
     // (gallery thumbnails, previews) have a still to render — the .m3u8 playlist itself is a
     // text manifest that can't be decoded as an image frame.
     val posterUrl: String? = null,
-    // Blurhash + thumbhash derived once from the same poster bitmap. Threaded into every imeta
-    // so receiving clients can render an instant low-res placeholder before the poster JPEG
-    // finishes loading. Per-rendition values would be redundant — the source frame is the same.
+    // Identical for every rendition since the source frame is the same.
     val blurhash: String? = null,
     val thumbhash: String? = null,
 )
@@ -73,15 +71,11 @@ sealed class HlsVideoEventTemplate {
 
 /**
  * Result of [HlsVideoEventBuilder.build]. Exposes the unsigned NIP-71 [template] plus the
- * resolved coordinates the caller needs to construct a matching kind:1 sibling note: the
- * orientation [kind] (34235/34236), the addressable [dTag] (replayable into an `a` tag), and
- * the master [masterDimension] (largest rendition's WxH) so the kind:1 imeta carries the same
- * dim as the NIP-71 master imeta.
+ * master [masterDimension] (largest rendition's WxH) so the kind:1 sibling imeta can carry
+ * the same dim as the NIP-71 master imeta.
  */
 data class HlsBuiltTemplate(
     val template: HlsVideoEventTemplate,
-    val kind: Int,
-    val dTag: String,
     val masterDimension: DimensionTag?,
 )
 
@@ -166,7 +160,6 @@ object HlsVideoEventBuilder {
                 )
             }
 
-        val kind = if (isVertical) VideoVerticalEvent.KIND else VideoHorizontalEvent.KIND
-        return HlsBuiltTemplate(template, kind, dTag, masterDimension)
+        return HlsBuiltTemplate(template, masterDimension)
     }
 }

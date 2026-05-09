@@ -63,8 +63,8 @@ object HlsKind1SiblingBuilder {
         masterSha256: String?,
         masterDimension: DimensionTag?,
         posterUrl: String?,
-        blurhashValue: String?,
-        thumbhashValue: String?,
+        blurhash: String?,
+        thumbhash: String?,
         createdAt: Long? = null,
     ): EventTemplate<TextNoteEvent> {
         val content =
@@ -79,8 +79,8 @@ object HlsKind1SiblingBuilder {
                 masterSha256?.let { hash(it) }
                 masterDimension?.let { dims(it) }
                 posterUrl?.let { image(it) }
-                blurhashValue?.let { blurhash(it) }
-                thumbhashValue?.let { thumbhash(it) }
+                blurhash?.let { this.blurhash(it) }
+                thumbhash?.let { this.thumbhash(it) }
             }
 
         return TextNoteEvent.build(content, createdAt ?: TimeUtils.now()) {

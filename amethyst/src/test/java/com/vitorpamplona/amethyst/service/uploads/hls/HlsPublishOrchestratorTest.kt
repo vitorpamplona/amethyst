@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPosterUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishRequest
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishState
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -377,6 +379,7 @@ class HlsPublishOrchestratorTest {
     @Test
     fun posterUrlFromUploadPosterClosureLandsOnEveryImeta() {
         val captured = mutableListOf<HlsVideoEventTemplate>()
+        val capturedSiblings = mutableListOf<EventTemplate<TextNoteEvent>>()
         val canned = CannedUploader()
         val orchestrator =
             HlsPublishOrchestrator(
@@ -384,8 +387,9 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl, _ ->
+                signAndPublish = { tpl, sibling ->
                     captured += tpl
+                    capturedSiblings += sibling
                     "event-id"
                 },
                 uploadPoster = { _ -> HlsPosterUpload("https://cdn.test/poster.jpg") },
@@ -400,6 +404,13 @@ class HlsPublishOrchestratorTest {
             val flat = imeta.joinToString("|")
             assertTrue("imeta missing poster: $flat", flat.contains("image https://cdn.test/poster.jpg"))
         }
+
+        // Sibling kind:1 carries the same poster URL on its single imeta.
+        val sibling = capturedSiblings.single()
+        val siblingImeta = sibling.tags.firstOrNull { it.isNotEmpty() && it[0] == "imeta" }
+        assertNotNull("sibling missing imeta", siblingImeta)
+        val siblingFlat = siblingImeta!!.joinToString("|")
+        assertTrue("sibling imeta missing poster: $siblingFlat", siblingFlat.contains("image https://cdn.test/poster.jpg"))
     }
 
     @Test
