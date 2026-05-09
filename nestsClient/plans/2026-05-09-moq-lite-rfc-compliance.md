@@ -17,10 +17,18 @@ Announce, Subscribe (incl. the `Option<u64>` off-by-one and `Duration`
 millis-as-varint conventions), SubscribeOk/Drop (with the
 type-outside-size-prefix framing peculiar to Lite-03), GroupHeader,
 Probe — match the reference Rust impl byte-for-byte. The known gaps
-are all spec-loose / future-fragile (🟡), not wire-incompatible (🔴).
-Two of those 🟡 gaps were fixed in this audit (commits below); the
-rest are documented for follow-up. **No 🔴 wire-incompatibilities
-remain.**
+are all spec-loose / future-fragile (🟡 / 🟦), not wire-incompatible
+(🔴).
+
+**This audit shipped four fixes** (M1, M4, M5, L5) and **closed M6**
+(verified via WebFetch that Goaway has no body in the spec, so our
+existing handler is canonical). **L4** is subsumed by the M1 fix.
+The remaining 🟡 / 🟦 items (M2, M3, L1, L2, L3) are deferred with
+rationale below — each is a deliberate non-fix because either the
+QUIC layer is locked (M2/M3 need WebTransport interface extensions
+that touch `:quic`), the change is significant scope (L1 Lite-04
+codec rewrite), or there's no consumer for the proposed API
+(L2/L3). **No 🔴 wire-incompatibilities remain.**
 
 ## Methodology
 
@@ -103,17 +111,17 @@ Severity legend (matches the prior QUIC audit):
 | #  | Spec § / Behavior                                                                  | Severity | Gap                                                                                                                                                                                                                                                                                                                                                                | Evidence (file:line)                                                  | Status |
 | -- | --------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------ |
 | H0 | (none — no wire-incompatible items found)                                          | 🔴       | —                                                                                                                                                                                                                                                                                                                                                                  | —                                                                     | n/a    |
-| M1 | `Publisher::serve_group` priority parity                                           | 🟡       | We assign each new group `priority = sequence (i32 cast)`, ignoring `track.priority` and never re-prioritising in flight. kixelated computes `let priority = priority.insert(track.priority, sequence); stream.set_priority(priority.current())` (per `rs/moq-lite/src/lite/publisher.rs::serve_group`), and the handle dynamically demotes older groups as newer ones insert. For our single Opus track at 1 group/sec the difference is unobservable (newer-first ordering still holds). For a future multi-track or multi-publisher session under congestion this could starve a low-priority track. | `MoqLiteSession.kt:1040-1050`                                         | open   |
-| M2 | `STOP_SENDING` for single-group cancel                                             | 🟡       | The Lite-03 spec lets a receiver cancel a specific group via `STOP_SENDING` on its uni stream. We close the consumer-facing frames channel only — the publisher's uni stream stays open until natural FIN or transport drop. Practical impact: the publisher wastes a tiny amount of bandwidth on frames the listener will discard; not user-visible. The `:quic` `QuicStream.stopSending(errorCode)` API exists, but isn't exposed through `WebTransportReadStream`. | `MoqLiteSession.kt:670-675` (no stopSending), `WebTransportSession.kt:103-107` (read interface lacks stopSending) | open   |
-| M3 | `RESET_STREAM` with `Error::to_code()`                                             | 🟡       | All error / cancel paths today FIN gracefully via `runCatching { bidi.finish() }`. The Lite-03 spec says errors on any stream are conveyed by `RESET_STREAM(application_error_code = Error::to_code() u32)`. Practical impact: the peer can't tell "I'm done with this stream" apart from "this stream errored" — the wrapper falls back to flow-end heuristics. | `MoqLiteSession.kt` everywhere `runCatching { …finish() }` is used; no `reset(code)` calls anywhere | open   |
+| M1 | `Publisher::serve_group` priority parity                                           | 🟡 → ✅   | We assigned each new group `priority = sequence (i32 cast)`, ignoring `track.priority` and never re-prioritising in flight. kixelated computes `let priority = priority.insert(track.priority, sequence); stream.set_priority(priority.current())` (per `rs/moq-lite/src/lite/publisher.rs::serve_group`). For our single Opus track at 1 group/sec the difference was unobservable (newer-first ordering still held). | `MoqLiteSession.kt:openGroupStream` (pre-fix)                         | **fixed in this audit** — see `Fix #3` |
+| M2 | `STOP_SENDING` for single-group cancel                                             | 🟡       | The Lite-03 spec lets a receiver cancel a specific group via `STOP_SENDING` on its uni stream. We close the consumer-facing frames channel only — the publisher's uni stream stays open until natural FIN or transport drop. Practical impact: the publisher wastes a tiny amount of bandwidth on frames the listener will discard; not user-visible. The `:quic` `QuicStream.stopSending(errorCode)` API exists, but isn't exposed through `WebTransportReadStream`. | `MoqLiteSession.kt:670-675` (no stopSending), `WebTransportSession.kt:103-107` (read interface lacks stopSending) | open (deferred — needs `:quic` interface extension; user prompt locked `:quic`) |
+| M3 | `RESET_STREAM` with `Error::to_code()`                                             | 🟡       | All error / cancel paths today FIN gracefully via `runCatching { bidi.finish() }`. The Lite-03 spec says errors on any stream are conveyed by `RESET_STREAM(application_error_code = Error::to_code() u32)`. Practical impact: the peer can't tell "I'm done with this stream" apart from "this stream errored" — the wrapper falls back to flow-end heuristics. No moq-lite-session error path actually wants to send a coded reset today (Drop replies use FIN per spec; transport drops surface as flow-end). | `MoqLiteSession.kt` everywhere `runCatching { …finish() }` is used; no `reset(code)` calls anywhere | open (deferred — interface extension without consumer = dead code) |
 | M4 | AnnouncePlease prefix-mismatch falls back to full suffix                           | 🟡 → ✅   | When the relay opened an Announce bidi with `prefix="X"`, our publisher emitted `Active(suffix=ourFullSuffix)` even when our suffix didn't start with `X`. The relay would observe an Active update for a broadcast it didn't ask about. In production the relay always asks for `prefix=""`, so this never bit empirically — but it's a spec violation. | `MoqLiteSession.kt:841-852` (pre-fix)                                 | **fixed in this audit** — see `Fix #1` |
 | M5 | Inbound Subscribe doesn't validate broadcast field                                 | 🟡 → ✅   | When the relay opened a Subscribe bidi, we matched on `track` only, never checking `sub.broadcast == publisher.suffix`. A relay (or peer) could subscribe to broadcast `"otherPubkey"` on our connection and we'd happily route OUR audio to them. The production relay routes correctly, so this never bit empirically — but it's a spec violation. | `MoqLiteSession.kt:861-898` (pre-fix)                                 | **fixed in this audit** — see `Fix #2` |
-| M6 | Goaway body decoding + migration handler                                           | 🟡       | We recognise `ControlType::Goaway = 5` and FIN cleanly, but never decode the body or act on the migration request. moq-rs uses Goaway to ask the publisher to migrate to a different relay node. Practical impact: on a relay-initiated graceful shutdown we wait for the eventual hard disconnect (already absorbed by `connectReconnectingNests*`), instead of pre-emptively reconnecting. | `MoqLiteSession.kt:973-990`                                           | open   |
-| L1 | Lite-04 ALPN constant defined but codec is Lite-03 only                            | 🟦       | `MoqLiteAlpn.LITE_04 = "moq-lite-04"` exists for forward-compat documentation but is never advertised. The codec doesn't implement Lite-04's reshaped `Announce.hops` (varint count → `OriginList`), `AnnounceInterest.exclude_hop`, or `Probe.rtt`. This is intentional + clearly documented. | `MoqLiteAlpn.kt:25-58`, `QuicWebTransportFactory.kt:94-113`           | open (deferred) |
-| L2 | SubscribeOk always echoes `null/null` for startGroup/endGroup                      | 🟦       | Per spec the publisher MAY narrow the subscriber's requested group bounds. We always reply with `(startGroup=null, endGroup=null)` regardless of the request. Audio rooms are live-only and the listener always asks "from latest", so the difference is meaningless in this product. | `MoqLiteSession.kt:911-921`                                           | open (deferred) |
-| L3 | No periodic Probe loop on subscriber side                                          | 🟦       | We respond to Probe bidis (with a single bitrate hint, then FIN) but never initiate Probe ourselves as a subscriber. moq-lite Lite-03 lets subscribers periodically open Probe bidis to nudge the publisher into emitting fresh bitrate hints; for fixed-rate Opus audio we don't need ABR, so this is a deliberate omission. | `MoqLiteSession.kt:925-944`                                           | open (deferred) |
-| L4 | Stream-priority overflow guard is a saturating cast                                | 🟦       | `uni.setPriority(sequence.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())` saturates at `Int.MAX_VALUE`. At our 1 group/sec cadence that's ≈ 71 years of continuous broadcast. Defensive only; will never bite. | `MoqLiteSession.kt:1046`                                              | open (won't fix) |
-| L5 | Inbound bidi pump captures `publishersSnapshot` at bidi-arrival time               | 🟦       | If a new publisher is added to the session (`session.publish(track="…")`) AFTER an inbound bidi opens, that publisher won't be visible to dispatching for the existing bidi. In practice both publishers (`audio/data` and `catalog.json`) open before any subscriber arrives, so this never bites. | `MoqLiteSession.kt:781-790`                                           | open (won't fix) |
+| M6 | Goaway body decoding + migration handler                                           | 🟡 → ✅   | We recognise `ControlType::Goaway = 5` and FIN cleanly. WebFetched the kixelated reference (`rs/moq-lite/src/lite/{stream,client}.rs`): **Goaway has no body schema in moq-lite Lite-03** — it's a single ControlType byte with no payload, not even a migration URL. Our existing handler (recognise, log, FIN) is the canonical implementation; "no body decode" was never a gap. | `MoqLiteSession.kt:973-990`, `MoqLiteControlCodes.kt:50-58`           | **closed in this audit** — see `M6 closure` |
+| L1 | Lite-04 ALPN constant defined but codec is Lite-03 only                            | 🟦       | `MoqLiteAlpn.LITE_04 = "moq-lite-04"` exists for forward-compat documentation but is never advertised. The codec doesn't implement Lite-04's reshaped `Announce.hops` (varint count → `OriginList`), `AnnounceInterest.exclude_hop`, or `Probe.rtt`. This is intentional + clearly documented. | `MoqLiteAlpn.kt:25-58`, `QuicWebTransportFactory.kt:94-113`           | open (deferred — significant codec rewrite, no current relay forces it) |
+| L2 | SubscribeOk always echoes `null/null` for startGroup/endGroup                      | 🟦       | Per spec the publisher MAY narrow the subscriber's requested group bounds. We always reply with `(startGroup=null, endGroup=null)` regardless of the request. Audio rooms are live-only and the listener always asks "from latest", so the difference is meaningless in this product. | `MoqLiteSession.kt:911-921`                                           | open (won't fix — no functional impact for live audio) |
+| L3 | No periodic Probe loop on subscriber side                                          | 🟦       | We respond to Probe bidis (with a single bitrate hint, then FIN) but never initiate Probe ourselves as a subscriber. moq-lite Lite-03 lets subscribers periodically open Probe bidis to nudge the publisher into emitting fresh bitrate hints; for fixed-rate Opus audio we don't need ABR, so this is a deliberate omission. | `MoqLiteSession.kt:925-944`                                           | open (won't fix — no consumer for the API) |
+| L4 | Stream-priority overflow guard is a saturating cast                                | 🟦       | Pre-fix, `setPriority(sequence.coerceAtMost(Int.MAX_VALUE).toInt())` saturated at `Int.MAX_VALUE` (≈ 71 yrs at 1 grp/sec). After the M1 fix, sequence saturates at the 24-bit boundary (≈ 6 days within a single track) but the per-track high byte keeps cross-track ordering intact. Defensive only; production sessions cycle on JWT refresh every 9 min. | `MoqLiteSession.kt:openGroupStream` (post-M1)                         | closed (subsumed by M1 fix) |
+| L5 | Inbound bidi pump captures `publishersSnapshot` at bidi-arrival time               | 🟦 → ✅   | If a new publisher was added to the session (`session.publish(track="…")`) AFTER an inbound bidi opened, the dispatcher couldn't see it. In practice both nests publishers (`audio/data` and `catalog.json`) register before any subscriber arrives, so this never bit. Tightened anyway: snapshot is now read at first-byte dispatch time. | `MoqLiteSession.kt:781-790` (pre-fix)                                 | **fixed in this audit** — see `Fix #4` |
 
 ## Specifically checked items (per audit-prompt request)
 
@@ -163,35 +171,57 @@ Severity legend (matches the prior QUIC audit):
 
 ## What's deliberately deferred
 
-1. **Stream-priority parity (M1).** Folding in `track.priority` and
-   wiring dynamic re-prioritisation across in-flight groups would
-   match kixelated's `PriorityHandle` exactly. For our single-track
-   Opus producer the win is invisible; deferring until we publish
-   multiple tracks (e.g. a hand-raised speaker simultaneously
-   sending audio + chat) or run a real video track.
-2. **STOP_SENDING + RESET_STREAM (M2 + M3).** The QUIC layer exposes
-   `QuicStream.stopSending(errorCode)` and `markLost`-style reset
-   flows, but the WebTransport read/write interface in
-   `WebTransportSession.kt` doesn't surface them yet. Adding either
-   would mean: extending `WebTransportReadStream` /
-   `WebTransportWriteStream` with `stopSending(code)` /
-   `reset(code)`, plumbing through the QUIC adapter, and wiring
-   error-code constants in moq-lite. Since the production relay
-   tolerates graceful FIN as "I'm done" without complaining,
-   deferring until either the relay starts caring (unlikely) or we
-   add a Lite-04 codec target.
-3. **Goaway body decoding + migration (M6).** Real Goaway support
-   means decoding a preferred-relay path and reconnecting to the
-   new endpoint. That's a connection-layer concern that lives
-   above the moq-lite session; deferring until either kixelated's
-   relay deployment uses Goaway in anger or we ship multi-relay
-   pooling on the client.
-4. **Lite-04 codec (L1).** Tracked in `MoqLiteAlpn.kt:50-56`.
-   Defer until either we need Lite-04-only relay features
-   (probably `Probe.rtt`) or kixelated phases out Lite-03.
-5. **Optional SubscribeOk narrowing (L2) + subscriber-driven Probe
-   (L3).** Deferred indefinitely — fixed-rate Opus has no use case
-   for either.
+1. **STOP_SENDING + RESET_STREAM (M2 + M3).** The QUIC layer exposes
+   `QuicStream.stopSending(errorCode)` and `resetStream(errorCode)`,
+   but neither is surfaced through the WebTransport read/write
+   interfaces in `WebTransportSession.kt`. Adding either means:
+   extending `WebTransportReadStream` / `WebTransportWriteStream`
+   with `stopSending(code)` / `reset(code)`, extending `:quic`'s
+   `StrippedWtStream` with closures (touches the locked QUIC
+   layer), plumbing through the QUIC adapter, and wiring error-code
+   constants in moq-lite. Since the production relay tolerates
+   graceful FIN as "I'm done" without complaining, **and no
+   moq-lite-session error path actually wants to send a coded reset
+   today** (Drop replies use FIN per spec; transport drops surface
+   as flow-end), the interface extension would land as dead code.
+   Defer until either the relay starts caring or we ship a
+   listener-driven group-cancel feature. The user's audit prompt
+   explicitly locked `:quic`, which forecloses M2/M3 in this
+   session anyway.
+
+2. **Lite-04 codec (L1).** Tracked in `MoqLiteAlpn.kt:50-56`.
+   Lite-04 reshapes `Announce.hops` (varint count → `OriginList`),
+   adds `AnnounceInterest.exclude_hop`, and adds `Probe.rtt`. None
+   of the Lite-04 features are required by the production
+   nostrnests relay. Defer until either the relay phases out
+   Lite-03 or we need Lite-04-only features.
+
+3. **Optional SubscribeOk narrowing (L2) + subscriber-driven Probe
+   (L3).** Won't fix — fixed-rate Opus + live-only audio rooms
+   have no use case for either. The publisher MAY narrow
+   `startGroup`/`endGroup` per spec but we have no group history
+   to narrow to; the subscriber MAY probe the publisher for a
+   bitrate hint but our encoder is fixed-rate so the hint never
+   changes.
+
+## Closed in this audit (no fix needed)
+
+### M6 closure — Goaway has no body in moq-lite Lite-03
+
+A second WebFetch pass against
+`https://raw.githubusercontent.com/kixelated/moq/main/rs/moq-lite/src/lite/stream.rs`
+and `…/client.rs` confirmed: **`ControlType::Goaway = 5` is a bare
+discriminator with no payload schema in moq-lite Lite-03.** No URL,
+no preferred-relay address, no error code — it's just the byte. The
+"no body decode" comment in our existing handler
+(`MoqLiteSession.kt:973-990`) was never a gap; there was nothing to
+decode. The wrapper-layer `connectReconnectingNests*` already absorbs
+the eventual hard disconnect, and a Goaway with no body has nothing
+more to say than "I'm shutting down, expect FIN." Our recognise + log
++ FIN behavior is the canonical implementation.
+
+If a future Lite-04+ revision adds a Goaway body (URL, etc.) we'd
+need to decode it — that becomes part of the L1 Lite-04 codec work.
 
 ## Fixes shipped in this audit
 
@@ -241,6 +271,70 @@ reason="<requested> not published on this session (we publish
 
 Regression test:
 `MoqLiteSessionTest.publisher_replies_subscribeDrop_when_broadcast_does_not_match`.
+
+### Fix #3 — Pack trackPriority + sequence into stream priority (M1)
+
+`Publisher::serve_group` in kixelated's reference
+(`rs/moq-lite/src/lite/publisher.rs`) calls
+`priority.insert(track.priority, sequence)` and feeds the resulting
+position into `stream.set_priority`. The `PriorityHandle` orders
+streams first by `track.priority u8` (higher track = drains ahead
+under congestion), then by group `sequence` within a track (newer =
+drains ahead).
+
+Pre-fix we passed raw `sequence.toInt()` directly to
+`uni.setPriority`, ignoring the per-track byte. For our single-Opus-
+track production case this was unobservable — newer-first ordering
+held by sequence monotonicity — but a future multi-track broadcast
+(audio + companion catalog / status track) would have starved the
+lower-rate track the moment audio's outbound queue got congested.
+
+The fix: add `trackPriority: Int = DEFAULT_TRACK_PRIORITY` parameter
+to `MoqLiteSession.publish()`; store on `PublisherStateImpl`; bit-pack
+in `openGroupStream` as
+`((trackPriority and 0xFF) shl 24) or (sequence.toInt() and 0x00FF_FFFF)`.
+
+`DEFAULT_TRACK_PRIORITY = 0x80` matches the existing subscriber-side
+`DEFAULT_PRIORITY` midpoint, so all existing call sites keep their
+prior behavior. The 24-bit sequence window is ample (≈ 6 days at
+1 grp/sec, beyond which all newer groups within a single track tie
+— but still beat older groups of any LOWER-priority track via the
+top byte).
+
+Test seam: `FakeWebTransport.openUniStream` now records the most-
+recent `setPriority` value via a shared `AtomicInteger` cell that the
+peer-side `FakeReadStream` exposes as `lastSetPriority`. Lets the
+new regression test verify the bit-pack formula on the actual
+peer-side read stream rather than peeking into private state.
+
+Regression test:
+`MoqLiteSessionTest.publisher_packs_trackPriority_and_sequence_into_setPriority_value`.
+
+### Fix #4 — Refresh publisher list per-dispatch on inbound bidi (L5)
+
+`handleInboundBidi` previously snapshotted the publisher list at the
+TOP of the function (= bidi-arrival time) and used that snapshot for
+the rest of the bidi's lifetime. A publisher registered between
+bidi-open and the first inbound chunk would miss the dispatcher's
+view, even though the publisher was already live in
+`activePublishers` by the time we needed to dispatch.
+
+Practical impact today: zero — both nests publishers register from
+`MoqLiteNestsSpeaker.startBroadcasting` before the relay's SUBSCRIBE
+bidi for either track lands. The ~few-ms gap is below the network
+round-trip floor.
+
+But the contract is narrower if we read the list at first-byte time:
+we then see every publisher that was registered up to the moment we
+needed to make a routing decision. Move the publishers fetch from
+the function-top to inside the `if (!dispatched)` block, after the
+control-type byte has been read. On empty publisher list (the case
+we previously short-circuited at function-top), we now FIN cleanly so
+the peer's wait resolves instead of hanging on an idle bidi.
+
+No new regression test — exercised end-to-end by the existing
+publisher tests, which now pass against the freshness-aware
+dispatcher.
 
 ## Build / test verification
 
