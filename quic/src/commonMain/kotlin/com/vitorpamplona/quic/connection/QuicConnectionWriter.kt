@@ -110,6 +110,26 @@ fun drainOutbound(
     // time comparison) when the validator is in [PathValidationState.Idle].
     conn.checkPathValidationTimeoutLocked(nowMillis)
 
+    // RFC 9000 §5.1.1 + §19.15: once the handshake is confirmed,
+    // issue spare source CIDs to the peer so it has DCIDs available
+    // for path migration / NAT rebind. Strict servers (quic-go,
+    // picoquic, msquic, mvfst) refuse to validate a new path until
+    // they have a spare DCID from us; quinn migrates on src-port-
+    // change alone, which is why rebind-* tests passed against
+    // quinn pre-fix and failed against the others. Issue
+    // peer.active_connection_id_limit - 1 spares (we already implicitly
+    // issued seq=0 via the handshake). The default
+    // active_connection_id_limit per RFC 9000 §18.2 is 2; modern
+    // servers advertise 4–8.
+    if (!conn.ownSourceCidsIssued && conn.handshakeConfirmed) {
+        val peerLimit = conn.peerTransportParameters?.activeConnectionIdLimit ?: 2L
+        // Cap at a sensible upper bound to avoid issuing huge pools
+        // for misbehaving servers; 4 matches our own
+        // [QuicConnectionConfig.activeConnectionIdLimit] default.
+        val spareCount = (peerLimit - 1L).coerceIn(0L, 7L).toInt()
+        if (spareCount > 0) conn.issueOwnConnectionIdsLocked(spareCount)
+    }
+
     // Drain destructive frame sources into local lists, ONCE.
     val initialContents = collectHandshakeLevelFrames(conn, EncryptionLevel.INITIAL, nowMillis)
     val handshakeContents = collectHandshakeLevelFrames(conn, EncryptionLevel.HANDSHAKE, nowMillis)
@@ -1086,10 +1106,26 @@ private fun appendFlowControlUpdates(
         tokens += RecoveryToken.RetireConnectionId(seq)
     }
 
-    // NEW_CONNECTION_ID retransmits. No application path emits these
-    // initially today (connection-ID rotation isn't wired); the map
-    // is populated only by the loss dispatcher, so this branch only
-    // fires for genuine retransmits.
+    // NEW_CONNECTION_ID — fresh issuances queued by
+    // [QuicConnection.issueOwnConnectionIdsLocked] post-handshake.
+    // Each emission also records a recovery token so the loss
+    // dispatcher can re-queue if the carrying packet is declared lost.
+    while (conn.pendingOwnNewConnectionIdEmits.isNotEmpty()) {
+        val token = conn.pendingOwnNewConnectionIdEmits.removeFirst()
+        frames +=
+            NewConnectionIdFrame(
+                sequenceNumber = token.sequenceNumber,
+                retirePriorTo = token.retirePriorTo,
+                connectionId = token.connectionId,
+                statelessResetToken = token.statelessResetToken,
+            )
+        tokens += token
+    }
+
+    // NEW_CONNECTION_ID retransmits — the loss dispatcher populates
+    // [pendingNewConnectionId] when a previously-emitted frame's
+    // carrier packet was declared lost. Same wire shape as a fresh
+    // issuance; we just preserve the original token.
     if (conn.pendingNewConnectionId.isNotEmpty()) {
         val pendingNewCidEntries = conn.pendingNewConnectionId.entries.toList()
         for ((_, token) in pendingNewCidEntries) {

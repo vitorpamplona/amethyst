@@ -674,6 +674,72 @@ class QuicConnection(
         MutableMap<Long, com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId> = HashMap()
 
     /**
+     * Active source CIDs we've issued to the peer (RFC 9000 §5.1.1).
+     * Keyed by sequence number. The initial CID is implicitly sequence
+     * 0 ([sourceConnectionId]) and is seeded into this pool at
+     * connection start. Additional sequences come from
+     * [issueOwnConnectionIdsLocked] which the writer drives once the
+     * handshake is confirmed.
+     *
+     * Why we need this: strict servers (quic-go, picoquic, msquic,
+     * mvfst) gate server-initiated path validation on having a SPARE
+     * destination CID for the new client path (RFC 9000 §9.5: "An
+     * endpoint MUST NOT reuse a connection ID for sending packets to
+     * more than one source address"). Without spares from us, server
+     * logs `"skipping validation of new path … since no connection
+     * ID is available"` and the rebind-port / rebind-addr /
+     * connectionmigration interop tests time out. Quinn is the
+     * exception — it migrates on src-port-change alone, which is why
+     * those cells passed against quinn pre-fix.
+     *
+     * Lifetime: entries are added by [issueOwnConnectionIdsLocked]
+     * and removed by [applyPeerRetireConnectionIdLocked]. We only
+     * cap at peer's `active_connection_id_limit`; the peer telling
+     * us to retire one creates room for a fresh issuance.
+     */
+    internal val issuedSourceConnectionIds: LinkedHashMap<Long, IssuedSourceConnectionIdEntry> =
+        LinkedHashMap<Long, IssuedSourceConnectionIdEntry>().apply {
+            // Sequence 0 is implicit per §5.1.1 and has no
+            // stateless-reset token — we never advertised one in our
+            // transport parameters (the `stateless_reset_token` TP is
+            // server-only per §18.2). The empty-bytes sentinel here
+            // is correct: this entry exists for sequence-counter
+            // continuity and peer-RETIRE tracking, never for a
+            // RecoveryToken / NEW_CONNECTION_ID emission (it'd be a
+            // §19.15 protocol violation to send sequence 0 in a
+            // NEW_CONNECTION_ID frame).
+            put(0L, IssuedSourceConnectionIdEntry(0L, sourceConnectionId.bytes, ByteArray(0)))
+        }
+
+    /**
+     * Counter for the next sequence number we'll issue via
+     * NEW_CONNECTION_ID. Starts at 1 because sequence 0 is reserved
+     * for the initial source CID.
+     */
+    internal var nextOwnSourceCidSeq: Long = 1L
+
+    /**
+     * NEW_CONNECTION_ID frames staged for FIRST emission (i.e. fresh
+     * issuance, distinct from [pendingNewConnectionId] which is the
+     * loss-recovery retransmit queue). The writer drains this on each
+     * application-level build; a sent token is recorded as
+     * [com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId]
+     * for the loss dispatcher.
+     */
+    internal val pendingOwnNewConnectionIdEmits:
+        ArrayDeque<com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId> =
+        ArrayDeque()
+
+    /**
+     * Whether [issueOwnConnectionIdsLocked] has run. Single-shot
+     * because we issue the full peer-active-connection-id-limit pool
+     * at handshake-confirmation time; further issuance only happens
+     * in response to peer's RETIRE_CONNECTION_ID (which calls
+     * [issueOwnReplacementSourceCidLocked]).
+     */
+    internal var ownSourceCidsIssued: Boolean = false
+
+    /**
      * RFC 9000 §8.2.2: queue of inbound PATH_CHALLENGE payloads we
      * still owe a PATH_RESPONSE for. Each entry is the EXACT 8 bytes
      * the peer challenged with — the response MUST echo them
@@ -2493,39 +2559,125 @@ class QuicConnection(
      * RFC 9000 §19.16: peer asked us to retire one of our own
      * source CIDs.
      *
-     * Two cases:
-     *  - Sequence > 0: we never issued anything beyond seq 0, so
-     *    this references a CID we never advertised. PROTOCOL_VIOLATION
-     *    per §19.16.
-     *  - Sequence == 0: peer is asking us to retire the SCID we
-     *    picked at connection start. Per RFC 9000 §5.1.1 we'd be
-     *    expected to have already issued a replacement via
-     *    NEW_CONNECTION_ID and switch the peer to it. We don't
-     *    issue our own NEW_CONNECTION_ID frames today, so we have
-     *    no replacement to give the peer. Closing the connection
-     *    surfaces this as a known limitation rather than continuing
-     *    against a peer that thinks we agreed to stop using our
-     *    only CID.
+     * Three cases:
+     *  - Sequence is in [issuedSourceConnectionIds] — peer is
+     *    retiring an SCID we issued via NEW_CONNECTION_ID. Drop the
+     *    entry and issue a replacement (so the pool stays topped up
+     *    for future migrations). Common during NAT rebind: peer
+     *    burns through our spares as it migrates.
+     *  - Sequence < [nextOwnSourceCidSeq] but missing from the pool
+     *    — already-retired SCID. Silently drop per §19.16 ("a peer
+     *    that retransmits RETIRE_CONNECTION_ID after observing the
+     *    corresponding ACK ... it's harmless").
+     *  - Sequence ≥ [nextOwnSourceCidSeq] — peer is retiring a CID
+     *    we never advertised. PROTOCOL_VIOLATION per §19.16. Same
+     *    diagnostic for sequence 0 if it's still active and we have
+     *    no spares to give the peer (which is impossible once
+     *    [issueOwnConnectionIdsLocked] has run, but defensively
+     *    surfaces the only failure mode left).
      *
      * Caller must hold [streamsLock].
      */
     internal fun applyPeerRetireConnectionIdLocked(sequenceNumber: Long) {
-        if (sequenceNumber > 0L) {
+        if (sequenceNumber >= nextOwnSourceCidSeq) {
             markClosedExternally(
-                "PROTOCOL_VIOLATION: RETIRE_CONNECTION_ID seq=$sequenceNumber > any we issued (0)",
+                "PROTOCOL_VIOLATION: RETIRE_CONNECTION_ID seq=$sequenceNumber ≥ next-issued seq=$nextOwnSourceCidSeq",
             )
             return
         }
-        // Sequence 0: peer wants us off our initial SCID, but we never
-        // advertised additional SCIDs (we don't issue NEW_CONNECTION_ID
-        // frames yet). RFC 9000 §19.16 lets us close — and we MUST,
-        // because there's no replacement SCID to switch to. Reclassify
-        // as PROTOCOL_VIOLATION (peer-side fault) rather than
-        // INTERNAL_ERROR (our-side fault) — the original diagnostic
-        // misdescribed which side made the mistake.
-        markClosedExternally(
-            "PROTOCOL_VIOLATION: peer asked to retire our initial SCID (seq=0) but we never " +
-                "advertised additional SCIDs to switch to",
+        val removed = issuedSourceConnectionIds.remove(sequenceNumber)
+        if (removed == null) {
+            // Already-retired entry; benign §19.16 retransmit.
+            return
+        }
+        if (sequenceNumber == 0L && issuedSourceConnectionIds.isEmpty()) {
+            // Peer retired our LAST source CID. Without a spare we
+            // can't continue speaking on the wire — close per §19.16.
+            // Should be unreachable once [issueOwnConnectionIdsLocked]
+            // has run (the loop seeds the pool with handshake-confirmed
+            // spares); kept as a defence-in-depth so a misbehaving
+            // peer that retires faster than we issue can't drive us
+            // into a silent wedge.
+            markClosedExternally(
+                "PROTOCOL_VIOLATION: peer retired our initial SCID (seq=0) and no spare " +
+                    "is left in the issued pool",
+            )
+            return
+        }
+        // Top up the pool so a subsequent migration still has spares.
+        // RFC 9000 §5.1.2 — endpoints SHOULD replace retired CIDs.
+        issueOwnReplacementSourceCidLocked()
+    }
+
+    /**
+     * RFC 9000 §5.1.1 + §19.15: issue spare source CIDs to the peer
+     * via NEW_CONNECTION_ID frames so it has DCIDs available to send
+     * to us on alternative paths (NAT rebind, connection migration).
+     * Strict servers (quic-go, picoquic, msquic, mvfst) refuse to
+     * validate a new path until they have a spare DCID from us — the
+     * tell is the server log line `"skipping validation of new path
+     * … since no connection ID is available"`.
+     *
+     * Issues `count` fresh entries (`nextOwnSourceCidSeq` ..
+     * `nextOwnSourceCidSeq + count - 1`), each with a random 8-byte
+     * CID and a random 16-byte stateless-reset token. The entries
+     * land in [issuedSourceConnectionIds] (peer-RETIRE tracking) and
+     * a [com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId]
+     * goes onto [pendingOwnNewConnectionIdEmits] so the writer
+     * emits the frame on the next application-level build.
+     *
+     * Idempotent via [ownSourceCidsIssued] — caller doesn't need to
+     * gate. Caller must hold [streamsLock].
+     */
+    internal fun issueOwnConnectionIdsLocked(count: Int) {
+        if (ownSourceCidsIssued || count <= 0) return
+        repeat(count) {
+            val seq = nextOwnSourceCidSeq
+            nextOwnSourceCidSeq += 1
+            val cidBytes =
+                com.vitorpamplona.quartz.utils.RandomInstance
+                    .bytes(sourceConnectionId.length)
+            val token =
+                com.vitorpamplona.quartz.utils.RandomInstance
+                    .bytes(16)
+            issuedSourceConnectionIds[seq] = IssuedSourceConnectionIdEntry(seq, cidBytes, token)
+            pendingOwnNewConnectionIdEmits.addLast(
+                com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId(
+                    sequenceNumber = seq,
+                    retirePriorTo = 0L,
+                    connectionId = cidBytes,
+                    statelessResetToken = token,
+                ),
+            )
+        }
+        ownSourceCidsIssued = true
+    }
+
+    /**
+     * Issue exactly one replacement source CID after the peer has
+     * retired one of ours (RFC 9000 §5.1.2: the peer is allowed to
+     * cycle through our spares freely). Keeps the pool topped up so
+     * a subsequent rebind still has a fresh DCID available. Caller
+     * must hold [streamsLock]; should only fire from
+     * [applyPeerRetireConnectionIdLocked].
+     */
+    internal fun issueOwnReplacementSourceCidLocked() {
+        val seq = nextOwnSourceCidSeq
+        nextOwnSourceCidSeq += 1
+        val cidBytes =
+            com.vitorpamplona.quartz.utils.RandomInstance
+                .bytes(sourceConnectionId.length)
+        val token =
+            com.vitorpamplona.quartz.utils.RandomInstance
+                .bytes(16)
+        issuedSourceConnectionIds[seq] = IssuedSourceConnectionIdEntry(seq, cidBytes, token)
+        pendingOwnNewConnectionIdEmits.addLast(
+            com.vitorpamplona.quic.connection.recovery.RecoveryToken.NewConnectionId(
+                sequenceNumber = seq,
+                retirePriorTo = 0L,
+                connectionId = cidBytes,
+                statelessResetToken = token,
+            ),
         )
     }
 
@@ -3112,6 +3264,39 @@ private fun defaultMonotonicNowMillis(): () -> Long {
         kotlin.time.TimeSource.Monotonic
             .markNow()
     return { anchor.elapsedNow().inWholeMilliseconds }
+}
+
+/**
+ * One source CID we've issued to the peer (RFC 9000 §5.1.1 +
+ * §19.15). Sequence 0 is the initial CID, implicitly issued via the
+ * client's first Initial. Sequences ≥ 1 are issued explicitly via
+ * NEW_CONNECTION_ID frames after the handshake is confirmed.
+ *
+ * `statelessResetToken` is the 16-byte token the peer would put in
+ * a stateless reset packet addressed to this CID. Sequence 0's
+ * entry has an empty token because clients can't advertise a
+ * stateless-reset token via transport parameters (the
+ * `stateless_reset_token` TP is server-only per RFC 9000 §18.2).
+ */
+internal data class IssuedSourceConnectionIdEntry(
+    val sequenceNumber: Long,
+    val connectionId: ByteArray,
+    val statelessResetToken: ByteArray,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is IssuedSourceConnectionIdEntry) return false
+        return sequenceNumber == other.sequenceNumber &&
+            connectionId.contentEquals(other.connectionId) &&
+            statelessResetToken.contentEquals(other.statelessResetToken)
+    }
+
+    override fun hashCode(): Int {
+        var h = sequenceNumber.hashCode()
+        h = 31 * h + connectionId.contentHashCode()
+        h = 31 * h + statelessResetToken.contentHashCode()
+        return h
+    }
 }
 
 /** Connection was closed (locally or by peer) before reaching CONNECTED. */
