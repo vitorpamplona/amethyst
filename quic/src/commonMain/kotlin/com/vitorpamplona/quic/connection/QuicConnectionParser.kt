@@ -67,6 +67,10 @@ import com.vitorpamplona.quic.tls.TlsClient
  * under streamsLock so frame-dispatch / stream creation / level state
  * remains a single critical section.
  */
+
+/** RFC 9000 §16: maximum varint value, also the per-stream offset ceiling. */
+private const val MAX_QUIC_OFFSET: Long = (1L shl 62) - 1L
+
 fun feedDatagram(
     conn: QuicConnection,
     datagram: ByteArray,
@@ -780,9 +784,17 @@ private fun dispatchFrames(
                 // RFC 9000 §4.5: the [finalSize] in RESET_STREAM MUST agree
                 // with any final size implied by previously-received STREAM
                 // frames AND MUST be ≥ the highest offset already observed.
-                // A peer that violates this is closed with FINAL_SIZE_ERROR
-                // — pre-fix we accepted any value silently, letting a buggy
-                // peer drift our state.
+                // §4.5 also caps final size at 2^62-1 (the QUIC offset field
+                // ceiling). A peer that violates any of these is closed with
+                // FINAL_SIZE_ERROR — pre-fix we accepted any value silently,
+                // letting a buggy peer drift our state.
+                if (frame.finalSize < 0L || frame.finalSize > MAX_QUIC_OFFSET) {
+                    conn.markClosedExternally(
+                        "FINAL_SIZE_ERROR: stream ${frame.streamId} RESET_STREAM finalSize " +
+                            "${frame.finalSize} outside [0, 2^62-1]",
+                    )
+                    return
+                }
                 val target = conn.streamByIdLocked(frame.streamId)
                 if (target != null) {
                     val priorFin = target.receive.finOffset

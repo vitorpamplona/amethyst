@@ -130,10 +130,18 @@ class QuicStream(
      * writer's appendFlowControlUpdates consumes it to skip streams that
      * haven't received any new bytes since the last MAX_STREAM_DATA emission.
      *
+     * `@Volatile` because the parser writes it from the read loop and the
+     * writer reads it from the send loop without holding the same lock.
+     * Without volatile the writer could miss the parser's update for an
+     * unbounded time on JVM (the field is read in a hot drain loop where
+     * the JIT might cache it), suppressing MAX_STREAM_DATA emissions
+     * until something else triggered a fresh load.
+     *
      * Pre-fix the writer iterated EVERY open stream on every drain
      * (audit-4 perf #9 — O(streams) × ~50 drains/sec; significant for audio
      * rooms with many WT streams).
      */
+    @Volatile
     internal var receiveDirtyForFlowControl: Boolean = false
 
     /** True once we've FIN'd our write side and the peer FIN'd theirs. */

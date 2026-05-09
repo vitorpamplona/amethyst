@@ -677,7 +677,23 @@ interface TlsSecretsListener {
  * [ticketAgeAdd] and [issuedAtMillis] to compute the obfuscated_ticket_age
  * the server expects.
  */
-data class TlsResumptionState(
+/**
+ * Cached state from a prior TLS handshake that lets the client offer
+ * RFC 8446 PSK-resumption + RFC 9001 §4.6 0-RTT on the next connection.
+ *
+ * Plain `class` (not `data class`) intentionally:
+ *  - The `data class`-generated `equals` / `hashCode` use reference
+ *    equality on [ByteArray] fields, so two states with byte-identical
+ *    PSKs would compare unequal — surprising and almost never useful.
+ *  - The auto-generated `toString` would dump `psk` / `ticket` /
+ *    `peerTransportParameters` byte contents into any log, stack trace,
+ *    or debugger that touches the object. Both are sensitive.
+ *
+ * We override [equals] / [hashCode] with [contentEquals] semantics on
+ * the byte fields (so callers can deduplicate cached states by content)
+ * and [toString] to redact the secret payload.
+ */
+class TlsResumptionState(
     /** Opaque ticket bytes echoed verbatim as the PSK identity on the next connection. */
     val ticket: ByteArray,
     /** PSK derived from `resumption_master_secret` + `ticket_nonce` per RFC 8446 §4.6.1. */
@@ -716,7 +732,51 @@ data class TlsResumptionState(
     val peerTransportParameters: ByteArray? = null,
     /** Negotiated ALPN from the prior connection. 0-RTT must use the same protocol. */
     val negotiatedAlpn: ByteArray? = null,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TlsResumptionState) return false
+        return ticket.contentEquals(other.ticket) &&
+            psk.contentEquals(other.psk) &&
+            cipherSuite == other.cipherSuite &&
+            ticketAgeAdd == other.ticketAgeAdd &&
+            ticketLifetimeSec == other.ticketLifetimeSec &&
+            issuedAtMillis == other.issuedAtMillis &&
+            maxEarlyDataSize == other.maxEarlyDataSize &&
+            (peerTransportParameters?.contentEquals(other.peerTransportParameters) ?: (other.peerTransportParameters == null)) &&
+            (negotiatedAlpn?.contentEquals(other.negotiatedAlpn) ?: (other.negotiatedAlpn == null))
+    }
+
+    override fun hashCode(): Int {
+        var h = ticket.contentHashCode()
+        h = 31 * h + psk.contentHashCode()
+        h = 31 * h + cipherSuite
+        h = 31 * h + ticketAgeAdd.hashCode()
+        h = 31 * h + ticketLifetimeSec.hashCode()
+        h = 31 * h + issuedAtMillis.hashCode()
+        h = 31 * h + maxEarlyDataSize.hashCode()
+        h = 31 * h + (peerTransportParameters?.contentHashCode() ?: 0)
+        h = 31 * h + (negotiatedAlpn?.contentHashCode() ?: 0)
+        return h
+    }
+
+    /**
+     * Redacted [toString]: never include `ticket`, `psk`, or
+     * `peerTransportParameters` byte contents — those leak into logs
+     * and stack traces. Sizes are fine to expose.
+     */
+    override fun toString(): String =
+        "TlsResumptionState(" +
+            "ticket=<${ticket.size} bytes>, " +
+            "psk=<${psk.size} bytes redacted>, " +
+            "cipherSuite=0x${cipherSuite.toString(16)}, " +
+            "ticketAgeAdd=$ticketAgeAdd, " +
+            "ticketLifetimeSec=$ticketLifetimeSec, " +
+            "issuedAtMillis=$issuedAtMillis, " +
+            "maxEarlyDataSize=$maxEarlyDataSize, " +
+            "peerTransportParameters=${peerTransportParameters?.let { "<${it.size} bytes>" }}, " +
+            "negotiatedAlpn=${negotiatedAlpn?.decodeToString()})"
+}
 
 /** Pluggable certificate validator. Decoupled so we can stub it in tests. */
 interface CertificateValidator {
