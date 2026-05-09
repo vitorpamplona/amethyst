@@ -173,6 +173,30 @@ object MoqLiteSubscribeDropCode {
 }
 
 /**
+ * Application error codes a listener passes to
+ * [com.vitorpamplona.nestsclient.transport.WebTransportReadStream.stopSending]
+ * when canceling a group's uni stream. moq-lite leaves these
+ * application-defined; we follow the same convention as
+ * [MoqLiteSubscribeDropCode] (small non-zero varints) so a future
+ * cross-protocol mapping is straightforward.
+ *
+ * Used by [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession.drainOneGroup]
+ * when a group arrives for a subscription that's already been
+ * removed: rather than silently dropping every frame the publisher
+ * pushes (and letting the publisher waste bandwidth on
+ * retransmits), we `stopSending` the uni stream so the publisher
+ * abandons it.
+ */
+object MoqLiteStreamCancelCode {
+    /**
+     * The receiving subscription has been canceled / unsubscribed
+     * since this group started. The publisher should abandon any
+     * pending retransmits.
+     */
+    const val SUBSCRIPTION_GONE: Long = 0x10L
+}
+
+/**
  * Header at the start of a Group uni stream. After the
  * [MoqLiteDataType.Group] type byte, the publisher writes one
  * size-prefixed [MoqLiteGroupHeader] payload, then a sequence of

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.nestsclient.moq.lite
 
+import com.vitorpamplona.nestsclient.transport.ChannelWriteStream
 import com.vitorpamplona.nestsclient.transport.FakeBidiStream
 import com.vitorpamplona.nestsclient.transport.FakeReadStream
 import com.vitorpamplona.nestsclient.transport.FakeWebTransport
@@ -832,6 +833,61 @@ class MoqLiteSessionTest {
             // registration.
             withTimeout(2_000) { handle.frames.toList() }
 
+            session.close()
+        }
+
+    @Test
+    fun listener_stopSending_group_uni_when_subscription_already_canceled() =
+        runBlocking {
+            // Lite-03 audit M2: when a group's uni stream arrives for a
+            // subscribe id that was canceled before the first frame
+            // landed, the listener MUST stopSending() the uni stream so
+            // the publisher abandons retransmits instead of wasting
+            // bandwidth. Pre-fix the listener silently dropped every
+            // frame; the publisher kept pushing until natural FIN.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Set up a subscription so the uni-stream pump is active.
+            val peer =
+                async {
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
+                    bidi.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
+                    bidi
+                }
+            val handle = session.subscribe("speakerX", "audio/data")
+            val subBidi = peer.await()
+
+            // Cancel the subscription before any group flows.
+            handle.unsubscribe()
+            // Drain the subscribe bidi's FIN so the peer's pump
+            // stays clean — not strictly required for the assertion
+            // but keeps the test isolated.
+            subBidi.incoming().toList()
+
+            // Now the peer (= the relay) opens a uni stream for that
+            // dead subscribe id and writes one frame.
+            val uni = serverSide.openUniStream() as ChannelWriteStream
+            uni.write(Varint.encode(MoqLiteDataType.Group.code))
+            uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId = handle.id, sequence = 0L)))
+            uni.write(framePayload(byteArrayOf(0x01)))
+
+            // Spin until the listener's drainOneGroup has processed
+            // the first frame, found no matching subscription, and
+            // fired stopSending. We hold the writer side, so reading
+            // [peerStopSendingCode] doesn't race the listener's
+            // pump for the peer-side [FakeReadStream] reference.
+            val deadline = System.currentTimeMillis() + 2_000
+            while (uni.peerStopSendingCode == null && System.currentTimeMillis() < deadline) {
+                kotlinx.coroutines.delay(10)
+            }
+            assertEquals(
+                MoqLiteStreamCancelCode.SUBSCRIPTION_GONE as Long?,
+                uni.peerStopSendingCode,
+                "listener must stopSending(SUBSCRIPTION_GONE) when a group arrives for a canceled subscription",
+            )
+
+            uni.finish()
             session.close()
         }
 

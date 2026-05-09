@@ -329,8 +329,13 @@ class FakeReadStream internal constructor(
  * [FakeWebTransport.openUniStream] (production: locally-opened uni
  * stream that the paired peer reads via incomingUniStreams) and any
  * test that wants to drive uni-stream bytes through a known channel.
+ *
+ * Public so tests that hold the writer reference (e.g. via
+ * `serverSide.openUniStream()`) can introspect the peer-side
+ * `stopSending` code via [peerStopSendingCode] without racing the
+ * listener's uni-stream pump on the read side.
  */
-private class ChannelWriteStream(
+class ChannelWriteStream internal constructor(
     private val channel: Channel<ByteArray>,
     /**
      * Optional shared cell with the peer-side reader. When present,
@@ -338,6 +343,12 @@ private class ChannelWriteStream(
      */
     private val priorityCell: java.util.concurrent.atomic.AtomicInteger? = null,
     private val resetCell: java.util.concurrent.atomic.AtomicLong? = null,
+    /**
+     * Cell that records the *peer's* `stopSending(code)` call, since
+     * the writer is on the other side of the stream from the
+     * `stopSending` caller. Same cell that
+     * [FakeReadStream.lastStopSendingCode] reads.
+     */
     private val stopSendingCell: java.util.concurrent.atomic.AtomicLong? = null,
 ) : WebTransportWriteStream {
     override suspend fun write(chunk: ByteArray) {
@@ -360,8 +371,15 @@ private class ChannelWriteStream(
         priorityCell?.set(priority)
     }
 
-    @Suppress("unused")
-    private val unusedStopSendingCellTether: java.util.concurrent.atomic.AtomicLong? = stopSendingCell
+    /**
+     * Code the peer-side reader passed to
+     * [WebTransportReadStream.stopSending], or `null` if not called.
+     * Lets a test that holds the writer side inspect the listener's
+     * group-cancel without racing for the peer-side
+     * [WebTransportReadStream] reference.
+     */
+    val peerStopSendingCode: Long?
+        get() = stopSendingCell?.get()?.takeIf { it != NO_CODE }
 }
 
 /**

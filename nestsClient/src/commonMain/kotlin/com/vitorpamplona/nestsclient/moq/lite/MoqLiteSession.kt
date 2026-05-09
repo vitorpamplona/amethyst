@@ -604,6 +604,15 @@ class MoqLiteSession internal constructor(
         var frameCount = 0
         var droppedNoSub = 0
         var trySendFailures = 0
+        // Audit M2: once we observe the subscription is gone, fire
+        // STOP_SENDING(SUBSCRIPTION_GONE) once on the uni stream so
+        // the publisher abandons any in-flight retransmits. Pre-fix
+        // we silently dropped every frame; the publisher kept pushing
+        // and the relay kept buffering bytes the listener would never
+        // read. Latched so concurrent frames don't fire it N times
+        // (RFC 9000 §3.5: subsequent STOP_SENDING calls are ignored
+        // by the peer, but we save the syscall).
+        var stopSendingFired = false
         try {
             stream.incoming().collect { chunk ->
                 buffer.push(chunk)
@@ -630,6 +639,17 @@ class MoqLiteSession internal constructor(
                     val sub = state.withLock { subscriptionsBySubscribeId[subscribeId] }
                     if (sub == null) {
                         droppedNoSub += 1
+                        if (!stopSendingFired) {
+                            stopSendingFired = true
+                            Log.w("NestRx") {
+                                "drainOneGroup#$streamSeq subId=$subscribeId no longer subscribed — stopSending(SUBSCRIPTION_GONE)"
+                            }
+                            NestsTrace.emit("group_stop_sending") {
+                                "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence," +
+                                    "\"code\":${MoqLiteStreamCancelCode.SUBSCRIPTION_GONE}"
+                            }
+                            runCatching { stream.stopSending(MoqLiteStreamCancelCode.SUBSCRIPTION_GONE) }
+                        }
                     } else {
                         val sent =
                             sub.frames.trySend(
@@ -641,16 +661,13 @@ class MoqLiteSession internal constructor(
                         if (!sent.isSuccess) trySendFailures += 1
                     }
                     frameCount += 1
-                    // If the subscription has been closed already we
-                    // silently drop the frame — the publisher hasn't
-                    // observed the unsubscribe yet (its uni streams
-                    // are independent of our bidi FIN).
                 }
             }
-            Log.d("NestRx") { "drainOneGroup#$streamSeq FIN subId=$subscribeId groupSeq=$groupSequence frames=$frameCount droppedNoSub=$droppedNoSub trySendFail=$trySendFailures" }
+            Log.d("NestRx") { "drainOneGroup#$streamSeq FIN subId=$subscribeId groupSeq=$groupSequence frames=$frameCount droppedNoSub=$droppedNoSub trySendFail=$trySendFailures stopSent=$stopSendingFired" }
             NestsTrace.emit("group_fin") {
                 "\"stream_seq\":$streamSeq,\"sub_id\":$subscribeId,\"group_seq\":$groupSequence," +
-                    "\"frames\":$frameCount,\"dropped_no_sub\":$droppedNoSub,\"try_send_fail\":$trySendFailures"
+                    "\"frames\":$frameCount,\"dropped_no_sub\":$droppedNoSub,\"try_send_fail\":$trySendFailures," +
+                    "\"stop_sent\":$stopSendingFired"
             }
         } catch (ce: CancellationException) {
             throw ce
