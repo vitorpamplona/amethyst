@@ -189,10 +189,7 @@ fun DiscoverScreen(
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { feedTabs.size }
 
     LaunchedEffect(initialTab) {
-        val target = initialTab?.toTabIndex() ?: return@LaunchedEffect
-        if (target in feedTabs.indices && pagerState.currentPage != target) {
-            pagerState.scrollToPage(target)
-        }
+        initialTab?.let { pagerState.scrollToPage(it.toTabIndex()) }
     }
 
     WatchAccountForDiscoveryScreen(
@@ -538,7 +535,7 @@ private fun DiscoverFeedColumnsLoaded(
     }
 }
 
-// Tab positions match the order built in DiscoverScreen above. Update both together.
+// Exhaustive on DiscoverTab so adding a new enum value forces an update of feedTabs above.
 private fun DiscoverTab.toTabIndex(): Int =
     when (this) {
         DiscoverTab.FOLLOWS -> 0
