@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quic.tls
 
-import com.vitorpamplona.quic.QuicCodecException
 import com.vitorpamplona.quic.QuicWriter
+import com.vitorpamplona.quic.TlsAlertException
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
@@ -32,7 +32,9 @@ import kotlin.test.assertFailsWith
  * Before the round-3 fix, an HRR was treated as a regular ServerHello, then
  * X25519 was performed against the cookie/extension bytes (garbage), then
  * AEAD failed downstream with a confusing error. The current code rejects
- * cleanly with a [QuicCodecException].
+ * cleanly with a [TlsAlertException] carrying RFC 8446 §6.2
+ * `handshake_failure = 40` (mapped by the QUIC layer to error code
+ * `0x100 + 40 = 0x128` per RFC 9001 §4.8).
  */
 class HelloRetryRequestTest {
     @Test
@@ -49,9 +51,11 @@ class HelloRetryRequestTest {
         tls.pollOutbound(TlsClient.Level.INITIAL)
 
         val hrr = buildHelloRetryRequest()
-        assertFailsWith<QuicCodecException> {
-            tls.pushHandshakeBytes(TlsClient.Level.INITIAL, hrr)
-        }
+        val ex =
+            assertFailsWith<TlsAlertException> {
+                tls.pushHandshakeBytes(TlsClient.Level.INITIAL, hrr)
+            }
+        kotlin.test.assertEquals(40, ex.alertCode, "RFC 8446 §6.2 handshake_failure = 40")
     }
 
     /**

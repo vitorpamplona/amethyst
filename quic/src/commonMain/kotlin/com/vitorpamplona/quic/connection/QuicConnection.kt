@@ -24,6 +24,7 @@ import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
 import com.vitorpamplona.quic.crypto.bestAes128GcmAead
+import com.vitorpamplona.quic.frame.QuicTransportError
 import com.vitorpamplona.quic.observability.QlogObserver
 import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.stream.QuicStream
@@ -296,9 +297,32 @@ class QuicConnection(
      */
     @Volatile
     var peerTransportParameters: TransportParameters? = null
-        private set
+        internal set
 
-    enum class Status { HANDSHAKING, CONNECTED, CLOSING, CLOSED }
+    enum class Status {
+        HANDSHAKING,
+        CONNECTED,
+
+        /**
+         * RFC 9000 §10.2.1 closing period. We've sent a
+         * CONNECTION_CLOSE (or are about to); the writer flushes the
+         * close datagram and then the connection holds until the
+         * peer's last responses drain out of flight.
+         */
+        CLOSING,
+
+        /**
+         * RFC 9000 §10.2.2 draining period. We received a
+         * CONNECTION_CLOSE from the peer; we MUST NOT send any further
+         * packets and SHOULD discard inbound packets without
+         * processing. The state MUST persist for at least 3 * PTO
+         * before transitioning to fully [CLOSED] so the peer's
+         * retransmits can converge.
+         */
+        DRAINING,
+
+        CLOSED,
+    }
 
     /**
      * Lock-split refactor (2026-05-08): @Volatile so concurrent loops can
@@ -309,6 +333,39 @@ class QuicConnection(
     @Volatile
     var status: Status = Status.HANDSHAKING
         internal set
+
+    /**
+     * RFC 9000 §10.1 idle-timeout tracking. The driver fires
+     * [markClosedExternally] (silent close, no CONNECTION_CLOSE per
+     * §10.2.1) when the time since this timestamp exceeds
+     * [effectiveIdleTimeoutMs].
+     *
+     * Updated on:
+     *  - successful inbound packet decrypt (parser)
+     *  - outbound ack-eliciting packet emission (writer)
+     *
+     * Initialized to the connection's start time so the timer can fire
+     * even if no inbound packet ever arrives (e.g. handshake never
+     * completes on a black-holed path).
+     *
+     * @Volatile because the driver reads it from the send loop while the
+     * parser / writer mutate it from feed/drain coroutines under
+     * `streamsLock`. A torn long read would mis-arm the deadline by at
+     * most one packet's worth of time, but volatile is cheaper than the
+     * alternative (locking around every observation).
+     */
+    @Volatile
+    internal var lastActivityMs: Long = nowMillis()
+
+    /**
+     * RFC 9000 §10.2.2 draining-period deadline. Set by
+     * [enterDraining] to `now + 3 * PTO`; the driver's send loop
+     * folds it into the timeout and transitions to [Status.CLOSED]
+     * via [markClosedExternally] when it elapses. Null whenever the
+     * connection is not in [Status.DRAINING].
+     */
+    @Volatile
+    internal var drainingDeadlineMs: Long? = null
 
     /**
      * Non-suspend monitor protecting the atomic transition of
@@ -457,6 +514,64 @@ class QuicConnection(
      * this — prevents spamming the peer with redundant updates.
      */
     internal var advertisedMaxData: Long = config.initialMaxData
+
+    /**
+     * RFC 9000 §4.1 connection-level inbound flow-control accounting.
+     * Sum across all streams (live + retired) of the largest stream
+     * offset ever observed on an inbound STREAM / RESET_STREAM frame.
+     * The receiver MUST close the connection with FLOW_CONTROL_ERROR
+     * when this sum exceeds [advertisedMaxData]; that's enforced in
+     * the parser at frame-ingest time.
+     *
+     * Different from the writer's `totalRecvAdvanced` which uses
+     * `stream.receive.contiguousEnd()` (a slight under-count) for
+     * MAX_DATA threshold logic. Here we track the strict spec
+     * quantity — necessary to close before bookkeeping diverges
+     * if the peer sends data with gaps that pushes total received
+     * past the limit.
+     */
+    @Volatile
+    internal var connectionInboundOffsetSum: Long = 0L
+
+    /**
+     * RFC 9001 §6.6 / §B.1: per-key encryption count for the active
+     * 1-RTT send key. The writer increments this on each
+     * application-level packet it builds. When the count reaches the
+     * AEAD's `confidentialityLimit` we MUST initiate a key update
+     * before the next packet (else AEAD security degrades). The
+     * counter resets to 0 every time the send key phase rotates.
+     *
+     * Initial / Handshake levels share their keys briefly enough that
+     * the limit isn't reachable, so we only track 1-RTT.
+     */
+    @Volatile
+    internal var aeadEncryptCount: Long = 0L
+
+    /**
+     * RFC 9001 §6.6 / §B.1: count of failed AEAD verifications on
+     * the active 1-RTT receive key. Each `parseAndDecrypt` that
+     * returns null at APPLICATION level bumps this. When it reaches
+     * the AEAD's `integrityLimit` we MUST close the connection with
+     * AEAD_LIMIT_REACHED.
+     *
+     * Resets every time the receive key phase rotates. The integrity
+     * limit for AES-128-GCM (2^52) is unreachable in practice; for
+     * ChaCha20-Poly1305 (2^36) it's reachable only by a determined
+     * attacker spamming forged packets — close in either case is
+     * spec-mandated.
+     */
+    @Volatile
+    internal var aeadDecryptFailureCount: Long = 0L
+
+    /**
+     * Soft-trigger latch for [aeadEncryptCount]. Set true once we've
+     * called [initiateKeyUpdate] in response to crossing the soft
+     * threshold (half the confidentiality limit). Prevents repeatedly
+     * firing key-updates while the in-progress one is still pending.
+     * Cleared when the rotation actually completes (counter resets).
+     */
+    @Volatile
+    internal var aeadKeyUpdateRequested: Boolean = false
 
     /**
      * Cumulative count of peer-initiated unidirectional streams we've
@@ -1109,6 +1224,42 @@ class QuicConnection(
             )
             return
         }
+        // RFC 9000 §18.2 bounds checks. A peer that violates these is in
+        // protocol violation and the connection MUST close with
+        // TRANSPORT_PARAMETER_ERROR.
+        //
+        //  - max_udp_payload_size: minimum 1200 (the §14 datagram size
+        //    floor). A smaller value would force fragmented Initials,
+        //    which our writer can't produce.
+        //  - ack_delay_exponent: maximum 20. Beyond that, the
+        //    `ackDelay << exponent` shift in the parser overflows even
+        //    with the clamp.
+        //  - active_connection_id_limit: minimum 2. A value < 2 leaves
+        //    the peer no spare CID to migrate to.
+        tp.maxUdpPayloadSize?.let { v ->
+            if (v < 1200L) {
+                markClosedExternally(
+                    "TRANSPORT_PARAMETER_ERROR: max_udp_payload_size $v < 1200",
+                )
+                return
+            }
+        }
+        tp.ackDelayExponent?.let { v ->
+            if (v > 20L) {
+                markClosedExternally(
+                    "TRANSPORT_PARAMETER_ERROR: ack_delay_exponent $v > 20",
+                )
+                return
+            }
+        }
+        tp.activeConnectionIdLimit?.let { v ->
+            if (v < 2L) {
+                markClosedExternally(
+                    "TRANSPORT_PARAMETER_ERROR: active_connection_id_limit $v < 2",
+                )
+                return
+            }
+        }
         peerTransportParameters = tp
         qlogObserver.onTransportParametersSet("remote", peerTransportParametersSummary(tp))
         sendConnectionFlowCredit = tp.initialMaxData ?: 0L
@@ -1514,8 +1665,34 @@ class QuicConnection(
         closeAllSignals()
     }
 
-    /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
-    internal fun markClosedExternally(reason: String) {
+    /**
+     * Called by the parser on inbound CONNECTION_CLOSE or by the driver
+     * on read-loop death.
+     *
+     * [errorCode] surfaces the spec-mandated transport / TLS-alert
+     * code on the connection's `closeErrorCode` getter so observability
+     * tools (qlog, support logs) see the precise reason. Default is
+     * [QuicTransportError.NO_ERROR] for backward compatibility — most
+     * callers that don't yet pin a specific code keep the prior
+     * behaviour. Specific call sites:
+     *  - TLS layer: passes `0x100 + alert_description` per RFC 9001 §4.8
+     *    via [com.vitorpamplona.quic.TlsAlertException.quicErrorCode];
+     *  - CRYPTO buffer overflow: [QuicTransportError.CRYPTO_BUFFER_EXCEEDED];
+     *  - AEAD limit: [QuicTransportError.AEAD_LIMIT_REACHED];
+     *  - Transport-parameter violations: [QuicTransportError.TRANSPORT_PARAMETER_ERROR];
+     *  - Flow-control / stream-state / final-size violations: their
+     *    matching §20.1 codes.
+     *
+     * Note: [markClosedExternally] does NOT emit a CONNECTION_CLOSE
+     * frame on the wire (it transitions straight to CLOSED). The
+     * [errorCode] is for our local observability. The wire-emit path
+     * (`close(errorCode, reason)` → CLOSING → writer drain) is for
+     * graceful application-initiated close.
+     */
+    internal fun markClosedExternally(
+        reason: String,
+        errorCode: Long = QuicTransportError.NO_ERROR,
+    ) {
         // First-call wins for [closeReason] so the highest-quality
         // diagnostic is preserved when several teardown paths race
         // (e.g. read loop's `socket.receive() == null` finally fires
@@ -1530,6 +1707,13 @@ class QuicConnection(
                 if (status == Status.CLOSED) return@synchronized false
                 status = Status.CLOSED
                 closeReason = reason
+                // Only set the code on first transition AND when the
+                // caller passed a non-default value; preserves the
+                // earlier-set code if a caller raced past us with
+                // NO_ERROR.
+                if (errorCode != QuicTransportError.NO_ERROR && closeErrorCode == 0L) {
+                    closeErrorCode = errorCode
+                }
                 true
             }
         // Wake any teardown coroutine waiting for the close to land. Safe
@@ -1875,6 +2059,13 @@ class QuicConnection(
                 currentSendKeyPhase = !currentSendKeyPhase
             }
         }
+        // RFC 9001 §6.6 limits are PER-KEY: every rotation resets both
+        // the encrypt count (now using fresh send keys) and the
+        // decrypt-failure count (fresh receive keys mean prior failures
+        // can't accumulate further toward the integrity limit).
+        aeadEncryptCount = 0L
+        aeadDecryptFailureCount = 0L
+        aeadKeyUpdateRequested = false
         qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
         qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
     }
@@ -1962,6 +2153,10 @@ class QuicConnection(
         currentReceiveKeyPhase = !currentReceiveKeyPhase
         currentSendKeyPhase = !currentSendKeyPhase
         keyUpdateInProgress = true
+        // RFC 9001 §6.6 per-key counters reset on rotation (see commitKeyUpdate).
+        aeadEncryptCount = 0L
+        aeadDecryptFailureCount = 0L
+        aeadKeyUpdateRequested = false
         qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
         qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
         return true
@@ -2319,6 +2514,166 @@ class QuicConnection(
     ): PathMigrationResult = streamsLock.withLock { triggerPathMigrationLocked(nowMillis, currentPtoMillis) }
 
     /**
+     * RFC 9000 §10.1: effective idle-timeout in milliseconds, or null
+     * if neither endpoint advertised a non-zero value (timeout is
+     * disabled). The effective timeout is the minimum of the
+     * locally-configured value and the peer's advertised value, after
+     * dropping any side that advertised 0 (per §18.2 a value of 0
+     * means "no timeout").
+     *
+     * §10.1 also requires we increase the timeout to at least 3 * PTO
+     * to avoid timing out before loss detection has had a chance to
+     * recover the path.
+     */
+    internal fun effectiveIdleTimeoutMs(): Long? {
+        val local = config.maxIdleTimeoutMillis.takeIf { it > 0L }
+        val peer = peerTransportParameters?.maxIdleTimeoutMillis?.takeIf { it > 0L }
+        val agreed =
+            when {
+                local != null && peer != null -> minOf(local, peer)
+                local != null -> local
+                peer != null -> peer
+                else -> return null
+            }
+        // §10.1: floor at 3 * PTO so loss recovery has time to fire.
+        // Pre-handshake we don't have peer max_ack_delay yet, fall back
+        // to 0 (matches the writer's pre-handshake gating).
+        val maxAckDelayMs = peerTransportParameters?.maxAckDelay ?: 0L
+        val ptoBaseMs = lossDetection.ptoBaseMs(maxAckDelayMs).coerceAtLeast(1L)
+        val floor = ptoBaseMs * 3L
+        return agreed.coerceAtLeast(floor)
+    }
+
+    /**
+     * RFC 9000 §10.1.1 idle-timer tick. Called by the driver after a
+     * [withTimeoutOrNull] expiry to check whether the silence has
+     * exceeded [effectiveIdleTimeoutMs]. Returns true on timeout
+     * (caller should silently close per §10.2.1).
+     */
+    internal fun isIdleTimedOut(nowMillis: Long): Boolean {
+        val timeoutMs = effectiveIdleTimeoutMs() ?: return false
+        return nowMillis - lastActivityMs >= timeoutMs
+    }
+
+    /**
+     * RFC 9000 §10.2.2: enter the draining period after receiving a
+     * peer's CONNECTION_CLOSE. Sets [status] to [Status.DRAINING],
+     * records a `now + 3 * PTO` deadline at which the driver flips
+     * the connection to [Status.CLOSED]. While draining, the writer
+     * MUST NOT emit any packets; the read loop drops late inbound
+     * silently.
+     *
+     * For the application this is functionally equivalent to "closed"
+     * — `awaitIncoming*` returns null, new streams can't be opened —
+     * but the explicit DRAINING state lets observability tools (qlog,
+     * tests) see the spec-mandated grace period.
+     *
+     * Per §10.2.2 caller transitions ONLY from CONNECTED / HANDSHAKING.
+     * A second call (peer retransmits its CONNECTION_CLOSE) is a
+     * harmless no-op.
+     */
+    internal fun enterDraining(
+        reason: String,
+        nowMillis: Long,
+    ) {
+        val firstTransition =
+            synchronized(closeStateMonitor) {
+                if (status == Status.CLOSED || status == Status.DRAINING) return@synchronized false
+                closeReason = reason
+                status = Status.DRAINING
+                true
+            }
+        if (!firstTransition) return
+        // 3 * PTO deadline. Use the connection's `lossDetection.ptoBaseMs`
+        // for the post-handshake case (peer params have arrived); fall
+        // back to a small floor pre-handshake.
+        val maxAckDelay = peerTransportParameters?.maxAckDelay ?: 0L
+        val ptoBaseMs = lossDetection.ptoBaseMs(maxAckDelay).coerceAtLeast(1L)
+        drainingDeadlineMs = nowMillis + (ptoBaseMs * 3L).coerceAtLeast(MIN_DRAINING_PERIOD_MS)
+        // Wake any close()-awaiter so they don't sit on the
+        // `closingDrainSignal` for 3*PTO unnecessarily.
+        closingDrainSignal.complete(Unit)
+        qlogObserver.onConnectionClosed("remote", closeErrorCode, reason)
+        if (!handshakeComplete) {
+            signalHandshakeFailed(QuicConnectionClosedException("connection closed externally: $reason"))
+        }
+    }
+
+    /**
+     * RFC 9000 §10.2.2 draining-deadline check. Returns true once
+     * the 3 * PTO grace period has elapsed and the connection should
+     * be flipped to fully closed.
+     */
+    internal fun isDrainingExpired(nowMillis: Long): Boolean {
+        val deadline = drainingDeadlineMs ?: return false
+        return status == Status.DRAINING && nowMillis >= deadline
+    }
+
+    /**
+     * RFC 9000 §10.3 stateless-reset detection. A peer that has lost
+     * connection state (crash, restart, route change) signals so by
+     * sending a "Stateless Reset" datagram — bytes that look like a
+     * short-header packet on the wire but whose last 16 bytes equal a
+     * `stateless_reset_token` previously communicated by the peer.
+     *
+     * The check fires at AEAD-failure time (a stateless reset is
+     * indistinguishable from forgery without the token comparison).
+     * Comparison is constant-time per §10.3.1 to avoid leaking token
+     * bits via timing.
+     *
+     * Token sources covered:
+     *  - The peer's `stateless_reset_token` transport parameter (the
+     *    sequence-0 / initial CID's token).
+     *  - Every NEW_CONNECTION_ID token the peer has ever sent
+     *    ([PathValidator.allKnownStatelessResetTokens]) — including
+     *    tokens for CIDs that have since been rotated-to-active or
+     *    RETIRE_CONNECTION_ID'd. The lifetime retention covers the
+     *    WiFi↔cellular handoff path: when we migrate to a new DCID
+     *    and the peer crashes mid-handoff, the stateless reset on
+     *    the new path uses the migrated CID's token, which is no
+     *    longer in the unused pool but IS in the lifetime store.
+     */
+    internal fun isStatelessReset(datagram: ByteArray): Boolean {
+        if (datagram.size < 22) return false
+        // Form bit must be 0 (looks-like-short-header).
+        if ((datagram[0].toInt() and 0x80) != 0) return false
+        val tokenStart = datagram.size - 16
+        // Compare against every known token. Constant-time per token;
+        // total time scales with token count but doesn't reveal which
+        // (if any) matched.
+        var anyMatch = false
+        peerTransportParameters?.statelessResetToken?.let { tok ->
+            if (tok.size == 16 && constantTimeEqualsRange(tok, datagram, tokenStart)) {
+                anyMatch = true
+            }
+        }
+        for (token in pathValidator.allKnownStatelessResetTokens()) {
+            if (token.size != 16) continue
+            if (constantTimeEqualsRange(token, datagram, tokenStart)) {
+                anyMatch = true
+            }
+        }
+        return anyMatch
+    }
+
+    /**
+     * Constant-time comparison of [token] (16 bytes) against the slice
+     * of [datagram] starting at [datagramOffset]. Caller MUST verify
+     * `datagram.size >= datagramOffset + token.size` upstream.
+     */
+    private fun constantTimeEqualsRange(
+        token: ByteArray,
+        datagram: ByteArray,
+        datagramOffset: Int,
+    ): Boolean {
+        var diff = 0
+        for (i in 0 until token.size) {
+            diff = diff or (token[i].toInt() xor datagram[datagramOffset + i].toInt())
+        }
+        return diff == 0
+    }
+
+    /**
      * Check whether an outstanding PATH_CHALLENGE has exceeded the
      * 3 * PTO budget (RFC 9000 §8.2.4). Called from the driver's
      * PTO timer path. Returns true when validation just timed out.
@@ -2585,6 +2940,14 @@ class QuicConnection(
     }
 
     companion object {
+        /**
+         * RFC 9000 §10.2.2 floor on the draining-period grace. The
+         * spec mandates "at least 3 * PTO" which can be vanishingly
+         * small pre-handshake. Floor at 100 ms so qlog observers and
+         * tests can see the DRAINING window.
+         */
+        const val MIN_DRAINING_PERIOD_MS: Long = 100L
+
         /**
          * Bound on the inbound datagram queue depth. RFC 9221 datagrams are
          * outside connection-level flow control, so without this cap a peer

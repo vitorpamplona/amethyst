@@ -53,6 +53,24 @@ import com.vitorpamplona.quic.tls.TlsClient
 private const val MAX_QUIC_OFFSET: Long = (1L shl 62) - 1L
 
 /**
+ * RFC 9000 §22 CRYPTO_BUFFER_EXCEEDED cap. Largest amount of CRYPTO
+ * data we'll buffer per encryption level past the contiguous read
+ * frontier before closing the connection. Sized to comfortably hold:
+ *  - Initial: ClientHello + ServerHello + (rarely fragmented) Initial
+ *    flight (~few KB).
+ *  - Handshake: EncryptedExtensions + full RSA-4096 cert chain (~ten
+ *    intermediates worst case) + CertificateVerify + Finished. Real
+ *    deployments cap out under 30 KB.
+ *  - Application: post-handshake NewSessionTicket(s); a few hundred
+ *    bytes per ticket.
+ *
+ * The 64 KiB cap leaves significant headroom over real handshakes
+ * while bounding the worst-case heap a misbehaving peer can pin
+ * (3 levels × 64 KiB = 192 KiB).
+ */
+private const val CRYPTO_BUFFER_CAP_BYTES: Long = 64L * 1024L
+
+/**
  * Decode every QUIC packet inside a single inbound UDP datagram and dispatch
  * its frames to [conn]'s state.
  *
@@ -82,7 +100,30 @@ fun feedDatagram(
         // header after HP unmask (or a similar invariant violation
         // bubbled out of the parse path). Spec MUST close with
         // PROTOCOL_VIOLATION.
-        conn.markClosedExternally(e.message ?: "PROTOCOL_VIOLATION")
+        conn.markClosedExternally(
+            e.message ?: "PROTOCOL_VIOLATION",
+            errorCode = com.vitorpamplona.quic.frame.QuicTransportError.PROTOCOL_VIOLATION,
+        )
+    } catch (e: com.vitorpamplona.quic.TlsAlertException) {
+        // RFC 9001 §4.8: a TLS alert maps to QUIC error code
+        // `0x100 + alert_description`. Surface the precise spec code
+        // on `closeErrorCode` so qlog / support logs can identify
+        // the TLS reason instead of seeing only INTERNAL_ERROR.
+        conn.markClosedExternally(
+            "CRYPTO_ERROR (TLS alert ${e.alertCode}): ${e.message ?: "no detail"}",
+            errorCode = e.quicErrorCode,
+        )
+    } catch (e: com.vitorpamplona.quic.QuicCodecException) {
+        // Generic TLS / frame parse failure that didn't carry a
+        // specific alert code. Map to CRYPTO_ERROR with TLS
+        // `internal_error = 80` so the close still falls in the
+        // §4.8 range; observers can distinguish it from
+        // PROTOCOL_VIOLATION (transport layer) by the 0x100 prefix.
+        val alertCode = com.vitorpamplona.quic.tls.TlsConstants.ALERT_INTERNAL_ERROR
+        conn.markClosedExternally(
+            "CRYPTO_ERROR (TLS internal_error): ${e.message ?: e::class.simpleName}",
+            errorCode = 0x100L + alertCode.toLong(),
+        )
     }
 }
 
@@ -91,6 +132,28 @@ private fun feedDatagramInner(
     datagram: ByteArray,
     nowMillis: Long,
 ) {
+    // RFC 9000 §10.2.2: while in the DRAINING state, late inbound
+    // packets MUST be discarded silently. Same goes for CLOSED.
+    if (conn.status == QuicConnection.Status.DRAINING ||
+        conn.status == QuicConnection.Status.CLOSED
+    ) {
+        return
+    }
+    // RFC 9000 §10.3 stateless-reset detection. A peer that has lost
+    // connection state signals so by sending a datagram whose trailing
+    // 16 bytes equal a stateless_reset_token we previously received.
+    // Pre-empts the AEAD path entirely: a real short-header packet's
+    // trailing 16 bytes (the AEAD tag) match a known token with
+    // probability 2^-128, so the false-positive rate is zero in
+    // practice. Spec MUST close silently — no CONNECTION_CLOSE per
+    // §10.3.1.
+    if (datagram.isNotEmpty() &&
+        (datagram[0].toInt() and 0x80) == 0 &&
+        conn.isStatelessReset(datagram)
+    ) {
+        conn.markClosedExternally("stateless reset received from peer")
+        return
+    }
     var offset = 0
     while (offset < datagram.size) {
         val first = datagram[offset].toInt() and 0xFF
@@ -259,6 +322,9 @@ private fun feedLongHeaderPacket(
     }
 
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
+    // RFC 9000 §10.1.1: any successfully processed inbound packet
+    // resets the idle timer.
+    conn.lastActivityMs = nowMillis
 
     // The server's source CID becomes our destination CID for subsequent packets.
     if (level == EncryptionLevel.INITIAL) {
@@ -416,10 +482,34 @@ private fun feedShortHeaderPacket(
         }
     }
     if (parsed == null) {
+        // RFC 9000 §10.3: an undecryptable short-header datagram may
+        // be a Stateless Reset from a peer that lost connection
+        // state (crash, restart, NAT rebinding). Before counting it
+        // as a forgery against the integrity limit, check whether
+        // its trailing 16 bytes match any known stateless-reset
+        // token. If so, the connection is over — silently transition
+        // to CLOSED per §10.3.1 (no CONNECTION_CLOSE emission, no
+        // further packets, just stop).
+        if (offset == 0 && conn.isStatelessReset(datagram)) {
+            conn.markClosedExternally("stateless reset received from peer")
+            return
+        }
         conn.qlogObserver.onPacketDropped(
             "AEAD auth failed or header parse failed at level APPLICATION",
             datagram.size - offset,
         )
+        // RFC 9001 §6.6 / §B.1 integrity limit. A 1-RTT packet that
+        // failed AEAD verification counts as a forgery attempt against
+        // the active receive key. Closing here prevents an attacker
+        // from grinding through the integrity-limit-many forgeries
+        // searching for a key recovery on the underlying AEAD.
+        conn.aeadDecryptFailureCount += 1L
+        val limit = live.aead.integrityLimit
+        if (conn.aeadDecryptFailureCount >= limit) {
+            conn.markClosedExternally(
+                "AEAD_LIMIT_REACHED: 1-RTT decrypt-failure count ${conn.aeadDecryptFailureCount} >= integrity limit $limit",
+            )
+        }
         return
     }
     // AEAD succeeded with the candidate next-phase keys → commit the
@@ -450,6 +540,9 @@ private fun feedShortHeaderPacket(
         conn.keyUpdateInProgress = false
     }
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
+    // RFC 9000 §10.1.1: any successfully processed inbound packet
+    // resets the idle timer.
+    conn.lastActivityMs = nowMillis
     if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
         conn.qlogObserver.onPacketReceived(
             level = EncryptionLevel.APPLICATION,
@@ -544,8 +637,19 @@ private fun dispatchFrames(
                     // before consuming. Per RFC 9000 §18.2 the exponent is
                     // 0..20; we further clamp ackDelay so the shift never
                     // overflows (`ackDelay <= Long.MAX_VALUE >>> exponent`).
-                    val rawExponent = conn.config.ackDelayExponent
-                    val exponent = rawExponent.coerceIn(0L, 20L).toInt()
+                    //
+                    // RFC 9000 §13.2.5: a received ACK is decoded using the
+                    // PEER's `ack_delay_exponent`, not ours. Pre-handshake
+                    // peer params haven't arrived yet — fall back to the
+                    // default of 3 per §18.2. Coercion below ensures even
+                    // a malicious peer that smuggles a >20 value through
+                    // the §18.2 bounds check (e.g. on a connection where
+                    // the peer-params bounds enforcement is bypassed by a
+                    // race) can't desync our RTT estimator.
+                    val peerExponent =
+                        conn.peerTransportParameters?.ackDelayExponent
+                            ?: TransportParameterDefaults.ACK_DELAY_EXPONENT
+                    val exponent = peerExponent.coerceIn(0L, 20L).toInt()
                     val maxAckDelayPreShift =
                         if (exponent == 0) Long.MAX_VALUE else Long.MAX_VALUE ushr exponent
                     val safeAckDelay = frame.ackDelay.coerceIn(0L, maxAckDelayPreShift)
@@ -588,6 +692,23 @@ private fun dispatchFrames(
 
             is CryptoFrame -> {
                 ackEliciting = true
+                // RFC 9000 §22 / §7.5: a peer sending more CRYPTO data
+                // than we can buffer per encryption level MUST close
+                // the connection with CRYPTO_BUFFER_EXCEEDED. The cap
+                // is generous (covers a worst-case RSA-4096 cert chain
+                // with intermediates) but bounded so a misbehaving
+                // peer can't pin gigabytes by sending huge offsets.
+                // Pre-check: reject obviously-overflowing frames
+                // BEFORE the insert so we don't buffer them at all.
+                val frameEnd = frame.offset + frame.data.size.toLong()
+                val proposed = maxOf(state.cryptoReceive.highestObservedOffset(), frameEnd)
+                if (proposed - state.cryptoReceive.contiguousEnd() > CRYPTO_BUFFER_CAP_BYTES) {
+                    conn.markClosedExternally(
+                        "CRYPTO_BUFFER_EXCEEDED: $level CRYPTO buffered=${proposed - state.cryptoReceive.contiguousEnd()} > cap=$CRYPTO_BUFFER_CAP_BYTES",
+                        errorCode = com.vitorpamplona.quic.frame.QuicTransportError.CRYPTO_BUFFER_EXCEEDED,
+                    )
+                    return
+                }
                 state.cryptoReceive.insert(frame.offset, frame.data)
                 val contiguous = state.cryptoReceive.readContiguous()
                 if (contiguous.isNotEmpty()) {
@@ -648,6 +769,19 @@ private fun dispatchFrames(
                     continue
                 }
                 val stream = conn.getOrCreatePeerStreamLocked(frame.streamId)
+                // RFC 9000 §3.2: once the peer has sent RESET_STREAM the
+                // receive side is in the "Reset Recvd" terminal state.
+                // Any subsequent STREAM frame on this id is a peer
+                // protocol violation — close with STREAM_STATE_ERROR.
+                // Pre-fix the bytes were silently absorbed, leaving the
+                // application with a phantom mid-reset stream that the
+                // peer believed was already dead.
+                if (stream.peerResetReceived) {
+                    conn.markClosedExternally(
+                        "STREAM_STATE_ERROR: stream ${frame.streamId} STREAM after RESET_STREAM",
+                    )
+                    return
+                }
                 // RFC 9000 §4.1: peer MUST NOT send beyond the limit we advertised.
                 // The connection-level kill protects against unbounded memory
                 // growth from a misbehaving peer.
@@ -657,6 +791,25 @@ private fun dispatchFrames(
                         "peer exceeded stream ${frame.streamId} receive limit ($frameEnd > ${stream.receiveLimit})",
                     )
                     return
+                }
+                // RFC 9000 §4.1 connection-level enforcement: the SUM
+                // across all streams of "largest stream offset received"
+                // MUST NOT exceed the most recently advertised MAX_DATA.
+                // We update [conn.connectionInboundOffsetSum] only when
+                // this frame's end-offset advances the per-stream
+                // high-water mark, so duplicate / reordered frames don't
+                // double-count.
+                if (frameEnd > stream.receiveHighestOffset) {
+                    val delta = frameEnd - stream.receiveHighestOffset
+                    stream.receiveHighestOffset = frameEnd
+                    conn.connectionInboundOffsetSum += delta
+                    if (conn.connectionInboundOffsetSum > conn.advertisedMaxData) {
+                        conn.markClosedExternally(
+                            "FLOW_CONTROL_ERROR: peer exceeded connection MAX_DATA " +
+                                "(${conn.connectionInboundOffsetSum} > ${conn.advertisedMaxData})",
+                        )
+                        return
+                    }
                 }
                 // RFC 9000 §4.5: enforce final-size invariants. The
                 // [com.vitorpamplona.quic.stream.ReceiveBuffer.insert]
@@ -813,6 +966,30 @@ private fun dispatchFrames(
                         return
                     }
                 }
+                // RFC 9000 §4.5: a RESET_STREAM's finalSize counts toward
+                // connection-level flow control even though no STREAM frame
+                // ever delivered those bytes — it represents what the peer
+                // committed to send before aborting. Top up
+                // [conn.connectionInboundOffsetSum] when finalSize advances
+                // beyond what STREAM frames already counted, then re-check
+                // against the connection cap.
+                if (target != null && frame.finalSize > target.receiveHighestOffset) {
+                    val delta = frame.finalSize - target.receiveHighestOffset
+                    target.receiveHighestOffset = frame.finalSize
+                    conn.connectionInboundOffsetSum += delta
+                    if (conn.connectionInboundOffsetSum > conn.advertisedMaxData) {
+                        conn.markClosedExternally(
+                            "FLOW_CONTROL_ERROR: peer RESET_STREAM finalSize pushed connection past MAX_DATA " +
+                                "(${conn.connectionInboundOffsetSum} > ${conn.advertisedMaxData})",
+                        )
+                        return
+                    }
+                }
+                // RFC 9000 §3.2: latch the receive-side terminal state so
+                // any subsequent STREAM frame on this id closes the
+                // connection with STREAM_STATE_ERROR (handled in the
+                // STREAM branch above).
+                target?.peerResetReceived = true
                 // Mark the peer's stream aborted and close our read side; the
                 // application sees a truncated incoming flow.
                 target?.closeIncoming()
@@ -920,7 +1097,14 @@ private fun dispatchFrames(
                 // Audit-4 #13: any frames following CONNECTION_CLOSE in the
                 // same payload MUST NOT be dispatched — they could create
                 // streams or deliver bytes on an already-closed connection.
-                conn.markClosedExternally("peer CONNECTION_CLOSE: ${frame.reason}")
+                //
+                // RFC 9000 §10.2.2: enter the DRAINING state for 3 * PTO
+                // before transitioning to CLOSED. During draining we
+                // MUST NOT send packets and SHOULD discard inbound
+                // silently. The driver's send loop transitions to
+                // CLOSED when [QuicConnection.drainingDeadlineMs]
+                // elapses.
+                conn.enterDraining("peer CONNECTION_CLOSE: ${frame.reason}", nowMillis)
                 return
             }
 

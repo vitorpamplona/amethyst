@@ -38,6 +38,28 @@ abstract class Aead {
     abstract val nonceLength: Int
     abstract val tagLength: Int
 
+    /**
+     * RFC 9001 §B.1 confidentiality limit — the maximum number of
+     * packets the endpoint can encrypt with a single key before MUST
+     * initiating a key update / closing the connection.
+     *
+     * AES-128-GCM: 2^23 = 8_388_608.
+     * ChaCha20-Poly1305: 2^62 (effectively unlimited for practical
+     * sessions, but still a finite cap).
+     */
+    abstract val confidentialityLimit: Long
+
+    /**
+     * RFC 9001 §B.1 integrity limit — the maximum number of forged
+     * packets (failed AEAD verifications) the endpoint may attempt to
+     * decrypt before MUST closing the connection with
+     * AEAD_LIMIT_REACHED.
+     *
+     * AES-128-GCM: 2^52 (effectively unreachable).
+     * ChaCha20-Poly1305: 2^36.
+     */
+    abstract val integrityLimit: Long
+
     abstract fun seal(
         key: ByteArray,
         nonce: ByteArray,
@@ -153,6 +175,10 @@ object Aes128Gcm : Aead() {
     override val nonceLength = 12
     override val tagLength = 16
 
+    // RFC 9001 §B.1 limits for AEAD_AES_128_GCM.
+    override val confidentialityLimit: Long = 1L shl 23
+    override val integrityLimit: Long = 1L shl 52
+
     override fun seal(
         key: ByteArray,
         nonce: ByteArray,
@@ -185,6 +211,10 @@ object ChaCha20Poly1305Aead : Aead() {
     override val keyLength = 32
     override val nonceLength = 12
     override val tagLength = 16
+
+    // RFC 9001 §B.1 limits for AEAD_CHACHA20_POLY1305.
+    override val confidentialityLimit: Long = (1L shl 62)
+    override val integrityLimit: Long = 1L shl 36
 
     override fun seal(
         key: ByteArray,

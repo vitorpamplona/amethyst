@@ -48,6 +48,10 @@ class JcaAesGcmAead(
     override val nonceLength = 12
     override val tagLength = 16
 
+    // RFC 9001 §B.1 limits — same as commonMain `Aes128Gcm`.
+    override val confidentialityLimit: Long = 1L shl 23
+    override val integrityLimit: Long = 1L shl 52
+
     private val keySpec = SecretKeySpec(key, "AES")
 
     // Separate ciphers per direction. JCA's AES-GCM tracks the (key, iv) pair

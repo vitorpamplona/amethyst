@@ -65,6 +65,55 @@ object FrameType {
     const val DATAGRAM_LEN: Long = 0x31
 }
 
+/**
+ * RFC 9000 §20.1 transport-error code identifiers. These are the values
+ * we put in the `errorCode` field of a CONNECTION_CLOSE (Transport,
+ * frame type 0x1c). The qlog observer surfaces them as the spec
+ * mnemonic so post-mortem analysis tools can categorize closes.
+ *
+ * RFC 9001 §4.8 reserves the range 0x100–0x1ff for TLS alerts mapped
+ * via `0x100 + alert_description`; those aren't enumerated here — the
+ * encoder builds them ad-hoc via [TlsAlertException.quicErrorCode].
+ */
+object QuicTransportError {
+    const val NO_ERROR: Long = 0x00
+    const val INTERNAL_ERROR: Long = 0x01
+    const val CONNECTION_REFUSED: Long = 0x02
+    const val FLOW_CONTROL_ERROR: Long = 0x03
+    const val STREAM_LIMIT_ERROR: Long = 0x04
+    const val STREAM_STATE_ERROR: Long = 0x05
+    const val FINAL_SIZE_ERROR: Long = 0x06
+    const val FRAME_ENCODING_ERROR: Long = 0x07
+    const val TRANSPORT_PARAMETER_ERROR: Long = 0x08
+    const val CONNECTION_ID_LIMIT_ERROR: Long = 0x09
+    const val PROTOCOL_VIOLATION: Long = 0x0a
+    const val INVALID_TOKEN: Long = 0x0b
+    const val APPLICATION_ERROR: Long = 0x0c
+
+    /**
+     * RFC 9000 §22: an endpoint received more data in CRYPTO frames
+     * than it can buffer. We enforce a per-level cap so a misbehaving
+     * peer can't pin unbounded memory before the handshake completes.
+     */
+    const val CRYPTO_BUFFER_EXCEEDED: Long = 0x0d
+
+    /**
+     * RFC 9000 §22 / RFC 9001 §6: an endpoint detected errors in
+     * performing a key update — e.g. peer used the wrong key phase
+     * with a regressing PN, or AEAD failed under both the live and
+     * next-phase keys during a rotation attempt.
+     */
+    const val KEY_UPDATE_ERROR: Long = 0x0e
+
+    /**
+     * RFC 9001 §6.6: encryption / integrity limit on the active AEAD
+     * was reached. Used by the per-key invocation tracker.
+     */
+    const val AEAD_LIMIT_REACHED: Long = 0x0f
+
+    const val NO_VIABLE_PATH: Long = 0x10
+}
+
 sealed class Frame {
     abstract fun encode(out: QuicWriter)
 }
