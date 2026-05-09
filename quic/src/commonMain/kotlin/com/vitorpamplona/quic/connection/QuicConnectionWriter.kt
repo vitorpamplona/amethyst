@@ -622,31 +622,23 @@ private fun buildApplicationPacket(
     // Skip ACK building when we're about to emit a 0-RTT packet.
     if (use1Rtt) {
         state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { plainAck ->
-            // RFC 9000 §13.4.2: an endpoint that USES ECN on outbound
-            // packets (we set ECT(0) on every datagram via the socket's
-            // IP_TOS option) MUST report ECN counts in 1-RTT ACK frames so
-            // the peer can detect path congestion. We don't currently
-            // read inbound TOS bits — JDK's DatagramChannel doesn't expose
-            // them without JNI — so the counts are all-zero. The interop
-            // runner's `ecn` testcase only checks for the field's presence
-            // (`hasattr(p["quic"], "ack.ect0_count")`); strict peers that
-            // cross-validate counts would reject this, but aioquic /
-            // picoquic / quic-go all tolerate it. Initial / Handshake-space
-            // ACKs stay plain (ecnCounts=null) — the spec allows ECN counts
-            // there too, but interop implementations don't always handle
-            // them and we'd gain nothing.
-            val ackWithEcn =
-                AckFrame(
-                    largestAcknowledged = plainAck.largestAcknowledged,
-                    ackDelay = plainAck.ackDelay,
-                    firstAckRange = plainAck.firstAckRange,
-                    additionalRanges = plainAck.additionalRanges,
-                    ecnCounts =
-                        com.vitorpamplona.quic.frame
-                            .AckEcnCounts(0L, 0L, 0L),
-                )
-            frames += ackWithEcn
-            tokens += RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = ackWithEcn.largestAcknowledged)
+            // RFC 9000 §13.4.2: an endpoint that USES ECN MUST report
+            // accurate ECN counts. Pre-fix we hardcoded
+            // `AckEcnCounts(0, 0, 0)` while still marking outbound
+            // datagrams with ECT(0) — a strict peer cross-validating
+            // counts could treat the all-zero report as a
+            // PROTOCOL_VIOLATION, since we claim to be using ECN but
+            // never accumulate the counts. We don't read inbound TOS
+            // (JDK's DatagramChannel doesn't expose it without JNI),
+            // so honest reporting means: don't claim to track ECN at
+            // all — emit ACK with `ecnCounts = null`. The peer reads
+            // that as "this endpoint isn't reporting ECN" and skips
+            // its own ECN-driven congestion logic for our direction.
+            // We still mark outbound ECT(0) (other peers' tracking
+            // benefits from the path-quality signal); the asymmetry
+            // is allowed by §13.4.
+            frames += plainAck
+            tokens += RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = plainAck.largestAcknowledged)
         }
     }
 

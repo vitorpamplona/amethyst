@@ -45,3 +45,24 @@ actual val PlatformChaCha20Block: ChaCha20BlockEncrypt =
     }
 
 actual fun bestAes128GcmAead(key: ByteArray): Aead = JcaAesGcmAead(key)
+
+/**
+ * Try the JCA `ChaCha20-Poly1305` cipher first (Java 11+ /
+ * Android API 28+) — gives us range-overload + offset-based doFinal,
+ * which lets [com.vitorpamplona.quic.packet.LongHeaderPacket.build]
+ * and [com.vitorpamplona.quic.packet.ShortHeaderPacket.build] write
+ * ciphertext+tag in-place without intermediate allocations on the
+ * outbound hot path.
+ *
+ * Falls back to the pure-Kotlin [ChaCha20Poly1305Aead] singleton if
+ * the JCA provider doesn't ship the algorithm — older Android
+ * versions, headless containers without the standard provider set,
+ * GraalVM native-image unsubsetted, etc. The fallback is correct
+ * (same algorithm) but slower and skips the range overloads.
+ */
+actual fun bestChaCha20Poly1305Aead(key: ByteArray): Aead =
+    try {
+        JcaChaCha20Poly1305Aead(key)
+    } catch (_: java.security.NoSuchAlgorithmException) {
+        ChaCha20Poly1305Aead
+    }
