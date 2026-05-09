@@ -672,6 +672,20 @@ class MoqLiteSessionTest {
             kotlin.test.assertContains(dropped.drop.reasonPhrase, "wrongPubkey")
             kotlin.test.assertContains(dropped.drop.reasonPhrase, "speakerPubkey")
 
+            // Audit M3: in addition to the application-level Drop body,
+            // the publisher must also `RESET_STREAM(errorCode)` the bidi
+            // so the peer can distinguish a typed rejection from a
+            // graceful "publisher gone" FIN. Drain so the read side
+            // closes and the cell publishes, then assert the code.
+            // toList() will end because reset() closed the channel.
+            withTimeout(2_000) { subBidi.incoming().toList() }
+            val fakeBidi = subBidi as FakeBidiStream
+            assertEquals(
+                MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST as Long?,
+                fakeBidi.lastPeerResetCode,
+                "publisher must reset the bidi with BROADCAST_DOES_NOT_EXIST after the Drop body",
+            )
+
             publisher.close()
             session.close()
         }
@@ -715,6 +729,19 @@ class MoqLiteSessionTest {
             // Reason phrase is informational; pin substring rather than
             // the exact text so we can keep tweaking the wording.
             kotlin.test.assertContains(dropped.drop.reasonPhrase, "video/data")
+
+            // Audit M3: typed RESET_STREAM follows the Drop body. Same
+            // shape as broadcast_does_not_match — the code matches
+            // the Drop's errorCode so a peer that only watched the
+            // QUIC layer (no body decode) still sees the typed
+            // rejection.
+            withTimeout(2_000) { subBidi.incoming().toList() }
+            val fakeBidi = subBidi as FakeBidiStream
+            assertEquals(
+                MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST as Long?,
+                fakeBidi.lastPeerResetCode,
+                "publisher must reset the bidi with TRACK_DOES_NOT_EXIST after the Drop body",
+            )
 
             publisher.close()
             session.close()

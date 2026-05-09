@@ -933,7 +933,7 @@ class MoqLiteSession internal constructor(
                             if (sub.broadcast != ourSuffix) {
                                 Log.w("NestTx") {
                                     "SUBSCRIBE inbound id=${sub.id} broadcast='${sub.broadcast}' does not match " +
-                                        "publisher.suffix='$ourSuffix' — replying SubscribeDrop"
+                                        "publisher.suffix='$ourSuffix' — replying SubscribeDrop+RESET"
                                 }
                                 runCatching {
                                     bidi.write(
@@ -946,7 +946,16 @@ class MoqLiteSession internal constructor(
                                             ),
                                         ),
                                     )
-                                    bidi.finish()
+                                    // Lite-03 conveys errors on any stream via
+                                    // `RESET_STREAM(application_error_code)` (audit
+                                    // M3). The Drop body is the application-level
+                                    // signal; the reset is the QUIC-level signal
+                                    // that carries the same code, distinguishing
+                                    // "publisher rejected this subscribe" from
+                                    // "publisher gracefully shut down" (which
+                                    // would be a plain FIN). Pre-fix we FINed,
+                                    // overlapping the two semantics.
+                                    bidi.reset(MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST)
                                 }
                                 dispatched = true
                                 return@collect
@@ -956,19 +965,23 @@ class MoqLiteSession internal constructor(
                             val targetPublisher = publishersSnapshot.firstOrNull { it.track == sub.track }
                             if (targetPublisher == null) {
                                 // Reply SubscribeDrop with a TRACK_DOES_NOT_EXIST
-                                // error code BEFORE we FIN — without this the
+                                // error code BEFORE we RESET — without this the
                                 // peer's response wait resolves only on
-                                // bidi-FIN with no indication WHY (looks
+                                // bidi tear-down with no indication WHY (looks
                                 // identical to "publisher disappeared mid-
                                 // subscribe"). Drop carries the error code +
                                 // reason phrase the watcher can log /
                                 // surface, and matches what kixelated's
                                 // `rs/moq-lite/src/lite/subscribe.rs`
                                 // expects for an unrecognised track on a
-                                // live broadcast.
+                                // live broadcast. RESET (audit M3) replaces
+                                // the prior FIN: Lite-03 conveys errors via
+                                // RESET_STREAM, distinguishing "publisher
+                                // rejected" from "publisher gracefully shut
+                                // down."
                                 Log.w("NestTx") {
                                     "SUBSCRIBE inbound id=${sub.id} track='${sub.track}' has no matching publisher " +
-                                        "on this session (have ${publishersSnapshot.map { it.track }}) — replying SubscribeDrop"
+                                        "on this session (have ${publishersSnapshot.map { it.track }}) — replying SubscribeDrop+RESET"
                                 }
                                 runCatching {
                                     bidi.write(
@@ -981,7 +994,7 @@ class MoqLiteSession internal constructor(
                                             ),
                                         ),
                                     )
-                                    bidi.finish()
+                                    bidi.reset(MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST)
                                 }
                                 dispatched = true
                                 return@collect
