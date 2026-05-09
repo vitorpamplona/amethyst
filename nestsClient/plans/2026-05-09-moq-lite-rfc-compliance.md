@@ -20,19 +20,17 @@ Probe — match the reference Rust impl byte-for-byte. The known gaps
 are all spec-loose / future-fragile (🟡 / 🟦), not wire-incompatible
 (🔴).
 
-**This audit shipped six fixes** (M1, M2, M3, M4, M5, L5) and
-**closed M6** (verified via WebFetch that Goaway has no body in
-the spec, so our existing handler is canonical). **L4** is subsumed
-by the M1 fix. M2/M3 originally deferred under the "`:quic` is
-locked" constraint; after a merge from `main` brought in the full
-RFC-compliant `:quic` layer, the user lifted the constraint and
-M2/M3 landed end-to-end (interface extension, all adapters, plus
-production use sites in `drainOneGroup` and the inbound-bidi
-dispatcher's Drop reply paths). The remaining items (L1 Lite-04
-codec, L2 SubscribeOk narrowing, L3 subscriber Probe) are
-deliberate non-fixes — significant scope (L1) or no consumer for
-the proposed API (L2/L3). **No 🔴 wire-incompatibilities remain;
-no 🟡 items remain open.**
+**This audit shipped nine fixes** (M1, M2, M3, M4, M5, L1, L2, L3,
+L5) and **closed M6** (verified via WebFetch that Goaway has no
+body in the spec, so our existing handler is canonical). **L4**
+is subsumed by the M1 fix. M2/M3 originally deferred under the
+"`:quic` is locked" constraint; after a merge from `main` brought
+in the full RFC-compliant `:quic` layer, the user lifted the
+constraint and M2/M3 landed end-to-end. L1/L2/L3 originally
+parked as 🟦 non-fixes; the user re-prioritised them and all
+three landed with regression tests. **Every gap from the matrix
+is now resolved (✅) or explicitly closed.** No 🔴, 🟡, or 🟦
+items remain open.
 
 ## Methodology
 
@@ -121,9 +119,9 @@ Severity legend (matches the prior QUIC audit):
 | M4 | AnnouncePlease prefix-mismatch falls back to full suffix                           | 🟡 → ✅   | When the relay opened an Announce bidi with `prefix="X"`, our publisher emitted `Active(suffix=ourFullSuffix)` even when our suffix didn't start with `X`. The relay would observe an Active update for a broadcast it didn't ask about. In production the relay always asks for `prefix=""`, so this never bit empirically — but it's a spec violation. | `MoqLiteSession.kt:841-852` (pre-fix)                                 | **fixed in this audit** — see `Fix #1` |
 | M5 | Inbound Subscribe doesn't validate broadcast field                                 | 🟡 → ✅   | When the relay opened a Subscribe bidi, we matched on `track` only, never checking `sub.broadcast == publisher.suffix`. A relay (or peer) could subscribe to broadcast `"otherPubkey"` on our connection and we'd happily route OUR audio to them. The production relay routes correctly, so this never bit empirically — but it's a spec violation. | `MoqLiteSession.kt:861-898` (pre-fix)                                 | **fixed in this audit** — see `Fix #2` |
 | M6 | Goaway body decoding + migration handler                                           | 🟡 → ✅   | We recognise `ControlType::Goaway = 5` and FIN cleanly. WebFetched the kixelated reference (`rs/moq-lite/src/lite/{stream,client}.rs`): **Goaway has no body schema in moq-lite Lite-03** — it's a single ControlType byte with no payload, not even a migration URL. Our existing handler (recognise, log, FIN) is the canonical implementation; "no body decode" was never a gap. | `MoqLiteSession.kt:973-990`, `MoqLiteControlCodes.kt:50-58`           | **closed in this audit** — see `M6 closure` |
-| L1 | Lite-04 ALPN constant defined but codec is Lite-03 only                            | 🟦       | `MoqLiteAlpn.LITE_04 = "moq-lite-04"` exists for forward-compat documentation but is never advertised. The codec doesn't implement Lite-04's reshaped `Announce.hops` (varint count → `OriginList`), `AnnounceInterest.exclude_hop`, or `Probe.rtt`. This is intentional + clearly documented. | `MoqLiteAlpn.kt:25-58`, `QuicWebTransportFactory.kt:94-113`           | open (deferred — significant codec rewrite, no current relay forces it) |
-| L2 | SubscribeOk always echoes `null/null` for startGroup/endGroup                      | 🟦       | Per spec the publisher MAY narrow the subscriber's requested group bounds. We always reply with `(startGroup=null, endGroup=null)` regardless of the request. Audio rooms are live-only and the listener always asks "from latest", so the difference is meaningless in this product. | `MoqLiteSession.kt:911-921`                                           | open (won't fix — no functional impact for live audio) |
-| L3 | No periodic Probe loop on subscriber side                                          | 🟦       | We respond to Probe bidis (with a single bitrate hint, then FIN) but never initiate Probe ourselves as a subscriber. moq-lite Lite-03 lets subscribers periodically open Probe bidis to nudge the publisher into emitting fresh bitrate hints; for fixed-rate Opus audio we don't need ABR, so this is a deliberate omission. | `MoqLiteSession.kt:925-944`                                           | open (won't fix — no consumer for the API) |
+| L1 | Lite-04 ALPN constant defined but codec is Lite-03 only                            | 🟦 → ✅   | Pre-fix `MoqLiteAlpn.LITE_04` was a documented constant but the codec was hard-wired to Lite-03 — advertising Lite-04 would have caused the very first Announce to desync. Now full Lite-04 support: codec is version-aware via a new `MoqLiteVersion` enum, all three differing fields (Announce.hops as `OriginList`, AnnouncePlease.excludeHop, Probe.rtt) are encoded / decoded correctly, ALPN negotiation surfaces the server's pick via `WebTransportSession.negotiatedSubProtocol`, and `connectNestsListener` / `connectNestsSpeaker` advertise both versions and use whichever the relay echoes. | `MoqLiteCodec.kt`, `MoqLiteSession.kt`, `MoqLiteAlpn.kt`, `QuicWebTransportFactory.kt`, `WebTransportSession.kt`, `NestsConnect.kt` | **fixed in this audit** — see `Fix #8` |
+| L2 | SubscribeOk always echoes `null/null` for startGroup/endGroup                      | 🟦 → ✅   | Per spec the publisher MAY narrow the subscriber's requested group bounds. Pre-fix we echoed `null/null` and lost the diagnostic "which group am I about to start sending?" signal. Now the publisher narrows `startGroup` to its `nextSequence` — useful for hot-swap continuations where the seeded `startSequence` is non-zero. `endGroup` stays null (live broadcast, no end). | `MoqLiteSession.kt` Subscribe accept arm                                | **fixed in this audit** — see `Fix #6` |
+| L3 | No subscriber-driven Probe API                                                     | 🟦 → ✅   | Pre-fix the publisher-side Probe handler existed but no subscriber-side counterpart did, leaving the protocol surface incomplete. New `MoqLiteSession.probe()` opens a Probe bidi (writes `ControlType=4`) and returns a `MoqLiteProbeHandle` whose `updates` flow yields each `MoqLiteProbe` the publisher pushes. Mirrors kixelated's `Subscriber::run_probe_stream`. No production consumer (audio rooms are fixed-rate Opus, no ABR), but the API completes the surface for diagnostic tools. | `MoqLiteSession.kt` `probe()` (new), `MoqLiteHandles.kt` `MoqLiteProbeHandle` (new) | **fixed in this audit** — see `Fix #7` |
 | L4 | Stream-priority overflow guard is a saturating cast                                | 🟦       | Pre-fix, `setPriority(sequence.coerceAtMost(Int.MAX_VALUE).toInt())` saturated at `Int.MAX_VALUE` (≈ 71 yrs at 1 grp/sec). After the M1 fix, sequence saturates at the 24-bit boundary (≈ 6 days within a single track) but the per-track high byte keeps cross-track ordering intact. Defensive only; production sessions cycle on JWT refresh every 9 min. | `MoqLiteSession.kt:openGroupStream` (post-M1)                         | closed (subsumed by M1 fix) |
 | L5 | Inbound bidi pump captures `publishersSnapshot` at bidi-arrival time               | 🟦 → ✅   | If a new publisher was added to the session (`session.publish(track="…")`) AFTER an inbound bidi opened, the dispatcher couldn't see it. In practice both nests publishers (`audio/data` and `catalog.json`) register before any subscriber arrives, so this never bit. Tightened anyway: snapshot is now read at first-byte dispatch time. | `MoqLiteSession.kt:781-790` (pre-fix)                                 | **fixed in this audit** — see `Fix #4` |
 
@@ -175,20 +173,18 @@ Severity legend (matches the prior QUIC audit):
 
 ## What's deliberately deferred
 
-1. **Lite-04 codec (L1).** Tracked in `MoqLiteAlpn.kt:50-56`.
-   Lite-04 reshapes `Announce.hops` (varint count → `OriginList`),
-   adds `AnnounceInterest.exclude_hop`, and adds `Probe.rtt`. None
-   of the Lite-04 features are required by the production
-   nostrnests relay. Defer until either the relay phases out
-   Lite-03 or we need Lite-04-only features.
+Nothing. Every gap surfaced by the audit is now resolved. The
+remaining open items are external follow-ups (not moq-lite gaps):
 
-2. **Optional SubscribeOk narrowing (L2) + subscriber-driven Probe
-   (L3).** Won't fix — fixed-rate Opus + live-only audio rooms
-   have no use case for either. The publisher MAY narrow
-   `startGroup`/`endGroup` per spec but we have no group history
-   to narrow to; the subscriber MAY probe the publisher for a
-   bitrate hint but our encoder is fixed-rate so the hint never
-   changes.
+  - **`kixelated/moq` feature request** — file an issue
+    describing the production stream-cliff symptom (relay's
+    per-subscriber forward queue starvation under sustained
+    push) and propose: (a) per-deployment tuning of the
+    unbounded `FuturesUnordered` task pool, and (b) a deadline
+    on `serve_group()`'s `open_uni().await` derived from the
+    active subscriber's smallest `max_latency`. This is a
+    feature request against the upstream relay, not a defect in
+    our code.
 
 ## Closed in this audit (no fix needed)
 
@@ -388,6 +384,113 @@ the peer's wait resolves instead of hanging on an idle bidi.
 No new regression test — exercised end-to-end by the existing
 publisher tests, which now pass against the freshness-aware
 dispatcher.
+
+### Fix #6 — SubscribeOk narrows startGroup to publisher.nextSequence (L2)
+
+When accepting a SUBSCRIBE, the publisher MAY narrow the
+subscriber's `startGroup` / `endGroup` request bounds per spec.
+Pre-fix we always echoed `null/null`, which lost the diagnostic
+"which group am I about to start sending?" information —
+particularly useful for hot-swap continuations where
+[MoqLitePublisherHandle.nextSequence] is non-zero (the seeded
+`startSequence` from the previous moq-lite session).
+
+The fix narrows `startGroup` to `targetPublisher.nextSequence`.
+The subscriber decodes this as "the next group on this
+subscription will be sequence N" and can log / surface the
+join-point. `endGroup` stays null because live audio rooms have
+no end in sight; the subscriber's request bound is honoured
+implicitly when the publisher closes.
+
+Regression test:
+`MoqLiteSessionTest.publisher_subscribeOk_narrows_startGroup_to_next_sequence`.
+
+### Fix #7 — Subscriber-driven Probe API (L3)
+
+`MoqLiteSession.probe()` mirrors kixelated's
+`Subscriber::run_probe_stream`
+(`rs/moq-lite/src/lite/subscriber.rs`): opens a bidi, writes
+`ControlType::Probe` (varint 4), and returns a
+`MoqLiteProbeHandle` whose `updates` flow yields each
+size-prefixed `MoqLiteProbe` message the publisher pushes. The
+handle's `close()` FINs the bidi and cancels the pump.
+
+`updates` is a `MutableSharedFlow(replay=8)` so a collector that
+attaches after the publisher's first emit doesn't miss it
+(matches the same shape the announce-watch uses).
+
+No production consumer for the API today — Amethyst's nests
+listener doesn't run ABR on a fixed-rate Opus encoder. The API
+exists to round out the moq-lite Lite-03/04 surface: a
+diagnostic tool can now read a publisher's bitrate without
+subscribing to its data track.
+
+Regression test:
+`MoqLiteSessionTest.subscriber_probe_writes_control_type_and_decodes_publisher_bitrate`.
+
+### Fix #8 — Version-aware Lite-03/04 codec + ALPN negotiation (L1)
+
+Pre-fix the codec was hard-wired to Lite-03; advertising the
+documented `MoqLiteAlpn.LITE_04` constant would have caused the
+very first Announce to desync because Lite-04 reshapes three
+fields. Now full Lite-04 support, gated on a runtime version
+discriminator selected by ALPN negotiation.
+
+Wire diff verified via WebFetch against
+`kixelated/moq` `main` (2026-05-09) at
+`rs/moq-lite/src/lite/{announce,subscribe,probe}.rs` and
+`rs/moq-lite/src/model/origin.rs`:
+
+  - `Announce.hops`: Lite-03 = single varint count (the spec
+    fills with `Origin::UNKNOWN` placeholders on decode);
+    Lite-04 = `varint(count) + count × varint(originId)` (the
+    `OriginList`). MAX_HOPS = 32.
+  - `AnnouncePlease.excludeHop`: Lite-03 absent; Lite-04 single
+    varint after `prefix`. Sentinel `0` = no exclusion.
+  - `Probe.rtt`: Lite-03 absent; Lite-04 single varint after
+    `bitrate`. Sentinel `0` = unknown (decoded as null).
+    Outgoing `Some(0)` clamped to `Some(1)` to avoid colliding
+    with the sentinel — mirrors kixelated's `encode_msg` clamp.
+
+Surface added:
+
+  - `MoqLiteVersion` enum (LITE_03, LITE_04) with `fromAlpn`.
+  - All affected `MoqLiteCodec` methods take `version:
+    MoqLiteVersion = LITE_03`.
+  - `MoqLiteSession.client(transport, scope, version)` carries
+    the version through every codec invocation.
+  - Data classes evolved: `MoqLiteAnnouncePlease.excludeHop`
+    (default 0L), `MoqLiteAnnounce.hops` (`Long` →
+    `List<Long>`), `MoqLiteProbe.rtt` (`Long?`, default null).
+  - `WebTransportSession.negotiatedSubProtocol: String?` exposes
+    the server's `wt-protocol` selection.
+    `QuicWebTransportFactory` parses the response HEADERS,
+    extracts the SF-string from `wt-protocol`, and threads it
+    into `QuicWebTransportSession`.
+    `FakeWebTransport.pair(negotiatedSubProtocol = …)` lets
+    tests drive the same path.
+  - Default advertised list now `[moq-lite-04, moq-lite-03]`.
+    Lite-04 first to match kixelated's preference; servers that
+    don't support it fall back to Lite-03 cleanly.
+  - `connectNestsListener` / `connectNestsSpeaker` resolve the
+    version via
+    `resolveMoqLiteVersion(webTransport.negotiatedSubProtocol)`
+    and pass it to `MoqLiteSession.client(...)`. Falls back to
+    Lite-03 when the server doesn't echo `wt-protocol` (older
+    deployments) or echoes an unrecognised value (forward-compat).
+
+Regression tests (all green):
+
+  - `MoqLiteCodecTest.announcePlease_lite04_round_trips_excludeHop`
+  - `MoqLiteCodecTest.announcePlease_lite03_omits_excludeHop_on_wire`
+  - `MoqLiteCodecTest.announce_lite04_round_trips_full_origin_list`
+  - `MoqLiteCodecTest.announce_lite03_drops_origin_ids_keeps_count`
+  - `MoqLiteCodecTest.announce_decoder_rejects_oversize_hop_count`
+  - `MoqLiteCodecTest.probe_lite04_round_trips_rtt`
+  - `MoqLiteCodecTest.probe_lite04_clamps_some_zero_to_one_to_avoid_unknown_sentinel`
+  - `MoqLiteCodecTest.probe_lite04_decodes_zero_rtt_as_null`
+  - `MoqLiteCodecTest.probe_lite03_wire_omits_rtt`
+  - `MoqLiteSessionTest.lite04_announce_round_trips_full_origin_list_through_session`
 
 ## Build / test verification
 
