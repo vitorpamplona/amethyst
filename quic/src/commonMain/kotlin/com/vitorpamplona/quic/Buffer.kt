@@ -305,3 +305,28 @@ class QuicCodecException(
 class QuicProtocolViolationException(
     message: String,
 ) : RuntimeException(message)
+
+/**
+ * RFC 9001 §4.8 TLS-alert-shaped exception. The TLS layer raises this
+ * when a handshake violation maps cleanly to one of the RFC 8446 §6
+ * alert descriptions (decode_error=50, handshake_failure=40,
+ * no_application_protocol=120, etc.). The QUIC layer catches it and
+ * closes the connection with `errorCode = 0x100 + alertCode`, so qlog /
+ * tcpdump observers see the precise TLS reason instead of the generic
+ * `INTERNAL_ERROR` we used to emit.
+ *
+ * `alertCode` is the raw TLS alert description value (0..255) per RFC
+ * 8446 §B.2; the +0x100 offset is added at close time per RFC 9001 §4.8.
+ */
+class TlsAlertException(
+    val alertCode: Int,
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause) {
+    init {
+        require(alertCode in 0..255) { "TLS alert code must be a uint8: $alertCode" }
+    }
+
+    /** RFC 9001 §4.8: QUIC error code = 0x100 + TLS alert description. */
+    val quicErrorCode: Long get() = 0x100L + alertCode.toLong()
+}

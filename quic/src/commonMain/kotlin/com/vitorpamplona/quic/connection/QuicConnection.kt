@@ -24,6 +24,7 @@ import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
 import com.vitorpamplona.quic.crypto.bestAes128GcmAead
+import com.vitorpamplona.quic.frame.QuicTransportError
 import com.vitorpamplona.quic.observability.QlogObserver
 import com.vitorpamplona.quic.packet.QuicVersion
 import com.vitorpamplona.quic.stream.QuicStream
@@ -1664,8 +1665,34 @@ class QuicConnection(
         closeAllSignals()
     }
 
-    /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
-    internal fun markClosedExternally(reason: String) {
+    /**
+     * Called by the parser on inbound CONNECTION_CLOSE or by the driver
+     * on read-loop death.
+     *
+     * [errorCode] surfaces the spec-mandated transport / TLS-alert
+     * code on the connection's `closeErrorCode` getter so observability
+     * tools (qlog, support logs) see the precise reason. Default is
+     * [QuicTransportError.NO_ERROR] for backward compatibility — most
+     * callers that don't yet pin a specific code keep the prior
+     * behaviour. Specific call sites:
+     *  - TLS layer: passes `0x100 + alert_description` per RFC 9001 §4.8
+     *    via [com.vitorpamplona.quic.TlsAlertException.quicErrorCode];
+     *  - CRYPTO buffer overflow: [QuicTransportError.CRYPTO_BUFFER_EXCEEDED];
+     *  - AEAD limit: [QuicTransportError.AEAD_LIMIT_REACHED];
+     *  - Transport-parameter violations: [QuicTransportError.TRANSPORT_PARAMETER_ERROR];
+     *  - Flow-control / stream-state / final-size violations: their
+     *    matching §20.1 codes.
+     *
+     * Note: [markClosedExternally] does NOT emit a CONNECTION_CLOSE
+     * frame on the wire (it transitions straight to CLOSED). The
+     * [errorCode] is for our local observability. The wire-emit path
+     * (`close(errorCode, reason)` → CLOSING → writer drain) is for
+     * graceful application-initiated close.
+     */
+    internal fun markClosedExternally(
+        reason: String,
+        errorCode: Long = QuicTransportError.NO_ERROR,
+    ) {
         // First-call wins for [closeReason] so the highest-quality
         // diagnostic is preserved when several teardown paths race
         // (e.g. read loop's `socket.receive() == null` finally fires
@@ -1680,6 +1707,13 @@ class QuicConnection(
                 if (status == Status.CLOSED) return@synchronized false
                 status = Status.CLOSED
                 closeReason = reason
+                // Only set the code on first transition AND when the
+                // caller passed a non-default value; preserves the
+                // earlier-set code if a caller raced past us with
+                // NO_ERROR.
+                if (errorCode != QuicTransportError.NO_ERROR && closeErrorCode == 0L) {
+                    closeErrorCode = errorCode
+                }
                 true
             }
         // Wake any teardown coroutine waiting for the close to land. Safe

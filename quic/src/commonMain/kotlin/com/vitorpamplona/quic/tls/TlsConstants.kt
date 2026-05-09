@@ -82,10 +82,28 @@ object TlsConstants {
     // ── Server-name (SNI) types ───────────────────────────────────────────────
     const val SERVER_NAME_TYPE_HOST_NAME: Int = 0
 
-    // ── Alert constants — only the ones we actually look at ───────────────────
+    // ── Alert descriptions (RFC 8446 §B.2) ───────────────────────────────────
+    //
+    // Used by RFC 9001 §4.8: a TLS-layer violation maps to QUIC error code
+    // `0x100 + alert_description`, surfaced via [TlsAlertException].
     const val ALERT_CLOSE_NOTIFY: Int = 0
-    const val ALERT_DECODE_ERROR: Int = 50
+    const val ALERT_UNEXPECTED_MESSAGE: Int = 10
+    const val ALERT_BAD_RECORD_MAC: Int = 20
     const val ALERT_HANDSHAKE_FAILURE: Int = 40
+    const val ALERT_BAD_CERTIFICATE: Int = 42
+    const val ALERT_UNSUPPORTED_CERTIFICATE: Int = 43
+    const val ALERT_CERTIFICATE_REVOKED: Int = 44
+    const val ALERT_CERTIFICATE_EXPIRED: Int = 45
+    const val ALERT_CERTIFICATE_UNKNOWN: Int = 46
+    const val ALERT_ILLEGAL_PARAMETER: Int = 47
+    const val ALERT_UNKNOWN_CA: Int = 48
+    const val ALERT_DECODE_ERROR: Int = 50
+    const val ALERT_DECRYPT_ERROR: Int = 51
+    const val ALERT_PROTOCOL_VERSION: Int = 70
+    const val ALERT_INTERNAL_ERROR: Int = 80
+    const val ALERT_MISSING_EXTENSION: Int = 109
+    const val ALERT_UNSUPPORTED_EXTENSION: Int = 110
+    const val ALERT_NO_APPLICATION_PROTOCOL: Int = 120
 
     // ── ALPN ──────────────────────────────────────────────────────────────────
     val ALPN_H3: ByteArray = "h3".encodeToByteArray()

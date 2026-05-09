@@ -53,6 +53,24 @@ import com.vitorpamplona.quic.tls.TlsClient
 private const val MAX_QUIC_OFFSET: Long = (1L shl 62) - 1L
 
 /**
+ * RFC 9000 §22 CRYPTO_BUFFER_EXCEEDED cap. Largest amount of CRYPTO
+ * data we'll buffer per encryption level past the contiguous read
+ * frontier before closing the connection. Sized to comfortably hold:
+ *  - Initial: ClientHello + ServerHello + (rarely fragmented) Initial
+ *    flight (~few KB).
+ *  - Handshake: EncryptedExtensions + full RSA-4096 cert chain (~ten
+ *    intermediates worst case) + CertificateVerify + Finished. Real
+ *    deployments cap out under 30 KB.
+ *  - Application: post-handshake NewSessionTicket(s); a few hundred
+ *    bytes per ticket.
+ *
+ * The 64 KiB cap leaves significant headroom over real handshakes
+ * while bounding the worst-case heap a misbehaving peer can pin
+ * (3 levels × 64 KiB = 192 KiB).
+ */
+private const val CRYPTO_BUFFER_CAP_BYTES: Long = 64L * 1024L
+
+/**
  * Decode every QUIC packet inside a single inbound UDP datagram and dispatch
  * its frames to [conn]'s state.
  *
@@ -82,7 +100,30 @@ fun feedDatagram(
         // header after HP unmask (or a similar invariant violation
         // bubbled out of the parse path). Spec MUST close with
         // PROTOCOL_VIOLATION.
-        conn.markClosedExternally(e.message ?: "PROTOCOL_VIOLATION")
+        conn.markClosedExternally(
+            e.message ?: "PROTOCOL_VIOLATION",
+            errorCode = com.vitorpamplona.quic.frame.QuicTransportError.PROTOCOL_VIOLATION,
+        )
+    } catch (e: com.vitorpamplona.quic.TlsAlertException) {
+        // RFC 9001 §4.8: a TLS alert maps to QUIC error code
+        // `0x100 + alert_description`. Surface the precise spec code
+        // on `closeErrorCode` so qlog / support logs can identify
+        // the TLS reason instead of seeing only INTERNAL_ERROR.
+        conn.markClosedExternally(
+            "CRYPTO_ERROR (TLS alert ${e.alertCode}): ${e.message ?: "no detail"}",
+            errorCode = e.quicErrorCode,
+        )
+    } catch (e: com.vitorpamplona.quic.QuicCodecException) {
+        // Generic TLS / frame parse failure that didn't carry a
+        // specific alert code. Map to CRYPTO_ERROR with TLS
+        // `internal_error = 80` so the close still falls in the
+        // §4.8 range; observers can distinguish it from
+        // PROTOCOL_VIOLATION (transport layer) by the 0x100 prefix.
+        val alertCode = com.vitorpamplona.quic.tls.TlsConstants.ALERT_INTERNAL_ERROR
+        conn.markClosedExternally(
+            "CRYPTO_ERROR (TLS internal_error): ${e.message ?: e::class.simpleName}",
+            errorCode = 0x100L + alertCode.toLong(),
+        )
     }
 }
 
@@ -651,6 +692,23 @@ private fun dispatchFrames(
 
             is CryptoFrame -> {
                 ackEliciting = true
+                // RFC 9000 §22 / §7.5: a peer sending more CRYPTO data
+                // than we can buffer per encryption level MUST close
+                // the connection with CRYPTO_BUFFER_EXCEEDED. The cap
+                // is generous (covers a worst-case RSA-4096 cert chain
+                // with intermediates) but bounded so a misbehaving
+                // peer can't pin gigabytes by sending huge offsets.
+                // Pre-check: reject obviously-overflowing frames
+                // BEFORE the insert so we don't buffer them at all.
+                val frameEnd = frame.offset + frame.data.size.toLong()
+                val proposed = maxOf(state.cryptoReceive.highestObservedOffset(), frameEnd)
+                if (proposed - state.cryptoReceive.contiguousEnd() > CRYPTO_BUFFER_CAP_BYTES) {
+                    conn.markClosedExternally(
+                        "CRYPTO_BUFFER_EXCEEDED: $level CRYPTO buffered=${proposed - state.cryptoReceive.contiguousEnd()} > cap=$CRYPTO_BUFFER_CAP_BYTES",
+                        errorCode = com.vitorpamplona.quic.frame.QuicTransportError.CRYPTO_BUFFER_EXCEEDED,
+                    )
+                    return
+                }
                 state.cryptoReceive.insert(frame.offset, frame.data)
                 val contiguous = state.cryptoReceive.readContiguous()
                 if (contiguous.isNotEmpty()) {
