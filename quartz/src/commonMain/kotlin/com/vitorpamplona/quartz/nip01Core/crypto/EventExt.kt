@@ -39,7 +39,7 @@ fun Event.verifySignature(): Boolean {
 /** Checks if the ID is correct and then if the pubKey's secret key signed the event. */
 fun Event.checkSignature() {
     if (!verifyId()) {
-        throw Exception("ID mismatch: our ID is ${generateId()} for event ${toJson()}")
+        throw Exception("ID mismatch: our ID is ${generateId()} for event id=$id, pubKey=$pubKey, kind=$kind, createdAt=$createdAt")
     }
     if (!verifySignature()) {
         throw Exception("Bad signature!")
@@ -50,6 +50,6 @@ fun Event.verify(): Boolean =
     try {
         verifyId() && verifySignature()
     } catch (e: Exception) {
-        Log.w("Event", "Event $id does not have a valid signature: ${toJson()}", e)
+        Log.w("Event", "Event $id does not have a valid signature (pubKey=$pubKey, kind=$kind, createdAt=$createdAt)", e)
         false
     }

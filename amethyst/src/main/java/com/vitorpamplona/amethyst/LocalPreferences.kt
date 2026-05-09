@@ -696,7 +696,7 @@ object LocalPreferences {
             JsonMapper.fromJson<TopFilter>(value)
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
-            Log.w("LocalPreferences", "Error Decoding TopFilter from Preferences with value $value", e)
+            Log.w("LocalPreferences", "Error Decoding TopFilter from Preferences", e)
             default
         }
     }
@@ -754,7 +754,7 @@ object LocalPreferences {
             }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
-            Log.w("LocalPreferences", "Error Decoding ${T::class.java} from Preferences with value $value", e)
+            Log.w("LocalPreferences", "Error Decoding ${T::class.simpleName} from Preferences", e)
             null
         }
     }
@@ -767,7 +767,7 @@ object LocalPreferences {
             Event.fromJson(value) as T?
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
-            Log.w("LocalPreferences", "Error Decoding ${T::class.java} from Preferences with value $value", e)
+            Log.w("LocalPreferences", "Error Decoding ${T::class.simpleName} from Preferences", e)
             null
         }
     }

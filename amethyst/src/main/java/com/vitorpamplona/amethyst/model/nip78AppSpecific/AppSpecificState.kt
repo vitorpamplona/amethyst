@@ -75,7 +75,7 @@ class AppSpecificState(
                         settings.syncedSettings.updateFrom(syncedSettings)
                     } catch (e: Throwable) {
                         if (e is CancellationException) throw e
-                        Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value", e)
+                        Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences", e)
                     }
                 }
             }
@@ -92,7 +92,7 @@ class AppSpecificState(
                                 settings.updateAppSpecificData(it, syncedSettings)
                             } catch (e: Throwable) {
                                 if (e is CancellationException) throw e
-                                Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
+                                Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences", e)
                             }
                         }
                     } catch (e: Throwable) {
