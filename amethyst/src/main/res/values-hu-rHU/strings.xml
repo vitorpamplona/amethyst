@@ -157,6 +157,8 @@
     <string name="pronouns">Megszólítás</string>
     <string name="ln_address">LN-cím</string>
     <string name="ln_url_outdated">LN-webcím (elavult)</string>
+    <string name="stale_relay_hint_label">A forrásátjátszók elavultak lehetnek</string>
+    <string name="stale_relay_hint_icon_description">Elavult átjátszóra vonatkozó figyelmeztetés</string>
     <string name="download_to_phone">Mentés a telefonra</string>
     <string name="save_to_gallery">Mentés a galériába</string>
     <string name="image_saved_to_the_gallery">Kép mentve a képgalériába</string>
@@ -165,7 +167,7 @@
     <string name="failed_to_save_the_image">Nem sikerült menteni a képet</string>
     <string name="video_saved_to_the_gallery">Videó mentve a videógalériába</string>
     <string name="failed_to_save_the_video">Nem sikerült menteni a videót</string>
-    <string name="pdf_saved_to_the_gallery">A PDF fájl a Letöltések/Amethyst mappába lett mentve</string>
+    <string name="pdf_saved_to_the_gallery">A PDF-fájl a Letöltések/Amethyst mappába lett mentve</string>
     <string name="failed_to_save_the_pdf">Nem sikerült menteni a PDF-fájlt</string>
     <string name="upload_image">Kép feltöltése</string>
     <string name="upload_file">Fájl feltöltése</string>
@@ -423,6 +425,10 @@
     <string name="scheduled_posts_at_time_past">%1$s · %2$s ezelőtt</string>
     <string name="scheduled_posts_day_tomorrow">Holnap</string>
     <string name="scheduled_posts_logout_toast_zero">Kijelentkezve</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="one">Ön kijelentkezett · %d ütemezett bejegyzés törölve</item>
+        <item quantity="other">Ön kijelentkezett · %d ütemezett bejegyzés törölve</item>
+    </plurals>
     <string name="scheduled_posts_notification_sent_title">Ütemezett bejegyzés közzétéve</string>
     <string name="scheduled_posts_notification_failed_title">Nem sikerült közzétenni egy ütemezett bejegyzést</string>
     <string name="app_notification_scheduled_posts_channel_name">Ütemezett bejegyzések</string>
@@ -436,16 +442,20 @@
     <string name="scheduled_posts_status_failed">Sikertelen</string>
     <string name="scheduled_posts_status_sent">Elküldve</string>
     <string name="scheduled_posts_status_cancelled">Megszakitva</string>
+    <plurals name="scheduled_posts_logout_warning">
+        <item quantity="one">Önnek %d ütemezett bejegyzése van, amely még nem lett közzétéve. A kijelentkezéssel véglegesen törli azt.</item>
+        <item quantity="other">Önnek %d ütemezett bejegyzése van, amelyek még nem lettek közzétéve. A kijelentkezéssel véglegesen törli azokat.</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="one">%d sorbaállítva</item>
         <item quantity="other">%d sorbaállítva</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · 1 bejegyzés 1 órán belül</item>
+        <item quantity="one"> · %d bejegyzés 1 órán belül</item>
         <item quantity="other"> · %d bejegyzés 1 órán belül</item>
     </plurals>
     <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">1 átjátszóhoz</item>
+        <item quantity="one">%d átjátszóhoz</item>
         <item quantity="other">%d átjátszóhoz</item>
     </plurals>
     <string name="scheduled_posts_event_id_copied">Bejegyzés azonosítója másolva</string>
@@ -473,6 +483,34 @@
     <string name="new_community_relay_marker_requests">Kérések</string>
     <string name="new_community_relay_marker_approvals">Jóváhagyások</string>
     <string name="new_community_empty">Nincs olyan közösség, amely megfelelne ennek a szűrőnek.</string>
+    <string name="new_community_rules_section">Ellenőrizhető szabályok (nem kötelező)</string>
+    <string name="new_community_rules_hint">A közösség mellett egy géppel olvasható szabálydokumentumot (NIP-9A) is közzétesz. Az ezt támogató kliensek küldés előtt blokkolják a szabályoknak meg nem felelő bejegyzéseket.</string>
+    <string name="new_community_rules_kinds_section">Engedélyezett eseménytípusok</string>
+    <string name="new_community_rules_kinds_hint">Koppintson egy típus engedélyezéséhez. Tartsa hosszan nyomva az eseményenkénti méretkorlát vagy a napi bejegyzéslimit beállításához.</string>
+    <string name="new_community_rules_kind_short_text">Rövid szöveg (1)</string>
+    <string name="new_community_rules_kind_long_form">Hosszú formátumú cikk (30023)</string>
+    <string name="new_community_rules_kind_picture">Képes bejegyzés (20)</string>
+    <string name="new_community_rules_kind_video">Videós bejegyzés (21)</string>
+    <string name="new_community_rules_kind_short_video">Rövid videó (22)</string>
+    <string name="new_community_rules_kind_comment">Közösségi megjegyzés (1111)</string>
+    <string name="new_community_rules_kind_custom_label">Egyedi típus</string>
+    <string name="new_community_rules_kind_add">Típus hozzáadása</string>
+    <string name="new_community_rules_limits_title">A(z) %1$d típus korlátozásai</string>
+    <string name="new_community_rules_limits_max_bytes">Maximális eseményméret (bájtban)</string>
+    <string name="new_community_rules_limits_max_per_day">Bejegyzések maximális száma szerzőnként naponta</string>
+    <string name="new_community_rules_limits_unlimited">Hagyja üresen, ha nem szeretne korlátozást megadni</string>
+    <string name="new_community_rules_limits_save">Korlátozások mentése</string>
+    <string name="new_community_rules_banned_section">Letiltott felhasználók</string>
+    <string name="new_community_rules_banned_hint">Ezek a publikus kulcsok nem tehetnek közzé bejegyzést a közösségben.</string>
+    <string name="new_community_rules_banned_add">Egy kitiltott felhasználó hozzáadása</string>
+    <string name="new_community_rules_banned_placeholder">Név, npub vagy NIP-05</string>
+    <string name="new_community_rules_wot_section">Bizalmi háló (Web-of-Trust) szűrő (nem kötelező)</string>
+    <string name="new_community_rules_wot_hint">Csak olyan szerzők engedélyezése, akik egy gyökér publikus kulcstól legfeljebb N ugráson belül elérhetők. Több szűrő esetén elegendő, ha az egyiknek megfelel a szerző.</string>
+    <string name="new_community_rules_wot_root">Gyökér npub vagy hex nyilvános kulcs</string>
+    <string name="new_community_rules_wot_depth">Mélység</string>
+    <string name="new_community_rules_wot_add">WoT-szűrő hozzáadása</string>
+    <string name="new_community_rules_max_event_size_section">Globális maximális eseményméret (nem kötelező)</string>
+    <string name="new_community_rules_max_event_size_hint">Bájtban \u2014 hagyja üresen, ha nem szeretne globális korlátozást megadni.</string>
     <string name="received_badges">Fogadott</string>
     <string name="my_badges">Saját</string>
     <string name="awarded_badges">Kitüntetett</string>
@@ -798,6 +836,12 @@
     <string name="zap_forward_lnAddress">Ln-cím vagy @Felhasználó</string>
     <string name="media_servers">Médiakiszolgálók</string>
     <string name="set_preferred_media_servers">Állítsa be a kívánt médiafeltöltő-kiszolgálókat.</string>
+    <string name="use_local_blossom_cache">Helyi Blossom gyorsítótár használata</string>
+    <string name="use_local_blossom_cache_caption">Ha ezen az eszközön (a 24242-es porton) Blossom gyorsítótár fut, a kép- és videóletöltések azon keresztül lesznek irányítva.</string>
+    <string name="local_blossom_cache_detected">Helyi gyorsítótár található a 24242-es porton.</string>
+    <string name="local_blossom_cache_not_detected">Helyi gyorsítótár nem található a 24242-es porton.</string>
+    <string name="local_blossom_cache_profile_pics_only">Csak a profilképek gyorsítótárazása</string>
+    <string name="local_blossom_cache_profile_pics_only_caption">A helyi gyorsítótár korlátozása csak a profilképekre. A hírfolyamban megjelenő képek és videók közvetlenül az eredeti kiszolgálókról lesznek letöltve.</string>
     <string name="no_nip96_server_message">Nincsenek beállítva NIP-96 kiszolgálók. Használhatja az Amethyst listáját, vagy hozzáadhat egyet az alábbiakból ↓</string>
     <string name="no_blossom_server_message">Nincsenek Blossom-kiszolgálók beállítva. Használhatja az Amethyst listáját, vagy hozzáadhat egyet az alábbiakból ↓</string>
     <string name="recommended_media_servers">Ajánlott médiakiszolgálók</string>
@@ -1056,12 +1100,16 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen amikor a bejegyzések jelentve vannak azok által akiket követek</string>
     <string name="filter_spam_from_strangers_title">Kéretlen tartalomszűrő</string>
     <string name="filter_spam_from_strangers_explainer">Elrejti az ismeretlen felhasználók hozzászólásait, amelyek pontosan ugyanazok voltak 5 vagy több alkalommal</string>
+    <string name="disable_client_tag_title">Ne legyenek megjelölve az eseményeim klienscímkével</string>
+    <string name="disable_client_tag_explainer">Ha engedélyezve van, akkor az Amethyst nem fűz NIP-89 klienscímkét az Ön által közzétett eseményekhez.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Figyelmeztetés a jelentésekre</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzéseket az Ön által követett felhasználók 5 vagy annál többször jelentették</string>
     <string name="show_sensitive_content_title">Érzékeny tartalom megjelenítése</string>
     <string name="show_sensitive_content_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzés szerzője érzékenynek jelölte a hozzászólást</string>
     <string name="max_hashtag_limit_title">Kulcsszavak száma legfeljebb bejegyzésenként</string>
     <string name="max_hashtag_limit_explainer">Elrejti azokat a bejegyzéseket, amelyek több kulcsszót tartalmaznak ennél a korlátnál. A kikapcsoláshoz állítsa 0-ra</string>
+    <string name="hide_community_rules_violations_title">Közösségi szabályokat sértő bejegyzések elrejtése</string>
+    <string name="hide_community_rules_violations_explainer">Eltávolítja a bejegyzéseket a közösségi hírfolyamokból, ha a közösség közzétesz egy NIP-9A szabálydokumentumot, és egy esemény nem felel meg annak. Nincs hatása, ha a közösség nem rendelkezik strukturált szabályokkal.</string>
     <string name="new_reaction_symbol">Új reakció-szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">A felhasználó számára nincsenek előre kiválasztott reakciótípusok. Hosszan nyomja meg a szív gombot a módosításhoz</string>
     <string name="zapraiser">Zap-gyűjtés</string>
@@ -2483,4 +2531,12 @@
     <string name="emoji_private_explainer">A privát emodzsik titkosítva kerülnek tárolásra az átjátszókon, és csak Önnek láthatók. Ugyanúgy megjelennek a reakciómenüben és a „:” automatikus kiegészítésben, mint a nyilvánosak.</string>
     <string name="gif">Gif</string>
     <!-- NIP-9A community rules composer-side validation. -->
+    <string name="community_rules_violation_icon">Közösségi szabálysértés</string>
+    <string name="community_rules_violation_author_denied">Ön szerepel a közösség tiltólistáján. A bejegyzései nem lesznek elfogadva.</string>
+    <string name="community_rules_violation_kind_not_allowed">Ez a közösség nem fogad el %1$d típusú eseményeket.</string>
+    <string name="community_rules_violation_kind_size_exceeded">A vázlat %1$d bájt; a közösség ennél a típusnál %2$d bájtban korlátozza a méretet.</string>
+    <string name="community_rules_violation_max_size_exceeded">A vázlat %1$d bájt; a közösség %2$d bájtban korlátozza az események méretét.</string>
+    <string name="community_rules_violation_quota_exceeded">Ön ma már %1$d ilyen típusú eseményt tett közzé (a korlát: %2$d).</string>
+    <string name="community_rules_violation_wot_gate_failed">Ön nem felel meg a közösség bizalmi hálóra (Web-of-Trust) vonatkozó követelményeinek.</string>
+    <string name="community_rules_violation_stale_rules">A legfrissebb közösségi szabálydokumentum elavultként el lett utasítva.</string>
 </resources>
