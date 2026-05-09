@@ -290,6 +290,48 @@ class PathValidator(
     fun unusedTokenForSequence(sequenceNumber: Long): ByteArray? = unusedCids[sequenceNumber]?.statelessResetToken
 
     /**
+     * RFC 9000 §10.3 stateless-reset support, audio-rooms WiFi-handoff
+     * extension. Every stateless-reset token the peer has ever issued
+     * us via NEW_CONNECTION_ID — whether the corresponding CID is
+     * still in [unusedCids], currently active (rotated to via
+     * [tryStartValidation] / [forceRotateToHigherSequence]), or
+     * RETIRE_CONNECTION_ID'd.
+     *
+     * Why retain after rotation/retire: when the user roams between
+     * WiFi and cellular, we migrate the connection to a fresh DCID
+     * via [tryStartValidation]. If the peer (relay) loses connection
+     * state during the handoff (crash, restart, NAT rebinding), it
+     * sends a stateless reset using whichever of OUR-issued source
+     * CIDs it last had cached — which corresponds to whichever
+     * stateless-reset token it remembers issuing for that CID. We
+     * MUST be able to match the reset against the right token. If we
+     * only kept tokens for CIDs in the unused pool (the pre-fix
+     * shape), the rotated-to active CID's token would be lost the
+     * moment migration started — a stateless reset on the new path
+     * would look like noise and we'd hang until idle timeout.
+     *
+     * §10.3.1 explicitly allows endpoints to keep tokens after
+     * retirement: "An endpoint MAY drop a Stateless Reset Token
+     * after retiring the corresponding connection ID; this saves
+     * storage at the cost of being more vulnerable to spoofing if
+     * the same token is reused by an attacker." For audio-rooms the
+     * extra ~16 bytes per peer-issued CID is trivial.
+     *
+     * Returned in insertion order (oldest first); caller treats it
+     * as an unordered set for matching.
+     */
+    fun allKnownStatelessResetTokens(): List<ByteArray> = knownStatelessResetTokens
+
+    /**
+     * Lifetime store of every stateless-reset token the peer has
+     * ever advertised via NEW_CONNECTION_ID. Append-only — entries
+     * are NOT removed when the corresponding CID is rotated out of
+     * [unusedCids] or RETIRE_CONNECTION_ID'd. See
+     * [allKnownStatelessResetTokens] for the rationale.
+     */
+    private val knownStatelessResetTokens: ArrayList<ByteArray> = ArrayList()
+
+    /**
      * Record a peer-issued `NEW_CONNECTION_ID` (RFC 9000 §19.15).
      * Returns the result code so the caller (parser) can decide
      * whether to close the connection on a peer protocol violation.
@@ -375,12 +417,19 @@ class PathValidator(
 
         if (unusedCids.size >= maxUnusedCids) return RecordResult.PoolFull
 
+        val tokenCopy = statelessResetToken.copyOf()
         unusedCids[sequenceNumber] =
             PeerConnectionIdEntry(
                 sequenceNumber = sequenceNumber,
                 connectionId = connectionId.copyOf(),
-                statelessResetToken = statelessResetToken.copyOf(),
+                statelessResetToken = tokenCopy,
             )
+        // Append to the lifetime store so the token is still
+        // matchable after a future [tryStartValidation] /
+        // [forceRotateToHigherSequence] removes the entry from
+        // [unusedCids]. See [allKnownStatelessResetTokens] for
+        // rationale (WiFi-handoff stateless-reset detection).
+        knownStatelessResetTokens.add(tokenCopy)
         return RecordResult.Stored
     }
 

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quic.webtransport
 
 import com.vitorpamplona.quic.Varint
+import com.vitorpamplona.quic.http3.Http3ErrorCode
 import com.vitorpamplona.quic.http3.Http3Frame
 import com.vitorpamplona.quic.http3.Http3FrameReader
 import com.vitorpamplona.quic.http3.Http3Settings
@@ -127,6 +128,27 @@ class WtPeerStreamDemux(
         private set
 
     /**
+     * RFC 9114 §6.2.1 + RFC 9204 §4.2 critical-stream closure record.
+     * Latches the (errorCode, reason) pair the demux passed to its
+     * driver-side `connection.close` when ANY critical unidirectional
+     * stream — control, QPACK encoder, QPACK decoder — was closed by
+     * the peer (clean FIN) or violated an HTTP/3 invariant.
+     *
+     * Production callers don't need to observe this; the
+     * `connection.close` already drives the QUIC layer to CLOSED.
+     * Tests use it to assert the closure path fired without wiring a
+     * real driver: the flag is set inside [closeConnection] before
+     * (and independently of) the suspending `connection.close` call.
+     */
+    @Volatile
+    var criticalStreamClosureCode: Long? = null
+        private set
+
+    @Volatile
+    var criticalStreamClosureReason: String? = null
+        private set
+
+    /**
      * Surface RFC 9114 §7.2 frame-validation violations the
      * [Http3FrameReader] catches (H3_FRAME_UNEXPECTED, H3_MISSING_SETTINGS,
      * forbidden reserved types). The route()-level `catch (_: Throwable)`
@@ -214,7 +236,19 @@ class WtPeerStreamDemux(
                         }
 
                         Http3StreamType.QPACK_ENCODER, Http3StreamType.QPACK_DECODER -> {
-                            drainBlackHole(chunkChannel)
+                            // RFC 9204 §4.2: QPACK encoder + decoder
+                            // streams are critical. Closure of either
+                            // MUST be treated as H3_CLOSED_CRITICAL_STREAM
+                            // — same wire-spec class as the control
+                            // stream. We don't speak the QPACK
+                            // dynamic-table instructions either way
+                            // (encoder is RIC=0, decoder is best-effort
+                            // ACKs we ignore), so the drain is still
+                            // black-hole; only the FIN handling differs.
+                            drainCriticalStream(
+                                chunkChannel,
+                                "QPACK ${if (streamType == Http3StreamType.QPACK_ENCODER) "encoder" else "decoder"} stream",
+                            )
                         }
 
                         Http3StreamType.WEBTRANSPORT_UNI_STREAM -> {
@@ -271,16 +305,102 @@ class WtPeerStreamDemux(
                 reader.push(chunk)
                 consumeFrames(reader)
             }
+            // Channel iteration exited cleanly → peer FIN'd the
+            // control stream. RFC 9114 §6.2.1: closure of any
+            // critical stream MUST be treated as a connection error
+            // of type H3_CLOSED_CRITICAL_STREAM.
+            closeConnection(
+                Http3ErrorCode.CLOSED_CRITICAL_STREAM,
+                "H3_CLOSED_CRITICAL_STREAM: peer closed CONTROL stream",
+            )
         } catch (e: com.vitorpamplona.quic.QuicCodecException) {
             // RFC 9114 §7.2 frame-validation throws (H3_FRAME_UNEXPECTED /
             // H3_MISSING_SETTINGS / reserved type) land here. Record the
-            // diagnostic so the QUIC layer / application can close the
-            // connection deliberately instead of having the route() catch
-            // silently swallow the message. Idempotent on duplicate hits.
+            // diagnostic so observability tools (qlog, tests) see a
+            // structured message; ALSO drive the connection closed via
+            // [closeConnection] so the application doesn't need to poll
+            // [peerH3ProtocolError] separately. Idempotent on duplicate
+            // hits.
             if (peerH3ProtocolError == null) {
                 peerH3ProtocolError = e.message ?: "HTTP/3 protocol violation on CONTROL stream"
             }
+            closeConnection(
+                http3ErrorCodeForMessage(e.message),
+                e.message ?: "HTTP/3 protocol violation on CONTROL stream",
+            )
             throw e
+        }
+    }
+
+    /**
+     * Drain a critical unidirectional stream (QPACK encoder / decoder)
+     * whose payload we don't otherwise process. The QPACK control
+     * messages would only matter if we ran a dynamic table — since we
+     * don't, the bytes themselves are dropped, but the §6.2.1
+     * "critical stream closed = connection error" obligation still
+     * applies. On peer FIN we call [closeConnection] with
+     * H3_CLOSED_CRITICAL_STREAM.
+     */
+    private suspend fun drainCriticalStream(
+        chunkChannel: Channel<ByteArray>,
+        label: String,
+    ) {
+        @Suppress("UNUSED_VARIABLE")
+        for (discarded in chunkChannel) {
+            // intentionally discarded — QPACK dynamic-table is off.
+        }
+        closeConnection(
+            Http3ErrorCode.CLOSED_CRITICAL_STREAM,
+            "H3_CLOSED_CRITICAL_STREAM: peer closed $label",
+        )
+    }
+
+    /**
+     * Close the underlying QUIC connection with an HTTP/3
+     * application-level error code. No-op when the demux is running
+     * without a [driver] (test path) — the test is then expected to
+     * read [peerH3ProtocolError] / observe the FIN explicitly.
+     *
+     * Launched on the demux's [scope] so the suspending close call
+     * doesn't block the per-stream collector that's exiting.
+     */
+    private fun closeConnection(
+        errorCode: Long,
+        reason: String,
+    ) {
+        // Latch the closure intent FIRST so tests (and qlog observers)
+        // can see what we tried to do, regardless of whether a
+        // driver/connection is wired to follow through. Idempotent: a
+        // duplicate fire (e.g. control stream errors then closes)
+        // doesn't overwrite the first reason.
+        if (criticalStreamClosureCode == null) {
+            criticalStreamClosureCode = errorCode
+            criticalStreamClosureReason = reason
+        }
+        val conn = driver?.connection ?: return
+        scope.launch {
+            conn.close(errorCode, reason)
+            driver.wakeup()
+        }
+    }
+
+    /**
+     * Best-effort mapping from a [QuicCodecException] message raised by
+     * the HTTP/3 frame reader / SETTINGS validator to the matching
+     * RFC 9114 §8.1 error code. We attach the code to the
+     * application-level CONNECTION_CLOSE so downstream observers
+     * (qlog, peer) get the precise spec category instead of a generic
+     * GENERAL_PROTOCOL_ERROR.
+     */
+    private fun http3ErrorCodeForMessage(message: String?): Long {
+        if (message == null) return Http3ErrorCode.GENERAL_PROTOCOL_ERROR
+        return when {
+            message.contains("H3_FRAME_UNEXPECTED") -> Http3ErrorCode.FRAME_UNEXPECTED
+            message.contains("H3_MISSING_SETTINGS") -> Http3ErrorCode.MISSING_SETTINGS
+            message.contains("H3_SETTINGS_ERROR") -> Http3ErrorCode.SETTINGS_ERROR
+            message.contains("H3_ID_ERROR") -> Http3ErrorCode.ID_ERROR
+            message.contains("H3_FRAME_ERROR") -> Http3ErrorCode.FRAME_ERROR
+            else -> Http3ErrorCode.GENERAL_PROTOCOL_ERROR
         }
     }
 

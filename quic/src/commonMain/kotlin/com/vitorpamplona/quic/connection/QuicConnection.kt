@@ -2589,16 +2589,15 @@ class QuicConnection(
      *
      * Token sources covered:
      *  - The peer's `stateless_reset_token` transport parameter (the
-     *    sequence-0 / initial CID's token), iff this is a
-     *    server-issued connection.
-     *  - Each unused entry in [pathValidator]'s pool (peer issued
-     *    via NEW_CONNECTION_ID).
-     *
-     * Not covered (limitation of the current path-migration plumbing):
-     * tokens for an actively-used DCID that we migrated to via
-     * [PathValidator.tryStartValidation] — we lose the token when the
-     * entry leaves the pool. The vast majority of clients never
-     * migrate; this gap is acceptable for the audio-rooms scope.
+     *    sequence-0 / initial CID's token).
+     *  - Every NEW_CONNECTION_ID token the peer has ever sent
+     *    ([PathValidator.allKnownStatelessResetTokens]) — including
+     *    tokens for CIDs that have since been rotated-to-active or
+     *    RETIRE_CONNECTION_ID'd. The lifetime retention covers the
+     *    WiFi↔cellular handoff path: when we migrate to a new DCID
+     *    and the peer crashes mid-handoff, the stateless reset on
+     *    the new path uses the migrated CID's token, which is no
+     *    longer in the unused pool but IS in the lifetime store.
      */
     internal fun isStatelessReset(datagram: ByteArray): Boolean {
         if (datagram.size < 22) return false
@@ -2614,10 +2613,8 @@ class QuicConnection(
                 anyMatch = true
             }
         }
-        for (entry in pathValidator.unusedSequences()) {
-            // Hot-path access lives on the pool — fetch the token via
-            // the same code path the rest of [PathValidator] uses.
-            val token = pathValidator.unusedTokenForSequence(entry) ?: continue
+        for (token in pathValidator.allKnownStatelessResetTokens()) {
+            if (token.size != 16) continue
             if (constantTimeEqualsRange(token, datagram, tokenStart)) {
                 anyMatch = true
             }

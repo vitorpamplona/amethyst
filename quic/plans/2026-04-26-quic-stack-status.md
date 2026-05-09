@@ -257,10 +257,14 @@ not tackled:
    validation per RFC 9000 §8.2 + §9. See `PathValidator.kt` and the
    three test files (`PathValidatorTest`, `PathValidationTest`,
    `ClientPathMigrationTest`).
-5. **Stateless reset detection.** Stateless-reset tokens are now
-   *recorded* (per `PeerConnectionIdEntry`) but no inbound check
-   compares "looks-like-noise" datagrams against the token list. RFC
-   9000 §10.3.
+5. ~~**Stateless reset detection.**~~ **Resolved 2026-05-09** —
+   `QuicConnection.isStatelessReset` matches every short-header-form
+   datagram's trailing 16 bytes against the peer's transport-param
+   token AND every NEW_CONNECTION_ID token retained in
+   `PathValidator.allKnownStatelessResetTokens` (lifetime store —
+   covers the WiFi-handoff case where the migrated CID's token would
+   otherwise be lost the moment migration started). Constant-time per
+   §10.3.1; silent CLOSED transition on match.
 6. ~~**`AckTracker.purgeBelow` threshold semantics.**~~ **Resolved
    2026-05-05.**
 7. **Driver direct unit tests** require turning `UdpSocket` from `expect
@@ -292,7 +296,7 @@ file:line evidence. Severity:
 | RFC 9000 §4.1 | ~~🟡~~ | ~~**Connection-level inbound flow control missing.**~~ **Resolved 2026-05-09** — `QuicStream.receiveHighestOffset` + `QuicConnection.connectionInboundOffsetSum` track the §4.1 spec quantity (sum of largest-received-offset across streams). Parser closes with FLOW_CONTROL_ERROR when the sum exceeds `advertisedMaxData`. RESET_STREAM finalSize counted toward the limit per §4.5. Tests in `ConnectionLevelFlowControlTest`. |
 | RFC 9000 §3 | ~~🟡~~ | ~~**Stream state machine implicit, not validated.**~~ **Resolved 2026-05-09** — `QuicStream.peerResetReceived` latches when a RESET_STREAM arrives; the parser closes with STREAM_STATE_ERROR on any subsequent STREAM frame for the same id. (Other state transitions — FIN-size mismatch, illegal peer-initiated opens — were already caught.) Tests in `StreamAfterResetTest`. |
 | RFC 9000 §10.2 | ~~🟡~~ | ~~**No DRAINING state.**~~ **Resolved 2026-05-09** — `Status.DRAINING` added; parser routes peer's CONNECTION_CLOSE through `enterDraining` (sets status + 3 × PTO deadline) instead of immediate CLOSED. Driver folds the deadline into its send-loop sleep and flips to CLOSED on expiry. Late inbound during DRAINING is silently dropped at the top of `feedDatagramInner`. Tests in `DrainingStateTest`. |
-| RFC 9000 §10.3 | ~~🟡~~ | ~~**Stateless reset detection missing.**~~ **Resolved 2026-05-09** — `QuicConnection.isStatelessReset` checks the trailing 16 bytes of every short-header-form datagram against the peer's `statelessResetToken` AND every unused entry in `pathValidator`'s pool, in constant time per §10.3.1. On match, silently transitions to CLOSED. Tests in `StatelessResetDetectionTest`. |
+| RFC 9000 §10.3 | ~~🟡~~ | ~~**Stateless reset detection missing.**~~ **Resolved 2026-05-09** — `QuicConnection.isStatelessReset` checks the trailing 16 bytes of every short-header-form datagram against the peer's `statelessResetToken` AND every NEW_CONNECTION_ID token in `PathValidator.allKnownStatelessResetTokens` (lifetime store — extends past CID rotation / retirement so WiFi↔cellular handoffs still detect reset on the new path), in constant time per §10.3.1. On match, silently transitions to CLOSED. Tests in `StatelessResetDetectionTest` (7 cases including handoff + force-rotation). |
 | RFC 9001 §6.6 | ~~🟡~~ | ~~**AEAD invocation limit not tracked.**~~ **Resolved 2026-05-09** — `Aead.confidentialityLimit` / `integrityLimit` properties surface the §B.1 values; `QuicConnection.aeadEncryptCount` / `aeadDecryptFailureCount` track per-key usage and reset on rotation. Writer triggers a key update at half the confidentiality limit and closes with AEAD_LIMIT_REACHED if rotation can't complete; parser closes if decrypt failures hit the integrity limit. Tests in `AeadInvocationLimitTest`. |
 
 ### Transport-parameter bounds
@@ -310,7 +314,7 @@ file:line evidence. Severity:
 |---|---|---|---|
 | RFC 9114 §7.2.4.1 | ~~🟡~~ | ~~**HTTP/2 reserved SETTINGS ids 0x02/0x03/0x04/0x05 not rejected.**~~ **Resolved 2026-05-09** — `Http3Settings.decodeBody` raises H3_SETTINGS_ERROR for ids 0x02..0x05. Tests in `Http3ReservedSettingsTest`. |
 | RFC 9221 §3 | ~~🟡~~ | ~~**Outbound DATAGRAM size not gated.**~~ **Resolved 2026-05-09** — writer drops outbound DATAGRAM frames when peer didn't advertise `max_datagram_frame_size` or when the encoded frame would exceed the advertised value. Diagnostic via `qlogObserver.onPacketDropped`. |
-| RFC 9114 §6.2.1 | 🟦 | **Closing the control stream surfaces a flag rather than auto-closing.** Spec says closing the control stream is H3_CLOSED_CRITICAL_STREAM. Caller must poll `peerH3ProtocolError` and close. | `Http3FrameReader.kt`; `WtPeerStreamDemux.kt` |
+| RFC 9114 §6.2.1 + RFC 9204 §4.2 | ~~🟦~~ | ~~**Closing the control stream surfaces a flag rather than auto-closing.**~~ **Resolved 2026-05-09** — `WtPeerStreamDemux` now drives `connection.close(errorCode, reason)` itself when ANY critical unidirectional stream closes (control + QPACK encoder + QPACK decoder), whether by clean FIN (H3_CLOSED_CRITICAL_STREAM) or HTTP/3 protocol violation (mapped to the specific §8.1 code where possible). New `Http3ErrorCode` constants. Tests in `CriticalStreamClosureTest` (5 cases) cover FIN-on-control, FIN-on-QPACK, MISSING_SETTINGS, FRAME_UNEXPECTED, and idempotency. Audio rooms now get an immediate disconnect event when the relay drops the control stream mid-session. |
 
 ### TLS / error reporting cosmetics
 

@@ -60,3 +60,42 @@ object Http3SettingsId {
     /** WebTransport over HTTP/3 (draft / RFC 9220). */
     const val ENABLE_WEBTRANSPORT: Long = 0xc671706a
 }
+
+/**
+ * HTTP/3 error code identifiers per RFC 9114 §8.1. These are the values
+ * emitted in CONNECTION_CLOSE frames at the application-error level
+ * (frame type 0x1d) when an HTTP/3 invariant is violated. Quoted values
+ * are the spec defaults; we don't define the full table — only the
+ * codes the demux / frame reader actually need.
+ */
+object Http3ErrorCode {
+    /** §8.1: graceful close, no error. */
+    const val NO_ERROR: Long = 0x100
+
+    /** §8.1: peer violated a generic HTTP/3 invariant we can't classify more precisely. */
+    const val GENERAL_PROTOCOL_ERROR: Long = 0x101
+
+    /** §8.1: an internal-to-our-implementation error. */
+    const val INTERNAL_ERROR: Long = 0x102
+
+    /**
+     * RFC 9114 §6.2.1 / RFC 9204 §4.2: a critical unidirectional stream
+     * (control, QPACK encoder, QPACK decoder) was closed by the peer.
+     */
+    const val CLOSED_CRITICAL_STREAM: Long = 0x104
+
+    /** §8.1: a frame appeared in a context that does not permit it. */
+    const val FRAME_UNEXPECTED: Long = 0x105
+
+    /** §8.1: frame layout / length / payload was invalid. */
+    const val FRAME_ERROR: Long = 0x106
+
+    /** §5.2: a peer's stream id violated its own GOAWAY commitment. */
+    const val ID_ERROR: Long = 0x108
+
+    /** §7.2.4.1: a SETTINGS frame contained an error. */
+    const val SETTINGS_ERROR: Long = 0x109
+
+    /** §7.2.4.1: the first frame on the control stream was not SETTINGS. */
+    const val MISSING_SETTINGS: Long = 0x10a
+}

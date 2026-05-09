@@ -134,6 +134,87 @@ class StatelessResetDetectionTest {
     }
 
     @Test
+    fun token_persists_after_path_migration_for_wifi_handoff() {
+        // RFC 9000 §10.3 + audio-rooms WiFi-handoff path. The peer
+        // issues us a fresh CID via NEW_CONNECTION_ID. We migrate to
+        // it via tryStartValidation (mimics the WiFi→cellular
+        // handoff: client moves to a new path, requests a fresh DCID
+        // for unlinkability). The peer (relay) then loses connection
+        // state mid-handoff and emits a stateless reset using the
+        // token it issued for the migrated CID. We MUST detect the
+        // reset even though the CID has left the unused pool.
+        val (client, _) = newConnectedClient()
+        val handoffToken = ByteArray(16) { (0x88 + it).toByte() }
+        val newCidBytes = ByteArray(8) { (0xCC + it).toByte() }
+        // Step 1: peer offers a NEW_CONNECTION_ID. Token lands in
+        // the unused pool AND in the lifetime store.
+        val recordResult =
+            client.pathValidator.recordPeerNewConnectionId(
+                sequenceNumber = 1L,
+                retirePriorTo = 0L,
+                connectionId = newCidBytes,
+                statelessResetToken = handoffToken,
+            )
+        assertEquals(PathValidator.RecordResult.Stored, recordResult)
+        assertEquals(1, client.pathValidator.unusedCount())
+
+        // Step 2: client triggers a path migration (the WiFi
+        // handoff). The CID leaves the unused pool and becomes
+        // active. Pre-fix this would have lost the token.
+        val migration = client.pathValidator.tryStartValidation(nowMillis = 0L, currentPtoMillis = 100L)
+        assertEquals(PathMigrationResult.Started, migration)
+        assertEquals(0, client.pathValidator.unusedCount(), "unused pool drained by migration")
+
+        // Step 3: a stateless-reset datagram arrives carrying the
+        // handoff token in its trailing 16 bytes. The lifetime store
+        // still has it, so the match succeeds.
+        val dcid = client.sourceConnectionId.bytes
+        val datagram = byteArrayOf(0x40.toByte()) + dcid + ByteArray(40) + handoffToken
+        assertTrue(
+            client.isStatelessReset(datagram),
+            "post-migration token MUST still match for WiFi-handoff stateless-reset detection",
+        )
+    }
+
+    @Test
+    fun token_persists_through_force_rotation_for_acid_reissue() {
+        // RFC 9000 §5.1.2: when the peer raises retire_prior_to past
+        // our active CID, we force-rotate to a fresh entry. The
+        // displaced active CID's token must still be matchable in
+        // case the peer (or an adversary spoofing the peer)
+        // stateless-resets us on the prior path during the brief
+        // window before our retirement settles.
+        val (client, _) = newConnectedClient()
+        // Issue two CIDs (seq 1 and 2). retire_prior_to=2 will
+        // force a rotation to seq 2 and queue retirement for seq 1.
+        val tokenA = ByteArray(16) { (0x11 + it).toByte() }
+        val tokenB = ByteArray(16) { (0x22 + it).toByte() }
+        client.pathValidator.recordPeerNewConnectionId(
+            sequenceNumber = 1L,
+            retirePriorTo = 0L,
+            connectionId = ByteArray(8) { 0xAA.toByte() },
+            statelessResetToken = tokenA,
+        )
+        client.pathValidator.recordPeerNewConnectionId(
+            sequenceNumber = 2L,
+            retirePriorTo = 2L, // peer demands we retire CIDs < 2 (i.e. seq 0 + 1)
+            connectionId = ByteArray(8) { 0xBB.toByte() },
+            statelessResetToken = tokenB,
+        )
+        // Force-rotate (peer's watermark = 2 > activeCidSequence = 0).
+        val rotation = client.pathValidator.forceRotateToHigherSequence()
+        assertNotNull(rotation)
+        assertEquals(0, client.pathValidator.unusedCount(), "force-rotation drains the pool")
+
+        // Both tokens must still match — neither is in the unused
+        // pool any more, but both live on in the lifetime store.
+        val dcid = client.sourceConnectionId.bytes
+        val payload = ByteArray(40)
+        assertTrue(client.isStatelessReset(byteArrayOf(0x40.toByte()) + dcid + payload + tokenA))
+        assertTrue(client.isStatelessReset(byteArrayOf(0x40.toByte()) + dcid + payload + tokenB))
+    }
+
+    @Test
     fun isStatelessReset_rejects_too_short_datagram() {
         val (client, _) = newConnectedClient()
         val token = ByteArray(16) { 0x77 }
