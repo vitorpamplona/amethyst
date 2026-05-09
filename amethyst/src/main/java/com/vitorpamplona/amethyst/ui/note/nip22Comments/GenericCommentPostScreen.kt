@@ -52,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -85,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -147,6 +149,16 @@ fun GenericCommentPostScreen(
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    // NIP-9A: when replying into a NIP-72 community, mount the community feed
+    // subscription so the latest kind:34551 rules document is fetched and
+    // observed by the ViewModel for composer-side validation. No-op for
+    // hashtag/geohash composers (replyingTo is null or not addressable there).
+    (postViewModel.replyingTo as? AddressableNote)?.let { addressable ->
+        if (addressable.event is com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent) {
+            CommunityFilterAssemblerSubscription(addressable, accountViewModel.dataSources().community)
+        }
+    }
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
@@ -410,6 +422,9 @@ private fun GenericCommentPostBody(
                 modifier = SuggestionListDefaultHeightPage,
             )
         }
+
+        // NIP-9A: surface the first community-rules violation found in the current draft.
+        postViewModel.validationResult?.let { CommunityRulesViolationBanner(it) }
 
         BottomRowActions(postViewModel)
     }
