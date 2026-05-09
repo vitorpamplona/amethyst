@@ -74,8 +74,6 @@ fun drainOutbound(
     conn: QuicConnection,
     nowMillis: Long,
 ): ByteArray? {
-    val parts = mutableListOf<ByteArray>()
-
     // Closing — emit a CONNECTION_CLOSE at the highest available level. The
     // datagram-build paths below MUST satisfy two RFC 9000 constraints we
     // got wrong before:
@@ -601,7 +599,12 @@ private fun buildApplicationPacket(
     // settled mid-handshake (peer hasn't ACK'd anything yet), so the
     // walk is a no-op.
     conn.retireFullyDoneStreamsLocked()
-    val frames = mutableListOf<Frame>()
+    // Reuse per-connection scratch lists (cleared at entry) instead of
+    // allocating fresh `mutableListOf<Frame>` / `mutableListOf<RecoveryToken>`
+    // every drain — single-writer by [streamsLock], so the next drain's
+    // clear() runs after this drain has already snapshotted the tokens
+    // via `.toList()` into the SentPacket record.
+    val frames = conn.scratchAppFrames.also { it.clear() }
     // Tokens collected in lock-step with [frames]: each retransmittable
     // frame contributes a [RecoveryToken] so the [SentPacket] recorded
     // at the bottom of this function can drive RFC 9002 loss
@@ -610,7 +613,7 @@ private fun buildApplicationPacket(
     // are not retransmittable (DatagramFrame, StreamFrame for now) do
     // not contribute a token; the packet is still ack-eliciting and
     // tracked for loss-detection timing.
-    val tokens = mutableListOf<RecoveryToken>()
+    val tokens = conn.scratchAppTokens.also { it.clear() }
 
     // RFC 9000 §17.2.3 — 0-RTT packets MUST NOT contain ACK frames. The
     // server cannot ACK 0-RTT-level packets because it has no way to
@@ -725,7 +728,17 @@ private fun buildApplicationPacket(
         val sorted =
             when {
                 active.size <= 1 -> active
-                active.all { it.priority == 0 } -> active
+
+                // Single-pass uniform-priority check: if EVERY stream
+                // shares the same priority (whether default 0 or
+                // anything else), the sort is a no-op and we keep
+                // insertion order for round-robin fairness. Pre-fix
+                // we only short-circuited on `priority == 0`, so a
+                // homogeneous `priority == 7` workload paid for an
+                // O(N log N) sort despite the result being
+                // observationally identical to insertion order.
+                active.all { it.priority == active[0].priority } -> active
+
                 else -> active.sortedByDescending { it.priority }
             }
         val rotation = conn.streamRoundRobinStart

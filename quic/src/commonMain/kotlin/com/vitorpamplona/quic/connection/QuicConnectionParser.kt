@@ -436,6 +436,16 @@ private fun feedShortHeaderPacket(
     if (rotateOnSuccess != null && parsed.packet.packetNumber > state.pnSpace.largestReceived) {
         conn.commitKeyUpdate(rotateOnSuccess)
     }
+    // RFC 9001 §6.4: clear the in-flight-rotation gate once an inbound
+    // packet decrypts under the live (post-rotation) keys. That confirms
+    // the peer has rolled forward in lockstep, so it's safe to permit
+    // a subsequent [QuicConnection.initiateKeyUpdate]. The `rotateOnSuccess
+    // == null` branch above is the live-keys path (peer's key_phase bit
+    // matched our [currentReceiveKeyPhase]); reaching that with a
+    // successful parse is the confirmation signal.
+    if (rotateOnSuccess == null && conn.keyUpdateInProgress) {
+        conn.keyUpdateInProgress = false
+    }
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
     if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
         conn.qlogObserver.onPacketReceived(

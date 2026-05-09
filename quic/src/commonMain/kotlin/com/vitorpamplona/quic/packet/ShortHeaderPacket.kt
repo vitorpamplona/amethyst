@@ -75,12 +75,26 @@ object ShortHeaderPacket {
         // Trailing 0x00 bytes decode as PADDING frames (RFC 9000 §19.1).
         val paddedPlaintext = padForHeaderProtectionSample(plain.payload, pnLen)
 
+        // Same single-buffer + sealInto pattern as LongHeaderPacket.build:
+        // pre-allocate the final packet and have the AEAD write
+        // ciphertext+tag directly into it instead of allocating a fresh
+        // `seal()` return + a concat buffer. Saves 2 ByteArrays per
+        // outbound short-header packet.
         val nonce = aeadNonce(iv, plain.packetNumber)
-        val ciphertext = aead.seal(key, nonce, headerBytes, paddedPlaintext)
-
-        val packet = ByteArray(headerBytes.size + ciphertext.size)
+        val packet = ByteArray(headerBytes.size + paddedPlaintext.size + aead.tagLength)
         headerBytes.copyInto(packet, 0)
-        ciphertext.copyInto(packet, headerBytes.size)
+        aead.sealInto(
+            key = key,
+            nonce = nonce,
+            aad = packet,
+            aadOffset = 0,
+            aadLength = headerBytes.size,
+            plaintext = paddedPlaintext,
+            plaintextOffset = 0,
+            plaintextLength = paddedPlaintext.size,
+            output = packet,
+            outputOffset = headerBytes.size,
+        )
 
         val sampleStart = pnOffset + 4
         require(sampleStart + 16 <= packet.size) { "packet too short for HP sample" }

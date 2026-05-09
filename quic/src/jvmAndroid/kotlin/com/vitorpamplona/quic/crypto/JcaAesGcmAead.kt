@@ -206,6 +206,56 @@ class JcaAesGcmAead(
             }
         }
 
+    /**
+     * In-place range [seal]. Same semantics as the parent's [sealInto],
+     * but takes the JCA's native `Cipher.doFinal(input, inOff, inLen,
+     * output, outOff)` path so ciphertext+tag land directly in
+     * [output] with no intermediate allocation. Caller is expected to
+     * have sized `output` large enough to hold
+     * `plaintextLength + tagLength` bytes starting at `outputOffset`.
+     */
+    override fun sealInto(
+        key: ByteArray,
+        nonce: ByteArray,
+        aad: ByteArray,
+        aadOffset: Int,
+        aadLength: Int,
+        plaintext: ByteArray,
+        plaintextOffset: Int,
+        plaintextLength: Int,
+        output: ByteArray,
+        outputOffset: Int,
+    ): Int =
+        synchronized(this) {
+            val reuse = recentEncryptNonces.any { it.contentEquals(nonce) }
+            val cipher: Cipher
+            if (reuse) {
+                cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+            } else {
+                cipher = encryptCipher
+                try {
+                    cipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
+                } catch (t: Throwable) {
+                    if (recentEncryptNonces.lastOrNull()?.contentEquals(nonce) == true) {
+                        recentEncryptNonces.removeLast()
+                    }
+                    throw t
+                }
+            }
+            try {
+                cipher.updateAAD(aad, aadOffset, aadLength)
+                val written = cipher.doFinal(plaintext, plaintextOffset, plaintextLength, output, outputOffset)
+                if (!reuse) rememberEncryptNonce(nonce)
+                written
+            } catch (t: Throwable) {
+                if (!reuse && recentEncryptNonces.lastOrNull()?.contentEquals(nonce) == true) {
+                    recentEncryptNonces.removeLast()
+                }
+                throw t
+            }
+        }
+
     private companion object {
         private const val NONCE_HISTORY_LIMIT = 8
     }
