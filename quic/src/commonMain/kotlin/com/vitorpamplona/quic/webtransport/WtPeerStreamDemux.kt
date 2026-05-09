@@ -24,6 +24,7 @@ import com.vitorpamplona.quic.Varint
 import com.vitorpamplona.quic.http3.Http3Frame
 import com.vitorpamplona.quic.http3.Http3FrameReader
 import com.vitorpamplona.quic.http3.Http3Settings
+import com.vitorpamplona.quic.http3.Http3SettingsId
 import com.vitorpamplona.quic.http3.Http3StreamType
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
@@ -288,6 +289,28 @@ class WtPeerStreamDemux(
             val frame = reader.next() ?: return
             when (frame) {
                 is Http3Frame.Settings -> {
+                    // draft-ietf-webtrans-http3 §3 + RFC 8441: a server that
+                    // accepts WebTransport MUST advertise both
+                    // ENABLE_WEBTRANSPORT=1 and ENABLE_CONNECT_PROTOCOL=1.
+                    // If either is missing/zero, the WT session can't
+                    // proceed — surface as an H3 protocol error so
+                    // [drainControlStream]'s catch records it on
+                    // [peerH3ProtocolError] and the application closes
+                    // the connection instead of issuing an Extended
+                    // CONNECT the server will reject anyway.
+                    val s = frame.settings.settings
+                    val enableWt = s[Http3SettingsId.ENABLE_WEBTRANSPORT] ?: 0L
+                    val enableConnect = s[Http3SettingsId.ENABLE_CONNECT_PROTOCOL] ?: 0L
+                    if (enableWt != 1L) {
+                        throw com.vitorpamplona.quic.QuicCodecException(
+                            "peer SETTINGS missing ENABLE_WEBTRANSPORT=1 (got $enableWt)",
+                        )
+                    }
+                    if (enableConnect != 1L) {
+                        throw com.vitorpamplona.quic.QuicCodecException(
+                            "peer SETTINGS missing ENABLE_CONNECT_PROTOCOL=1 (got $enableConnect)",
+                        )
+                    }
                     peerSettings = frame.settings
                 }
 

@@ -1586,14 +1586,28 @@ class QuicConnection(
         streams[id] = stream
         streamsList = streamsList + stream
         newPeerStreams.addLast(stream)
-        // Track lifetime peer-stream counts so the writer can emit a
-        // refreshed MAX_STREAMS_* once the peer's usage approaches the
-        // currently-advertised cap. Without this, our initial cap of
-        // [config.initialMaxStreams*] is the lifetime maximum the peer
-        // can open and any longer broadcast silently truncates.
+        // Track the peer's own stream-counter, derived from the stream
+        // id's index field (bits 2..63 hold the per-direction sequence
+        // — see RFC 9000 §2.1). Pre-fix we incremented on every
+        // create-event, which double-counted when the peer retransmits
+        // a STREAM frame on a stream id we've retired AND aged out of
+        // [retiredStreamIdSet] (FIFO ring of bounded size). The
+        // phantom-stream guard in the parser drops most retransmits,
+        // but a sufficiently long broadcast can age the id out of the
+        // ring and the next retransmit lands here, bumping the
+        // counter and eventually triggering a spurious MAX_STREAMS_*
+        // emission. Using max(current, peerIndex + 1) makes the
+        // counter idempotent: re-creating the same id is a no-op,
+        // matching the peer's view exactly.
+        val peerIndexPlusOne = (id ushr 2) + 1L
         when (kind) {
-            StreamId.Kind.SERVER_UNI, StreamId.Kind.CLIENT_UNI -> peerInitiatedUniCount += 1
-            StreamId.Kind.SERVER_BIDI, StreamId.Kind.CLIENT_BIDI -> peerInitiatedBidiCount += 1
+            StreamId.Kind.SERVER_UNI, StreamId.Kind.CLIENT_UNI -> {
+                peerInitiatedUniCount = maxOf(peerInitiatedUniCount, peerIndexPlusOne)
+            }
+
+            StreamId.Kind.SERVER_BIDI, StreamId.Kind.CLIENT_BIDI -> {
+                peerInitiatedBidiCount = maxOf(peerInitiatedBidiCount, peerIndexPlusOne)
+            }
         }
         // Wake any awaitIncomingPeerStream caller. trySend on a CONFLATED
         // channel can never fail in steady state.
@@ -2183,10 +2197,16 @@ class QuicConnection(
             )
             return
         }
-        // Sequence 0: peer wants us off our initial SCID, but we
-        // haven't issued any replacements. Close — see kdoc above.
+        // Sequence 0: peer wants us off our initial SCID, but we never
+        // advertised additional SCIDs (we don't issue NEW_CONNECTION_ID
+        // frames yet). RFC 9000 §19.16 lets us close — and we MUST,
+        // because there's no replacement SCID to switch to. Reclassify
+        // as PROTOCOL_VIOLATION (peer-side fault) rather than
+        // INTERNAL_ERROR (our-side fault) — the original diagnostic
+        // misdescribed which side made the mistake.
         markClosedExternally(
-            "INTERNAL_ERROR: peer asked to retire our initial SCID but we have no replacement to offer",
+            "PROTOCOL_VIOLATION: peer asked to retire our initial SCID (seq=0) but we never " +
+                "advertised additional SCIDs to switch to",
         )
     }
 
