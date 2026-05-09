@@ -23,6 +23,8 @@ package com.vitorpamplona.quic.stream
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * One QUIC stream (bidirectional or unidirectional). Application code
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.flow
  * APIs; the [QuicConnection] owns the underlying buffers and drains them
  * into STREAM frames on the wire.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class QuicStream(
     val streamId: Long,
     val direction: Direction,
@@ -255,24 +258,28 @@ class QuicStream(
      * (two app threads racing the writer's clear-after-emit).
      */
     fun resetStream(errorCode: Long) {
-        // Synchronized atomic compare-and-set: pre-fix the
-        // `if (resetState != null) return` plus the assignment was
-        // racy. Two concurrent callers (e.g. the application aborting
-        // a request while STOP_SENDING from the peer triggers our own
-        // resetStream from the parser) could both observe null and
-        // both write — the second write would clobber the first
-        // errorCode while [resetEmitPending] was already set. The
-        // writer would then emit a RESET_STREAM with whichever
-        // errorCode landed last, possibly different from what the
-        // application asked for. The synchronized block makes
-        // first-call-wins genuinely first-call-wins.
-        synchronized(this) {
-            if (resetState != null) return
-            resetState =
-                ResetState(
-                    errorCode = errorCode,
-                    finalSize = send.nextOffset,
-                )
+        // Lock-free first-call-wins. The previous synchronized block
+        // existed because the naive `if (resetState != null) return;
+        // resetState = …` had a write-write race: two concurrent
+        // callers (e.g. the application aborting a request while
+        // STOP_SENDING from the peer triggers our own resetStream
+        // from the parser) could both observe null and both write,
+        // letting the second clobber the first errorCode while
+        // resetEmitPending was already set. The writer would then
+        // emit a RESET_STREAM with whichever errorCode landed last.
+        //
+        // compareAndSet collapses that to a single CAS: only the
+        // first writer succeeds, all others observe non-null and
+        // bail out. `resetEmitPending = true` happens only on the
+        // winning path, so its @Volatile write happens-after the
+        // resetState publication — the writer reading the flag sees
+        // the populated state.
+        val newState =
+            ResetState(
+                errorCode = errorCode,
+                finalSize = send.nextOffset,
+            )
+        if (resetState.compareAndSet(null, newState)) {
             resetEmitPending = true
         }
     }
@@ -292,10 +299,8 @@ class QuicStream(
      * original frame already on the wire).
      */
     fun stopSending(errorCode: Long) {
-        // Same atomic-CAS rationale as [resetStream].
-        synchronized(this) {
-            if (stopSendingState != null) return
-            stopSendingState = StopSendingState(errorCode = errorCode)
+        // Same lock-free first-call-wins rationale as [resetStream].
+        if (stopSendingState.compareAndSet(null, StopSendingState(errorCode = errorCode))) {
             stopSendingEmitPending = true
         }
     }
@@ -304,8 +309,13 @@ class QuicStream(
      * RFC 9000 §3.5 send-side reset state. Set once by [resetStream]
      * (subsequent calls no-op); read by the writer + loss/ACK
      * dispatchers. Once set, contents are immutable.
+     *
+     * Held in an [AtomicReference] so [resetStream] can use
+     * `compareAndSet(null, …)` to win the first-call-wins race
+     * without acquiring a lock. Readers use `.load()` — the published
+     * state is immutable after the CAS so a single load is enough.
      */
-    internal var resetState: ResetState? = null
+    internal val resetState: AtomicReference<ResetState?> = AtomicReference(null)
 
     /**
      * True while a RESET_STREAM emit is pending. Cleared after the
@@ -331,8 +341,12 @@ class QuicStream(
     @Volatile
     internal var resetAcked: Boolean = false
 
-    /** Receive-side stop-sending state. Set by [stopSending]. */
-    internal var stopSendingState: StopSendingState? = null
+    /**
+     * Receive-side stop-sending state. Set once by [stopSending]
+     * (subsequent calls no-op); read by the writer + loss/ACK
+     * dispatchers. Atomic for the same reason as [resetState].
+     */
+    internal val stopSendingState: AtomicReference<StopSendingState?> = AtomicReference(null)
 
     @Volatile
     internal var stopSendingEmitPending: Boolean = false

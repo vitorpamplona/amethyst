@@ -191,10 +191,20 @@ class JdkCertificateValidator(
             // GeneralName type 2 = dNSName, type 7 = iPAddress.
             if (type == 2 && dnsMatches(idnAscii(value), normalizedHost)) return true
             if (type == 7 && hostAsIp != null) {
+                // Defense-in-depth: a malformed cert could put a hostname in
+                // a type 7 SAN. Without this gate, InetAddress.getByName(value)
+                // would perform a DNS A/AAAA lookup on the validation path,
+                // both leaking the name in plaintext and blocking the read
+                // loop on the system resolver. Forcing a literal check keeps
+                // the JDK call to pure parsing (no I/O, no name service).
                 val sanIp =
-                    try {
-                        InetAddress.getByName(value).hostAddress
-                    } catch (_: Throwable) {
+                    if (looksLikeIpLiteral(value)) {
+                        try {
+                            InetAddress.getByName(value).hostAddress
+                        } catch (_: Throwable) {
+                            null
+                        }
+                    } else {
                         null
                     }
                 if (sanIp != null && sanIp.equals(hostAsIp, ignoreCase = true)) return true

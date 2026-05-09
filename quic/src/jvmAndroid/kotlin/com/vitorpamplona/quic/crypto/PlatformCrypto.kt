@@ -26,11 +26,23 @@ import javax.crypto.spec.SecretKeySpec
 
 /**
  * One-block AES-ECB encryption via JCA. Used only by QUIC header protection
- * (one block per packet, so no need for a more elaborate API).
+ * (one block per packet). The `Cipher` instance is cached per-thread so the
+ * read/send loops avoid `Cipher.getInstance(...)` provider lookup on every
+ * packet — which is the dominant cost for a 16-byte one-shot AEAD-less call.
+ *
+ * `ThreadLocal` is safe here because the call is stateless: every invocation
+ * re-`init`s with the caller-supplied key before `doFinal`, so a coroutine
+ * that hops dispatchers between calls just lands on whichever thread's cached
+ * `Cipher` it ends up on. No state leaks across calls.
  */
+private val aesEcbCipher: ThreadLocal<Cipher> =
+    ThreadLocal.withInitial { Cipher.getInstance("AES/ECB/NoPadding") }
+
 actual val PlatformAesOneBlock: AesOneBlockEncrypt =
     AesOneBlockEncrypt { key, block ->
-        val cipher = Cipher.getInstance("AES/ECB/NoPadding")
+        // .get() is non-null because withInitial supplies a Cipher, but
+        // Kotlin sees the Java return type as platform-nullable.
+        val cipher = aesEcbCipher.get()!!
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"))
         cipher.doFinal(block)
     }
