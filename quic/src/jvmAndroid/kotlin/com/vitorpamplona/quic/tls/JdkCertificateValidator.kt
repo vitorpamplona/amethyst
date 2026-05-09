@@ -247,28 +247,242 @@ class JdkCertificateValidator(
         if (!lhost.endsWith(suffix)) return false
         val prefix = lhost.substring(0, lhost.length - suffix.length)
         if (prefix.isEmpty() || '.' in prefix) return false
-        // RFC 6125 §6.4.3 — disallow wildcards in the public-suffix label.
+        // RFC 6125 §6.4.3 — disallow wildcards in the public-suffix
+        // label. The full Mozilla PSL is ~9000 entries; we ship a
+        // hand-picked subset covering the common multi-label
+        // effective-TLDs that come up in the wild for cert
+        // mis-issuance scenarios (multi-tenant ccTLDs, hosting
+        // platforms). Two layers of defence:
+        //   1. The dot-count heuristic (≥ 2 dots in the suffix)
+        //      catches the obvious `*.com` / `*.net` patterns.
+        //   2. The denylist below catches `*.co.uk`,
+        //      `*.s3.amazonaws.com`, `*.github.io`, etc. — the
+        //      multi-label tldsets where the dot-count alone would
+        //      let a rogue wildcard impersonate an entire tenant
+        //      pool.
         //
-        // KNOWN GAP: this heuristic counts dots in the suffix (≥ 2 → OK)
-        // and DOES NOT consult the actual public-suffix list. So it
-        // accepts `*.co.uk`, `*.github.io`, `*.s3.amazonaws.com`, etc.
-        // — multi-tenant TLDs whose effective TLD is multi-label. A
-        // CA that mis-issues such a wildcard could impersonate any
-        // co-tenant. The mitigation is partial: the WebPKI ecosystem
-        // already requires CAs to consult the PSL when issuing, so a
-        // rogue cert is unlikely to make it past CT logging — but if
-        // one does, our validation accepts it.
-        //
-        // Full fix requires shipping PSL data; deferred until the cost
-        // is justified by a higher-risk deployment. Production callers
-        // should rely on the OS / NetworkSecurityConfig pinning layer
-        // for sensitive endpoints rather than QUIC's built-in
-        // hostname check alone.
+        // This is intentionally conservative — false positives
+        // (rejecting a legitimate but unusual wildcard) are recoverable
+        // by the application using OS-level pinning, while false
+        // negatives (accepting a rogue wildcard) silently break
+        // hostname authentication. The full PSL would close the
+        // remaining gap; until then, this catches the high-volume
+        // attack surfaces.
+        val suffixWithoutLeadingDot = suffix.removePrefix(".")
+        if (suffixWithoutLeadingDot in MULTI_LABEL_PUBLIC_SUFFIXES) return false
         val suffixDots = suffix.count { it == '.' }
         return suffixDots >= 2
     }
 
     companion object {
+        /**
+         * Hand-picked subset of the Mozilla Public Suffix List covering
+         * common multi-label effective-TLDs. Wildcards spanning these
+         * suffixes (e.g. `*.co.uk`, `*.s3.amazonaws.com`) MUST be
+         * rejected per RFC 6125 §6.4.3 — a rogue cert that captured
+         * such a wildcard would impersonate every co-tenant.
+         *
+         * Strict subset of the full PSL — we don't ship the ~9000-entry
+         * data file; entries here cover the high-frequency attack
+         * surfaces (multi-tenant ccTLDs, major hosting platforms). The
+         * full PSL would close the remaining gap; for now, callers of
+         * sensitive endpoints should still layer OS-level pinning.
+         *
+         * Sources:
+         *  - Top multi-label ccTLDs from publicsuffix.org/list/
+         *    (uk / au / nz / jp / kr / br / mx / in / ar / il / etc.)
+         *  - Major hosting platforms whose tenant subdomains all share
+         *    one cert root (s3.amazonaws.com, github.io, herokuapp.com,
+         *    vercel.app, netlify.app, web.app, blogspot.com,
+         *    appspot.com, pages.dev, workers.dev, etc.)
+         */
+        private val MULTI_LABEL_PUBLIC_SUFFIXES: Set<String> =
+            setOf(
+                // UK
+                "co.uk",
+                "org.uk",
+                "ac.uk",
+                "gov.uk",
+                "ltd.uk",
+                "plc.uk",
+                "me.uk",
+                "net.uk",
+                "sch.uk",
+                "nhs.uk",
+                "police.uk",
+                // AU
+                "com.au",
+                "net.au",
+                "org.au",
+                "edu.au",
+                "gov.au",
+                "asn.au",
+                "id.au",
+                // NZ
+                "co.nz",
+                "net.nz",
+                "org.nz",
+                "ac.nz",
+                "govt.nz",
+                "school.nz",
+                // JP
+                "co.jp",
+                "ne.jp",
+                "or.jp",
+                "ac.jp",
+                "ad.jp",
+                "ed.jp",
+                "go.jp",
+                "gr.jp",
+                "lg.jp",
+                // KR
+                "co.kr",
+                "ne.kr",
+                "or.kr",
+                "re.kr",
+                "ac.kr",
+                "go.kr",
+                "mil.kr",
+                "sc.kr",
+                // BR
+                "com.br",
+                "net.br",
+                "org.br",
+                "edu.br",
+                "gov.br",
+                "mil.br",
+                // MX
+                "com.mx",
+                "net.mx",
+                "org.mx",
+                "edu.mx",
+                "gob.mx",
+                // IN
+                "co.in",
+                "net.in",
+                "org.in",
+                "edu.in",
+                "gov.in",
+                "ac.in",
+                "res.in",
+                // AR
+                "com.ar",
+                "net.ar",
+                "org.ar",
+                "edu.ar",
+                "gov.ar",
+                "gob.ar",
+                "mil.ar",
+                // IL
+                "co.il",
+                "net.il",
+                "org.il",
+                "ac.il",
+                "gov.il",
+                "muni.il",
+                "k12.il",
+                // ZA
+                "co.za",
+                "net.za",
+                "org.za",
+                "ac.za",
+                "gov.za",
+                "edu.za",
+                "law.za",
+                // CN
+                "com.cn",
+                "net.cn",
+                "org.cn",
+                "edu.cn",
+                "gov.cn",
+                "ac.cn",
+                "mil.cn",
+                // TR
+                "com.tr",
+                "net.tr",
+                "org.tr",
+                "edu.tr",
+                "gov.tr",
+                "biz.tr",
+                "info.tr",
+                // RU
+                "com.ru",
+                "net.ru",
+                "org.ru",
+                "pp.ru",
+                "msk.ru",
+                "spb.ru",
+                // PL
+                "com.pl",
+                "net.pl",
+                "org.pl",
+                "edu.pl",
+                "gov.pl",
+                "mil.pl",
+                // ES
+                "com.es",
+                "nom.es",
+                "org.es",
+                "gob.es",
+                "edu.es",
+                // HK / SG / TW / MY
+                "com.hk",
+                "net.hk",
+                "org.hk",
+                "edu.hk",
+                "gov.hk",
+                "idv.hk",
+                "com.sg",
+                "net.sg",
+                "org.sg",
+                "edu.sg",
+                "gov.sg",
+                "per.sg",
+                "com.tw",
+                "net.tw",
+                "org.tw",
+                "edu.tw",
+                "gov.tw",
+                "idv.tw",
+                "com.my",
+                "net.my",
+                "org.my",
+                "edu.my",
+                "gov.my",
+                "mil.my",
+                // Major hosting platforms — all tenants share root cert paths.
+                "github.io",
+                "github.com",
+                "s3.amazonaws.com",
+                "compute.amazonaws.com",
+                "blogspot.com",
+                "blogspot.co.uk",
+                "blogspot.de",
+                "blogspot.fr",
+                "appspot.com",
+                "googleapis.com",
+                "googleusercontent.com",
+                "herokuapp.com",
+                "herokussl.com",
+                "vercel.app",
+                "now.sh",
+                "netlify.app",
+                "netlify.com",
+                "web.app",
+                "firebaseapp.com",
+                "pages.dev",
+                "workers.dev",
+                "azurewebsites.net",
+                "cloudapp.net",
+                "trafficmanager.net",
+                "fastly.net",
+                "fastlylb.net",
+                "cloudfront.net",
+                "ngrok.io",
+                "ngrok.app",
+                "execute-api.us-east-1.amazonaws.com",
+            )
+
         private fun defaultTrustManager(): X509TrustManager {
             val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
             tmf.init(null as KeyStore?)

@@ -136,6 +136,21 @@ class SendBuffer(
      */
     private val retransmit: ArrayDeque<Range> = ArrayDeque()
 
+    /**
+     * Cached `sum(retransmit[].length)` so [readableBytes] can return
+     * in O(1) instead of walking the deque on every call. The writer's
+     * pre-flight "anything to send?" check runs per-stream per-drain
+     * (~50 drains/sec × N streams), so an O(R) per-call cost on lossy
+     * paths with deep retransmit queues was meaningful CPU.
+     *
+     * Updated in lockstep with every [retransmit] add/remove path:
+     * retransmit.addLast / addFirst / removeFirst, and
+     * [removeOverlap]'s mid-walk add/remove during ACK processing.
+     * The invariant `retransmitTotalBytes == retransmit.sumOf { it.length }`
+     * holds whenever no [SendBuffer] method is mid-mutation.
+     */
+    private var retransmitTotalBytes: Long = 0L
+
     private var _finPending: Boolean = false
     private var _finSent: Boolean = false
     private var _finAcked: Boolean = false
@@ -154,9 +169,7 @@ class SendBuffer(
     val readableBytes: Int
         get() =
             synchronized(this) {
-                var sum = 0L
-                for (r in retransmit) sum += r.length
-                sum += (_nextOffset - nextSendOffset)
+                val sum = retransmitTotalBytes + (_nextOffset - nextSendOffset)
                 sum.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             }
 
@@ -210,16 +223,18 @@ class SendBuffer(
                 val take = minOf(retransmitHead.length, cap.toLong())
                 val payload = sliceAt(retransmitHead.offset, take.toInt())
                 retransmit.removeFirst()
+                retransmitTotalBytes -= retransmitHead.length
                 val fin = retransmitHead.fin && take == retransmitHead.length
                 if (take < retransmitHead.length) {
                     // Push remainder back at the head, preserving offset.
-                    retransmit.addFirst(
+                    val remainder =
                         Range(
                             offset = retransmitHead.offset + take,
                             length = retransmitHead.length - take,
                             fin = retransmitHead.fin,
-                        ),
-                    )
+                        )
+                    retransmit.addFirst(remainder)
+                    retransmitTotalBytes += remainder.length
                 }
                 addToInFlight(Range(retransmitHead.offset, take, fin))
                 if (fin) _finSent = true
@@ -351,13 +366,29 @@ class SendBuffer(
             }
             // Move every inflight range to the retransmit queue,
             // preserving offset order (inFlight is sorted by offset
-            // ascending, so addLast preserves sort within retransmit
-            // for these new entries — though retransmit is a FIFO
-            // and doesn't strictly require sorted order, takeChunk
-            // pops front-first regardless).
+            // ascending). Coalesce adjacent ranges on insert: if the
+            // previous tail entry's `offset + length` equals the
+            // current's `offset`, merge them into a single range. The
+            // PTO probe path otherwise emits one tiny STREAM frame per
+            // original-packet boundary instead of replaying the
+            // contiguous bytes as a single chunk, fragmenting the
+            // probe across N small frames + N AEAD seals + N writes
+            // when one frame would do. Coalescing across the FIN bit
+            // is gated — only merge when the previous tail had no
+            // FIN, otherwise the FIN's implicit final-size invariant
+            // could shift.
             for (r in inFlight) {
                 if (r.fin && !_finAcked) _finSent = false
-                retransmit.addLast(r)
+                val tail = retransmit.lastOrNull()
+                if (tail != null && !tail.fin && tail.offset + tail.length == r.offset) {
+                    // Merge: extend the tail to cover [tail.offset, r.endOffset).
+                    val merged = Range(tail.offset, tail.length + r.length, r.fin)
+                    retransmit.removeLast()
+                    retransmit.addLast(merged)
+                } else {
+                    retransmit.addLast(r)
+                }
+                retransmitTotalBytes += r.length
             }
             inFlight.clear()
         }
@@ -405,6 +436,7 @@ class SendBuffer(
 
                         OverlapAction.RETRANSMIT -> {
                             retransmit.addLast(r)
+                            retransmitTotalBytes += r.length
                         }
 
                         OverlapAction.DROP -> {} // discard
@@ -482,6 +514,7 @@ class SendBuffer(
                                 fin = coveredFin,
                             ),
                         )
+                        retransmitTotalBytes += coveredLen
                     }
 
                     OverlapAction.DROP -> {} // discard the covered piece

@@ -254,6 +254,18 @@ class QuicConnection(
     internal var previousReceiveProtection: PacketProtection? = null
 
     /**
+     * RFC 9001 §6.4: an endpoint MUST NOT initiate a subsequent key update
+     * unless the previous one has been confirmed by the peer. We treat
+     * "confirmed" as having received any application-level packet whose
+     * decrypt succeeded under the post-rotation (current) live keys —
+     * meaning the peer has rolled forward in lockstep. Set true by
+     * [initiateKeyUpdate], cleared by [QuicConnectionParser] on the
+     * first short-header packet that AEAD-passes after the rotation.
+     */
+    @Volatile
+    internal var keyUpdateInProgress: Boolean = false
+
+    /**
      * RFC 9001 §4.10 — 0-RTT send-side packet protection. Installed when
      * the TLS layer derives `client_early_traffic_secret` (right after
      * a resumption ClientHello with the early_data extension goes out)
@@ -571,6 +583,22 @@ class QuicConnection(
     internal val lossDetection: com.vitorpamplona.quic.connection.recovery.QuicLossDetection =
         com.vitorpamplona.quic.connection.recovery
             .QuicLossDetection()
+
+    /**
+     * Reusable scratch lists for [QuicConnectionWriter.buildApplicationPacket].
+     * The function clears them at entry, fills them, encodes the
+     * packet, snapshots the [scratchAppTokens] via `.toList()` for
+     * the [SentPacket] record, and returns. The next drain (single-
+     * threaded by [streamsLock]) then re-clears and re-uses.
+     *
+     * Skipped for [collectHandshakeLevelFrames]: that function returns
+     * a [com.vitorpamplona.quic.connection.HandshakeLevelContents]
+     * wrapping the lists, which the caller holds across two
+     * `buildLongHeaderFromFrames` calls (natural-size + padded
+     * rebuild). Reusing those would corrupt the rebuild path.
+     */
+    internal val scratchAppFrames: MutableList<com.vitorpamplona.quic.frame.Frame> = mutableListOf()
+    internal val scratchAppTokens: MutableList<com.vitorpamplona.quic.connection.recovery.RecoveryToken> = mutableListOf()
 
     /**
      * RFC 9002 §6.2 Probe Timeout signalling. When the driver loop's
@@ -1845,12 +1873,14 @@ class QuicConnection(
      * outbound packet carries `KEY_PHASE = 1` and the peer is expected
      * to mirror back in the same phase.
      *
-     * RFC 9001 §6.5 says an endpoint MUST NOT initiate a key update
-     * before the handshake is confirmed (HANDSHAKE_DONE received). The
-     * caller is responsible for that check; this method just performs
-     * the rotation. §6.4 also forbids initiating a second update before
-     * the current one has been confirmed (peer responds in matching
-     * phase) — same caller contract.
+     * Spec invariants enforced here (caller no longer responsible):
+     *  - RFC 9001 §6.5: returns false if [handshakeComplete] is not
+     *    yet true. Initiating before handshake confirmation is a
+     *    PROTOCOL_VIOLATION.
+     *  - RFC 9001 §6.4: returns false if a previous rotation is still
+     *    in flight ([keyUpdateInProgress]). The parser clears that
+     *    flag on the first inbound packet that AEAD-decrypts under
+     *    the post-rotation keys, signalling the peer rolled forward.
      *
      * Header-protection key is unchanged (RFC 9001 §6.1: HP key is NOT
      * rotated when keys are updated).
@@ -1864,6 +1894,16 @@ class QuicConnection(
      * and server".
      */
     fun initiateKeyUpdate(): Boolean {
+        // RFC 9001 §6.5: handshake MUST be confirmed before initiating
+        // a key update. We use [handshakeComplete] as the proxy —
+        // application keys are installed and the peer's HANDSHAKE_DONE
+        // has been processed.
+        if (!handshakeComplete) return false
+        // RFC 9001 §6.4: MUST NOT initiate a subsequent rotation until
+        // the previous one is confirmed. The parser clears this flag
+        // when it observes an inbound packet that AEAD-decrypts under
+        // the post-rotation live keys.
+        if (keyUpdateInProgress) return false
         val cs = appCipherSuite.takeIf { it != 0 } ?: return false
         val curRx = appReceiveSecret ?: return false
         val curTx = appSendSecret ?: return false
@@ -1907,6 +1947,7 @@ class QuicConnection(
         appSendSecret = nextTxSecret
         currentReceiveKeyPhase = !currentReceiveKeyPhase
         currentSendKeyPhase = !currentSendKeyPhase
+        keyUpdateInProgress = true
         qlogObserver.onKeyUpdated("client", EncryptionLevel.APPLICATION)
         qlogObserver.onKeyUpdated("server", EncryptionLevel.APPLICATION)
         return true

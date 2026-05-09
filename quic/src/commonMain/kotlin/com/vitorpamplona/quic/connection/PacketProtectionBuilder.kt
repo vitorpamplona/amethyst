@@ -73,9 +73,18 @@ fun packetProtectionFromSecret(
     // which avoids `Cipher.getInstance` per-packet (audit-1, audit-3 finding).
     val aead: Aead =
         when (cipherSuite) {
-            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256 -> bestAes128GcmAead(keys.key)
-            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256 -> com.vitorpamplona.quic.crypto.ChaCha20Poly1305Aead
-            else -> error("unreachable")
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256 -> {
+                bestAes128GcmAead(keys.key)
+            }
+
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256 -> {
+                com.vitorpamplona.quic.crypto
+                    .bestChaCha20Poly1305Aead(keys.key)
+            }
+
+            else -> {
+                error("unreachable")
+            }
         }
     return PacketProtection(aead, keys.key, keys.iv, hp, keys.hp)
 }

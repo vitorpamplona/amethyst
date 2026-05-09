@@ -109,14 +109,28 @@ object LongHeaderPacket {
         }
         val headerBytes = w.toByteArray()
 
-        // Encrypt padded payload
+        // Pre-allocate the final packet buffer in one shot and have the
+        // AEAD seal write ciphertext+tag directly into it. Pre-fix this
+        // path allocated `headerBytes`, `paddedPlaintext`, the
+        // `aead.seal` return ByteArray, and the final concat buffer —
+        // four ByteArrays per outbound packet. The single-buffer +
+        // [Aead.sealInto] form below collapses the seal output and
+        // concat into the same allocation.
         val nonce = aeadNonce(iv, plain.packetNumber)
-        val ciphertext = aead.seal(key, nonce, headerBytes, paddedPlaintext)
-
-        // Concatenate header + ciphertext
-        val packet = ByteArray(headerBytes.size + ciphertext.size)
+        val packet = ByteArray(headerBytes.size + paddedPlaintext.size + aead.tagLength)
         headerBytes.copyInto(packet, 0)
-        ciphertext.copyInto(packet, headerBytes.size)
+        aead.sealInto(
+            key = key,
+            nonce = nonce,
+            aad = packet,
+            aadOffset = 0,
+            aadLength = headerBytes.size,
+            plaintext = paddedPlaintext,
+            plaintextOffset = 0,
+            plaintextLength = paddedPlaintext.size,
+            output = packet,
+            outputOffset = headerBytes.size,
+        )
 
         // Apply header protection. Sample is 16 bytes starting 4 bytes after pnOffset.
         val sampleStart = pnOffset + 4

@@ -74,8 +74,6 @@ fun drainOutbound(
     conn: QuicConnection,
     nowMillis: Long,
 ): ByteArray? {
-    val parts = mutableListOf<ByteArray>()
-
     // Closing — emit a CONNECTION_CLOSE at the highest available level. The
     // datagram-build paths below MUST satisfy two RFC 9000 constraints we
     // got wrong before:
@@ -601,7 +599,12 @@ private fun buildApplicationPacket(
     // settled mid-handshake (peer hasn't ACK'd anything yet), so the
     // walk is a no-op.
     conn.retireFullyDoneStreamsLocked()
-    val frames = mutableListOf<Frame>()
+    // Reuse per-connection scratch lists (cleared at entry) instead of
+    // allocating fresh `mutableListOf<Frame>` / `mutableListOf<RecoveryToken>`
+    // every drain — single-writer by [streamsLock], so the next drain's
+    // clear() runs after this drain has already snapshotted the tokens
+    // via `.toList()` into the SentPacket record.
+    val frames = conn.scratchAppFrames.also { it.clear() }
     // Tokens collected in lock-step with [frames]: each retransmittable
     // frame contributes a [RecoveryToken] so the [SentPacket] recorded
     // at the bottom of this function can drive RFC 9002 loss
@@ -610,7 +613,7 @@ private fun buildApplicationPacket(
     // are not retransmittable (DatagramFrame, StreamFrame for now) do
     // not contribute a token; the packet is still ack-eliciting and
     // tracked for loss-detection timing.
-    val tokens = mutableListOf<RecoveryToken>()
+    val tokens = conn.scratchAppTokens.also { it.clear() }
 
     // RFC 9000 §17.2.3 — 0-RTT packets MUST NOT contain ACK frames. The
     // server cannot ACK 0-RTT-level packets because it has no way to
@@ -619,31 +622,23 @@ private fun buildApplicationPacket(
     // Skip ACK building when we're about to emit a 0-RTT packet.
     if (use1Rtt) {
         state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { plainAck ->
-            // RFC 9000 §13.4.2: an endpoint that USES ECN on outbound
-            // packets (we set ECT(0) on every datagram via the socket's
-            // IP_TOS option) MUST report ECN counts in 1-RTT ACK frames so
-            // the peer can detect path congestion. We don't currently
-            // read inbound TOS bits — JDK's DatagramChannel doesn't expose
-            // them without JNI — so the counts are all-zero. The interop
-            // runner's `ecn` testcase only checks for the field's presence
-            // (`hasattr(p["quic"], "ack.ect0_count")`); strict peers that
-            // cross-validate counts would reject this, but aioquic /
-            // picoquic / quic-go all tolerate it. Initial / Handshake-space
-            // ACKs stay plain (ecnCounts=null) — the spec allows ECN counts
-            // there too, but interop implementations don't always handle
-            // them and we'd gain nothing.
-            val ackWithEcn =
-                AckFrame(
-                    largestAcknowledged = plainAck.largestAcknowledged,
-                    ackDelay = plainAck.ackDelay,
-                    firstAckRange = plainAck.firstAckRange,
-                    additionalRanges = plainAck.additionalRanges,
-                    ecnCounts =
-                        com.vitorpamplona.quic.frame
-                            .AckEcnCounts(0L, 0L, 0L),
-                )
-            frames += ackWithEcn
-            tokens += RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = ackWithEcn.largestAcknowledged)
+            // RFC 9000 §13.4.2: an endpoint that USES ECN MUST report
+            // accurate ECN counts. Pre-fix we hardcoded
+            // `AckEcnCounts(0, 0, 0)` while still marking outbound
+            // datagrams with ECT(0) — a strict peer cross-validating
+            // counts could treat the all-zero report as a
+            // PROTOCOL_VIOLATION, since we claim to be using ECN but
+            // never accumulate the counts. We don't read inbound TOS
+            // (JDK's DatagramChannel doesn't expose it without JNI),
+            // so honest reporting means: don't claim to track ECN at
+            // all — emit ACK with `ecnCounts = null`. The peer reads
+            // that as "this endpoint isn't reporting ECN" and skips
+            // its own ECN-driven congestion logic for our direction.
+            // We still mark outbound ECT(0) (other peers' tracking
+            // benefits from the path-quality signal); the asymmetry
+            // is allowed by §13.4.
+            frames += plainAck
+            tokens += RecoveryToken.Ack(level = EncryptionLevel.APPLICATION, largestAcked = plainAck.largestAcknowledged)
         }
     }
 
@@ -725,7 +720,17 @@ private fun buildApplicationPacket(
         val sorted =
             when {
                 active.size <= 1 -> active
-                active.all { it.priority == 0 } -> active
+
+                // Single-pass uniform-priority check: if EVERY stream
+                // shares the same priority (whether default 0 or
+                // anything else), the sort is a no-op and we keep
+                // insertion order for round-robin fairness. Pre-fix
+                // we only short-circuited on `priority == 0`, so a
+                // homogeneous `priority == 7` workload paid for an
+                // O(N log N) sort despite the result being
+                // observationally identical to insertion order.
+                active.all { it.priority == active[0].priority } -> active
+
                 else -> active.sortedByDescending { it.priority }
             }
         val rotation = conn.streamRoundRobinStart

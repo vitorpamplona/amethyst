@@ -87,6 +87,41 @@ abstract class Aead {
     }
 
     /**
+     * Range + in-place [seal]: read `aad` and `plaintext` from sub-ranges
+     * and write ciphertext+tag DIRECTLY into [output] at [outputOffset].
+     * Returns the number of bytes written (== plaintextLength + tagLength).
+     *
+     * Saves another ByteArray allocation per outbound packet vs.
+     * [sealRange] — the build path can pre-allocate one final packet
+     * buffer and have the ciphertext land in-place rather than copying
+     * a fresh `seal()` result. Combined with the AAD+plaintext range
+     * inputs already handled by [sealRange], a complete outbound packet
+     * goes from ~4 allocations (headerBytes / paddedPlaintext /
+     * ciphertext / final concat) down to ~2 (the final packet buffer
+     * and the AEAD provider's internal scratch).
+     *
+     * Default impl falls back to [sealRange] + copy; the JCA-backed
+     * [com.vitorpamplona.quic.crypto.JcaAesGcmAead] overrides to use
+     * `Cipher.doFinal(input, inOff, inLen, output, outOff)`.
+     */
+    open fun sealInto(
+        key: ByteArray,
+        nonce: ByteArray,
+        aad: ByteArray,
+        aadOffset: Int,
+        aadLength: Int,
+        plaintext: ByteArray,
+        plaintextOffset: Int,
+        plaintextLength: Int,
+        output: ByteArray,
+        outputOffset: Int,
+    ): Int {
+        val ct = sealRange(key, nonce, aad, aadOffset, aadLength, plaintext, plaintextOffset, plaintextLength)
+        ct.copyInto(output, outputOffset)
+        return ct.size
+    }
+
+    /**
      * Range-based [open] — same semantics as [open] but reads `aad` and
      * `ciphertext` from sub-ranges. Default impl slices and delegates.
      */

@@ -361,39 +361,47 @@ class TlsClient(
                         // We offered PSK but the server picked full-
                         // handshake. RFC 8446 §4.2.11 lets the server
                         // do this freely (rate limit, ticket aged out,
-                        // policy mismatch). Recovering in-place
-                        // requires:
-                        //   1. Discarding the early secret derived
-                        //      from the resumption PSK.
-                        //   2. Rebuilding the transcript without the
-                        //      `pre_shared_key` extension or its
-                        //      binder bytes.
-                        //   3. Replaying the post-ClientHello derivation
-                        //      with the new transcript.
-                        // Each step is touchy enough that a
-                        // subtly-wrong transcript hash would land us on
-                        // a successful handshake with wrong keys, which
-                        // is harder to debug than a hard failure. We
-                        // surface a typed [PskRejectedException] so
-                        // application-layer reconnect logic can drop
-                        // the cached resumption state and retry from
-                        // scratch — that path is correct by
-                        // construction (fresh ClientHello, no PSK
-                        // history). Production callers wrapping this
-                        // client SHOULD catch [PskRejectedException]
-                        // and retry without [resumption].
-                        throw PskRejectedException(
-                            "server rejected PSK; application must retry without resumption",
-                        )
+                        // policy mismatch).
+                        //
+                        // Recover in-place WITHOUT a transcript rebuild.
+                        // The on-wire ClientHello carries the
+                        // pre_shared_key extension and binder bytes;
+                        // both client and server hash the FULL
+                        // ClientHello (binders included) into their
+                        // running transcript hash regardless of accept
+                        // / reject (RFC 8446 §4.2.11). So the
+                        // transcript itself stays valid — only the
+                        // [earlySecret] derivation changes:
+                        //   * accepted: early_secret = HKDF.extract(0, PSK)
+                        //   * rejected: early_secret = HKDF.extract(0, 0)
+                        // [deriveHandshake] then folds early_secret +
+                        // ECDHE shared secret into [handshakeSecret];
+                        // every downstream key follows. We just have
+                        // to overwrite earlySecret here BEFORE
+                        // [deriveHandshake] runs below.
+                        //
+                        // Any 0-RTT packets the application already
+                        // emitted under the PSK-derived
+                        // [clientEarlyTrafficSecret] are lost: the
+                        // server can't decrypt them, and the EE will
+                        // arrive without the early_data extension
+                        // (earlyDataAccepted = false). That's the
+                        // RFC's expected behaviour and the
+                        // application-level retry layer is responsible
+                        // for replaying any 0-RTT-bound payload over
+                        // 1-RTT. The handshake itself proceeds cleanly.
+                        keySchedule.deriveEarly()
+                        pskAccepted = false
+                    } else {
+                        val r = QuicReader(pskExt.data)
+                        val selectedIdentity = r.readUint16()
+                        if (selectedIdentity != 0) {
+                            throw QuicCodecException(
+                                "server selected PSK identity $selectedIdentity but we only offered 0",
+                            )
+                        }
+                        pskAccepted = true
                     }
-                    val r = QuicReader(pskExt.data)
-                    val selectedIdentity = r.readUint16()
-                    if (selectedIdentity != 0) {
-                        throw QuicCodecException(
-                            "server selected PSK identity $selectedIdentity but we only offered 0",
-                        )
-                    }
-                    pskAccepted = true
                 } else if (pskExt != null) {
                     throw QuicCodecException("server picked PSK we never offered")
                 }
@@ -605,22 +613,6 @@ class TlsClient(
     }
 }
 
-/**
- * Thrown when the server returned a ServerHello without a `pre_shared_key`
- * extension despite the client offering one in [TlsClient.resumption].
- * The handshake cannot proceed in-place because the early secret + transcript
- * were already shaped around the PSK; application-layer reconnect logic
- * should catch this, drop the cached [TlsResumptionState], and retry the
- * handshake from scratch. See the call site in
- * [TlsClient.handleHandshakeMessage] for the full rationale.
- *
- * Distinct subclass of [QuicCodecException] so callers can selectively
- * catch the recoverable case without swallowing genuine protocol errors.
- */
-class PskRejectedException(
-    message: String,
-) : QuicCodecException(message)
-
 /** Callback interface so the QUIC layer can react to TLS-derived secrets. */
 interface TlsSecretsListener {
     fun onHandshakeKeysReady(
@@ -685,7 +677,23 @@ interface TlsSecretsListener {
  * [ticketAgeAdd] and [issuedAtMillis] to compute the obfuscated_ticket_age
  * the server expects.
  */
-data class TlsResumptionState(
+/**
+ * Cached state from a prior TLS handshake that lets the client offer
+ * RFC 8446 PSK-resumption + RFC 9001 §4.6 0-RTT on the next connection.
+ *
+ * Plain `class` (not `data class`) intentionally:
+ *  - The `data class`-generated `equals` / `hashCode` use reference
+ *    equality on [ByteArray] fields, so two states with byte-identical
+ *    PSKs would compare unequal — surprising and almost never useful.
+ *  - The auto-generated `toString` would dump `psk` / `ticket` /
+ *    `peerTransportParameters` byte contents into any log, stack trace,
+ *    or debugger that touches the object. Both are sensitive.
+ *
+ * We override [equals] / [hashCode] with [contentEquals] semantics on
+ * the byte fields (so callers can deduplicate cached states by content)
+ * and [toString] to redact the secret payload.
+ */
+class TlsResumptionState(
     /** Opaque ticket bytes echoed verbatim as the PSK identity on the next connection. */
     val ticket: ByteArray,
     /** PSK derived from `resumption_master_secret` + `ticket_nonce` per RFC 8446 §4.6.1. */
@@ -724,7 +732,51 @@ data class TlsResumptionState(
     val peerTransportParameters: ByteArray? = null,
     /** Negotiated ALPN from the prior connection. 0-RTT must use the same protocol. */
     val negotiatedAlpn: ByteArray? = null,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TlsResumptionState) return false
+        return ticket.contentEquals(other.ticket) &&
+            psk.contentEquals(other.psk) &&
+            cipherSuite == other.cipherSuite &&
+            ticketAgeAdd == other.ticketAgeAdd &&
+            ticketLifetimeSec == other.ticketLifetimeSec &&
+            issuedAtMillis == other.issuedAtMillis &&
+            maxEarlyDataSize == other.maxEarlyDataSize &&
+            (peerTransportParameters?.contentEquals(other.peerTransportParameters) ?: (other.peerTransportParameters == null)) &&
+            (negotiatedAlpn?.contentEquals(other.negotiatedAlpn) ?: (other.negotiatedAlpn == null))
+    }
+
+    override fun hashCode(): Int {
+        var h = ticket.contentHashCode()
+        h = 31 * h + psk.contentHashCode()
+        h = 31 * h + cipherSuite
+        h = 31 * h + ticketAgeAdd.hashCode()
+        h = 31 * h + ticketLifetimeSec.hashCode()
+        h = 31 * h + issuedAtMillis.hashCode()
+        h = 31 * h + maxEarlyDataSize.hashCode()
+        h = 31 * h + (peerTransportParameters?.contentHashCode() ?: 0)
+        h = 31 * h + (negotiatedAlpn?.contentHashCode() ?: 0)
+        return h
+    }
+
+    /**
+     * Redacted [toString]: never include `ticket`, `psk`, or
+     * `peerTransportParameters` byte contents — those leak into logs
+     * and stack traces. Sizes are fine to expose.
+     */
+    override fun toString(): String =
+        "TlsResumptionState(" +
+            "ticket=<${ticket.size} bytes>, " +
+            "psk=<${psk.size} bytes redacted>, " +
+            "cipherSuite=0x${cipherSuite.toString(16)}, " +
+            "ticketAgeAdd=$ticketAgeAdd, " +
+            "ticketLifetimeSec=$ticketLifetimeSec, " +
+            "issuedAtMillis=$issuedAtMillis, " +
+            "maxEarlyDataSize=$maxEarlyDataSize, " +
+            "peerTransportParameters=${peerTransportParameters?.let { "<${it.size} bytes>" }}, " +
+            "negotiatedAlpn=${negotiatedAlpn?.decodeToString()})"
+}
 
 /** Pluggable certificate validator. Decoupled so we can stub it in tests. */
 interface CertificateValidator {

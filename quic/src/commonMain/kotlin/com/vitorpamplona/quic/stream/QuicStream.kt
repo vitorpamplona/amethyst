@@ -22,7 +22,7 @@ package com.vitorpamplona.quic.stream
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.flow
 
 /**
  * One QUIC stream (bidirectional or unidirectional). Application code
@@ -78,33 +78,35 @@ class QuicStream(
      * was discarded, leaving a hole in the stream that the application could
      * never know about.
      *
-     * **Single-collector contract.** [consumeAsFlow] cancels the underlying
-     * [Channel] when its collector terminates (either by exception or
-     * explicit cancellation). After that point any subsequent
-     * `trySend` from the parser fails, sets [overflowed] = true, and
-     * the parser tears the whole connection down with
-     * `INTERNAL_ERROR: stream … consumer overflowed`. So:
-     *  - Application code MUST collect [incoming] **at most once** per
-     *    stream and MUST hold the collect open until the stream
-     *    terminates (FIN, peer RESET_STREAM, or local
-     *    [stopSending] / [resetStream] decision).
-     *  - Cancelling the collector early — e.g. wrapping in
-     *    `withTimeout(...)` — is equivalent to telling the connection
-     *    to drop. If the application wants to stop receiving without
-     *    killing the connection, call [stopSending] FIRST, then let
-     *    the parser's RESET_STREAM-style teardown drain the channel
-     *    cleanly.
+     * **Resilience to collector cancellation.** Pre-fix this exposed
+     * [incomingChannel] via `consumeAsFlow()`, which cancels the
+     * underlying [Channel] when its collector terminates. That coupled
+     * "application stopped collecting" to "parser INTERNAL_ERRORs the
+     * whole connection on next delivery" — cancelling the collector
+     * early (e.g. `withTimeout(...)`) was effectively a request to
+     * drop the connection. Rebuilt as `flow { for (c in
+     * incomingChannel) emit(c) }`: a fresh emit-only Flow over the
+     * channel iterator, with no `consume`-style ownership transfer.
+     * Now collector cancellation just exits the flow without touching
+     * the channel; the channel stays open, the parser keeps
+     * delivering, and the application can re-collect later (a fresh
+     * collector picks up at `channel.receive()` — i.e. from the
+     * current head, not the start).
      *
-     * This is a fragile coupling we accept for now because (a) every
-     * production caller already follows the single-collector pattern,
-     * and (b) widening the contract would require swapping
-     * `consumeAsFlow` for a `MutableSharedFlow` with replay/buffer
-     * semantics, which has its own back-pressure pitfalls. The
-     * comment is here so a future refactor doesn't accidentally
-     * loosen the contract.
+     * Producer back-pressure unchanged: the channel buffer is still
+     * 64 chunks, [trySend] still sets [overflowed] on saturation,
+     * and the parser still closes the connection if the application
+     * fails to drain. The looser contract just permits the previously-
+     * disallowed pattern of "stop reading temporarily, then resume".
+     *
+     * Concurrent collectors are still NOT supported — two simultaneous
+     * collects would race the channel iterator and each chunk goes to
+     * exactly one of them non-deterministically. Sequential collects
+     * (one finishes / cancels, then another starts) are the new
+     * supported pattern.
      */
     private val incomingChannel = Channel<ByteArray>(capacity = 64)
-    val incoming: Flow<ByteArray> get() = incomingChannel.consumeAsFlow()
+    val incoming: Flow<ByteArray> = flow { for (chunk in incomingChannel) emit(chunk) }
 
     /**
      * True once a [deliverIncoming] call failed because the channel was
@@ -128,10 +130,18 @@ class QuicStream(
      * writer's appendFlowControlUpdates consumes it to skip streams that
      * haven't received any new bytes since the last MAX_STREAM_DATA emission.
      *
+     * `@Volatile` because the parser writes it from the read loop and the
+     * writer reads it from the send loop without holding the same lock.
+     * Without volatile the writer could miss the parser's update for an
+     * unbounded time on JVM (the field is read in a hot drain loop where
+     * the JIT might cache it), suppressing MAX_STREAM_DATA emissions
+     * until something else triggered a fresh load.
+     *
      * Pre-fix the writer iterated EVERY open stream on every drain
      * (audit-4 perf #9 — O(streams) × ~50 drains/sec; significant for audio
      * rooms with many WT streams).
      */
+    @Volatile
     internal var receiveDirtyForFlowControl: Boolean = false
 
     /** True once we've FIN'd our write side and the peer FIN'd theirs. */

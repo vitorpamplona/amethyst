@@ -34,3 +34,13 @@ expect val PlatformChaCha20Block: ChaCha20BlockEncrypt
  * stateless singleton) — correct, just not the fast path.
  */
 expect fun bestAes128GcmAead(key: ByteArray): Aead
+
+/**
+ * Build the platform's preferred ChaCha20-Poly1305 AEAD for a fixed [key].
+ * JVM 11+ / Android API 28+ provide a JCA `ChaCha20-Poly1305` cipher
+ * that supports range-based `Cipher.doFinal(input, off, len, output, off)`,
+ * unlocking the same allocation-elision wins as [bestAes128GcmAead].
+ * Older platforms fall back to the pure-Kotlin [ChaCha20Poly1305Aead]
+ * singleton — correct, just slower and without range overloads.
+ */
+expect fun bestChaCha20Poly1305Aead(key: ByteArray): Aead
