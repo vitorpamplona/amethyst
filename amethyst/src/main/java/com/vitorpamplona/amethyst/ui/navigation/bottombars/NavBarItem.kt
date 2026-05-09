@@ -62,6 +62,7 @@ enum class NavBarItem {
     PRODUCTS,
     EMOJI_SETS,
     SETTINGS,
+    FAVORITE_ALGO_FEEDS,
 }
 
 data class NavBarItemDef(
@@ -156,6 +157,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.interest_sets_title,
                 icon = MaterialSymbols.Tag,
                 resolveRoute = { Route.InterestSets },
+            ),
+        NavBarItem.FAVORITE_ALGO_FEEDS to
+            NavBarItemDef(
+                id = NavBarItem.FAVORITE_ALGO_FEEDS,
+                labelRes = R.string.favorite_dvms_title,
+                icon = MaterialSymbols.Star,
+                resolveRoute = { Route.EditFavoriteAlgoFeeds },
             ),
         NavBarItem.EMOJI_PACKS to
             NavBarItemDef(
