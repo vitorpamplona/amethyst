@@ -691,6 +691,67 @@ class MoqLiteSession internal constructor(
         sub.frames.close()
     }
 
+    /**
+     * Open a Probe bidi against the relay / publisher (audit L3).
+     * Mirrors kixelated's `Subscriber::run_probe_stream`
+     * (`rs/moq-lite/src/lite/subscriber.rs`): subscriber writes
+     * `ControlType::Probe` (varint 4), then reads size-prefixed
+     * [MoqLiteProbe] messages until the publisher FINs.
+     *
+     * The publisher reciprocates by writing one or more [MoqLiteProbe]
+     * messages indicating its expected outbound bitrate. Amethyst's
+     * own publisher path is fixed-rate Opus and emits exactly one
+     * Probe before FIN, but third-party (e.g. browser-side
+     * `kixelated/moq` watcher → relay-served broadcast) publishers
+     * MAY emit multiple over time as their ABR estimates change.
+     *
+     * The returned handle's `updates` flow is cold — collecting it
+     * starts the read pump on this session's scope. On collector
+     * cancellation OR [MoqLiteProbeHandle.close], the bidi FINs and
+     * the pump exits.
+     *
+     * No application-level use of probe data exists in nests today
+     * (we don't run ABR), but the API completes the moq-lite Lite-03
+     * protocol surface. Useful for diagnostic tools that want to
+     * read a publisher's bitrate without subscribing to its data
+     * track.
+     */
+    suspend fun probe(): MoqLiteProbeHandle {
+        ensureOpen()
+        val bidi = transport.openBidiStream()
+        bidi.write(Varint.encode(MoqLiteControlType.Probe.code))
+        val updates =
+            MutableSharedFlow<MoqLiteProbe>(
+                replay = 8,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
+        val pump =
+            scope.launch {
+                val buffer = MoqLiteFrameBuffer()
+                try {
+                    bidi.incoming().collect { chunk ->
+                        buffer.push(chunk)
+                        while (true) {
+                            val payload = buffer.readSizePrefixed() ?: break
+                            updates.emit(MoqLiteCodec.decodeProbe(payload))
+                        }
+                    }
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (_: Throwable) {
+                    // Probe bidi died — best-effort silent. The
+                    // updates flow simply stops emitting.
+                }
+            }
+        return MoqLiteProbeHandle(
+            updates = updates,
+            close = {
+                runCatching { bidi.finish() }
+                pump.cancelAndJoin()
+            },
+        )
+    }
+
     // ====================================================================
     // Publisher side
     // ====================================================================

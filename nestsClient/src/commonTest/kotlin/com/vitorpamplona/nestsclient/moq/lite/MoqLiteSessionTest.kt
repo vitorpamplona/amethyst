@@ -941,6 +941,50 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun subscriber_probe_writes_control_type_and_decodes_publisher_bitrate() =
+        runBlocking {
+            // Lite-03 audit L3: the subscriber side opens a Probe bidi
+            // by writing ControlType=Probe and reads size-prefixed
+            // MoqLiteProbe messages from the publisher. Mirrors
+            // kixelated's `Subscriber::run_probe_stream`
+            // (`rs/moq-lite/src/lite/subscriber.rs`).
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Server side: read the subscriber's control byte, then
+            // write two Probe messages.
+            val serverPump =
+                async {
+                    val bidi = serverSide.peerOpenedBidiStreams().first()
+                    val buf = MoqLiteFrameBuffer()
+                    // Read the leading ControlType varint. The session
+                    // writes it as a single chunk via bidi.write.
+                    val ctChunk = withTimeout(2_000) { bidi.incoming().first() }
+                    buf.push(ctChunk)
+                    val ct = buf.readVarint()
+                    assertEquals(MoqLiteControlType.Probe.code, ct, "subscriber writes ControlType=Probe")
+
+                    // Push two probes (different bitrates) then FIN.
+                    bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = 32_000L)))
+                    bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = 64_000L)))
+                    bidi.finish()
+                }
+
+            val handle = session.probe()
+            // Drain both probes from the cold flow. SharedFlow with
+            // replay=8 means we can collect after the publisher has
+            // already pushed without losing emissions.
+            val received = withTimeout(2_000) { handle.updates.take(2).toList() }
+            assertEquals(2, received.size)
+            assertEquals(32_000L, received[0].bitrate)
+            assertEquals(64_000L, received[1].bitrate)
+
+            serverPump.await()
+            handle.close()
+            session.close()
+        }
+
+    @Test
     fun unsubscribe_FINs_the_subscribe_bidi() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()
