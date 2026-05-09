@@ -20,15 +20,19 @@ Probe — match the reference Rust impl byte-for-byte. The known gaps
 are all spec-loose / future-fragile (🟡 / 🟦), not wire-incompatible
 (🔴).
 
-**This audit shipped four fixes** (M1, M4, M5, L5) and **closed M6**
-(verified via WebFetch that Goaway has no body in the spec, so our
-existing handler is canonical). **L4** is subsumed by the M1 fix.
-The remaining 🟡 / 🟦 items (M2, M3, L1, L2, L3) are deferred with
-rationale below — each is a deliberate non-fix because either the
-QUIC layer is locked (M2/M3 need WebTransport interface extensions
-that touch `:quic`), the change is significant scope (L1 Lite-04
-codec rewrite), or there's no consumer for the proposed API
-(L2/L3). **No 🔴 wire-incompatibilities remain.**
+**This audit shipped six fixes** (M1, M2, M3, M4, M5, L5) and
+**closed M6** (verified via WebFetch that Goaway has no body in
+the spec, so our existing handler is canonical). **L4** is subsumed
+by the M1 fix. M2/M3 originally deferred under the "`:quic` is
+locked" constraint; after a merge from `main` brought in the full
+RFC-compliant `:quic` layer, the user lifted the constraint and
+M2/M3 landed end-to-end (interface extension, all adapters, plus
+production use sites in `drainOneGroup` and the inbound-bidi
+dispatcher's Drop reply paths). The remaining items (L1 Lite-04
+codec, L2 SubscribeOk narrowing, L3 subscriber Probe) are
+deliberate non-fixes — significant scope (L1) or no consumer for
+the proposed API (L2/L3). **No 🔴 wire-incompatibilities remain;
+no 🟡 items remain open.**
 
 ## Methodology
 
@@ -112,8 +116,8 @@ Severity legend (matches the prior QUIC audit):
 | -- | --------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------ |
 | H0 | (none — no wire-incompatible items found)                                          | 🔴       | —                                                                                                                                                                                                                                                                                                                                                                  | —                                                                     | n/a    |
 | M1 | `Publisher::serve_group` priority parity                                           | 🟡 → ✅   | We assigned each new group `priority = sequence (i32 cast)`, ignoring `track.priority` and never re-prioritising in flight. kixelated computes `let priority = priority.insert(track.priority, sequence); stream.set_priority(priority.current())` (per `rs/moq-lite/src/lite/publisher.rs::serve_group`). For our single Opus track at 1 group/sec the difference was unobservable (newer-first ordering still held). | `MoqLiteSession.kt:openGroupStream` (pre-fix)                         | **fixed in this audit** — see `Fix #3` |
-| M2 | `STOP_SENDING` for single-group cancel                                             | 🟡       | The Lite-03 spec lets a receiver cancel a specific group via `STOP_SENDING` on its uni stream. We close the consumer-facing frames channel only — the publisher's uni stream stays open until natural FIN or transport drop. Practical impact: the publisher wastes a tiny amount of bandwidth on frames the listener will discard; not user-visible. The `:quic` `QuicStream.stopSending(errorCode)` API exists, but isn't exposed through `WebTransportReadStream`. | `MoqLiteSession.kt:670-675` (no stopSending), `WebTransportSession.kt:103-107` (read interface lacks stopSending) | open (deferred — needs `:quic` interface extension; user prompt locked `:quic`) |
-| M3 | `RESET_STREAM` with `Error::to_code()`                                             | 🟡       | All error / cancel paths today FIN gracefully via `runCatching { bidi.finish() }`. The Lite-03 spec says errors on any stream are conveyed by `RESET_STREAM(application_error_code = Error::to_code() u32)`. Practical impact: the peer can't tell "I'm done with this stream" apart from "this stream errored" — the wrapper falls back to flow-end heuristics. No moq-lite-session error path actually wants to send a coded reset today (Drop replies use FIN per spec; transport drops surface as flow-end). | `MoqLiteSession.kt` everywhere `runCatching { …finish() }` is used; no `reset(code)` calls anywhere | open (deferred — interface extension without consumer = dead code) |
+| M2 | `STOP_SENDING` for single-group cancel                                             | 🟡 → ✅   | The Lite-03 spec lets a receiver cancel a specific group via `STOP_SENDING` on its uni stream. Pre-fix we closed the consumer-facing frames channel only — the publisher's uni stream stayed open until natural FIN, wasting bandwidth on frames the listener would discard plus relay queue pressure on the per-subscriber forward pipeline. The `:quic` `QuicStream.stopSending(errorCode)` API existed but wasn't exposed through `WebTransportReadStream`. Now plumbed end-to-end: extended `WebTransportReadStream` with `stopSending(code)`, plumbed through `:quic`'s `StrippedWtStream`, and `MoqLiteSession.drainOneGroup` fires `stopSending(SUBSCRIPTION_GONE)` once on the first frame that observes `sub == null`. | `MoqLiteSession.kt:drainOneGroup` (pre-fix), `WebTransportSession.kt` (read interface)                            | **fixed in this audit** — see `Fix #5` |
+| M3 | `RESET_STREAM` with `Error::to_code()`                                             | 🟡 → ✅   | Pre-fix all error / cancel paths FIN'd gracefully via `runCatching { bidi.finish() }`. Lite-03 spec says errors on any stream are conveyed by `RESET_STREAM(application_error_code u32)`. The `SubscribeDrop` reply paths now write the body and then `RESET_STREAM(errorCode)` instead of `finish()`, so a peer watching only the QUIC layer (no body decode) can distinguish typed rejection from graceful "publisher gone" FIN. Plumbing extended `WebTransportWriteStream` with `reset(code)` and routed through both QUIC-backed adapters + `:quic`'s `StrippedWtStream`. | `MoqLiteSession.kt:handleInboundBidi` Drop replies (pre-fix)                                                      | **fixed in this audit** — see `Fix #5` |
 | M4 | AnnouncePlease prefix-mismatch falls back to full suffix                           | 🟡 → ✅   | When the relay opened an Announce bidi with `prefix="X"`, our publisher emitted `Active(suffix=ourFullSuffix)` even when our suffix didn't start with `X`. The relay would observe an Active update for a broadcast it didn't ask about. In production the relay always asks for `prefix=""`, so this never bit empirically — but it's a spec violation. | `MoqLiteSession.kt:841-852` (pre-fix)                                 | **fixed in this audit** — see `Fix #1` |
 | M5 | Inbound Subscribe doesn't validate broadcast field                                 | 🟡 → ✅   | When the relay opened a Subscribe bidi, we matched on `track` only, never checking `sub.broadcast == publisher.suffix`. A relay (or peer) could subscribe to broadcast `"otherPubkey"` on our connection and we'd happily route OUR audio to them. The production relay routes correctly, so this never bit empirically — but it's a spec violation. | `MoqLiteSession.kt:861-898` (pre-fix)                                 | **fixed in this audit** — see `Fix #2` |
 | M6 | Goaway body decoding + migration handler                                           | 🟡 → ✅   | We recognise `ControlType::Goaway = 5` and FIN cleanly. WebFetched the kixelated reference (`rs/moq-lite/src/lite/{stream,client}.rs`): **Goaway has no body schema in moq-lite Lite-03** — it's a single ControlType byte with no payload, not even a migration URL. Our existing handler (recognise, log, FIN) is the canonical implementation; "no body decode" was never a gap. | `MoqLiteSession.kt:973-990`, `MoqLiteControlCodes.kt:50-58`           | **closed in this audit** — see `M6 closure` |
@@ -171,32 +175,14 @@ Severity legend (matches the prior QUIC audit):
 
 ## What's deliberately deferred
 
-1. **STOP_SENDING + RESET_STREAM (M2 + M3).** The QUIC layer exposes
-   `QuicStream.stopSending(errorCode)` and `resetStream(errorCode)`,
-   but neither is surfaced through the WebTransport read/write
-   interfaces in `WebTransportSession.kt`. Adding either means:
-   extending `WebTransportReadStream` / `WebTransportWriteStream`
-   with `stopSending(code)` / `reset(code)`, extending `:quic`'s
-   `StrippedWtStream` with closures (touches the locked QUIC
-   layer), plumbing through the QUIC adapter, and wiring error-code
-   constants in moq-lite. Since the production relay tolerates
-   graceful FIN as "I'm done" without complaining, **and no
-   moq-lite-session error path actually wants to send a coded reset
-   today** (Drop replies use FIN per spec; transport drops surface
-   as flow-end), the interface extension would land as dead code.
-   Defer until either the relay starts caring or we ship a
-   listener-driven group-cancel feature. The user's audit prompt
-   explicitly locked `:quic`, which forecloses M2/M3 in this
-   session anyway.
-
-2. **Lite-04 codec (L1).** Tracked in `MoqLiteAlpn.kt:50-56`.
+1. **Lite-04 codec (L1).** Tracked in `MoqLiteAlpn.kt:50-56`.
    Lite-04 reshapes `Announce.hops` (varint count → `OriginList`),
    adds `AnnounceInterest.exclude_hop`, and adds `Probe.rtt`. None
    of the Lite-04 features are required by the production
    nostrnests relay. Defer until either the relay phases out
    Lite-03 or we need Lite-04-only features.
 
-3. **Optional SubscribeOk narrowing (L2) + subscriber-driven Probe
+2. **Optional SubscribeOk narrowing (L2) + subscriber-driven Probe
    (L3).** Won't fix — fixed-rate Opus + live-only audio rooms
    have no use case for either. The publisher MAY narrow
    `startGroup`/`endGroup` per spec but we have no group history
@@ -309,6 +295,73 @@ peer-side read stream rather than peeking into private state.
 
 Regression test:
 `MoqLiteSessionTest.publisher_packs_trackPriority_and_sequence_into_setPriority_value`.
+
+### Fix #5 — Plumb RESET_STREAM + STOP_SENDING through WebTransport (M2 + M3)
+
+The two items shipped together because the plumbing is shared. After
+the merge from `main` brought in the full RFC-compliant `:quic`
+layer (commits `9f7f6a9e..6f32975c`), the user lifted the
+"`:quic` is locked" constraint that originally deferred M2/M3.
+
+**Plumbing** (new commit `feat(quic,nestsclient): plumb RESET_STREAM
++ STOP_SENDING through WebTransport`):
+  - `:quic`'s `StrippedWtStream` gains optional `reset` /
+    `stopSending` closures, wired in `WtPeerStreamDemux.emitStripped`
+    through `QuicStream.resetStream(code)` /
+    `QuicStream.stopSending(code)` + `driver.wakeup()`.
+  - `WebTransportReadStream.stopSending(code)` and
+    `WebTransportWriteStream.reset(code)` added to the public
+    interface — both suspending, both first-call-wins.
+  - All adapters (`QuicBidiStreamAdapter`,
+    `QuicUniWriteStreamAdapter`, `StrippedWtBidiStreamAdapter`,
+    `StrippedWtReadStreamAdapter`) route directly to the underlying
+    QUIC stream API.
+  - `FakeWebTransport`'s `FakeBidiStream`, `FakeReadStream`,
+    `ChannelWriteStream` (now public for test access) record reset
+    / stopSending codes in shared `AtomicLong` cells with sentinel
+    `NO_CODE = Long.MIN_VALUE`. New properties `lastResetCode`,
+    `lastStopSendingCode`, `lastPeerResetCode`,
+    `lastPeerStopSendingCode`, `peerStopSendingCode` give tests
+    typed-error introspection without mock magic.
+
+**M3 (publisher Drop reply uses RESET_STREAM)** (`fix(nestsclient):
+RESET_STREAM with typed code after SubscribeDrop body`):
+  - In `handleInboundBidi`, both Drop reply paths
+    (`BROADCAST_DOES_NOT_EXIST`, `TRACK_DOES_NOT_EXIST`) now write
+    the Drop body and then `bidi.reset(errorCode)` instead of
+    `bidi.finish()`.
+  - The errorCode matches the body's `errorCode` field, so a peer
+    that decodes the Drop sees the same number as one that only
+    sees the RESET_STREAM frame at the QUIC layer.
+  - Strengthened the existing M5 + Drop tests to additionally
+    assert `subBidi.lastPeerResetCode == errorCode` so the
+    typed-error contract is locked.
+
+**M2 (listener stopSending on dead group)** (`fix(nestsclient):
+STOP_SENDING on group uni when subscription already canceled`):
+  - In `drainOneGroup`, the first frame that observes `sub ==
+    null` (subscription already canceled) fires
+    `stream.stopSending(MoqLiteStreamCancelCode.SUBSCRIPTION_GONE)`
+    once, latched, so the publisher abandons in-flight retransmits
+    instead of wasting bandwidth.
+  - New error-code constant
+    `MoqLiteStreamCancelCode.SUBSCRIPTION_GONE = 0x10L` lives in
+    `MoqLiteMessages.kt` next to `MoqLiteSubscribeDropCode`.
+  - Practical impact in production: the relay's per-subscriber
+    forward pipeline (already documented in the stream-cliff
+    investigation) keeps queueing groups for slow / canceled
+    subscribers; an early `stopSending` at the listener side
+    relieves the relay's queue earlier, complementing the
+    `framesPerGroup` mitigation.
+
+Regression tests:
+  - `MoqLiteSessionTest.publisher_replies_subscribeDrop_when_broadcast_does_not_match`
+    — additional `lastPeerResetCode` assertion (M3).
+  - `MoqLiteSessionTest.publisher_replies_subscribeDrop_when_track_is_not_published`
+    — additional `lastPeerResetCode` assertion (M3).
+  - `MoqLiteSessionTest.listener_stopSending_group_uni_when_subscription_already_canceled`
+    — new test; verifies `peerStopSendingCode` lands the correct
+    cancel code (M2).
 
 ### Fix #4 — Refresh publisher list per-dispatch on inbound bidi (L5)
 
