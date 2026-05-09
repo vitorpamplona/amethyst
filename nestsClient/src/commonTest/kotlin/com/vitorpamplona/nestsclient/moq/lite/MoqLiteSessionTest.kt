@@ -21,6 +21,7 @@
 package com.vitorpamplona.nestsclient.moq.lite
 
 import com.vitorpamplona.nestsclient.transport.FakeBidiStream
+import com.vitorpamplona.nestsclient.transport.FakeReadStream
 import com.vitorpamplona.nestsclient.transport.FakeWebTransport
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CoroutineScope
@@ -395,6 +396,68 @@ class MoqLiteSessionTest {
                 )
             assertEquals(42L, header.sequence, "first group's sequence is the seeded startSequence")
 
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_packs_trackPriority_and_sequence_into_setPriority_value() =
+        runBlocking {
+            // Lite-03 audit M1: openGroupStream packs the publisher's
+            // trackPriority byte into bits 31..24 and the group sequence
+            // into bits 23..0 of the value passed to
+            // WebTransportWriteStream.setPriority. This mirrors the
+            // (track.priority, sequence) ordering kixelated's
+            // PriorityHandle uses at `rs/moq-lite/src/lite/priority.rs`.
+            // Verified on the *peer* side via FakeReadStream.lastSetPriority,
+            // which the in-memory transport uses as a side-channel for
+            // priority introspection.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Use a non-default trackPriority so a regression that
+            // accidentally drops it back to DEFAULT_TRACK_PRIORITY shows
+            // up in the assertion.
+            val publisher =
+                session.publish(
+                    broadcastSuffix = "speakerPubkey",
+                    track = "audio/data",
+                    startSequence = 7L,
+                    trackPriority = 0xC0,
+                )
+
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 99L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+            withTimeout(2_000) { subBidi.incoming().first() }
+
+            assertEquals(true, publisher.send("opus-frame".encodeToByteArray()))
+            publisher.endGroup()
+
+            val relayUni = withTimeout(2_000) { serverSide.incomingUniStreams().first() }
+            val fakeRead = relayUni as FakeReadStream
+            // Expected: (0xC0 shl 24) or (7 and 0x00FF_FFFF) =
+            // 0xC000_0007 in unsigned terms = -1073741817 as Int.
+            // Compute via the same formula so the test asserts the
+            // CONTRACT, not a hex literal.
+            val expected = ((0xC0 and 0xFF) shl 24) or (7 and 0x00FF_FFFF)
+            assertEquals(expected, fakeRead.lastSetPriority, "trackPriority dominates the high byte; sequence fills the low 24 bits")
+
+            // Drain the stream so the cleanup path doesn't leak.
+            relayUni.incoming().toList()
             publisher.close()
             session.close()
         }

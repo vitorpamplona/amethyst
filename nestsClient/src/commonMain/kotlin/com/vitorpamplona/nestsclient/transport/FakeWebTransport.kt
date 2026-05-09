@@ -78,8 +78,17 @@ class FakeWebTransport private constructor(
         // simulate in the in-memory channel.
         stateLock.withLock { check(open) { "session closed" } }
         val pipe = Channel<ByteArray>(Channel.BUFFERED)
-        outboundUniStreams.send(FakeReadStream(pipe))
-        return ChannelWriteStream(pipe)
+        // Shared priority cell: the writer (us) stores its most recent
+        // setPriority call here; the peer-side reader exposes it via
+        // [FakeReadStream.lastSetPriority] so tests can verify the
+        // priority value the moq-lite publisher computed without
+        // peeking into private state. Defaults to 0 (the
+        // [WebTransportWriteStream.setPriority] kdoc default).
+        val priorityCell =
+            java.util.concurrent.atomic
+                .AtomicInteger(0)
+        outboundUniStreams.send(FakeReadStream(pipe, priorityCell))
+        return ChannelWriteStream(pipe, priorityCell)
     }
 
     override suspend fun sendDatagram(payload: ByteArray): Boolean {
@@ -168,8 +177,24 @@ class FakeBidiStream internal constructor(
 
 class FakeReadStream internal constructor(
     private val read: Channel<ByteArray>,
+    /**
+     * Optional shared cell with the writer side. When present, exposes
+     * the most recent [WebTransportWriteStream.setPriority] value the
+     * writer applied. `null` for read streams not paired with a fake
+     * uni-stream writer (e.g. tests that hand-roll a [Channel]).
+     */
+    private val priorityCell: java.util.concurrent.atomic.AtomicInteger? = null,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = read.receiveAsFlow()
+
+    /**
+     * Last priority value the paired write side applied via
+     * [WebTransportWriteStream.setPriority], or `0` if no priority was
+     * ever set. Returns `null` when this read stream isn't paired with
+     * a fake uni-stream writer.
+     */
+    val lastSetPriority: Int?
+        get() = priorityCell?.get()
 }
 
 /**
@@ -180,6 +205,11 @@ class FakeReadStream internal constructor(
  */
 private class ChannelWriteStream(
     private val channel: Channel<ByteArray>,
+    /**
+     * Optional shared cell with the peer-side reader. When present,
+     * stores each [setPriority] call so the peer can introspect.
+     */
+    private val priorityCell: java.util.concurrent.atomic.AtomicInteger? = null,
 ) : WebTransportWriteStream {
     override suspend fun write(chunk: ByteArray) {
         channel.send(chunk)
@@ -189,5 +219,7 @@ private class ChannelWriteStream(
         channel.close()
     }
 
-    override fun setPriority(priority: Int) = Unit
+    override fun setPriority(priority: Int) {
+        priorityCell?.set(priority)
+    }
 }

@@ -717,9 +717,24 @@ class MoqLiteSession internal constructor(
         broadcastSuffix: String,
         track: String,
         startSequence: Long = 0L,
+        /**
+         * Per-track priority byte, 0..255. Defaults to
+         * [DEFAULT_TRACK_PRIORITY] (the moq-lite midpoint). Mirrors the
+         * `track.priority u8` field that kixelated's
+         * `Publisher::serve_group` mixes with `sequence` via its
+         * `PriorityHandle` (see `rs/moq-lite/src/lite/priority.rs`).
+         * Higher values drain ahead of lower ones under congestion;
+         * within a single track, newer groups (higher sequence) drain
+         * ahead of older ones. For audio rooms the default is fine —
+         * we only run one track at the same priority — but a future
+         * multi-track broadcast (e.g. mixing audio with a low-rate
+         * status track) can lift audio above its peer.
+         */
+        trackPriority: Int = DEFAULT_TRACK_PRIORITY,
     ): MoqLitePublisherHandle {
         ensureOpen()
         require(startSequence >= 0L) { "startSequence must be >= 0, got $startSequence" }
+        require(trackPriority in 0..255) { "trackPriority must fit in a byte: $trackPriority" }
         val normalised = MoqLitePath.normalize(broadcastSuffix)
         val publisher: PublisherStateImpl
         state.withLock {
@@ -737,6 +752,7 @@ class MoqLiteSession internal constructor(
                     suffix = normalised,
                     track = track,
                     startSequence = startSequence,
+                    trackPriority = trackPriority,
                 )
             activePublishers += publisher
             // Lazy launch — the inbound-bidi pump needs to keep running
@@ -1077,6 +1093,7 @@ class MoqLiteSession internal constructor(
     internal suspend fun openGroupStream(
         subscribeId: Long,
         sequence: Long,
+        trackPriority: Int = DEFAULT_TRACK_PRIORITY,
     ): com.vitorpamplona.nestsclient.transport.WebTransportWriteStream {
         // Group streams use reliable QUIC delivery to match the
         // moq-lite reference (kixelated/moq-rs `serve_group` writes
@@ -1093,13 +1110,30 @@ class MoqLiteSession internal constructor(
         // 150 ms late still falls inside hang's default ~200 ms
         // jitter buffer) and avoids the dropout entirely.
         val uni = transport.openUniStream()
-        // Mirror moq-rs `Publisher::serve_group`
-        // (`rs/moq-lite/src/lite/publisher.rs`): newer groups get higher
-        // priority so the QUIC writer drains fresh audio first when
-        // retransmits queue up under loss. Saturating cast guards a
-        // theoretical broadcast that runs long enough for `sequence` to
-        // exceed Int.MAX_VALUE (≈ 71 years at 1 group/sec); defensive only.
-        uni.setPriority(sequence.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+        // Mirror moq-rs `Publisher::serve_group` (`rs/moq-lite/src/lite/
+        // publisher.rs`) and `PriorityHandle.insert(track.priority,
+        // sequence)`: priority sorts first by track (higher track =
+        // drains ahead under congestion), then by group sequence within
+        // a track (newer = drains ahead). Pre-fix we passed raw
+        // `sequence` and ignored the per-track byte entirely, which
+        // worked for our single-track Opus case but starves a low-rate
+        // companion track (e.g. catalog) the moment audio's outbound
+        // queue gets congested.
+        //
+        // Wire layout into `Int`:
+        //   bits 31..24  trackPriority u8 (0..255)  — top byte
+        //   bits 23..0   sequence low 24 bits        — wraps every
+        //                ~16M groups within a single track
+        //
+        // Saturating cast on `sequence` guards a theoretical broadcast
+        // long enough to outgrow 24 bits (≈ 6 days at the production
+        // 1-group/sec cadence; the priority degrades to "all newer
+        // groups tie" past that, but they still beat older groups of
+        // any LOWER-priority track via the top byte). Defensive only;
+        // production sessions cycle on JWT refresh every 9 min.
+        val seq24 = sequence.coerceAtMost(0xFF_FFFFL).toInt() and 0x00FF_FFFF
+        val packedPriority = ((trackPriority and 0xFF) shl 24) or seq24
+        uni.setPriority(packedPriority)
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))
         return uni
@@ -1170,6 +1204,13 @@ class MoqLiteSession internal constructor(
         override val suffix: String,
         internal val track: String,
         startSequence: Long,
+        /**
+         * Per-track priority byte (0..255) — see [publish] kdoc.
+         * Mixed with each group's [GroupOutbound.sequence] in
+         * [openGroupStream] to mirror kixelated's `(track.priority,
+         * sequence)` priority ordering.
+         */
+        internal val trackPriority: Int,
     ) : MoqLitePublisherHandle {
         private val gate = Mutex()
         private val announceBidis = mutableListOf<AnnounceBidiEntry>()
@@ -1373,14 +1414,14 @@ class MoqLiteSession internal constructor(
             nextSequenceField = sequence + 1L
             val uni =
                 try {
-                    openGroupStream(subscribeId = sub.id, sequence = sequence)
+                    openGroupStream(subscribeId = sub.id, sequence = sequence, trackPriority = trackPriority)
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
                     Log.w("NestTx") { "openGroupStream threw subId=${sub.id} seq=$sequence: ${t::class.simpleName}: ${t.message}" }
                     throw t
                 }
-            Log.d("NestTx") { "openGroupStream subId=${sub.id} seq=$sequence" }
+            Log.d("NestTx") { "openGroupStream subId=${sub.id} seq=$sequence trackPriority=$trackPriority" }
             return GroupOutbound(sequence = sequence, uni = uni)
         }
     }
@@ -1398,6 +1439,17 @@ class MoqLiteSession internal constructor(
     companion object {
         /** moq-lite priority byte midpoint — neutral default. */
         const val DEFAULT_PRIORITY: Int = 0x80
+
+        /**
+         * Default per-track priority byte applied when [publish] is
+         * called without an explicit `trackPriority`. Same midpoint
+         * as the subscriber-side [DEFAULT_PRIORITY] — kept distinct
+         * because the two values are conceptually independent (one
+         * is the subscriber's priority hint in the SUBSCRIBE wire
+         * field, the other is the publisher's per-stream drain
+         * priority in `kixelated/moq`'s `PriorityHandle`).
+         */
+        const val DEFAULT_TRACK_PRIORITY: Int = 0x80
 
         /**
          * Bitrate hint (bits/sec) we report on inbound moq-lite Probe
