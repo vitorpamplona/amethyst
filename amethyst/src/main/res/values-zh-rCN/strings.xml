@@ -157,6 +157,8 @@
     <string name="pronouns">称谓代词</string>
     <string name="ln_address">闪电地址</string>
     <string name="ln_url_outdated">LN链接（过期）</string>
+    <string name="stale_relay_hint_label">源中继可能陈旧</string>
+    <string name="stale_relay_hint_icon_description">陈旧中继警告</string>
     <string name="download_to_phone">保存到手机</string>
     <string name="save_to_gallery">保存到相册</string>
     <string name="image_saved_to_the_gallery">图片已保存到相册</string>
@@ -423,6 +425,9 @@
     <string name="scheduled_posts_at_time_past">%1$s · %2$s 前</string>
     <string name="scheduled_posts_day_tomorrow">明天</string>
     <string name="scheduled_posts_logout_toast_zero">已退出登录</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="other">已退出登录 删除了 %d 个定时帖</item>
+    </plurals>
     <string name="scheduled_posts_notification_sent_title">发布了定时帖</string>
     <string name="scheduled_posts_notification_failed_title">未能发布定时帖</string>
     <string name="app_notification_scheduled_posts_channel_name">定时帖</string>
@@ -436,6 +441,9 @@
     <string name="scheduled_posts_status_failed">失败</string>
     <string name="scheduled_posts_status_sent">已发送</string>
     <string name="scheduled_posts_status_cancelled">已取消</string>
+    <plurals name="scheduled_posts_logout_warning">
+        <item quantity="other">您有尚未发布的 %d 个定时帖。退出登录将永久删除它们。</item>
+    </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
         <item quantity="other">%d 个已加入队列</item>
     </plurals>
@@ -470,6 +478,33 @@
     <string name="new_community_relay_marker_requests">请求</string>
     <string name="new_community_relay_marker_approvals">批准</string>
     <string name="new_community_empty">没有社区匹配此过滤器。</string>
+    <string name="new_community_rules_section">可验证规则 (可选)</string>
+    <string name="new_community_rules_hint">和社区一起发布机器可读的规则文档 (NIP-9A) 。支持它的客户端在发送之前阻止不匹配的帖子。</string>
+    <string name="new_community_rules_kinds_section">允许的事件类型</string>
+    <string name="new_community_rules_kinds_hint">轻触以允许一种类型。长按一种类型来设置每个事件的大小或每日帖子的限制。</string>
+    <string name="new_community_rules_kind_short_text">短文本 (1)</string>
+    <string name="new_community_rules_kind_long_form">长文章(30023)</string>
+    <string name="new_community_rules_kind_picture">图片帖子(20)</string>
+    <string name="new_community_rules_kind_video">视频帖子 (21)</string>
+    <string name="new_community_rules_kind_short_video">短视频(22)</string>
+    <string name="new_community_rules_kind_comment">社区评论(1111)</string>
+    <string name="new_community_rules_kind_custom_label">自定义类型</string>
+    <string name="new_community_rules_kind_add">添加类型</string>
+    <string name="new_community_rules_limits_title"> %1$d 类型的限制</string>
+    <string name="new_community_rules_limits_max_bytes">最大事件大小(字节)</string>
+    <string name="new_community_rules_limits_max_per_day">每位作者每天最多发帖数</string>
+    <string name="new_community_rules_limits_unlimited">留空为无限制</string>
+    <string name="new_community_rules_limits_save">保存限制</string>
+    <string name="new_community_rules_banned_section">封禁的用户</string>
+    <string name="new_community_rules_banned_hint">这些 pubkey 无法发布到社区。</string>
+    <string name="new_community_rules_banned_add">添加被封禁用户</string>
+    <string name="new_community_rules_banned_placeholder">姓名, npub, 或 NIP-05</string>
+    <string name="new_community_rules_wot_section">信任网络网关(可选)</string>
+    <string name="new_community_rules_wot_root">根npub 或16进制 pubkey</string>
+    <string name="new_community_rules_wot_depth">深度</string>
+    <string name="new_community_rules_wot_add">添加信任网络(WoT)网关</string>
+    <string name="new_community_rules_max_event_size_section">全局最大事件大小(可选)</string>
+    <string name="new_community_rules_max_event_size_hint">字节 \u2014 留空无全限制。</string>
     <string name="received_badges">已收到</string>
     <string name="my_badges">我的</string>
     <string name="awarded_badges">授予的</string>
@@ -794,6 +829,12 @@
     <string name="zap_forward_lnAddress">闪电地址或 @User</string>
     <string name="media_servers">媒体服务器</string>
     <string name="set_preferred_media_servers">设置首选媒体上传服务器。</string>
+    <string name="use_local_blossom_cache">使用本地Blossom 缓存</string>
+    <string name="use_local_blossom_cache_caption">当Blossom 缓存在此设备上运行时(端口2442)，通过它路由图像和视频下载。</string>
+    <string name="local_blossom_cache_detected">端口2442检测到本地缓存。</string>
+    <string name="local_blossom_cache_not_detected">端口2442未检测到本地缓存。</string>
+    <string name="local_blossom_cache_profile_pics_only">仅缓存个人资料图片</string>
+    <string name="local_blossom_cache_profile_pics_only_caption">限制本地缓存到个人资料图片。源图片和视频将直接从原始服务器获取。</string>
     <string name="no_nip96_server_message">尚未设置 NIP-96 服务器。可以使用默认的内置服务器列表或自行添加 ↓</string>
     <string name="no_blossom_server_message">尚未设置 Blossom 服务器。可以使用默认的内置服务器列表或自行添加 ↓</string>
     <string name="recommended_media_servers">推荐的媒体服务器</string>
@@ -1026,7 +1067,7 @@
     <string name="always_on_notif_title">Amethyst 通知活跃</string>
     <string name="always_on_notif_connected">已连接到 %1$d 个收件箱中继</string>
     <string name="always_on_notif_connecting">正在连接到收件箱中继\u2026</string>
-    <string name="always_on_notif_setting_title">始终开启通知服务</string>
+    <string name="always_on_notif_setting_title">“始终显示通知”服务</string>
     <string name="always_on_notif_setting_description">保持与收件箱中继的持续连接以便即时发送通知。 显示正在进行的通知。使用更多电量，但确保您永远不会错过消息。</string>
     <string name="battery_optimization_title">电池优化已启用</string>
     <string name="battery_optimization_description">Android 可能会限制后台中继连接。禁用针对Amethyst电池优化以确保可靠的通知。</string>
@@ -1052,12 +1093,16 @@
     <string name="warn_when_posts_have_reports_from_your_follows">当帖子有你的关注的报告时警告</string>
     <string name="filter_spam_from_strangers_title">过滤垃圾信息</string>
     <string name="filter_spam_from_strangers_explainer">隐藏陌生人的五次或五次以上完全相同的帖子</string>
+    <string name="disable_client_tag_title">不要将客户标签添加到我的事件</string>
+    <string name="disable_client_tag_explainer">启用时，Amethyst 将不会在您发布的事件中附加一个 NIP-89 客户端标签。</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">举报警示</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">当帖子有来自你关注的五次及以上举报时显示警告消息</string>
     <string name="show_sensitive_content_title">显示敏感内容</string>
     <string name="show_sensitive_content_explainer">当帖子作者将帖子标记为敏感时显示警告消息</string>
     <string name="max_hashtag_limit_title">每个帖子最大话题标签数</string>
     <string name="max_hashtag_limit_explainer">隐藏话题超过此限制的帖子。设为 0 表示禁用</string>
+    <string name="hide_community_rules_violations_title">隐藏违反社区规则的帖子</string>
+    <string name="hide_community_rules_violations_explainer">当社区发布了一份NIP-9A规则文档而一个事件会让它失灵时，丢弃社区的帖子。 当社区没有结构化规则时没有任何影响。</string>
     <string name="new_reaction_symbol">新回应符号</string>
     <string name="no_reaction_type_setup_long_press_to_change">未选择回应类型。长按可更改</string>
     <string name="zapraiser">Zapraiser</string>
@@ -2473,4 +2518,12 @@
     <string name="emoji_private_explainer">私密表情符号被加密存储在中继上，只对您可见。它们就像公开表情符号一样出现在回应菜单和 \":\" 自动完成中。</string>
     <string name="gif">Gif</string>
     <!-- NIP-9A community rules composer-side validation. -->
+    <string name="community_rules_violation_icon">违反社区规则</string>
+    <string name="community_rules_violation_author_denied">您在这个社区拒绝列表中。帖子将不被接受。</string>
+    <string name="community_rules_violation_kind_not_allowed">这个社区不接受 %1$d 类型的事件。</string>
+    <string name="community_rules_violation_kind_size_exceeded">草稿为 %1$d 字节；这个社区将此类内容大小限制为 %2$d 字节。</string>
+    <string name="community_rules_violation_max_size_exceeded">草稿为 %1$d 字节；这个社区将事件大小限制为 %2$d 字节。</string>
+    <string name="community_rules_violation_quota_exceeded">您今天已经发布了 %1$d 个此类事件 (限制 %2$d)。</string>
+    <string name="community_rules_violation_wot_gate_failed">您没有通过该社区的信任网络要求。</string>
+    <string name="community_rules_violation_stale_rules">最新的社区规则文件因陈旧而被拒绝。</string>
 </resources>
