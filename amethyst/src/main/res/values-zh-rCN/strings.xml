@@ -2472,4 +2472,5 @@
     <string name="emoji_public_explainer">公开表情符号对所有人可见；当此表情包位于您的表情符号列表中时，它们会显示在您的“反应”菜单及“:”自动补全选择器中。</string>
     <string name="emoji_private_explainer">私密表情符号被加密存储在中继上，只对您可见。它们就像公开表情符号一样出现在回应菜单和 \":\" 自动完成中。</string>
     <string name="gif">Gif</string>
+    <!-- NIP-9A community rules composer-side validation. -->
 </resources>
