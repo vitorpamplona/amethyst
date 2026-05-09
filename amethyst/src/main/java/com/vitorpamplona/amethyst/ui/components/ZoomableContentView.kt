@@ -226,6 +226,7 @@ fun ZoomableContentView(
                         accountViewModel = accountViewModel,
                         thumbhash = content.thumbhash,
                         isLiveStream = content.isLiveStream,
+                        hash = content.hash,
                     )
                 }
             }

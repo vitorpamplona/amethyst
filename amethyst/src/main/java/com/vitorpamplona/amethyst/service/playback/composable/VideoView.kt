@@ -70,6 +70,7 @@ fun VideoView(
     alwaysShowVideo: Boolean = false,
     thumbhash: String? = null,
     isLiveStream: Boolean = false,
+    hash: String? = null,
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -80,7 +81,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream, hash = hash)
 }
 
 @Composable
@@ -103,6 +104,7 @@ fun VideoView(
     isLiveStream: Boolean = false,
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
+    hash: String? = null,
 ) {
     val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
     // Reset the manual-show toggle when the video URI changes so a recycled feed slot
@@ -160,6 +162,10 @@ fun VideoView(
                     isLiveStream = isLiveStream,
                     onZoom = onDialog,
                     hasBlurhash = false,
+                    blurhash = blurhash,
+                    dim = dimensions,
+                    hash = hash,
+                    thumbhash = thumbhash,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )
@@ -207,6 +213,10 @@ fun VideoView(
                     isLiveStream = isLiveStream,
                     onZoom = onDialog,
                     hasBlurhash = true,
+                    blurhash = blurhash,
+                    dim = dimensions,
+                    hash = hash,
+                    thumbhash = thumbhash,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 import androidx.compose.runtime.Immutable
 import androidx.media3.common.MediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 @Immutable
 data class MediaItemData(
@@ -40,6 +41,13 @@ data class MediaItemData(
     // (e.g. multi-rendition NIP-71 videos) must leave this false so that
     // ExoPlayer's SimpleCache can cache their immutable segments.
     val isLiveStream: Boolean = false,
+    // Source-imeta visual fields — carried through so the player's "Add to Gallery" /
+    // "Share" actions can publish a richer ProfileGalleryEntryEvent. Optional; null when
+    // the surface that constructed this MediaItemData didn't have them.
+    val blurhash: String? = null,
+    val dim: DimensionTag? = null,
+    val hash: String? = null,
+    val thumbhash: String? = null,
 )
 
 @Immutable
