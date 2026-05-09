@@ -281,6 +281,67 @@ class PtoCryptoRetransmitTest {
             )
         }
 
+    @Test
+    fun consecutivePtoCountAdvancesByOnePerPtoFiringNotPerProbePacket() =
+        runBlocking {
+            // RFC 9002 §6.2.2: the consecutive-PTO count advances by
+            // exactly ONE per PTO timer expiry (so the §6.2.1 backoff
+            // is `pto_base * 2^count` per firing). Pre-2026-05-08 the
+            // count incremented THREE times per firing — once in
+            // `handlePtoFired`, once in `requeueInflightForProbe`,
+            // and again from the send loop's between-probe re-requeue
+            // — making the effective backoff `2^(3*N)` (1×, 8×, 64×
+            // per PTO). Quic-go's `amplificationlimit` testcase
+            // exposed this: PTO #3 didn't fire until ~11 s
+            // post-handshake, well past quic-go's 5 s amp-limited
+            // idle timeout. See the explicit kdoc in
+            // [com.vitorpamplona.quic.connection.handlePtoFired].
+            //
+            // This test drives the EXACT helpers the production send
+            // loop calls (handlePtoFired + the between-probe
+            // requeueInflightForProbe) and asserts the count grows
+            // by 1 per PTO firing, not per probe packet.
+            val client = newClientWithStartedHandshake()
+            drainOutbound(client, nowMillis = 1L)
+            assertEquals(0, client.consecutivePtoCount, "fresh client starts at 0")
+
+            // PTO #1 — full simulation including budget consumption.
+            handlePtoFired(client)
+            assertEquals(
+                1,
+                client.consecutivePtoCount,
+                "handlePtoFired alone must take count from 0 to 1",
+            )
+            // First probe drained.
+            drainOutbound(client, nowMillis = 2L)
+            client.pendingProbePackets--
+            // Send loop's between-probe re-requeue. Pre-fix this
+            // bumped the count to 2 inside the same PTO firing.
+            requeueInflightForProbe(client)
+            assertEquals(
+                1,
+                client.consecutivePtoCount,
+                "between-probe re-requeue must NOT bump the count — same PTO firing",
+            )
+            // Second probe drained.
+            drainOutbound(client, nowMillis = 3L)
+            client.pendingProbePackets--
+
+            // PTO #2 — count must advance to 2, not 4.
+            handlePtoFired(client)
+            assertEquals(2, client.consecutivePtoCount, "PTO #2 takes count from 1 to 2")
+            drainOutbound(client, nowMillis = 4L)
+            client.pendingProbePackets--
+            requeueInflightForProbe(client)
+            assertEquals(2, client.consecutivePtoCount)
+            drainOutbound(client, nowMillis = 5L)
+            client.pendingProbePackets--
+
+            // PTO #3 — count → 3, not 6 (capped).
+            handlePtoFired(client)
+            assertEquals(3, client.consecutivePtoCount, "PTO #3 takes count from 2 to 3")
+        }
+
     /**
      * Decode an Initial-level long-header packet from a freshly-drained
      * datagram and return its frames. We open with the client's own

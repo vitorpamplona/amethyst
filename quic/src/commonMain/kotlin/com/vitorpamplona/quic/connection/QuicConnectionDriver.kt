@@ -508,12 +508,23 @@ class QuicConnectionDriver(
  * (or the fresh one — both are valid) and is at worst a no-op.
  */
 internal suspend fun handlePtoFired(conn: QuicConnection) {
+    // RFC 9002 §6.2.2: the consecutive-PTO count advances by exactly
+    // ONE per PTO timer expiry, so the §6.2.1 backoff is
+    // `pto_base * 2^count` per firing. Pre-2026-05-08 we incremented
+    // THREE times per firing — here + inside [requeueInflightForProbe]
+    // + again from the send loop's between-probe re-requeue (RFC
+    // §6.2.4 two-packet probe budget) — turning the backoff into
+    // `2^(3*N)` — 1×, 8×, 64× per PTO instead of 1×, 2×, 4×.
+    // Quic-go's `amplificationlimit` testcase exposed this: after the
+    // sim drops client packets 2-7, we couldn't get a probe to the
+    // server within its 5 s amp-limited idle timeout because PTO #3
+    // didn't fire until ~11 s post-handshake.
+    //
     // Increment FIRST so [requeueInflightForProbe]'s threshold check
-    // sees the post-increment value. The increment must happen exactly
-    // once per PTO event — not per call to [requeueInflightForProbe],
-    // because the send loop calls that helper again between the first
-    // and second probe (RFC 9002 §6.2.4) and that re-requeue is part
-    // of the SAME PTO event.
+    // (RFC 9000 §9 — trigger migration after PATH_PROBE_PTO_THRESHOLD
+    // consecutive PTOs) sees the post-increment value, matching the
+    // constant's natural reading: "after N consecutive PTOs with no
+    // progress, trigger migration on the Nth PTO firing".
     conn.consecutivePtoCount = (conn.consecutivePtoCount + 1).coerceAtMost(6)
     conn.pendingPing = true
     requeueInflightForProbe(conn)
@@ -550,13 +561,15 @@ internal suspend fun requeueInflightForProbe(conn: QuicConnection) {
     if (conn.initial.sendProtection != null && !conn.initial.keysDiscarded) {
         conn.requeueAllInflightCrypto(EncryptionLevel.INITIAL)
     }
-    // The PTO count is incremented in [handlePtoFired] BEFORE this
-    // helper runs, so the threshold check below sees the post-increment
-    // value (matching the constant's natural reading: "after N
-    // consecutive PTOs with no progress, trigger migration on the Nth
-    // PTO firing"). The send loop's between-probe re-requeue calls
-    // this helper without bumping the count again — that's the same
-    // PTO event, not a new one.
+    // [conn.consecutivePtoCount] is incremented exactly once per PTO
+    // firing inside [handlePtoFired]; the path-validation threshold
+    // check below reads the already-incremented value. Pre-2026-05-08
+    // this function ALSO incremented the count, and the send loop's
+    // between-probe re-requeue called this function again — turning
+    // one PTO into +3 to the count. The amplificationlimit interop
+    // testcase against quic-go flushed this: PTO #3 didn't fire until
+    // ~11 s post-handshake, well past the 5 s amp-limited idle
+    // timeout. See [handlePtoFired] kdoc for the full mechanism.
     // Once 1-RTT keys are installed, PTO must also retransmit application
     // data — STREAM bytes that were sent but never ACK'd. Without this,
     // a single corrupted/lost 1-RTT packet (especially the first one
