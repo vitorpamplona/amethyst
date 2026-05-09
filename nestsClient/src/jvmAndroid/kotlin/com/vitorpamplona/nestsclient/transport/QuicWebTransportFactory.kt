@@ -85,32 +85,26 @@ class QuicWebTransportFactory(
      * via the `wt-available-protocols` header (RFC 8941 Structured Field List
      * of strings — see draft-ietf-webtrans-http3-14 §3.3).
      *
-     * For nests, this MUST contain `moq-lite-03`; without it, moq-relay falls
-     * back to the legacy in-band SETUP exchange (moq-lite-02) and our first
-     * post-CONNECT message is decoded as SETUP_CLIENT, producing
-     * `connection closed err=invalid value` on the relay side and a stalled
-     * subscribe / `subscribe stream FIN before reply` on the client side.
+     * For nests, this MUST contain at least `moq-lite-03`; without it,
+     * moq-relay falls back to the legacy in-band SETUP exchange
+     * (moq-lite-02) and our first post-CONNECT message is decoded as
+     * SETUP_CLIENT, producing `connection closed err=invalid value` on
+     * the relay side and a stalled subscribe on the client side.
      *
-     * **Lite-04 is intentionally NOT advertised** even though the kixelated
-     * browser client now ships it. Lite-04 reshapes the on-the-wire
-     * Announce.hops field from a single varint count into a full
-     * `OriginList` (`kixelated/moq` commit 45db108, "moq-lite/moq-relay:
-     * hop-based clustering"), adds an `exclude_hop` field to
-     * AnnounceInterest, and adds an `rtt` field to Probe — Subscribe and
-     * Group framing are unchanged but Announce framing diverges. Our codec
-     * speaks pure Lite-03; if a Lite-04-preferring relay picks
-     * `moq-lite-04` from our advertised list, the very first Announce
-     * exchange would desync (we'd encode/read a bare hops varint where
-     * the peer expects `len + len × u62`) and the connection would abort.
-     * Until [com.vitorpamplona.nestsclient.moq.lite.MoqLiteCodec] gains
-     * version-aware Announce / AnnounceInterest / Probe paths and
-     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteAnnounce.hops]
-     * becomes a list, advertising Lite-04 is a footgun. See
-     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteAlpn] for the
-     * known-version constants.
+     * Both `moq-lite-04` and `moq-lite-03` are advertised by default
+     * — the codec is now version-aware (audit L1), so the relay's
+     * choice (echoed via `wt-protocol`) is honoured at runtime via
+     * [WebTransportSession.negotiatedSubProtocol] →
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteVersion.fromAlpn].
+     * Lite-04 sits ahead of Lite-03 in the list to match kixelated's
+     * preference order; servers that don't yet support Lite-04 fall
+     * back to Lite-03 cleanly. See
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteAlpn] /
+     * [com.vitorpamplona.nestsclient.moq.lite.MoqLiteVersion] for the
+     * version constants and codec behavior.
      */
     private val webTransportSubProtocols: List<String> =
-        listOf(MoqLiteAlpn.LITE_03),
+        listOf(MoqLiteAlpn.LITE_04, MoqLiteAlpn.LITE_03),
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,
@@ -181,27 +175,27 @@ class QuicWebTransportFactory(
             // Wait for the response HEADERS and verify :status is 2xx before
             // declaring the WebTransport session open. Per RFC 9220 a non-2xx
             // status means the server rejected the upgrade.
-            val responseStatus =
+            val response =
                 kotlinx.coroutines.withTimeoutOrNull(connectTimeoutMillis) {
-                    readResponseStatus(requestStream)
-                } ?: -1
-            if (responseStatus < 0) {
+                    readConnectResponse(requestStream)
+                }
+            if (response == null) {
                 driver.close()
                 throw WebTransportException(
                     kind = WebTransportException.Kind.HandshakeFailed,
                     message = "WebTransport CONNECT response timed out after ${connectTimeoutMillis}ms",
                 )
             }
-            if (responseStatus !in 200..299) {
+            if (response.status !in 200..299) {
                 driver.close()
                 throw WebTransportException(
                     kind = WebTransportException.Kind.ConnectRejected,
-                    message = "WebTransport CONNECT returned :status=$responseStatus",
+                    message = "WebTransport CONNECT returned :status=${response.status}",
                 )
             }
 
             val state = QuicWebTransportSessionState(conn, driver, requestStream.streamId)
-            return QuicWebTransportSession(state)
+            return QuicWebTransportSession(state, response.subProtocol)
         } catch (we: WebTransportException) {
             throw we
         } catch (ce: kotlinx.coroutines.CancellationException) {
@@ -220,14 +214,20 @@ class QuicWebTransportFactory(
     }
 
     /**
-     * Drain bytes from [requestStream] through an [Http3FrameReader] until a
-     * HEADERS frame arrives, then decode the QPACK field section and pull the
-     * `:status` pseudo-header.
+     * Drain bytes from [requestStream] through an [Http3FrameReader]
+     * until a HEADERS frame arrives, then decode the QPACK field
+     * section and pull out (`:status`, `wt-protocol`).
      *
-     * Returns 0 if the stream closes without a HEADERS frame (the caller treats
-     * that as a connect rejection).
+     * `wt-protocol` (draft-ietf-webtrans-http3 §3.3, RFC 8941
+     * SF-string) is the server's selection from the client-offered
+     * `wt-available-protocols` list. Returned as a bare string with
+     * surrounding quotes stripped; `null` when the server didn't
+     * echo the header (e.g. older servers, or when the client
+     * offered only one protocol). The header value MAY contain
+     * commas if the server were to echo a list; we only expose the
+     * first item — moq-lite servers always echo a single value.
      */
-    private suspend fun readResponseStatus(requestStream: QuicStream): Int {
+    private suspend fun readConnectResponse(requestStream: QuicStream): ConnectResponse {
         val reader = Http3FrameReader()
         val incoming = requestStream.incoming
         try {
@@ -238,19 +238,51 @@ class QuicWebTransportFactory(
                     if (frame is Http3Frame.Headers) {
                         val pairs = QpackDecoder().decodeFieldSection(frame.qpackPayload)
                         val status = pairs.firstOrNull { it.first == ":status" }?.second?.toIntOrNull() ?: 0
-                        throw HeadersReceived(status)
+                        val subProtocol =
+                            pairs
+                                .firstOrNull { it.first.equals("wt-protocol", ignoreCase = true) }
+                                ?.second
+                                ?.let { parseFirstSfString(it) }
+                        throw HeadersReceived(status, subProtocol)
                     }
                 }
             }
         } catch (e: HeadersReceived) {
-            return e.status
+            return ConnectResponse(e.status, e.subProtocol)
         }
-        return 0
+        return ConnectResponse(0, null)
     }
+
+    private data class ConnectResponse(
+        val status: Int,
+        val subProtocol: String?,
+    )
 
     private class HeadersReceived(
         val status: Int,
+        val subProtocol: String?,
     ) : RuntimeException()
+
+    /**
+     * Parse the first item out of an RFC 8941 SF-list-of-strings
+     * value (the format `wt-protocol` carries per
+     * draft-ietf-webtrans-http3 §3.3). For "moq-lite-04" servers
+     * echo a single quoted string; for completeness we tolerate a
+     * comma-separated list and take the first. Returns `null` if
+     * the value can't be parsed as an SF-string.
+     *
+     * This is a deliberately minimal parser — full RFC 8941
+     * parameter handling isn't needed for the moq-lite use case
+     * (no parameters are ever attached). Tolerates surrounding
+     * whitespace per §3.1.
+     */
+    private fun parseFirstSfString(raw: String): String? {
+        val firstItem = raw.substringBefore(',').trim()
+        if (firstItem.length < 2 || firstItem.first() != '"' || firstItem.last() != '"') return null
+        // SF-string only supports `\\` and `\"` escapes per §3.3.3.
+        // moq-lite values are bare ASCII; just strip the quotes.
+        return firstItem.substring(1, firstItem.length - 1)
+    }
 
     /**
      * Encode [items] as an RFC 8941 Structured Field List of bare strings
@@ -279,6 +311,14 @@ class QuicWebTransportFactory(
 /** Adapter that wraps the :quic [QuicWebTransportSessionState] in the nestsClient interface. */
 class QuicWebTransportSession(
     private val state: QuicWebTransportSessionState,
+    /**
+     * The sub-protocol the server selected via `wt-protocol`
+     * during Extended CONNECT. Captured by
+     * [QuicWebTransportFactory.connect] from the parsed response
+     * headers and passed through to this constructor. `null` when
+     * the server didn't echo the header.
+     */
+    override val negotiatedSubProtocol: String? = null,
 ) : WebTransportSession {
     override val isOpen: Boolean get() = state.isOpen
 
@@ -366,6 +406,16 @@ private class QuicBidiStreamAdapter(
         driver.wakeup()
     }
 
+    override suspend fun reset(errorCode: Long) {
+        stream.resetStream(errorCode)
+        driver.wakeup()
+    }
+
+    override suspend fun stopSending(errorCode: Long) {
+        stream.stopSending(errorCode)
+        driver.wakeup()
+    }
+
     override fun setPriority(priority: Int) {
         stream.priority = priority
     }
@@ -373,8 +423,14 @@ private class QuicBidiStreamAdapter(
 
 private class QuicReadStreamAdapter(
     private val stream: QuicStream,
+    private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = stream.incoming
+
+    override suspend fun stopSending(errorCode: Long) {
+        stream.stopSending(errorCode)
+        driver.wakeup()
+    }
 }
 
 /**
@@ -397,6 +453,11 @@ private class QuicUniWriteStreamAdapter(
         driver.wakeup()
     }
 
+    override suspend fun reset(errorCode: Long) {
+        stream.resetStream(errorCode)
+        driver.wakeup()
+    }
+
     override fun setPriority(priority: Int) {
         stream.priority = priority
     }
@@ -407,13 +468,17 @@ private class StrippedWtReadStreamAdapter(
     private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = stripped.data
+
+    override suspend fun stopSending(errorCode: Long) {
+        stripped.stopSending(errorCode)
+    }
 }
 
 /**
  * Adapter for a peer-initiated bidi WT stream whose WT_BIDI_STREAM prefix
- * has been stripped. Routes [write] / [finish] through the demux's
- * driver-aware closures so application bytes actually leave the
- * connection.
+ * has been stripped. Routes [write] / [finish] / [reset] / [stopSending]
+ * through the demux's driver-aware closures so application bytes actually
+ * leave the connection.
  */
 private class StrippedWtBidiStreamAdapter(
     private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
@@ -440,13 +505,27 @@ private class StrippedWtBidiStreamAdapter(
         finish()
     }
 
+    override suspend fun reset(errorCode: Long) {
+        // Bidi streams have a send side we own, so `reset` is wired by
+        // the demux. Same defensive `?:` shape as in `write` / `finish`.
+        val r =
+            stripped.reset
+                ?: error("peer-initiated bidi stream has no reset — demux didn't wire one")
+        r(errorCode)
+    }
+
+    override suspend fun stopSending(errorCode: Long) {
+        stripped.stopSending(errorCode)
+    }
+
     /**
      * No-op: peer-initiated bidi streams arrive through the demux as a
      * [com.vitorpamplona.quic.webtransport.StrippedWtStream] which exposes
-     * only `send`/`finish` closures, not the underlying [QuicStream]. The
-     * moq-lite priority use case targets locally-opened uni group streams
-     * only, so this path doesn't need to model priority — see the
-     * [WebTransportWriteStream.setPriority] contract.
+     * only `send`/`finish`/`reset`/`stopSending` closures, not the
+     * underlying [QuicStream]. The moq-lite priority use case targets
+     * locally-opened uni group streams only, so this path doesn't need
+     * to model priority — see the [WebTransportWriteStream.setPriority]
+     * contract.
      */
     override fun setPriority(priority: Int) = Unit
 }

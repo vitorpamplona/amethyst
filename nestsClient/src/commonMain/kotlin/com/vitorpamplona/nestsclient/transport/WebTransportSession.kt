@@ -43,6 +43,21 @@ interface WebTransportSession {
     val isOpen: Boolean
 
     /**
+     * The sub-protocol the server selected via the
+     * `wt-protocol` response header (RFC 8941 SF-string;
+     * draft-ietf-webtrans-http3 §3.3). `null` if the server didn't
+     * echo a sub-protocol — typically because the client offered
+     * none, or because the server is older than draft-13 and
+     * supports only a single protocol implicitly.
+     *
+     * Used by moq-lite negotiation: a client that advertised both
+     * `moq-lite-04` and `moq-lite-03` reads this to select the
+     * matching [com.vitorpamplona.nestsclient.moq.lite.MoqLiteVersion]
+     * for its [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession].
+     */
+    val negotiatedSubProtocol: String?
+
+    /**
      * Open a new bidirectional WebTransport stream. The returned [WebTransportBidiStream]
      * is writable + readable and closes when either peer half-closes.
      */
@@ -104,6 +119,30 @@ interface WebTransportBidiStream :
 interface WebTransportReadStream {
     /** Flow of chunks as they arrive. Completes when the peer closes its write side. */
     fun incoming(): Flow<ByteArray>
+
+    /**
+     * RFC 9000 §3.5: ask the peer to stop sending on this stream.
+     * Causes a `STOP_SENDING(applicationErrorCode)` frame to land at
+     * the peer, which typically responds with `RESET_STREAM` carrying
+     * the same code. Call this when the application no longer needs
+     * the stream's bytes — it lets the peer abandon any pending
+     * retransmits instead of wasting bandwidth on data we'd discard.
+     *
+     * First call wins per `:quic`'s `QuicStream.stopSending`
+     * lock-free first-call-wins gate; subsequent calls (including
+     * with a different code) are silently ignored to keep the wire
+     * frame stable.
+     *
+     * Used by moq-lite Lite-03's group-cancel path: a listener that
+     * decides a specific group is too stale can `stopSending` its
+     * uni stream so the publisher abandons any in-flight retransmits
+     * instead of wasting bandwidth on bytes the listener will discard.
+     *
+     * Implementations that don't model receive-side cancellation
+     * (e.g. the in-memory fake when no test asserts on it) MAY
+     * treat this as a no-op.
+     */
+    suspend fun stopSending(errorCode: Long)
 }
 
 /** Write-only WebTransport stream. */
@@ -112,6 +151,31 @@ interface WebTransportWriteStream {
 
     /** Half-close the write side (FIN). No further writes after this call. */
     suspend fun finish()
+
+    /**
+     * RFC 9000 §3.5: send `RESET_STREAM(applicationErrorCode)` on
+     * this stream's send half, abandoning any pending bytes. Distinct
+     * from [finish], which is a graceful FIN — `reset` carries a
+     * typed error code the peer can act on.
+     *
+     * First call wins per `:quic`'s `QuicStream.resetStream`
+     * lock-free first-call-wins gate; subsequent calls (and any
+     * subsequent [write] / [finish]) are silently ignored to keep
+     * the wire frame stable.
+     *
+     * Used by moq-lite Lite-03's typed cancel paths: a publisher
+     * that rejects a Subscribe (e.g. broadcast / track does not
+     * exist) follows the SubscribeDrop body with a
+     * `RESET_STREAM(errorCode)` so the subscriber sees a typed
+     * application reason rather than the ambiguous "publisher FINed
+     * the bidi" signal that overlaps with a graceful publisher
+     * shutdown.
+     *
+     * Implementations that don't model sender-driven reset (e.g.
+     * the in-memory fake when no test asserts on it) MAY treat this
+     * as a [finish].
+     */
+    suspend fun reset(errorCode: Long)
 
     /**
      * Hint to the transport about this stream's drain priority relative

@@ -24,6 +24,7 @@ import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteVersion
 import com.vitorpamplona.nestsclient.transport.WebTransportException
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
@@ -106,9 +107,11 @@ suspend fun connectNestsListener(
 
     state.value = NestsListenerState.Connecting(NestsListenerState.Connecting.ConnectStep.MoqHandshake)
 
-    // moq-lite Lite-03 has NO setup message — the WebTransport handshake
-    // itself is the handshake, version is selected by the ALPN
-    // `moq-lite-03`.
+    // moq-lite has NO setup message — the WebTransport handshake itself
+    // is the handshake. Version (Lite-03 vs Lite-04) is selected by the
+    // ALPN exchange (`wt-available-protocols` / `wt-protocol`) and
+    // surfaced via [MoqLiteSession.version]; the session itself derives
+    // it from `transport.negotiatedSubProtocol`.
     val moq =
         try {
             MoqLiteSession.client(webTransport, scope)
@@ -118,7 +121,7 @@ suspend fun connectNestsListener(
             return failedListener(state)
         }
 
-    state.value = NestsListenerState.Connected(room, MOQ_LITE_03_VERSION)
+    state.value = NestsListenerState.Connected(room, versionCode(moq.version))
     return MoqLiteNestsListener(
         session = moq,
         mutableState = state,
@@ -133,6 +136,20 @@ suspend fun connectNestsListener(
  * `-03` in the low bytes for diagnostic display.
  */
 const val MOQ_LITE_03_VERSION: Long = 0x6D71_6C03L
+
+/**
+ * Synthetic version code for moq-lite Lite-04 sessions — same shape
+ * as [MOQ_LITE_03_VERSION] with the ALPN suffix `-04` in the low
+ * bytes.
+ */
+const val MOQ_LITE_04_VERSION: Long = 0x6D71_6C04L
+
+/** Map a [MoqLiteVersion] to its synthetic [MOQ_LITE_03_VERSION]-family code. */
+internal fun versionCode(version: MoqLiteVersion): Long =
+    when (version) {
+        MoqLiteVersion.LITE_03 -> MOQ_LITE_03_VERSION
+        MoqLiteVersion.LITE_04 -> MOQ_LITE_04_VERSION
+    }
 
 /**
  * Build a no-op [NestsListener] in a Failed state for callers that want a
@@ -239,8 +256,9 @@ suspend fun connectNestsSpeaker(
 
     state.value = NestsSpeakerState.Connecting(NestsSpeakerState.Connecting.ConnectStep.MoqHandshake)
 
-    // moq-lite Lite-03 has NO setup message. Same logic as the listener
-    // path — version is selected by the `moq-lite-03` ALPN.
+    // moq-lite has NO setup message. Same logic as the listener path —
+    // version is selected by the ALPN exchange and derived inside
+    // [MoqLiteSession.version].
     val moq =
         try {
             MoqLiteSession.client(webTransport, scope)
@@ -250,7 +268,7 @@ suspend fun connectNestsSpeaker(
             return failedSpeaker(state)
         }
 
-    state.value = NestsSpeakerState.Connected(room, MOQ_LITE_03_VERSION)
+    state.value = NestsSpeakerState.Connected(room, versionCode(moq.version))
     return MoqLiteNestsSpeaker(
         session = moq,
         speakerPubkeyHex = speakerPubkeyHex,

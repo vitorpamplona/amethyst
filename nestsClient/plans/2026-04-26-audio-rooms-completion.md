@@ -62,6 +62,20 @@
 ## Pointers
 
 - moq-lite wire spec + IETF gap: `nestsClient/plans/2026-04-26-moq-lite-gap.md`
+- moq-lite Lite-03/04 compliance audit (2026-05-09): `nestsClient/plans/2026-05-09-moq-lite-rfc-compliance.md` —
+  no 🔴 wire-incompatibilities found; **nine spec tightenings
+  shipped end-to-end**: AnnouncePlease prefix-mismatch, Subscribe
+  broadcast validation, trackPriority bit-pack matching
+  kixelated's `PriorityHandle`, publishers-list freshness on
+  inbound bidi dispatch, RESET_STREAM with typed code on Drop
+  replies, STOP_SENDING(SUBSCRIPTION_GONE) on dead group uni,
+  SubscribeOk narrowing of `startGroup` to publisher's
+  `nextSequence`, subscriber-driven Probe API
+  (`MoqLiteSession.probe()`), and full Lite-04 codec + ALPN
+  negotiation (`MoqLiteVersion` enum, `wt-protocol` parsing,
+  dual-version advertisement). M6 (Goaway body) closed via spec
+  verification (no body in Lite-03/04). **No items remain
+  deferred.**
 - Nostrnests integration audit (gaps + roadmap): see most recent doc in `nestsClient/plans/`
 - QUIC stack status: `quic/plans/2026-04-26-quic-stack-status.md`
 - Audio-rooms NIP draft (needs refresh after the moq-lite findings):

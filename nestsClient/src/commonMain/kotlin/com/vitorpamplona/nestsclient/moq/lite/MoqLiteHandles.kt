@@ -54,6 +54,28 @@ class MoqLiteAnnouncesHandle internal constructor(
     suspend fun close() = close.invoke()
 }
 
+/**
+ * Active probe handle returned by [MoqLiteSession.probe]. Mirrors
+ * kixelated's `Subscriber::run_probe_stream`
+ * (`rs/moq-lite/src/lite/subscriber.rs`): subscriber opens a bidi,
+ * writes `ControlType::Probe`, then reads size-prefixed
+ * [MoqLiteProbe] messages indefinitely until the publisher FINs or
+ * the consumer calls [close].
+ *
+ * [updates] is a cold flow that emits every Probe message the
+ * publisher pushes — typically a single bitrate hint at session
+ * start, but a publisher running an ABR codec MAY emit multiple
+ * over time. For a fixed-rate Opus producer (which is what
+ * Amethyst's nests speaker is) the publisher emits one and FINs;
+ * the flow then completes naturally and consumers see end-of-flow.
+ */
+class MoqLiteProbeHandle internal constructor(
+    val updates: Flow<MoqLiteProbe>,
+    private val close: suspend () -> Unit,
+) {
+    suspend fun close() = close.invoke()
+}
+
 /** Thrown when subscribe is rejected (Drop) or the response stream dies. */
 class MoqLiteSubscribeException(
     message: String,

@@ -44,6 +44,14 @@ import kotlinx.coroutines.launch
  * is false), [send] and [finish] are wired to the stream's outbound
  * half so the application can write its response. They are null on
  * unidirectional streams.
+ *
+ * For both directions, [reset] (RFC 9000 §3.5 RESET_STREAM) and
+ * [stopSending] (RFC 9000 §3.5 STOP_SENDING) are exposed so application
+ * code (e.g. moq-lite Lite-03's typed cancel paths) can convey error
+ * codes instead of relying on graceful FIN. [reset] is null on uni
+ * streams whose write side belongs to the peer; [stopSending] is null
+ * when there's no read side to ask the peer to stop on (i.e. never
+ * — every stream we surface here has a read side).
  */
 class StrippedWtStream(
     val streamId: Long,
@@ -58,6 +66,23 @@ class StrippedWtStream(
      * Half-close the send side (FIN). Null for unidirectional streams.
      */
     val finish: (suspend () -> Unit)? = null,
+    /**
+     * Send `RESET_STREAM(applicationErrorCode)` on the send half (RFC
+     * 9000 §3.5). Null when the application doesn't own the send side
+     * (peer-initiated uni stream). The first call wins per
+     * `QuicStream.resetStream`'s lock-free first-call-wins gate;
+     * duplicate calls with different codes are silently ignored to
+     * keep the wire frame stable.
+     */
+    val reset: (suspend (errorCode: Long) -> Unit)? = null,
+    /**
+     * Send `STOP_SENDING(applicationErrorCode)` on the receive half
+     * (RFC 9000 §3.5) — asks the peer to RESET its corresponding
+     * send side. Non-null because every stripped stream surfaced
+     * here has a read side; the demux always wires it. First call
+     * wins.
+     */
+    val stopSending: suspend (errorCode: Long) -> Unit,
 )
 
 /**
@@ -515,6 +540,26 @@ class WtPeerStreamDemux(
                     driver?.wakeup()
                 }
             }
+        // RESET_STREAM is meaningful only on streams whose write side
+        // belongs to us. Same null pattern as [send] / [finish] for
+        // peer-initiated uni streams.
+        val reset: (suspend (Long) -> Unit)? =
+            if (isUni) {
+                null
+            } else {
+                { errorCode ->
+                    stream.resetStream(errorCode)
+                    driver?.wakeup()
+                }
+            }
+        // STOP_SENDING is meaningful on the receive half — every
+        // stripped stream we surface here has one (uni: peer is
+        // sender; bidi: peer's send side is our receive side), so
+        // wire unconditionally.
+        val stopSending: (suspend (Long) -> Unit) = { errorCode ->
+            stream.stopSending(errorCode)
+            driver?.wakeup()
+        }
         // Suspending send instead of `trySend` so a slow application
         // back-pressures the demux instead of silently dropping the
         // stream. With a bounded buffer ([readyStreamsBuffer]),
@@ -529,6 +574,8 @@ class WtPeerStreamDemux(
                 data = data,
                 send = send,
                 finish = finish,
+                reset = reset,
+                stopSending = stopSending,
             ),
         )
     }

@@ -61,17 +61,20 @@ class MoqLiteCodecTest {
 
     @Test
     fun announce_active_round_trips() {
-        val msg = MoqLiteAnnounce(status = MoqLiteAnnounceStatus.Active, suffix = "speakerPubkey", hops = 0L)
+        val msg = MoqLiteAnnounce(status = MoqLiteAnnounceStatus.Active, suffix = "speakerPubkey", hops = emptyList())
         val payload = peelSizePrefix(MoqLiteCodec.encodeAnnounce(msg))
         // Byte 0 is the status byte (literal 1), then a 13-byte string,
-        // then a varint hops.
+        // then a varint hops count.
         assertEquals(1, payload[0].toInt())
         assertEquals(msg, MoqLiteCodec.decodeAnnounce(payload))
     }
 
     @Test
     fun announce_ended_with_relay_hops_round_trips() {
-        val msg = MoqLiteAnnounce(status = MoqLiteAnnounceStatus.Ended, suffix = "fff", hops = 7L)
+        // Lite-03 wire only carries a count; decoded list is filled
+        // with UNKNOWN placeholders (origin id 0). Round-trip thus
+        // requires the input also be a list of zeros.
+        val msg = MoqLiteAnnounce(status = MoqLiteAnnounceStatus.Ended, suffix = "fff", hops = List(7) { 0L })
         val payload = peelSizePrefix(MoqLiteCodec.encodeAnnounce(msg))
         assertEquals(0, payload[0].toInt())
         assertEquals(msg, MoqLiteCodec.decodeAnnounce(payload))
@@ -200,6 +203,172 @@ class MoqLiteCodecTest {
         val msg = MoqLiteGroupHeader(subscribeId = 42L, sequence = 7L)
         val payload = peelSizePrefix(MoqLiteCodec.encodeGroupHeader(msg))
         assertEquals(msg, MoqLiteCodec.decodeGroupHeader(payload))
+    }
+
+    // ---------------- Lite-04 wire diffs (audit L1) ----------------
+
+    @Test
+    fun announcePlease_lite04_round_trips_excludeHop() {
+        val msg = MoqLiteAnnouncePlease(prefix = "rooms/A", excludeHop = 7L)
+        val payload =
+            peelSizePrefix(
+                MoqLiteCodec.encodeAnnouncePlease(msg, MoqLiteVersion.LITE_04),
+            )
+        // Wire after prefix: a single varint excludeHop.
+        val r = MoqReader(payload)
+        assertEquals("rooms/A", r.readLengthPrefixedString())
+        assertEquals(7L, r.readVarint(), "Lite-04 excludeHop is a single varint after prefix")
+        assertTrue(!r.hasMore())
+        // Round-trip via decoder.
+        assertEquals(
+            msg,
+            MoqLiteCodec.decodeAnnouncePlease(payload, MoqLiteVersion.LITE_04),
+        )
+    }
+
+    @Test
+    fun announcePlease_lite03_omits_excludeHop_on_wire() {
+        // Lite-03 encode MUST NOT write excludeHop, regardless of the
+        // value carried in the data class. Confirms a Lite-04-aware
+        // app accidentally talking Lite-03 doesn't leak the field
+        // and desync the peer.
+        val msg = MoqLiteAnnouncePlease(prefix = "rooms/A", excludeHop = 99L)
+        val payload =
+            peelSizePrefix(
+                MoqLiteCodec.encodeAnnouncePlease(msg, MoqLiteVersion.LITE_03),
+            )
+        val r = MoqReader(payload)
+        assertEquals("rooms/A", r.readLengthPrefixedString())
+        assertTrue(!r.hasMore(), "Lite-03 wire MUST end after prefix — no excludeHop")
+        // Decoded msg drops back to excludeHop=0 (Lite-03 default).
+        assertEquals(
+            MoqLiteAnnouncePlease(prefix = "rooms/A", excludeHop = 0L),
+            MoqLiteCodec.decodeAnnouncePlease(payload, MoqLiteVersion.LITE_03),
+        )
+    }
+
+    @Test
+    fun announce_lite04_round_trips_full_origin_list() {
+        val msg =
+            MoqLiteAnnounce(
+                status = MoqLiteAnnounceStatus.Active,
+                suffix = "spk",
+                hops = listOf(1L, 5L, 12L),
+            )
+        val payload =
+            peelSizePrefix(
+                MoqLiteCodec.encodeAnnounce(msg, MoqLiteVersion.LITE_04),
+            )
+        // Wire: status u8, suffix string, count varint, then count
+        // origin id varints.
+        val r = MoqReader(payload)
+        assertEquals(1, r.readByte()) // Active
+        assertEquals("spk", r.readLengthPrefixedString())
+        assertEquals(3L, r.readVarint(), "count")
+        assertEquals(1L, r.readVarint(), "origin[0]")
+        assertEquals(5L, r.readVarint(), "origin[1]")
+        assertEquals(12L, r.readVarint(), "origin[2]")
+        assertTrue(!r.hasMore())
+        assertEquals(msg, MoqLiteCodec.decodeAnnounce(payload, MoqLiteVersion.LITE_04))
+    }
+
+    @Test
+    fun announce_lite03_drops_origin_ids_keeps_count() {
+        // Lite-03 wire only carries the count; the IDs are discarded
+        // on encode and reconstructed as UNKNOWN (0) placeholders on
+        // decode. Confirms cross-version round-trip is lossy in this
+        // direction (matches kixelated's Lite-03 hop-count semantic).
+        val sent =
+            MoqLiteAnnounce(
+                status = MoqLiteAnnounceStatus.Active,
+                suffix = "spk",
+                hops = listOf(1L, 5L, 12L),
+            )
+        val payload = peelSizePrefix(MoqLiteCodec.encodeAnnounce(sent, MoqLiteVersion.LITE_03))
+        val decoded = MoqLiteCodec.decodeAnnounce(payload, MoqLiteVersion.LITE_03)
+        // Same count, IDs replaced with UNKNOWN.
+        assertEquals(3, decoded.hops.size)
+        assertEquals(listOf(0L, 0L, 0L), decoded.hops)
+    }
+
+    @Test
+    fun announce_decoder_rejects_oversize_hop_count() {
+        // MAX_HOPS = 32 per kixelated's Origin::MAX_HOPS. A wire
+        // payload with count = 33 must be rejected.
+        val out =
+            com.vitorpamplona.nestsclient.moq
+                .MoqWriter()
+        out.writeByte(1) // Active
+        out.writeLengthPrefixedString("spk")
+        out.writeVarint(33L)
+        // Lite-03 doesn't write IDs so the body ends here.
+        val payload = out.toByteArray()
+        assertFailsWith<MoqCodecException> {
+            MoqLiteCodec.decodeAnnounce(payload, MoqLiteVersion.LITE_03)
+        }
+    }
+
+    @Test
+    fun probe_lite04_round_trips_rtt() {
+        val msg = MoqLiteProbe(bitrate = 32_000L, rtt = 25L)
+        val payload =
+            peelSizePrefix(
+                MoqLiteCodec.encodeProbe(msg, MoqLiteVersion.LITE_04),
+            )
+        val r = MoqReader(payload)
+        assertEquals(32_000L, r.readVarint())
+        assertEquals(25L, r.readVarint())
+        assertTrue(!r.hasMore())
+        assertEquals(msg, MoqLiteCodec.decodeProbe(payload, MoqLiteVersion.LITE_04))
+    }
+
+    @Test
+    fun probe_lite04_clamps_some_zero_to_one_to_avoid_unknown_sentinel() {
+        // Per kixelated `encode_msg`, an outgoing rtt of `Some(0)` is
+        // clamped to `Some(1)` because 0 is the unknown-sentinel.
+        // Mirroring that exactly avoids a peer round-trip from
+        // Some(0) to None.
+        val msg = MoqLiteProbe(bitrate = 100_000L, rtt = 0L)
+        val payload =
+            peelSizePrefix(
+                MoqLiteCodec.encodeProbe(msg, MoqLiteVersion.LITE_04),
+            )
+        val r = MoqReader(payload)
+        r.readVarint() // bitrate
+        assertEquals(1L, r.readVarint(), "rtt=0 must be clamped to 1 on the wire")
+    }
+
+    @Test
+    fun probe_lite04_decodes_zero_rtt_as_null() {
+        // Symmetric: an incoming `0` MUST decode as null (None).
+        val out =
+            com.vitorpamplona.nestsclient.moq
+                .MoqWriter()
+        out.writeVarint(64_000L)
+        out.writeVarint(0L) // rtt = unknown
+        val payload = out.toByteArray()
+        val decoded = MoqLiteCodec.decodeProbe(payload, MoqLiteVersion.LITE_04)
+        assertEquals(64_000L, decoded.bitrate)
+        assertEquals(null, decoded.rtt, "rtt=0 decodes as null (unknown sentinel)")
+    }
+
+    @Test
+    fun probe_lite03_wire_omits_rtt() {
+        // Lite-03 encode MUST NOT write rtt regardless of the data
+        // class value.
+        val msg = MoqLiteProbe(bitrate = 32_000L, rtt = 99L)
+        val payload =
+            peelSizePrefix(
+                MoqLiteCodec.encodeProbe(msg, MoqLiteVersion.LITE_03),
+            )
+        val r = MoqReader(payload)
+        assertEquals(32_000L, r.readVarint())
+        assertTrue(!r.hasMore(), "Lite-03 probe must end after bitrate — no rtt")
+        // Decoded msg drops rtt to null (Lite-03 default).
+        assertEquals(
+            MoqLiteProbe(bitrate = 32_000L, rtt = null),
+            MoqLiteCodec.decodeProbe(payload, MoqLiteVersion.LITE_03),
+        )
     }
 
     @Test

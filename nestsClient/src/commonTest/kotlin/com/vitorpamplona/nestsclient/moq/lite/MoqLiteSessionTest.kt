@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.nestsclient.moq.lite
 
+import com.vitorpamplona.nestsclient.transport.ChannelWriteStream
 import com.vitorpamplona.nestsclient.transport.FakeBidiStream
+import com.vitorpamplona.nestsclient.transport.FakeReadStream
 import com.vitorpamplona.nestsclient.transport.FakeWebTransport
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CoroutineScope
@@ -167,7 +169,7 @@ class MoqLiteSessionTest {
                             MoqLiteAnnounce(
                                 MoqLiteAnnounceStatus.Active,
                                 "speakerOne",
-                                hops = 1L,
+                                hops = listOf(0L),
                             ),
                         ),
                     )
@@ -176,7 +178,7 @@ class MoqLiteSessionTest {
                             MoqLiteAnnounce(
                                 MoqLiteAnnounceStatus.Active,
                                 "speakerTwo",
-                                hops = 1L,
+                                hops = listOf(0L),
                             ),
                         ),
                     )
@@ -341,6 +343,113 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun lite04_announce_round_trips_full_origin_list_through_session() =
+        runBlocking {
+            // Lite-03 audit L1: a session running [MoqLiteVersion.LITE_04]
+            // routes its codec calls through the Lite-04 branches —
+            // verified end-to-end by encoding an Announce on the
+            // server side with two origin IDs and confirming the
+            // client-side announce-watch flow surfaces them
+            // unchanged. Pre-fix the codec was Lite-03-only and
+            // would have read the count and discarded the IDs.
+            // Drive the negotiated sub-protocol via the fake so the
+            // session derives `version = LITE_04` itself (matching the
+            // production path, where `MoqLiteSession.version` reads
+            // through `transport.negotiatedSubProtocol`).
+            val (clientSide, serverSide) =
+                FakeWebTransport.pair(negotiatedSubProtocol = MoqLiteAlpn.LITE_04)
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+            assertEquals(MoqLiteVersion.LITE_04, session.version)
+
+            val peer =
+                async {
+                    val bidi = serverSide.peerOpenedBidiStreams().first()
+                    // Drain control byte + AnnouncePlease. Lite-04
+                    // shape: prefix string then excludeHop varint.
+                    val chunks = bidi.incoming().take(2).toList()
+                    assertEquals(MoqLiteControlType.Announce.code, MoqLiteFrameBuffer().apply { push(chunks[0]) }.readVarint())
+                    val pleasePayload =
+                        MoqLiteFrameBuffer().apply { push(chunks[1]) }.readSizePrefixed()
+                            ?: error("AnnouncePlease body missing")
+                    val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload, MoqLiteVersion.LITE_04)
+                    assertEquals("rooms/A", please.prefix)
+                    assertEquals(0L, please.excludeHop, "default excludeHop is 0 (no exclusion)")
+
+                    // Push an Announce with full origin list (Lite-04
+                    // shape).
+                    bidi.write(
+                        MoqLiteCodec.encodeAnnounce(
+                            MoqLiteAnnounce(
+                                status = MoqLiteAnnounceStatus.Active,
+                                suffix = "speakerA",
+                                hops = listOf(2L, 7L),
+                            ),
+                            MoqLiteVersion.LITE_04,
+                        ),
+                    )
+                }
+
+            val handle = session.announce("rooms/A")
+            val announce = withTimeout(2_000) { handle.updates.first() }
+            assertEquals(MoqLiteAnnounceStatus.Active, announce.status)
+            assertEquals("speakerA", announce.suffix)
+            assertEquals(listOf(2L, 7L), announce.hops, "Lite-04 session preserves origin id list")
+
+            peer.await()
+            handle.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_subscribeOk_narrows_startGroup_to_next_sequence() =
+        runBlocking {
+            // Lite-03 audit L2: when accepting a SUBSCRIBE, the publisher
+            // narrows the SubscribeOk's `startGroup` from the subscriber's
+            // request to its own [MoqLitePublisherHandle.nextSequence],
+            // communicating the exact sequence the next group will
+            // carry. Particularly useful for hot-swap continuations
+            // (publisher seeded with a non-zero startSequence).
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher =
+                session.publish(
+                    broadcastSuffix = "speakerPubkey",
+                    track = "audio/data",
+                    startSequence = 100L,
+                )
+
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 5L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        // Subscriber asks "from latest" — publisher is
+                        // free to narrow.
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+
+            val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
+            val resp = MoqLiteCodec.decodeSubscribeResponse(ackChunk)
+            val ok = (resp as MoqLiteCodec.SubscribeResponse.Ok).ok
+            assertEquals(100L, ok.startGroup, "publisher narrows startGroup to its nextSequence")
+            // endGroup stays null — live broadcast has no end in sight.
+            assertEquals(null, ok.endGroup)
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_startSequence_seeds_first_group_for_hot_swap_continuation() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()
@@ -397,6 +506,148 @@ class MoqLiteSessionTest {
 
             publisher.close()
             session.close()
+        }
+
+    @Test
+    fun publisher_packs_trackPriority_and_sequence_into_setPriority_value() =
+        runBlocking {
+            // Lite-03 audit M1: openGroupStream packs the publisher's
+            // trackPriority byte into bits 30..23 and the group sequence
+            // into bits 22..0 of the value passed to
+            // WebTransportWriteStream.setPriority. Bit 31 stays 0 so
+            // the resulting Int is always non-negative — required
+            // because [QuicConnectionWriter] sorts via signed
+            // `sortedByDescending { it.priority }`. Verified on the
+            // *peer* side via FakeReadStream.lastSetPriority, which the
+            // in-memory transport uses as a side-channel for priority
+            // introspection.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Use a non-default trackPriority so a regression that
+            // accidentally drops it back to DEFAULT_TRACK_PRIORITY shows
+            // up in the assertion. 0xC0 sits in the upper half of the
+            // byte range — pre-fix this would have produced a negative
+            // Int (bit 31 set) that mis-sorts.
+            val publisher =
+                session.publish(
+                    broadcastSuffix = "speakerPubkey",
+                    track = "audio/data",
+                    startSequence = 7L,
+                    trackPriority = 0xC0,
+                )
+
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 99L,
+                        broadcast = "speakerPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+            withTimeout(2_000) { subBidi.incoming().first() }
+
+            assertEquals(true, publisher.send("opus-frame".encodeToByteArray()))
+            publisher.endGroup()
+
+            val relayUni = withTimeout(2_000) { serverSide.incomingUniStreams().first() }
+            val fakeRead = relayUni as FakeReadStream
+            // Expected: (0xC0 shl 23) or (7 and 0x7FFFFF). Compute via
+            // the same formula so the test asserts the CONTRACT, not
+            // a hex literal.
+            val expected = ((0xC0 and 0xFF) shl 23) or (7 and 0x007F_FFFF)
+            assertEquals(expected, fakeRead.lastSetPriority, "trackPriority occupies bits 30..23; sequence fills the low 23 bits")
+            // Critical guard: the encoded value MUST be non-negative so
+            // the QUIC writer's signed `sortedByDescending` orders it
+            // correctly relative to lower-trackPriority streams.
+            kotlin.test.assertTrue(
+                (fakeRead.lastSetPriority ?: -1) >= 0,
+                "encoded priority must be non-negative — bit 31 is reserved as the sign bit",
+            )
+
+            // Drain the stream so the cleanup path doesn't leak.
+            relayUni.incoming().toList()
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_priority_pack_keeps_top_trackPriority_above_lower_trackPriority() =
+        runBlocking {
+            // Direct guard against the pre-fix sign-extension bug: a
+            // higher trackPriority MUST produce a higher encoded
+            // priority value. Pre-fix `trackPriority=0xFF` with
+            // sequence=0 produced a negative Int that sorted BELOW
+            // `trackPriority=0x7F` with the same sequence — exactly
+            // the inversion the audit M1 fix was supposed to prevent.
+            // We exercise the path by opening a uni stream via a
+            // publisher of each priority and comparing.
+            val (clientSide1, serverSide1) = FakeWebTransport.pair()
+            val (clientSide2, serverSide2) = FakeWebTransport.pair()
+            val sessionHigh = MoqLiteSession.client(clientSide1, pumpScope)
+            val sessionLow = MoqLiteSession.client(clientSide2, pumpScope)
+
+            val pubHigh =
+                sessionHigh.publish(
+                    broadcastSuffix = "spk",
+                    track = "audio/data",
+                    trackPriority = 0xFF,
+                )
+            val pubLow =
+                sessionLow.publish(
+                    broadcastSuffix = "spk",
+                    track = "audio/data",
+                    trackPriority = 0x7F,
+                )
+
+            // Wire each up with a subscriber so send() doesn't drop.
+            for ((server, _) in listOf(serverSide1 to "high", serverSide2 to "low")) {
+                val sub = server.openBidiStream()
+                sub.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+                sub.write(
+                    MoqLiteCodec.encodeSubscribe(
+                        MoqLiteSubscribe(
+                            id = 1L,
+                            broadcast = "spk",
+                            track = "audio/data",
+                            priority = 0x80,
+                            ordered = true,
+                            maxLatencyMillis = 0L,
+                            startGroup = null,
+                            endGroup = null,
+                        ),
+                    ),
+                )
+                withTimeout(2_000) { sub.incoming().first() }
+            }
+
+            pubHigh.send("h".encodeToByteArray())
+            pubHigh.endGroup()
+            pubLow.send("l".encodeToByteArray())
+            pubLow.endGroup()
+
+            val highUni = withTimeout(2_000) { serverSide1.incomingUniStreams().first() } as FakeReadStream
+            val lowUni = withTimeout(2_000) { serverSide2.incomingUniStreams().first() } as FakeReadStream
+            val highPriority = highUni.lastSetPriority ?: error("high priority not set")
+            val lowPriority = lowUni.lastSetPriority ?: error("low priority not set")
+
+            kotlin.test.assertTrue(highPriority > lowPriority, "0xFF trackPriority must encode higher than 0x7F (was $highPriority vs $lowPriority)")
+            kotlin.test.assertTrue(highPriority >= 0, "0xFF trackPriority encoding must stay non-negative (was $highPriority)")
+
+            highUni.incoming().toList()
+            lowUni.incoming().toList()
+            pubHigh.close()
+            pubLow.close()
+            sessionHigh.close()
+            sessionLow.close()
         }
 
     @Test
@@ -534,6 +785,100 @@ class MoqLiteSessionTest {
         }
 
     @Test
+    fun publisher_skips_announce_when_announce_please_prefix_does_not_match() =
+        runBlocking {
+            // Lite-03 audit M4: when the relay opens an Announce bidi
+            // with a non-empty prefix that doesn't match our broadcast
+            // suffix, the publisher MUST NOT emit Active under the
+            // requested prefix (or under our own suffix) — kixelated's
+            // `rs/moq-lite/src/lite/announce.rs::Producer` only emits
+            // for matching prefixes. Pre-fix we'd fall through the
+            // `null` branch of `MoqLitePath.stripPrefix` and announce
+            // ourselves anyway. Verified here by FINing the bidi
+            // cleanly without writing any Announce body.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+
+            // Relay opens Announce bidi with a non-matching prefix.
+            val relayBidi = serverSide.openBidiStream()
+            relayBidi.write(Varint.encode(MoqLiteControlType.Announce.code))
+            relayBidi.write(
+                MoqLiteCodec.encodeAnnouncePlease(
+                    MoqLiteAnnouncePlease(prefix = "differentRoom"),
+                ),
+            )
+
+            // The bidi MUST end with no body (peer FIN), and
+            // `relayBidi.incoming().toList()` therefore returns empty.
+            // Use a generous timeout so a slow fake doesn't false-pass
+            // by hanging instead of FINing.
+            val chunks = withTimeout(2_000) { relayBidi.incoming().toList() }
+            assertEquals(emptyList(), chunks, "non-matching prefix must FIN without writing any Announce body")
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun publisher_replies_subscribeDrop_when_broadcast_does_not_match() =
+        runBlocking {
+            // Lite-03 audit M5: when the relay opens a Subscribe bidi
+            // whose `broadcast` field doesn't match our publisher's
+            // suffix, the publisher MUST reply SubscribeDrop with the
+            // BROADCAST_DOES_NOT_EXIST code rather than route OUR audio
+            // to the wrong subscriber. Pre-fix we matched on `track`
+            // only and would happily send Opus frames to a peer who
+            // subscribed under any broadcast string they liked.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            val publisher = session.publish(broadcastSuffix = "speakerPubkey", track = "audio/data")
+
+            val subBidi = serverSide.openBidiStream()
+            subBidi.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+            subBidi.write(
+                MoqLiteCodec.encodeSubscribe(
+                    MoqLiteSubscribe(
+                        id = 11L,
+                        broadcast = "wrongPubkey",
+                        track = "audio/data",
+                        priority = 0x80,
+                        ordered = true,
+                        maxLatencyMillis = 0L,
+                        startGroup = null,
+                        endGroup = null,
+                    ),
+                ),
+            )
+
+            val ackChunk = withTimeout(2_000) { subBidi.incoming().first() }
+            val resp = MoqLiteCodec.decodeSubscribeResponse(ackChunk)
+            val dropped = resp as MoqLiteCodec.SubscribeResponse.Dropped
+            assertEquals(MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST, dropped.drop.errorCode)
+            kotlin.test.assertContains(dropped.drop.reasonPhrase, "wrongPubkey")
+            kotlin.test.assertContains(dropped.drop.reasonPhrase, "speakerPubkey")
+
+            // Audit M3: in addition to the application-level Drop body,
+            // the publisher must also `RESET_STREAM(errorCode)` the bidi
+            // so the peer can distinguish a typed rejection from a
+            // graceful "publisher gone" FIN. Drain so the read side
+            // closes and the cell publishes, then assert the code.
+            // toList() will end because reset() closed the channel.
+            withTimeout(2_000) { subBidi.incoming().toList() }
+            val fakeBidi = subBidi as FakeBidiStream
+            assertEquals(
+                MoqLiteSubscribeDropCode.BROADCAST_DOES_NOT_EXIST as Long?,
+                fakeBidi.lastPeerResetCode,
+                "publisher must reset the bidi with BROADCAST_DOES_NOT_EXIST after the Drop body",
+            )
+
+            publisher.close()
+            session.close()
+        }
+
+    @Test
     fun publisher_replies_subscribeDrop_when_track_is_not_published() =
         runBlocking {
             val (clientSide, serverSide) = FakeWebTransport.pair()
@@ -572,6 +917,19 @@ class MoqLiteSessionTest {
             // Reason phrase is informational; pin substring rather than
             // the exact text so we can keep tweaking the wording.
             kotlin.test.assertContains(dropped.drop.reasonPhrase, "video/data")
+
+            // Audit M3: typed RESET_STREAM follows the Drop body. Same
+            // shape as broadcast_does_not_match — the code matches
+            // the Drop's errorCode so a peer that only watched the
+            // QUIC layer (no body decode) still sees the typed
+            // rejection.
+            withTimeout(2_000) { subBidi.incoming().toList() }
+            val fakeBidi = subBidi as FakeBidiStream
+            assertEquals(
+                MoqLiteSubscribeDropCode.TRACK_DOES_NOT_EXIST as Long?,
+                fakeBidi.lastPeerResetCode,
+                "publisher must reset the bidi with TRACK_DOES_NOT_EXIST after the Drop body",
+            )
 
             publisher.close()
             session.close()
@@ -662,6 +1020,105 @@ class MoqLiteSessionTest {
             // registration.
             withTimeout(2_000) { handle.frames.toList() }
 
+            session.close()
+        }
+
+    @Test
+    fun listener_stopSending_group_uni_when_subscription_already_canceled() =
+        runBlocking {
+            // Lite-03 audit M2: when a group's uni stream arrives for a
+            // subscribe id that was canceled before the first frame
+            // landed, the listener MUST stopSending() the uni stream so
+            // the publisher abandons retransmits instead of wasting
+            // bandwidth. Pre-fix the listener silently dropped every
+            // frame; the publisher kept pushing until natural FIN.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Set up a subscription so the uni-stream pump is active.
+            val peer =
+                async {
+                    val (bidi, _) = nextSubscribeBidi(serverSide)
+                    bidi.write(MoqLiteCodec.encodeSubscribeOk(okFor(0L)))
+                    bidi
+                }
+            val handle = session.subscribe("speakerX", "audio/data")
+            val subBidi = peer.await()
+
+            // Cancel the subscription before any group flows.
+            handle.unsubscribe()
+            // Drain the subscribe bidi's FIN so the peer's pump
+            // stays clean — not strictly required for the assertion
+            // but keeps the test isolated.
+            subBidi.incoming().toList()
+
+            // Now the peer (= the relay) opens a uni stream for that
+            // dead subscribe id and writes one frame.
+            val uni = serverSide.openUniStream() as ChannelWriteStream
+            uni.write(Varint.encode(MoqLiteDataType.Group.code))
+            uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId = handle.id, sequence = 0L)))
+            uni.write(framePayload(byteArrayOf(0x01)))
+
+            // Spin until the listener's drainOneGroup has processed
+            // the first frame, found no matching subscription, and
+            // fired stopSending. We hold the writer side, so reading
+            // [peerStopSendingCode] doesn't race the listener's
+            // pump for the peer-side [FakeReadStream] reference.
+            val deadline = System.currentTimeMillis() + 2_000
+            while (uni.peerStopSendingCode == null && System.currentTimeMillis() < deadline) {
+                kotlinx.coroutines.delay(10)
+            }
+            assertEquals(
+                MoqLiteStreamCancelCode.SUBSCRIPTION_GONE as Long?,
+                uni.peerStopSendingCode,
+                "listener must stopSending(SUBSCRIPTION_GONE) when a group arrives for a canceled subscription",
+            )
+
+            uni.finish()
+            session.close()
+        }
+
+    @Test
+    fun subscriber_probe_writes_control_type_and_decodes_publisher_bitrate() =
+        runBlocking {
+            // Lite-03 audit L3: the subscriber side opens a Probe bidi
+            // by writing ControlType=Probe and reads size-prefixed
+            // MoqLiteProbe messages from the publisher. Mirrors
+            // kixelated's `Subscriber::run_probe_stream`
+            // (`rs/moq-lite/src/lite/subscriber.rs`).
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope)
+
+            // Server side: read the subscriber's control byte, then
+            // write two Probe messages.
+            val serverPump =
+                async {
+                    val bidi = serverSide.peerOpenedBidiStreams().first()
+                    val buf = MoqLiteFrameBuffer()
+                    // Read the leading ControlType varint. The session
+                    // writes it as a single chunk via bidi.write.
+                    val ctChunk = withTimeout(2_000) { bidi.incoming().first() }
+                    buf.push(ctChunk)
+                    val ct = buf.readVarint()
+                    assertEquals(MoqLiteControlType.Probe.code, ct, "subscriber writes ControlType=Probe")
+
+                    // Push two probes (different bitrates) then FIN.
+                    bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = 32_000L)))
+                    bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = 64_000L)))
+                    bidi.finish()
+                }
+
+            val handle = session.probe()
+            // Drain both probes from the cold flow. SharedFlow with
+            // replay=8 means we can collect after the publisher has
+            // already pushed without losing emissions.
+            val received = withTimeout(2_000) { handle.updates.take(2).toList() }
+            assertEquals(2, received.size)
+            assertEquals(32_000L, received[0].bitrate)
+            assertEquals(64_000L, received[1].bitrate)
+
+            serverPump.await()
+            handle.close()
             session.close()
         }
 
