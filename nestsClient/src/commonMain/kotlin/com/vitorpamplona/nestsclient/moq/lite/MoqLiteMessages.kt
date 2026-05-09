@@ -30,16 +30,32 @@ package com.vitorpamplona.nestsclient.moq.lite
 
 /**
  * "I'm interested in broadcasts under this prefix" — the first message
- * the subscriber writes on an Announce bidi.
+ * the subscriber writes on an Announce bidi. Mirrors kixelated's
+ * `AnnounceInterest` struct (`rs/moq-lite/src/lite/announce.rs`).
  *
  * Wire layout (size-prefixed):
- *   prefix  string  (varint length + UTF-8)
+ *   prefix       string  (varint length + UTF-8)
+ *   excludeHop   u62 varint  (Lite-04 ONLY; sentinel `0` = no exclusion)
  *
- * Empty prefix means "everything".
+ * Empty prefix means "everything". `excludeHop != 0` (Lite-04 only)
+ * asks the publisher to skip announces whose hop ID list contains
+ * this value — used in clustered moq-rs deployments to break
+ * forwarding loops.
  */
 data class MoqLiteAnnouncePlease(
     val prefix: String,
-)
+    /**
+     * Lite-04 only. `0` (the default) means "no exclusion." A
+     * non-zero value asks the publisher to skip announces whose
+     * `hops` list contains this origin ID. Encoded as a single
+     * varint after [prefix]; absent on the wire under Lite-03.
+     */
+    val excludeHop: Long = 0L,
+) {
+    init {
+        require(excludeHop >= 0) { "excludeHop must be non-negative: $excludeHop" }
+    }
+}
 
 /**
  * Per-broadcast announce update streamed by the publisher (or relay)
@@ -52,13 +68,37 @@ data class MoqLiteAnnouncePlease(
  *   suffix  string   (broadcast path with the requested `prefix`
  *                     stripped — `MoqLitePath.join(prefix, suffix)`
  *                     reconstitutes the absolute path)
- *   hops    u62      (relay routing depth, Lite-03 only)
+ *   hops    OriginList  (Lite-03: a single varint count;
+ *                        Lite-04: `varint(count) + count × varint(id)`)
+ *
+ * [hops] is modeled as `List<Long>` — origin IDs the announce has
+ * traversed. Empty list = no hops. Origin id `0` is reserved as
+ * `Origin::UNKNOWN` (used by Lite-03 decode to fill the count of
+ * placeholder entries when the wire only carries a count). Per
+ * kixelated, [hops] is bounded to 32 entries (`MAX_HOPS`).
  */
 data class MoqLiteAnnounce(
     val status: MoqLiteAnnounceStatus,
     val suffix: String,
-    val hops: Long,
-)
+    val hops: List<Long>,
+) {
+    init {
+        require(hops.size <= MAX_HOPS) { "hops list must not exceed MAX_HOPS=$MAX_HOPS, got ${hops.size}" }
+        // Origin id is a u62 varint; reject negatives so encoding
+        // can't silently produce a malformed varint. Per kixelated,
+        // id == 0 means UNKNOWN; otherwise must fit in 62 bits.
+        require(hops.all { it >= 0 }) { "hops origin ids must be non-negative" }
+    }
+
+    companion object {
+        /**
+         * Maximum number of origin entries in [hops]. Mirrors
+         * `kixelated/moq`'s `Origin::MAX_HOPS = 32`; the decoder
+         * rejects oversize lists with a codec exception.
+         */
+        const val MAX_HOPS: Int = 32
+    }
+}
 
 /**
  * "Subscribe me to (broadcast, track)" — the first message the
@@ -210,12 +250,28 @@ data class MoqLiteGroupHeader(
 /**
  * Probe message written by the *publisher* on a subscriber-initiated
  * Probe bidi (ControlType=4). `bitrate` is encoded as a u62 varint in
- * a size-prefixed body. Decode-only for now — the listener path
- * exposes the most recent reading, and we don't initiate probes from
- * the speaker side.
+ * a size-prefixed body.
+ *
+ * Wire layout (size-prefixed):
+ *   bitrate  u62 varint
+ *   rtt      u62 varint  (Lite-04 ONLY; sentinel `0` = unknown.
+ *                         Outgoing `Some(0)` is clamped to `Some(1)`
+ *                         to avoid colliding with the sentinel.)
  *
  * Source: `rs/moq-lite/src/lite/probe.rs`.
  */
 data class MoqLiteProbe(
     val bitrate: Long,
-)
+    /**
+     * Round-trip time hint, in the unit the application and peer
+     * have agreed to (kixelated's Rust type is plain `Option<u64>`
+     * — no unit attached at the type level). Lite-04 only; absent
+     * on the wire under Lite-03. `null` = unknown.
+     */
+    val rtt: Long? = null,
+) {
+    init {
+        require(bitrate >= 0) { "bitrate must be non-negative: $bitrate" }
+        if (rtt != null) require(rtt >= 0) { "rtt must be non-negative when present: $rtt" }
+    }
+}

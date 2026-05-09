@@ -43,6 +43,21 @@ interface WebTransportSession {
     val isOpen: Boolean
 
     /**
+     * The sub-protocol the server selected via the
+     * `wt-protocol` response header (RFC 8941 SF-string;
+     * draft-ietf-webtrans-http3 §3.3). `null` if the server didn't
+     * echo a sub-protocol — typically because the client offered
+     * none, or because the server is older than draft-13 and
+     * supports only a single protocol implicitly.
+     *
+     * Used by moq-lite negotiation: a client that advertised both
+     * `moq-lite-04` and `moq-lite-03` reads this to select the
+     * matching [com.vitorpamplona.nestsclient.moq.lite.MoqLiteVersion]
+     * for its [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession].
+     */
+    val negotiatedSubProtocol: String?
+
+    /**
      * Open a new bidirectional WebTransport stream. The returned [WebTransportBidiStream]
      * is writable + readable and closes when either peer half-closes.
      */

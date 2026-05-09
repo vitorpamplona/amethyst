@@ -77,6 +77,23 @@ class MoqLiteSession internal constructor(
      */
     internal val transport: WebTransportSession,
     private val scope: CoroutineScope,
+    /**
+     * Wire-format version this session speaks. Selected at
+     * WebTransport CONNECT time via the
+     * `wt-available-protocols` / `wt-protocol` exchange (see
+     * [com.vitorpamplona.nestsclient.transport.WebTransportSession.negotiatedSubProtocol]).
+     * Defaults to [MoqLiteVersion.LITE_03] for backward compat with
+     * call sites that don't pass an explicit version (most tests +
+     * the legacy single-version factory). Production
+     * `connectNestsListener` / `connectNestsSpeaker` pass the
+     * resolved version from the negotiated ALPN.
+     *
+     * The version selects between the version-conditional codec
+     * branches in [MoqLiteCodec] for `Announce.hops`,
+     * `AnnouncePlease.excludeHop`, and `Probe.rtt`. All other
+     * messages are wire-identical between the two versions.
+     */
+    val version: MoqLiteVersion = MoqLiteVersion.LITE_03,
 ) {
     private val state = Mutex()
     private val subscriptionsBySubscribeId: MutableMap<Long, ListenerSubscription> = HashMap()
@@ -132,7 +149,7 @@ class MoqLiteSession internal constructor(
         ensureOpen()
         val bidi = transport.openBidiStream()
         bidi.write(Varint.encode(MoqLiteControlType.Announce.code))
-        bidi.write(MoqLiteCodec.encodeAnnouncePlease(MoqLiteAnnouncePlease(prefix)))
+        bidi.write(MoqLiteCodec.encodeAnnouncePlease(MoqLiteAnnouncePlease(prefix), version))
 
         // replay=64, DROP_OLDEST: announces emitted before the
         // caller's `collect` attaches MUST NOT be dropped — that's
@@ -164,7 +181,7 @@ class MoqLiteSession internal constructor(
                         buffer.push(chunk)
                         while (true) {
                             val payload = buffer.readSizePrefixed() ?: break
-                            val decoded = MoqLiteCodec.decodeAnnounce(payload)
+                            val decoded = MoqLiteCodec.decodeAnnounce(payload, version)
                             emitCount += 1
                             Log.d("NestRx") {
                                 "session.announce(prefix='$prefix') bidi pump emit #$emitCount " +
@@ -733,7 +750,7 @@ class MoqLiteSession internal constructor(
                         buffer.push(chunk)
                         while (true) {
                             val payload = buffer.readSizePrefixed() ?: break
-                            updates.emit(MoqLiteCodec.decodeProbe(payload))
+                            updates.emit(MoqLiteCodec.decodeProbe(payload, version))
                         }
                     }
                 } catch (ce: CancellationException) {
@@ -949,7 +966,7 @@ class MoqLiteSession internal constructor(
                     when (controlType) {
                         MoqLiteControlType.Announce -> {
                             val pleasePayload = buffer.readSizePrefixed() ?: return@collect
-                            val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload)
+                            val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload, version)
                             // Per moq-lite Lite-03 (`rs/moq-lite/src/lite/announce.rs`),
                             // a publisher MUST only emit Active for broadcasts whose
                             // path starts with the requested prefix. If our suffix
@@ -976,8 +993,9 @@ class MoqLiteSession internal constructor(
                                     MoqLiteAnnounce(
                                         status = MoqLiteAnnounceStatus.Active,
                                         suffix = emittedSuffix,
-                                        hops = 0L,
+                                        hops = emptyList(),
                                     ),
+                                    version,
                                 ),
                             )
                             announcePublisher.registerAnnounceBidi(bidi, emittedSuffix)
@@ -1134,7 +1152,7 @@ class MoqLiteSession internal constructor(
                             // which left the subscriber's ABR
                             // estimator with no signal.
                             runCatching {
-                                bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = NESTS_AUDIO_BITRATE_HINT_BPS)))
+                                bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = NESTS_AUDIO_BITRATE_HINT_BPS), version))
                                 bidi.finish()
                             }
                             dispatched = true
@@ -1511,8 +1529,9 @@ class MoqLiteSession internal constructor(
                             MoqLiteAnnounce(
                                 status = MoqLiteAnnounceStatus.Ended,
                                 suffix = entry.emittedSuffix,
-                                hops = 0L,
+                                hops = emptyList(),
                             ),
+                            version,
                         ),
                     )
                 }
@@ -1607,6 +1626,7 @@ class MoqLiteSession internal constructor(
         fun client(
             transport: WebTransportSession,
             pumpScope: CoroutineScope,
-        ): MoqLiteSession = MoqLiteSession(transport, pumpScope)
+            version: MoqLiteVersion = MoqLiteVersion.LITE_03,
+        ): MoqLiteSession = MoqLiteSession(transport, pumpScope, version)
     }
 }

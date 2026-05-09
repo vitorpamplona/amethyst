@@ -49,37 +49,86 @@ import com.vitorpamplona.nestsclient.moq.MoqWriter
 object MoqLiteCodec {
     // ---------------- AnnouncePlease ----------------
 
-    fun encodeAnnouncePlease(msg: MoqLiteAnnouncePlease): ByteArray {
+    fun encodeAnnouncePlease(
+        msg: MoqLiteAnnouncePlease,
+        version: MoqLiteVersion = MoqLiteVersion.LITE_03,
+    ): ByteArray {
         val body = MoqWriter()
         body.writeLengthPrefixedString(MoqLitePath.normalize(msg.prefix))
+        // Lite-04 appends `excludeHop` as a single varint after
+        // prefix. Sentinel `0` = no exclusion. Lite-03 omits the
+        // field entirely; ignore [msg.excludeHop] in that case.
+        if (version == MoqLiteVersion.LITE_04) {
+            body.writeVarint(msg.excludeHop)
+        }
         return wrapSizePrefixed(body)
     }
 
-    fun decodeAnnouncePlease(payload: ByteArray): MoqLiteAnnouncePlease {
+    fun decodeAnnouncePlease(
+        payload: ByteArray,
+        version: MoqLiteVersion = MoqLiteVersion.LITE_03,
+    ): MoqLiteAnnouncePlease {
         val r = MoqReader(payload)
         val prefix = MoqLitePath.normalize(r.readLengthPrefixedString())
+        val excludeHop =
+            if (version == MoqLiteVersion.LITE_04) r.readVarint() else 0L
         ensureFullyConsumed(r, "AnnouncePlease")
-        return MoqLiteAnnouncePlease(prefix = prefix)
+        return MoqLiteAnnouncePlease(prefix = prefix, excludeHop = excludeHop)
     }
 
     // ---------------- Announce ----------------
 
-    fun encodeAnnounce(msg: MoqLiteAnnounce): ByteArray {
+    fun encodeAnnounce(
+        msg: MoqLiteAnnounce,
+        version: MoqLiteVersion = MoqLiteVersion.LITE_03,
+    ): ByteArray {
         val body = MoqWriter()
         body.writeByte(msg.status.code)
         body.writeLengthPrefixedString(MoqLitePath.normalize(msg.suffix))
-        body.writeVarint(msg.hops)
+        // Lite-03: just the count. Lite-04: count + each origin id.
+        // Mirrors kixelated's `encode_hops` switch.
+        body.writeVarint(msg.hops.size.toLong())
+        if (version == MoqLiteVersion.LITE_04) {
+            for (originId in msg.hops) {
+                body.writeVarint(originId)
+            }
+        }
         return wrapSizePrefixed(body)
     }
 
-    fun decodeAnnounce(payload: ByteArray): MoqLiteAnnounce {
+    fun decodeAnnounce(
+        payload: ByteArray,
+        version: MoqLiteVersion = MoqLiteVersion.LITE_03,
+    ): MoqLiteAnnounce {
         val r = MoqReader(payload)
         val statusByte = r.readByte()
         val status =
             MoqLiteAnnounceStatus.fromCode(statusByte)
                 ?: throw MoqCodecException("unknown moq-lite Announce status byte: $statusByte")
         val suffix = MoqLitePath.normalize(r.readLengthPrefixedString())
-        val hops = r.readVarint()
+        val count = r.readVarint()
+        if (count < 0L || count > MoqLiteAnnounce.MAX_HOPS) {
+            throw MoqCodecException("Announce hops count out of range [0, ${MoqLiteAnnounce.MAX_HOPS}]: $count")
+        }
+        val hops: List<Long> =
+            when (version) {
+                MoqLiteVersion.LITE_03 -> {
+                    // Wire only carries a count; fill with UNKNOWN
+                    // placeholders (origin id 0). Mirrors kixelated's
+                    // `Origin::UNKNOWN` fill in announce.rs.
+                    List(count.toInt()) { 0L }
+                }
+
+                MoqLiteVersion.LITE_04 -> {
+                    val list = ArrayList<Long>(count.toInt())
+                    repeat(count.toInt()) {
+                        val id = r.readVarint()
+                        require(id >= 0) { "decoded origin id must be non-negative" }
+                        list.add(id)
+                    }
+                    list
+                }
+            }
         ensureFullyConsumed(r, "Announce")
         return MoqLiteAnnounce(status = status, suffix = suffix, hops = hops)
     }
@@ -244,24 +293,52 @@ object MoqLiteCodec {
 
     // ---------------- Probe ----------------
 
-    fun decodeProbe(payload: ByteArray): MoqLiteProbe {
+    fun decodeProbe(
+        payload: ByteArray,
+        version: MoqLiteVersion = MoqLiteVersion.LITE_03,
+    ): MoqLiteProbe {
         val r = MoqReader(payload)
         val bitrate = r.readVarint()
+        // Lite-04 appends `rtt` as a single varint after bitrate.
+        // Sentinel `0` = unknown (decoded as null).
+        val rtt: Long? =
+            if (version == MoqLiteVersion.LITE_04) {
+                val raw = r.readVarint()
+                if (raw == 0L) null else raw
+            } else {
+                null
+            }
         ensureFullyConsumed(r, "Probe")
-        return MoqLiteProbe(bitrate = bitrate)
+        return MoqLiteProbe(bitrate = bitrate, rtt = rtt)
     }
 
     /**
-     * Encode a single Lite-03 Probe message body
-     * (`lite/probe.rs` — `bitrate: u62` only; `rtt` is Lite-04+).
-     * The publisher writes these size-prefixed onto a Probe bidi the
+     * Encode a Probe message body. Lite-03 writes only `bitrate`;
+     * Lite-04 appends `rtt` (sentinel `0` = unknown; outgoing
+     * `Some(0)` is clamped to `Some(1)` to avoid colliding with the
+     * sentinel — matches kixelated's `encode_msg` clamp). The
+     * publisher writes these size-prefixed onto a Probe bidi the
      * subscriber opened, advertising the publisher's expected
-     * bandwidth. Wrapping (size prefix) is the caller's responsibility,
-     * matching [encodeAnnouncePlease] / [encodeAnnounce].
+     * bandwidth. Wrapping (size prefix) is the caller's
+     * responsibility, matching [encodeAnnouncePlease] / [encodeAnnounce].
      */
-    fun encodeProbe(probe: MoqLiteProbe): ByteArray {
+    fun encodeProbe(
+        probe: MoqLiteProbe,
+        version: MoqLiteVersion = MoqLiteVersion.LITE_03,
+    ): ByteArray {
         val body = MoqWriter()
         body.writeVarint(probe.bitrate)
+        if (version == MoqLiteVersion.LITE_04) {
+            // null → 0 (unknown sentinel). Some(0) → 1 (clamp).
+            // Otherwise pass through.
+            val wire =
+                when (val r = probe.rtt) {
+                    null -> 0L
+                    0L -> 1L
+                    else -> r
+                }
+            body.writeVarint(wire)
+        }
         return wrapSizePrefixed(body)
     }
 

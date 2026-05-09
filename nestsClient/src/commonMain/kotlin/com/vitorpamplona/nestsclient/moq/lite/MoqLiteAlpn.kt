@@ -47,12 +47,65 @@ object MoqLiteAlpn {
     const val LITE_03: String = "moq-lite-03"
 
     /**
-     * `moq-lite-04` ALPN string. Wire-incompatible with [MoqLiteCodec]
-     * today — see the object kdoc for the codec diff. Defined here so
-     * a future patch that lands version-aware Announce / Probe codecs
-     * can drop it into the [QuicWebTransportFactory] sub-protocol list
-     * without re-deriving the constant.
+     * `moq-lite-04` ALPN string. Wire-compatible with [MoqLiteCodec]
+     * when the codec is invoked with [MoqLiteVersion.LITE_04] — see
+     * [MoqLiteVersion] for the version-conditional codec branches.
+     * Lite-04 reshapes `Announce.hops` (varint count → `OriginList`),
+     * adds `AnnounceInterest.exclude_hop`, and adds `Probe.rtt`.
+     * Subscribe / SubscribeOk / Drop / Group / SubscribeResponse are
+     * unchanged from Lite-03. The factory advertises Lite-04 ahead
+     * of Lite-03 to match kixelated's preference order.
      */
     const val LITE_04: String = "moq-lite-04"
     const val LEGACY: String = "moql"
+}
+
+/**
+ * Version discriminator for the [MoqLiteCodec] / [MoqLiteSession]
+ * version-aware code paths. Selected at WebTransport CONNECT time
+ * via the `wt-available-protocols` / `wt-protocol` ALPN exchange
+ * (see `QuicWebTransportFactory` and
+ * [com.vitorpamplona.nestsclient.transport.WebTransportSession.negotiatedSubProtocol]).
+ *
+ * The wire delta between [LITE_03] and [LITE_04] is exactly three
+ * fields:
+ *   - `Announce.hops`: Lite-03 = single varint count; Lite-04 =
+ *     `varint(count) + count × varint(originId)` (the `OriginList`).
+ *   - `AnnounceInterest.exclude_hop` (= our `AnnouncePlease.excludeHop`):
+ *     Lite-03 = absent; Lite-04 = a single varint after `prefix`
+ *     (sentinel `0` = no exclusion).
+ *   - `Probe.rtt`: Lite-03 = absent; Lite-04 = a single varint after
+ *     `bitrate` (sentinel `0` = unknown; outgoing `Some(0)` is
+ *     clamped to `Some(1)` to avoid colliding with the sentinel).
+ *
+ * Everything else (`Subscribe`, `SubscribeOk`, `SubscribeDrop`,
+ * `SubscribeResponse`, `GroupHeader`, `ControlType`, `DataType`,
+ * `AnnounceStatus`) is byte-for-byte identical between the two
+ * versions.
+ *
+ * Source: `kixelated/moq` `rs/moq-lite/src/lite/{announce,probe,
+ * subscribe}.rs` Lite-04 branches (verified against `main` @
+ * 2026-05-09).
+ */
+enum class MoqLiteVersion(
+    val alpn: String,
+) {
+    LITE_03(MoqLiteAlpn.LITE_03),
+    LITE_04(MoqLiteAlpn.LITE_04),
+    ;
+
+    companion object {
+        /**
+         * Resolve a negotiated `wt-protocol` value back to the
+         * version enum, or `null` if the string isn't a recognised
+         * moq-lite version. Caller decides whether to fall back to
+         * a default ([LITE_03]) or fail loudly.
+         */
+        fun fromAlpn(alpn: String?): MoqLiteVersion? =
+            when (alpn) {
+                MoqLiteAlpn.LITE_03 -> LITE_03
+                MoqLiteAlpn.LITE_04 -> LITE_04
+                else -> null
+            }
+    }
 }

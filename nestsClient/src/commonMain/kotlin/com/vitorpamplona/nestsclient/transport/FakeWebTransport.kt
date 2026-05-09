@@ -47,6 +47,15 @@ class FakeWebTransport private constructor(
     private val inboundBidiStreams: Channel<FakeBidiStream>,
     private val inboundUniStreams: Channel<WebTransportReadStream>,
     private val outboundUniStreams: Channel<WebTransportReadStream>,
+    /**
+     * Test-controllable negotiated sub-protocol. Defaults to `null`
+     * — production fakes that don't care about ALPN negotiation
+     * keep the same behavior they had before this field existed.
+     * Tests that exercise the version-aware [MoqLiteSession] can
+     * pass a non-null value via [pair] to simulate a relay that
+     * picked Lite-04 (or any other ALPN string).
+     */
+    override val negotiatedSubProtocol: String? = null,
 ) : WebTransportSession {
     private val stateLock = Mutex()
     private var open = true
@@ -170,8 +179,14 @@ class FakeWebTransport private constructor(
          * Create two linked fakes that act as "client" and "server" endpoints of
          * the same virtual WebTransport session. Datagrams and streams opened on
          * one side appear on the other.
+         *
+         * @param negotiatedSubProtocol surfaced by both sides via
+         *   [WebTransportSession.negotiatedSubProtocol]. Defaults to
+         *   `null`. Tests that drive a version-aware
+         *   [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession]
+         *   pass e.g. `"moq-lite-04"` here.
          */
-        fun pair(): Pair<FakeWebTransport, FakeWebTransport> {
+        fun pair(negotiatedSubProtocol: String? = null): Pair<FakeWebTransport, FakeWebTransport> {
             val aToBDatagrams = Channel<ByteArray>(Channel.BUFFERED)
             val bToADatagrams = Channel<ByteArray>(Channel.BUFFERED)
             val aToBBidi = Channel<FakeBidiStream>(Channel.BUFFERED)
@@ -187,6 +202,7 @@ class FakeWebTransport private constructor(
                     inboundBidiStreams = bToABidi,
                     inboundUniStreams = bToAUni,
                     outboundUniStreams = aToBUni,
+                    negotiatedSubProtocol = negotiatedSubProtocol,
                 )
             val b =
                 FakeWebTransport(
@@ -196,6 +212,7 @@ class FakeWebTransport private constructor(
                     inboundBidiStreams = aToBBidi,
                     inboundUniStreams = aToBUni,
                     outboundUniStreams = bToAUni,
+                    negotiatedSubProtocol = negotiatedSubProtocol,
                 )
             return a to b
         }

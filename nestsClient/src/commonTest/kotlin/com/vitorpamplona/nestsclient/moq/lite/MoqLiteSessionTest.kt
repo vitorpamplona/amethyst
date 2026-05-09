@@ -169,7 +169,7 @@ class MoqLiteSessionTest {
                             MoqLiteAnnounce(
                                 MoqLiteAnnounceStatus.Active,
                                 "speakerOne",
-                                hops = 1L,
+                                hops = listOf(0L),
                             ),
                         ),
                     )
@@ -178,7 +178,7 @@ class MoqLiteSessionTest {
                             MoqLiteAnnounce(
                                 MoqLiteAnnounceStatus.Active,
                                 "speakerTwo",
-                                hops = 1L,
+                                hops = listOf(0L),
                             ),
                         ),
                     )
@@ -339,6 +339,59 @@ class MoqLiteSessionTest {
             assertContentEquals("opus-1".encodeToByteArray(), firstFrame)
 
             publisher.close()
+            session.close()
+        }
+
+    @Test
+    fun lite04_announce_round_trips_full_origin_list_through_session() =
+        runBlocking {
+            // Lite-03 audit L1: a session running [MoqLiteVersion.LITE_04]
+            // routes its codec calls through the Lite-04 branches —
+            // verified end-to-end by encoding an Announce on the
+            // server side with two origin IDs and confirming the
+            // client-side announce-watch flow surfaces them
+            // unchanged. Pre-fix the codec was Lite-03-only and
+            // would have read the count and discarded the IDs.
+            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val session = MoqLiteSession.client(clientSide, pumpScope, MoqLiteVersion.LITE_04)
+            assertEquals(MoqLiteVersion.LITE_04, session.version)
+
+            val peer =
+                async {
+                    val bidi = serverSide.peerOpenedBidiStreams().first()
+                    // Drain control byte + AnnouncePlease. Lite-04
+                    // shape: prefix string then excludeHop varint.
+                    val chunks = bidi.incoming().take(2).toList()
+                    assertEquals(MoqLiteControlType.Announce.code, MoqLiteFrameBuffer().apply { push(chunks[0]) }.readVarint())
+                    val pleasePayload =
+                        MoqLiteFrameBuffer().apply { push(chunks[1]) }.readSizePrefixed()
+                            ?: error("AnnouncePlease body missing")
+                    val please = MoqLiteCodec.decodeAnnouncePlease(pleasePayload, MoqLiteVersion.LITE_04)
+                    assertEquals("rooms/A", please.prefix)
+                    assertEquals(0L, please.excludeHop, "default excludeHop is 0 (no exclusion)")
+
+                    // Push an Announce with full origin list (Lite-04
+                    // shape).
+                    bidi.write(
+                        MoqLiteCodec.encodeAnnounce(
+                            MoqLiteAnnounce(
+                                status = MoqLiteAnnounceStatus.Active,
+                                suffix = "speakerA",
+                                hops = listOf(2L, 7L),
+                            ),
+                            MoqLiteVersion.LITE_04,
+                        ),
+                    )
+                }
+
+            val handle = session.announce("rooms/A")
+            val announce = withTimeout(2_000) { handle.updates.first() }
+            assertEquals(MoqLiteAnnounceStatus.Active, announce.status)
+            assertEquals("speakerA", announce.suffix)
+            assertEquals(listOf(2L, 7L), announce.hops, "Lite-04 session preserves origin id list")
+
+            peer.await()
+            handle.close()
             session.close()
         }
 
