@@ -223,10 +223,21 @@ object LongHeaderPacket {
             )
 
         val aadEnd = localPnOffset + pnLen
-        val aad = packet.copyOfRange(0, aadEnd)
-        val ciphertext = packet.copyOfRange(aadEnd, packet.size)
         val nonce = aeadNonce(iv, fullPn)
-        val plaintext = aead.open(key, nonce, aad, ciphertext) ?: return null
+        // Range-based open avoids two ByteArray slice allocations per
+        // inbound packet — see [ShortHeaderPacket.parseAndDecrypt] for
+        // rationale.
+        val plaintext =
+            aead.openRange(
+                key = key,
+                nonce = nonce,
+                aad = packet,
+                aadOffset = 0,
+                aadLength = aadEnd,
+                ciphertext = packet,
+                ciphertextOffset = aadEnd,
+                ciphertextLength = packet.size - aadEnd,
+            ) ?: return null
 
         return ParseResult(
             packet =

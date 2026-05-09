@@ -91,13 +91,13 @@ class RetransmitIntegrationTest {
                 client.application.largestAckedPn = futurePn
                 client.application.largestAckedSentTimeMs = 1L
                 // 4. Run loss detection — msuPn is < futurePn - 3 ⇒ lost.
-                val lost =
+                val result =
                     client.lossDetection.detectAndRemoveLost(
                         sentPackets = client.application.sentPackets,
                         largestAckedPn = futurePn,
                         nowMs = 2L,
                     )
-                val lostMsuPacket = lost.firstOrNull { it.packetNumber == msuPn }
+                val lostMsuPacket = result.lost.firstOrNull { it.packetNumber == msuPn }
                 assertNotNull(lostMsuPacket, "msuPn=$msuPn must be declared lost (largestAckedPn=$futurePn, threshold=3)")
                 // 5. Dispatch lost tokens — pendingMaxStreamsUni gets set.
                 client.onTokensLost(lostMsuPacket.tokens)

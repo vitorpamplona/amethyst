@@ -77,6 +77,31 @@ class QuicStream(
      * rather than silently dropping bytes. Pre-audit-4 the failed `trySend`
      * was discarded, leaving a hole in the stream that the application could
      * never know about.
+     *
+     * **Single-collector contract.** [consumeAsFlow] cancels the underlying
+     * [Channel] when its collector terminates (either by exception or
+     * explicit cancellation). After that point any subsequent
+     * `trySend` from the parser fails, sets [overflowed] = true, and
+     * the parser tears the whole connection down with
+     * `INTERNAL_ERROR: stream … consumer overflowed`. So:
+     *  - Application code MUST collect [incoming] **at most once** per
+     *    stream and MUST hold the collect open until the stream
+     *    terminates (FIN, peer RESET_STREAM, or local
+     *    [stopSending] / [resetStream] decision).
+     *  - Cancelling the collector early — e.g. wrapping in
+     *    `withTimeout(...)` — is equivalent to telling the connection
+     *    to drop. If the application wants to stop receiving without
+     *    killing the connection, call [stopSending] FIRST, then let
+     *    the parser's RESET_STREAM-style teardown drain the channel
+     *    cleanly.
+     *
+     * This is a fragile coupling we accept for now because (a) every
+     * production caller already follows the single-collector pattern,
+     * and (b) widening the contract would require swapping
+     * `consumeAsFlow` for a `MutableSharedFlow` with replay/buffer
+     * semantics, which has its own back-pressure pitfalls. The
+     * comment is here so a future refactor doesn't accidentally
+     * loosen the contract.
      */
     private val incomingChannel = Channel<ByteArray>(capacity = 64)
     val incoming: Flow<ByteArray> get() = incomingChannel.consumeAsFlow()

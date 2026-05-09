@@ -113,10 +113,10 @@ class QuicLossDetectionTest {
         // (Pn 10 is the largest-acked itself — not in flight; it was just removed by drain.
         //  We model "after-drain" by removing 10 from sent before calling detectAndRemoveLost.)
         sent.remove(10L)
-        val lost = ld.detectAndRemoveLost(sent, largestAckedPn = 10L, nowMs = 1L)
+        val result = ld.detectAndRemoveLost(sent, largestAckedPn = 10L, nowMs = 1L)
         // sentAt=0, nowMs=1, lossDelayMs=374 → time threshold cutoff at -373: nothing lost by time threshold
         // (sentAt 0 is NOT <= -373). But packet threshold removes pns 0..6.
-        assertEquals(setOf(0L, 1L, 2L, 3L, 4L, 5L, 6L), lost.map { it.packetNumber }.toSet())
+        assertEquals(setOf(0L, 1L, 2L, 3L, 4L, 5L, 6L), result.lost.map { it.packetNumber }.toSet())
         assertEquals(setOf(7L, 8L, 9L), sent.keys, "pns 7..9 remain in flight; pn 10 was drained earlier")
     }
 
@@ -132,8 +132,8 @@ class QuicLossDetectionTest {
         sent[1L] = sentPacket(1L, sentAt = 195L) // recent: 195 + 11 = 206, now=200 ⇒ not lost
         // pn 2 is the largest-acked, drained earlier.
 
-        val lost = ld.detectAndRemoveLost(sent, largestAckedPn = 2L, nowMs = 200L)
-        assertEquals(listOf(0L), lost.map { it.packetNumber })
+        val result = ld.detectAndRemoveLost(sent, largestAckedPn = 2L, nowMs = 200L)
+        assertEquals(listOf(0L), result.lost.map { it.packetNumber })
         assertEquals(setOf(1L), sent.keys)
     }
 
@@ -145,8 +145,8 @@ class QuicLossDetectionTest {
         val ld = QuicLossDetection()
         val sent = mutableMapOf<Long, SentPacket>()
         sent[5L] = sentPacket(5L, sentAt = 0L)
-        val lost = ld.detectAndRemoveLost(sent, largestAckedPn = 5L, nowMs = 1L)
-        assertTrue(lost.isEmpty())
+        val result = ld.detectAndRemoveLost(sent, largestAckedPn = 5L, nowMs = 1L)
+        assertTrue(result.lost.isEmpty())
         assertNotNull(sent[5L])
     }
 
@@ -154,8 +154,9 @@ class QuicLossDetectionTest {
     fun emptyMap_returnsEmpty() {
         val ld = QuicLossDetection()
         val sent = mutableMapOf<Long, SentPacket>()
-        val lost = ld.detectAndRemoveLost(sent, largestAckedPn = 100L, nowMs = 1L)
-        assertTrue(lost.isEmpty())
+        val result = ld.detectAndRemoveLost(sent, largestAckedPn = 100L, nowMs = 1L)
+        assertTrue(result.lost.isEmpty())
+        assertEquals(null, result.nextLossTimeMs)
     }
 
     @Test
@@ -175,11 +176,16 @@ class QuicLossDetectionTest {
                     ),
             )
         // PN 0 is below largestAckedPn=10 - threshold(3) = 7, so lost by packet threshold.
-        val lost = ld.detectAndRemoveLost(sent, largestAckedPn = 10L, nowMs = 1L)
-        assertEquals(1, lost.size)
-        assertEquals(2, lost.single().tokens.size)
-        assertEquals(RecoveryToken.MaxStreamsUni(150L), lost.single().tokens[0])
-        assertEquals(RecoveryToken.MaxData(5_000L), lost.single().tokens[1])
+        val result = ld.detectAndRemoveLost(sent, largestAckedPn = 10L, nowMs = 1L)
+        assertEquals(1, result.lost.size)
+        assertEquals(
+            2,
+            result.lost
+                .single()
+                .tokens.size,
+        )
+        assertEquals(RecoveryToken.MaxStreamsUni(150L), result.lost.single().tokens[0])
+        assertEquals(RecoveryToken.MaxData(5_000L), result.lost.single().tokens[1])
         assertNull(sent[0L])
     }
 
@@ -192,8 +198,8 @@ class QuicLossDetectionTest {
         ld.onRttSample(largestAckedSentTimeMs = 0L, ackDelayMs = 0L, nowMs = 10L)
         val sent = mutableMapOf<Long, SentPacket>()
         sent[0L] = sentPacket(0L, sentAt = 0L) // old AND below threshold
-        val lost = ld.detectAndRemoveLost(sent, largestAckedPn = 10L, nowMs = 200L)
-        assertEquals(1, lost.size)
+        val result = ld.detectAndRemoveLost(sent, largestAckedPn = 10L, nowMs = 200L)
+        assertEquals(1, result.lost.size)
         assertTrue(sent.isEmpty())
     }
 }

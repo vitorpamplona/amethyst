@@ -54,6 +54,13 @@ class QpackEncoder {
         name: String,
         value: String,
     ) {
+        // RFC 9204 §4.5.4 / §7.1: sensitive headers (credentials and
+        // session cookies) MUST be marked never-indexed (N=1) so an
+        // intermediate cache cannot retain them. Indexed-field-line
+        // form (no literal value) doesn't need this since no value
+        // appears literally on the wire.
+        val sensitive = isSensitive(name)
+
         val pairIdx = QpackStaticTable.pairToIndex[name to value]
         if (pairIdx != null) {
             // Indexed field line, static. Pattern: 1|T(=1)|index(6-bit prefix)
@@ -62,20 +69,38 @@ class QpackEncoder {
         }
         val nameIdx = QpackStaticTable.nameToIndex[name]
         if (nameIdx != null) {
-            // Literal Field Line With Name Reference, static. Pattern: 0|1|N(=0)|T(=1)|index(4-bit prefix)
-            QpackInteger.encode(nameIdx.toLong(), 4, 0x50, w)
+            // Literal Field Line With Name Reference, static. Pattern:
+            //   0|1|N|T(=1)|index(4-bit prefix)
+            // N=1 for sensitive headers per RFC 9204 §4.5.4.
+            val firstByte = if (sensitive) 0x70 else 0x50
+            QpackInteger.encode(nameIdx.toLong(), 4, firstByte, w)
             // Then value: H=0|len(7-bit prefix)
             val valueBytes = value.encodeToByteArray()
             QpackInteger.encode(valueBytes.size.toLong(), 7, 0x00, w)
             w.writeBytes(valueBytes)
             return
         }
-        // Literal field line with literal name. Pattern: 0|0|1|N(=0)|H(=0)|len(3-bit prefix)
+        // Literal field line with literal name. Pattern:
+        //   0|0|1|N|H(=0)|len(3-bit prefix)
+        // N=1 for sensitive headers.
+        val firstByte = if (sensitive) 0x30 else 0x20
         val nameBytes = name.encodeToByteArray()
-        QpackInteger.encode(nameBytes.size.toLong(), 3, 0x20, w)
+        QpackInteger.encode(nameBytes.size.toLong(), 3, firstByte, w)
         w.writeBytes(nameBytes)
         val valueBytes = value.encodeToByteArray()
         QpackInteger.encode(valueBytes.size.toLong(), 7, 0x00, w)
         w.writeBytes(valueBytes)
     }
+
+    /**
+     * Headers whose values are credentials or session-bound and MUST
+     * NOT be cached by an intermediary per RFC 9204 §4.5.4. Names are
+     * compared after the encoder's lower-case normalization, so we
+     * test against lower-case forms here.
+     */
+    private fun isSensitive(name: String): Boolean =
+        when (name) {
+            "authorization", "proxy-authorization", "cookie", "set-cookie" -> true
+            else -> false
+        }
 }

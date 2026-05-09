@@ -52,6 +52,64 @@ abstract class Aead {
         aad: ByteArray,
         ciphertext: ByteArray,
     ): ByteArray?
+
+    /**
+     * Range-based [seal] — same semantics as [seal] but reads `aad` and
+     * `plaintext` from sub-ranges of larger backing arrays. Default impl
+     * slices and delegates; concrete impls (notably the JCA-backed
+     * [com.vitorpamplona.quic.crypto.JcaAesGcmAead]) override to skip
+     * the slice allocations entirely by passing the offsets through to
+     * `Cipher.updateAAD` / `Cipher.doFinal`.
+     *
+     * Saves ~2 ByteArray allocations per outbound packet on the hot
+     * path (the header `aad` and the payload `plaintext` no longer
+     * need to be carved out of the in-progress packet buffer).
+     */
+    open fun sealRange(
+        key: ByteArray,
+        nonce: ByteArray,
+        aad: ByteArray,
+        aadOffset: Int,
+        aadLength: Int,
+        plaintext: ByteArray,
+        plaintextOffset: Int,
+        plaintextLength: Int,
+    ): ByteArray {
+        val a =
+            if (aadOffset == 0 && aadLength == aad.size) aad else aad.copyOfRange(aadOffset, aadOffset + aadLength)
+        val p =
+            if (plaintextOffset == 0 && plaintextLength == plaintext.size) {
+                plaintext
+            } else {
+                plaintext.copyOfRange(plaintextOffset, plaintextOffset + plaintextLength)
+            }
+        return seal(key, nonce, a, p)
+    }
+
+    /**
+     * Range-based [open] — same semantics as [open] but reads `aad` and
+     * `ciphertext` from sub-ranges. Default impl slices and delegates.
+     */
+    open fun openRange(
+        key: ByteArray,
+        nonce: ByteArray,
+        aad: ByteArray,
+        aadOffset: Int,
+        aadLength: Int,
+        ciphertext: ByteArray,
+        ciphertextOffset: Int,
+        ciphertextLength: Int,
+    ): ByteArray? {
+        val a =
+            if (aadOffset == 0 && aadLength == aad.size) aad else aad.copyOfRange(aadOffset, aadOffset + aadLength)
+        val c =
+            if (ciphertextOffset == 0 && ciphertextLength == ciphertext.size) {
+                ciphertext
+            } else {
+                ciphertext.copyOfRange(ciphertextOffset, ciphertextOffset + ciphertextLength)
+            }
+        return open(key, nonce, a, c)
+    }
 }
 
 /** AES-128-GCM AEAD via Quartz's AESGCM (which uses JCA underneath on JVM/Android). */

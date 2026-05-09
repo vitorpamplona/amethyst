@@ -23,6 +23,7 @@ package com.vitorpamplona.quic.webtransport
 import com.vitorpamplona.quic.QuicWriter
 import com.vitorpamplona.quic.http3.Http3FrameType
 import com.vitorpamplona.quic.http3.Http3Settings
+import com.vitorpamplona.quic.http3.Http3SettingsId
 import com.vitorpamplona.quic.http3.Http3StreamType
 import com.vitorpamplona.quic.stream.QuicStream
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +69,19 @@ class WtPeerStreamDemuxTest {
             //   2. SETTINGS frame with a single QPACK_MAX_TABLE_CAPACITY=0.
             //   3. GOAWAY frame with stream id 12.
             val typePrefix = QuicWriter().also { it.writeVarint(Http3StreamType.CONTROL) }.toByteArray()
-            val settingsFrame = Http3Settings(emptyMap()).encodeFrame()
+            // Realistic server SETTINGS — both ENABLE_CONNECT_PROTOCOL=1
+            // and ENABLE_WEBTRANSPORT=1 are required for the demux to
+            // accept the SETTINGS frame (draft-ietf-webtrans-http3 §3 +
+            // RFC 8441). Pre-validation tests used emptyMap() as a
+            // stand-in; with the validation in place we mirror what a
+            // real WT-capable server sends.
+            val settingsFrame =
+                Http3Settings(
+                    mapOf(
+                        Http3SettingsId.ENABLE_CONNECT_PROTOCOL to 1L,
+                        Http3SettingsId.ENABLE_WEBTRANSPORT to 1L,
+                    ),
+                ).encodeFrame()
             val goawayBody = QuicWriter().also { it.writeVarint(12L) }.toByteArray()
             val goawayFrame =
                 QuicWriter()
@@ -113,7 +126,19 @@ class WtPeerStreamDemuxTest {
             demux.process(stream)
 
             val typePrefix = QuicWriter().also { it.writeVarint(Http3StreamType.CONTROL) }.toByteArray()
-            val settingsFrame = Http3Settings(emptyMap()).encodeFrame()
+            // Realistic server SETTINGS — both ENABLE_CONNECT_PROTOCOL=1
+            // and ENABLE_WEBTRANSPORT=1 are required for the demux to
+            // accept the SETTINGS frame (draft-ietf-webtrans-http3 §3 +
+            // RFC 8441). Pre-validation tests used emptyMap() as a
+            // stand-in; with the validation in place we mirror what a
+            // real WT-capable server sends.
+            val settingsFrame =
+                Http3Settings(
+                    mapOf(
+                        Http3SettingsId.ENABLE_CONNECT_PROTOCOL to 1L,
+                        Http3SettingsId.ENABLE_WEBTRANSPORT to 1L,
+                    ),
+                ).encodeFrame()
             // First GOAWAY = 8.
             val ga1Body = QuicWriter().also { it.writeVarint(8L) }.toByteArray()
             val ga1 =
@@ -166,7 +191,19 @@ class WtPeerStreamDemuxTest {
             demux.process(stream)
 
             val typePrefix = QuicWriter().also { it.writeVarint(Http3StreamType.CONTROL) }.toByteArray()
-            val settingsFrame = Http3Settings(emptyMap()).encodeFrame()
+            // Realistic server SETTINGS — both ENABLE_CONNECT_PROTOCOL=1
+            // and ENABLE_WEBTRANSPORT=1 are required for the demux to
+            // accept the SETTINGS frame (draft-ietf-webtrans-http3 §3 +
+            // RFC 8441). Pre-validation tests used emptyMap() as a
+            // stand-in; with the validation in place we mirror what a
+            // real WT-capable server sends.
+            val settingsFrame =
+                Http3Settings(
+                    mapOf(
+                        Http3SettingsId.ENABLE_CONNECT_PROTOCOL to 1L,
+                        Http3SettingsId.ENABLE_WEBTRANSPORT to 1L,
+                    ),
+                ).encodeFrame()
             stream.deliverIncoming(typePrefix)
             stream.deliverIncoming(settingsFrame)
             stream.closeIncoming()

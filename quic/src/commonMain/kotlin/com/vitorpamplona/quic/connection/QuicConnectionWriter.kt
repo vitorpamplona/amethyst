@@ -712,7 +712,16 @@ private fun buildApplicationPacket(
         // The combination drops drainOutbound's per-call cost from
         // O(N log N) where N=total-streams to roughly O(active) under
         // realistic loads.
-        val active = streamsView.filter { !it.isClosed }
+        // Allocation hot-path: under realistic load most streams are
+        // open, so the `filter` allocates an N-sized ArrayList only to
+        // hand back the same N elements. Quick `any` scan first; only
+        // pay for the filter list when at least one stream is closed.
+        val active =
+            if (streamsView.any { it.isClosed }) {
+                streamsView.filter { !it.isClosed }
+            } else {
+                streamsView
+            }
         val sorted =
             when {
                 active.size <= 1 -> active

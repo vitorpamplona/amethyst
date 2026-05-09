@@ -182,10 +182,22 @@ object ShortHeaderPacket {
         }
         val fullPn = PacketNumberSpaceState.decodePacketNumber(largestReceivedInSpace, truncatedPn, pnLen)
         val aadEnd = localPnOffset + pnLen
-        val aad = packet.copyOfRange(0, aadEnd)
-        val ciphertext = packet.copyOfRange(aadEnd, packet.size)
         val nonce = aeadNonce(iv, fullPn)
-        val plaintext = aead.open(key, nonce, aad, ciphertext) ?: return null
+        // Range-based open: aad = packet[0..aadEnd), ciphertext = packet[aadEnd..size).
+        // Saves the two ByteArray slice allocations that the
+        // whole-array form (`aad = copyOfRange(0, aadEnd)` etc.)
+        // would do — ~2 KB per inbound packet on the hot path.
+        val plaintext =
+            aead.openRange(
+                key = key,
+                nonce = nonce,
+                aad = packet,
+                aadOffset = 0,
+                aadLength = aadEnd,
+                ciphertext = packet,
+                ciphertextOffset = aadEnd,
+                ciphertextLength = packet.size - aadEnd,
+            ) ?: return null
         return ParseResult(
             packet =
                 ShortHeaderPlaintextPacket(
