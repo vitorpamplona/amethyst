@@ -544,14 +544,19 @@ private fun buildLongHeaderFromFrames(
     // map insert below overwrites the prior entry, so the recorded
     // SentPacket reflects the final padded packet's size — correct
     // for retransmit purposes.
+    val ackEliciting = isAckEliciting(frames)
     state.sentPackets[pn] =
         SentPacket(
             packetNumber = pn,
             sentAtMillis = nowMillis,
-            ackEliciting = isAckEliciting(frames),
+            ackEliciting = ackEliciting,
             sizeBytes = packet.size,
             tokens = tokens,
         )
+    // RFC 9000 §10.1.1: an ack-eliciting outbound packet resets the
+    // idle timer. (Non-ack-eliciting packets — pure ACK or PADDING-only
+    // — do NOT reset.)
+    if (ackEliciting) conn.lastActivityMs = nowMillis
     emitQlogSent(conn, level, pn, packet.size, frames)
     return packet
 }
@@ -866,14 +871,19 @@ private fun buildApplicationPacket(
                 )
             }
         }
+    val ackEliciting = isAckEliciting(frames)
     state.sentPackets[pn] =
         SentPacket(
             packetNumber = pn,
             sentAtMillis = nowMillis,
-            ackEliciting = isAckEliciting(frames),
+            ackEliciting = ackEliciting,
             sizeBytes = sizeBytes.getOrNull()?.size ?: 0,
             tokens = tokens.toList(),
         )
+    // RFC 9000 §10.1.1: an ack-eliciting outbound packet resets the
+    // idle timer. (Non-ack-eliciting packets — pure ACK or PADDING-only
+    // — do NOT reset.)
+    if (ackEliciting) conn.lastActivityMs = nowMillis
     sizeBytes.getOrNull()?.let { built ->
         emitQlogSent(conn, EncryptionLevel.APPLICATION, pn, built.size, frames)
     }

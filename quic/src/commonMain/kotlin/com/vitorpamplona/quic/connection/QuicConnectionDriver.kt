@@ -288,8 +288,22 @@ class QuicConnectionDriver(
                     connection.handshake.nextLossTimeMs,
                     connection.application.nextLossTimeMs,
                 ).minOrNull()?.let { (it - nowForLossTimer).coerceAtLeast(0L) }
+            // RFC 9000 §10.1 idle-timeout deadline. Null when neither
+            // endpoint advertised a non-zero `max_idle_timeout`. We
+            // fold the remaining time into the same `withTimeoutOrNull`
+            // sleep so an idle connection wakes exactly at expiry
+            // instead of polling.
+            val idleTimeoutMs = connection.effectiveIdleTimeoutMs()
+            val idleDelta =
+                idleTimeoutMs?.let {
+                    (connection.lastActivityMs + it - nowForLossTimer).coerceAtLeast(0L)
+                }
             val sleepMillis =
-                if (nextLossDelta != null && nextLossDelta < ptoMillis) nextLossDelta else ptoMillis
+                minOf(
+                    ptoMillis,
+                    nextLossDelta ?: Long.MAX_VALUE,
+                    idleDelta ?: Long.MAX_VALUE,
+                )
             // Suspend until either: a wakeup arrives, or the timer expires.
             val woke =
                 withTimeoutOrNull(sleepMillis) {
@@ -297,12 +311,20 @@ class QuicConnectionDriver(
                     Unit
                 }
             if (woke == null) {
-                // Distinguish loss-timer expiry from PTO expiry. A
-                // loss-timer wake just runs `detectAndRemoveLost`
-                // across the levels — newly time-threshold-lost
-                // packets get their tokens re-queued for retransmit on
-                // the next drain. A PTO wake additionally bumps the
-                // consecutive-PTO counter and arms the probe budget.
+                // Distinguish idle-timeout / loss-timer / PTO expiry. An
+                // idle-timeout wake silently closes the connection per
+                // RFC 9000 §10.2.1 ("the connection enters the closing
+                // state silently — discarding the connection state
+                // without sending a CONNECTION_CLOSE frame"). A
+                // loss-timer wake just runs `detectAndRemoveLost`. A
+                // PTO wake additionally bumps the consecutive-PTO
+                // counter and arms the probe budget.
+                if (idleTimeoutMs != null && connection.isIdleTimedOut(nowMillis())) {
+                    connection.markClosedExternally(
+                        "idle timeout ($idleTimeoutMs ms with no activity)",
+                    )
+                    continue
+                }
                 val pickedLossTimer = nextLossDelta != null && nextLossDelta < ptoMillis
                 if (pickedLossTimer) {
                     handleLossTimerFired(connection)

@@ -193,7 +193,7 @@ gates on the audio-rooms completion plan
 | 8 | 2026-05-06 | Path validation pass 1 + 2 | DCID rotation, retire-prior-to monotonicity, abrupt migration | all fixed |
 | 9 | 2026-05-07 | DoS hardening + reserved-bit checks + TLS bounds + SendBuffer shrink | bound peer-controlled buffers and channels | all fixed |
 | 10 | 2026-05-08 | Lock-split design + close-under-load + key-update PN gate | streamsLock + lifecycleLock split | all fixed; see [`2026-05-08-lock-split-design.md`](2026-05-08-lock-split-design.md) |
-| 11 | 2026-05-09 | Four-RFC compliance audit (4 parallel agents: 9000, 9001, 9002, 9221+9114+9204) | ~15 items, mostly receive-side validation gaps | catalogued in [§ RFC compliance gaps](#rfc-compliance-gaps-2026-05-09) below |
+| 11 | 2026-05-09 | Four-RFC compliance audit (4 parallel agents: 9000, 9001, 9002, 9221+9114+9204) | ~15 items, mostly receive-side validation gaps | catalogued in [§ RFC compliance gaps](#rfc-compliance-gaps-2026-05-09) below; both 🔴 High items (fixed-bit, idle timeout) fixed same-day |
 
 Every fix carries an inline `audit-N #M` reference comment so the regression
 test → fix → comment chain is auditable. The whole audit corpus is in the
@@ -287,8 +287,8 @@ file:line evidence. Severity:
 
 | RFC § | Sev | Gap | Evidence |
 |---|---|---|---|
-| RFC 9000 §17.3 | 🔴 | **Inbound short-header fixed-bit (0x40) not validated.** RFC says fixed-bit MUST be 1 on receive. Form-bit (0x80) and reserved-bit (0x18) ARE checked, but 0x40 is never asserted post-HP-unmask. | `ShortHeaderPacket.kt:163-187` (form-bit checked, fixed-bit not) |
-| RFC 9000 §10.1 | 🔴 | **`max_idle_timeout` not enforced.** Decoded into config and advertised, but no idle deadline tracking, no auto-close on silence. Connection lives forever if no I/O happens. | `QuicConnection.kt:1040,1054,1069`; `QuicConnectionDriver.kt` (no idle timer) |
+| RFC 9000 §17.2 + §17.3 | ~~🔴~~ | ~~**Inbound fixed-bit (0x40) not validated** on long- or short-header receive.~~ **Resolved 2026-05-09** — both `LongHeaderPacket.parseAndDecrypt`, `ShortHeaderPacket.parseAndDecrypt`, and `ShortHeaderPacket.peekKeyPhase` now reject fixed-bit=0 packets per RFC §17.2 / §17.3 (silent discard). Tests in `FixedBitValidationTest`. |
+| RFC 9000 §10.1 | ~~🔴~~ | ~~**`max_idle_timeout` not enforced.**~~ **Resolved 2026-05-09** — `QuicConnection.lastActivityMs` updated on inbound packet receipt and outbound ack-eliciting send; `effectiveIdleTimeoutMs()` computes min(local, peer) with 3*PTO floor per §10.1; driver send-loop folds the deadline into its `withTimeoutOrNull` and silently closes via `markClosedExternally` per §10.2.1 on expiry. Tests in `IdleTimeoutTest` (8 cases). |
 | RFC 9000 §4.1 | 🟡 | **Connection-level inbound flow control missing.** Per-stream `receiveLimit` IS enforced (`QuicConnectionParser.kt:655`) — peer overshoot closes the connection. But the aggregate connection-level cap (matching what we advertised in `initial_max_data`) is not tracked on the receive side. | `QuicConnectionParser.kt:735-743` (only updates send-side credit on MAX_DATA) |
 | RFC 9000 §3 | 🟡 | **Stream state machine implicit, not validated.** The 10-state machine (Ready / Send / Data Sent / Data Recvd / Reset Sent / Reset Recvd × directions) is encoded as flags + buffer content. STREAM frames arriving after a RESET_STREAM are silently absorbed instead of raising STREAM_STATE_ERROR. (FIN-size mismatch *is* caught — `QuicConnectionParser.kt:672-685`.) | `QuicStream.kt:35-51` (no explicit state field) |
 | RFC 9000 §10.2 | 🟡 | **No DRAINING state.** Closing transitions go CONNECTED → CLOSING → CLOSED without the 3 × PTO hold the spec mandates. Late inbound packets after our own CONNECTION_CLOSE may not get a re-emitted close. | `QuicConnection.kt:301,1441-1531` (Status enum has no DRAINING) |

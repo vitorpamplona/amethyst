@@ -259,6 +259,9 @@ private fun feedLongHeaderPacket(
     }
 
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
+    // RFC 9000 §10.1.1: any successfully processed inbound packet
+    // resets the idle timer.
+    conn.lastActivityMs = nowMillis
 
     // The server's source CID becomes our destination CID for subsequent packets.
     if (level == EncryptionLevel.INITIAL) {
@@ -450,6 +453,9 @@ private fun feedShortHeaderPacket(
         conn.keyUpdateInProgress = false
     }
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
+    // RFC 9000 §10.1.1: any successfully processed inbound packet
+    // resets the idle timer.
+    conn.lastActivityMs = nowMillis
     if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
         conn.qlogObserver.onPacketReceived(
             level = EncryptionLevel.APPLICATION,

@@ -296,7 +296,7 @@ class QuicConnection(
      */
     @Volatile
     var peerTransportParameters: TransportParameters? = null
-        private set
+        internal set
 
     enum class Status { HANDSHAKING, CONNECTED, CLOSING, CLOSED }
 
@@ -309,6 +309,29 @@ class QuicConnection(
     @Volatile
     var status: Status = Status.HANDSHAKING
         internal set
+
+    /**
+     * RFC 9000 §10.1 idle-timeout tracking. The driver fires
+     * [markClosedExternally] (silent close, no CONNECTION_CLOSE per
+     * §10.2.1) when the time since this timestamp exceeds
+     * [effectiveIdleTimeoutMs].
+     *
+     * Updated on:
+     *  - successful inbound packet decrypt (parser)
+     *  - outbound ack-eliciting packet emission (writer)
+     *
+     * Initialized to the connection's start time so the timer can fire
+     * even if no inbound packet ever arrives (e.g. handshake never
+     * completes on a black-holed path).
+     *
+     * @Volatile because the driver reads it from the send loop while the
+     * parser / writer mutate it from feed/drain coroutines under
+     * `streamsLock`. A torn long read would mis-arm the deadline by at
+     * most one packet's worth of time, but volatile is cheaper than the
+     * alternative (locking around every observation).
+     */
+    @Volatile
+    internal var lastActivityMs: Long = nowMillis()
 
     /**
      * Non-suspend monitor protecting the atomic transition of
@@ -2317,6 +2340,48 @@ class QuicConnection(
         nowMillis: Long = nowMillis(),
         currentPtoMillis: Long = lossDetection.ptoBaseMs(peerTransportParameters?.maxAckDelay ?: 0L),
     ): PathMigrationResult = streamsLock.withLock { triggerPathMigrationLocked(nowMillis, currentPtoMillis) }
+
+    /**
+     * RFC 9000 §10.1: effective idle-timeout in milliseconds, or null
+     * if neither endpoint advertised a non-zero value (timeout is
+     * disabled). The effective timeout is the minimum of the
+     * locally-configured value and the peer's advertised value, after
+     * dropping any side that advertised 0 (per §18.2 a value of 0
+     * means "no timeout").
+     *
+     * §10.1 also requires we increase the timeout to at least 3 * PTO
+     * to avoid timing out before loss detection has had a chance to
+     * recover the path.
+     */
+    internal fun effectiveIdleTimeoutMs(): Long? {
+        val local = config.maxIdleTimeoutMillis.takeIf { it > 0L }
+        val peer = peerTransportParameters?.maxIdleTimeoutMillis?.takeIf { it > 0L }
+        val agreed =
+            when {
+                local != null && peer != null -> minOf(local, peer)
+                local != null -> local
+                peer != null -> peer
+                else -> return null
+            }
+        // §10.1: floor at 3 * PTO so loss recovery has time to fire.
+        // Pre-handshake we don't have peer max_ack_delay yet, fall back
+        // to 0 (matches the writer's pre-handshake gating).
+        val maxAckDelayMs = peerTransportParameters?.maxAckDelay ?: 0L
+        val ptoBaseMs = lossDetection.ptoBaseMs(maxAckDelayMs).coerceAtLeast(1L)
+        val floor = ptoBaseMs * 3L
+        return agreed.coerceAtLeast(floor)
+    }
+
+    /**
+     * RFC 9000 §10.1.1 idle-timer tick. Called by the driver after a
+     * [withTimeoutOrNull] expiry to check whether the silence has
+     * exceeded [effectiveIdleTimeoutMs]. Returns true on timeout
+     * (caller should silently close per §10.2.1).
+     */
+    internal fun isIdleTimedOut(nowMillis: Long): Boolean {
+        val timeoutMs = effectiveIdleTimeoutMs() ?: return false
+        return nowMillis - lastActivityMs >= timeoutMs
+    }
 
     /**
      * Check whether an outstanding PATH_CHALLENGE has exceeded the
