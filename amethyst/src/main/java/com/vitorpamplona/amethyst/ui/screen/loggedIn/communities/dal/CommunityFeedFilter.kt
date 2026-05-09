@@ -31,40 +31,66 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator
 
 class CommunityFeedFilter(
     val communityDefNote: AddressableNote,
     val account: Account,
+    /**
+     * When true, candidate events are additionally checked against the latest
+     * NIP-9A `kind:34551` rules document for this community and dropped on any
+     * violation. No-op when no rules document is cached. Default false preserves
+     * pre-9A behaviour for any caller that constructs the filter directly.
+     */
+    val hideRulesViolations: Boolean = false,
 ) : AdditiveFeedFilter<Note>() {
     val communityDefEvent = communityDefNote.event as? CommunityDefinitionEvent
     val moderators = communityDefEvent?.moderatorKeys()?.toSet() ?: emptySet()
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + communityDefNote.idHex
 
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
+
+    /**
+     * Memoised per-feed validator. Recomputed lazily on each `feed()` /
+     * `applyFilter()` call; the latest cached rules event for the community
+     * may change between calls when the rules sub-assembler delivers an update.
+     * Null when [hideRulesViolations] is off, when no rules are cached, or when
+     * the community definition itself isn't available.
+     */
+    private fun rulesValidator(): CommunityRulesValidator? {
+        if (!hideRulesViolations) return null
+        val def = communityDefEvent ?: return null
+        return latestCommunityRules(def)?.let { CommunityRulesValidator(it) }
+    }
+
     override fun feed(): List<Note> {
         if (communityDefEvent == null) return emptyList()
 
+        val validator = rulesValidator()
         val result =
             LocalCache.notes.mapFlattenIntoSet { _, it ->
-                filterMap(it)
+                filterMap(it, validator)
             }
 
         return sort(result)
     }
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         if (communityDefEvent == null) return emptySet()
 
+        val validator = rulesValidator()
         return collection
             .mapNotNull {
-                filterMap(it)
+                filterMap(it, validator)
             }.flatten()
             .toSet()
     }
 
-    private fun filterMap(note: Note): List<Note>? {
+    private fun filterMap(
+        note: Note,
+        validator: CommunityRulesValidator?,
+    ): List<Note>? {
         val noteEvent = note.event ?: return null
 
         return if (
@@ -75,10 +101,10 @@ class CommunityFeedFilter(
         ) {
             if (noteEvent is CommunityPostApprovalEvent) {
                 note.replyTo?.filter {
-                    it.isNewThread()
+                    it.isNewThread() && passesRules(it, validator)
                 }
             } else {
-                if (note.isNewThread()) {
+                if (note.isNewThread() && passesRules(note, validator)) {
                     listOf(note)
                 } else {
                     null
@@ -88,6 +114,11 @@ class CommunityFeedFilter(
             null
         }
     }
+
+    private fun passesRules(
+        candidate: Note,
+        validator: CommunityRulesValidator?,
+    ): Boolean = validator == null || !violatesCommunityRules(validator, candidate)
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

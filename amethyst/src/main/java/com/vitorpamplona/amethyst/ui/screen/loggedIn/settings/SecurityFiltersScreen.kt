@@ -436,6 +436,19 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
+
+        SettingsRow(
+            R.string.hide_community_rules_violations_title,
+            R.string.hide_community_rules_violations_explainer,
+        ) {
+            val hideViolations by accountViewModel.account.settings.hideCommunityRulesViolations
+                .collectAsStateWithLifecycle()
+
+            Switch(
+                checked = hideViolations,
+                onCheckedChange = { accountViewModel.account.settings.changeHideCommunityRulesViolations(it) },
+            )
+        }
     }
 }
 

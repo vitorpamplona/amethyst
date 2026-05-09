@@ -151,6 +151,12 @@ class AccountSettings(
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    /**
+     * NIP-9A opt-in: when true, community feeds drop events whose latest cached
+     * `kind:34551` rules document fails [com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator].
+     * Default false preserves pre-9A behaviour.
+     */
+    val hideCommunityRulesViolations: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -408,6 +414,13 @@ class AccountSettings(
     fun changeUseLocalBlossomCache(enabled: Boolean) {
         if (useLocalBlossomCache.value != enabled) {
             useLocalBlossomCache.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeHideCommunityRulesViolations(enabled: Boolean) {
+        if (hideCommunityRulesViolations.value != enabled) {
+            hideCommunityRulesViolations.tryEmit(enabled)
             saveAccountSettings()
         }
     }
