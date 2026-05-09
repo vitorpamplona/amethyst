@@ -380,15 +380,14 @@ class QuicConnectionDriver(
                 wakeup()
                 val send = sendJob
                 // Bounded wait for the send loop to flush CONNECTION_CLOSE.
-                // We don't want to hang forever if the writer is wedged —
-                // the timeout is the upper bound on how long close() blocks.
+                // Event-driven via [QuicConnection.closingDrainSignal] —
+                // both `drainOutbound` (after building the close datagram)
+                // and `markClosedExternally` (forced transition) complete
+                // the deferred. Replaces an earlier 1 ms polling loop.
+                // The timeout is the upper bound on how long close() blocks
+                // if the writer is wedged.
                 withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
-                    // Spin until the writer has actually drained the queued
-                    // close. The CLOSING-status check transitions to CLOSED
-                    // once drainOutbound builds the CONNECTION_CLOSE packet.
-                    while (connection.status == QuicConnection.Status.CLOSING) {
-                        kotlinx.coroutines.delay(1)
-                    }
+                    connection.closingDrainSignal.await()
                 }
                 // Now flip to CLOSED so both loops exit their while-guards.
                 connection.markClosedExternally("driver close requested")

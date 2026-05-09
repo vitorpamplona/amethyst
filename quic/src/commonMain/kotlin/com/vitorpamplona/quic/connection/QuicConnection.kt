@@ -324,6 +324,16 @@ class QuicConnection(
      */
     private val closeStateMonitor = Any()
 
+    /**
+     * Single-shot signal completed when [status] transitions to CLOSED —
+     * either by the writer flushing CONNECTION_CLOSE in `drainOutbound`,
+     * or by [markClosedExternally] forcing the state. Replaces an earlier
+     * 1 ms polling loop in `QuicConnectionDriver.close()`. Idempotent:
+     * `complete(Unit)` returns false on subsequent firers, so racing
+     * teardown paths are safe.
+     */
+    internal val closingDrainSignal: CompletableDeferred<Unit> = CompletableDeferred()
+
     /** App-level error code for graceful close. */
     var closeReason: String? = null
         private set
@@ -1522,6 +1532,10 @@ class QuicConnection(
                 closeReason = reason
                 true
             }
+        // Wake any teardown coroutine waiting for the close to land. Safe
+        // to call after the monitor — complete() is idempotent and the
+        // CLOSED transition has already been published via @Volatile.
+        if (firstClose) closingDrainSignal.complete(Unit)
         if (firstClose) {
             // "remote" covers both peer-initiated CONNECTION_CLOSE and
             // local invariant violations (CID mismatch, frame decode

@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(kotlin.concurrent.atomics.ExperimentalAtomicApi::class)
+
 package com.vitorpamplona.quic.connection
 
 import com.vitorpamplona.quartz.utils.Log
@@ -86,6 +88,9 @@ fun drainOutbound(
     if (conn.status == QuicConnection.Status.CLOSING) {
         val datagram = buildClosingDatagram(conn, nowMillis)
         conn.status = QuicConnection.Status.CLOSED
+        // Signal the teardown coroutine that the close datagram is built;
+        // the driver awaits this instead of polling status.
+        conn.closingDrainSignal.complete(Unit)
         return datagram
     }
 
@@ -952,7 +957,7 @@ private fun appendFlowControlUpdates(
     // resetAcked / stopSendingAcked so subsequent stale loss tokens
     // are dropped.
     for (stream in conn.streamsListLocked()) {
-        val resetState = stream.resetState
+        val resetState = stream.resetState.load()
         if (resetState != null && stream.resetEmitPending && !stream.resetAcked) {
             frames +=
                 ResetStreamFrame(
@@ -968,7 +973,7 @@ private fun appendFlowControlUpdates(
                 )
             stream.resetEmitPending = false
         }
-        val stopSendingState = stream.stopSendingState
+        val stopSendingState = stream.stopSendingState.load()
         if (stopSendingState != null && stream.stopSendingEmitPending && !stream.stopSendingAcked) {
             frames +=
                 StopSendingFrame(
