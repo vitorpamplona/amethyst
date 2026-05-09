@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQual
 import com.vitorpamplona.amethyst.service.playback.composable.mainVideo.VideoPlayerActiveMutex
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 val DEFAULT_MUTED_SETTING = mutableStateOf(true)
 
@@ -54,6 +55,10 @@ fun VideoViewInner(
     onZoom: (() -> Unit)? = null,
     hasBlurhash: Boolean = false,
     isFullscreen: Boolean = false,
+    blurhash: String? = null,
+    dim: DimensionTag? = null,
+    hash: String? = null,
+    thumbhash: String? = null,
     accountViewModel: AccountViewModel,
 ) {
     // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
@@ -76,6 +81,10 @@ fun VideoViewInner(
         keepPlaying = true,
         waveformData = waveform,
         isLiveStream = isLiveStream,
+        blurhash = blurhash,
+        dim = dim,
+        hash = hash,
+        thumbhash = thumbhash,
     ) { mediaItem ->
         GetVideoController(
             mediaItem = mediaItem,

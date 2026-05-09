@@ -226,6 +226,7 @@ fun ZoomableContentView(
                         accountViewModel = accountViewModel,
                         thumbhash = content.thumbhash,
                         isLiveStream = content.isLiveStream,
+                        hash = content.hash,
                     )
                 }
             }
@@ -961,7 +962,10 @@ fun ShareMediaAction(
                                     // still — the .m3u8 URL itself is a text manifest. Only
                                     // MediaUrlVideo carries an artworkUri.
                                     val posterUrl = (content as? MediaUrlVideo)?.artworkUri
-                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType, image = posterUrl)
+                                    val thumbhashFromContent =
+                                        (content as? MediaUrlVideo)?.thumbhash
+                                            ?: (content as? MediaUrlImage)?.thumbhash
+                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType, thumbhash = thumbhashFromContent, image = posterUrl)
                                     accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                                 }
                             }

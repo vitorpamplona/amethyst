@@ -48,6 +48,8 @@ data class PreviewHashes(
 }
 
 object PreviewMetadataCalculator {
+    private const val LOG_TAG = "PreviewMetadataCalc"
+
     private fun isImage(mimeType: String?) = mimeType?.startsWith("image/", ignoreCase = true) == true
 
     private fun isVideo(mimeType: String?) = mimeType?.startsWith("video/", ignoreCase = true) == true
@@ -117,7 +119,7 @@ object PreviewMetadataCalculator {
                 }
             }
         } catch (e: Exception) {
-            Log.w("PreviewMetadataCalc", "Failed to compute metadata from uri", e)
+            Log.w(LOG_TAG, "Failed to compute metadata from uri", e)
             null
         }
     }
@@ -133,8 +135,14 @@ object PreviewMetadataCalculator {
     private fun processBitmap(bitmap: Bitmap?): PreviewHashes =
         if (bitmap != null) {
             try {
-                val blurhash = runCatching { BlurhashWrapper(bitmap.toBlurhash()) }.getOrNull()
-                val thumbhash = runCatching { ThumbhashWrapper(bitmap.toThumbhash()) }.getOrNull()
+                val blurhash =
+                    runCatching { BlurhashWrapper(bitmap.toBlurhash()) }
+                        .onFailure { Log.w(LOG_TAG, "blurhash generation failed", it) }
+                        .getOrNull()
+                val thumbhash =
+                    runCatching { ThumbhashWrapper(bitmap.toThumbhash()) }
+                        .onFailure { Log.w(LOG_TAG, "thumbhash generation failed", it) }
+                        .getOrNull()
                 PreviewHashes(
                     blurhash = blurhash,
                     thumbhash = thumbhash,
@@ -153,6 +161,9 @@ object PreviewMetadataCalculator {
     ): PreviewHashes {
         val dim = retriever.prepareDimFromVideo() ?: dimPrecomputed
         val thumb = retriever.getThumbnail()
+        if (thumb == null) {
+            Log.w(LOG_TAG) { "video frame extraction returned null; no blurhash/thumbhash will be generated" }
+        }
         val hashes = processBitmap(thumb)
         val finalDim = if (dim?.hasSize() == true) dim else hashes.dim
         return hashes.copy(dim = finalDim)

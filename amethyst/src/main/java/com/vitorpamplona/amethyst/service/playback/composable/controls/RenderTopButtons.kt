@@ -303,9 +303,9 @@ fun RenderTopButtons(
                 popupExpanded = shareDialogVisible,
                 videoUri = mediaData.videoUri,
                 postNostrUri = mediaData.callbackUri,
-                blurhash = null,
-                dim = null,
-                hash = null,
+                blurhash = mediaData.blurhash,
+                dim = mediaData.dim,
+                hash = mediaData.hash,
                 mimeType = mediaData.mimeType,
                 onDismiss = { shareDialogVisible.value = false },
                 content =
@@ -316,6 +316,10 @@ fun RenderTopButtons(
                         authorName = mediaData.authorName,
                         description = mediaData.title,
                         uri = mediaData.callbackUri,
+                        blurhash = mediaData.blurhash,
+                        dim = mediaData.dim,
+                        hash = mediaData.hash,
+                        thumbhash = mediaData.thumbhash,
                     ),
                 accountViewModel = accountViewModel,
             )
