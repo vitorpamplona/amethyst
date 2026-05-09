@@ -129,6 +129,20 @@ class QuicStream(
         internal set
 
     /**
+     * RFC 9000 §4.1: highest stream offset (offset + length) ever seen
+     * on an inbound STREAM or RESET_STREAM frame. Used by
+     * [QuicConnection]'s connection-level flow-control accounting —
+     * the spec requires the receiver to compare the SUM across all
+     * streams of "largest received offset" against the advertised
+     * `initial_max_data` / latest MAX_DATA, NOT the contiguous read
+     * frontier. The writer's MAX_DATA threshold logic still uses the
+     * cheaper contiguous-end approximation; this field is purely the
+     * enforcement signal on receive.
+     */
+    @Volatile
+    internal var receiveHighestOffset: Long = 0L
+
+    /**
      * Marker the parser sets whenever [receive.contiguousEnd] advances; the
      * writer's appendFlowControlUpdates consumes it to skip streams that
      * haven't received any new bytes since the last MAX_STREAM_DATA emission.

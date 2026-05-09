@@ -482,6 +482,24 @@ class QuicConnection(
     internal var advertisedMaxData: Long = config.initialMaxData
 
     /**
+     * RFC 9000 §4.1 connection-level inbound flow-control accounting.
+     * Sum across all streams (live + retired) of the largest stream
+     * offset ever observed on an inbound STREAM / RESET_STREAM frame.
+     * The receiver MUST close the connection with FLOW_CONTROL_ERROR
+     * when this sum exceeds [advertisedMaxData]; that's enforced in
+     * the parser at frame-ingest time.
+     *
+     * Different from the writer's `totalRecvAdvanced` which uses
+     * `stream.receive.contiguousEnd()` (a slight under-count) for
+     * MAX_DATA threshold logic. Here we track the strict spec
+     * quantity — necessary to close before bookkeeping diverges
+     * if the peer sends data with gaps that pushes total received
+     * past the limit.
+     */
+    @Volatile
+    internal var connectionInboundOffsetSum: Long = 0L
+
+    /**
      * Cumulative count of peer-initiated unidirectional streams we've
      * accepted (incremented in [getOrCreatePeerStreamLocked]). Compared
      * against [advertisedMaxStreamsUni] by the writer to decide whether

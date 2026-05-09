@@ -675,6 +675,25 @@ private fun dispatchFrames(
                     )
                     return
                 }
+                // RFC 9000 §4.1 connection-level enforcement: the SUM
+                // across all streams of "largest stream offset received"
+                // MUST NOT exceed the most recently advertised MAX_DATA.
+                // We update [conn.connectionInboundOffsetSum] only when
+                // this frame's end-offset advances the per-stream
+                // high-water mark, so duplicate / reordered frames don't
+                // double-count.
+                if (frameEnd > stream.receiveHighestOffset) {
+                    val delta = frameEnd - stream.receiveHighestOffset
+                    stream.receiveHighestOffset = frameEnd
+                    conn.connectionInboundOffsetSum += delta
+                    if (conn.connectionInboundOffsetSum > conn.advertisedMaxData) {
+                        conn.markClosedExternally(
+                            "FLOW_CONTROL_ERROR: peer exceeded connection MAX_DATA " +
+                                "(${conn.connectionInboundOffsetSum} > ${conn.advertisedMaxData})",
+                        )
+                        return
+                    }
+                }
                 // RFC 9000 §4.5: enforce final-size invariants. The
                 // [com.vitorpamplona.quic.stream.ReceiveBuffer.insert]
                 // surface returns a typed result; map any non-OK result
@@ -826,6 +845,25 @@ private fun dispatchFrames(
                         conn.markClosedExternally(
                             "FINAL_SIZE_ERROR: stream ${frame.streamId} RESET_STREAM finalSize " +
                                 "${frame.finalSize} below already-observed offset $highestSeen",
+                        )
+                        return
+                    }
+                }
+                // RFC 9000 §4.5: a RESET_STREAM's finalSize counts toward
+                // connection-level flow control even though no STREAM frame
+                // ever delivered those bytes — it represents what the peer
+                // committed to send before aborting. Top up
+                // [conn.connectionInboundOffsetSum] when finalSize advances
+                // beyond what STREAM frames already counted, then re-check
+                // against the connection cap.
+                if (target != null && frame.finalSize > target.receiveHighestOffset) {
+                    val delta = frame.finalSize - target.receiveHighestOffset
+                    target.receiveHighestOffset = frame.finalSize
+                    conn.connectionInboundOffsetSum += delta
+                    if (conn.connectionInboundOffsetSum > conn.advertisedMaxData) {
+                        conn.markClosedExternally(
+                            "FLOW_CONTROL_ERROR: peer RESET_STREAM finalSize pushed connection past MAX_DATA " +
+                                "(${conn.connectionInboundOffsetSum} > ${conn.advertisedMaxData})",
                         )
                         return
                     }
