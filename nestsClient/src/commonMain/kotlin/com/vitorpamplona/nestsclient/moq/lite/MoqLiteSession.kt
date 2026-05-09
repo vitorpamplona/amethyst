@@ -1264,18 +1264,30 @@ class MoqLiteSession internal constructor(
         // queue gets congested.
         //
         // Wire layout into `Int`:
-        //   bits 31..24  trackPriority u8 (0..255)  — top byte
-        //   bits 23..0   sequence low 24 bits        — wraps every
-        //                ~16M groups within a single track
+        //   bit 31       0 (always — keeps the value non-negative)
+        //   bits 30..23  trackPriority u8 (0..255)
+        //   bits 22..0   sequence low 23 bits  (~8.4M groups)
+        //
+        // Bit 31 is reserved as the sign bit because
+        // [com.vitorpamplona.quic.connection.QuicConnectionWriter] sorts
+        // streams via signed `sortedByDescending { it.priority }`.
+        // Setting bit 31 (which would happen for `trackPriority >= 0x80`
+        // shifted by 24) produces a negative `Int` that sorts BELOW
+        // positive priorities, inverting the intent. The audit's
+        // priority-byte default `DEFAULT_TRACK_PRIORITY = 0x80` sits
+        // exactly on this boundary — without the 23-bit shift the
+        // default-vs-default case would be fine but a hand-tuned 0xFF
+        // (highest intended) would sort behind 0x7F (lower intended).
         //
         // Saturating cast on `sequence` guards a theoretical broadcast
-        // long enough to outgrow 24 bits (≈ 6 days at the production
-        // 1-group/sec cadence; the priority degrades to "all newer
-        // groups tie" past that, but they still beat older groups of
-        // any LOWER-priority track via the top byte). Defensive only;
-        // production sessions cycle on JWT refresh every 9 min.
-        val seq24 = sequence.coerceAtMost(0xFF_FFFFL).toInt() and 0x00FF_FFFF
-        val packedPriority = ((trackPriority and 0xFF) shl 24) or seq24
+        // long enough to outgrow 23 bits (≈ 97 days at the production
+        // 1-group/sec cadence). Past that the priority degrades to "all
+        // newer groups within a track tie", but they still beat older
+        // groups of any LOWER-priority track via the high byte.
+        // Production sessions cycle on JWT refresh every 9 min, so the
+        // wrap is defensive only.
+        val seq23 = sequence.coerceAtMost(0x7F_FFFFL).toInt() and 0x007F_FFFF
+        val packedPriority = ((trackPriority and 0xFF) shl 23) or seq23
         uni.setPriority(packedPriority)
         uni.write(Varint.encode(MoqLiteDataType.Group.code))
         uni.write(MoqLiteCodec.encodeGroupHeader(MoqLiteGroupHeader(subscribeId, sequence)))

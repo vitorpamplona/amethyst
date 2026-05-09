@@ -122,7 +122,7 @@ Severity legend (matches the prior QUIC audit):
 | L1 | Lite-04 ALPN constant defined but codec is Lite-03 only                            | 🟦 → ✅   | Pre-fix `MoqLiteAlpn.LITE_04` was a documented constant but the codec was hard-wired to Lite-03 — advertising Lite-04 would have caused the very first Announce to desync. Now full Lite-04 support: codec is version-aware via a new `MoqLiteVersion` enum, all three differing fields (Announce.hops as `OriginList`, AnnouncePlease.excludeHop, Probe.rtt) are encoded / decoded correctly, ALPN negotiation surfaces the server's pick via `WebTransportSession.negotiatedSubProtocol`, and `connectNestsListener` / `connectNestsSpeaker` advertise both versions and use whichever the relay echoes. | `MoqLiteCodec.kt`, `MoqLiteSession.kt`, `MoqLiteAlpn.kt`, `QuicWebTransportFactory.kt`, `WebTransportSession.kt`, `NestsConnect.kt` | **fixed in this audit** — see `Fix #8` |
 | L2 | SubscribeOk always echoes `null/null` for startGroup/endGroup                      | 🟦 → ✅   | Per spec the publisher MAY narrow the subscriber's requested group bounds. Pre-fix we echoed `null/null` and lost the diagnostic "which group am I about to start sending?" signal. Now the publisher narrows `startGroup` to its `nextSequence` — useful for hot-swap continuations where the seeded `startSequence` is non-zero. `endGroup` stays null (live broadcast, no end). | `MoqLiteSession.kt` Subscribe accept arm                                | **fixed in this audit** — see `Fix #6` |
 | L3 | No subscriber-driven Probe API                                                     | 🟦 → ✅   | Pre-fix the publisher-side Probe handler existed but no subscriber-side counterpart did, leaving the protocol surface incomplete. New `MoqLiteSession.probe()` opens a Probe bidi (writes `ControlType=4`) and returns a `MoqLiteProbeHandle` whose `updates` flow yields each `MoqLiteProbe` the publisher pushes. Mirrors kixelated's `Subscriber::run_probe_stream`. No production consumer (audio rooms are fixed-rate Opus, no ABR), but the API completes the surface for diagnostic tools. | `MoqLiteSession.kt` `probe()` (new), `MoqLiteHandles.kt` `MoqLiteProbeHandle` (new) | **fixed in this audit** — see `Fix #7` |
-| L4 | Stream-priority overflow guard is a saturating cast                                | 🟦       | Pre-fix, `setPriority(sequence.coerceAtMost(Int.MAX_VALUE).toInt())` saturated at `Int.MAX_VALUE` (≈ 71 yrs at 1 grp/sec). After the M1 fix, sequence saturates at the 24-bit boundary (≈ 6 days within a single track) but the per-track high byte keeps cross-track ordering intact. Defensive only; production sessions cycle on JWT refresh every 9 min. | `MoqLiteSession.kt:openGroupStream` (post-M1)                         | closed (subsumed by M1 fix) |
+| L4 | Stream-priority overflow guard is a saturating cast                                | 🟦       | Pre-fix, `setPriority(sequence.coerceAtMost(Int.MAX_VALUE).toInt())` saturated at `Int.MAX_VALUE` (≈ 71 yrs at 1 grp/sec). After the M1 fix, sequence saturates at the 23-bit boundary (≈ 97 days within a single track) but the per-track high byte keeps cross-track ordering intact. Defensive only; production sessions cycle on JWT refresh every 9 min. | `MoqLiteSession.kt:openGroupStream` (post-M1)                         | closed (subsumed by M1 fix) |
 | L5 | Inbound bidi pump captures `publishersSnapshot` at bidi-arrival time               | 🟦 → ✅   | If a new publisher was added to the session (`session.publish(track="…")`) AFTER an inbound bidi opened, the dispatcher couldn't see it. In practice both nests publishers (`audio/data` and `catalog.json`) register before any subscriber arrives, so this never bit. Tightened anyway: snapshot is now read at first-byte dispatch time. | `MoqLiteSession.kt:781-790` (pre-fix)                                 | **fixed in this audit** — see `Fix #4` |
 
 ## Specifically checked items (per audit-prompt request)
@@ -274,14 +274,21 @@ lower-rate track the moment audio's outbound queue got congested.
 The fix: add `trackPriority: Int = DEFAULT_TRACK_PRIORITY` parameter
 to `MoqLiteSession.publish()`; store on `PublisherStateImpl`; bit-pack
 in `openGroupStream` as
-`((trackPriority and 0xFF) shl 24) or (sequence.toInt() and 0x00FF_FFFF)`.
+`((trackPriority and 0xFF) shl 23) or (sequence.toInt() and 0x007F_FFFF)`.
+
+Wire layout:
+  - bit 31      : 0 (reserved as the sign bit — required because
+    `QuicConnectionWriter.sortedByDescending { priority }` uses
+    signed `Int.compareTo`; a negative value would sort BELOW
+    every positive priority and invert the intent).
+  - bits 30..23 : trackPriority u8 (0..255).
+  - bits 22..0  : sequence low 23 bits.
 
 `DEFAULT_TRACK_PRIORITY = 0x80` matches the existing subscriber-side
-`DEFAULT_PRIORITY` midpoint, so all existing call sites keep their
-prior behavior. The 24-bit sequence window is ample (≈ 6 days at
-1 grp/sec, beyond which all newer groups within a single track tie
-— but still beat older groups of any LOWER-priority track via the
-top byte).
+`DEFAULT_PRIORITY` midpoint. The 23-bit sequence window is ample
+(≈ 97 days at 1 grp/sec, beyond which all newer groups within a
+single track tie — but still beat older groups of any LOWER-priority
+track via the high byte).
 
 Test seam: `FakeWebTransport.openUniStream` now records the most-
 recent `setPriority` value via a shared `AtomicInteger` cell that the

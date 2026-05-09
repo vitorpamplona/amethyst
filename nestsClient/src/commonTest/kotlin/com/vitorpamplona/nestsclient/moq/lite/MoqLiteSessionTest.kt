@@ -507,20 +507,23 @@ class MoqLiteSessionTest {
     fun publisher_packs_trackPriority_and_sequence_into_setPriority_value() =
         runBlocking {
             // Lite-03 audit M1: openGroupStream packs the publisher's
-            // trackPriority byte into bits 31..24 and the group sequence
-            // into bits 23..0 of the value passed to
-            // WebTransportWriteStream.setPriority. This mirrors the
-            // (track.priority, sequence) ordering kixelated's
-            // PriorityHandle uses at `rs/moq-lite/src/lite/priority.rs`.
-            // Verified on the *peer* side via FakeReadStream.lastSetPriority,
-            // which the in-memory transport uses as a side-channel for
-            // priority introspection.
+            // trackPriority byte into bits 30..23 and the group sequence
+            // into bits 22..0 of the value passed to
+            // WebTransportWriteStream.setPriority. Bit 31 stays 0 so
+            // the resulting Int is always non-negative — required
+            // because [QuicConnectionWriter] sorts via signed
+            // `sortedByDescending { it.priority }`. Verified on the
+            // *peer* side via FakeReadStream.lastSetPriority, which the
+            // in-memory transport uses as a side-channel for priority
+            // introspection.
             val (clientSide, serverSide) = FakeWebTransport.pair()
             val session = MoqLiteSession.client(clientSide, pumpScope)
 
             // Use a non-default trackPriority so a regression that
             // accidentally drops it back to DEFAULT_TRACK_PRIORITY shows
-            // up in the assertion.
+            // up in the assertion. 0xC0 sits in the upper half of the
+            // byte range — pre-fix this would have produced a negative
+            // Int (bit 31 set) that mis-sorts.
             val publisher =
                 session.publish(
                     broadcastSuffix = "speakerPubkey",
@@ -552,17 +555,94 @@ class MoqLiteSessionTest {
 
             val relayUni = withTimeout(2_000) { serverSide.incomingUniStreams().first() }
             val fakeRead = relayUni as FakeReadStream
-            // Expected: (0xC0 shl 24) or (7 and 0x00FF_FFFF) =
-            // 0xC000_0007 in unsigned terms = -1073741817 as Int.
-            // Compute via the same formula so the test asserts the
-            // CONTRACT, not a hex literal.
-            val expected = ((0xC0 and 0xFF) shl 24) or (7 and 0x00FF_FFFF)
-            assertEquals(expected, fakeRead.lastSetPriority, "trackPriority dominates the high byte; sequence fills the low 24 bits")
+            // Expected: (0xC0 shl 23) or (7 and 0x7FFFFF). Compute via
+            // the same formula so the test asserts the CONTRACT, not
+            // a hex literal.
+            val expected = ((0xC0 and 0xFF) shl 23) or (7 and 0x007F_FFFF)
+            assertEquals(expected, fakeRead.lastSetPriority, "trackPriority occupies bits 30..23; sequence fills the low 23 bits")
+            // Critical guard: the encoded value MUST be non-negative so
+            // the QUIC writer's signed `sortedByDescending` orders it
+            // correctly relative to lower-trackPriority streams.
+            kotlin.test.assertTrue(
+                (fakeRead.lastSetPriority ?: -1) >= 0,
+                "encoded priority must be non-negative — bit 31 is reserved as the sign bit",
+            )
 
             // Drain the stream so the cleanup path doesn't leak.
             relayUni.incoming().toList()
             publisher.close()
             session.close()
+        }
+
+    @Test
+    fun publisher_priority_pack_keeps_top_trackPriority_above_lower_trackPriority() =
+        runBlocking {
+            // Direct guard against the pre-fix sign-extension bug: a
+            // higher trackPriority MUST produce a higher encoded
+            // priority value. Pre-fix `trackPriority=0xFF` with
+            // sequence=0 produced a negative Int that sorted BELOW
+            // `trackPriority=0x7F` with the same sequence — exactly
+            // the inversion the audit M1 fix was supposed to prevent.
+            // We exercise the path by opening a uni stream via a
+            // publisher of each priority and comparing.
+            val (clientSide1, serverSide1) = FakeWebTransport.pair()
+            val (clientSide2, serverSide2) = FakeWebTransport.pair()
+            val sessionHigh = MoqLiteSession.client(clientSide1, pumpScope)
+            val sessionLow = MoqLiteSession.client(clientSide2, pumpScope)
+
+            val pubHigh =
+                sessionHigh.publish(
+                    broadcastSuffix = "spk",
+                    track = "audio/data",
+                    trackPriority = 0xFF,
+                )
+            val pubLow =
+                sessionLow.publish(
+                    broadcastSuffix = "spk",
+                    track = "audio/data",
+                    trackPriority = 0x7F,
+                )
+
+            // Wire each up with a subscriber so send() doesn't drop.
+            for ((server, _) in listOf(serverSide1 to "high", serverSide2 to "low")) {
+                val sub = server.openBidiStream()
+                sub.write(Varint.encode(MoqLiteControlType.Subscribe.code))
+                sub.write(
+                    MoqLiteCodec.encodeSubscribe(
+                        MoqLiteSubscribe(
+                            id = 1L,
+                            broadcast = "spk",
+                            track = "audio/data",
+                            priority = 0x80,
+                            ordered = true,
+                            maxLatencyMillis = 0L,
+                            startGroup = null,
+                            endGroup = null,
+                        ),
+                    ),
+                )
+                withTimeout(2_000) { sub.incoming().first() }
+            }
+
+            pubHigh.send("h".encodeToByteArray())
+            pubHigh.endGroup()
+            pubLow.send("l".encodeToByteArray())
+            pubLow.endGroup()
+
+            val highUni = withTimeout(2_000) { serverSide1.incomingUniStreams().first() } as FakeReadStream
+            val lowUni = withTimeout(2_000) { serverSide2.incomingUniStreams().first() } as FakeReadStream
+            val highPriority = highUni.lastSetPriority ?: error("high priority not set")
+            val lowPriority = lowUni.lastSetPriority ?: error("low priority not set")
+
+            kotlin.test.assertTrue(highPriority > lowPriority, "0xFF trackPriority must encode higher than 0x7F (was $highPriority vs $lowPriority)")
+            kotlin.test.assertTrue(highPriority >= 0, "0xFF trackPriority encoding must stay non-negative (was $highPriority)")
+
+            highUni.incoming().toList()
+            lowUni.incoming().toList()
+            pubHigh.close()
+            pubLow.close()
+            sessionHigh.close()
+            sessionLow.close()
         }
 
     @Test
