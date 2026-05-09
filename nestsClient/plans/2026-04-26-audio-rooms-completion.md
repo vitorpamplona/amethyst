@@ -62,6 +62,11 @@
 ## Pointers
 
 - moq-lite wire spec + IETF gap: `nestsClient/plans/2026-04-26-moq-lite-gap.md`
+- moq-lite Lite-03 compliance audit (2026-05-09): `nestsClient/plans/2026-05-09-moq-lite-rfc-compliance.md` —
+  no 🔴 wire-incompatibilities found; two 🟡 publisher-side spec
+  tightenings shipped (AnnouncePlease prefix-mismatch, Subscribe
+  broadcast field validation), four 🟡 / four 🟦 items deferred with
+  rationale.
 - Nostrnests integration audit (gaps + roadmap): see most recent doc in `nestsClient/plans/`
 - QUIC stack status: `quic/plans/2026-04-26-quic-stack-status.md`
 - Audio-rooms NIP draft (needs refresh after the moq-lite findings):
