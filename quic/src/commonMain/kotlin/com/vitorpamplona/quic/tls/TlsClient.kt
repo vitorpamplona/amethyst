@@ -668,7 +668,8 @@ interface TlsSecretsListener {
  * Self-contained state needed to resume a TLS 1.3 session via PSK on the
  * next connection. Produced by the TLS layer when a NewSessionTicket
  * arrives; consumed by a fresh [TlsClient] via its `resumption`
- * constructor argument.
+ * constructor argument. Lets the client offer RFC 8446 PSK-resumption +
+ * RFC 9001 §4.6 0-RTT on the next connection.
  *
  * Why store all this rather than just the ticket: the PSK derivation
  * binds to a specific cipher suite (32-byte hash for our SHA-256 suites)
@@ -676,10 +677,6 @@ interface TlsSecretsListener {
  * obfuscation arithmetic on the next connection needs both
  * [ticketAgeAdd] and [issuedAtMillis] to compute the obfuscated_ticket_age
  * the server expects.
- */
-/**
- * Cached state from a prior TLS handshake that lets the client offer
- * RFC 8446 PSK-resumption + RFC 9001 §4.6 0-RTT on the next connection.
  *
  * Plain `class` (not `data class`) intentionally:
  *  - The `data class`-generated `equals` / `hashCode` use reference

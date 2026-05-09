@@ -49,6 +49,9 @@ import com.vitorpamplona.quic.packet.ShortHeaderPacket
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
 
+/** RFC 9000 §16: maximum varint value, also the per-stream offset ceiling. */
+private const val MAX_QUIC_OFFSET: Long = (1L shl 62) - 1L
+
 /**
  * Decode every QUIC packet inside a single inbound UDP datagram and dispatch
  * its frames to [conn]'s state.
@@ -67,10 +70,6 @@ import com.vitorpamplona.quic.tls.TlsClient
  * under streamsLock so frame-dispatch / stream creation / level state
  * remains a single critical section.
  */
-
-/** RFC 9000 §16: maximum varint value, also the per-stream offset ceiling. */
-private const val MAX_QUIC_OFFSET: Long = (1L shl 62) - 1L
-
 fun feedDatagram(
     conn: QuicConnection,
     datagram: ByteArray,
