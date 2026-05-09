@@ -2489,6 +2489,73 @@ class QuicConnection(
     }
 
     /**
+     * RFC 9000 §10.3 stateless-reset detection. A peer that has lost
+     * connection state (crash, restart, route change) signals so by
+     * sending a "Stateless Reset" datagram — bytes that look like a
+     * short-header packet on the wire but whose last 16 bytes equal a
+     * `stateless_reset_token` previously communicated by the peer.
+     *
+     * The check fires at AEAD-failure time (a stateless reset is
+     * indistinguishable from forgery without the token comparison).
+     * Comparison is constant-time per §10.3.1 to avoid leaking token
+     * bits via timing.
+     *
+     * Token sources covered:
+     *  - The peer's `stateless_reset_token` transport parameter (the
+     *    sequence-0 / initial CID's token), iff this is a
+     *    server-issued connection.
+     *  - Each unused entry in [pathValidator]'s pool (peer issued
+     *    via NEW_CONNECTION_ID).
+     *
+     * Not covered (limitation of the current path-migration plumbing):
+     * tokens for an actively-used DCID that we migrated to via
+     * [PathValidator.tryStartValidation] — we lose the token when the
+     * entry leaves the pool. The vast majority of clients never
+     * migrate; this gap is acceptable for the audio-rooms scope.
+     */
+    internal fun isStatelessReset(datagram: ByteArray): Boolean {
+        if (datagram.size < 22) return false
+        // Form bit must be 0 (looks-like-short-header).
+        if ((datagram[0].toInt() and 0x80) != 0) return false
+        val tokenStart = datagram.size - 16
+        // Compare against every known token. Constant-time per token;
+        // total time scales with token count but doesn't reveal which
+        // (if any) matched.
+        var anyMatch = false
+        peerTransportParameters?.statelessResetToken?.let { tok ->
+            if (tok.size == 16 && constantTimeEqualsRange(tok, datagram, tokenStart)) {
+                anyMatch = true
+            }
+        }
+        for (entry in pathValidator.unusedSequences()) {
+            // Hot-path access lives on the pool — fetch the token via
+            // the same code path the rest of [PathValidator] uses.
+            val token = pathValidator.unusedTokenForSequence(entry) ?: continue
+            if (constantTimeEqualsRange(token, datagram, tokenStart)) {
+                anyMatch = true
+            }
+        }
+        return anyMatch
+    }
+
+    /**
+     * Constant-time comparison of [token] (16 bytes) against the slice
+     * of [datagram] starting at [datagramOffset]. Caller MUST verify
+     * `datagram.size >= datagramOffset + token.size` upstream.
+     */
+    private fun constantTimeEqualsRange(
+        token: ByteArray,
+        datagram: ByteArray,
+        datagramOffset: Int,
+    ): Boolean {
+        var diff = 0
+        for (i in 0 until token.size) {
+            diff = diff or (token[i].toInt() xor datagram[datagramOffset + i].toInt())
+        }
+        return diff == 0
+    }
+
+    /**
      * Check whether an outstanding PATH_CHALLENGE has exceeded the
      * 3 * PTO budget (RFC 9000 §8.2.4). Called from the driver's
      * PTO timer path. Returns true when validation just timed out.

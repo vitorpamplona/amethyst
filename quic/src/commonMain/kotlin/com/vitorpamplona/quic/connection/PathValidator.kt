@@ -281,6 +281,15 @@ class PathValidator(
     fun unusedSequences(): List<Long> = unusedCids.keys.toList()
 
     /**
+     * Stateless-reset-token lookup for an unused-pool entry. Returns
+     * null if no entry exists for [sequenceNumber] (e.g. it was
+     * retired between [unusedSequences] returning and this call).
+     * Used by [QuicConnection.isStatelessReset] for token matching
+     * against arriving look-like-noise datagrams per RFC 9000 §10.3.
+     */
+    fun unusedTokenForSequence(sequenceNumber: Long): ByteArray? = unusedCids[sequenceNumber]?.statelessResetToken
+
+    /**
      * Record a peer-issued `NEW_CONNECTION_ID` (RFC 9000 §19.15).
      * Returns the result code so the caller (parser) can decide
      * whether to close the connection on a peer protocol violation.

@@ -91,6 +91,21 @@ private fun feedDatagramInner(
     datagram: ByteArray,
     nowMillis: Long,
 ) {
+    // RFC 9000 §10.3 stateless-reset detection. A peer that has lost
+    // connection state signals so by sending a datagram whose trailing
+    // 16 bytes equal a stateless_reset_token we previously received.
+    // Pre-empts the AEAD path entirely: a real short-header packet's
+    // trailing 16 bytes (the AEAD tag) match a known token with
+    // probability 2^-128, so the false-positive rate is zero in
+    // practice. Spec MUST close silently — no CONNECTION_CLOSE per
+    // §10.3.1.
+    if (datagram.isNotEmpty() &&
+        (datagram[0].toInt() and 0x80) == 0 &&
+        conn.isStatelessReset(datagram)
+    ) {
+        conn.markClosedExternally("stateless reset received from peer")
+        return
+    }
     var offset = 0
     while (offset < datagram.size) {
         val first = datagram[offset].toInt() and 0xFF
@@ -419,6 +434,18 @@ private fun feedShortHeaderPacket(
         }
     }
     if (parsed == null) {
+        // RFC 9000 §10.3: an undecryptable short-header datagram may
+        // be a Stateless Reset from a peer that lost connection
+        // state (crash, restart, NAT rebinding). Before counting it
+        // as a forgery against the integrity limit, check whether
+        // its trailing 16 bytes match any known stateless-reset
+        // token. If so, the connection is over — silently transition
+        // to CLOSED per §10.3.1 (no CONNECTION_CLOSE emission, no
+        // further packets, just stop).
+        if (offset == 0 && conn.isStatelessReset(datagram)) {
+            conn.markClosedExternally("stateless reset received from peer")
+            return
+        }
         conn.qlogObserver.onPacketDropped(
             "AEAD auth failed or header parse failed at level APPLICATION",
             datagram.size - offset,
