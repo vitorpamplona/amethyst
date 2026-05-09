@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -63,6 +64,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MoreOptionsButton(
@@ -201,6 +203,18 @@ fun NoteDropDownMenu(
             M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_note_id)) {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(note.toNostrUri())
+                    onDismiss()
+                }
+            }
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_raw_json)) {
+                val event = note.event
+                if (event != null) {
+                    scope.launch {
+                        val json = withContext(Dispatchers.Default) { JacksonMapper.toJsonPretty(event) }
+                        clipboardManager.setText(json)
+                        onDismiss()
+                    }
+                } else {
                     onDismiss()
                 }
             }
