@@ -2296,7 +2296,7 @@
     <string name="attestation_request">Solicitação de atestação</string>
     <string name="attestation_request_description">Solicitando atestação para um evento</string>
     <string name="attestor_recommendation">Recomendação do atestante</string>
-    <string name="attestor_recommendation_for_kinds">Recomendado para tipos: %1$s</string>
+    <string name="attestor_recommendation_for_kinds">Recomendado para tipos: </string>
     <string name="attestor_proficiency">Competência do atestante</string>
     <string name="attestor_proficiency_for_kinds">Competente na verificação de tipos: %1$s</string>
     <string name="attestation_attests_to">Atesta</string>

@@ -924,7 +924,7 @@
     <string name="follow_set_creation_menu_title">नई सूची बनाएँ</string>
     <string name="follow_set_creation_item_label">प्रयोक्ता के साथ नई सूची %1$s बनाएँ</string>
     <string name="follow_set_creation_item_description">अनुगम्य सूची %1$s बनाता है तथा उससे %2$s जोडता है।</string>
-    <string name="follow_set_creation_dialog_title">नई %1$s सूची</string>
+    <string name="follow_set_creation_dialog_title">नई फ़ॉलो सूची</string>
     <string name="follow_pack_creation_dialog_title">नव्य अनुचरण पोटली</string>
     <string name="follow_set_copy_dialog_title">अनुचरण सूची की अनुकृति करें</string>
     <string name="follow_set_desc_modify_label">विवरण का संशोधन करें</string>

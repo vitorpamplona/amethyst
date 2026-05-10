@@ -969,7 +969,7 @@
     <string name="follow_set_creation_menu_title">Vytvořit nový seznam</string>
     <string name="follow_set_creation_item_label">Vytvořit nový seznam %1$s s uživatelem</string>
     <string name="follow_set_creation_item_description">Vytvoří %1$s sadu sledování a přidá do ní %2$s.</string>
-    <string name="follow_set_creation_dialog_title">Nový seznam %1$s</string>
+    <string name="follow_set_creation_dialog_title">Nový seznam sledovaných</string>
     <string name="follow_set_creation_name_label">Název sady</string>
     <string name="follow_set_creation_desc_label">Popis sady (volitelné)</string>
     <string name="follow_set_creation_action_btn_label">Vytvořit sadu</string>

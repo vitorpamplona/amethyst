@@ -2320,7 +2320,7 @@
     <string name="attestation_request">Žádost o atestaci</string>
     <string name="attestation_request_description">Žádost o atestaci události</string>
     <string name="attestor_recommendation">Doporučení atestátora</string>
-    <string name="attestor_recommendation_for_kinds">Doporučen pro druhy: %1$s</string>
+    <string name="attestor_recommendation_for_kinds">Doporučen pro druhy: </string>
     <string name="attestor_proficiency">Odbornost atestátora</string>
     <string name="attestor_proficiency_for_kinds">Odborník na ověřování druhů: %1$s</string>
     <string name="attestation_attests_to">Potvrzuje</string>

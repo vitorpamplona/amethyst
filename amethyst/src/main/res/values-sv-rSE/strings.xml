@@ -2295,7 +2295,7 @@
     <string name="attestation_request">Attesteringsförfrågan</string>
     <string name="attestation_request_description">Begär attestering för en händelse</string>
     <string name="attestor_recommendation">Attestantens rekommendation</string>
-    <string name="attestor_recommendation_for_kinds">Rekommenderad för typer: %1$s</string>
+    <string name="attestor_recommendation_for_kinds">Rekommenderad för typer: </string>
     <string name="attestor_proficiency">Attestantens kompetens</string>
     <string name="attestor_proficiency_for_kinds">Kompetent att verifiera typer: %1$s</string>
     <string name="attestation_attests_to">Intygar</string>

@@ -2300,7 +2300,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="attestation_request">Attestierungsanfrage</string>
     <string name="attestation_request_description">Attestierung für ein Ereignis anfordern</string>
     <string name="attestor_recommendation">Empfehlung des Attestierers</string>
-    <string name="attestor_recommendation_for_kinds">Empfohlen für Arten: %1$s</string>
+    <string name="attestor_recommendation_for_kinds">Empfohlen für Arten: </string>
     <string name="attestor_proficiency">Kompetenz des Attestierers</string>
     <string name="attestor_proficiency_for_kinds">Kompetent für die Verifizierung von Arten: %1$s</string>
     <string name="attestation_attests_to">Bestätigt</string>

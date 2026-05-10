@@ -1009,7 +1009,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_creation_menu_title">Neue Liste erstellen</string>
     <string name="follow_set_creation_item_label">Neue %1$s-Liste mit Benutzer erstellen</string>
     <string name="follow_set_creation_item_description">Erstellt ein %1$s-Folge-Set und fügt %2$s hinzu.</string>
-    <string name="follow_set_creation_dialog_title">Neue %1$s-Liste</string>
+    <string name="follow_set_creation_dialog_title">Neue Folgen-Liste</string>
     <string name="follow_set_creation_name_label">Set-Name</string>
     <string name="follow_set_creation_desc_label">Set-Beschreibung (optional)</string>
     <string name="follow_set_creation_action_btn_label">Set erstellen</string>
