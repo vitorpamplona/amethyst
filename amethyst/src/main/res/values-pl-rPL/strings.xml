@@ -1900,7 +1900,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="remove_dvm_from_favorites">Usuń z ulubionych</string>
     <string name="favorite_dvms_title">Algorytmy ulubionych kanałów</string>
     <string name="favorite_dvms_explainer">Algorytmy kanałów, które tutaj oznaczyłeś gwiazdką, pojawiają się jako ikony filtrów na stronie głównej. Otwórz sekcję Odkryj, aby dodać kolejne.</string>
-    <string name="favorite_dvms_empty">Brak algorytmów ulubionych kanałów. Otwórz sekcję „Odkrywaj”, wybierz jeden z nich i oznacz go gwiazdką, aby dodać go tutaj.</string>
     <string name="dvm_home_status_requesting">Poproś %1$s o wyświetlenie treści…</string>
     <string name="dvm_home_status_requesting_all">Poproś algorytmy o wyświetlenie ulubionych treści…</string>
     <string name="dvm_home_status_processing">Przetwarzanie statusu kanału…</string>

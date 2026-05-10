@@ -1889,7 +1889,6 @@
     <string name="remove_dvm_from_favorites">Eltávolítás a kedvencekből</string>
     <string name="favorite_dvms_title">Kedvenc hírfolyam-algoritmusok</string>
     <string name="favorite_dvms_explainer">Az itt kedvencként megjelölt hírfolyam-algoritmusok szűrőgombként jelennek meg a főoldal hírfolyamán. Nyissa meg a felfedezés menüpontot, ha továbbiakat szeretne hozzáadni.</string>
-    <string name="favorite_dvms_empty">Még nincsenek kedvenc hírfolyam-algoritmusok. Nyissa meg a „Felfedezés” menüpontot, válasszon ki egyet, majd jelölje meg csillaggal, hogy itt megjelenjen.</string>
     <string name="dvm_home_status_requesting">%1$s lekérdezése egy hírfolyamért…</string>
     <string name="dvm_home_status_requesting_all">Hírfolyamok keresése a kedvenc hírfolyam-algoritmusok segítségével…</string>
     <string name="dvm_home_status_processing">Hírfolyam feldolgozása…</string>

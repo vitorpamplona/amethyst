@@ -1848,7 +1848,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="remove_dvm_from_favorites">Aus Favoriten entfernen</string>
     <string name="favorite_dvms_title">Bevorzugte Feed-Algorithmen</string>
     <string name="favorite_dvms_explainer">Feed-Algorithmen, die du mit einem Stern markierst, erscheinen als Filter-Chips im Home-Feed. Öffne Entdecken, um weitere hinzuzufügen.</string>
-    <string name="favorite_dvms_empty">Noch keine bevorzugten Feed-Algorithmen. Öffne Entdecken, tippe einen an und markiere ihn mit einem Stern, um ihn hier hinzuzufügen.</string>
     <string name="dvm_home_status_requesting">Frage %1$s nach einem Feed…</string>
     <string name="dvm_home_status_requesting_all">Frage deine bevorzugten Feed-Algorithmen nach Feeds…</string>
     <string name="dvm_home_status_processing">Feed wird verarbeitet…</string>

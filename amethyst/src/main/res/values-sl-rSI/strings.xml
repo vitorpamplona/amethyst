@@ -1804,7 +1804,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="remove_dvm_from_favorites">Odstrani iz priljubljenih</string>
     <string name="favorite_dvms_title">Priljubljeni algoritmi vsebin</string>
     <string name="favorite_dvms_explainer">Algoritmi vsebin, ki jih tukaj označite z zvezdico, se bodo prikazali kot filtri na začetnem zaslonu. Za nove odprite »Odkrij«.</string>
-    <string name="favorite_dvms_empty">Še nimate priljubljenih algoritmov vsebin. Odprite »Odkrij«, izberite enega in ga označite z zvezdico, da ga dodate sem.</string>
     <string name="dvm_home_status_requesting">Poizvedba pri %1$s za vsebine…</string>
     <string name="dvm_home_status_requesting_all">Pridobivanje vsebin iz vaših najljubših algoritmov…</string>
     <string name="dvm_home_status_processing">Priprava vaših vsebin…</string>

@@ -1844,7 +1844,6 @@
     <string name="remove_dvm_from_favorites">Remover dos favoritos</string>
     <string name="favorite_dvms_title">Algoritmos de feed favoritos</string>
     <string name="favorite_dvms_explainer">Os algoritmos de feed marcados com estrela aparecem como chips de filtro no feed Início. Abra Descobrir para adicionar mais.</string>
-    <string name="favorite_dvms_empty">Ainda não há algoritmos favoritos. Abra Descobrir, toque em um e marque com estrela para adicioná-lo aqui.</string>
     <string name="dvm_home_status_requesting">Solicitando feed a %1$s…</string>
     <string name="dvm_home_status_requesting_all">Solicitando feeds aos seus algoritmos favoritos…</string>
     <string name="dvm_home_status_processing">Processando seu feed…</string>

@@ -1856,7 +1856,6 @@
     <string name="remove_dvm_from_favorites">Odebrat z oblíbených</string>
     <string name="favorite_dvms_title">Oblíbené algoritmy zdrojů</string>
     <string name="favorite_dvms_explainer">Algoritmy zdrojů, které zde označíte hvězdičkou, se zobrazí jako filtry na hlavním zdroji. Otevřete Objevovat pro přidání dalších.</string>
-    <string name="favorite_dvms_empty">Zatím nemáte žádné oblíbené algoritmy zdrojů. Otevřete Objevovat, klepněte na nějaký a označte ho hvězdičkou.</string>
     <string name="dvm_home_status_requesting">Žádost %1$s o zdroj…</string>
     <string name="dvm_home_status_requesting_all">Žádost oblíbených algoritmů o zdroje…</string>
     <string name="dvm_home_status_processing">Zpracování zdroje…</string>
