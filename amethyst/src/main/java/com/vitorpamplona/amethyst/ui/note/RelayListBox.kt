@@ -59,7 +59,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.noteComposeRelayBox
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.flow.mapNotNull
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
 
 @Composable
 fun RelayBadges(
@@ -81,7 +85,7 @@ fun RelayBadges(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, FlowPreview::class)
 @Composable
 fun RenderAllRelayList(
     baseNote: Note,
@@ -90,16 +94,26 @@ fun RenderAllRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteRelays by baseNote
-        .flow()
-        .relays.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow =
+        remember(baseNote) {
+            baseNote
+                .flow()
+                .relays.stateFlow
+                .sample(500)
+                .map { it.note.relays }
+                .distinctUntilChanged()
+        }
+
+    val relays by flow.collectAsStateWithLifecycle(baseNote.relays)
 
     FlowRow(modifier, verticalArrangement = verticalArrangement) {
-        noteRelays.note.relays.forEach { RenderRelay(it, accountViewModel, nav) }
+        relays.forEach { RenderRelay(it, accountViewModel, nav) }
     }
 }
 
+// Single sampled subscription instead of one per slot: emits the first 3 relays from the note.
+// Throttled to 500ms because relay arrivals can churn a list of an actively-fanned-out note.
+@OptIn(FlowPreview::class)
 @Composable
 fun RenderClosedRelayList(
     baseNote: Note,
@@ -108,32 +122,32 @@ fun RenderClosedRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val flow =
+        remember(baseNote) {
+            baseNote
+                .flow()
+                .relays.stateFlow
+                .sample(500)
+                .map { it.note.relays.take(3) }
+                .distinctUntilChanged()
+        }
+
+    val initial = remember(baseNote) { baseNote.relays.take(3) }
+    val relays by flow.collectAsStateWithLifecycle(initial)
+
     Row(modifier, verticalAlignment = verticalAlignment) {
-        WatchAndRenderRelay(baseNote, 0, accountViewModel, nav)
-        WatchAndRenderRelay(baseNote, 1, accountViewModel, nav)
-        WatchAndRenderRelay(baseNote, 2, accountViewModel, nav)
+        RenderRelaySlot(relays.getOrNull(0), accountViewModel, nav)
+        RenderRelaySlot(relays.getOrNull(1), accountViewModel, nav)
+        RenderRelaySlot(relays.getOrNull(2), accountViewModel, nav)
     }
 }
 
 @Composable
-fun WatchAndRenderRelay(
-    baseNote: Note,
-    relayIndex: Int,
+private fun RenderRelaySlot(
+    relay: NormalizedRelayUrl?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val flow =
-        remember(baseNote, relayIndex) {
-            baseNote
-                .flow()
-                .relays.stateFlow
-                .mapNotNull {
-                    it.note.relays.getOrNull(relayIndex)
-                }
-        }
-
-    val relay by flow.collectAsStateWithLifecycle(baseNote.relays.getOrNull(relayIndex))
-
     CrossfadeIfEnabled(targetState = relay, label = "RenderRelay", modifier = Size17Modifier, accountViewModel = accountViewModel) {
         if (it != null) {
             RenderRelay(it, accountViewModel, nav)
