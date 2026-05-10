@@ -2243,9 +2243,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="hls_view_note">Poglej zapisek</string>
     <string name="hls_done">Končano</string>
     <string name="hls_try_again">Poskusi znova</string>
-    <string name="hls_draft_note_after_upload">Osnutek zapiska po nalaganju</string>
-    <string name="hls_draft_note_after_upload_explainer">Odpri urejevalnik z že izpolnjenim naslovom, opisom in povezavo do videa, da ga lahko pred objavo še dodelaš.</string>
-    <string name="hls_draft_note_button">Osnutek zapiska</string>
     <string name="pack_actions_dialog_title">Možnosti paketa</string>
     <string name="list_actions_dialog_title">Možnosti seznama</string>
     <string name="bookmark_item_actions_dialog_title">Možnosti zaznamkov</string>

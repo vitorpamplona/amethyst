@@ -30,9 +30,12 @@ import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPosterUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishRequest
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishState
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -160,7 +163,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     publishedTemplates += tpl
                     "signed-event-id"
                 },
@@ -220,7 +223,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = capturingRunUpload,
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = {
+                signAndPublish = { _, _ ->
                     capturedDuringPublish += orchestrator.state.value
                     "event-id"
                 },
@@ -246,7 +249,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = { _, _, _ -> throw RuntimeException("decode failed") },
                 buildUploader = { CannedUploader() },
                 uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -266,7 +269,7 @@ class HlsPublishOrchestratorTest {
                     HlsBlobUploader { _, _, _ -> throw RuntimeException("server 500") }
                 },
                 uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -285,7 +288,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = { _, _ -> throw RuntimeException("master upload failed") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -304,7 +307,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { throw RuntimeException("relay rejected") },
+                signAndPublish = { _, _ -> throw RuntimeException("relay rejected") },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -324,7 +327,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     captured += tpl
                     "event-id"
                 },
@@ -362,7 +365,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(portrait),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     captured += tpl
                     "event-id"
                 },
@@ -376,6 +379,7 @@ class HlsPublishOrchestratorTest {
     @Test
     fun posterUrlFromUploadPosterClosureLandsOnEveryImeta() {
         val captured = mutableListOf<HlsVideoEventTemplate>()
+        val capturedSiblings = mutableListOf<EventTemplate<TextNoteEvent>>()
         val canned = CannedUploader()
         val orchestrator =
             HlsPublishOrchestrator(
@@ -383,11 +387,12 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, sibling ->
                     captured += tpl
+                    capturedSiblings += sibling
                     "event-id"
                 },
-                uploadPoster = { _ -> "https://cdn.test/poster.jpg" },
+                uploadPoster = { _ -> HlsPosterUpload("https://cdn.test/poster.jpg") },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -399,6 +404,13 @@ class HlsPublishOrchestratorTest {
             val flat = imeta.joinToString("|")
             assertTrue("imeta missing poster: $flat", flat.contains("image https://cdn.test/poster.jpg"))
         }
+
+        // Sibling kind:1 carries the same poster URL on its single imeta.
+        val sibling = capturedSiblings.single()
+        val siblingImeta = sibling.tags.firstOrNull { it.isNotEmpty() && it[0] == "imeta" }
+        assertNotNull("sibling missing imeta", siblingImeta)
+        val siblingFlat = siblingImeta!!.joinToString("|")
+        assertTrue("sibling imeta missing poster: $siblingFlat", siblingFlat.contains("image https://cdn.test/poster.jpg"))
     }
 
     @Test
@@ -411,7 +423,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = fakeRunUpload(),
                 buildUploader = { canned },
                 uploadMaster = fakeUploadMaster(canned),
-                signAndPublish = { tpl ->
+                signAndPublish = { tpl, _ ->
                     captured += tpl
                     "event-id"
                 },
@@ -439,7 +451,7 @@ class HlsPublishOrchestratorTest {
                 runUpload = { _, _, _ -> throw RuntimeException("boom") },
                 buildUploader = { CannedUploader() },
                 uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
-                signAndPublish = { "never" },
+                signAndPublish = { _, _ -> "never" },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }

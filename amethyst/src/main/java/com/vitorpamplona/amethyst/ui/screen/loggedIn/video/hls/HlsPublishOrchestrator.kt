@@ -31,10 +31,13 @@ import com.davotoula.lightcompressor.hls.Rendition
 import com.davotoula.lightcompressor.hls.SimpleHlsListener
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
+import com.vitorpamplona.amethyst.service.uploads.hls.HlsKind1SiblingBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoPublishInput
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +56,18 @@ data class HlsPublishRequest(
     val server: ServerName,
     val ladder: HlsLadder = HlsLadder.default(),
     val durationSeconds: Int? = null,
+)
+
+/**
+ * Poster JPEG upload result. Carries the public URL plus blurhash/thumbhash derived from the
+ * same poster pixels, so every imeta in the published NIP-71 event can render an instant
+ * low-res placeholder. All three fields share a single source frame; per-rendition variants
+ * would be redundant.
+ */
+data class HlsPosterUpload(
+    val url: String,
+    val blurhash: String? = null,
+    val thumbhash: String? = null,
 )
 
 /**
@@ -76,12 +91,17 @@ class HlsPublishOrchestrator(
     ) -> HlsUploadResult<MediaUploadResult>,
     private val buildUploader: (ServerName) -> HlsBlobUploader,
     private val uploadMaster: suspend (HlsBlobUploader, String) -> MediaUploadResult,
-    private val signAndPublish: suspend (HlsVideoEventTemplate) -> String,
+    // Signs and broadcasts the NIP-71 video event AND the kind:1 sibling note. Returns the
+    // NIP-71 event id.
+    private val signAndPublish: suspend (
+        primary: HlsVideoEventTemplate,
+        sibling: EventTemplate<TextNoteEvent>,
+    ) -> String,
     // Generates a poster JPEG from the picked source video and uploads it via the supplied
     // uploader, returning the public URL. Returns null if poster generation isn't possible
     // (unsupported source, decode failure, no readable frame). Failures here must NOT fail
     // the whole publish — the orchestrator catches and continues without a poster.
-    private val uploadPoster: suspend (HlsBlobUploader) -> String? = { _ -> null },
+    private val uploadPoster: suspend (HlsBlobUploader) -> HlsPosterUpload? = { _ -> null },
 ) {
     val state: StateFlow<HlsPublishState> = _state
 
@@ -208,7 +228,7 @@ class HlsPublishOrchestrator(
             // previews) have a still to render. Tolerate failure: skip the poster rather than
             // failing the entire publish, since the user has already paid the cost of the long
             // segment uploads.
-            val posterUrl =
+            val posterResult =
                 try {
                     uploadPoster(uploader)
                 } catch (e: CancellationException) {
@@ -219,7 +239,7 @@ class HlsPublishOrchestrator(
                 }
 
             _state.value = HlsPublishState.Publishing
-            val template =
+            val built =
                 HlsVideoEventBuilder.build(
                     HlsVideoPublishInput(
                         renditions = uploadResult.renditions,
@@ -230,10 +250,23 @@ class HlsPublishOrchestrator(
                         description = request.description,
                         durationSeconds = request.durationSeconds,
                         contentWarning = contentWarningOrNull(request),
-                        posterUrl = posterUrl,
+                        posterUrl = posterResult?.url,
+                        blurhash = posterResult?.blurhash,
+                        thumbhash = posterResult?.thumbhash,
                     ),
                 )
-            val eventId = signAndPublish(template)
+            val sibling =
+                HlsKind1SiblingBuilder.build(
+                    title = request.title,
+                    description = request.description,
+                    masterUrl = masterUrl,
+                    masterSha256 = masterUpload.sha256,
+                    masterDimension = built.masterDimension,
+                    posterUrl = posterResult?.url,
+                    blurhash = posterResult?.blurhash,
+                    thumbhash = posterResult?.thumbhash,
+                )
+            val eventId = signAndPublish(built.template, sibling)
 
             _state.value =
                 HlsPublishState.Success(

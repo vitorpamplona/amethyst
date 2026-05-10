@@ -54,6 +54,9 @@ data class HlsVideoPublishInput(
     // (gallery thumbnails, previews) have a still to render — the .m3u8 playlist itself is a
     // text manifest that can't be decoded as an image frame.
     val posterUrl: String? = null,
+    // Identical for every rendition since the source frame is the same.
+    val blurhash: String? = null,
+    val thumbhash: String? = null,
 )
 
 sealed class HlsVideoEventTemplate {
@@ -65,6 +68,16 @@ sealed class HlsVideoEventTemplate {
         val template: EventTemplate<VideoVerticalEvent>,
     ) : HlsVideoEventTemplate()
 }
+
+/**
+ * Result of [HlsVideoEventBuilder.build]. Exposes the unsigned NIP-71 [template] plus the
+ * master [masterDimension] (largest rendition's WxH) so the kind:1 sibling imeta can carry
+ * the same dim as the NIP-71 master imeta.
+ */
+data class HlsBuiltTemplate(
+    val template: HlsVideoEventTemplate,
+    val masterDimension: DimensionTag?,
+)
 
 /**
  * Assembles a NIP-71 VideoHorizontalEvent / VideoVerticalEvent template from an HLS upload
@@ -81,7 +94,7 @@ sealed class HlsVideoEventTemplate {
  */
 @OptIn(ExperimentalUuidApi::class)
 object HlsVideoEventBuilder {
-    fun build(input: HlsVideoPublishInput): HlsVideoEventTemplate {
+    fun build(input: HlsVideoPublishInput): HlsBuiltTemplate {
         val firstRendition = input.renditions.firstOrNull()
         val isVertical = firstRendition != null && firstRendition.height > firstRendition.width
 
@@ -96,6 +109,8 @@ object HlsVideoEventBuilder {
                 dimension = masterDimension,
                 alt = input.alt,
                 image = posterImage,
+                blurhash = input.blurhash,
+                thumbhash = input.thumbhash,
             )
 
         val renditionMetas =
@@ -115,6 +130,8 @@ object HlsVideoEventBuilder {
                     size = combinedMetadata?.size?.toInt(),
                     dimension = DimensionTag(summary.width, summary.height),
                     image = posterImage,
+                    blurhash = input.blurhash,
+                    thumbhash = input.thumbhash,
                 )
             }
 
@@ -122,24 +139,27 @@ object HlsVideoEventBuilder {
         val dTag = input.dTag ?: Uuid.random().toString()
         val createdAt = input.createdAt ?: TimeUtils.now()
 
-        return if (isVertical) {
-            HlsVideoEventTemplate.Vertical(
-                VideoVerticalEvent.build(input.description, dTag, createdAt) {
-                    videoIMetas(videoMetas)
-                    title(input.title)
-                    input.durationSeconds?.let { duration(it) }
-                    input.contentWarning?.let { contentWarning(it) }
-                },
-            )
-        } else {
-            HlsVideoEventTemplate.Horizontal(
-                VideoHorizontalEvent.build(input.description, dTag, createdAt) {
-                    videoIMetas(videoMetas)
-                    title(input.title)
-                    input.durationSeconds?.let { duration(it) }
-                    input.contentWarning?.let { contentWarning(it) }
-                },
-            )
-        }
+        val template =
+            if (isVertical) {
+                HlsVideoEventTemplate.Vertical(
+                    VideoVerticalEvent.build(input.description, dTag, createdAt) {
+                        videoIMetas(videoMetas)
+                        title(input.title)
+                        input.durationSeconds?.let { duration(it) }
+                        input.contentWarning?.let { contentWarning(it) }
+                    },
+                )
+            } else {
+                HlsVideoEventTemplate.Horizontal(
+                    VideoHorizontalEvent.build(input.description, dTag, createdAt) {
+                        videoIMetas(videoMetas)
+                        title(input.title)
+                        input.durationSeconds?.let { duration(it) }
+                        input.contentWarning?.let { contentWarning(it) }
+                    },
+                )
+            }
+
+        return HlsBuiltTemplate(template, masterDimension)
     }
 }

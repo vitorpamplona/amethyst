@@ -28,11 +28,13 @@ import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsUploadHelper
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.getThumbnail
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
@@ -87,7 +89,7 @@ fun createProductionHlsPublishOrchestrator(
                 }
             }
         },
-        signAndPublish = { template ->
+        signAndPublish = { template, sibling ->
             val inner =
                 when (template) {
                     is HlsVideoEventTemplate.Horizontal -> template.template
@@ -95,6 +97,17 @@ fun createProductionHlsPublishOrchestrator(
                 }
             val signed = account.signer.sign(inner)
             account.sendAutomatic(signed)
+
+            // Sibling-publish failure is a soft warning: the NIP-71 event already landed, so a
+            // partial success is more useful than a hard fail.
+            try {
+                val signedSibling = account.signer.sign(sibling)
+                account.sendAutomatic(signedSibling)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.w(TAG) { "kind:1 sibling sign/publish failed: ${e.message}" }
+            }
             signed.id
         },
         uploadPoster = { uploader ->
@@ -108,8 +121,9 @@ fun createProductionHlsPublishOrchestrator(
     )
 
 /**
- * Extracts a still frame from the source video at [uri], encodes it as JPEG, and uploads it
- * via [uploader]. Returns the public URL on success or null if any step fails (unsupported
+ * Extracts a still frame from the source video at [uri], encodes it as JPEG, computes blurhash +
+ * thumbhash from the same JPEG bytes, and uploads it via [uploader]. Returns an [HlsPosterUpload]
+ * carrying the public URL plus the two hashes on success, or null if any step fails (unsupported
  * source, no readable frame, encode/upload error). The orchestrator treats null as "publish
  * without a poster" — failure here must never abort the publish.
  */
@@ -117,11 +131,28 @@ private suspend fun generateAndUploadPoster(
     context: Context,
     uri: Uri,
     uploader: HlsBlobUploader,
-): String? {
+): HlsPosterUpload? {
     val posterFile = extractPosterToTempFile(context, uri) ?: return null
     return try {
+        // Read once: hash from the same bytes we upload, so the hashes describe the exact
+        // JPEG receiving clients will fetch via the imeta `image` URL.
+        val posterBytes = posterFile.readBytes()
+        val hashes =
+            try {
+                PreviewMetadataCalculator.computeFromBytes(posterBytes, POSTER_CONTENT_TYPE, null)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG) { "uploadPoster: blurhash/thumbhash compute failed: ${e.message}" }
+                null
+            }
         val result = uploader.upload(posterFile, POSTER_CONTENT_TYPE) { _, _ -> }
-        result.url
+        val url = result.url ?: return null
+        HlsPosterUpload(
+            url = url,
+            blurhash = hashes?.blurhash?.blurhash,
+            thumbhash = hashes?.thumbhash?.thumbhash,
+        )
     } finally {
         if (!posterFile.delete()) {
             Log.w(TAG) { "uploadPoster: failed to delete temp file ${posterFile.absolutePath}" }
@@ -155,6 +186,8 @@ private suspend fun extractPosterToTempFile(
                 }
                 throw e
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG) { "extractPosterToTempFile: failed for $uri — ${e.message}" }
             null
