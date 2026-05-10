@@ -489,30 +489,31 @@ fun calculateBackgroundColor(
 ): MutableState<Color> {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+
+    // Only fade in/out the "new item" highlight for items that track read state.
+    // Inner notes (reposts/quotes) pass routeForLastRead = null and reuse the parent color directly,
+    // so the LaunchedEffect would just park a coroutine for 5s per item during scroll.
+    val isNew =
+        remember(createdAt, routeForLastRead) {
+            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+        }
+
     val bgColor =
         remember(createdAt) {
             mutableStateOf(
-                if (routeForLastRead != null) {
-                    val isNew = accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
-
-                    if (isNew) {
-                        if (parentBackgroundColor != null) {
-                            newItemColor.compositeOver(parentBackgroundColor.value)
-                        } else {
-                            newItemColor.compositeOver(defaultBackgroundColor)
-                        }
-                    } else {
-                        parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
-                    }
+                if (isNew) {
+                    newItemColor.compositeOver(parentBackgroundColor?.value ?: defaultBackgroundColor)
                 } else {
-                    parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+                    parentBackgroundColor?.value ?: Color.Transparent
                 },
             )
         }
 
-    LaunchedEffect(createdAt) {
-        delay(5000)
-        bgColor.value = parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+    if (isNew) {
+        LaunchedEffect(createdAt) {
+            delay(5000)
+            bgColor.value = parentBackgroundColor?.value ?: Color.Transparent
+        }
     }
 
     return bgColor

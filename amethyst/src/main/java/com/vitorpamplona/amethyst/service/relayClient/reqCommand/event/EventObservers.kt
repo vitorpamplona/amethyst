@@ -52,10 +52,8 @@ fun observeNote(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .metadata.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().metadata.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -187,10 +185,8 @@ fun observeNoteReplies(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .replies.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().replies.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -225,10 +221,8 @@ fun observeNoteReactions(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .reactions.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().reactions.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -265,10 +259,8 @@ fun observeNoteZaps(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .zaps.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().zaps.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -280,10 +272,8 @@ fun observeNoteReposts(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .boosts.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().boosts.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -365,11 +355,8 @@ fun observeNoteOts(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .ots
-        .stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().ots.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -381,11 +368,8 @@ fun observeNoteEdits(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .edits
-        .stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().edits.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @Composable
