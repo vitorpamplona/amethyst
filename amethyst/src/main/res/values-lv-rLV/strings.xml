@@ -117,7 +117,7 @@
     <string name="follow_list_selection">Sekot saraksts</string>
     <string name="follow_set_icon_description">Ikona sarakstam</string>
     <string name="follow_set_creation_menu_title">Izveidot jaunu sarakstu</string>
-    <string name="follow_set_creation_dialog_title">Jaunais %1$s saraksts</string>
+    <string name="follow_set_creation_dialog_title">Jauns sekošanas saraksts</string>
     <string name="follow_set_creation_name_label">Kolekcijas nosaukums</string>
     <string name="follow_set_creation_desc_label">Kolekcijas apraksts (neobligāti, pēc izvēles)</string>
     <string name="follow_set_creation_action_btn_label">Izveidot kolekciju</string>
