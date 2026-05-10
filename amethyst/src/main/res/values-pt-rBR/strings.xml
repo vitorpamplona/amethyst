@@ -2531,4 +2531,7 @@
     <string name="stale_relay_hint_label">Os relays de origem podem estar desatualizados</string>
     <string name="use_local_blossom_cache">Usar cache Blossom local</string>
     <string name="use_local_blossom_cache_caption">Quando um cache Blossom estiver rodando neste dispositivo (porta 24242), rotear downloads de imagens e vídeos por ele.</string>
+    <string name="favorite_dvms_empty_cta">Adicionar alguns feeds</string>
+    <string name="favorite_dvms_empty_headline">Fixe seus algoritmos favoritos</string>
+    <string name="favorite_dvms_empty_subtitle">Toque no botão abaixo para explorar algoritmos e marque com estrela os que deseja manter aqui.</string>
 </resources>

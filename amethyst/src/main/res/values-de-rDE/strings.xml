@@ -2536,4 +2536,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="use_local_blossom_cache">Lokalen Blossom-Cache verwenden</string>
     <string name="use_local_blossom_cache_caption">Wenn auf diesem Gerät ein Blossom-Cache läuft (Port 24242), Bild- und Video-Downloads darüber leiten.</string>
     <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
+    <string name="favorite_dvms_empty_cta">Feeds hinzufügen</string>
+    <string name="favorite_dvms_empty_headline">Lieblingsalgorithmen anheften</string>
+    <string name="favorite_dvms_empty_subtitle">Tippe auf die Schaltfläche unten, um Algorithmen zu durchsuchen, und markiere die, die du hier behalten möchtest, mit einem Stern.</string>
 </resources>

@@ -2555,4 +2555,7 @@
     <string name="stale_relay_hint_label">Zdrojová relé mohou být zastaralá</string>
     <string name="use_local_blossom_cache">Použít lokální Blossom cache</string>
     <string name="use_local_blossom_cache_caption">Pokud na tomto zařízení běží Blossom cache (port 24242), směrovat stahování obrázků a videí přes ni.</string>
+    <string name="favorite_dvms_empty_cta">Přidat nějaké kanály</string>
+    <string name="favorite_dvms_empty_headline">Připněte si oblíbené algoritmy</string>
+    <string name="favorite_dvms_empty_subtitle">Klepněte na tlačítko níže pro procházení algoritmů a označte hvězdičkou ty, které si zde chcete ponechat.</string>
 </resources>

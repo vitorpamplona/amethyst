@@ -2530,4 +2530,7 @@
     <string name="stale_relay_hint_label">Källrelän kan vara föråldrade</string>
     <string name="use_local_blossom_cache">Använd lokal Blossom-cache</string>
     <string name="use_local_blossom_cache_caption">När en Blossom-cache körs på den här enheten (port 24242), dirigera bild- och videonedladdningar genom den.</string>
+    <string name="favorite_dvms_empty_cta">Lägg till några flöden</string>
+    <string name="favorite_dvms_empty_headline">Fäst dina favoritalgoritmer</string>
+    <string name="favorite_dvms_empty_subtitle">Tryck på knappen nedan för att bläddra bland algoritmer och stjärnmarkera de du vill behålla här.</string>
 </resources>
