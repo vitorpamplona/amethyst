@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +44,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.ui.components.AnimatedUrlImage
+import com.vitorpamplona.amethyst.ui.components.isAnimatedImageUrl
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -74,11 +77,21 @@ fun ShowEmojiSuggestionList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = spacedBy(Size10dp),
                 ) {
-                    AsyncImage(
-                        it.link,
-                        contentDescription = it.code,
-                        modifier = Size40Modifier,
-                    )
+                    if (isAnimatedImageUrl(it.link)) {
+                        AnimatedUrlImage(
+                            imageUrl = it.link,
+                            contentDescription = it.code,
+                            modifier = Size40Modifier,
+                            contentScale = ContentScale.Fit,
+                            autoPlay = true,
+                        )
+                    } else {
+                        AsyncImage(
+                            it.link,
+                            contentDescription = it.code,
+                            modifier = Size40Modifier,
+                        )
+                    }
                     Text(it.code, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     IconButton(
                         modifier = Size40Modifier,

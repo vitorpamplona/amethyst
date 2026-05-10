@@ -60,9 +60,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
+import com.vitorpamplona.amethyst.ui.components.AnimatedUrlImage
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.components.isAnimatedImageUrl
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
@@ -169,6 +171,7 @@ private fun EmojiPackScreenView(
                 }
                 EmojiGrid(
                     pack = currentPack,
+                    accountViewModel = accountViewModel,
                     onLongPress = { emoji, isPrivate -> pendingDelete = EmojiDeleteTarget(emoji, isPrivate) },
                 )
             }
@@ -222,6 +225,7 @@ private data class EmojiDeleteTarget(
 @Composable
 private fun EmojiGrid(
     pack: OwnedEmojiPack,
+    accountViewModel: AccountViewModel,
     onLongPress: (EmojiUrlTag, Boolean) -> Unit,
 ) {
     val allEmojis =
@@ -241,6 +245,7 @@ private fun EmojiGrid(
             EmojiCell(
                 emoji = emoji,
                 isPrivate = isPrivate,
+                accountViewModel = accountViewModel,
                 onLongClick = { onLongPress(emoji, isPrivate) },
             )
         }
@@ -252,6 +257,7 @@ private fun EmojiGrid(
 private fun EmojiCell(
     emoji: EmojiUrlTag,
     isPrivate: Boolean,
+    accountViewModel: AccountViewModel,
     onLongClick: () -> Unit,
 ) {
     val privateLabel = stringRes(R.string.emoji_private_badge)
@@ -264,12 +270,23 @@ private fun EmojiCell(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = emoji.url,
-            contentDescription = if (isPrivate) "${emoji.code} ($privateLabel)" else emoji.code,
-            modifier = Size35Modifier,
-            contentScale = ContentScale.Fit,
-        )
+        val contentDescription = if (isPrivate) "${emoji.code} ($privateLabel)" else emoji.code
+        if (isAnimatedImageUrl(emoji.url)) {
+            AnimatedUrlImage(
+                imageUrl = emoji.url,
+                contentDescription = contentDescription,
+                modifier = Size35Modifier,
+                contentScale = ContentScale.Fit,
+                autoPlay = accountViewModel.settings.autoPlayVideos(),
+            )
+        } else {
+            AsyncImage(
+                model = emoji.url,
+                contentDescription = contentDescription,
+                modifier = Size35Modifier,
+                contentScale = ContentScale.Fit,
+            )
+        }
         if (isPrivate) {
             Box(
                 modifier =

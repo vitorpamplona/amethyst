@@ -47,6 +47,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.AnimatedUrlImage
+import com.vitorpamplona.amethyst.ui.components.isAnimatedImageUrl
 import com.vitorpamplona.amethyst.ui.stringRes
 
 private const val PREVIEW_SLOTS = 6
@@ -149,12 +151,22 @@ private fun EmojiPreviewGrid(urls: List<String>) {
 @Composable
 private fun EmojiPreviewSlot(url: String?) {
     if (url != null) {
-        AsyncImage(
-            model = url,
-            contentDescription = null,
-            modifier = Modifier.size(ThumbSize),
-            contentScale = ContentScale.Fit,
-        )
+        if (isAnimatedImageUrl(url)) {
+            AnimatedUrlImage(
+                imageUrl = url,
+                contentDescription = null,
+                modifier = Modifier.size(ThumbSize),
+                contentScale = ContentScale.Fit,
+                autoPlay = true,
+            )
+        } else {
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                modifier = Modifier.size(ThumbSize),
+                contentScale = ContentScale.Fit,
+            )
+        }
     } else {
         Box(
             modifier =

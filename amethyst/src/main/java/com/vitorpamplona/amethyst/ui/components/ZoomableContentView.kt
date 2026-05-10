@@ -167,7 +167,7 @@ fun ZoomableContentView(
                 modifier = mediaSizingModifier(ratio, contentScale),
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
-                if (content.isGif()) {
+                if (content.isAnimatedImage()) {
                     GifVideoView(
                         videoUri = bridgedUrl,
                         contentDescription = content.description,
@@ -178,6 +178,7 @@ fun ZoomableContentView(
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                         thumbhash = content.thumbhash,
+                        mimeType = content.mimeType,
                     )
                 } else {
                     TwoSecondController(content) { controllerVisible ->
@@ -233,7 +234,7 @@ fun ZoomableContentView(
         }
 
         is MediaLocalImage -> {
-            if (content.isGif()) {
+            if (content.isAnimatedImage()) {
                 content.localFile?.let {
                     GifVideoView(
                         videoUri = it.toUri().toString(),
@@ -245,6 +246,7 @@ fun ZoomableContentView(
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                         thumbhash = content.thumbhash,
+                        mimeType = content.mimeType,
                     )
                 }
             } else {
@@ -695,11 +697,11 @@ fun ShowHash(content: MediaUrlContent) {
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
 
-fun BaseMediaContent.isGif(): Boolean =
+fun BaseMediaContent.isAnimatedImage(): Boolean =
     if (this is MediaUrlContent) {
-        mimeType == "image/gif" || url.endsWith(".gif", ignoreCase = true) || url.contains(".gif?", ignoreCase = true) || url.contains(".gif#", ignoreCase = true)
+        isAnimatedImageMimeType(mimeType) || isAnimatedImageUrl(url)
     } else if (this is MediaPreloadedContent) {
-        mimeType == "image/gif" || localFile?.name?.endsWith(".gif", ignoreCase = true) == true
+        isAnimatedImageMimeType(mimeType) || isAnimatedImageFileName(localFile?.name)
     } else {
         false
     }

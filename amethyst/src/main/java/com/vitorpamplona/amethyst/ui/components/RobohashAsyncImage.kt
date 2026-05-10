@@ -125,7 +125,7 @@ fun RobohashFallbackAsyncImage(
         remember(model, robot, useBridge) {
             bridgeProfilePictureUrl(model, useBridge, robot)
         }
-    if (bridgedModel != null && loadProfilePicture && isGifUrl(bridgedModel)) {
+    if (bridgedModel != null && loadProfilePicture && isAnimatedImageUrl(bridgedModel)) {
         GifProfilePicture(
             userHex = robot,
             userPicture = bridgedModel,

@@ -2804,6 +2804,7 @@
     <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
     <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
     <string name="gif">Gif</string>
+    <string name="avif" translatable="false">AVIF</string>
     <!-- NIP-9A community rules composer-side validation. -->
     <string name="community_rules_violation_icon">Community rule violation</string>
     <string name="community_rules_violation_author_denied">You are on this community\'s deny-list. Posts will not be accepted.</string>

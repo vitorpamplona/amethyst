@@ -51,7 +51,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.AnimatedUrlImage
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
+import com.vitorpamplona.amethyst.ui.components.isAnimatedImageUrl
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.note.elements.RemoveButton
@@ -137,22 +139,22 @@ fun RenderEmojiPack(
         ) {
             emojisToShow.forEach { emoji ->
                 if (onClick != null) {
-                    AsyncImage(
-                        model = emoji.url,
-                        contentDescription = emoji.code,
+                    EmojiImage(
+                        emoji = emoji,
                         modifier = Size35Modifier.clickable { onClick(emoji) },
                         contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
                     )
                 } else {
                     Box(
                         modifier = Size35Modifier,
                         contentAlignment = Alignment.Center,
                     ) {
-                        AsyncImage(
-                            model = emoji.url,
-                            contentDescription = emoji.code,
+                        EmojiImage(
+                            emoji = emoji,
                             modifier = Size35Modifier,
                             contentScale = ContentScale.Crop,
+                            accountViewModel = accountViewModel,
                         )
                     }
                 }
@@ -172,6 +174,31 @@ fun RenderEmojiPack(
                 ShowMoreButton { expanded = !expanded }
             }
         }
+    }
+}
+
+@Composable
+private fun EmojiImage(
+    emoji: EmojiUrlTag,
+    modifier: Modifier,
+    contentScale: ContentScale,
+    accountViewModel: AccountViewModel,
+) {
+    if (isAnimatedImageUrl(emoji.url)) {
+        AnimatedUrlImage(
+            imageUrl = emoji.url,
+            contentDescription = emoji.code,
+            modifier = modifier,
+            contentScale = contentScale,
+            autoPlay = accountViewModel.settings.autoPlayVideos(),
+        )
+    } else {
+        AsyncImage(
+            model = emoji.url,
+            contentDescription = emoji.code,
+            modifier = modifier,
+            contentScale = contentScale,
+        )
     }
 }
 

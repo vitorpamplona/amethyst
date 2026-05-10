@@ -56,7 +56,7 @@ fun MyAsyncImage(
     onLoadingBackground: (@Composable () -> Unit)?,
     onError: (@Composable () -> Unit)?,
 ) {
-    if (isGifUrl(imageUrl)) {
+    if (isAnimatedImageUrl(imageUrl)) {
         GifVideoView(
             videoUri = imageUrl,
             contentDescription = contentDescription,
@@ -153,8 +153,3 @@ fun MyAsyncImage(
         }
     }
 }
-
-fun isGifUrl(url: String): Boolean =
-    url.endsWith(".gif", ignoreCase = true) ||
-        url.contains(".gif?", ignoreCase = true) ||
-        url.contains(".gif#", ignoreCase = true)

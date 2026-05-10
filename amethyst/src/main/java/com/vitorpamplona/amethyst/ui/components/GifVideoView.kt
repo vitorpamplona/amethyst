@@ -48,7 +48,6 @@ import coil3.asDrawable
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
@@ -67,6 +66,7 @@ fun GifVideoView(
     onDialog: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
+    mimeType: String? = null,
 ) {
     // Pure read path — DimensionTag.aspectRatio() is a one-line int division and
     // MediaAspectRatioCache.get() is a synchronized LruCache lookup. Wrapping this in
@@ -74,6 +74,7 @@ fun GifVideoView(
     // than the work it saves; that's why this stays as a plain expression.
     val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
     val autoPlay = accountViewModel.settings.autoPlayVideos()
+    val imageTypeLabel = stringResource(animatedImageLabelRes(videoUri, mimeType))
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
 
@@ -133,7 +134,7 @@ fun GifVideoView(
 
         if (!autoPlay) {
             Text(
-                text = stringResource(R.string.gif),
+                text = imageTypeLabel,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = Font10SP,
@@ -146,6 +147,39 @@ fun GifVideoView(
                         .background(Color.Black.copy(alpha = 0.6f))
                         .padding(horizontal = 4.dp, vertical = 1.dp),
             )
+        }
+    }
+}
+
+@Composable
+fun AnimatedUrlImage(
+    imageUrl: String,
+    contentDescription: String?,
+    modifier: Modifier,
+    contentScale: ContentScale,
+    autoPlay: Boolean,
+) {
+    val context = LocalContext.current
+
+    SubcomposeAsyncImage(
+        model = imageUrl,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = contentScale,
+    ) {
+        val state by painter.state.collectAsState()
+        val successState = state as? AsyncImagePainter.State.Success
+        val drawable = successState?.result?.image?.asDrawable(context.resources)
+
+        LaunchedEffect(autoPlay, drawable) {
+            if (drawable is Animatable) {
+                if (autoPlay) drawable.start() else drawable.stop()
+            }
+        }
+
+        when (state) {
+            is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
+            else -> {}
         }
     }
 }
