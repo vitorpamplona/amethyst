@@ -285,8 +285,8 @@ val DefaultBottomBarItems: List<NavBarItem> =
         NavBarItem.MESSAGES,
         NavBarItem.VIDEO,
         NavBarItem.DISCOVER,
-        NavBarItem.NOTIFICATIONS,
         NavBarItem.FAVORITE_ALGO_FEEDS,
+        NavBarItem.NOTIFICATIONS,
     )
 
 // Ordered membership lists for each drawer section. The drawer renders these by looking up
