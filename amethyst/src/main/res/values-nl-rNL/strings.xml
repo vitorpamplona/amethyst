@@ -1668,7 +1668,6 @@
     <string name="remove_dvm_from_favorites">Verwijderen uit favorieten</string>
     <string name="favorite_dvms_title">Favoriete feed-algoritmes</string>
     <string name="favorite_dvms_explainer">Feed-algoritmes die je hier hebt gesterd, verschijnen als filterchips op de startfeed. Open Ontdekken om meer toe te voegen.</string>
-    <string name="favorite_dvms_empty">Nog geen favoriete feed-algoritmes. Open Ontdekken, tik op een en ster het om hier toe te voegen.</string>
     <string name="dvm_home_status_requesting">%1$s vragen voor een feed…</string>
     <string name="dvm_home_status_requesting_all">Je favoriete feed-algoritmes vragen voor feeds…</string>
     <string name="dvm_home_status_processing">Je feed verwerken…</string>

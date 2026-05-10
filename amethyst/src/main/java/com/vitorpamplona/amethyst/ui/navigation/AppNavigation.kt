@@ -233,7 +233,7 @@ fun BuildNavigation(
         composable<Route.Home> { HomeScreen(accountViewModel, nav) }
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
         composable<Route.Video> { VideoScreen(accountViewModel, nav) }
-        composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
+        composableArgs<Route.Discover> { DiscoverScreen(it.initialTab, accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Communities> { CommunitiesScreen(accountViewModel, nav) }

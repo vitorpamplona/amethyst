@@ -1890,7 +1890,6 @@
     <string name="remove_dvm_from_favorites">इष्टसूची में से हटाएँ</string>
     <string name="favorite_dvms_title">इष्ट सूचनावली कलनविधियाँ</string>
     <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिनहें आपने यहाँ ताराचिह्नित किए मूल सूचनावली पर छलनी खण्डों के जैसे दिखेंगे। खोज पटल खोलें अधिक जोडने के लिए।</string>
-    <string name="favorite_dvms_empty">कोई इष्ट सूचनावली कलनविधियाँ नहीं अभी तक। खोज पटल खोलें तथा एक पर दबाएँ तथा ताराचिह्नित करें यहाँ जोडने के लिए।</string>
     <string name="dvm_home_status_requesting">अनुरोध %1$s को सूचनावली के लिए…</string>
     <string name="dvm_home_status_requesting_all">आपके इष्ट सूचनावली कलनविधियों को अनुरोध किया जा रहा है सूचनावलियों के लिए…</string>
     <string name="dvm_home_status_processing">आपकी सूचनावली पर कार्य चालू…</string>

@@ -100,7 +100,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.DISCOVER,
                 labelRes = R.string.route_discover,
                 icon = MaterialSymbols.Sensors,
-                resolveRoute = { Route.Discover },
+                resolveRoute = { Route.Discover() },
             ),
         NavBarItem.NOTIFICATIONS to
             NavBarItemDef(
@@ -162,7 +162,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
             NavBarItemDef(
                 id = NavBarItem.FAVORITE_ALGO_FEEDS,
                 labelRes = R.string.favorite_dvms_title,
-                icon = MaterialSymbols.Star,
+                icon = MaterialSymbols.AutoAwesome,
                 resolveRoute = { Route.EditFavoriteAlgoFeeds },
             ),
         NavBarItem.EMOJI_PACKS to
@@ -285,6 +285,7 @@ val DefaultBottomBarItems: List<NavBarItem> =
         NavBarItem.MESSAGES,
         NavBarItem.VIDEO,
         NavBarItem.DISCOVER,
+        NavBarItem.FAVORITE_ALGO_FEEDS,
         NavBarItem.NOTIFICATIONS,
     )
 

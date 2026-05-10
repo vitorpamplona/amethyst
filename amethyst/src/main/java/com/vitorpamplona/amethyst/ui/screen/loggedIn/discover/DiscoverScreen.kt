@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
@@ -95,10 +96,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun DiscoverScreen(
+    initialTab: DiscoverTab?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     DiscoverScreen(
+        initialTab = initialTab,
         discoveryFollowSetsFeedContentState = accountViewModel.feedStates.discoverFollowSets,
         discoveryReadsFeedContentState = accountViewModel.feedStates.discoverReads,
         discoveryContentNIP89FeedContentState = accountViewModel.feedStates.discoverDVMs,
@@ -114,6 +117,7 @@ fun DiscoverScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
+    initialTab: DiscoverTab?,
     discoveryFollowSetsFeedContentState: FeedContentState,
     discoveryReadsFeedContentState: FeedContentState,
     discoveryContentNIP89FeedContentState: FeedContentState,
@@ -184,6 +188,10 @@ fun DiscoverScreen(
 
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { feedTabs.size }
 
+    LaunchedEffect(initialTab) {
+        initialTab?.let { pagerState.scrollToPage(it.toTabIndex()) }
+    }
+
     WatchAccountForDiscoveryScreen(
         discoveryFollowSetsFeedContentState = discoveryFollowSetsFeedContentState,
         discoveryReadsFeedContentState = discoveryReadsFeedContentState,
@@ -240,8 +248,8 @@ private fun DiscoverPages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Discover, nav, accountViewModel) { route ->
-                if (route == Route.Discover) {
+            AppBottomBar(Route.Discover(), nav, accountViewModel) { route ->
+                if (route is Route.Discover) {
                     val currentPage = pagerState.currentPage
                     if (currentPage >= 0 && currentPage < feedTabs.size) {
                         feedTabs[currentPage].feedState.sendToTop()
@@ -526,3 +534,15 @@ private fun DiscoverFeedColumnsLoaded(
         }
     }
 }
+
+// Exhaustive on DiscoverTab so adding a new enum value forces an update of feedTabs above.
+private fun DiscoverTab.toTabIndex(): Int =
+    when (this) {
+        DiscoverTab.FOLLOWS -> 0
+        DiscoverTab.READS -> 1
+        DiscoverTab.ALGOS -> 2
+        DiscoverTab.LIVE -> 3
+        DiscoverTab.COMMUNITY -> 4
+        DiscoverTab.MARKETPLACE -> 5
+        DiscoverTab.CHATS -> 6
+    }

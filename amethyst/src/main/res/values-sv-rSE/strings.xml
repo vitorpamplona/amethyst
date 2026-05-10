@@ -1843,7 +1843,6 @@
     <string name="remove_dvm_from_favorites">Ta bort från favoriter</string>
     <string name="favorite_dvms_title">Favorit-flödesalgoritmer</string>
     <string name="favorite_dvms_explainer">Flödesalgoritmer du stjärnmarkerar visas som filterchips på Hem-flödet. Öppna Upptäck för att lägga till fler.</string>
-    <string name="favorite_dvms_empty">Inga favorit-flödesalgoritmer än. Öppna Upptäck, tryck på en och stjärnmarkera för att lägga till den här.</string>
     <string name="dvm_home_status_requesting">Frågar %1$s om ett flöde…</string>
     <string name="dvm_home_status_requesting_all">Frågar dina favorit-flödesalgoritmer om flöden…</string>
     <string name="dvm_home_status_processing">Bearbetar ditt flöde…</string>

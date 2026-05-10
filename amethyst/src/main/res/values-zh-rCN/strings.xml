@@ -1883,7 +1883,6 @@
     <string name="remove_dvm_from_favorites">从收藏中移除</string>
     <string name="favorite_dvms_title">收藏源算法</string>
     <string name="favorite_dvms_explainer">此处加星的订阅源算法在主页源上显示为筛选缺口。打开发现添加更多。</string>
-    <string name="favorite_dvms_empty">还没有收藏的订阅源算法。打开发现、轻触一个、加星将其添加到这里。</string>
     <string name="dvm_home_status_requesting">正请求 %1$s 获得一个源…</string>
     <string name="dvm_home_status_requesting_all">正向收藏的源算法请求订阅源…</string>
     <string name="dvm_home_status_processing">正处理你的源…</string>
