@@ -32,6 +32,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
+import com.vitorpamplona.amethyst.model.CastProtocolType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
@@ -108,6 +109,7 @@ class UiSharedPreferences(
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
         val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
         val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
+        val UI_CAST_PROTOCOL = stringPreferencesKey("ui.cast_protocol")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -134,6 +136,7 @@ class UiSharedPreferences(
                         preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
+                    castProtocol = preferences[UI_CAST_PROTOCOL]?.let { CastProtocolType.valueOf(it) } ?: CastProtocolType.BOTH,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -173,6 +176,7 @@ class UiSharedPreferences(
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
                     preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
+                    preferences[UI_CAST_PROTOCOL] = sharedSettings.castProtocol.name
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

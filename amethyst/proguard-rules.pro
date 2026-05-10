@@ -69,3 +69,11 @@
 -keep class * extends androidx.room.RoomDatabase {
     <init>();
 }
+
+# jUPnP ships optional Jetty + OSGi transport adapters that Android doesn't
+# use (we run jupnp-android's Servlet-less transport). Tell R8 to ignore the
+# dangling references rather than fail the minify step.
+-dontwarn org.eclipse.jetty.**
+-dontwarn org.osgi.**
+-dontwarn javax.servlet.**
+-dontwarn org.jupnp.transport.impl.jetty.**

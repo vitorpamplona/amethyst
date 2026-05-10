@@ -53,14 +53,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.BooleanType
+import com.vitorpamplona.amethyst.model.CastProtocolType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.parseBooleanType
+import com.vitorpamplona.amethyst.model.parseCastProtocolType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseGalleryType
@@ -128,6 +131,9 @@ fun SettingsScreen(
         ShowImagePreviewChoice(sharedPrefs)
         ShowVideoPlaybackChoice(sharedPrefs)
         AutoplayVideosChoice(sharedPrefs)
+        if (BuildConfig.FLAVOR == "play") {
+            CastProtocolChoice(sharedPrefs)
+        }
         ShowUrlPreviewChoice(sharedPrefs)
         ShowProfilePictureChoice(sharedPrefs)
         ImmersiveScrollingChoice(sharedPrefs)
@@ -277,6 +283,27 @@ fun ShowVideoPlaybackChoice(sharedPrefs: UiSettingsFlow) {
         videoIndex.screenCode,
     ) {
         sharedPrefs.automaticallyStartPlayback.tryEmit(parseConnectivityType(it))
+    }
+}
+
+@Composable
+fun CastProtocolChoice(sharedPrefs: UiSettingsFlow) {
+    val castProtocolOptions =
+        persistentListOf(
+            TitleExplainer(stringRes(CastProtocolType.BOTH.resourceId)),
+            TitleExplainer(stringRes(CastProtocolType.CHROMECAST.resourceId)),
+            TitleExplainer(stringRes(CastProtocolType.DLNA.resourceId)),
+        )
+
+    val castProtocolIndex by sharedPrefs.castProtocol.collectAsState()
+
+    SettingsRow(
+        R.string.cast_protocol_setting_title,
+        R.string.cast_protocol_setting_description,
+        castProtocolOptions,
+        castProtocolIndex.screenCode,
+    ) {
+        sharedPrefs.castProtocol.tryEmit(parseCastProtocolType(it))
     }
 }
 

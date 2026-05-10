@@ -47,6 +47,7 @@ class UiSettingsFlow(
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeEverythingTab: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val castProtocol: MutableStateFlow<CastProtocolType> = MutableStateFlow(CastProtocolType.BOTH),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -68,6 +69,7 @@ class UiSettingsFlow(
             showHomeNewThreadsTab,
             showHomeConversationsTab,
             showHomeEverythingTab,
+            castProtocol,
         )
 
     // emits at every change in any of the propertyes.
@@ -93,6 +95,7 @@ class UiSettingsFlow(
                 flows[15] as Boolean,
                 flows[16] as Boolean,
                 flows[17] as Boolean,
+                flows[18] as CastProtocolType,
             )
         }
 
@@ -116,6 +119,7 @@ class UiSettingsFlow(
             showHomeNewThreadsTab.value,
             showHomeConversationsTab.value,
             showHomeEverythingTab.value,
+            castProtocol.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -193,6 +197,10 @@ class UiSettingsFlow(
             showHomeEverythingTab.tryEmit(torSettings.showHomeEverythingTab)
             any = true
         }
+        if (castProtocol.value != torSettings.castProtocol) {
+            castProtocol.tryEmit(torSettings.castProtocol)
+            any = true
+        }
 
         return any
     }
@@ -230,6 +238,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showHomeNewThreadsTab),
                 MutableStateFlow(uiSettings.showHomeConversationsTab),
                 MutableStateFlow(uiSettings.showHomeEverythingTab),
+                MutableStateFlow(uiSettings.castProtocol),
             )
     }
 }

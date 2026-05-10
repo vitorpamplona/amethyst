@@ -55,11 +55,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
+import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
+import com.vitorpamplona.amethyst.ui.cast.CastDevicePickerDialog
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -197,6 +199,7 @@ fun RenderTopButtons(
 ) {
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
     val shareDialogVisible = remember { mutableStateOf(false) }
+    val castDialogVisible = remember { mutableStateOf(false) }
     val saveAction =
         rememberSaveMediaAction { context ->
             accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
@@ -210,6 +213,7 @@ fun RenderTopButtons(
             VideoPlayerAction.Share -> true
             VideoPlayerAction.Download -> !isLive
             VideoPlayerAction.PictureInPicture -> pipSupported
+            VideoPlayerAction.Cast -> mediaData.videoUri.startsWith("http", ignoreCase = true)
         }
 
     val canFullscreen = onZoomClick != null
@@ -281,6 +285,15 @@ fun RenderTopButtons(
                         onClick = onPictureInPictureClick,
                     )
                 }
+
+                VideoPlayerAction.Cast -> {
+                    AnimatedTopBarIconButton(
+                        controllerVisible = controllerVisible,
+                        symbol = MaterialSymbols.Cast,
+                        contentDescription = stringRes(R.string.cast_to_device),
+                        onClick = { castDialogVisible.value = true },
+                    )
+                }
             }
         }
 
@@ -295,6 +308,20 @@ fun RenderTopButtons(
                 onShareClick = { shareDialogVisible.value = true },
                 onSaveClick = saveAction,
                 onPipClick = onPictureInPictureClick,
+                onCastClick = { castDialogVisible.value = true },
+            )
+        }
+
+        if (castDialogVisible.value) {
+            CastDevicePickerDialog(
+                request =
+                    CastRequest(
+                        url = mediaData.videoUri,
+                        mimeType = mediaData.mimeType,
+                        title = mediaData.title,
+                        artworkUri = mediaData.artworkUri,
+                    ),
+                onDismiss = { castDialogVisible.value = false },
             )
         }
 

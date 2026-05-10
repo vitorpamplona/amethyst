@@ -42,6 +42,11 @@
          (otherwise the wrapper waits ~30s for QUIC PTO before reconnecting). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- DLNA SSDP discovery (multicast 239.255.255.250:1900) for the LAN cast
+         feature. Acquired only while the cast device picker is open. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
     <!-- Audio/Video Playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />

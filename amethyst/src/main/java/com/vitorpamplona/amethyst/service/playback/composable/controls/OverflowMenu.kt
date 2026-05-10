@@ -70,6 +70,7 @@ fun OverflowMenuButtonPreview() {
                 onShareClick = {},
                 onSaveClick = {},
                 onPipClick = {},
+                onCastClick = {},
             )
         }
     }
@@ -86,6 +87,7 @@ fun AnimatedOverflowMenuButton(
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
+    onCastClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -103,6 +105,7 @@ fun AnimatedOverflowMenuButton(
             onShareClick = onShareClick,
             onSaveClick = onSaveClick,
             onPipClick = onPipClick,
+            onCastClick = onCastClick,
         )
     }
 }
@@ -117,6 +120,7 @@ fun OverflowMenuButton(
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
+    onCastClick: () -> Unit,
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
 
@@ -209,6 +213,16 @@ fun OverflowMenuButton(
                             ) {
                                 menuExpanded.value = false
                                 onPipClick()
+                            }
+                        }
+
+                        VideoPlayerAction.Cast -> {
+                            M3ActionRow(
+                                icon = MaterialSymbols.Cast,
+                                text = stringRes(R.string.cast_to_device),
+                            ) {
+                                menuExpanded.value = false
+                                onCastClick()
                             }
                         }
                     }

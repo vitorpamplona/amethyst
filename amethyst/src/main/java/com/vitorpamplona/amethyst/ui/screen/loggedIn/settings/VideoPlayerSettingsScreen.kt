@@ -330,6 +330,7 @@ fun videoPlayerActionName(action: VideoPlayerAction): String =
         VideoPlayerAction.Share -> stringRes(R.string.video_player_settings_action_share)
         VideoPlayerAction.Download -> stringRes(R.string.video_player_settings_action_download)
         VideoPlayerAction.PictureInPicture -> stringRes(R.string.video_player_settings_action_pip)
+        VideoPlayerAction.Cast -> stringRes(R.string.video_player_settings_action_cast)
     }
 
 @Composable
@@ -341,4 +342,5 @@ fun videoPlayerActionDescription(action: VideoPlayerAction): String =
         VideoPlayerAction.Share -> stringRes(R.string.video_player_settings_action_share_description)
         VideoPlayerAction.Download -> stringRes(R.string.video_player_settings_action_download_description)
         VideoPlayerAction.PictureInPicture -> stringRes(R.string.video_player_settings_action_pip_description)
+        VideoPlayerAction.Cast -> stringRes(R.string.video_player_settings_action_cast_description)
     }

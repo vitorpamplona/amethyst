@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
+import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
@@ -490,6 +491,14 @@ class AppModules(
     val nip95cache: File by lazy {
         Log.d("AppModules", "NIP95 Cache Init")
         Nip95CacheFactory.new(appContext)
+    }
+
+    // LAN cast registry — aggregates Chromecast (play flavor only) and DLNA
+    // discovery into a single device list. Discovery starts only when the
+    // picker dialog opens; idle by default to keep multicast traffic off.
+    val castRegistry: CastRegistry by lazy {
+        Log.d("AppModules", "CastRegistry Init")
+        CastRegistry(appContext, applicationIOScope, uiPrefs.value.castProtocol)
     }
 
     // local video cache with disk + memory

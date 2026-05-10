@@ -60,7 +60,7 @@ class AccountSyncedSettings(
         )
     val videoPlayer =
         AccountVideoPlayerPreferences(
-            MutableStateFlow(internalSettings.videoPlayer.buttonItems.toImmutableList()),
+            MutableStateFlow(mergeWithDefaultVideoPlayerButtons(internalSettings.videoPlayer.buttonItems).toImmutableList()),
         )
 
     fun toInternal(): AccountSyncedSettingsInternal =
@@ -150,7 +150,8 @@ class AccountSyncedSettings(
             security.disableClientTag.tryEmit(syncedSettingsInternal.security.disableClientTag)
         }
 
-        val newVideoPlayerButtonItems = syncedSettingsInternal.videoPlayer.buttonItems.toImmutableList()
+        val newVideoPlayerButtonItems =
+            mergeWithDefaultVideoPlayerButtons(syncedSettingsInternal.videoPlayer.buttonItems).toImmutableList()
         if (!equalImmutableLists(videoPlayer.buttonItems.value, newVideoPlayerButtonItems)) {
             videoPlayer.buttonItems.tryEmit(newVideoPlayerButtonItems)
         }

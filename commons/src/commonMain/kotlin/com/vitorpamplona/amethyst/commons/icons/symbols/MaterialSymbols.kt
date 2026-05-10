@@ -55,6 +55,8 @@ object MaterialSymbols {
     val CameraFront = MaterialSymbol("\uF2C9")
     val CameraRear = MaterialSymbol("\uF2C8")
     val Cancel = MaterialSymbol("\uE888")
+    val Cast = MaterialSymbol("\uE307")
+    val CastConnected = MaterialSymbol("\uE308")
     val CellTower = MaterialSymbol("\uEBBA")
     val Chat = MaterialSymbol("\uE0C9")
     val Check = MaterialSymbol("\uE5CA")

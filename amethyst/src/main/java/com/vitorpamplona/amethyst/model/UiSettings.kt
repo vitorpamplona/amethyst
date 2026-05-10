@@ -47,6 +47,7 @@ data class UiSettings(
     val showHomeNewThreadsTab: Boolean = true,
     val showHomeConversationsTab: Boolean = true,
     val showHomeEverythingTab: Boolean = false,
+    val castProtocol: CastProtocolType = CastProtocolType.BOTH,
 )
 
 enum class ThemeType(
@@ -145,6 +146,23 @@ fun parseBooleanType(screenCode: Int): BooleanType =
         BooleanType.ALWAYS.screenCode -> BooleanType.ALWAYS
         BooleanType.NEVER.screenCode -> BooleanType.NEVER
         else -> BooleanType.ALWAYS
+    }
+
+enum class CastProtocolType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    BOTH(0, R.string.cast_protocol_both),
+    CHROMECAST(1, R.string.cast_protocol_chromecast),
+    DLNA(2, R.string.cast_protocol_dlna),
+}
+
+fun parseCastProtocolType(screenCode: Int): CastProtocolType =
+    when (screenCode) {
+        CastProtocolType.BOTH.screenCode -> CastProtocolType.BOTH
+        CastProtocolType.CHROMECAST.screenCode -> CastProtocolType.CHROMECAST
+        CastProtocolType.DLNA.screenCode -> CastProtocolType.DLNA
+        else -> CastProtocolType.BOTH
     }
 
 enum class WarningType(
