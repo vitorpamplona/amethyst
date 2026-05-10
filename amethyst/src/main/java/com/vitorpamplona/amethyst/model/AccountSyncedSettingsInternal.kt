@@ -138,6 +138,7 @@ class AccountLanguagePreferencesInternal(
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
+    var translationServiceUrl: String = "",
 )
 
 @Serializable

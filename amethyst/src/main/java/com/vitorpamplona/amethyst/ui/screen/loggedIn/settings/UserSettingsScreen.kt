@@ -106,6 +106,7 @@ fun UserSettingsScreen(
                 verticalArrangement = SpacedBy10dp,
             ) {
                 TranslateToSetting(accountViewModel)
+                TranslationServiceUrlSetting(accountViewModel)
                 HorizontalDivider(thickness = DividerThickness)
                 DontTranslateFromSetting(accountViewModel)
                 HorizontalDivider(thickness = DividerThickness)

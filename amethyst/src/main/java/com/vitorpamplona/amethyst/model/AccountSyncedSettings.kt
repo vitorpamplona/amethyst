@@ -47,6 +47,7 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.languages.dontTranslateFrom),
             MutableStateFlow(internalSettings.languages.languagePreferences),
             MutableStateFlow(internalSettings.languages.translateTo),
+            MutableStateFlow(internalSettings.languages.translationServiceUrl),
         )
     val security =
         AccountSecurityPreferences(
@@ -75,6 +76,7 @@ class AccountSyncedSettings(
                     languages.dontTranslateFrom.value,
                     languages.languagePreferences.value,
                     languages.translateTo.value,
+                    languages.translationServiceUrl.value,
                 ),
             security =
                 AccountSecurityPreferencesInternal(
@@ -118,6 +120,10 @@ class AccountSyncedSettings(
 
         if (languages.translateTo.value != syncedSettingsInternal.languages.translateTo) {
             languages.translateTo.value = syncedSettingsInternal.languages.translateTo
+        }
+
+        if (languages.translationServiceUrl.value != syncedSettingsInternal.languages.translationServiceUrl) {
+            languages.translationServiceUrl.value = syncedSettingsInternal.languages.translationServiceUrl
         }
 
         if (security.showSensitiveContent.value != syncedSettingsInternal.security.showSensitiveContent) {
@@ -175,6 +181,7 @@ class AccountLanguagePreferences(
     var dontTranslateFrom: MutableStateFlow<Set<String>>,
     var languagePreferences: MutableStateFlow<Map<String, String>>,
     var translateTo: MutableStateFlow<String>,
+    var translationServiceUrl: MutableStateFlow<String>,
 ) {
     // ---
     // language services
@@ -202,6 +209,15 @@ class AccountLanguagePreferences(
     fun updateTranslateTo(languageCode: String): Boolean {
         if (translateTo.value != languageCode) {
             translateTo.tryEmit(languageCode)
+            return true
+        }
+        return false
+    }
+
+    fun updateTranslationServiceUrl(url: String): Boolean {
+        val normalized = url.trim().trimEnd('/')
+        if (translationServiceUrl.value != normalized) {
+            translationServiceUrl.tryEmit(normalized)
             return true
         }
         return false

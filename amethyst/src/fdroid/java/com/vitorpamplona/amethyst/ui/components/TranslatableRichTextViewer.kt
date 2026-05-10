@@ -20,16 +20,25 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.amethyst.service.lang.ResultOrError
+import com.vitorpamplona.amethyst.service.lang.TranslationsCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun TranslatableRichTextViewer(
@@ -44,19 +53,27 @@ fun TranslatableRichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
-) = ExpandableRichTextViewer(
-    content,
-    canPreview,
-    quotesLeft,
-    modifier,
-    tags,
-    backgroundColor,
-    id,
-    callbackUri,
-    authorPubKey,
-    accountViewModel,
-    nav,
-)
+) {
+    TranslatableRichTextViewer(
+        content = content,
+        id = id,
+        accountViewModel = accountViewModel,
+    ) {
+        ExpandableRichTextViewer(
+            it,
+            canPreview,
+            quotesLeft,
+            modifier,
+            tags,
+            backgroundColor,
+            id,
+            callbackUri,
+            authorPubKey,
+            accountViewModel,
+            nav,
+        )
+    }
+}
 
 @Composable
 fun TranslatableRichTextViewer(
@@ -65,4 +82,101 @@ fun TranslatableRichTextViewer(
     translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
-) = displayText(content)
+) {
+    val languages = accountViewModel.account.settings.syncedSettings.languages
+    val translateTo by languages.translateTo.collectAsStateWithLifecycle()
+    val dontTranslateFrom by languages.dontTranslateFrom.collectAsStateWithLifecycle()
+    val languagePreferences by languages.languagePreferences.collectAsStateWithLifecycle()
+    val serverUrl by languages.translationServiceUrl.collectAsStateWithLifecycle()
+
+    val translatedTextState =
+        remember(id, content, translateTo, dontTranslateFrom, serverUrl) {
+            mutableStateOf(
+                TranslationsCache.get(content, translateTo, dontTranslateFrom, serverUrl)
+                    ?: TranslationConfig(content, null, null),
+            )
+        }
+
+    LaunchedEffect(content, translateTo, dontTranslateFrom, serverUrl) {
+        try {
+            translatedTextState.value = translateAndCache(content, translateTo, dontTranslateFrom, serverUrl)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+        }
+    }
+
+    RenderTextWithTranslateOptions(
+        translatedTextState = translatedTextState.value,
+        content = content,
+        languagePreferences = languagePreferences,
+        translationMessageModifier = translationMessageModifier,
+        accountViewModel = accountViewModel,
+        displayText = displayText,
+    )
+}
+
+@Composable
+private fun RenderTextWithTranslateOptions(
+    translatedTextState: TranslationConfig,
+    content: String,
+    languagePreferences: Map<String, String>,
+    translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
+    accountViewModel: AccountViewModel,
+    displayText: @Composable (String) -> Unit,
+) {
+    val source = translatedTextState.sourceLang
+    val target = translatedTextState.targetLang
+    val translationOccurred = source != null && target != null && source != target
+
+    val storedPreference = if (translationOccurred) languagePreferences["$source,$target"] else null
+    var showOriginal by
+        remember(translatedTextState, storedPreference) {
+            mutableStateOf(storedPreference == source)
+        }
+
+    val toBeViewed = if (showOriginal || !translationOccurred) content else translatedTextState.result
+
+    Column {
+        displayText(toBeViewed)
+
+        if (translationOccurred) {
+            TranslationStatusBar(
+                source = source,
+                target = target,
+                modifier = translationMessageModifier,
+                accountViewModel = accountViewModel,
+            ) { showOriginal = it }
+        }
+    }
+}
+
+private suspend fun translateAndCache(
+    content: String,
+    translateTo: String,
+    dontTranslateFrom: Set<String>,
+    serverUrl: String,
+): TranslationConfig {
+    TranslationsCache.get(content, translateTo, dontTranslateFrom, serverUrl)?.let { return it }
+
+    val noOp = TranslationConfig(content, null, null)
+    val raw =
+        LanguageTranslatorService.autoTranslate(
+            text = content,
+            dontTranslateFrom = dontTranslateFrom,
+            translateTo = translateTo,
+            serverUrl = serverUrl,
+        ) ?: return noOp.also { TranslationsCache.set(content, translateTo, dontTranslateFrom, serverUrl, it) }
+
+    val config = raw.toTranslationConfig(content) ?: noOp
+    TranslationsCache.set(content, translateTo, dontTranslateFrom, serverUrl, config)
+    return config
+}
+
+private fun ResultOrError.toTranslationConfig(content: String): TranslationConfig? {
+    val translated = result ?: return null
+    val source = sourceLang ?: return null
+    val target = targetLang ?: return null
+    if (source == target || translated == content) return null
+    return TranslationConfig(translated, source, target)
+}

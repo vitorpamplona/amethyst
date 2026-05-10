@@ -20,6 +20,94 @@
  */
 package com.vitorpamplona.amethyst.service.lang
 
+import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.Amethyst
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.coroutines.executeAsync
+
+@Immutable
+data class ResultOrError(
+    val result: String?,
+    val sourceLang: String?,
+    val targetLang: String?,
+)
+
 object LanguageTranslatorService {
-    fun clear() {}
+    private val json = jacksonObjectMapper()
+    private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+
+    fun clear() {
+        TranslationsCache.clear()
+    }
+
+    suspend fun autoTranslate(
+        text: String,
+        dontTranslateFrom: Set<String>,
+        translateTo: String,
+        serverUrl: String,
+    ): ResultOrError? {
+        if (serverUrl.isBlank() || !TranslationDictionary.isWorthTranslating(text)) return null
+
+        val url = normalizedTranslateUrl(serverUrl) ?: return null
+        val dict = TranslationDictionary.build(text)
+        val encoded = TranslationDictionary.encode(text, dict)
+
+        return withContext(Dispatchers.IO) {
+            val requestBody =
+                json
+                    .writeValueAsString(
+                        mapOf(
+                            "q" to encoded,
+                            "source" to "auto",
+                            "target" to translateTo,
+                            "format" to "text",
+                        ),
+                    ).toRequestBody(jsonMediaType)
+
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .post(requestBody)
+                    .build()
+
+            val client = Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForNip05(url)
+
+            client.newCall(request).executeAsync().use { response ->
+                if (!response.isSuccessful) {
+                    throw IllegalArgumentException("LibreTranslate returned HTTP ${response.code}")
+                }
+
+                val body = response.body.string()
+                val tree = json.readTree(body)
+                val translated = TranslationDictionary.decode(tree["translatedText"]?.asText(), dict)
+                val source = tree["detectedLanguage"]?.get("language")?.asText()
+
+                if (translated.isNullOrBlank()) return@use null
+                if (source == null || source == "und") return@use null
+                if (source.equals(translateTo, ignoreCase = true)) return@use null
+                if (source in dontTranslateFrom) return@use null
+
+                ResultOrError(translated, source, translateTo)
+            }
+        }
+    }
+
+    private fun normalizedTranslateUrl(serverUrl: String): String? {
+        val root = serverUrl.trim().trimEnd('/')
+        if (root.isBlank()) return null
+        val baseUrl = root.toHttpUrlOrNull() ?: return null
+        if (baseUrl.encodedPath.trimEnd('/').endsWith("/translate")) return baseUrl.toString()
+        return baseUrl
+            .newBuilder()
+            .addPathSegment("translate")
+            .build()
+            .toString()
+    }
 }
