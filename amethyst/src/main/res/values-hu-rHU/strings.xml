@@ -30,6 +30,7 @@
     <string name="copy_text">Szöveg másolása</string>
     <string name="copy_user_pubkey">Szerző azonosítójának másolása</string>
     <string name="copy_note_id">Bejegyzés azonosítójának másolása</string>
+    <string name="copy_raw_json">Nyers JSON másolása</string>
     <string name="broadcast">Közvetítés</string>
     <string name="timestamp_it">Időbélyegzés</string>
     <string name="timestamp_pending">Időbélyeg: függőben lévő megerősítések</string>

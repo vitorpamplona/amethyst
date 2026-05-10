@@ -30,6 +30,7 @@
     <string name="copy_text">复制文本</string>
     <string name="copy_user_pubkey">复制作者公钥 ID</string>
     <string name="copy_note_id">复制笔记 ID</string>
+    <string name="copy_raw_json">复制原始JSON</string>
     <string name="broadcast">广播</string>
     <string name="timestamp_it">获取公开时间戳</string>
     <string name="timestamp_pending">OpenTimestamps：待确认</string>
