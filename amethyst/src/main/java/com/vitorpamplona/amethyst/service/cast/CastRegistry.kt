@@ -25,7 +25,11 @@ import com.vitorpamplona.amethyst.model.CastProtocolType
 import com.vitorpamplona.amethyst.service.cast.chromecast.ChromecastCaster
 import com.vitorpamplona.amethyst.service.cast.dlna.DlnaCaster
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -74,30 +78,27 @@ class CastRegistry(
                 }
             Log.d(TAG) {
                 "devices flow update proto=$proto " +
-                    snapshots.mapIndexed { i, l -> "${casters[i].id}=${l.size}" }.joinToString() +
-                    " merged=${merged.size} -> [${merged.joinToString { "${it.casterId}:${it.name}" }}]"
+                    snapshots.mapIndexed { i, l -> "${casters[i].kind}=${l.size}" }.joinToString() +
+                    " merged=${merged.size} -> [${merged.joinToString { "${it.kind}:${it.name}" }}]"
             }
             merged
-        }.stateIn(scope, SharingStarted.Eagerly, emptyList())
+        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val sessionState: StateFlow<CastSessionState> =
         combine(casters.map { it.sessionState }) { states ->
             states.firstOrNull { it !is CastSessionState.Idle } ?: CastSessionState.Idle
-        }.stateIn(scope, SharingStarted.Eagerly, CastSessionState.Idle)
+        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), CastSessionState.Idle)
 
     private val refCount = AtomicInteger(0)
     private val active =
-        ConcurrentHashMap<String, Boolean>().apply {
-            casters.forEach { put(it.id, false) }
+        ConcurrentHashMap<CastDeviceKind, Boolean>().apply {
+            casters.forEach { put(it.kind, false) }
         }
 
     init {
         Log.d(TAG) {
-            "init casters=[${casters.joinToString { it.id }}] initialProtocol=${protocolFlow.value}"
+            "init casters=[${casters.joinToString { it.kind.name }}] initialProtocol=${protocolFlow.value}"
         }
-        // While the picker is open, react to protocol changes by stopping/starting
-        // the affected casters. Idle case is a no-op because reconcile only runs
-        // when refCount > 0.
         scope.launch {
             protocolFlow.collect { proto ->
                 Log.d(TAG) { "protocolFlow change -> $proto refCount=${refCount.get()}" }
@@ -112,8 +113,8 @@ class CastRegistry(
     ): Boolean =
         when (proto) {
             CastProtocolType.BOTH -> true
-            CastProtocolType.CHROMECAST -> caster.id == "chromecast"
-            CastProtocolType.DLNA -> caster.id == "dlna"
+            CastProtocolType.CHROMECAST -> caster.kind == CastDeviceKind.Chromecast
+            CastProtocolType.DLNA -> caster.kind == CastDeviceKind.Dlna
         }
 
     @Synchronized
@@ -121,17 +122,17 @@ class CastRegistry(
         val proto = protocolFlow.value
         casters.forEach { caster ->
             val shouldRun = isCasterEnabled(caster, proto)
-            val running = active[caster.id] == true
+            val running = active[caster.kind] == true
             if (shouldRun && !running) {
-                Log.d(TAG) { "reconcile START ${caster.id} (proto=$proto)" }
+                Log.d(TAG) { "reconcile START ${caster.kind} (proto=$proto)" }
                 runCatching { caster.startDiscovery() }
-                    .onFailure { Log.w(TAG, "reconcile START ${caster.id} threw: ${it.message}", it) }
-                active[caster.id] = true
+                    .onFailure { Log.w(TAG, "reconcile START ${caster.kind} threw: ${it.message}", it) }
+                active[caster.kind] = true
             } else if (!shouldRun && running) {
-                Log.d(TAG) { "reconcile STOP ${caster.id} (proto=$proto)" }
+                Log.d(TAG) { "reconcile STOP ${caster.kind} (proto=$proto)" }
                 runCatching { caster.stopDiscovery() }
-                    .onFailure { Log.w(TAG, "reconcile STOP ${caster.id} threw: ${it.message}", it) }
-                active[caster.id] = false
+                    .onFailure { Log.w(TAG, "reconcile STOP ${caster.kind} threw: ${it.message}", it) }
+                active[caster.kind] = false
             }
         }
     }
@@ -140,10 +141,10 @@ class CastRegistry(
     private fun stopAll() {
         Log.d(TAG) { "stopAll active=${active.filterValues { it }.keys}" }
         casters.forEach { caster ->
-            if (active[caster.id] == true) {
+            if (active[caster.kind] == true) {
                 runCatching { caster.stopDiscovery() }
-                    .onFailure { Log.w(TAG, "stopAll ${caster.id} threw: ${it.message}", it) }
-                active[caster.id] = false
+                    .onFailure { Log.w(TAG, "stopAll ${caster.kind} threw: ${it.message}", it) }
+                active[caster.kind] = false
             }
         }
     }
@@ -168,11 +169,11 @@ class CastRegistry(
         request: CastRequest,
     ) {
         Log.d(TAG) {
-            "cast device=${device.casterId}:${device.name} url=${request.url} mime=${request.mimeType}"
+            "cast device=${device.kind}:${device.name} url=${request.url} mime=${request.mimeType}"
         }
-        val caster = casters.firstOrNull { it.id == device.casterId }
+        val caster = casters.firstOrNull { it.kind == device.kind }
         if (caster == null) {
-            Log.w(TAG, "cast: no caster found for casterId=${device.casterId}")
+            Log.w(TAG, "cast: no caster found for kind=${device.kind}")
             return
         }
         caster.cast(device, request)
@@ -180,6 +181,19 @@ class CastRegistry(
 
     suspend fun stopCasting() {
         Log.d(TAG) { "stopCasting (broadcast to all casters)" }
-        casters.forEach { runCatching { it.stopCasting() } }
+        coroutineScope {
+            casters
+                .map { caster ->
+                    async {
+                        try {
+                            caster.stopCasting()
+                        } catch (ce: CancellationException) {
+                            throw ce
+                        } catch (t: Throwable) {
+                            Log.w(TAG, "stopCasting ${caster.kind} threw: ${t.message}", t)
+                        }
+                    }
+                }.awaitAll()
+        }
     }
 }

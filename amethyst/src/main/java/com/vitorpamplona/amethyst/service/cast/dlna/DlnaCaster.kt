@@ -64,7 +64,7 @@ private val AV_TRANSPORT = UDAServiceType("AVTransport")
 class DlnaCaster(
     private val appContext: Context,
 ) : VideoCaster {
-    override val id: String = "dlna"
+    override val kind: CastDeviceKind = CastDeviceKind.Dlna
 
     private val devicesFlow = MutableStateFlow<List<CastDevice>>(emptyList())
     override val devices: StateFlow<List<CastDevice>> = devicesFlow.asStateFlow()
@@ -154,7 +154,6 @@ class DlnaCaster(
                     id = device.identity.udn.identifierString,
                     name = device.details?.friendlyName ?: device.displayString,
                     kind = CastDeviceKind.Dlna,
-                    casterId = id,
                 )
             }
     }

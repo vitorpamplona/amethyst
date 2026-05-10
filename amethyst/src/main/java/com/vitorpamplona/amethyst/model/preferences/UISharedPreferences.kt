@@ -136,7 +136,7 @@ class UiSharedPreferences(
                         preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
-                    castProtocol = preferences[UI_CAST_PROTOCOL]?.let { CastProtocolType.valueOf(it) } ?: CastProtocolType.BOTH,
+                    castProtocol = preferences[UI_CAST_PROTOCOL]?.let { runCatching { CastProtocolType.valueOf(it) }.getOrNull() } ?: CastProtocolType.BOTH,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -71,6 +72,8 @@ fun OverflowMenuButtonPreview() {
                 onSaveClick = {},
                 onPipClick = {},
                 onCastClick = {},
+                castIcon = MaterialSymbols.Cast,
+                castContentDescription = "",
             )
         }
     }
@@ -88,6 +91,8 @@ fun AnimatedOverflowMenuButton(
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
     onCastClick: () -> Unit,
+    castIcon: MaterialSymbol,
+    castContentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -106,6 +111,8 @@ fun AnimatedOverflowMenuButton(
             onSaveClick = onSaveClick,
             onPipClick = onPipClick,
             onCastClick = onCastClick,
+            castIcon = castIcon,
+            castContentDescription = castContentDescription,
         )
     }
 }
@@ -121,6 +128,8 @@ fun OverflowMenuButton(
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
     onCastClick: () -> Unit,
+    castIcon: MaterialSymbol,
+    castContentDescription: String,
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
 
@@ -218,8 +227,8 @@ fun OverflowMenuButton(
 
                         VideoPlayerAction.Cast -> {
                             M3ActionRow(
-                                icon = MaterialSymbols.Cast,
-                                text = stringRes(R.string.cast_to_device),
+                                icon = castIcon,
+                                text = castContentDescription,
                             ) {
                                 menuExpanded.value = false
                                 onCastClick()

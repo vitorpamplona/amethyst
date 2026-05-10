@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -51,11 +50,9 @@ fun CastDevicePickerDialog(
     onDismiss: () -> Unit,
     registry: CastRegistry = Amethyst.instance.castRegistry,
 ) {
-    Log.d(TAG) { "open url=${request.url} mime=${request.mimeType}" }
-    LaunchedEffect(registry) {
-        registry.startDiscovery()
-    }
     androidx.compose.runtime.DisposableEffect(registry) {
+        Log.d(TAG) { "open url=${request.url} mime=${request.mimeType}" }
+        registry.startDiscovery()
         onDispose {
             Log.d(TAG) { "dispose -> stopDiscovery" }
             registry.stopDiscovery()
@@ -93,7 +90,7 @@ fun CastDevicePickerDialog(
                         icon = icon,
                         text = device.name,
                     ) {
-                        Log.d(TAG) { "tap device=${device.casterId}:${device.name}" }
+                        Log.d(TAG) { "tap device=${device.kind}:${device.name}" }
                         // Keep discovery alive across the dialog's onDispose so the caster's
                         // session listener stays registered until the cast attempt finishes.
                         // Without this the dialog's stopDiscovery (~10ms after tap) tears the

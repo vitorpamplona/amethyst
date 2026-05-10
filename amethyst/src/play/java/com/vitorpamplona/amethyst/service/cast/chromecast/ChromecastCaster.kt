@@ -30,9 +30,11 @@ import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
+import com.google.android.gms.cast.MediaStatus
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
+import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.images.WebImage
@@ -53,6 +55,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "ChromecastCaster"
 private const val SESSION_START_TIMEOUT_MS = 30_000L
+private const val STOP_AWAIT_TIMEOUT_MS = 5_000L
 
 /**
  * Google Cast (Chromecast) implementation of [VideoCaster].
@@ -65,7 +68,7 @@ private const val SESSION_START_TIMEOUT_MS = 30_000L
 class ChromecastCaster(
     private val appContext: Context,
 ) : VideoCaster {
-    override val id: String = "chromecast"
+    override val kind: CastDeviceKind = CastDeviceKind.Chromecast
 
     private val devicesFlow = MutableStateFlow<List<CastDevice>>(emptyList())
     override val devices: StateFlow<List<CastDevice>> = devicesFlow.asStateFlow()
@@ -80,6 +83,15 @@ class ChromecastCaster(
     @Volatile
     private var castContext: CastContext? = null
     private var registered = false
+
+    // Session listener lifetime is independent of discovery: the picker may
+    // open and close while a cast is still running, so we register the
+    // listener once when CastContext becomes available and keep it for the
+    // lifetime of the caster. Without this, stopDiscovery() during cast()'s
+    // finally block would unregister the listener mid-session and we'd never
+    // observe onSessionEnded — leaving sessionFlow out of sync with the TV.
+    @Volatile
+    private var sessionListenerAttached = false
 
     private val routes = mutableMapOf<String, MediaRouter.RouteInfo>()
 
@@ -110,6 +122,63 @@ class ChromecastCaster(
             }
         }
 
+    private val mediaClientCallback =
+        object : RemoteMediaClient.Callback() {
+            override fun onStatusUpdated() {
+                val client = currentMediaClient ?: return
+                val status = client.mediaStatus
+                Log.d(TAG) {
+                    "media.onStatusUpdated playerState=${playerStateName(client.playerState)} " +
+                        "idleReason=${idleReasonName(status?.idleReason ?: -1)} " +
+                        "pos=${client.approximateStreamPosition}/${client.streamDuration}ms"
+                }
+            }
+
+            override fun onMediaError(mediaError: com.google.android.gms.cast.MediaError) {
+                Log.w(TAG, "media.onMediaError code=${mediaError.detailedErrorCode} reason=${mediaError.reason} type=${mediaError.type}")
+            }
+        }
+
+    @Volatile
+    private var currentMediaClient: RemoteMediaClient? = null
+
+    private fun attachMediaClientCallback(session: CastSession) {
+        val client = session.remoteMediaClient ?: return
+        if (currentMediaClient === client) return
+        currentMediaClient?.unregisterCallback(mediaClientCallback)
+        currentMediaClient = client
+        client.registerCallback(mediaClientCallback)
+        Log.d(TAG) { "media.callback attached" }
+    }
+
+    private fun detachMediaClientCallback() {
+        currentMediaClient?.let {
+            it.unregisterCallback(mediaClientCallback)
+            Log.d(TAG) { "media.callback detached" }
+        }
+        currentMediaClient = null
+    }
+
+    private fun playerStateName(state: Int): String =
+        when (state) {
+            MediaStatus.PLAYER_STATE_IDLE -> "IDLE"
+            MediaStatus.PLAYER_STATE_PLAYING -> "PLAYING"
+            MediaStatus.PLAYER_STATE_PAUSED -> "PAUSED"
+            MediaStatus.PLAYER_STATE_BUFFERING -> "BUFFERING"
+            MediaStatus.PLAYER_STATE_LOADING -> "LOADING"
+            else -> "UNKNOWN($state)"
+        }
+
+    private fun idleReasonName(reason: Int): String =
+        when (reason) {
+            MediaStatus.IDLE_REASON_NONE -> "NONE"
+            MediaStatus.IDLE_REASON_FINISHED -> "FINISHED"
+            MediaStatus.IDLE_REASON_CANCELED -> "CANCELED"
+            MediaStatus.IDLE_REASON_INTERRUPTED -> "INTERRUPTED"
+            MediaStatus.IDLE_REASON_ERROR -> "ERROR"
+            else -> "—"
+        }
+
     private val sessionListener =
         object : SessionManagerListener<CastSession> {
             override fun onSessionStarting(session: CastSession) {
@@ -121,6 +190,7 @@ class ChromecastCaster(
                 sessionId: String,
             ) {
                 Log.d(TAG) { "session.onStarted id=$sessionId connected=${session.isConnected} hasClient=${session.remoteMediaClient != null}" }
+                attachMediaClientCallback(session)
                 pendingSessionStart?.complete(true)
                 pendingSessionStart = null
             }
@@ -148,6 +218,7 @@ class ChromecastCaster(
                 // outcome — the session never reached a usable state. Without
                 // completing here the cast coroutine hangs and the discovery
                 // ref-count leaks +1 for every failed attempt.
+                detachMediaClientCallback()
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
                 sessionFlow.value = CastSessionState.Idle
@@ -166,6 +237,7 @@ class ChromecastCaster(
             ) {
                 Log.d(TAG) { "session.onResumed wasSuspended=$wasSuspended" }
                 // Resume counts as the session being usable — let cast() proceed.
+                attachMediaClientCallback(session)
                 pendingSessionStart?.complete(true)
                 pendingSessionStart = null
             }
@@ -215,11 +287,21 @@ class ChromecastCaster(
             // the main thread, OptionsProvider is declared in the play manifest,
             // and the SDK caches the singleton after the first call.
             @Suppress("DEPRECATION")
-            CastContext.getSharedInstance(appContext).also { castContext = it }
+            CastContext.getSharedInstance(appContext).also {
+                castContext = it
+                attachSessionListener(it)
+            }
         } catch (t: Throwable) {
             Log.w(TAG, "Failed to initialize CastContext: ${t.message}", t)
             null
         }
+    }
+
+    private fun attachSessionListener(ctx: CastContext) {
+        if (sessionListenerAttached) return
+        ctx.sessionManager.addSessionManagerListener(sessionListener, CastSession::class.java)
+        sessionListenerAttached = true
+        Log.d(TAG) { "sessionListener attached (caster lifetime)" }
     }
 
     override fun startDiscovery() {
@@ -241,11 +323,10 @@ class ChromecastCaster(
                     .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
                     .build()
             router.addCallback(selector, routerCallback, MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN)
-            ctx.sessionManager.addSessionManagerListener(sessionListener, CastSession::class.java)
             mediaRouter = router
             routeSelector = selector
             registered = true
-            Log.d(TAG) { "startDiscovery: registered router callback + session listener" }
+            Log.d(TAG) { "startDiscovery: registered router callback (sessionListener already attached)" }
             updateRoutes(router)
         }
     }
@@ -255,11 +336,13 @@ class ChromecastCaster(
         main.post {
             if (!registered) return@post
             mediaRouter?.removeCallback(routerCallback)
-            castContext?.sessionManager?.removeSessionManagerListener(sessionListener, CastSession::class.java)
+            // Intentionally NOT removing sessionListener: it must stay attached
+            // for the lifetime of any in-flight cast session, otherwise the
+            // session-end callbacks fire into the void.
             registered = false
             routes.clear()
             devicesFlow.value = emptyList()
-            Log.d(TAG) { "stopDiscovery: unregistered" }
+            Log.d(TAG) { "stopDiscovery: router callback removed (sessionListener kept)" }
         }
     }
 
@@ -277,7 +360,6 @@ class ChromecastCaster(
                     id = route.id,
                     name = route.name,
                     kind = CastDeviceKind.Chromecast,
-                    casterId = id,
                 )
             }
         Log.d(TAG) { "updateRoutes: count=${list.size} -> [${list.joinToString { it.name }}]" }
@@ -314,6 +396,10 @@ class ChromecastCaster(
                     "cast: existing session connected=${existing?.isConnected} hasClient=${existing?.remoteMediaClient != null}"
                 }
                 val pending = CompletableDeferred<Boolean>()
+                // If a previous cast() is still awaiting a callback, fail it
+                // before swapping in our deferred — otherwise the earlier call
+                // hangs to the 30s timeout.
+                pendingSessionStart?.complete(false)
                 pendingSessionStart = pending
                 try {
                     Log.d(TAG) { "cast: selectRoute id=${route.id}" }
@@ -396,10 +482,38 @@ class ChromecastCaster(
     }
 
     override suspend fun stopCasting() {
-        Log.d(TAG) { "stopCasting" }
+        Log.d(TAG) { "stopCasting (hasClient=${currentMediaClient != null})" }
+        // Await MEDIA_STOP before endCurrentSession() — racing them on the
+        // same main-thread tick loses the stop on some receivers (LG webOS).
+        val client = currentMediaClient
+        if (client != null) {
+            val stopAck = CompletableDeferred<Int>()
+            withContext(Dispatchers.Main) {
+                try {
+                    client.stop().setResultCallback { result ->
+                        val status = result.status
+                        Log.d(TAG) {
+                            "remoteMediaClient.stop ack code=${status.statusCode} msg=${status.statusMessage}"
+                        }
+                        stopAck.complete(status.statusCode)
+                    }
+                } catch (t: Throwable) {
+                    Log.w(TAG, "remoteMediaClient.stop threw: ${t.message}", t)
+                    stopAck.complete(-1)
+                }
+            }
+            val acked = withTimeoutOrNull(STOP_AWAIT_TIMEOUT_MS) { stopAck.await() }
+            if (acked == null) {
+                Log.w(TAG, "remoteMediaClient.stop did not ack within ${STOP_AWAIT_TIMEOUT_MS}ms")
+            }
+        }
         withContext(Dispatchers.Main) {
             try {
-                castContext?.sessionManager?.endCurrentSession(true)
+                // false: receiver app already halted media via stop() above.
+                // true previously triggered an extra teardown that compounded
+                // the race — keep the receiver running on its splash screen
+                // so the next cast can reuse the connection cleanly.
+                castContext?.sessionManager?.endCurrentSession(false)
             } catch (t: Throwable) {
                 Log.w(TAG, "endCurrentSession failed: ${t.message}", t)
             }

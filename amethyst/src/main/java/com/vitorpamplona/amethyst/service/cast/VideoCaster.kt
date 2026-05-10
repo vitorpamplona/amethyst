@@ -29,8 +29,8 @@ import kotlinx.coroutines.flow.StateFlow
  * to give the UI a unified device list and active-session state.
  */
 interface VideoCaster {
-    /** Stable identifier for diagnostics and merging device IDs across casters. */
-    val id: String
+    /** Which protocol this caster speaks. The registry routes by [CastDevice.kind]. */
+    val kind: CastDeviceKind
 
     /** Discovered receiver devices; emits a snapshot whenever the set changes. */
     val devices: StateFlow<List<CastDevice>>
@@ -51,7 +51,7 @@ interface VideoCaster {
     /**
      * Hand a video off to [device] and start playback. Updates [sessionState]
      * to Connecting → Casting (or Error). [device] must be one this caster
-     * emitted in [devices] — the registry routes by [CastDevice.casterId].
+     * emitted in [devices].
      */
     suspend fun cast(
         device: CastDevice,

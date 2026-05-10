@@ -32,7 +32,6 @@ data class CastDevice(
     val id: String,
     val name: String,
     val kind: CastDeviceKind,
-    val casterId: String,
 )
 
 @Immutable
@@ -43,19 +42,21 @@ data class CastRequest(
     val artworkUri: String? = null,
 )
 
-// When the caller didn't supply a mime hint, fall back to a best-guess from the
-// URL extension. Critical for HLS: the default Cast receiver crashes loading
-// `.m3u8` content sent as `video/mp4` because it tries to demux a playlist as
-// MP4 — wiping the TV's Cast service from the network in the process.
-fun CastRequest.effectiveMimeType(): String =
-    mimeType?.takeIf { it.isNotBlank() }
-        ?: when {
-            url.endsWith(".m3u8", ignoreCase = true) -> "application/vnd.apple.mpegurl"
-            url.endsWith(".mpd", ignoreCase = true) -> "application/dash+xml"
-            url.endsWith(".webm", ignoreCase = true) -> "video/webm"
-            url.endsWith(".mkv", ignoreCase = true) -> "video/x-matroska"
-            else -> "video/mp4"
-        }
+// Critical for HLS: sending an `.m3u8` URL with `video/mp4` makes the default
+// Cast receiver try to demux a playlist as MP4 and crash, wiping the TV's Cast
+// service from the network in the process. Strip query/fragment first so
+// signed URLs like `…/stream.m3u8?token=…` still match.
+fun CastRequest.effectiveMimeType(): String {
+    mimeType?.takeIf { it.isNotBlank() }?.let { return it }
+    val path = url.substringBefore('?').substringBefore('#')
+    return when {
+        path.endsWith(".m3u8", ignoreCase = true) -> "application/vnd.apple.mpegurl"
+        path.endsWith(".mpd", ignoreCase = true) -> "application/dash+xml"
+        path.endsWith(".webm", ignoreCase = true) -> "video/webm"
+        path.endsWith(".mkv", ignoreCase = true) -> "video/x-matroska"
+        else -> "video/mp4"
+    }
+}
 
 sealed class CastSessionState {
     object Idle : CastSessionState()

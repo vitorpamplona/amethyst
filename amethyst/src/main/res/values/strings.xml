@@ -2559,6 +2559,7 @@
 
     <!-- LAN cast (Chromecast / DLNA) feature -->
     <string name="cast_to_device">Cast to device</string>
+    <string name="cast_stop_casting">Stop casting</string>
     <string name="cast_to_device_dialog_title">Cast to…</string>
     <string name="cast_searching_for_devices">Searching for devices on your Wi-Fi…</string>
     <string name="cast_protocol_setting_title">Cast protocol</string>

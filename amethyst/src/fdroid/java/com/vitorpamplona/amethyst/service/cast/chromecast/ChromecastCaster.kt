@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.cast.chromecast
 
 import android.content.Context
 import com.vitorpamplona.amethyst.service.cast.CastDevice
+import com.vitorpamplona.amethyst.service.cast.CastDeviceKind
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.cast.VideoCaster
@@ -38,7 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class ChromecastCaster(
     appContext: Context,
 ) : VideoCaster {
-    override val id: String = "chromecast"
+    override val kind: CastDeviceKind = CastDeviceKind.Chromecast
 
     override val devices: StateFlow<List<CastDevice>> = MutableStateFlow<List<CastDevice>>(emptyList()).asStateFlow()
 

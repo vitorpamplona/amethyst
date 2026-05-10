@@ -33,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -48,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.service.cast.CastRequest
+import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
@@ -73,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -138,6 +142,22 @@ fun RenderTopButtons(
 
     val overflowQualityOpen = remember { mutableStateOf(false) }
 
+    // Pause local playback while this video is casting so audio doesn't
+    // double up; only resume on the transition we caused.
+    val castSessionStateForLocal by Amethyst.instance.castRegistry.sessionState
+        .collectAsStateWithLifecycle()
+    val wasCastingThisVideo = remember { mutableStateOf(false) }
+    LaunchedEffect(castSessionStateForLocal, mediaData.videoUri) {
+        val isCastingThis =
+            (castSessionStateForLocal as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
+        if (isCastingThis && !wasCastingThisVideo.value) {
+            player.pause()
+        } else if (!isCastingThis && wasCastingThisVideo.value) {
+            player.play()
+        }
+        wasCastingThisVideo.value = isCastingThis
+    }
+
     RenderTopButtons(
         mediaData = mediaData,
         hasMultipleQualities = hasMultipleQualities,
@@ -200,6 +220,26 @@ fun RenderTopButtons(
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
     val shareDialogVisible = remember { mutableStateOf(false) }
     val castDialogVisible = remember { mutableStateOf(false) }
+    val castSessionState by Amethyst.instance.castRegistry.sessionState
+        .collectAsStateWithLifecycle()
+    val isThisVideoCasting =
+        (castSessionState as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
+    val castIcon = if (isThisVideoCasting) MaterialSymbols.CastConnected else MaterialSymbols.Cast
+    val castContentDescription =
+        stringRes(if (isThisVideoCasting) R.string.cast_stop_casting else R.string.cast_to_device)
+    val onCastButtonClick =
+        remember(isThisVideoCasting) {
+            {
+                if (isThisVideoCasting) {
+                    Amethyst.instance.applicationIOScope.launch {
+                        Amethyst.instance.castRegistry.stopCasting()
+                    }
+                } else {
+                    castDialogVisible.value = true
+                }
+                Unit
+            }
+        }
     val saveAction =
         rememberSaveMediaAction { context ->
             accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
@@ -289,9 +329,9 @@ fun RenderTopButtons(
                 VideoPlayerAction.Cast -> {
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
-                        symbol = MaterialSymbols.Cast,
-                        contentDescription = stringRes(R.string.cast_to_device),
-                        onClick = { castDialogVisible.value = true },
+                        symbol = castIcon,
+                        contentDescription = castContentDescription,
+                        onClick = onCastButtonClick,
                     )
                 }
             }
@@ -308,7 +348,9 @@ fun RenderTopButtons(
                 onShareClick = { shareDialogVisible.value = true },
                 onSaveClick = saveAction,
                 onPipClick = onPictureInPictureClick,
-                onCastClick = { castDialogVisible.value = true },
+                onCastClick = onCastButtonClick,
+                castIcon = castIcon,
+                castContentDescription = castContentDescription,
             )
         }
 
