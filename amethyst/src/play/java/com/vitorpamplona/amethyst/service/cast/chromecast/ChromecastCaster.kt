@@ -131,7 +131,7 @@ class ChromecastCaster(
             }
 
             override fun onMediaError(mediaError: com.google.android.gms.cast.MediaError) {
-                Log.w(TAG, "media.onMediaError code=${mediaError.detailedErrorCode} reason=${mediaError.reason} type=${mediaError.type}")
+                Log.w(TAG) { "media.onMediaError code=${mediaError.detailedErrorCode} reason=${mediaError.reason} type=${mediaError.type}" }
             }
         }
 
@@ -195,7 +195,7 @@ class ChromecastCaster(
                 session: CastSession,
                 error: Int,
             ) {
-                Log.w(TAG, "session.onStartFailed error=$error")
+                Log.w(TAG) { "session.onStartFailed error=$error" }
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
                 sessionFlow.value = CastSessionState.Error(currentDevice(), "Cast session failed (code $error)")
@@ -242,7 +242,7 @@ class ChromecastCaster(
                 session: CastSession,
                 error: Int,
             ) {
-                Log.w(TAG, "session.onResumeFailed error=$error")
+                Log.w(TAG) { "session.onResumeFailed error=$error" }
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
             }
@@ -288,7 +288,7 @@ class ChromecastCaster(
                 attachSessionListener(it)
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "Failed to initialize CastContext: ${t.message}", t)
+            Log.w(TAG, "Failed to initialize CastContext", t)
             null
         }
     }
@@ -377,7 +377,7 @@ class ChromecastCaster(
                 routes[device.id] ?: mediaRouter?.routes?.firstOrNull { it.id == device.id }
             }
         if (route == null) {
-            Log.w(TAG, "cast: route ${device.id} not in current set; offline?")
+            Log.w(TAG) { "cast: route ${device.id} not in current set; offline?" }
             sessionFlow.value = CastSessionState.Error(device, "Device went offline")
             return
         }
@@ -404,7 +404,7 @@ class ChromecastCaster(
                         pending.complete(true)
                     }
                 } catch (t: Throwable) {
-                    Log.w(TAG, "cast: selectRoute threw: ${t.message}", t)
+                    Log.w(TAG, "cast: selectRoute threw", t)
                     pending.complete(false)
                 }
                 // Defence in depth: if a callback is somehow missed (SDK bug,
@@ -414,7 +414,7 @@ class ChromecastCaster(
                 // wrong on the SDK side.
                 val outcome = withTimeoutOrNull(SESSION_START_TIMEOUT_MS) { pending.await() }
                 if (outcome == null) {
-                    Log.w(TAG, "cast: session start timed out after ${SESSION_START_TIMEOUT_MS}ms")
+                    Log.w(TAG) { "cast: session start timed out after ${SESSION_START_TIMEOUT_MS}ms" }
                     pendingSessionStart = null
                 }
                 outcome ?: false
@@ -442,7 +442,7 @@ class ChromecastCaster(
                         Log.d(TAG) { "cast: load() submitted (status=${client.playerState})" }
                         true
                     } catch (t: Throwable) {
-                        Log.w(TAG, "cast: remoteMediaClient.load failed: ${t.message}", t)
+                        Log.w(TAG, "cast: remoteMediaClient.load failed", t)
                         false
                     }
                 }
@@ -493,13 +493,13 @@ class ChromecastCaster(
                         stopAck.complete(status.statusCode)
                     }
                 } catch (t: Throwable) {
-                    Log.w(TAG, "remoteMediaClient.stop threw: ${t.message}", t)
+                    Log.w(TAG, "remoteMediaClient.stop threw", t)
                     stopAck.complete(-1)
                 }
             }
             val acked = withTimeoutOrNull(STOP_AWAIT_TIMEOUT_MS) { stopAck.await() }
             if (acked == null) {
-                Log.w(TAG, "remoteMediaClient.stop did not ack within ${STOP_AWAIT_TIMEOUT_MS}ms")
+                Log.w(TAG) { "remoteMediaClient.stop did not ack within ${STOP_AWAIT_TIMEOUT_MS}ms" }
             }
         }
         withContext(Dispatchers.Main) {
@@ -510,7 +510,7 @@ class ChromecastCaster(
                 // so the next cast can reuse the connection cleanly.
                 castContext?.sessionManager?.endCurrentSession(false)
             } catch (t: Throwable) {
-                Log.w(TAG, "endCurrentSession failed: ${t.message}", t)
+                Log.w(TAG, "endCurrentSession failed", t)
             }
             mediaRouter?.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
         }
