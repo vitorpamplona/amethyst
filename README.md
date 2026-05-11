@@ -440,11 +440,22 @@ to `onPause` methods.
 
 ## Contributing
 
-Issues can be logged on: [https://gitworkshop.dev/repo/amethyst](https://gitworkshop.dev/repo/amethyst)
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full guide — workflow,
+coding standards, the proof-of-testing rule for new / occasional
+contributors (human or AI-assisted), the cross-stack interop suites, and how the
+`[BUG]` / `[FEATURE]` issue templates and bounty system work.
 
-[GitHub issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) here are also welcome. Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
+Quick links:
 
-You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac)
+- [GitHub issues](https://github.com/vitorpamplona/amethyst/issues) and
+  [pull requests](https://github.com/vitorpamplona/amethyst/pulls).
+- Nostr-native issue tracker:
+  [gitworkshop.dev/repo/amethyst](https://gitworkshop.dev/repo/amethyst).
+- Translations: [Crowdin](https://crowdin.com/project/amethyst-social).
+- Patches over Nostr: [GitStr](https://github.com/fiatjaf/gitstr) to
+  [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac).
+- Security issues: [SECURITY.md](SECURITY.md) (do **not** file as public
+  GitHub issues).
 
 By contributing to this repository, you agree to license your work under the MIT license. Any work contributed where you are not the original author must contain its license header with the original author(s) and source.
 
