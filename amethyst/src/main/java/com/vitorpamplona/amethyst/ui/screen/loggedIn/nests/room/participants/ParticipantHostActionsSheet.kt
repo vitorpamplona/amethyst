@@ -37,12 +37,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
@@ -88,7 +88,6 @@ internal fun ParticipantHostActionsSheet(
     catalog: com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
 
     val roomATag =
         ATag(
@@ -98,9 +97,16 @@ internal fun ParticipantHostActionsSheet(
             relay = null,
         )
 
+    // Use the AccountViewModel's scope so the launched broadcast
+    // survives the onDismiss() that every action row triggers. A
+    // composition-scoped rememberCoroutineScope() gets cancelled the
+    // moment hostMenuTarget flips to null and the sheet leaves the
+    // tree — which races (and reliably loses) against the suspending
+    // signer.sign(template) call, so the promote/demote/kick events
+    // never actually went out.
     fun broadcast(template: com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<out com.vitorpamplona.quartz.nip01Core.core.Event>?) {
         template ?: return
-        scope.launch { runCatching { accountViewModel.account.signAndComputeBroadcast(template) } }
+        accountViewModel.viewModelScope.launch { runCatching { accountViewModel.account.signAndComputeBroadcast(template) } }
     }
 
     val targetUser =

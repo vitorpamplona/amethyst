@@ -37,10 +37,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomPresence
@@ -96,7 +96,6 @@ internal fun HandRaiseQueueSection(
 
     if (hands.isEmpty()) return
 
-    val scope = rememberCoroutineScope()
     Column(modifier = modifier.fillMaxSize().padding(top = 12.dp)) {
         Text(
             text = stringRes(R.string.nest_hand_raise_queue_title),
@@ -112,7 +111,14 @@ internal fun HandRaiseQueueSection(
                     hand = hand,
                     accountViewModel = accountViewModel,
                     onApprove = {
-                        scope.launch {
+                        // Approving makes `canSpeak()` true for this user, which
+                        // removes them from `hands` on the next recompose. If the
+                        // queue empties (no other raised hands), the whole
+                        // section leaves composition — a rememberCoroutineScope()
+                        // bound here would cancel the in-flight signer.sign(...)
+                        // and the promote never goes out. Launch on the
+                        // AccountViewModel's scope so signing outlives the row.
+                        accountViewModel.viewModelScope.launch {
                             val template = RoomParticipantActions.setRole(event, hand.pubkey, ROLE.SPEAKER)
                             template?.let { runCatching { accountViewModel.account.signAndComputeBroadcast(it) } }
                         }
