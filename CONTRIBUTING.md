@@ -10,13 +10,11 @@ work contributed where you are not the original author must contain its
 license header with the original author(s) and source.
 
 - [Ways to contribute](#ways-to-contribute)
-- [Human and AI contributions](#human-and-ai-contributions)
-- [New / occasional contributor: proof of testing](#new--occasional-contributor-proof-of-testing)
+- [Proof of testing (new / occasional contributors)](#proof-of-testing-new--occasional-contributors)
 - [Reporting bugs and requesting features](#reporting-bugs-and-requesting-features)
 - [Security issues](#security-issues)
 - [Development setup](#development-setup)
-- [Project layout](#project-layout)
-- [Where code belongs (sharing philosophy)](#where-code-belongs-sharing-philosophy)
+- [Where code belongs](#where-code-belongs)
 - [Workflow](#workflow)
 - [Coding standards](#coding-standards)
 - [Tests](#tests)
@@ -38,135 +36,86 @@ license header with the original author(s) and source.
   [Crowdin](https://crowdin.com/project/amethyst-social).
 - Report bugs, suggest features, or open issues at
   [github.com/vitorpamplona/amethyst/issues](https://github.com/vitorpamplona/amethyst/issues)
-  or the mirror at
+  or the Nostr mirror at
   [gitworkshop.dev/repo/amethyst](https://gitworkshop.dev/repo/amethyst).
 - Send patches over Nostr using
   [GitStr](https://github.com/fiatjaf/gitstr) — see the address at the bottom
   of the README.
 
-## Human and AI contributions
+## Proof of testing (new / occasional contributors)
 
 We accept pull requests authored by humans and pull requests authored with
-help from AI coding assistants (Claude Code, Copilot, Cursor, Codex, etc.).
-The rules are the same in both cases:
+help from AI coding assistants (Claude Code, Copilot, Cursor, Codex, etc.)
+under the same rules:
 
 - **You are the author of record.** You are responsible for understanding,
-  testing, and defending every line of code in the PR — including code an
-  assistant wrote for you. "The AI did it" is not a valid response to review
-  feedback.
-- **No hallucinated APIs or imports.** Don't submit code that calls functions,
-  classes, or libraries that don't exist in this repo or in our declared
-  dependencies. Build and run it before you push.
-- **Disclose AI involvement if it's substantial.** If an assistant generated
-  most of the diff, a one-line note in the PR description is appreciated
-  (e.g. "Drafted with Claude Code, manually reviewed and tested"). This is a
-  courtesy, not a gate.
+  testing, and defending every line — including code an assistant wrote for
+  you. "The AI did it" is not a valid response to review feedback.
+- **No hallucinated APIs or imports.** Don't submit code that calls
+  functions, classes, or libraries that don't exist in this repo or its
+  declared dependencies. Build and run it before you push.
 - **No machine-translated locale files.** Translations go through Crowdin so
   native speakers can review them.
+- **Disclose substantial AI involvement** with a one-line note in the PR
+  description. Courtesy, not a gate.
 
-## New / occasional contributor: proof of testing
+If you are **not a regular contributor** to this repository — first PR, or
+sporadic enough that maintainers wouldn't recognize your handle — the PR
+description must include proof that you actually ran the change:
 
-If you are **not a regular contributor** to this repository — that is, this
-is one of your first PRs, or you've only contributed sporadically and the
-current maintainers wouldn't recognize your handle from recent history — the
-PR description must include proof that you actually ran the change. This
-applies whether the patch was written by you or by an AI assistant.
-
-What "proof" means:
-
-- **Code/logic changes:** paste the output of the relevant test run, the CLI
-  command you ran, or the log lines that show the new behavior firing. Tests
-  passing in CI is necessary but not sufficient — show the new path
-  executing.
-- **UI changes (any change to `amethyst/`, `desktopApp/`, or `@Composable`
-  code in `commons/`):** attach screenshots or a short screen recording of
-  the new or changed screen on a real device or emulator. Include:
-  - Light **and** dark themes when the change is visible in both.
-  - The empty / loading / error states if your change introduces them.
-  - For Android: device model + Android version (e.g. "Pixel 7, Android 14").
-  - For Desktop: OS + window size (e.g. "macOS 14, 1440×900").
+- **Code/logic changes:** paste the test output, CLI command, or log lines
+  that show the new path executing. CI green is necessary but not
+  sufficient.
+- **UI changes** (`amethyst/`, `desktopApp/`, or `@Composable` code in
+  `commons/`): attach screenshots or a short recording from a real device or
+  emulator. See the PR template for the exact checklist (light + dark,
+  device / OS info, empty / loading / error states).
 - **Build / Gradle / packaging changes:** paste the `./gradlew` command and
-  the tail of its output, or the produced artifact name from
-  `desktopApp/build/compose/binaries/`.
-- **Translation-only PRs:** screenshots are not required, but mention which
-  locale and which strings you touched.
+  the tail of its output.
+- **Translation-only PRs:** mention which locale and which strings you
+  touched; screenshots not required.
 
-Once you have an established track record in the repository, a short test
-plan in the PR description is enough on subsequent PRs. Maintainers may
-still ask for screenshots on visual changes regardless of contributor
-seniority.
+Once you have an established track record, a short test plan is enough on
+subsequent PRs. Maintainers may still ask for screenshots on visual changes.
 
-If you cannot run a particular target locally (e.g. you don't have macOS but
-your change affects the DMG build), say so explicitly in the PR — don't
-claim it works when you haven't checked. Honest "I couldn't test this on
-Windows" is far better than a silent guess.
+If you can't run a particular target locally (e.g. no macOS, but your change
+affects the DMG build), say so explicitly. Honest "I couldn't test this on
+Windows" beats a silent guess.
 
 ## Reporting bugs and requesting features
 
-We use GitHub issue templates at
-[`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/). Please use them rather
-than opening a blank issue — they exist so triage can route the report
-without a follow-up round trip.
+Use the GitHub issue templates at
+[`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) rather than opening a
+blank issue — they exist so triage can route the report without a follow-up
+round trip.
 
-### Bug report (`[BUG]` title prefix)
+**Bug report (`[BUG]` title prefix):** describe the bug, give numbered repro
+steps from a fresh app launch, state expected behavior, attach video /
+screenshots for anything visual or timing-sensitive, list device info (phone
+brand/model, Android version, app version, flavour, Amber version if
+applicable), and include a bounty.
 
-Required fields:
-
-- **Describe the bug** — one-paragraph summary of what's wrong.
-- **To Reproduce** — numbered steps (1, 2, 3, …) that walk a maintainer from
-  a fresh app launch to the failure. "It crashes sometimes" is not a repro;
-  "tap +, paste this nevent, tap Send" is.
-- **Expected behavior** — what should have happened.
-- **Video and Screenshots** — attach them whenever the bug is visual,
-  involves navigation, or is timing-sensitive.
-- **Device info** — Phone Brand/Model, Android version, App version, App
-  flavour (Google Play / F-Droid / Desktop), and Amber version if you sign
-  with NIP-55.
-- **Bounty (in Bitcoin sats)** — see below.
-
-### Feature request (`[FEATURE]` title prefix)
-
-Required fields:
-
-- **Describe the solution you'd like** — what the user-facing outcome is.
-  Skip implementation suggestions unless they're load-bearing.
-- **Bounty (in Bitcoin sats)** — see below.
+**Feature request (`[FEATURE]` title prefix):** describe the user-facing
+outcome and include a bounty. Skip implementation suggestions unless they're
+load-bearing.
 
 ### Bounties
 
-Both templates include a bounty field, and the practice is unusually
-literal in this project: **maintainer time is allocated by bounty size**.
-The templates say so plainly — quoting them:
-
-> The size of the bounty is proportional to how much this matters to you. If
-> no bounty is offered, not even a small one, this bug will not be worked
-> on because it doesn't matter to you.
-
-In practice:
-
-- Bug fixes and features are prioritized roughly by bounty ÷ effort.
-- Even a small bounty (a few hundred sats) outranks a zero-bounty issue.
-- Bounties are not refunded if you change your mind, so size them
-  honestly against how much you want the outcome.
-- If you can fix the issue yourself, you don't need a bounty — open the
-  PR. Bounties exist to move issues that **nobody is currently working on**.
-- Security issues do not need a bounty and should not be filed as public
-  issues — see [SECURITY.md](SECURITY.md).
-
-### Sending issues over Nostr
-
-The repository is also mirrored at
-[`gitworkshop.dev/repo/amethyst`](https://gitworkshop.dev/repo/amethyst) for
-Nostr-native issue tracking, and patches can be sent via
-[GitStr](https://github.com/fiatjaf/gitstr) to the address at the bottom of
-the README.
+Maintainer time is allocated by bounty size. From the templates: *"If no
+bounty is offered, not even a small one, this bug will not be worked on
+because it doesn't matter to you."* Issues are prioritized by bounty ÷
+effort, even a few hundred sats outrank a zero-bounty issue, and bounties
+aren't refunded. If you can fix it yourself, just open the PR — bounties
+exist to move issues nobody is currently working on. Security issues do not
+need a bounty and should not be filed publicly; see
+[SECURITY.md](SECURITY.md).
 
 ## Security issues
 
 **Do not file security vulnerabilities as public GitHub issues.** Use
 [GitHub private vulnerability reporting](https://github.com/vitorpamplona/amethyst/security/advisories/new)
 instead. See [SECURITY.md](SECURITY.md) for scope, expected response times,
-and the disclosure policy.
+and disclosure policy.
 
 ## Development setup
 
@@ -191,45 +140,32 @@ cd amethyst
 Common Gradle entry points:
 
 ```bash
-# Run desktop app
-./gradlew :desktopApp:run
-
-# Install Android debug build
-./gradlew :amethyst:installDebug
-# or specifically:
-./gradlew installFdroidDebug
-./gradlew installPlayDebug
-
-# Build Quartz for all targets
-./gradlew :quartz:build
-
-# Full build (compiles all modules + runs tests)
-./gradlew build
+./gradlew :desktopApp:run         # Run desktop app
+./gradlew :amethyst:installDebug  # Install Android debug build
+./gradlew :quartz:build           # Build Quartz for all targets
+./gradlew build                   # Full build + tests
 ```
 
-## Project layout
+## Where code belongs
 
-```
-quartz/         Nostr KMP library — protocol, crypto, models. No UI.
-commons/        Shared Compose Multiplatform UI, icons, ViewModels, flows.
-quic/           Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport transport library.
-nestsClient/    Audio-rooms client (NIP-53) built on :quic and :quartz.
-amethyst/       Android app — Activity, layouts, navigation.
-desktopApp/     Desktop JVM app — Window, sidebar, keyboard shortcuts.
-cli/            `amy` — non-interactive JVM CLI over quartz + commons.
-ammolite/       Legacy support module.
-```
+Modules:
+
+- `quartz/` — Nostr KMP library (protocol, crypto, models). **No UI.**
+- `commons/` — Shared Compose Multiplatform UI, icons, ViewModels, flows.
+- `quic/` — Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport.
+- `nestsClient/` — Audio-rooms client (NIP-53) built on `:quic` and
+  `:quartz`.
+- `amethyst/` — Android app: Activity, layouts, navigation.
+- `desktopApp/` — Desktop JVM app: Window, sidebar, keyboard shortcuts.
+- `cli/` — `amy`, a non-interactive JVM CLI over `quartz` + `commons`.
+- `ammolite/` — Legacy support module.
 
 Per-module design docs live in `<module>/plans/YYYY-MM-DD-<slug>.md`. The
-global `docs/plans/` folder is frozen — don't add new files there.
-
-## Where code belongs (sharing philosophy)
+global `docs/plans/` folder is frozen.
 
 Before writing a new class or composable, check whether it already exists.
-Most logic is already implemented somewhere in the tree — duplicating it is
-the #1 cause of PR churn.
-
-Place new code by purpose:
+Most logic is already implemented somewhere — duplicating it is the #1 cause
+of PR churn. Place new code by purpose:
 
 | What you're adding | Goes in |
 |---|---|
@@ -246,61 +182,41 @@ Hard rules:
 - `quartz/` has **no UI**.
 - `cli/` has **no Nostr protocol or business logic** — it's a thin assembly
   layer over `quartz` + `commons`. If your CLI command needs new behavior,
-  extract that behavior into `commons/` first.
-- ViewModels are platform-agnostic and belong in `commons/commonMain/`. Only
-  screens (the Composable that wires layout + navigation) stay in the
-  platform module.
-- For platform-specific behavior in a shared file, use `expect`/`actual` —
-  ask `/kotlin-multiplatform` if unsure.
+  extract it into `commons/` first.
+- ViewModels belong in `commons/commonMain/`. Only screens (the Composable
+  that wires layout + navigation) stay in the platform module.
+- For platform-specific behavior in a shared file, use `expect`/`actual`.
 
 ## Workflow
 
 1. **Survey first.** Search the codebase for existing implementations before
    writing new code. The `.claude/CLAUDE.md` file has a recommended set of
-   `grep` queries; running them takes a minute and routinely turns up the
-   exact class you were about to re-invent.
+   `grep` queries; running them routinely turns up the exact class you were
+   about to re-invent.
 2. **Open a small PR.** One feature or one fix per PR. Refactors that
    support the change are fine; unrelated refactors are not.
 3. **Branch off `main`.**
-4. **Run tests + spotless locally** before pushing (see below).
-5. **Open the PR** with a description that explains *why*, not just *what*,
-   and includes the proof-of-testing notes described above.
+4. **Run tests + spotless locally** before pushing.
+5. **Open the PR** with a description that explains *why*, not just *what*.
 
 ## Coding standards
 
-- Kotlin, formatted with Spotless. Always run:
-  ```bash
-  ./gradlew spotlessApply
-  ```
-  before considering a task complete. CI runs `./gradlew spotlessCheck` and
-  will fail on unformatted code.
-- Never use `--no-verify` to bypass pre-commit hooks. If a hook fails,
-  fix the cause.
-- Don't add features, refactor, or introduce abstractions beyond what the
-  task requires. A bug fix doesn't need surrounding cleanup.
-- Don't add error handling, fallbacks, or validation for scenarios that
-  can't happen. Validate at system boundaries (user input, external APIs).
-- Prefer editing existing files to creating new ones. Don't create
-  documentation files (`*.md`) unless asked or unless the change genuinely
-  warrants one.
-- Default to writing no comments. Only add a comment when the *why* is
-  non-obvious (a workaround, a subtle invariant, behavior that would
-  surprise a reader). Don't restate what the code does.
-- Don't reference the current task, fix, or callers in comments
-  (e.g. "added for issue #123") — that belongs in the PR description.
+- Kotlin, formatted with Spotless. Always run `./gradlew spotlessApply`
+  before considering a task complete. CI runs `spotlessCheck` and will fail
+  on unformatted code.
+- Never use `--no-verify` to bypass pre-commit hooks. If a hook fails, fix
+  the cause.
+- Default to writing no comments. Add one only when the *why* is non-obvious
+  (a workaround, a subtle invariant, behavior that would surprise a
+  reader). Don't restate what the code does, and don't reference the
+  current task or callers — that belongs in the PR description.
 
 ## Tests
 
 ```bash
-# Unit + KMP common tests across all modules
-./gradlew test
-
-# Android instrumented tests (needs device or emulator)
-./gradlew connectedAndroidTest
-
-# A single module
-./gradlew :quartz:test
-./gradlew :commons:test
+./gradlew test                 # Unit + KMP common tests, all modules
+./gradlew connectedAndroidTest # Android instrumented tests (needs device)
+./gradlew :quartz:test         # Single module
 ```
 
 Add tests when:
@@ -309,7 +225,7 @@ Add tests when:
   after.
 - You add new protocol code in `quartz/` — Nostr event parsing, NIP
   implementations, and crypto paths should have unit coverage.
-- You add anything to `commons/` that has non-trivial state transitions.
+- You add anything to `commons/` with non-trivial state transitions.
 
 UI changes don't need automated UI tests, but they do need the screenshots
 described in the proof-of-testing section.
@@ -334,25 +250,25 @@ the PR description. Reviewers may ask if you didn't.
 
 ### Running them
 
-Each suite has its own README with prerequisites and flags. Quick links:
+Each suite has its own README; the non-obvious bits worth flagging up
+front:
 
-- **Marmot, DM, audio-rooms (CLI):** [`cli/tests/README.md`](cli/tests/README.md).
-  Headless variants require only `cargo` + a loopback `nostr-rs-relay`;
-  the interactive Marmot variant additionally prompts the human to drive
-  the Amethyst Android UI.
-- **MoQ-lite hang + browser:** [`nestsClient/tests/README.md`](nestsClient/tests/README.md).
-  Opt-in via `-DnestsHangInterop=true` and/or
+- **MoQ-lite tiers** are opt-in via `-DnestsHangInterop=true` and
   `-DnestsBrowserInterop=true` on `:nestsClient:jvmTest`. Cold first run is
   ~10–13 min per tier; cached runs ~3–7 min.
-- **QUIC interop-runner:** [`quic/interop/`](quic/interop/) plus its plan
-  at `quic/interop/plans/2026-05-06-interop-runner.md`. The standard sweep
-  is `for peer in aioquic picoquic quic-go quinn; do
-  quic/interop/run-matrix.sh -s $peer; done`. Always sequential —
-  `run-matrix.sh` is not safe to invoke concurrently.
+- **`quic/interop/run-matrix.sh` is not concurrency-safe.** Run peers
+  sequentially: `for peer in aioquic picoquic quic-go quinn; do
+  quic/interop/run-matrix.sh -s $peer; done`. Plan at
+  `quic/interop/plans/2026-05-06-interop-runner.md`.
+- **CLI suites** ([`cli/tests/README.md`](cli/tests/README.md)): headless
+  variants need only `cargo` + a loopback `nostr-rs-relay`; the interactive
+  Marmot variant prompts a human to drive the Android UI.
 
 If a change is documentation-only, UI-only, build-script-only, or otherwise
 cannot affect wire bytes / decoded audio / MLS state / DM envelopes, skip
 the interop suites and say so in the PR description.
+
+## Commits
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`,
   `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, etc.
@@ -368,15 +284,9 @@ the interop suites and say so in the PR description.
 A good PR description has:
 
 1. **Summary** — 1–3 sentences on what changed and why.
-2. **Modules touched** — `quartz`, `commons`, `amethyst`, `desktopApp`,
-   `cli`, etc.
-3. **Test plan** — exactly what you ran, on what platform, with what
+2. **Test plan** — exactly what you ran, on what platform, with what
    result. Include screenshots / recordings for UI changes (mandatory for
-   non-regular contributors; expected for all contributors on visual
-   changes).
-4. **Risk / rollback** — if the change touches relay subscriptions, the
-   `NostrClient`, signing, or anything in `Account`/`LocalCache`, call out
-   what could break and how to revert.
+   non-regular contributors; expected for everyone on visual changes).
 
 We aim to give first-pass feedback within a few days. PRs may sit longer if
 they're large, touch security-sensitive code, or arrive during a release
@@ -386,8 +296,8 @@ window.
 
 - Submit translations via
   [Crowdin](https://crowdin.com/project/amethyst-social), not as direct PRs
-  to `strings.xml`. Crowdin pushes are integrated through the
-  `crowdin.yml` workflow.
+  to `strings.xml`. Crowdin pushes are integrated through the `crowdin.yml`
+  workflow.
 - The `/find-missing-translations` skill can help reviewers spot
   untranslated keys for a target locale.
 
