@@ -89,6 +89,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileHeade
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.lists.TabProfileLists
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.lists.dal.UserProfileListsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualConversations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
@@ -230,6 +232,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val listsFeedViewModel: UserProfileListsFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserProfileListsFeedViewModel",
+            factory =
+                UserProfileListsFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     val pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfilePinnedNotesFeedViewModel",
@@ -261,6 +273,7 @@ fun PrepareViewModels(
         externalIdentities,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        listsFeedViewModel,
         pinnedNotesFeedViewModel,
         galleryFeedViewModel,
         reportsFeedViewModel,
@@ -281,6 +294,7 @@ fun ProfileScreen(
     externalIdentities: UserExternalIdentitiesViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
@@ -292,6 +306,7 @@ fun ProfileScreen(
     WatchLifecycleAndUpdateModel(mutualViewModel)
     WatchLifecycleAndUpdateModel(appRecommendations)
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
+    WatchLifecycleAndUpdateModel(listsFeedViewModel)
     WatchLifecycleAndUpdateModel(pinnedNotesFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
 
@@ -334,6 +349,7 @@ fun ProfileScreen(
                     followersFeedViewModel,
                     zapFeedViewModel,
                     bookmarksFeedViewModel,
+                    listsFeedViewModel,
                     pinnedNotesFeedViewModel,
                     galleryFeedViewModel,
                     reportsFeedViewModel,
@@ -433,13 +449,14 @@ private fun RenderScreen(
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 11 }
+    val pagerState = rememberPagerState { 12 }
 
     Column {
         ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
@@ -480,6 +497,7 @@ private fun RenderScreen(
                 followersFeedViewModel,
                 zapFeedViewModel,
                 bookmarksFeedViewModel,
+                listsFeedViewModel,
                 pinnedNotesFeedViewModel,
                 galleryFeedViewModel,
                 reportsFeedViewModel,
@@ -501,6 +519,7 @@ private fun CreateAndRenderPages(
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
@@ -523,9 +542,10 @@ private fun CreateAndRenderPages(
         5 -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
         6 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
         7 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
-        8 -> TabFollowedTags(baseUser, accountViewModel, nav)
-        9 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
-        10 -> TabRelays(baseUser, accountViewModel, nav)
+        8 -> TabProfileLists(listsFeedViewModel, accountViewModel, nav)
+        9 -> TabFollowedTags(baseUser, accountViewModel, nav)
+        10 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
+        11 -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
 
@@ -571,6 +591,7 @@ private fun CreateAndRenderTabs(
             { FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel) },
             { ZapTabHeader(zapFeedViewModel, accountViewModel) },
             { BookmarkTabHeader(baseUser, accountViewModel) },
+            { Text(text = stringRes(R.string.feed_group_lists)) },
             { FollowedTagsTabHeader(baseUser, accountViewModel) },
             { ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel) },
             { RelaysTabHeader(baseUser, accountViewModel) },
