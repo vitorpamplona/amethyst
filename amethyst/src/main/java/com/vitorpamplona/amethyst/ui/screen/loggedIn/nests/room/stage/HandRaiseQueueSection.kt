@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -53,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
-import kotlinx.coroutines.launch
 
 /**
  * Host-only queue of audience members whose latest kind-10312
@@ -96,7 +94,6 @@ internal fun HandRaiseQueueSection(
 
     if (hands.isEmpty()) return
 
-    val scope = rememberCoroutineScope()
     Column(modifier = modifier.fillMaxSize().padding(top = 12.dp)) {
         Text(
             text = stringRes(R.string.nest_hand_raise_queue_title),
@@ -112,9 +109,15 @@ internal fun HandRaiseQueueSection(
                     hand = hand,
                     accountViewModel = accountViewModel,
                     onApprove = {
-                        scope.launch {
+                        // launchSigner runs on viewModelScope (+ Dispatchers.IO)
+                        // and surfaces signer errors as toasts. Composition-scoped
+                        // alternatives get cancelled when this row leaves the tree:
+                        // approving flips `canSpeak()` true, the hand is filtered
+                        // out, and if it was the last hand the section disposes
+                        // entirely — killing the in-flight sign(...) before it ran.
+                        accountViewModel.launchSigner {
                             val template = RoomParticipantActions.setRole(event, hand.pubkey, ROLE.SPEAKER)
-                            template?.let { runCatching { accountViewModel.account.signAndComputeBroadcast(it) } }
+                            template?.let { accountViewModel.account.signAndComputeBroadcast(it) }
                         }
                     },
                 )

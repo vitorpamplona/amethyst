@@ -37,7 +37,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -56,7 +55,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
-import kotlinx.coroutines.launch
 
 /**
  * Per-participant context sheet (T2 #2). Always shows the
@@ -88,7 +86,6 @@ internal fun ParticipantHostActionsSheet(
     catalog: com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
 
     val roomATag =
         ATag(
@@ -98,9 +95,13 @@ internal fun ParticipantHostActionsSheet(
             relay = null,
         )
 
+    // Go through accountViewModel.launchSigner so the broadcast runs on
+    // viewModelScope (survives onDismiss() removing the sheet from
+    // composition) and signer errors surface as toasts instead of being
+    // silently swallowed.
     fun broadcast(template: com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<out com.vitorpamplona.quartz.nip01Core.core.Event>?) {
         template ?: return
-        scope.launch { runCatching { accountViewModel.account.signAndComputeBroadcast(template) } }
+        accountViewModel.launchSigner { accountViewModel.account.signAndComputeBroadcast(template) }
     }
 
     val targetUser =
