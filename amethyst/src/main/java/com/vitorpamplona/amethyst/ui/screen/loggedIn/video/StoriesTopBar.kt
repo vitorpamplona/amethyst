@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,12 +36,14 @@ import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoriesTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
+    UserDrawerSearchTopBar(accountViewModel, nav, colors) {
         val list by accountViewModel.account.settings.defaultStoriesFollowList
             .collectAsStateWithLifecycle()
 

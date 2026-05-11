@@ -24,13 +24,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -81,7 +83,11 @@ fun VideoScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            StoriesTopBar(accountViewModel, nav)
+            StoriesTopBar(
+                accountViewModel = accountViewModel,
+                nav = nav,
+                colors = transparentTopBarColors(),
+            )
         },
         bottomBar = {
             AppBottomBar(Route.Video, nav, accountViewModel) { route ->
@@ -168,6 +174,14 @@ private fun RenderFeed(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun transparentTopBarColors() =
+    TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+    )
+
 @Composable
 fun VideoFeedLoaded(
     loaded: FeedState.Loaded,
@@ -191,12 +205,12 @@ fun VideoFeedLoaded(
 
     VerticalPager(
         state = pagerState,
-        modifier = Modifier.fillMaxSize().padding(padding),
+        modifier = Modifier.fillMaxSize(),
         key = { idx -> items.list.getOrNull(idx)?.idHex ?: idx },
     ) { page ->
         val item = items.list.getOrNull(page) ?: return@VerticalPager
 
-        VideoPagerPage(baseNote = item, accountViewModel = accountViewModel, nav = nav) {
+        VideoPagerPage(baseNote = item, padding = padding, accountViewModel = accountViewModel, nav = nav) {
             Box(modifier = Modifier.fillMaxSize()) {
                 when (item.event) {
                     is PictureEvent -> PictureCardCompose(baseNote = item, accountViewModel = accountViewModel, nav = nav, showReactions = false)

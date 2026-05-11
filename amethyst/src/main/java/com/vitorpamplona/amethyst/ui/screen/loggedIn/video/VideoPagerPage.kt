@@ -23,10 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,16 +42,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlinx.coroutines.delay
 
 private const val AUTO_HIDE_MS = 3000L
 
+private fun pageMediaHashes(note: Note): Pair<String?, String?> =
+    when (val event = note.event) {
+        is VideoEvent -> {
+            val meta = event.imetaTags().firstOrNull()
+            meta?.blurhash to meta?.thumbhash
+        }
+
+        is PictureEvent -> {
+            val meta = event.imetaTags().firstOrNull()
+            meta?.blurhash to meta?.thumbhash
+        }
+
+        is FileHeaderEvent -> {
+            event.blurhash() to event.thumbhash()
+        }
+
+        else -> {
+            null to null
+        }
+    }
+
 @Composable
 fun VideoPagerPage(
     baseNote: Note,
+    padding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
     content: @Composable () -> Unit,
@@ -62,39 +91,61 @@ fun VideoPagerPage(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        content()
+    val (blurhash, thumbhash) =
+        remember(baseNote.idHex) { pageMediaHashes(baseNote) }
 
-        if (!chromeVisible) {
-            // Tap-catcher only when overlay is hidden — keeps card controls tappable when visible.
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Backdrop layer — full-bleed so blur extends behind the (transparent) top bar.
+        if (blurhash != null || thumbhash != null) {
+            BlurhashBackdrop(blurhash = blurhash, description = null, thumbhash = thumbhash)
             Box(
                 modifier =
                     Modifier
-                        .matchParentSize()
-                        .pointerInput(baseNote.idHex) {
-                            detectTapGestures(onTap = { chromeVisible = true })
-                        },
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.25f)),
             )
         }
 
-        AnimatedVisibility(
-            visible = chromeVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
+        // Foreground layer — respects scaffold insets so card + reactions stay clear of the bars.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.55f),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ReactionsRow(
-                    baseNote = baseNote,
-                    showReactionDetail = true,
-                    addPadding = true,
-                    editState = null,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
+            content()
+
+            if (!chromeVisible) {
+                // Tap-catcher only when overlay is hidden — keeps card controls tappable when visible.
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .pointerInput(baseNote.idHex) {
+                                detectTapGestures(onTap = { chromeVisible = true })
+                            },
                 )
+            }
+
+            AnimatedVisibility(
+                visible = chromeVisible,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter),
+            ) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.55f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    ReactionsRow(
+                        baseNote = baseNote,
+                        showReactionDetail = true,
+                        addPadding = true,
+                        editState = null,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
         }
     }

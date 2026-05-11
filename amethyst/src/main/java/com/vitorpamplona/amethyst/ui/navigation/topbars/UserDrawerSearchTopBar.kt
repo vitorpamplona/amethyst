@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -50,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 fun UserDrawerSearchTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
     content: @Composable () -> Unit,
 ) {
     ShorterTopAppBar(
@@ -62,6 +65,7 @@ fun UserDrawerSearchTopBar(
                 content()
             }
         },
+        colors = colors,
         navigationIcon = {
             // When this screen sits on top of a back stack (entered via the drawer
             // or any deep link), show a back arrow. When it's the root (entered via
