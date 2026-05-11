@@ -441,8 +441,8 @@ to `onPause` methods.
 ## Contributing
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full guide — workflow,
-coding standards, the proof-of-testing rule for first-time contributors
-(human or AI-assisted), the cross-stack interop suites, and how the
+coding standards, the proof-of-testing rule for new / occasional
+contributors (human or AI-assisted), the cross-stack interop suites, and how the
 `[BUG]` / `[FEATURE]` issue templates and bounty system work.
 
 Quick links:

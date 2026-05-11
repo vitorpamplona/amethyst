@@ -1,7 +1,7 @@
 <!--
 Thanks for contributing to Amethyst! Before opening this PR, please skim
 CONTRIBUTING.md — especially the "Proof of testing" and "Interoperability
-tests" sections if this is your first PR.
+tests" sections if you are not a regular contributor to this repo.
 
 Delete any section below that doesn't apply.
 -->
@@ -20,8 +20,9 @@ For UI changes, attach screenshots (light + dark) or a short recording.
 For Android: device model + Android version. For Desktop: OS + window size.
 For build/packaging changes: paste the `./gradlew` command + tail of output.
 
-If this is your FIRST PR to this repo, this section is required regardless
-of how small the change is — see CONTRIBUTING.md § Proof of testing. -->
+If you are NOT a regular contributor to this repo, this section is required
+regardless of how small the change is — see CONTRIBUTING.md § Proof of
+testing. -->
 
 - [ ] Ran `./gradlew spotlessApply` — repo is formatted
 - [ ] Ran `./gradlew test` (or the relevant module's tests)

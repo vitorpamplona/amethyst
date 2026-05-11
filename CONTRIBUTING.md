@@ -11,7 +11,7 @@ license header with the original author(s) and source.
 
 - [Ways to contribute](#ways-to-contribute)
 - [Human and AI contributions](#human-and-ai-contributions)
-- [New contributor: proof of testing](#new-contributor-proof-of-testing)
+- [New / occasional contributor: proof of testing](#new--occasional-contributor-proof-of-testing)
 - [Reporting bugs and requesting features](#reporting-bugs-and-requesting-features)
 - [Security issues](#security-issues)
 - [Development setup](#development-setup)
@@ -64,11 +64,13 @@ The rules are the same in both cases:
 - **No machine-translated locale files.** Translations go through Crowdin so
   native speakers can review them.
 
-## New contributor: proof of testing
+## New / occasional contributor: proof of testing
 
-If this is your **first PR** to this repository, the PR description must
-include proof that you actually ran the change. This applies whether the
-patch was written by you or by an AI assistant.
+If you are **not a regular contributor** to this repository — that is, this
+is one of your first PRs, or you've only contributed sporadically and the
+current maintainers wouldn't recognize your handle from recent history — the
+PR description must include proof that you actually ran the change. This
+applies whether the patch was written by you or by an AI assistant.
 
 What "proof" means:
 
@@ -89,10 +91,10 @@ What "proof" means:
 - **Translation-only PRs:** screenshots are not required, but mention which
   locale and which strings you touched.
 
-You don't need to keep doing this on every subsequent PR — once we've seen
-that you can run the project end-to-end, a short test plan in the PR
-description is enough. Maintainers may still ask for screenshots on visual
-changes regardless of contributor seniority.
+Once you have an established track record in the repository, a short test
+plan in the PR description is enough on subsequent PRs. Maintainers may
+still ask for screenshots on visual changes regardless of contributor
+seniority.
 
 If you cannot run a particular target locally (e.g. you don't have macOS but
 your change affects the DMG build), say so explicitly in the PR — don't
@@ -370,7 +372,7 @@ A good PR description has:
    `cli`, etc.
 3. **Test plan** — exactly what you ran, on what platform, with what
    result. Include screenshots / recordings for UI changes (mandatory for
-   first-time contributors; expected for all contributors on visual
+   non-regular contributors; expected for all contributors on visual
    changes).
 4. **Risk / rollback** — if the change touches relay subscriptions, the
    `NostrClient`, signing, or anything in `Account`/`LocalCache`, call out
