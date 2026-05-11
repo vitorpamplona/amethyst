@@ -10,6 +10,19 @@
 #   quic/interop/run-matrix.sh -s aioquic -t handshake              # one test
 #   quic/interop/run-matrix.sh -s quic-go -t handshake,chacha20     # different peer
 #
+# Default peer set when running the full nightly sweep:
+#   aioquic, picoquic, quic-go, quinn  — these are the four reference impls
+#   we hold to "must be flawless" because the Nostr/MoQ relay ecosystem
+#   our users actually run their servers on overlaps with all four
+#   (notably quinn: most Rust-based relays are built on it). Always sweep
+#   sequentially — run-matrix.sh is not safe to invoke concurrently (the
+#   runner's docker-compose.yml hardcodes container_name: sim/server/client,
+#   so parallel invocations collide).
+#
+#   for peer in aioquic picoquic quic-go quinn; do
+#       quic/interop/run-matrix.sh -s $peer
+#   done
+#
 # Env overrides:
 #   RUNNER_DIR   — where to clone / find the runner (default: ../quic-interop-runner)
 #   LOG_DIR      — qlog / pcap output (default: $RUNNER_DIR/logs)
@@ -145,7 +158,7 @@ fi
 # sim/server/client`, which Docker enforces globally regardless of
 # COMPOSE_PROJECT_NAME. Two simultaneous invocations collide on
 # `docker create container "sim"`. Run sequentially:
-#   for peer in aioquic picoquic quic-go; do
+#   for peer in aioquic picoquic quic-go quinn; do
 #       quic/interop/run-matrix.sh -s $peer -t handshake,chacha20,...
 #   done
 #

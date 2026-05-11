@@ -196,6 +196,49 @@ After all of these, expectation is aioquic / picoquic ≥6/7 (M
 might still be flaky). retry green via qlog-driven debugging is
 the marquee result.
 
+## Phase 6 — landed 2026-05-10 (matrix expansion + flakiness sweep)
+
+Three-round flakiness sweep across four peers (aioquic, picoquic,
+quic-go, quinn). Round 1 = full 24-testcase matrix; rounds 2 and 3 =
+11-test audio-critical subset (handshake, transfer, multiplexing,
+transferloss, transfercorruption, handshakeloss, handshakecorruption,
+longrtt, blackhole, keyupdate, retry).
+
+**quinn added** to the default set this phase — was previously
+untested; cohort coverage demanded it because most Rust-based Nostr /
+MoQ relays use it on the server side. Validated identical to the
+existing three:
+
+| Peer | Pass | Unsupported | Fail | Goodput (kbps) | Crosstraffic (kbps) |
+|---|---|---|---|---|---|
+| aioquic  | 19/22 | E, CM, V2 | — | 9071 ± 53 | 5084 ± 257 |
+| picoquic | 20/22 | V2        | CM (expected — no client-initiated migration) | 9234 ± 12 | 7405 ± 140 |
+| quic-go  | 19/22 | E, CM, V2 | — | 9449 ±  8 | 6276 ± 218 |
+| quinn    | 20/22 | CM, V2    | — | 9322 ±  6 | 4117 ± 2283 (env-inflated; see below) |
+
+Across **528 test executions** (4 peers × 1 full round + 4 peers × 2
+audio-critical rounds × 11 tests, plus 10-iter measurements):
+- **Zero result flakiness.** No testcase that passed on one round ever
+  failed on another, and vice versa.
+- **Two stall classes**, both environmental (Docker Desktop on macOS,
+  not in `:quic`):
+  - **Type A (compose-init lockup)** — `docker compose up` hangs for
+    ~15-16 min between Python's command-log and compose's first Docker
+    API call. Hit 4 testcases: picoquic r2 transfer, quic-go r2
+    handshakecorruption, quinn r1 rebind-port/rebind-addr (both),
+    quinn r3 handshakeloss. Test always succeeds once compose starts.
+    qlog confirms the QUIC connection itself completes in 10-30s. The
+    quinn-r1 crosstraffic std-dev (±2283 kbps) is entirely driven by
+    2 of 5 iterations being trapped in this stall — the 3 unaffected
+    iters were 111/138/97 s = consistent with peers.
+  - **Type B (pyshark XML stall)** — runner's `_get_packets()`
+    iteration through tshark's XML via pyshark takes 16+ min on
+    rebind/crosstraffic pcaps. Direct tshark CLI on the same pcap:
+    0.6 s. pyshark wrapper: 66 s. Multiple passes per testcase
+    amplify it.
+- Mitigations documented in `plans/2026-05-06-interop-runner.md`
+  Docker Desktop section (separate investigation note).
+
 ## Still open
 
 - **`v2`** — server demands QUIC v2 (RFC 9369). We're v1-only.
@@ -233,10 +276,22 @@ docker-compose.yml hardcodes `container_name: sim/server/client` —
 Docker enforces those globally. Use a sequential loop:
 
 ```
-for peer in aioquic picoquic quic-go; do
+for peer in aioquic picoquic quic-go quinn; do
     quic/interop/run-matrix.sh -s $peer -t handshake,chacha20,...
 done
 ```
+
+## Default peer set
+
+The four-peer baseline that every change touching `:quic` should be
+checked against is `aioquic`, `picoquic`, `quic-go`, and `quinn`. The
+rationale is product-shaped, not protocol-shaped: this is the cohort
+that the Nostr / MoQ relay ecosystem our users actually run their
+servers on is built on. quinn in particular underwrites most of the
+Rust relay stacks, so an interop regression there is a user-visible
+regression — it must stay flawless. quinn was added to the default
+set 2026-05-10 after running cleanly across the same audio-critical
+3-round flakiness sweep used for the other three peers.
 
 ## Explicitly unsupported testcases (return 127, runner skips)
 
