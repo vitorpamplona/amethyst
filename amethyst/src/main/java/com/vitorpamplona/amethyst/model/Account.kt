@@ -525,6 +525,14 @@ class Account(
         return false
     }
 
+    suspend fun updateReportWarningThreshold(threshold: Int): Boolean {
+        if (settings.updateReportWarningThreshold(threshold.coerceAtLeast(1))) {
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
     suspend fun updateSendKind0EventsToLocalRelay(send: Boolean): Boolean {
         if (settings.changeSendKind0EventsToLocalRelay(send)) {
             sendNewAppSpecificData()
@@ -2905,7 +2913,7 @@ class Account(
             return true
         }
 
-        if (!settings.syncedSettings.security.warnAboutPostsWithReports) {
+        if (!settings.syncedSettings.security.warnAboutPostsWithReports.value) {
             if (isHidden(user)) return false
 
             val reports = user.reportsOrNull() ?: return true
@@ -2916,20 +2924,22 @@ class Account(
         if (isHidden(user)) return false
 
         val reports = user.reportsOrNull() ?: return true
+        val reportWarningThreshold = settings.syncedSettings.security.reportWarningThreshold.value.coerceAtLeast(1)
 
         // if user hasn't hided this author
         return reports.reportsBy(userProfile()).isEmpty() &&
             // if user has not reported this post
-            reports.countReportAuthorsBy(followingKeySet()) < 5
+            reports.countReportAuthorsBy(followingKeySet()) < reportWarningThreshold
     }
 
     private fun isAcceptableDirect(note: Note): Boolean {
-        if (!settings.syncedSettings.security.warnAboutPostsWithReports) {
+        if (!settings.syncedSettings.security.warnAboutPostsWithReports.value) {
             return !note.hasReportsBy(userProfile())
         }
+        val reportWarningThreshold = settings.syncedSettings.security.reportWarningThreshold.value.coerceAtLeast(1)
         return !note.hasReportsBy(userProfile()) &&
             // if user has not reported this post
-            note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
+            note.countReportAuthorsBy(followingKeySet()) < reportWarningThreshold
     }
 
     fun isDecryptedContentHidden(noteEvent: PrivateDmEvent): Boolean =
