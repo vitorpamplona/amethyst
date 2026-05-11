@@ -30,6 +30,7 @@ import java.text.NumberFormat
 data class InvoiceAmount(
     val invoice: String,
     val amount: String?,
+    val description: String?,
 )
 
 object CachedLnInvoiceParser {
@@ -48,8 +49,16 @@ object CachedLnInvoiceParser {
                     e.printStackTrace()
                     null
                 }
+            val myInvoiceDescription =
+                try {
+                    LnInvoiceUtil.getDescription(myInvoice)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    e.printStackTrace()
+                    null
+                }
 
-            val lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount)
+            val lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount, myInvoiceDescription)
 
             lnInvoicesCache.put(lnbcWord, lnInvoice)
 
