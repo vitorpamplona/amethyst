@@ -11,20 +11,6 @@ Delete any section below that doesn't apply.
 <!-- 1–3 sentences. What changed and why. Not "what files changed" — the
 diff already shows that. -->
 
-## Modules touched
-
-<!-- Tick the modules this PR touches. -->
-
-- [ ] `amethyst/` (Android app)
-- [ ] `desktopApp/` (Desktop JVM app)
-- [ ] `quartz/` (Nostr KMP library)
-- [ ] `commons/` (shared UI / ViewModels)
-- [ ] `cli/` (`amy`)
-- [ ] `quic/` (QUIC + HTTP/3 + WebTransport)
-- [ ] `nestsClient/` (audio rooms / MoQ)
-- [ ] Build / Gradle / CI
-- [ ] Docs only
-
 ## Test plan
 
 <!-- Required. What did you actually run, on what platform, with what result?
@@ -59,14 +45,6 @@ locally and tick the box. If your change can't possibly affect them
 - [ ] MoQ-lite hang-tier — `:nestsClient:jvmTest -DnestsHangInterop=true`
 - [ ] MoQ-lite browser-tier — `:nestsClient:jvmTest -DnestsBrowserInterop=true`
 - [ ] QUIC interop-runner — `quic/interop/run-matrix.sh -s {aioquic,picoquic,quic-go,quinn}`
-
-## Risk / rollback
-
-<!-- Optional but expected for changes that touch: relay subscriptions,
-NostrClient, signing, Account / LocalCache, MLS state, NIP-44, audio
-rooms transport, or anything in `quartz/` that other modules depend on.
-
-What could break? How do we revert if it does? -->
 
 ## AI assistance
 
