@@ -27,6 +27,11 @@ object LnInvoiceUtil {
     private val invoicePattern =
         Regex("lnbc((\\d+)([munp])?)?1[^1\\s]+", RegexOption.IGNORE_CASE)
 
+    private const val TIMESTAMP_WORD_LENGTH = 7
+    private const val TAG_HEADER_WORD_LENGTH = 3
+    private const val SIGNATURE_WORD_LENGTH = 104
+    private const val DESCRIPTION_TAG = 13
+
     /** The Bech32 character set for encoding. */
     private const val CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
@@ -210,6 +215,11 @@ object LnInvoiceUtil {
     ) : Exception(message)
 
     fun decodeUnlimitedLength(invoice: String): Boolean {
+        decodeDataPart(invoice)
+        return true
+    }
+
+    private fun decodeDataPart(invoice: String): ByteArray {
         var lower = false
         var upper = false
         for (i in 0 until invoice.length) {
@@ -240,7 +250,7 @@ object LnInvoiceUtil {
         }
         val hrp = invoice.substring(0, pos).lowercase()
         if (!verifyChecksum(hrp, values)) throw AddressFormatException("Invalid Checksum")
-        return true
+        return values.copyOfRange(0, values.size - 6)
     }
 
     /**
@@ -282,6 +292,57 @@ object LnInvoiceUtil {
     val OnePico = BigDecimal("0.000000000001")
 
     fun getAmountInSats(invoice: String): BigDecimal = getAmount(invoice).multiply(OneHundredK)
+
+    fun getDescription(invoice: String): String? {
+        val data =
+            try {
+                decodeDataPart(invoice)
+            } catch (e: AddressFormatException) {
+                throw IllegalArgumentException("Cannot decode invoice: $invoice", e)
+            }
+
+        var index = TIMESTAMP_WORD_LENGTH
+        val taggedFieldsEnd = data.size - SIGNATURE_WORD_LENGTH
+        while (index + TAG_HEADER_WORD_LENGTH <= taggedFieldsEnd) {
+            val tag = data[index].toInt() and 31
+            val dataLength = ((data[index + 1].toInt() and 31) shl 5) + (data[index + 2].toInt() and 31)
+            index += TAG_HEADER_WORD_LENGTH
+
+            if (index + dataLength > taggedFieldsEnd) return null
+
+            if (tag == DESCRIPTION_TAG) {
+                return fiveBitWordsToBytes(data, index, dataLength)
+                    .decodeToString()
+                    .ifBlank { null }
+            }
+
+            index += dataLength
+        }
+
+        return null
+    }
+
+    private fun fiveBitWordsToBytes(
+        input: ByteArray,
+        offset: Int,
+        length: Int,
+    ): ByteArray {
+        var buffer = 0L
+        val output = ArrayList<Byte>(length)
+        var count = 0
+        for (i in offset until offset + length) {
+            val b = input[i]
+            buffer = (buffer shl 5) or (b.toLong() and 31)
+            count += 5
+            while (count >= 8) {
+                output.add(((buffer shr (count - 8)) and 0xff).toByte())
+                count -= 8
+            }
+        }
+        require(count <= 4) { "Zero-padding of more than 4 bits" }
+        require((buffer and ((1L shl count) - 1L)) == 0L) { "Non-zero padding in 8-to-5 conversion" }
+        return output.toByteArray()
+    }
 
     private fun multiplier(multiplier: String): BigDecimal =
         when (multiplier.lowercase()) {

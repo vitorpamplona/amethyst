@@ -89,7 +89,7 @@ fun MayBeInvoicePreview(
     LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
         CrossfadeIfEnabled(targetState = invoiceAmount, label = "MayBeInvoicePreview", accountViewModel = accountViewModel) {
             if (it != null) {
-                InvoicePreview(it.invoice, it.amount)
+                InvoicePreview(it.invoice, it.amount, it.description)
             } else {
                 Text(
                     text = lnbcWord,
@@ -104,6 +104,7 @@ fun MayBeInvoicePreview(
 fun InvoicePreview(
     lnInvoice: String,
     amount: String?,
+    description: String?,
 ) {
     val context = LocalContext.current
 
@@ -154,6 +155,18 @@ fun InvoicePreview(
             }
 
             HorizontalDivider(thickness = DividerThickness)
+
+            description?.let {
+                Text(
+                    text = it,
+                    fontSize = 16.sp,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp),
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                )
+            }
 
             amount?.let {
                 Text(
