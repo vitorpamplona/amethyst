@@ -60,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -107,6 +108,10 @@ fun UserSettingsScreen(
             ) {
                 TranslateToSetting(accountViewModel)
                 HorizontalDivider(thickness = DividerThickness)
+                if (BuildConfig.FLAVOR == "fdroid") {
+                    ExternalTranslatorSetting(accountViewModel)
+                    HorizontalDivider(thickness = DividerThickness)
+                }
                 DontTranslateFromSetting(accountViewModel)
                 HorizontalDivider(thickness = DividerThickness)
                 LanguagePreferencesSetting(accountViewModel)
@@ -224,6 +229,58 @@ fun TranslateToSetting(accountViewModel: AccountViewModel) {
                     showPicker = false
                 },
             )
+        }
+    }
+}
+
+@Composable
+fun ExternalTranslatorSetting(accountViewModel: AccountViewModel) {
+    val savedUrl by accountViewModel.account.settings.syncedSettings.languages.externalTranslatorUrl
+        .collectAsStateWithLifecycle()
+    var input by remember(savedUrl) { mutableStateOf(savedUrl) }
+    val normalized = input.trim().trimEnd('/')
+    val changed = normalized != savedUrl
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SettingsRow(
+            name = R.string.external_translator_url,
+            description = R.string.external_translator_url_description,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = input,
+            onValueChange = { input = it },
+            placeholder = { Text(stringRes(R.string.external_translator_url_placeholder)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        if (savedUrl.isNotBlank() || input.isNotBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(
+                    onClick = {
+                        input = ""
+                        accountViewModel.updateExternalTranslatorUrl("")
+                    },
+                    enabled = savedUrl.isNotBlank() || input.isNotBlank(),
+                ) {
+                    Text(stringRes(R.string.clear))
+                }
+                TextButton(
+                    onClick = {
+                        input = normalized
+                        accountViewModel.updateExternalTranslatorUrl(normalized)
+                    },
+                    enabled = changed,
+                ) {
+                    Text(stringRes(R.string.save))
+                }
+            }
         }
     }
 }

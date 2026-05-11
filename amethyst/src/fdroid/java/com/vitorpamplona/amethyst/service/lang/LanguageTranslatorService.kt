@@ -20,6 +20,156 @@
  */
 package com.vitorpamplona.amethyst.service.lang
 
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.coroutines.executeAsync
+import java.io.IOException
+
+@Immutable
+data class ResultOrError(
+    val result: String?,
+    val sourceLang: String?,
+    val targetLang: String?,
+)
+
 object LanguageTranslatorService {
-    fun clear() {}
+    private const val MIN_DETECTION_CONFIDENCE = 0.6
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val mediaType = "application/json; charset=utf-8".toMediaType()
+
+    fun clear() {
+        TranslationsCache.clear()
+    }
+
+    suspend fun autoTranslate(
+        text: String,
+        dontTranslateFrom: Set<String>,
+        translateTo: String,
+        externalTranslatorUrl: String,
+        okHttpClientForUrl: (String) -> OkHttpClient,
+    ): ResultOrError? {
+        val serverUrl = normalizeTranslatorUrl(externalTranslatorUrl) ?: return null
+        if (translateTo.isBlank() || !TranslationDictionary.isWorthTranslating(text)) return null
+
+        return withContext(Dispatchers.IO) {
+            translateOrSkip(text, dontTranslateFrom, translateTo, serverUrl, okHttpClientForUrl)
+        }
+    }
+
+    private suspend fun translateOrSkip(
+        text: String,
+        dontTranslateFrom: Set<String>,
+        translateTo: String,
+        serverUrl: String,
+        okHttpClientForUrl: (String) -> OkHttpClient,
+    ): ResultOrError? {
+        val detected = detectLanguage(text, serverUrl, okHttpClientForUrl) ?: return null
+
+        return when {
+            detected == "und" -> null
+            detected.equals(translateTo, ignoreCase = true) -> null
+            dontTranslateFrom.any { it.equals(detected, ignoreCase = true) } -> null
+            else -> translate(text, detected, translateTo, serverUrl, okHttpClientForUrl)
+        }
+    }
+
+    private suspend fun detectLanguage(
+        text: String,
+        serverUrl: String,
+        okHttpClientForUrl: (String) -> OkHttpClient,
+    ): String? {
+        val response =
+            postJson(
+                url = "$serverUrl/detect",
+                body = json.encodeToString(DetectRequest(text)),
+                okHttpClientForUrl = okHttpClientForUrl,
+            )
+        val detections = json.decodeFromString<List<DetectResponse>>(response)
+        val best = detections.maxByOrNull { it.confidence } ?: return null
+        return best.language.takeIf { it.isNotBlank() && best.confidence >= MIN_DETECTION_CONFIDENCE }
+    }
+
+    private suspend fun translate(
+        text: String,
+        source: String,
+        target: String,
+        serverUrl: String,
+        okHttpClientForUrl: (String) -> OkHttpClient,
+    ): ResultOrError {
+        val dict = TranslationDictionary.build(text)
+        val encoded = TranslationDictionary.encode(text, dict)
+        val response =
+            postJson(
+                url = "$serverUrl/translate",
+                body = json.encodeToString(TranslateRequest(encoded, source, target)),
+                okHttpClientForUrl = okHttpClientForUrl,
+            )
+        val translated = json.decodeFromString<TranslateResponse>(response).translatedText
+        return ResultOrError(TranslationDictionary.decode(translated, dict), source, target)
+    }
+
+    private suspend fun postJson(
+        url: String,
+        body: String,
+        okHttpClientForUrl: (String) -> OkHttpClient,
+    ): String {
+        checkNotInMainThread()
+        val request =
+            Request
+                .Builder()
+                .url(url)
+                .header("Accept", "application/json")
+                .post(body.toRequestBody(mediaType))
+                .build()
+
+        return okHttpClientForUrl(url).newCall(request).executeAsync().use { response ->
+            val responseBody = response.body.string()
+            if (!response.isSuccessful) {
+                throw IOException("LibreTranslate request failed with HTTP ${response.code}")
+            }
+            responseBody
+        }
+    }
+
+    private fun normalizeTranslatorUrl(url: String): String? {
+        val normalized = url.trim().trimEnd('/')
+        if (normalized.isBlank()) return null
+        if (!normalized.startsWith("https://") && !normalized.startsWith("http://")) return null
+        return normalized
+    }
+
+    @Serializable
+    private data class DetectRequest(
+        val q: String,
+    )
+
+    @Serializable
+    private data class DetectResponse(
+        val confidence: Double = 0.0,
+        val language: String = "",
+    )
+
+    @Serializable
+    private data class TranslateRequest(
+        val q: String,
+        val source: String,
+        val target: String,
+        val format: String = "text",
+    )
+
+    @Serializable
+    private data class TranslateResponse(
+        val translatedText: String = "",
+    )
 }

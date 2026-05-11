@@ -1202,6 +1202,8 @@ class AccountViewModel(
 
     fun updateTranslateTo(languageCode: String) = launchSigner { account.updateTranslateTo(languageCode) }
 
+    fun updateExternalTranslatorUrl(url: String) = launchSigner { account.updateExternalTranslatorUrl(url) }
+
     fun prefer(
         source: String,
         target: String,

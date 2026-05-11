@@ -2183,6 +2183,9 @@
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
     <string name="translate_to">Translate To</string>
     <string name="translate_to_description">Choose the language to translate content into.</string>
+    <string name="external_translator_url">LibreTranslate Server</string>
+    <string name="external_translator_url_description">F-Droid builds can translate through this server. Note text is sent to it; leave empty to disable.</string>
+    <string name="external_translator_url_placeholder">https://libretranslate.example</string>
     <string name="language_preferences">Language Display Preferences</string>
     <string name="language_preferences_description">For each translated language pair, choose which language to show first.</string>
     <string name="language_preference_pair">%1$s → %2$s</string>

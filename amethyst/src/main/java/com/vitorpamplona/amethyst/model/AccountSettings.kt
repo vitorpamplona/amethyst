@@ -661,6 +661,14 @@ class AccountSettings(
         return false
     }
 
+    fun updateExternalTranslatorUrl(url: String): Boolean {
+        if (syncedSettings.languages.updateExternalTranslatorUrl(url)) {
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun prefer(
         source: String,
         target: String,

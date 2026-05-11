@@ -620,6 +620,12 @@ class Account(
         }
     }
 
+    suspend fun updateExternalTranslatorUrl(url: String) {
+        if (settings.updateExternalTranslatorUrl(url)) {
+            sendNewAppSpecificData()
+        }
+    }
+
     suspend fun prefer(
         source: String,
         target: String,
