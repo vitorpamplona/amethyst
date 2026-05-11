@@ -24,6 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -99,8 +101,12 @@ fun VideoScreen(
             }
         },
         floatingButton = {
-            FabBottomBarPadded(nav) {
-                NewImageButton(accountViewModel, nav, videoFeedContentState::sendToTop)
+            // Bottom padding shifts the FAB above the reactions overlay so the row at the
+            // very bottom stays unobstructed.
+            Box(modifier = Modifier.padding(bottom = 80.dp)) {
+                FabBottomBarPadded(nav) {
+                    NewImageButton(accountViewModel, nav, videoFeedContentState::sendToTop)
+                }
             }
         },
         accountViewModel = accountViewModel,

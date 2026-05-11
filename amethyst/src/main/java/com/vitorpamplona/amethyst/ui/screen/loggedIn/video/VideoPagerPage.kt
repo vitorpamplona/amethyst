@@ -28,10 +28,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -52,6 +53,33 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlinx.coroutines.delay
 
 private const val AUTO_HIDE_MS = 3000L
+private const val REACTIONS_SCALE = 1.5f
+
+@Composable
+private fun EnlargedReactionsRow(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val base = LocalDensity.current
+    CompositionLocalProvider(
+        LocalDensity provides
+            Density(
+                density = base.density * REACTIONS_SCALE,
+                fontScale = base.fontScale,
+            ),
+    ) {
+        ReactionsRow(
+            baseNote = baseNote,
+            showReactionDetail = false,
+            addPadding = true,
+            editState = null,
+            tint = Color.White,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
 
 private fun pageMediaHashes(note: Note): Pair<String?, String?> =
     when (val event = note.event) {
@@ -133,19 +161,11 @@ fun VideoPagerPage(
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomCenter),
             ) {
-                Surface(
-                    color = Color.Black.copy(alpha = 0.55f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    ReactionsRow(
-                        baseNote = baseNote,
-                        showReactionDetail = true,
-                        addPadding = true,
-                        editState = null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+                EnlargedReactionsRow(
+                    baseNote = baseNote,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
     }

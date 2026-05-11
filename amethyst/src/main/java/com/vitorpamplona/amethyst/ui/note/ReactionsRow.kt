@@ -200,10 +200,11 @@ fun ReactionsRow(
     editState: State<GenericLoadable<EditState>>?,
     accountViewModel: AccountViewModel,
     nav: INav,
+    tint: Color = MaterialTheme.colorScheme.placeholderText,
 ) {
     val wantsToSeeReactions = rememberSaveable(baseNote) { mutableStateOf(false) }
 
-    InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav)
+    InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav, tint)
 
     LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
 
@@ -222,6 +223,7 @@ private fun InnerReactionRow(
     editState: State<GenericLoadable<EditState>>?,
     accountViewModel: AccountViewModel,
     nav: INav,
+    tint: Color,
 ) {
     val voiceRecordingState = remember(baseNote.idHex) { mutableStateOf(false) }
     val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
@@ -241,7 +243,7 @@ private fun InnerReactionRow(
                 ReactionRowAction.Reply -> {
                     ReplyReactionWithDialog(
                         baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
+                        tint,
                         accountViewModel,
                         nav,
                         showCounter = item.showCounter,
@@ -255,7 +257,7 @@ private fun InnerReactionRow(
                         BoostWithDialog(
                             baseNote,
                             editState,
-                            MaterialTheme.colorScheme.placeholderText,
+                            tint,
                             accountViewModel,
                             nav,
                             showCounter = item.showCounter,
@@ -266,7 +268,7 @@ private fun InnerReactionRow(
                 ReactionRowAction.Like -> {
                     LikeReaction(
                         baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
+                        tint,
                         accountViewModel,
                         nav,
                         showCounter = item.showCounter,
@@ -276,7 +278,7 @@ private fun InnerReactionRow(
                 ReactionRowAction.Zap -> {
                     ZapReaction(
                         baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
+                        tint,
                         accountViewModel,
                         nav = nav,
                         showCounter = item.showCounter,
@@ -286,14 +288,14 @@ private fun InnerReactionRow(
                 ReactionRowAction.Share -> {
                     ShareReaction(
                         note = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                        grayTint = tint,
                     )
                 }
 
                 ReactionRowAction.Pay -> {
                     PayReaction(
                         baseNote = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                        grayTint = tint,
                         accountViewModel = accountViewModel,
                     )
                 }
