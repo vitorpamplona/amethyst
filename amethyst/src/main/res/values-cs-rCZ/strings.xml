@@ -2303,6 +2303,7 @@
     <string name="media_actions_dialog_title">Akce médií</string>
     <string name="playback_actions_dialog_title">Přehrávání</string>
     <string name="video_quality_auto">Auto</string>
+    <!-- LAN cast (Chromecast) feature -->
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS nahrávání</string>
     <string name="share_hls_video_drawer_description">Publikujte multi-rozlišení HLS na váš media server</string>
