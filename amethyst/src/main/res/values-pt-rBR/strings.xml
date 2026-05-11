@@ -2279,6 +2279,7 @@
     <string name="media_actions_dialog_title">Ações de mídia</string>
     <string name="playback_actions_dialog_title">Reprodução</string>
     <string name="video_quality_auto">Auto</string>
+    <!-- LAN cast (Chromecast) feature -->
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">Upload HLS</string>
     <string name="share_hls_video_drawer_description">Publique HLS multi-resolução em seu servidor de mídia</string>

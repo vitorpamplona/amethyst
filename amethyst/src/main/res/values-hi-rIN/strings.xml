@@ -1105,6 +1105,8 @@
     <string name="disable_client_tag_explainer">जब सक्षम अमेथिस्ट निप॰८९ ग्राहक सूचक नहीं जोडेगा आपके द्वारा प्रकाशित घटनाओं में।</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">सूचनाएँ प्राप्त होने पर चेतावनी दें</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र 5 अथवा अधिक बार सूचित हो आपके द्वारा अनुचरित लेखाओं से</string>
+    <string name="report_warning_threshold_title">चेतावनी सीमा सूचना</string>
+    <string name="report_warning_threshold_explainer">चेतावनी देती है जब पत्र अथवा लेखाओं पर इतने सूचनाएँ प्राप्त होते हैं आपके द्वारा अनुचरित व्यक्तियें से</string>
     <string name="show_sensitive_content_title">संवेदनशील विषयवस्तु दिखाएँ</string>
     <string name="show_sensitive_content_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र के लेखक ने उसे संवेदनशील चिह्नित किया</string>
     <string name="max_hashtag_limit_title">अधिकतम विषयसूचक प्रति पत्र</string>
@@ -1890,6 +1892,9 @@
     <string name="remove_dvm_from_favorites">इष्टसूची में से हटाएँ</string>
     <string name="favorite_dvms_title">इष्ट सूचनावली कलनविधियाँ</string>
     <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिनहें आपने यहाँ ताराचिह्नित किए मूल सूचनावली पर छलनी खण्डों के जैसे दिखेंगे। खोज पटल खोलें अधिक जोडने के लिए।</string>
+    <string name="favorite_dvms_empty_headline">आपके इष्ट कलनविधियाँ अटकाएँ</string>
+    <string name="favorite_dvms_empty_subtitle">नीचे घुण्डी दबाएँ कलनविधियों का वीक्षण करने के लिए तथा ताराचिह्नित करें जिनको आप यहाँ रखना चाहते हैं।</string>
+    <string name="favorite_dvms_empty_cta">सूचनावलियाँ जोडें</string>
     <string name="dvm_home_status_requesting">अनुरोध %1$s को सूचनावली के लिए…</string>
     <string name="dvm_home_status_requesting_all">आपके इष्ट सूचनावली कलनविधियों को अनुरोध किया जा रहा है सूचनावलियों के लिए…</string>
     <string name="dvm_home_status_processing">आपकी सूचनावली पर कार्य चालू…</string>
@@ -2281,6 +2286,7 @@
     <string name="media_actions_dialog_title">अभिलेख कार्य</string>
     <string name="playback_actions_dialog_title">चालन</string>
     <string name="video_quality_auto">स्वचालित</string>
+    <!-- LAN cast (Chromecast) feature -->
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">एचएलएस॰ आरोहण</string>
     <string name="share_hls_video_drawer_description">बहुसुलझाव एचएलएस॰ प्रकाशित करें आपके प्रसारसंगणक में</string>
