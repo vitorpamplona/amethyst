@@ -185,6 +185,8 @@ sealed class DesktopScreen {
     data object Drafts : DesktopScreen()
 
     data object Settings : DesktopScreen()
+
+    data object LocalRelaySettings : DesktopScreen()
 }
 
 /** Reference to active Tor manager for shutdown hook. Set by App composable. */
@@ -720,6 +722,23 @@ fun App(
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
+    // Local relay store — persists events to SQLite per account
+    val localRelayStore =
+        remember {
+            com.vitorpamplona.amethyst.desktop.relay
+                .LocalRelayStore(scope)
+        }
+    val localRelayMaintenance =
+        remember {
+            com.vitorpamplona.amethyst.desktop.relay
+                .LocalRelayMaintenance(localRelayStore, scope)
+        }
+
+    // Wire local relay store to cache for write-through
+    LaunchedEffect(localRelayStore) {
+        localCache.localRelayStore = localRelayStore
+    }
+
     // Build TorRelayEvaluation for per-relay routing
     val torRelayEvaluation =
         remember(torSettings) {
@@ -795,6 +814,8 @@ fun App(
             is AccountState.LoggedOut -> {
                 subscriptionsCoordinator.clear()
                 localCache.clear()
+                localRelayMaintenance.stop()
+                localRelayStore.close()
                 previousAccountPubKey = null
             }
 
@@ -804,7 +825,15 @@ fun App(
                     // Account switched — clear old data so new feed loads fresh
                     subscriptionsCoordinator.clear()
                     localCache.clear()
+                    localRelayMaintenance.stop()
+                    localRelayStore.close()
                     subscriptionsCoordinator.start()
+                }
+                // Open local relay store for the current account and hydrate cache
+                localRelayStore.openForAccount(currentPubKey)
+                localRelayMaintenance.start()
+                scope.launch(Dispatchers.IO) {
+                    localRelayStore.hydrate(localCache)
                 }
                 previousAccountPubKey = currentPubKey
             }
@@ -883,6 +912,8 @@ fun App(
             runBlocking { accountManager.disconnectNip46Client() }
             subscriptionsCoordinator.clear()
             relayManager.disconnect()
+            localRelayMaintenance.stop()
+            localRelayStore.close()
             scope.cancel()
         }
     }
@@ -901,6 +932,7 @@ fun App(
                 CompositionLocalProvider(
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
+                    com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore provides localRelayStore,
                 ) {
                     when (accountState) {
                         is AccountState.LoggedOut -> {
@@ -1686,6 +1718,19 @@ fun RelaySettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // Local Relay section
+            val localRelay = com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore.current
+            if (localRelay != null) {
+                com.vitorpamplona.amethyst.desktop.ui.settings.LocalRelaySettingsScreen(
+                    localRelayStore = localRelay,
+                )
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(16.dp))
+            }
 
             val logoutScope = rememberCoroutineScope()
             OutlinedButton(

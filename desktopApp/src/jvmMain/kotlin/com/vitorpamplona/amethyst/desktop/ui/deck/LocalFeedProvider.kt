@@ -80,3 +80,8 @@ val LocalRelayManager =
     compositionLocalOf<DesktopRelayConnectionManager?> {
         null
     }
+
+val LocalLocalRelayStore =
+    compositionLocalOf<com.vitorpamplona.amethyst.desktop.relay.LocalRelayStore?> {
+        null
+    }
