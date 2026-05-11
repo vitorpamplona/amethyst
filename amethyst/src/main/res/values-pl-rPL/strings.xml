@@ -1115,6 +1115,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="disable_client_tag_explainer">Po włączeniu tej opcji Amethyst nie będzie dołączać tagu klienta NIP-89 do Twoich publikacji.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Ostrzeżenie o zgłoszeniach</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Wyświetla komunikat ostrzegawczy, gdy posty zostały zgłoszone przez 5 lub więcej obserwowanych osób</string>
+    <string name="report_warning_threshold_title">Zgłoś próg ostrzegawczy</string>
+    <string name="report_warning_threshold_explainer">Wyświetla ostrzeżenie, gdy posty lub profile osiągną określoną liczbę zgłoszeń od osób, które obserwujesz</string>
     <string name="show_sensitive_content_title">Pokaż wrażliwe treści</string>
     <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor oznaczył wpis jako wrażliwy</string>
     <string name="max_hashtag_limit_title">Maks ilość hashtagów na post</string>
@@ -1686,6 +1688,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="video_player_settings_action_download_description">Pobierz wideo na swoje urządzenie (opcja ukryta podczas transmisji na żywo)</string>
     <string name="video_player_settings_action_pip">Obraz w Obrazie</string>
     <string name="video_player_settings_action_pip_description">Odtwórz wideo w pływającym oknie (opcja ukryta, jeśli nie jest obsługiwana)</string>
+    <string name="video_player_settings_action_cast">Przenieś na urządzenie</string>
+    <string name="video_player_settings_action_cast_description">Prześlij film do urządzenia Chromecast lub odbiornika DLNA podłączonego do sieci Wi-Fi (opcja ukryta w przypadku plików lokalnych)</string>
     <string name="profile_image_of_user">Zdjęcie profilowe %1$s</string>
     <string name="relay_info">Transmiter %1$s</string>
     <string name="expand_relay_list">Rozwiń listę transmiterów</string>
@@ -1900,6 +1904,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="remove_dvm_from_favorites">Usuń z ulubionych</string>
     <string name="favorite_dvms_title">Algorytmy ulubionych kanałów</string>
     <string name="favorite_dvms_explainer">Algorytmy kanałów, które tutaj oznaczyłeś gwiazdką, pojawiają się jako ikony filtrów na stronie głównej. Otwórz sekcję Odkryj, aby dodać kolejne.</string>
+    <string name="favorite_dvms_empty_headline">Przypnij swoje ulubione algorytmy</string>
+    <string name="favorite_dvms_empty_subtitle">Kliknij przycisk poniżej, aby przejrzeć algorytmy i oznaczyć gwiazdką te, które chcesz tutaj zachować.</string>
+    <string name="favorite_dvms_empty_cta">Dodaj kilka kanałów</string>
     <string name="dvm_home_status_requesting">Poproś %1$s o wyświetlenie treści…</string>
     <string name="dvm_home_status_requesting_all">Poproś algorytmy o wyświetlenie ulubionych treści…</string>
     <string name="dvm_home_status_processing">Przetwarzanie statusu kanału…</string>
@@ -2304,6 +2311,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="playback_actions_dialog_title">Odtwarzanie</string>
     <string name="video_quality_auto">Automatycznie</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">Zrzuć na urządzenie</string>
+    <string name="cast_stop_casting">Przestań zrzucać</string>
+    <string name="cast_to_device_dialog_title">Zrzuć do…</string>
+    <string name="cast_searching_for_devices">Wyszukiwanie urządzeń w sieci Wi-Fi…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">Wgraj HLS</string>
     <string name="share_hls_video_drawer_description">Publikuj strumień HLS na swoim serwerze multimedialnym</string>
