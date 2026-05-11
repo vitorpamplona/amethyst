@@ -62,6 +62,7 @@ fun FileHeaderCardCompose(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    showReactions: Boolean = true,
 ) {
     val event = (baseNote.event as? FileHeaderEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
@@ -76,14 +77,16 @@ fun FileHeaderCardCompose(
         FileHeaderCardImage(baseNote, event, backgroundColor, accountViewModel)
 
         // Reactions row
-        ReactionsRow(
-            baseNote = baseNote,
-            showReactionDetail = true,
-            addPadding = true,
-            editState = null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        if (showReactions) {
+            ReactionsRow(
+                baseNote = baseNote,
+                showReactionDetail = true,
+                addPadding = true,
+                editState = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
 
         // Title and content
         FileHeaderCardCaption(event)

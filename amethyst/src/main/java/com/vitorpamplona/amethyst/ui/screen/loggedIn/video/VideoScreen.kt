@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -96,10 +98,11 @@ fun VideoScreen(
             }
         },
         accountViewModel = accountViewModel,
-    ) {
+    ) { padding ->
         RenderFeed(
             videoFeedContentState = videoFeedContentState,
             scrollKey = ScrollStateKeys.VIDEO_SCREEN,
+            padding = padding,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -125,6 +128,7 @@ fun WatchAccountForVideoScreen(
 private fun RenderFeed(
     videoFeedContentState: FeedContentState,
     scrollKey: String?,
+    padding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -137,17 +141,28 @@ private fun RenderFeed(
             accountViewModel = accountViewModel,
         ) { state ->
             when (state) {
-                is FeedState.Empty -> FeedEmpty(videoFeedContentState::invalidateData)
-                is FeedState.FeedError -> FeedError(state.errorMessage, videoFeedContentState::invalidateData)
-                is FeedState.Loaded ->
+                is FeedState.Empty -> {
+                    FeedEmpty(videoFeedContentState::invalidateData)
+                }
+
+                is FeedState.FeedError -> {
+                    FeedError(state.errorMessage, videoFeedContentState::invalidateData)
+                }
+
+                is FeedState.Loaded -> {
                     VideoFeedLoaded(
                         loaded = state,
                         scrollKey = scrollKey,
+                        padding = padding,
                         videoFeedContentState = videoFeedContentState,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
-                is FeedState.Loading -> LoadingFeed()
+                }
+
+                is FeedState.Loading -> {
+                    LoadingFeed()
+                }
             }
         }
     }
@@ -157,6 +172,7 @@ private fun RenderFeed(
 fun VideoFeedLoaded(
     loaded: FeedState.Loaded,
     scrollKey: String?,
+    padding: PaddingValues,
     videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -175,17 +191,19 @@ fun VideoFeedLoaded(
 
     VerticalPager(
         state = pagerState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(padding),
         key = { idx -> items.list.getOrNull(idx)?.idHex ?: idx },
     ) { page ->
         val item = items.list.getOrNull(page) ?: return@VerticalPager
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (item.event) {
-                is PictureEvent -> PictureCardCompose(baseNote = item, accountViewModel = accountViewModel, nav = nav)
-                is VideoEvent -> VideoCardCompose(item, accountViewModel, nav)
-                is FileHeaderEvent -> FileHeaderCardCompose(item, accountViewModel, nav)
-                else -> Unit
+        VideoPagerPage(baseNote = item, accountViewModel = accountViewModel, nav = nav) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (item.event) {
+                    is PictureEvent -> PictureCardCompose(baseNote = item, accountViewModel = accountViewModel, nav = nav, showReactions = false)
+                    is VideoEvent -> VideoCardCompose(item, accountViewModel, nav, showReactions = false)
+                    is FileHeaderEvent -> FileHeaderCardCompose(item, accountViewModel, nav, showReactions = false)
+                    else -> Unit
+                }
             }
         }
     }

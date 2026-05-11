@@ -63,6 +63,7 @@ fun VideoCardCompose(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    showReactions: Boolean = true,
 ) {
     val event = (baseNote.event as? VideoEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
@@ -77,14 +78,16 @@ fun VideoCardCompose(
         VideoCardImage(baseNote, event, backgroundColor, accountViewModel)
 
         // Reactions row
-        ReactionsRow(
-            baseNote = baseNote,
-            showReactionDetail = true,
-            addPadding = true,
-            editState = null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        if (showReactions) {
+            ReactionsRow(
+                baseNote = baseNote,
+                showReactionDetail = true,
+                addPadding = true,
+                editState = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
 
         // Title and content
         VideoCardCaption(event)
