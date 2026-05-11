@@ -2559,4 +2559,12 @@
     <string name="community_rules_violation_quota_exceeded">Dnes jsi již zveřejnil %1$d událostí tohoto typu (limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
+    <string name="cast_searching_for_devices">Hledání zařízení ve vaší Wi-Fi…</string>
+    <string name="cast_stop_casting">Ukončit odesílání</string>
+    <string name="cast_to_device">Odeslat do zařízení</string>
+    <string name="cast_to_device_dialog_title">Odeslat do…</string>
+    <string name="report_warning_threshold_explainer">Upozorní, když příspěvky nebo profily dosáhnou tohoto počtu nahlášení od lidí, které sledujete</string>
+    <string name="report_warning_threshold_title">Práh varování o nahlášeních</string>
+    <string name="video_player_settings_action_cast">Odeslat do zařízení</string>
+    <string name="video_player_settings_action_cast_description">Odeslat video do přijímače Chromecast ve vaší Wi-Fi (skryto pro místní soubory)</string>
 </resources>

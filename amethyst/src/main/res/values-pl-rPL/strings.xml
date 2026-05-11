@@ -1689,7 +1689,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="video_player_settings_action_pip">Obraz w Obrazie</string>
     <string name="video_player_settings_action_pip_description">Odtwórz wideo w pływającym oknie (opcja ukryta, jeśli nie jest obsługiwana)</string>
     <string name="video_player_settings_action_cast">Przenieś na urządzenie</string>
-    <string name="video_player_settings_action_cast_description">Prześlij film do urządzenia Chromecast lub odbiornika DLNA podłączonego do sieci Wi-Fi (opcja ukryta w przypadku plików lokalnych)</string>
+    <string name="video_player_settings_action_cast_description">Prześlij film do urządzenia Chromecast podłączonego do sieci Wi-Fi (opcja ukryta w przypadku plików lokalnych)</string>
     <string name="profile_image_of_user">Zdjęcie profilowe %1$s</string>
     <string name="relay_info">Transmiter %1$s</string>
     <string name="expand_relay_list">Rozwiń listę transmiterów</string>

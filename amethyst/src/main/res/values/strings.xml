@@ -1888,7 +1888,7 @@
     <string name="video_player_settings_action_pip">Picture-in-Picture</string>
     <string name="video_player_settings_action_pip_description">Play the video in a floating window (hidden if unsupported)</string>
     <string name="video_player_settings_action_cast">Cast to Device</string>
-    <string name="video_player_settings_action_cast_description">Send the video to a Chromecast or DLNA receiver on your Wi-Fi (hidden for local files)</string>
+    <string name="video_player_settings_action_cast_description">Send the video to a Chromecast receiver on your Wi-Fi (hidden for local files)</string>
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>

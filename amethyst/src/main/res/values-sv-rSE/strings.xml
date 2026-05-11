@@ -2534,4 +2534,12 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
+    <string name="cast_searching_for_devices">Söker efter enheter på ditt Wi-Fi…</string>
+    <string name="cast_stop_casting">Sluta casta</string>
+    <string name="cast_to_device">Casta till enhet</string>
+    <string name="cast_to_device_dialog_title">Casta till…</string>
+    <string name="report_warning_threshold_explainer">Varnar när inlägg eller profiler når detta antal rapporter från personer du följer</string>
+    <string name="report_warning_threshold_title">Tröskel för rapportvarning</string>
+    <string name="video_player_settings_action_cast">Casta till enhet</string>
+    <string name="video_player_settings_action_cast_description">Skicka videon till en Chromecast-mottagare på ditt Wi-Fi (dolt för lokala filer)</string>
 </resources>

@@ -2535,4 +2535,12 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
+    <string name="cast_searching_for_devices">Procurando dispositivos na sua Wi-Fi…</string>
+    <string name="cast_stop_casting">Parar transmissão</string>
+    <string name="cast_to_device">Transmitir para dispositivo</string>
+    <string name="cast_to_device_dialog_title">Transmitir para…</string>
+    <string name="report_warning_threshold_explainer">Avisa quando publicações ou perfis atingem este número de denúncias de pessoas que você segue</string>
+    <string name="report_warning_threshold_title">Limite de aviso de denúncias</string>
+    <string name="video_player_settings_action_cast">Transmitir para dispositivo</string>
+    <string name="video_player_settings_action_cast_description">Envia o vídeo para um receptor Chromecast na sua Wi-Fi (oculto para arquivos locais)</string>
 </resources>

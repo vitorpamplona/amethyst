@@ -2540,4 +2540,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
+    <string name="cast_searching_for_devices">Suche nach Geräten in deinem WLAN…</string>
+    <string name="cast_stop_casting">Streaming beenden</string>
+    <string name="cast_to_device">An Gerät streamen</string>
+    <string name="cast_to_device_dialog_title">Streamen an…</string>
+    <string name="report_warning_threshold_explainer">Warnt, wenn Beiträge oder Profile diese Anzahl an Meldungen von Personen erreichen, denen du folgst</string>
+    <string name="report_warning_threshold_title">Warnschwelle für Meldungen</string>
+    <string name="video_player_settings_action_cast">An Gerät streamen</string>
+    <string name="video_player_settings_action_cast_description">Sendet das Video an einen Chromecast-Empfänger in deinem WLAN (für lokale Dateien ausgeblendet)</string>
 </resources>
