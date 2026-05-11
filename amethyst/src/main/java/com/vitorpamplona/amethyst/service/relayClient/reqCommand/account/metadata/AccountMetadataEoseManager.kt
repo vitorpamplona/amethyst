@@ -27,12 +27,19 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+
+internal fun preferredMetadataRelays(
+    homeRelays: Set<NormalizedRelayUrl>,
+    outboxRelays: Set<NormalizedRelayUrl>,
+): Set<NormalizedRelayUrl> = outboxRelays.ifEmpty { homeRelays }
 
 class AccountMetadataEoseManager(
     client: INostrClient,
@@ -40,13 +47,14 @@ class AccountMetadataEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
-    fun relayFlow(query: AccountQueryState) = query.account.homeRelays.flow
-
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
-        relayFlow(key).value.flatMap {
+        preferredMetadataRelays(
+            key.account.homeRelays.flow.value,
+            key.account.outboxRelays.flow.value,
+        ).flatMap {
             val since = since?.get(it)?.time
             listOf(
                 filterAccountInfoAndListsFromKey(it, user(key).pubkeyHex, since),
@@ -66,7 +74,18 @@ class AccountMetadataEoseManager(
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.IO) {
-                    relayFlow(key).collectLatest {
+                    combine(
+                        key.account.homeRelays.flow,
+                        key.account.outboxRelays.flow,
+                        ::preferredMetadataRelays,
+                    ).collectLatest {
+                        // External clients can publish authored replaceables to relays that
+                        // are writable for the account but are not part of the narrower home
+                        // relay view. Watching the preferred relay set keeps list-like
+                        // metadata, including private-only kind:30000 lists, discoverable.
+                        //
+                        // updateFilter decides which relays to query; this path only
+                        // invalidates when the source relay sets change.
                         invalidateFilters()
                     }
                 },
