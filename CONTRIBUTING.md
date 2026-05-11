@@ -82,6 +82,11 @@ If you can't run a particular target locally (e.g. no macOS, but your change
 affects the DMG build), say so explicitly. Honest "I couldn't test this on
 Windows" beats a silent guess.
 
+If you used an AI coding assistant for a substantial portion of the diff,
+also read [`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md) — it adds
+gates specific to AI-authored PRs (research before code, both-flavour
+build, performance footguns, regression test plan).
+
 ## Reporting bugs and requesting features
 
 Use the GitHub issue templates at
