@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformatio
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -204,6 +205,9 @@ fun EditField(
     ThinPaddingTextField(
         state = channelScreenModel.message,
         onTextChanged = { channelScreenModel.onMessageChanged() },
+        onContentReceived = { uri, mimeType ->
+            channelScreenModel.pickedMedia(persistentListOf(SelectedMedia(uri, mimeType)))
+        },
         inputTransformation = MentionPreservingInputTransformation,
         keyboardOptions = PostKeyboard,
         shape = EditFieldBorder,

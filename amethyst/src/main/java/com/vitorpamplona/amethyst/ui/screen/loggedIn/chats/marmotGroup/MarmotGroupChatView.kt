@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -164,6 +165,9 @@ fun MarmotGroupMessageComposer(
     Column(modifier = EditFieldModifier) {
         ThinPaddingTextField(
             state = messageState,
+            onContentReceived = { uri, mimeType ->
+                uploadState.load(persistentListOf(SelectedMedia(uri, mimeType)))
+            },
             modifier = Modifier.fillMaxWidth(),
             shape = EditFieldBorder,
             placeholder = {
