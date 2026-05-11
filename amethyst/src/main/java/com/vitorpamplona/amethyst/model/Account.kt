@@ -2828,6 +2828,19 @@ class Account(
         sendMyPublicAndPrivateOutbox(muteList.showWords(words))
     }
 
+    fun threadMuteRootId(note: Note): HexKey =
+        note.replyTo?.firstOrNull { it.isNewThread() }?.idHex
+            ?: note.replyTo?.firstOrNull()?.idHex
+            ?: note.idHex
+
+    fun isThreadMuted(note: Note): Boolean =
+        note.idHex in settings.mutedThreadRootIds.value ||
+            note.replyTo?.any { it.idHex in settings.mutedThreadRootIds.value } == true
+
+    fun muteThread(note: Note) = settings.muteThread(threadMuteRootId(note))
+
+    fun unmuteThread(note: Note) = settings.unmuteThread(threadMuteRootId(note))
+
     suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
         onReady: (event: NIP90ContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,

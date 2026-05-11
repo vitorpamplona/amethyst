@@ -222,6 +222,7 @@ class NotificationFeedFilter(
             (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             noteEvent?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
+            !account.isThreadMuted(it) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             tagsAnEventByUser(it, loggedInUserHex)
     }

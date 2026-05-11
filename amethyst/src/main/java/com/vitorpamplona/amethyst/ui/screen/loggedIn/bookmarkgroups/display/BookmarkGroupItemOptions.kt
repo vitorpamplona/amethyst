@@ -116,6 +116,7 @@ fun BookmarkGroupItemOptionsMenu(
             isLoggedUser = false,
             isSensitive = false,
             showSensitiveContent = null,
+            isThreadMuted = false,
         ),
     )
 

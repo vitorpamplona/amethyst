@@ -149,6 +149,7 @@ private object PrefKeys {
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
     const val DISMISSED_POLL_NOTE_IDS = "dismissed_poll_note_ids"
+    const val MUTED_THREAD_ROOT_IDS = "muted_thread_root_ids"
     const val VIEWED_POLL_RESULT_NOTE_IDS = "viewed_poll_result_note_ids"
     const val PENDING_ATTESTATIONS = "pending_attestations"
 
@@ -435,6 +436,7 @@ object LocalPreferences {
                     )
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
                     putStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, settings.dismissedPollNoteIds.value)
+                    putStringSet(PrefKeys.MUTED_THREAD_ROOT_IDS, settings.mutedThreadRootIds.value)
                     putString(
                         PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS,
                         JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
@@ -529,6 +531,7 @@ object LocalPreferences {
                     val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
+                    val mutedThreadRootIds = getStringSet(PrefKeys.MUTED_THREAD_ROOT_IDS, null) ?: setOf()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
@@ -676,6 +679,7 @@ object LocalPreferences {
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute.await()),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
+                        mutedThreadRootIds = MutableStateFlow(mutedThreadRootIds),
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),

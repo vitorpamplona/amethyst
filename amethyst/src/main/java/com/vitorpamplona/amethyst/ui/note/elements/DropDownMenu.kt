@@ -102,6 +102,7 @@ data class DropDownParams(
     val isLoggedUser: Boolean,
     val isSensitive: Boolean,
     val showSensitiveContent: Boolean?,
+    val isThreadMuted: Boolean,
     val isEmojiPackInMyList: Boolean = false,
 )
 
@@ -124,6 +125,7 @@ fun NoteDropDownMenu(
             isLoggedUser = false,
             isSensitive = false,
             showSensitiveContent = null,
+            isThreadMuted = false,
         ),
     )
 
@@ -335,6 +337,17 @@ fun NoteDropDownMenu(
 
         // Moderation section
         M3ActionSection {
+            if (state.isThreadMuted) {
+                M3ActionRow(icon = MaterialSymbols.Forum, text = stringRes(R.string.unmute_thread)) {
+                    accountViewModel.unmuteThread(note)
+                    onDismiss()
+                }
+            } else {
+                M3ActionRow(icon = MaterialSymbols.Forum, text = stringRes(R.string.mute_thread)) {
+                    accountViewModel.muteThread(note)
+                    onDismiss()
+                }
+            }
             if (state.isLoggedUser) {
                 M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)
@@ -383,6 +396,7 @@ fun observeBookmarksFollowsAndAccount(
             isLoggedUser = accountViewModel.isLoggedUser(note.author),
             isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
             showSensitiveContent = showSensitiveContent,
+            isThreadMuted = accountViewModel.account.isThreadMuted(note),
             isEmojiPackInMyList = isEmojiPackInMyList,
         )
     }.onStart {
@@ -395,6 +409,7 @@ fun observeBookmarksFollowsAndAccount(
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
                 showSensitiveContent = accountViewModel.showSensitiveContent().value,
+                isThreadMuted = accountViewModel.account.isThreadMuted(note),
                 isEmojiPackInMyList =
                     noteIdForEmoji?.let {
                         accountViewModel.account.emoji

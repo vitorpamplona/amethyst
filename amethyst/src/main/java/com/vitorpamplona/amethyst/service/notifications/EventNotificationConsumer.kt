@@ -204,6 +204,10 @@ class EventNotificationConsumer(
         // to repeat either check.
         if (event.pubKey == account.signer.pubKey) return
 
+        LocalCache.getNoteIfExists(event.id)?.let {
+            if (account.isThreadMuted(it)) return
+        }
+
         when (event) {
             is PrivateDmEvent -> notify(event, account)
 

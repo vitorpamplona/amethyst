@@ -1220,6 +1220,10 @@ class AccountViewModel(
 
     fun showWords(words: List<String>) = launchSigner { account.showWords(words) }
 
+    fun muteThread(note: Note) = account.muteThread(note)
+
+    fun unmuteThread(note: Note) = account.unmuteThread(note)
+
     fun createStatus(newStatus: String) = launchSigner { account.createStatus(newStatus) }
 
     fun updateStatus(

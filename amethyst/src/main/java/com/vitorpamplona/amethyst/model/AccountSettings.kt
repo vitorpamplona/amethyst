@@ -203,6 +203,7 @@ class AccountSettings(
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    val mutedThreadRootIds: MutableStateFlow<Set<HexKey>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
@@ -971,6 +972,30 @@ class AccountSettings(
         if (!dismissedPollNoteIds.value.contains(noteId)) {
             dismissedPollNoteIds.update {
                 it + noteId
+            }
+            saveAccountSettings()
+        }
+    }
+
+    // ---
+    // muted threads
+    // ---
+
+    fun isMutedThread(threadRootId: HexKey): Boolean = mutedThreadRootIds.value.contains(threadRootId)
+
+    fun muteThread(threadRootId: HexKey) {
+        if (!mutedThreadRootIds.value.contains(threadRootId)) {
+            mutedThreadRootIds.update {
+                it + threadRootId
+            }
+            saveAccountSettings()
+        }
+    }
+
+    fun unmuteThread(threadRootId: HexKey) {
+        if (mutedThreadRootIds.value.contains(threadRootId)) {
+            mutedThreadRootIds.update {
+                it - threadRootId
             }
             saveAccountSettings()
         }

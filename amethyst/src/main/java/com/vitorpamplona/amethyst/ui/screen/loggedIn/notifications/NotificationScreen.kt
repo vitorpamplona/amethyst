@@ -115,8 +115,11 @@ fun WatchAccountForNotifications(
 ) {
     val listState by
         accountViewModel.account.liveNotificationFollowLists.collectAsStateWithLifecycle()
+    val mutedThreadRootIds by
+        accountViewModel.account.settings.mutedThreadRootIds
+            .collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, listState) {
+    LaunchedEffect(accountViewModel, listState, mutedThreadRootIds) {
         notifFeedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }
