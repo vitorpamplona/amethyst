@@ -26,6 +26,7 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.ProfileListSort
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntry
@@ -115,6 +116,7 @@ private object PrefKeys {
     const val DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST = "defaultBrowseEmojiSetsFollowList"
     const val DEFAULT_COMMUNITIES_FOLLOW_LIST = "defaultCommunitiesFollowList"
     const val DEFAULT_FOLLOW_PACKS_FOLLOW_LIST = "defaultFollowPacksFollowList"
+    const val DEFAULT_PROFILE_LIST_SORT = "defaultProfileListSort"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
     const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId"
@@ -371,6 +373,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
                     putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
                     putString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultFollowPacksFollowList.value))
+                    putString(PrefKeys.DEFAULT_PROFILE_LIST_SORT, JsonMapper.toJson(settings.defaultProfileListSort.value))
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -538,6 +541,7 @@ object LocalPreferences {
                     val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
                     val defaultNwcWalletIdStr = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
+                    val defaultProfileListSortStr = getString(PrefKeys.DEFAULT_PROFILE_LIST_SORT, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
                     val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
@@ -590,6 +594,7 @@ object LocalPreferences {
                             }
                         }
                     val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
+                    val defaultProfileListSort = async { parseOrNull<ProfileListSort>(defaultProfileListSortStr) ?: ProfileListSort.DEFAULT }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
                     val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
@@ -649,6 +654,7 @@ object LocalPreferences {
                         defaultBrowseEmojiSetsFollowList = MutableStateFlow(followListPrefs.browseEmojiSets),
                         defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
                         defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
+                        defaultProfileListSort = MutableStateFlow(defaultProfileListSort.await()),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
                         defaultNwcWalletId = MutableStateFlow(nwcWalletsLoaded.await().second),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,

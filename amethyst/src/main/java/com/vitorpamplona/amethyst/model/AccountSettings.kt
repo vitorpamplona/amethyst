@@ -77,6 +77,12 @@ val DefaultSignerPermissions =
     )
 
 @Serializable
+enum class ProfileListSort {
+    DEFAULT,
+    ZAPS_RECEIVED,
+}
+
+@Serializable
 sealed class TopFilter(
     val code: String,
 ) {
@@ -174,6 +180,7 @@ class AccountSettings(
     val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultProfileListSort: MutableStateFlow<ProfileListSort> = MutableStateFlow(ProfileListSort.DEFAULT),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
@@ -270,6 +277,15 @@ class AccountSettings(
     fun changeReactionRowItems(newItems: List<ReactionRowItem>): Boolean {
         if (syncedSettings.reactions.reactionRowItems.value != newItems) {
             syncedSettings.reactions.reactionRowItems.tryEmit(newItems.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeDefaultProfileListSort(sort: ProfileListSort): Boolean {
+        if (defaultProfileListSort.value != sort) {
+            defaultProfileListSort.tryEmit(sort)
             saveAccountSettings()
             return true
         }

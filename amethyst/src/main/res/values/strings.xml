@@ -2173,6 +2173,8 @@
     <string name="search_sort_oldest">Oldest</string>
     <string name="search_sort_relevance">Relevance</string>
     <string name="search_sort_popular">Popular</string>
+    <string name="profile_list_sort_default">Default</string>
+    <string name="profile_list_sort_zaps_received">Sats received</string>
     <string name="search_filters_title">Filters</string>
     <string name="search_filters_reset">Reset</string>
     <string name="search_filters_section_source">Source</string>

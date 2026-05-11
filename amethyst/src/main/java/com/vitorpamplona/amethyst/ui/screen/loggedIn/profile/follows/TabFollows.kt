@@ -29,30 +29,49 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileListSortControls
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun TabFollows(
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Column(Modifier.fillMaxHeight()) {
         val items by followsFeedViewModel.followsFlow.collectAsStateWithLifecycle()
+        val sortMode by accountViewModel.account.settings.defaultProfileListSort
+            .collectAsStateWithLifecycle()
+        val receivedZapAmounts by zapFeedViewModel.receivedZapAmountsByUser.collectAsStateWithLifecycle()
+        val zapAmountsByUser =
+            remember(receivedZapAmounts) {
+                receivedZapAmounts.associate { it.user.pubkeyHex to it.amount }
+            }
+        val sortedItems =
+            remember(items, sortMode, zapAmountsByUser) {
+                followsFeedViewModel.sortUsers(items, sortMode, zapAmountsByUser)
+            }
+
+        ProfileListSortControls(sortMode) {
+            accountViewModel.account.settings.changeDefaultProfileListSort(it)
+        }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = FeedPadding,
             state = rememberLazyListState(),
         ) {
-            itemsIndexed(items, key = { _, item -> item.pubkeyHex }) { _, item ->
+            itemsIndexed(sortedItems, key = { _, item -> item.pubkeyHex }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, nav = nav)
                 HorizontalDivider(
                     thickness = DividerThickness,

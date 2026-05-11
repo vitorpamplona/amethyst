@@ -25,10 +25,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ProfileListSort
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,6 +56,24 @@ class UserProfileFollowersUserFeedViewModel(
             { !account.isFollowing(it) },
             { it.pubkeyHex },
         )
+
+    fun sortUsers(
+        users: List<User>,
+        sortMode: ProfileListSort,
+        receivedZapAmountsByUser: Map<HexKey, BigDecimal>,
+    ): List<User> =
+        when (sortMode) {
+            ProfileListSort.DEFAULT -> {
+                users
+            }
+
+            ProfileListSort.ZAPS_RECEIVED -> {
+                users.sortedWith(
+                    compareByDescending<User> { receivedZapAmountsByUser[it.pubkeyHex] ?: BigDecimal.ZERO }
+                        .then(sortingModel),
+                )
+            }
+        }
 
     fun List<Event>.toNonHiddenOwners(): Set<User> =
         mapNotNullTo(mutableSetOf()) { event ->
