@@ -46,6 +46,7 @@ data class PollOption(
     var tally: MutableState<Float> = mutableFloatStateOf(0f),
     var consensusThreadhold: MutableState<Boolean> = mutableStateOf(false),
     var zappedByLoggedIn: MutableState<Boolean> = mutableStateOf(false),
+    var voteCount: MutableState<Int> = mutableStateOf(0),
 )
 
 @Stable
@@ -59,6 +60,7 @@ class PollNoteViewModel : ViewModel() {
     private var valueMinimum: Long? = null
     private var valueMaximumBD: BigDecimal? = null
     private var valueMinimumBD: BigDecimal? = null
+    private var zaplessPoll: Boolean = false
 
     private var closedAt: Long? = null
     private var consensusThreshold: BigDecimal? = null
@@ -82,6 +84,7 @@ class PollNoteViewModel : ViewModel() {
             valueMinimum = pollEvent?.minAmount()
             valueMinimumBD = valueMinimum?.let { BigDecimal(it) }
             valueMaximumBD = valueMaximum?.let { BigDecimal(it) }
+            zaplessPoll = pollEvent?.isZapless() == true
             consensusThreshold = pollEvent?.consensusThreshold()?.toBigDecimal()
             closedAt = pollEvent?.closedAt()
 
@@ -101,33 +104,75 @@ class PollNoteViewModel : ViewModel() {
 
     fun refreshTallies() {
         viewModelScope.launch(Dispatchers.IO) {
-            totalZapped = totalZapped()
-            wasZappedByLoggedInAccount = false
-            wasZappedByLoggedInAccount = account.calculateIfNoteWasZappedByAccount(pollNote, 0)
-            canZap.value = checkIfCanZap()
+            if (zaplessPoll) {
+                refreshReactionTallies()
+            } else {
+                totalZapped = totalZapped()
+                wasZappedByLoggedInAccount = false
+                wasZappedByLoggedInAccount = account.calculateIfNoteWasZappedByAccount(pollNote, 0)
+                canZap.value = checkIfCanZap()
 
-            tallies.forEach {
-                val zappedValue = zappedPollOptionAmount(it.option)
-                val tallyValue =
-                    if (totalZapped > BigDecimal.ZERO) {
-                        zappedValue.divide(totalZapped, 2, RoundingMode.HALF_UP)
-                    } else {
-                        BigDecimal.ZERO
-                    }
+                tallies.forEach {
+                    val zappedValue = zappedPollOptionAmount(it.option)
+                    val tallyValue =
+                        if (totalZapped > BigDecimal.ZERO) {
+                            zappedValue.divide(totalZapped, 2, RoundingMode.HALF_UP)
+                        } else {
+                            BigDecimal.ZERO
+                        }
 
-                it.zappedValue.value = zappedValue
-                it.tally.value = tallyValue.toFloat()
-                it.consensusThreadhold.value = consensusThreshold != null && tallyValue >= consensusThreshold!!
-                it.zappedByLoggedIn.value = account.userProfile().let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) }
+                    it.zappedValue.value = zappedValue
+                    it.voteCount.value = 0
+                    it.tally.value = tallyValue.toFloat()
+                    it.consensusThreadhold.value = consensusThreshold != null && tallyValue >= consensusThreshold!!
+                    it.zappedByLoggedIn.value = account.userProfile().let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) }
+                }
             }
+        }
+    }
+
+    private fun refreshReactionTallies() {
+        val note = pollNote ?: return
+        val validOptions = pollOptions?.keys?.map { it.toString() }?.toSet() ?: emptySet()
+        val latestVoteByAuthor =
+            note.reactions
+                .values
+                .flatten()
+                .filter { it.author != null && it.event?.content in validOptions }
+                .groupBy { it.author!!.pubkeyHex }
+                .mapValues { (_, reactions) -> reactions.maxByOrNull { it.createdAt() ?: 0L }!! }
+
+        val loggedInVote = latestVoteByAuthor[account.userProfile().pubkeyHex]?.event?.content
+        wasZappedByLoggedInAccount = loggedInVote != null
+        canZap.value = checkIfCanZap()
+
+        val totalVotes = latestVoteByAuthor.size
+
+        tallies.forEach {
+            val option = it.option.toString()
+            val voteCount = latestVoteByAuthor.values.count { reaction -> reaction.event?.content == option }
+            val tallyValue =
+                if (totalVotes > 0) {
+                    BigDecimal(voteCount).divide(BigDecimal(totalVotes), 2, RoundingMode.HALF_UP)
+                } else {
+                    BigDecimal.ZERO
+                }
+
+            it.zappedValue.value = BigDecimal.ZERO
+            it.voteCount.value = voteCount
+            it.tally.value = tallyValue.toFloat()
+            it.consensusThreadhold.value = consensusThreshold != null && tallyValue >= consensusThreshold!!
+            it.zappedByLoggedIn.value = loggedInVote == option
         }
     }
 
     fun checkIfCanZap(): Boolean {
         val account = account
         val note = pollNote ?: return false
-        return account.userProfile() != note.author && !wasZappedByLoggedInAccount
+        return account.userProfile() != note.author && !wasZappedByLoggedInAccount && !isPollClosed()
     }
+
+    fun isZaplessPoll() = zaplessPoll
 
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 

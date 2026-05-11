@@ -473,6 +473,30 @@ class AccountViewModel(
         reactToOrDelete(note, reaction)
     }
 
+    fun reactTo(
+        note: Note,
+        reaction: String,
+        allowDuplicate: Boolean = false,
+    ) {
+        launchSigner {
+            if (settings.useTrackedBroadcasts() && note.event !is NIP17Group) {
+                account.createReactionEvent(note, reaction, allowDuplicate)?.let { (event, relays) ->
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+
+                    account.consumeReactionEvent(event)
+                }
+            } else if (allowDuplicate) {
+                account.reactToWithoutDuplicateCheck(note, reaction)
+            } else {
+                account.reactTo(note, reaction)
+            }
+        }
+    }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

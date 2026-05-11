@@ -119,6 +119,8 @@ class ZapPollEvent(
 
     fun maxAmount() = tags.firstNotNullOfOrNull(MaximumTag::parse)
 
+    fun isZapless() = minAmount() == 0L && maxAmount() == 0L
+
     fun closedAt() = tags.firstNotNullOfOrNull(ClosedAtTag::parse)
 
     fun consensusThreshold() = tags.firstNotNullOfOrNull(ConsensusThresholdTag::parse)

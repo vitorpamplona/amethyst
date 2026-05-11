@@ -1586,13 +1586,13 @@ open class ShortNotePostViewModel :
     // ---
 
     fun updateMinZapAmountForPoll(textMin: String) {
-        zapPollValueMinimum = textMin.toLongOrNull()?.takeIf { it > 0 }
+        zapPollValueMinimum = textMin.toLongOrNull()?.takeIf { it >= 0 }
         checkMinMax()
         draftTag.newVersion()
     }
 
     fun updateMaxZapAmountForPoll(textMax: String) {
-        zapPollValueMaximum = textMax.toLongOrNull()?.takeIf { it > 0 }
+        zapPollValueMaximum = textMax.toLongOrNull()?.takeIf { it >= 0 }
         checkMinMax()
         draftTag.newVersion()
     }

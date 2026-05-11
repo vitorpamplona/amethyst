@@ -651,9 +651,10 @@ class Account(
     suspend fun createReactionEvent(
         note: Note,
         reaction: String,
+        allowDuplicate: Boolean = false,
     ): Pair<Event, Set<NormalizedRelayUrl>>? {
         if (!signer.isWriteable()) return null
-        if (note.hasReacted(userProfile(), reaction)) return null
+        if (!allowDuplicate && note.hasReacted(userProfile(), reaction)) return null
 
         val eventHint = note.toEventHint<Event>() ?: return null
 
@@ -664,6 +665,18 @@ class Account(
         val relays = computeRelayListToBroadcast(event)
 
         return event to relays
+    }
+
+    suspend fun reactToWithoutDuplicateCheck(
+        note: Note,
+        reaction: String,
+    ) {
+        if (!signer.isWriteable()) return
+
+        val eventHint = note.toEventHint<Event>() ?: return
+        val event = ReactionAction.reactTo(eventHint, reaction, signer)
+
+        sendAutomatic(event)
     }
 
     /**

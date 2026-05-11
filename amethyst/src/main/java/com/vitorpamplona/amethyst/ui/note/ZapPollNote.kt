@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.toasts.StringToastMsg
@@ -272,7 +273,7 @@ fun ZapPollNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchZapsAndUpdateTallies(baseNote, pollViewModel, accountViewModel)
+    WatchVotesAndUpdateTallies(baseNote, pollViewModel, accountViewModel)
 
     pollViewModel.tallies.forEach { option ->
         OptionNote(
@@ -288,14 +289,20 @@ fun ZapPollNote(
 }
 
 @Composable
-private fun WatchZapsAndUpdateTallies(
+private fun WatchVotesAndUpdateTallies(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val zapsState by observeNoteZaps(baseNote, accountViewModel)
+    if (pollViewModel.isZaplessPoll()) {
+        val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
-    LaunchedEffect(key1 = zapsState) { pollViewModel.refreshTallies() }
+        LaunchedEffect(key1 = reactionsState) { pollViewModel.refreshTallies() }
+    } else {
+        val zapsState by observeNoteZaps(baseNote, accountViewModel)
+
+        LaunchedEffect(key1 = zapsState) { pollViewModel.refreshTallies() }
+    }
 }
 
 @Composable
@@ -314,7 +321,41 @@ private fun OptionNote(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 3.dp),
     ) {
-        if (!pollViewModel.canZap.value) {
+        if (pollViewModel.isZaplessPoll()) {
+            ReactionVote(
+                baseNote,
+                poolOption,
+                pollViewModel = pollViewModel,
+                nonClickablePrepend = {
+                    if (!pollViewModel.canZap.value) {
+                        RenderOptionAfterVote(
+                            baseNote,
+                            poolOption,
+                            poolOption.consensusThreadhold.value,
+                            canPreview,
+                            tags,
+                            backgroundColor,
+                            accountViewModel,
+                            nav,
+                        )
+                    }
+                },
+                clickablePrepend = {
+                    if (pollViewModel.canZap.value) {
+                        RenderOptionBeforeVote(
+                            baseNote,
+                            poolOption.descriptor,
+                            canPreview,
+                            tags,
+                            backgroundColor,
+                            accountViewModel,
+                            nav,
+                        )
+                    }
+                },
+                accountViewModel = accountViewModel,
+            )
+        } else if (!pollViewModel.canZap.value) {
             ZapVote(
                 baseNote,
                 poolOption,
@@ -511,6 +552,84 @@ private fun RenderOptionBeforeVote(
                 nav = nav,
             )
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+fun ReactionVote(
+    baseNote: Note,
+    poolOption: PollOption,
+    modifier: Modifier = Modifier,
+    pollViewModel: PollNoteViewModel,
+    nonClickablePrepend: @Composable () -> Unit,
+    clickablePrepend: @Composable () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    val isLoggedUser by remember { derivedStateOf { accountViewModel.isLoggedUser(baseNote.author) } }
+
+    nonClickablePrepend()
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier.combinedClickable(
+                role = Role.Button,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple24dp,
+                onClick = {
+                    if (!accountViewModel.isWriteable()) {
+                        accountViewModel.toastManager.toast(
+                            R.string.read_only_user,
+                            R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        )
+                    } else if (pollViewModel.isPollClosed()) {
+                        accountViewModel.toastManager.toast(
+                            R.string.poll_unable_to_vote,
+                            R.string.poll_is_closed_explainer,
+                        )
+                    } else if (isLoggedUser) {
+                        accountViewModel.toastManager.toast(
+                            R.string.poll_unable_to_vote,
+                            R.string.poll_author_no_vote,
+                        )
+                    } else if (poolOption.zappedByLoggedIn.value) {
+                        accountViewModel.toastManager.toast(
+                            R.string.poll_unable_to_vote,
+                            R.string.one_vote_per_user_on_atomic_votes,
+                        )
+                    } else {
+                        accountViewModel.reactTo(baseNote, poolOption.option.toString(), allowDuplicate = true)
+                    }
+                },
+            ),
+    ) {
+        clickablePrepend()
+
+        if (poolOption.zappedByLoggedIn.value) {
+            Icon(
+                symbol = MaterialSymbols.Check,
+                contentDescription = stringRes(R.string.kind_poll),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            Icon(
+                symbol = MaterialSymbols.Poll,
+                contentDescription = stringRes(R.string.kind_poll),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+    }
+
+    if (!pollViewModel.canZap.value) {
+        Text(
+            text = poolOption.voteCount.value.toString(),
+            fontSize = Font14SP,
+            color = MaterialTheme.colorScheme.placeholderText,
+            modifier = modifier,
+        )
     }
 }
 
