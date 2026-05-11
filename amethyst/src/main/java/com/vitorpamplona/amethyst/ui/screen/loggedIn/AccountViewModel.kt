@@ -112,6 +112,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.EmptyNip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -359,10 +360,9 @@ class AccountViewModel(
             }.flatMapLatest { loadedFeedState ->
                 val flows =
                     loadedFeedState?.list?.mapNotNull { chat ->
-                        (chat.event as? ChatroomKeyable)?.let { event ->
-                            val room = event.chatroomKey(account.signer.pubKey)
-                            account.settings.getLastReadFlow("Room/${room.hashCode()}").map { lastReadAt ->
-                                (chat.event?.createdAt ?: 0) > lastReadAt
+                        unreadPrivateChatRoute(chat)?.let { (route, createdAt) ->
+                            account.settings.getLastReadFlow(route).map { lastReadAt ->
+                                createdAt > lastReadAt
                             }
                         }
                     }
@@ -379,12 +379,11 @@ class AccountViewModel(
                 if (feed is FeedState.Loaded) {
                     val newItems =
                         feed.feed.value.list.any { chat ->
-                            (chat.event as? ChatroomKeyable)?.let { event ->
-                                val room = event.chatroomKey(account.signer.pubKey)
+                            unreadPrivateChatRoute(chat)?.let { (route, createdAt) ->
                                 val lastReadAt =
-                                    account.settings.lastReadPerRoute.value["Room/${room.hashCode()}"]
+                                    account.settings.lastReadPerRoute.value[route]
                                         ?.value ?: 0L
-                                (chat.event?.createdAt ?: 0) > lastReadAt
+                                createdAt > lastReadAt
                             } == true
                         }
                     emit(newItems)
@@ -1404,8 +1403,29 @@ class AccountViewModel(
                     }
                 }
             }
+
+            markHiddenChatroomsAsRead()
         }
     }
+
+    private fun unreadPrivateChatRoute(chat: Note): Pair<String, Long>? {
+        val noteEvent = chat.event ?: return null
+        val room = (noteEvent as? ChatroomKeyable)?.chatroomKey(account.signer.pubKey) ?: return null
+        if (account.isAllHidden(room.users)) return null
+        return privateChatRoute(room) to noteEvent.createdAt
+    }
+
+    private fun markHiddenChatroomsAsRead() {
+        account.chatroomList.rooms.forEach { roomKey, chatroom ->
+            if (account.isAllHidden(roomKey.users)) {
+                chatroom.newestMessage?.createdAt()?.let {
+                    account.markAsRead(privateChatRoute(roomKey), it)
+                }
+            }
+        }
+    }
+
+    private fun privateChatRoute(room: ChatroomKey) = "Room/${room.hashCode()}"
 
     class Factory(
         val account: Account,
