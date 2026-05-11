@@ -20,6 +20,7 @@ license header with the original author(s) and source.
 - [Workflow](#workflow)
 - [Coding standards](#coding-standards)
 - [Tests](#tests)
+- [Interoperability tests](#interoperability-tests)
 - [Commits](#commits)
 - [Pull requests](#pull-requests)
 - [Translations](#translations)
@@ -100,15 +101,63 @@ Windows" is far better than a silent guess.
 
 ## Reporting bugs and requesting features
 
-Use the GitHub issue templates:
+We use GitHub issue templates at
+[`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/). Please use them rather
+than opening a blank issue — they exist so triage can route the report
+without a follow-up round trip.
 
-- **Bug report** — include device, OS version, app version, app flavour
-  (Play / F-Droid / Desktop), and (if you sign with Amber) the Amber version.
-- **Feature request** — describe the user-facing outcome you want.
+### Bug report (`[BUG]` title prefix)
 
-Both templates include a bounty field. Bounties are entirely optional, but
-issues with bounties are typically picked up faster — see the templates for
-context.
+Required fields:
+
+- **Describe the bug** — one-paragraph summary of what's wrong.
+- **To Reproduce** — numbered steps (1, 2, 3, …) that walk a maintainer from
+  a fresh app launch to the failure. "It crashes sometimes" is not a repro;
+  "tap +, paste this nevent, tap Send" is.
+- **Expected behavior** — what should have happened.
+- **Video and Screenshots** — attach them whenever the bug is visual,
+  involves navigation, or is timing-sensitive.
+- **Device info** — Phone Brand/Model, Android version, App version, App
+  flavour (Google Play / F-Droid / Desktop), and Amber version if you sign
+  with NIP-55.
+- **Bounty (in Bitcoin sats)** — see below.
+
+### Feature request (`[FEATURE]` title prefix)
+
+Required fields:
+
+- **Describe the solution you'd like** — what the user-facing outcome is.
+  Skip implementation suggestions unless they're load-bearing.
+- **Bounty (in Bitcoin sats)** — see below.
+
+### Bounties
+
+Both templates include a bounty field, and the practice is unusually
+literal in this project: **maintainer time is allocated by bounty size**.
+The templates say so plainly — quoting them:
+
+> The size of the bounty is proportional to how much this matters to you. If
+> no bounty is offered, not even a small one, this bug will not be worked
+> on because it doesn't matter to you.
+
+In practice:
+
+- Bug fixes and features are prioritized roughly by bounty ÷ effort.
+- Even a small bounty (a few hundred sats) outranks a zero-bounty issue.
+- Bounties are not refunded if you change your mind, so size them
+  honestly against how much you want the outcome.
+- If you can fix the issue yourself, you don't need a bounty — open the
+  PR. Bounties exist to move issues that **nobody is currently working on**.
+- Security issues do not need a bounty and should not be filed as public
+  issues — see [SECURITY.md](SECURITY.md).
+
+### Sending issues over Nostr
+
+The repository is also mirrored at
+[`gitworkshop.dev/repo/amethyst`](https://gitworkshop.dev/repo/amethyst) for
+Nostr-native issue tracking, and patches can be sent via
+[GitStr](https://github.com/fiatjaf/gitstr) to the address at the bottom of
+the README.
 
 ## Security issues
 
@@ -263,7 +312,45 @@ Add tests when:
 UI changes don't need automated UI tests, but they do need the screenshots
 described in the proof-of-testing section.
 
-## Commits
+## Interoperability tests
+
+Amethyst ships several cross-stack interop harnesses that drive our code
+against external reference implementations. They are **not run in CI** —
+they're slow, require Rust / bun / Docker / Chromium, and most PRs don't
+touch the code they cover. If your change *does* touch a covered area, you
+are expected to run the relevant suite locally and paste the result into
+the PR description. Reviewers may ask if you didn't.
+
+| Suite | Path | What it covers | When you must run it |
+|---|---|---|---|
+| **Marmot / MLS (Whitenoise)** | `cli/tests/marmot/` | NIP-EE MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation — Amethyst (or `amy`) ↔ `whitenoise-rs` Rust reference | Changes to MLS / Marmot code in `quartz/` or `commons/`, or to the Marmot UI / group-chat flow in `amethyst/` |
+| **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in `quartz/` or `commons/` |
+| **Audio rooms (manual)** | `cli/tests/nests/` | 47-test manual harness: Amethyst Android ↔ nostrnests.com reference web client. Host/listener flows, hand-raise, role promotion, kicks, schedule, reconnect, JWT refresh, PIP | Changes to NIP-53 audio rooms (`amethyst/` UI) or `nestsClient/` that affect host/listener UX |
+| **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or `quartz/.../nip53` |
+| **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any change to `:quic` (WebTransport, packet header protection, key updates, stream demux) |
+| **QUIC interop-runner** | `quic/interop/` | The standard `quic-interop-runner` matrix (ns-3 sim) against aioquic, picoquic, quic-go, quinn. Handshake, transfer, loss, corruption, IPv6, migration, key update, version negotiation | Any change in `:quic` that could affect wire bytes, congestion control, or the TLS state machine |
+
+### Running them
+
+Each suite has its own README with prerequisites and flags. Quick links:
+
+- **Marmot, DM, audio-rooms (CLI):** [`cli/tests/README.md`](cli/tests/README.md).
+  Headless variants require only `cargo` + a loopback `nostr-rs-relay`;
+  the interactive Marmot variant additionally prompts the human to drive
+  the Amethyst Android UI.
+- **MoQ-lite hang + browser:** [`nestsClient/tests/README.md`](nestsClient/tests/README.md).
+  Opt-in via `-DnestsHangInterop=true` and/or
+  `-DnestsBrowserInterop=true` on `:nestsClient:jvmTest`. Cold first run is
+  ~10–13 min per tier; cached runs ~3–7 min.
+- **QUIC interop-runner:** [`quic/interop/`](quic/interop/) plus its plan
+  at `quic/interop/plans/2026-05-06-interop-runner.md`. The standard sweep
+  is `for peer in aioquic picoquic quic-go quinn; do
+  quic/interop/run-matrix.sh -s $peer; done`. Always sequential —
+  `run-matrix.sh` is not safe to invoke concurrently.
+
+If a change is documentation-only, UI-only, build-script-only, or otherwise
+cannot affect wire bytes / decoded audio / MLS state / DM envelopes, skip
+the interop suites and say so in the PR description.
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`,
   `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, etc.
