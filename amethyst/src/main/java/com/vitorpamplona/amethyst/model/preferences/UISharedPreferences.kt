@@ -108,6 +108,9 @@ class UiSharedPreferences(
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
         val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
         val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
+        val UI_SHOW_HOME_NEW_THREADS_TAB = booleanPreferencesKey("ui.show_home_new_threads_tab")
+        val UI_SHOW_HOME_CONVERSATIONS_TAB = booleanPreferencesKey("ui.show_home_conversations_tab")
+        val UI_SHOW_HOME_EVERYTHING_TAB = booleanPreferencesKey("ui.show_home_everything_tab")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -134,6 +137,9 @@ class UiSharedPreferences(
                         preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
+                    showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
+                    showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
+                    showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -173,6 +179,9 @@ class UiSharedPreferences(
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
                     preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
+                    preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
+                    preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
+                    preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
