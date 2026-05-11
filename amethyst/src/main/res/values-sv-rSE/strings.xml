@@ -1100,6 +1100,8 @@
     <string name="disable_client_tag_explainer">När aktiverat kommer Amethyst inte att lägga till en NIP-89 klienttagg till händelser du publicerar.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Varna vid rapporter</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Visar ett varningsmeddelande när inlägg har 5 eller fler rapporter från följande</string>
+    <string name="report_warning_threshold_title">Tröskel för rapportvarning</string>
+    <string name="report_warning_threshold_explainer">Varnar när inlägg eller profiler når detta antal rapporter från personer du följer</string>
     <string name="show_sensitive_content_title">Visa känsligt innehåll</string>
     <string name="show_sensitive_content_explainer">Visar ett varningsmeddelande när författaren till inlägget markerar det som känsligt</string>
     <string name="max_hashtag_limit_title">Max hashtags per inlägg</string>
@@ -1670,6 +1672,8 @@
     <string name="video_player_settings_action_download_description">Ladda ner videon till enheten (dolt vid livesändningar)</string>
     <string name="video_player_settings_action_pip">Bild-i-bild</string>
     <string name="video_player_settings_action_pip_description">Spela upp videon i ett flytande fönster (dolt om det inte stöds)</string>
+    <string name="video_player_settings_action_cast">Casta till enhet</string>
+    <string name="video_player_settings_action_cast_description">Skicka videon till en Chromecast-mottagare på ditt Wi-Fi (dolt för lokala filer)</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
     <string name="relay_info">Relä %1$s</string>
     <string name="expand_relay_list">Expandera relälistan</string>
@@ -2279,6 +2283,10 @@
     <string name="playback_actions_dialog_title">Uppspelning</string>
     <string name="video_quality_auto">Auto</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">Casta till enhet</string>
+    <string name="cast_stop_casting">Sluta casta</string>
+    <string name="cast_to_device_dialog_title">Casta till…</string>
+    <string name="cast_searching_for_devices">Söker efter enheter på ditt Wi-Fi…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS-uppladdning</string>
     <string name="share_hls_video_drawer_description">Publicera HLS i flera upplösningar till din mediaserver</string>
@@ -2534,12 +2542,4 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
-    <string name="cast_searching_for_devices">Söker efter enheter på ditt Wi-Fi…</string>
-    <string name="cast_stop_casting">Sluta casta</string>
-    <string name="cast_to_device">Casta till enhet</string>
-    <string name="cast_to_device_dialog_title">Casta till…</string>
-    <string name="report_warning_threshold_explainer">Varnar när inlägg eller profiler når detta antal rapporter från personer du följer</string>
-    <string name="report_warning_threshold_title">Tröskel för rapportvarning</string>
-    <string name="video_player_settings_action_cast">Casta till enhet</string>
-    <string name="video_player_settings_action_cast_description">Skicka videon till en Chromecast-mottagare på ditt Wi-Fi (dolt för lokala filer)</string>
 </resources>

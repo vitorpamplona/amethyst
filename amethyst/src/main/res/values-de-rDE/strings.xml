@@ -1106,6 +1106,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="disable_client_tag_explainer">Wenn aktiviert, fügt Amethyst deinen veröffentlichten Ereignissen kein NIP-89 Client-Tag hinzu.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Bei Berichten warnen</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zeigt eine Warnmeldung an, wenn die Beiträge 5 oder mehr Berichte von den folgenden Beiträgen enthalten</string>
+    <string name="report_warning_threshold_title">Warnschwelle für Meldungen</string>
+    <string name="report_warning_threshold_explainer">Warnt, wenn Beiträge oder Profile diese Anzahl an Meldungen von Personen erreichen, denen du folgst</string>
     <string name="show_sensitive_content_title">Heiklen Inhalt anzeigen</string>
     <string name="show_sensitive_content_explainer">Zeigt eine Warnmeldung an, wenn der Autor des Beitrags ihn als sensibel markiert hat</string>
     <string name="max_hashtag_limit_title">Max. Hashtags pro Beitrag</string>
@@ -1676,6 +1678,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="video_player_settings_action_download_description">Video auf dein Gerät herunterladen (bei Live-Streams ausgeblendet)</string>
     <string name="video_player_settings_action_pip">Bild-in-Bild</string>
     <string name="video_player_settings_action_pip_description">Video in einem schwebenden Fenster abspielen (ausgeblendet, wenn nicht unterstützt)</string>
+    <string name="video_player_settings_action_cast">An Gerät streamen</string>
+    <string name="video_player_settings_action_cast_description">Sendet das Video an einen Chromecast-Empfänger in deinem WLAN (für lokale Dateien ausgeblendet)</string>
     <string name="profile_image_of_user">Profilbild von %1$s</string>
     <string name="relay_info">%1$s weiterleiten</string>
     <string name="expand_relay_list">Rela-Liste erweitern</string>
@@ -2285,6 +2289,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="playback_actions_dialog_title">Wiedergabe</string>
     <string name="video_quality_auto">Auto</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">An Gerät streamen</string>
+    <string name="cast_stop_casting">Streaming beenden</string>
+    <string name="cast_to_device_dialog_title">Streamen an…</string>
+    <string name="cast_searching_for_devices">Suche nach Geräten in deinem WLAN…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS-Upload</string>
     <string name="share_hls_video_drawer_description">Veröffentliche HLS in mehreren Auflösungen auf deinem Medienserver</string>
@@ -2540,12 +2548,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
-    <string name="cast_searching_for_devices">Suche nach Geräten in deinem WLAN…</string>
-    <string name="cast_stop_casting">Streaming beenden</string>
-    <string name="cast_to_device">An Gerät streamen</string>
-    <string name="cast_to_device_dialog_title">Streamen an…</string>
-    <string name="report_warning_threshold_explainer">Warnt, wenn Beiträge oder Profile diese Anzahl an Meldungen von Personen erreichen, denen du folgst</string>
-    <string name="report_warning_threshold_title">Warnschwelle für Meldungen</string>
-    <string name="video_player_settings_action_cast">An Gerät streamen</string>
-    <string name="video_player_settings_action_cast_description">Sendet das Video an einen Chromecast-Empfänger in deinem WLAN (für lokale Dateien ausgeblendet)</string>
 </resources>

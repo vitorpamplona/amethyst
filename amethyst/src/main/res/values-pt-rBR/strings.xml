@@ -1101,6 +1101,8 @@
     <string name="disable_client_tag_explainer">Quando ativado, o Amethyst não anexará uma tag de cliente NIP-89 aos eventos que você publicar.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Avisar em relatórios</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Mostra uma mensagem de aviso quando as postagens tiverem 5 ou mais relatórios de suas seguintes</string>
+    <string name="report_warning_threshold_title">Limite de aviso de denúncias</string>
+    <string name="report_warning_threshold_explainer">Avisa quando publicações ou perfis atingem este número de denúncias de pessoas que você segue</string>
     <string name="show_sensitive_content_title">Mostrar conteúdo sensível</string>
     <string name="show_sensitive_content_explainer">Mostra uma mensagem de aviso quando o autor da publicação a marcar como sensível</string>
     <string name="max_hashtag_limit_title">Máximo de hashtags por postagem</string>
@@ -1671,6 +1673,8 @@
     <string name="video_player_settings_action_download_description">Baixar o vídeo para o dispositivo (oculto em transmissões ao vivo)</string>
     <string name="video_player_settings_action_pip">Picture-in-Picture</string>
     <string name="video_player_settings_action_pip_description">Reproduzir o vídeo em uma janela flutuante (oculto se não suportado)</string>
+    <string name="video_player_settings_action_cast">Transmitir para dispositivo</string>
+    <string name="video_player_settings_action_cast_description">Envia o vídeo para um receptor Chromecast na sua Wi-Fi (oculto para arquivos locais)</string>
     <string name="profile_image_of_user">Foto de perfil de %1$s</string>
     <string name="relay_info">Repassar %1$s</string>
     <string name="expand_relay_list">Expandir lista de repasse</string>
@@ -2280,6 +2284,10 @@
     <string name="playback_actions_dialog_title">Reprodução</string>
     <string name="video_quality_auto">Auto</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">Transmitir para dispositivo</string>
+    <string name="cast_stop_casting">Parar transmissão</string>
+    <string name="cast_to_device_dialog_title">Transmitir para…</string>
+    <string name="cast_searching_for_devices">Procurando dispositivos na sua Wi-Fi…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">Upload HLS</string>
     <string name="share_hls_video_drawer_description">Publique HLS multi-resolução em seu servidor de mídia</string>
@@ -2535,12 +2543,4 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
-    <string name="cast_searching_for_devices">Procurando dispositivos na sua Wi-Fi…</string>
-    <string name="cast_stop_casting">Parar transmissão</string>
-    <string name="cast_to_device">Transmitir para dispositivo</string>
-    <string name="cast_to_device_dialog_title">Transmitir para…</string>
-    <string name="report_warning_threshold_explainer">Avisa quando publicações ou perfis atingem este número de denúncias de pessoas que você segue</string>
-    <string name="report_warning_threshold_title">Limite de aviso de denúncias</string>
-    <string name="video_player_settings_action_cast">Transmitir para dispositivo</string>
-    <string name="video_player_settings_action_cast_description">Envia o vídeo para um receptor Chromecast na sua Wi-Fi (oculto para arquivos locais)</string>
 </resources>
