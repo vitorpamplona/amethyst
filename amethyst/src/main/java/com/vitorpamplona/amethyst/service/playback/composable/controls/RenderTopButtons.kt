@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
-import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
@@ -106,7 +105,7 @@ fun RenderTopButtons(
     accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
-    val isLive = remember(mediaData.videoUri) { isLiveStreaming(mediaData.videoUri) }
+    val isLive = mediaData.isLiveStream
     val pipSupported =
         remember {
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
