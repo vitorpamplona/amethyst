@@ -81,6 +81,7 @@ fun AnimatedPlayPauseButton(
     controllerVisible: State<Boolean>,
     modifier: Modifier = Modifier,
     isPlaying: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
@@ -89,13 +90,14 @@ fun AnimatedPlayPauseButton(
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
-        PlayPauseButton(isPlaying, onClick)
+        PlayPauseButton(isPlaying, enabled, onClick)
     }
 }
 
 @Composable
 fun PlayPauseButton(
     isPlaying: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Box(modifier = PlayIconSize, contentAlignment = Alignment.Center) {
@@ -108,6 +110,7 @@ fun PlayPauseButton(
 
         IconButton(
             onClick = onClick,
+            enabled = enabled,
             modifier = Modifier.size(80.dp),
         ) {
             if (!isPlaying) {

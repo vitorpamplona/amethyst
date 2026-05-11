@@ -53,6 +53,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
@@ -128,6 +129,8 @@ fun SettingsScreen(
         ShowImagePreviewChoice(sharedPrefs)
         ShowVideoPlaybackChoice(sharedPrefs)
         AutoplayVideosChoice(sharedPrefs)
+        if (BuildConfig.FLAVOR == "play") {
+        }
         ShowUrlPreviewChoice(sharedPrefs)
         ShowProfilePictureChoice(sharedPrefs)
         ImmersiveScrollingChoice(sharedPrefs)

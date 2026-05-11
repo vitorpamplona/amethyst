@@ -75,6 +75,7 @@ enum class VideoPlayerAction {
     Share,
     Download,
     PictureInPicture,
+    Cast,
 }
 
 @Serializable
@@ -94,10 +95,21 @@ val DefaultVideoPlayerButtonItems =
         VideoPlayerButtonItem(VideoPlayerAction.Fullscreen, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Mute, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Quality, VideoButtonLocation.TopBar),
+        VideoPlayerButtonItem(VideoPlayerAction.Cast, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Share, VideoButtonLocation.OverflowMenu),
         VideoPlayerButtonItem(VideoPlayerAction.Download, VideoButtonLocation.OverflowMenu),
         VideoPlayerButtonItem(VideoPlayerAction.PictureInPicture, VideoButtonLocation.OverflowMenu),
     )
+
+// Existing accounts have a button-items list serialized before some actions
+// existed (e.g. Cast was added later). Append any default items the saved list
+// is missing so new actions surface without forcing a settings reset — the
+// user's existing order/locations for actions they already have are preserved.
+fun mergeWithDefaultVideoPlayerButtons(saved: List<VideoPlayerButtonItem>): List<VideoPlayerButtonItem> {
+    val knownActions = saved.mapTo(mutableSetOf()) { it.action }
+    val missing = DefaultVideoPlayerButtonItems.filter { it.action !in knownActions }
+    return if (missing.isEmpty()) saved else saved + missing
+}
 
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())

@@ -33,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -48,6 +49,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -55,11 +58,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
+import com.vitorpamplona.amethyst.service.cast.CastRequest
+import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
+import com.vitorpamplona.amethyst.ui.cast.CastDevicePickerDialog
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -71,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -136,6 +143,42 @@ fun RenderTopButtons(
 
     val overflowQualityOpen = remember { mutableStateOf(false) }
 
+    // Pause local playback while this video is casting so audio doesn't
+    // double up. Has to survive (a) the player instance being recreated when
+    // the composable scrolls off-screen and back on, and (b) any later
+    // playWhenReady=true flips from auto-play-on-attach or end-of-loading.
+    // A one-shot LaunchedEffect would only pause once; a Player.Listener
+    // re-pauses every time the player flips back to playing.
+    val castSessionStateForLocal by Amethyst.instance.castRegistry.sessionState
+        .collectAsStateWithLifecycle()
+    val isCastingThisVideo =
+        (castSessionStateForLocal as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
+    DisposableEffect(player, isCastingThisVideo) {
+        if (isCastingThisVideo) {
+            player.pause()
+            val listener =
+                object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        if (isPlaying) player.pause()
+                    }
+                }
+            player.addListener(listener)
+            onDispose { player.removeListener(listener) }
+        } else {
+            onDispose { }
+        }
+    }
+    // Auto-resume local playback only on a genuine cast→no-cast transition
+    // (not on cold-mount when nothing is casting). `previousCasting` is keyed
+    // on videoUri so it resets when the player switches to a different note.
+    val previousCasting = remember(mediaData.videoUri) { mutableStateOf(false) }
+    LaunchedEffect(isCastingThisVideo, mediaData.videoUri) {
+        if (previousCasting.value && !isCastingThisVideo) {
+            player.play()
+        }
+        previousCasting.value = isCastingThisVideo
+    }
+
     RenderTopButtons(
         mediaData = mediaData,
         hasMultipleQualities = hasMultipleQualities,
@@ -197,6 +240,27 @@ fun RenderTopButtons(
 ) {
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
     val shareDialogVisible = remember { mutableStateOf(false) }
+    val castDialogVisible = remember { mutableStateOf(false) }
+    val castSessionState by Amethyst.instance.castRegistry.sessionState
+        .collectAsStateWithLifecycle()
+    val isThisVideoCasting =
+        (castSessionState as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
+    val castIcon = if (isThisVideoCasting) MaterialSymbols.CastConnected else MaterialSymbols.Cast
+    val castContentDescription =
+        stringRes(if (isThisVideoCasting) R.string.cast_stop_casting else R.string.cast_to_device)
+    val onCastButtonClick =
+        remember(isThisVideoCasting) {
+            {
+                if (isThisVideoCasting) {
+                    Amethyst.instance.applicationIOScope.launch {
+                        Amethyst.instance.castRegistry.stopCasting()
+                    }
+                } else {
+                    castDialogVisible.value = true
+                }
+                Unit
+            }
+        }
     val saveAction =
         rememberSaveMediaAction { context ->
             accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
@@ -204,12 +268,33 @@ fun RenderTopButtons(
 
     fun isAvailable(action: VideoPlayerAction): Boolean =
         when (action) {
-            VideoPlayerAction.Fullscreen -> onZoomClick != null
-            VideoPlayerAction.Mute -> true
-            VideoPlayerAction.Quality -> hasMultipleQualities
-            VideoPlayerAction.Share -> true
-            VideoPlayerAction.Download -> !isLive
-            VideoPlayerAction.PictureInPicture -> pipSupported
+            VideoPlayerAction.Fullscreen -> {
+                onZoomClick != null
+            }
+
+            VideoPlayerAction.Mute -> {
+                true
+            }
+
+            VideoPlayerAction.Quality -> {
+                hasMultipleQualities
+            }
+
+            VideoPlayerAction.Share -> {
+                true
+            }
+
+            VideoPlayerAction.Download -> {
+                !isLive
+            }
+
+            VideoPlayerAction.PictureInPicture -> {
+                pipSupported
+            }
+
+            VideoPlayerAction.Cast -> {
+                BuildConfig.IS_CASTING_AVAILABLE && mediaData.videoUri.startsWith("http", ignoreCase = true)
+            }
         }
 
     val canFullscreen = onZoomClick != null
@@ -281,6 +366,15 @@ fun RenderTopButtons(
                         onClick = onPictureInPictureClick,
                     )
                 }
+
+                VideoPlayerAction.Cast -> {
+                    AnimatedTopBarIconButton(
+                        controllerVisible = controllerVisible,
+                        symbol = castIcon,
+                        contentDescription = castContentDescription,
+                        onClick = onCastButtonClick,
+                    )
+                }
             }
         }
 
@@ -295,6 +389,22 @@ fun RenderTopButtons(
                 onShareClick = { shareDialogVisible.value = true },
                 onSaveClick = saveAction,
                 onPipClick = onPictureInPictureClick,
+                onCastClick = onCastButtonClick,
+                castIcon = castIcon,
+                castContentDescription = castContentDescription,
+            )
+        }
+
+        if (castDialogVisible.value) {
+            CastDevicePickerDialog(
+                request =
+                    CastRequest(
+                        url = mediaData.videoUri,
+                        mimeType = mediaData.mimeType,
+                        title = mediaData.title,
+                        artworkUri = mediaData.artworkUri,
+                    ),
+                onDismiss = { castDialogVisible.value = false },
             )
         }
 

@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -70,6 +71,9 @@ fun OverflowMenuButtonPreview() {
                 onShareClick = {},
                 onSaveClick = {},
                 onPipClick = {},
+                onCastClick = {},
+                castIcon = MaterialSymbols.Cast,
+                castContentDescription = "",
             )
         }
     }
@@ -86,6 +90,9 @@ fun AnimatedOverflowMenuButton(
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
+    onCastClick: () -> Unit,
+    castIcon: MaterialSymbol,
+    castContentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -103,6 +110,9 @@ fun AnimatedOverflowMenuButton(
             onShareClick = onShareClick,
             onSaveClick = onSaveClick,
             onPipClick = onPipClick,
+            onCastClick = onCastClick,
+            castIcon = castIcon,
+            castContentDescription = castContentDescription,
         )
     }
 }
@@ -117,6 +127,9 @@ fun OverflowMenuButton(
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
+    onCastClick: () -> Unit,
+    castIcon: MaterialSymbol,
+    castContentDescription: String,
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
 
@@ -209,6 +222,16 @@ fun OverflowMenuButton(
                             ) {
                                 menuExpanded.value = false
                                 onPipClick()
+                            }
+                        }
+
+                        VideoPlayerAction.Cast -> {
+                            M3ActionRow(
+                                icon = castIcon,
+                                text = castContentDescription,
+                            ) {
+                                menuExpanded.value = false
+                                onCastClick()
                             }
                         }
                     }

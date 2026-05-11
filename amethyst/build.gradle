@@ -199,10 +199,12 @@ android {
         play {
             getIsDefault().set(true)
             dimension "channel"
+            buildConfigField "boolean", "IS_CASTING_AVAILABLE", "true"
         }
 
         fdroid {
             dimension "channel"
+            buildConfigField "boolean", "IS_CASTING_AVAILABLE", "false"
         }
     }
 
@@ -378,6 +380,11 @@ dependencies {
 
     //PushNotifications(FDroid)
     fdroidImplementation libs.unifiedpush
+
+    // Google Cast SDK — Chromecast support. Play flavor only because the
+    // framework hard-depends on Google Play services, which is unavailable
+    // on de-Googled / GrapheneOS devices that ship the F-Droid build.
+    playImplementation libs.play.services.cast.framework
 
     // Charts
     implementation libs.vico.charts.compose

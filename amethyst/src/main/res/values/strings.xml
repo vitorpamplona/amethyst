@@ -1887,6 +1887,8 @@
     <string name="video_player_settings_action_download_description">Download the video to your device (hidden on live streams)</string>
     <string name="video_player_settings_action_pip">Picture-in-Picture</string>
     <string name="video_player_settings_action_pip_description">Play the video in a floating window (hidden if unsupported)</string>
+    <string name="video_player_settings_action_cast">Cast to Device</string>
+    <string name="video_player_settings_action_cast_description">Send the video to a Chromecast or DLNA receiver on your Wi-Fi (hidden for local files)</string>
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>
@@ -2554,6 +2556,12 @@
     <string name="media_actions_dialog_title">Media Actions</string>
     <string name="playback_actions_dialog_title">Playback</string>
     <string name="video_quality_auto">Auto</string>
+
+    <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">Cast to device</string>
+    <string name="cast_stop_casting">Stop casting</string>
+    <string name="cast_to_device_dialog_title">Cast to…</string>
+    <string name="cast_searching_for_devices">Searching for devices on your Wi-Fi…</string>
 
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS Upload</string>

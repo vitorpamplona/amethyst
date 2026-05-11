@@ -26,11 +26,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.seekBackward
 import com.vitorpamplona.amethyst.service.playback.composable.skipForward
@@ -41,10 +45,16 @@ import kotlinx.coroutines.delay
 fun RenderCenterButtons(
     controllerState: MediaControllerState,
     controllerVisible: MutableState<Boolean>,
+    videoUri: String,
     modifier: Modifier,
     isLiveStream: Boolean = false,
 ) {
     val state = rememberPlayPauseButtonState(controllerState.controller)
+
+    val castSessionState by Amethyst.instance.castRegistry.sessionState
+        .collectAsStateWithLifecycle()
+    val isCastingThisVideo =
+        (castSessionState as? CastSessionState.Casting)?.request?.url == videoUri
 
     Row(
         modifier = modifier,
@@ -52,23 +62,39 @@ fun RenderCenterButtons(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (!isLiveStream) {
-            AnimatedSkipButton(controllerVisible = controllerVisible, isForward = false) {
+            AnimatedSkipButton(
+                controllerVisible = controllerVisible,
+                isForward = false,
+                enabled = !isCastingThisVideo,
+            ) {
                 controllerState.controller.seekBackward()
             }
         }
 
-        AnimatedPlayPauseButton(controllerVisible, Modifier, !state.showPlay) {
+        AnimatedPlayPauseButton(
+            controllerVisible,
+            Modifier,
+            !state.showPlay,
+            enabled = !isCastingThisVideo,
+        ) {
             state.onClick()
         }
 
         if (!isLiveStream) {
-            AnimatedSkipButton(controllerVisible = controllerVisible, isForward = true) {
+            AnimatedSkipButton(
+                controllerVisible = controllerVisible,
+                isForward = true,
+                enabled = !isCastingThisVideo,
+            ) {
                 controllerState.controller.skipForward()
             }
         }
     }
 
-    if (!state.showPlay) {
+    // Auto-hide controls 3s after playback begins — but stay visible while
+    // casting so the user can see the disabled transport controls and find
+    // the cast-stop button in the top bar without tapping the screen first.
+    if (!state.showPlay && !isCastingThisVideo) {
         LaunchedEffect(state.showPlay) {
             delay(3000)
             controllerVisible.value = false
