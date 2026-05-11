@@ -58,6 +58,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -103,7 +104,13 @@ fun VideoPlayerSettingsScreen(
 @Composable
 fun VideoPlayerSettingsContent(accountViewModel: AccountViewModel) {
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
-    var items by remember(buttonItems) { mutableStateOf(buttonItems.toList()) }
+    val displayedItems =
+        if (BuildConfig.IS_CASTING_AVAILABLE) {
+            buttonItems
+        } else {
+            buttonItems.filter { it.action != VideoPlayerAction.Cast }
+        }
+    var items by remember(displayedItems) { mutableStateOf(displayedItems.toList()) }
 
     fun save(newItems: List<VideoPlayerButtonItem>) {
         items = newItems.toMutableList()

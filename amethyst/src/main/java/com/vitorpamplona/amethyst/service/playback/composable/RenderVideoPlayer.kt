@@ -154,6 +154,7 @@ fun RenderVideoPlayer(
             RenderCenterButtons(
                 controllerState = controllerState,
                 controllerVisible = controllerVisible,
+                videoUri = mediaItem.src.videoUri,
                 modifier = Modifier.align(Alignment.Center),
                 isLiveStream = isLive,
             )

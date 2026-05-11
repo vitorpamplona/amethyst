@@ -39,10 +39,8 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.images.WebImage
 import com.vitorpamplona.amethyst.service.cast.CastDevice
-import com.vitorpamplona.amethyst.service.cast.CastDeviceKind
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
-import com.vitorpamplona.amethyst.service.cast.VideoCaster
 import com.vitorpamplona.amethyst.service.cast.effectiveMimeType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
@@ -58,7 +56,7 @@ private const val SESSION_START_TIMEOUT_MS = 30_000L
 private const val STOP_AWAIT_TIMEOUT_MS = 5_000L
 
 /**
- * Google Cast (Chromecast) implementation of [VideoCaster].
+ * Google Cast (Chromecast) caster.
  *
  * Only present in the play flavor — the F-Droid flavor ships a no-op stub
  * with the same FQN. The class still works at runtime when Google Play
@@ -67,14 +65,12 @@ private const val STOP_AWAIT_TIMEOUT_MS = 5_000L
  */
 class ChromecastCaster(
     private val appContext: Context,
-) : VideoCaster {
-    override val kind: CastDeviceKind = CastDeviceKind.Chromecast
-
+) {
     private val devicesFlow = MutableStateFlow<List<CastDevice>>(emptyList())
-    override val devices: StateFlow<List<CastDevice>> = devicesFlow.asStateFlow()
+    val devices: StateFlow<List<CastDevice>> = devicesFlow.asStateFlow()
 
     private val sessionFlow = MutableStateFlow<CastSessionState>(CastSessionState.Idle)
-    override val sessionState: StateFlow<CastSessionState> = sessionFlow.asStateFlow()
+    val sessionState: StateFlow<CastSessionState> = sessionFlow.asStateFlow()
 
     private val main = Handler(Looper.getMainLooper())
     private var mediaRouter: MediaRouter? = null
@@ -304,7 +300,7 @@ class ChromecastCaster(
         Log.d(TAG) { "sessionListener attached (caster lifetime)" }
     }
 
-    override fun startDiscovery() {
+    fun startDiscovery() {
         Log.d(TAG) { "startDiscovery (already registered? $registered)" }
         main.post {
             if (registered) {
@@ -331,7 +327,7 @@ class ChromecastCaster(
         }
     }
 
-    override fun stopDiscovery() {
+    fun stopDiscovery() {
         Log.d(TAG) { "stopDiscovery (registered=$registered)" }
         main.post {
             if (!registered) return@post
@@ -359,14 +355,13 @@ class ChromecastCaster(
                 CastDevice(
                     id = route.id,
                     name = route.name,
-                    kind = CastDeviceKind.Chromecast,
                 )
             }
         Log.d(TAG) { "updateRoutes: count=${list.size} -> [${list.joinToString { it.name }}]" }
         devicesFlow.value = list
     }
 
-    override suspend fun cast(
+    suspend fun cast(
         device: CastDevice,
         request: CastRequest,
     ) {
@@ -481,7 +476,7 @@ class ChromecastCaster(
             .build()
     }
 
-    override suspend fun stopCasting() {
+    suspend fun stopCasting() {
         Log.d(TAG) { "stopCasting (hasClient=${currentMediaClient != null})" }
         // Await MEDIA_STOP before endCurrentSession() — racing them on the
         // same main-thread tick loses the stop on some receivers (LG webOS).

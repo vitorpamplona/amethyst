@@ -31,7 +31,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.service.cast.CastDeviceKind
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
@@ -81,16 +80,11 @@ fun CastDevicePickerDialog(
         } else {
             M3ActionSection {
                 devices.forEach { device ->
-                    val icon =
-                        when (device.kind) {
-                            CastDeviceKind.Chromecast -> MaterialSymbols.Cast
-                            CastDeviceKind.Dlna -> MaterialSymbols.CastConnected
-                        }
                     M3ActionRow(
-                        icon = icon,
+                        icon = MaterialSymbols.Cast,
                         text = device.name,
                     ) {
-                        Log.d(TAG) { "tap device=${device.kind}:${device.name}" }
+                        Log.d(TAG) { "tap device=${device.name}" }
                         // Keep discovery alive across the dialog's onDispose so the caster's
                         // session listener stays registered until the cast attempt finishes.
                         // Without this the dialog's stopDiscovery (~10ms after tap) tears the

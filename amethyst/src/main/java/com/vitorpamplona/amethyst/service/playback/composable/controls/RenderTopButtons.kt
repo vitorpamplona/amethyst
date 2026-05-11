@@ -50,6 +50,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -143,19 +144,39 @@ fun RenderTopButtons(
     val overflowQualityOpen = remember { mutableStateOf(false) }
 
     // Pause local playback while this video is casting so audio doesn't
-    // double up; only resume on the transition we caused.
+    // double up. Has to survive (a) the player instance being recreated when
+    // the composable scrolls off-screen and back on, and (b) any later
+    // playWhenReady=true flips from auto-play-on-attach or end-of-loading.
+    // A one-shot LaunchedEffect would only pause once; a Player.Listener
+    // re-pauses every time the player flips back to playing.
     val castSessionStateForLocal by Amethyst.instance.castRegistry.sessionState
         .collectAsStateWithLifecycle()
-    val wasCastingThisVideo = remember { mutableStateOf(false) }
-    LaunchedEffect(castSessionStateForLocal, mediaData.videoUri) {
-        val isCastingThis =
-            (castSessionStateForLocal as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
-        if (isCastingThis && !wasCastingThisVideo.value) {
+    val isCastingThisVideo =
+        (castSessionStateForLocal as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
+    DisposableEffect(player, isCastingThisVideo) {
+        if (isCastingThisVideo) {
             player.pause()
-        } else if (!isCastingThis && wasCastingThisVideo.value) {
+            val listener =
+                object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        if (isPlaying) player.pause()
+                    }
+                }
+            player.addListener(listener)
+            onDispose { player.removeListener(listener) }
+        } else {
+            onDispose { }
+        }
+    }
+    // Auto-resume local playback only on a genuine cast→no-cast transition
+    // (not on cold-mount when nothing is casting). `previousCasting` is keyed
+    // on videoUri so it resets when the player switches to a different note.
+    val previousCasting = remember(mediaData.videoUri) { mutableStateOf(false) }
+    LaunchedEffect(isCastingThisVideo, mediaData.videoUri) {
+        if (previousCasting.value && !isCastingThisVideo) {
             player.play()
         }
-        wasCastingThisVideo.value = isCastingThis
+        previousCasting.value = isCastingThisVideo
     }
 
     RenderTopButtons(
@@ -247,13 +268,33 @@ fun RenderTopButtons(
 
     fun isAvailable(action: VideoPlayerAction): Boolean =
         when (action) {
-            VideoPlayerAction.Fullscreen -> onZoomClick != null
-            VideoPlayerAction.Mute -> true
-            VideoPlayerAction.Quality -> hasMultipleQualities
-            VideoPlayerAction.Share -> true
-            VideoPlayerAction.Download -> !isLive
-            VideoPlayerAction.PictureInPicture -> pipSupported
-            VideoPlayerAction.Cast -> mediaData.videoUri.startsWith("http", ignoreCase = true)
+            VideoPlayerAction.Fullscreen -> {
+                onZoomClick != null
+            }
+
+            VideoPlayerAction.Mute -> {
+                true
+            }
+
+            VideoPlayerAction.Quality -> {
+                hasMultipleQualities
+            }
+
+            VideoPlayerAction.Share -> {
+                true
+            }
+
+            VideoPlayerAction.Download -> {
+                !isLive
+            }
+
+            VideoPlayerAction.PictureInPicture -> {
+                pipSupported
+            }
+
+            VideoPlayerAction.Cast -> {
+                BuildConfig.IS_CASTING_AVAILABLE && mediaData.videoUri.startsWith("http", ignoreCase = true)
+            }
         }
 
     val canFullscreen = onZoomClick != null

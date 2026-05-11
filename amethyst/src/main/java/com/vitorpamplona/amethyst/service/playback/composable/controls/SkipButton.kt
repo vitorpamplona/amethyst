@@ -69,6 +69,7 @@ fun AnimatedSkipButton(
     controllerVisible: State<Boolean>,
     isForward: Boolean,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
@@ -77,18 +78,20 @@ fun AnimatedSkipButton(
         enter = FadeIn,
         exit = FadeOut,
     ) {
-        SkipButton(isForward = isForward, onClick = onClick)
+        SkipButton(isForward = isForward, enabled = enabled, onClick = onClick)
     }
 }
 
 @Composable
 fun SkipButton(
     isForward: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val icon = if (isForward) MaterialSymbols.Forward10 else MaterialSymbols.Replay10
     val label = if (isForward) stringRes(R.string.skip_forward, SKIP_SECONDS) else stringRes(R.string.skip_back, SKIP_SECONDS)
-    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
-        Icon(symbol = icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(32.dp))
+    val tint = if (enabled) Color.White else Color.White.copy(alpha = 0.38f)
+    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(48.dp)) {
+        Icon(symbol = icon, contentDescription = label, tint = tint, modifier = Modifier.size(32.dp))
     }
 }

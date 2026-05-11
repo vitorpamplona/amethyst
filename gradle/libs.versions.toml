@@ -65,12 +65,6 @@ tarsosdsp = "2.5"
 translate = "17.0.3"
 jetbrainsCompose = "1.10.3"
 unifiedpush = "3.0.10"
-jupnp = "3.0.4"
-# jUPnP 3.0.x's AndroidUpnpServiceConfiguration.createStreamServer wires in
-# JettyServletContainer at runtime — without these jUPnP throws
-# NoClassDefFoundError on startup() and DLNA discovery never runs. Stay on the
-# 9.4 line because jUPnP 3.0.x targets javax.servlet (Jetty 10+ uses jakarta).
-jetty = "9.4.57.v20241219"
 playServicesCast = "22.1.0"
 vico-charts-compose = "3.1.0"
 zelory = "3.0.1"
@@ -195,12 +189,6 @@ schnorr256k1-kmp = { group = "com.vitorpamplona.schnorr256k1", name = "schnorr25
 stream-webrtc-android = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "streamWebrtcAndroid" }
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
-jupnp-android = { group = "org.jupnp", name = "org.jupnp.android", version.ref = "jupnp" }
-jupnp-core = { group = "org.jupnp", name = "org.jupnp", version.ref = "jupnp" }
-jupnp-support = { group = "org.jupnp", name = "org.jupnp.support", version.ref = "jupnp" }
-jetty-server = { group = "org.eclipse.jetty", name = "jetty-server", version.ref = "jetty" }
-jetty-servlet = { group = "org.eclipse.jetty", name = "jetty-servlet", version.ref = "jetty" }
-jetty-client = { group = "org.eclipse.jetty", name = "jetty-client", version.ref = "jetty" }
 play-services-cast-framework = { group = "com.google.android.gms", name = "play-services-cast-framework", version.ref = "playServicesCast" }
 vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts-compose" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }

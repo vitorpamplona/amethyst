@@ -493,12 +493,12 @@ class AppModules(
         Nip95CacheFactory.new(appContext)
     }
 
-    // LAN cast registry — aggregates Chromecast (play flavor only) and DLNA
-    // discovery into a single device list. Discovery starts only when the
-    // picker dialog opens; idle by default to keep multicast traffic off.
+    // LAN cast registry — Chromecast only (play flavor real, fdroid no-op
+    // stub). Discovery starts only when the picker dialog opens; idle by
+    // default to keep multicast traffic off.
     val castRegistry: CastRegistry by lazy {
         Log.d("AppModules", "CastRegistry Init")
-        CastRegistry(appContext, applicationIOScope, uiPrefs.value.castProtocol)
+        CastRegistry(appContext)
     }
 
     // local video cache with disk + memory

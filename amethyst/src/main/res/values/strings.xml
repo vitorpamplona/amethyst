@@ -2557,16 +2557,11 @@
     <string name="playback_actions_dialog_title">Playback</string>
     <string name="video_quality_auto">Auto</string>
 
-    <!-- LAN cast (Chromecast / DLNA) feature -->
+    <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Cast to device</string>
     <string name="cast_stop_casting">Stop casting</string>
     <string name="cast_to_device_dialog_title">Cast to…</string>
     <string name="cast_searching_for_devices">Searching for devices on your Wi-Fi…</string>
-    <string name="cast_protocol_setting_title">Cast protocol</string>
-    <string name="cast_protocol_setting_description">Which devices to scan for when casting videos on your Wi-Fi</string>
-    <string name="cast_protocol_both">Chromecast &amp; UPnP</string>
-    <string name="cast_protocol_chromecast">Chromecast only</string>
-    <string name="cast_protocol_dlna">UPnP / DLNA only</string>
 
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS Upload</string>

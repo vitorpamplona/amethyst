@@ -22,10 +22,8 @@ package com.vitorpamplona.amethyst.service.cast.chromecast
 
 import android.content.Context
 import com.vitorpamplona.amethyst.service.cast.CastDevice
-import com.vitorpamplona.amethyst.service.cast.CastDeviceKind
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
-import com.vitorpamplona.amethyst.service.cast.VideoCaster
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,26 +31,27 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * F-Droid stub: the Google Cast SDK requires Google Play services, which are
  * not present on the FOSS build. This caster always reports an empty device
- * list so the registry simply skips Chromecast paths at runtime.
+ * list so the registry simply returns no devices. The cast button is hidden
+ * on fdroid via `BuildConfig.IS_CASTING_AVAILABLE`, so this stub should never
+ * be exercised at runtime; it exists to keep the shared-source-set
+ * `CastRegistry` constructible.
  */
 @Suppress("UNUSED_PARAMETER")
 class ChromecastCaster(
     appContext: Context,
-) : VideoCaster {
-    override val kind: CastDeviceKind = CastDeviceKind.Chromecast
+) {
+    val devices: StateFlow<List<CastDevice>> = MutableStateFlow<List<CastDevice>>(emptyList()).asStateFlow()
 
-    override val devices: StateFlow<List<CastDevice>> = MutableStateFlow<List<CastDevice>>(emptyList()).asStateFlow()
+    val sessionState: StateFlow<CastSessionState> = MutableStateFlow<CastSessionState>(CastSessionState.Idle).asStateFlow()
 
-    override val sessionState: StateFlow<CastSessionState> = MutableStateFlow<CastSessionState>(CastSessionState.Idle).asStateFlow()
+    fun startDiscovery() = Unit
 
-    override fun startDiscovery() = Unit
+    fun stopDiscovery() = Unit
 
-    override fun stopDiscovery() = Unit
-
-    override suspend fun cast(
+    suspend fun cast(
         device: CastDevice,
         request: CastRequest,
     ) = Unit
 
-    override suspend fun stopCasting() = Unit
+    suspend fun stopCasting() = Unit
 }

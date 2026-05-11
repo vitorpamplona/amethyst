@@ -22,16 +22,10 @@ package com.vitorpamplona.amethyst.service.cast
 
 import androidx.compose.runtime.Immutable
 
-enum class CastDeviceKind {
-    Chromecast,
-    Dlna,
-}
-
 @Immutable
 data class CastDevice(
     val id: String,
     val name: String,
-    val kind: CastDeviceKind,
 )
 
 @Immutable
