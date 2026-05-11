@@ -422,14 +422,18 @@ private fun MemberCell(
         label = "speaker-outer-ring-width",
     )
     // Reserve enough space around the avatar Box to fit the outer ring
-    // and glow halo. Without this padding the rings clip against the
+    // and glow halo. Without this margin the rings clip against the
     // surrounding Surface / LazyVerticalGrid bounds (most visibly at
     // the top edge for the first row, where the stage card's rounded
     // corner cuts into the glow). The glow extends up to MAX_GLOW_RADIUS
     // past the avatar; the outer ring extends OUTER_RING_GAP +
-    // OUTER_RING_MAX_WIDTH past it.
+    // OUTER_RING_MAX_WIDTH past it. Applied as an explicit outer-Box
+    // size below rather than as inner padding so a width-constrained
+    // grid cell doesn't squish the avatar horizontally into an oval
+    // (cells are tight on width but free on height).
     val ringPadding =
         maxOf(MAX_GLOW_RADIUS.value, (OUTER_RING_GAP + OUTER_RING_MAX_WIDTH).value).dp
+    val outerBoxSize = avatarSize + ringPadding * 2
     val avatarModifier =
         Modifier
             .border(animatedRingWidth, animatedRingColor, CircleShape)
@@ -472,54 +476,54 @@ private fun MemberCell(
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         // Outer Box paints the glow halo + detached outer ring on a
-        // canvas that's bigger than the avatar by [ringPadding]. The
-        // inner Box keeps its tight-to-avatar bounds so badge corner
-        // alignment (TopStart, TopEnd, BottomCenter, BottomEnd) still
-        // tracks the avatar circle, not the padded outer area.
+        // canvas that's bigger than the avatar by [ringPadding]. Size
+        // is set explicitly so the AvatarAndBadges child (which sizes
+        // tight to the 75dp picture, keeping badge corner alignment
+        // against the avatar circle rather than the padded area) is
+        // centered without inheriting a width-only constraint from the
+        // grid cell — that asymmetry was rendering the avatar as an
+        // oval on cells narrower than [outerBoxSize].
         Box(
             modifier =
-                Modifier.drawBehind {
-                    val avatarRadiusPx = avatarSize.toPx() / 2f
-                    val cx = size.width / 2f
-                    val cy = size.height / 2f
-                    if (animatedGlowAlpha > 0.001f) {
-                        val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
-                        drawCircle(
-                            color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
-                            radius = avatarRadiusPx + extra,
-                            center = Offset(cx, cy),
-                        )
-                    }
-                    if (animatedOuterRingAlpha > 0.001f && animatedOuterRingWidth > 0.dp) {
-                        val strokePx = animatedOuterRingWidth.toPx()
-                        val ringRadius = avatarRadiusPx + OUTER_RING_GAP.toPx() + strokePx / 2f
-                        drawCircle(
-                            color = NEST_SPEAKING_COLOR.copy(alpha = animatedOuterRingAlpha),
-                            radius = ringRadius,
-                            center = Offset(cx, cy),
-                            style = Stroke(width = strokePx),
-                        )
-                    }
-                },
+                Modifier
+                    .size(outerBoxSize)
+                    .drawBehind {
+                        val avatarRadiusPx = avatarSize.toPx() / 2f
+                        val cx = size.width / 2f
+                        val cy = size.height / 2f
+                        if (animatedGlowAlpha > 0.001f) {
+                            val extra = MAX_GLOW_RADIUS.toPx() * clampedLevel
+                            drawCircle(
+                                color = NEST_SPEAKING_COLOR.copy(alpha = animatedGlowAlpha),
+                                radius = avatarRadiusPx + extra,
+                                center = Offset(cx, cy),
+                            )
+                        }
+                        if (animatedOuterRingAlpha > 0.001f && animatedOuterRingWidth > 0.dp) {
+                            val strokePx = animatedOuterRingWidth.toPx()
+                            val ringRadius = avatarRadiusPx + OUTER_RING_GAP.toPx() + strokePx / 2f
+                            drawCircle(
+                                color = NEST_SPEAKING_COLOR.copy(alpha = animatedOuterRingAlpha),
+                                radius = ringRadius,
+                                center = Offset(cx, cy),
+                                style = Stroke(width = strokePx),
+                            )
+                        }
+                    },
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier.padding(ringPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                AvatarAndBadges(
-                    member = member,
-                    avatarSize = avatarSize,
-                    accountViewModel = accountViewModel,
-                    avatarModifier = avatarModifier,
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                    isConnecting = isConnecting,
-                    showMicBadge = showMicBadge,
-                    isSpeaking = isSpeaking,
-                    reactions = reactions,
-                )
-            }
+            AvatarAndBadges(
+                member = member,
+                avatarSize = avatarSize,
+                accountViewModel = accountViewModel,
+                avatarModifier = avatarModifier,
+                onClick = onClick,
+                onLongClick = onLongClick,
+                isConnecting = isConnecting,
+                showMicBadge = showMicBadge,
+                isSpeaking = isSpeaking,
+                reactions = reactions,
+            )
         }
         UsernameDisplay(
             baseUser = user,
