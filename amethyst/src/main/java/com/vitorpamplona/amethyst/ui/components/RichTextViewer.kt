@@ -136,7 +136,11 @@ fun RichTextViewer(
     nav: INav,
 ) {
     Column(modifier = modifier) {
-        if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
+        val state =
+            remember(content, tags) {
+                CachedRichTextParser.parseText(content, tags, callbackUri, authorPubKey)
+            }
+        if (state.isMarkdown) {
             RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
         } else {
             RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav)
