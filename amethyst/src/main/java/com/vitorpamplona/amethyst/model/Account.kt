@@ -2924,7 +2924,9 @@ class Account(
         if (isHidden(user)) return false
 
         val reports = user.reportsOrNull() ?: return true
-        val reportWarningThreshold = settings.syncedSettings.security.reportWarningThreshold.value.coerceAtLeast(1)
+        val reportWarningThreshold =
+            settings.syncedSettings.security.reportWarningThreshold.value
+                .coerceAtLeast(1)
 
         // if user hasn't hided this author
         return reports.reportsBy(userProfile()).isEmpty() &&
@@ -2936,7 +2938,9 @@ class Account(
         if (!settings.syncedSettings.security.warnAboutPostsWithReports.value) {
             return !note.hasReportsBy(userProfile())
         }
-        val reportWarningThreshold = settings.syncedSettings.security.reportWarningThreshold.value.coerceAtLeast(1)
+        val reportWarningThreshold =
+            settings.syncedSettings.security.reportWarningThreshold.value
+                .coerceAtLeast(1)
         return !note.hasReportsBy(userProfile()) &&
             // if user has not reported this post
             note.countReportAuthorsBy(followingKeySet()) < reportWarningThreshold

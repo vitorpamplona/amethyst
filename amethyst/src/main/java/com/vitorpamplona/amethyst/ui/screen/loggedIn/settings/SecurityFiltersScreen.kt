@@ -362,7 +362,11 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
                 R.string.report_warning_threshold_explainer,
             ) {
                 var reportWarningThreshold by remember {
-                    mutableStateOf(accountViewModel.account.settings.syncedSettings.security.reportWarningThreshold.value.coerceAtLeast(1).toString())
+                    mutableStateOf(
+                        accountViewModel.account.settings.syncedSettings.security.reportWarningThreshold.value
+                            .coerceAtLeast(1)
+                            .toString(),
+                    )
                 }
 
                 OutlinedTextField(
