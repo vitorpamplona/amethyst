@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomPresence
@@ -53,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
-import kotlinx.coroutines.launch
 
 /**
  * Host-only queue of audience members whose latest kind-10312
@@ -111,16 +109,15 @@ internal fun HandRaiseQueueSection(
                     hand = hand,
                     accountViewModel = accountViewModel,
                     onApprove = {
-                        // Approving makes `canSpeak()` true for this user, which
-                        // removes them from `hands` on the next recompose. If the
-                        // queue empties (no other raised hands), the whole
-                        // section leaves composition — a rememberCoroutineScope()
-                        // bound here would cancel the in-flight signer.sign(...)
-                        // and the promote never goes out. Launch on the
-                        // AccountViewModel's scope so signing outlives the row.
-                        accountViewModel.viewModelScope.launch {
+                        // launchSigner runs on viewModelScope (+ Dispatchers.IO)
+                        // and surfaces signer errors as toasts. Composition-scoped
+                        // alternatives get cancelled when this row leaves the tree:
+                        // approving flips `canSpeak()` true, the hand is filtered
+                        // out, and if it was the last hand the section disposes
+                        // entirely — killing the in-flight sign(...) before it ran.
+                        accountViewModel.launchSigner {
                             val template = RoomParticipantActions.setRole(event, hand.pubkey, ROLE.SPEAKER)
-                            template?.let { runCatching { accountViewModel.account.signAndComputeBroadcast(it) } }
+                            template?.let { accountViewModel.account.signAndComputeBroadcast(it) }
                         }
                     },
                 )

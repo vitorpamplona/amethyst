@@ -42,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
@@ -56,7 +55,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
-import kotlinx.coroutines.launch
 
 /**
  * Per-participant context sheet (T2 #2). Always shows the
@@ -97,16 +95,13 @@ internal fun ParticipantHostActionsSheet(
             relay = null,
         )
 
-    // Use the AccountViewModel's scope so the launched broadcast
-    // survives the onDismiss() that every action row triggers. A
-    // composition-scoped rememberCoroutineScope() gets cancelled the
-    // moment hostMenuTarget flips to null and the sheet leaves the
-    // tree — which races (and reliably loses) against the suspending
-    // signer.sign(template) call, so the promote/demote/kick events
-    // never actually went out.
+    // Go through accountViewModel.launchSigner so the broadcast runs on
+    // viewModelScope (survives onDismiss() removing the sheet from
+    // composition) and signer errors surface as toasts instead of being
+    // silently swallowed.
     fun broadcast(template: com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<out com.vitorpamplona.quartz.nip01Core.core.Event>?) {
         template ?: return
-        accountViewModel.viewModelScope.launch { runCatching { accountViewModel.account.signAndComputeBroadcast(template) } }
+        accountViewModel.launchSigner { accountViewModel.account.signAndComputeBroadcast(template) }
     }
 
     val targetUser =
