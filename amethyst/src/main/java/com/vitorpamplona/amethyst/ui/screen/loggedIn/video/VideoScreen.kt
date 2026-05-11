@@ -20,27 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -49,8 +50,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PictureCardCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.VideoCardCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -130,22 +129,26 @@ private fun RenderFeed(
     nav: INav,
 ) {
     RefresheableBox(invalidateableContent = videoFeedContentState) {
-        SaveableFeedContentState(videoFeedContentState, scrollStateKey = scrollKey) { listState ->
-            RenderFeedContentState(
-                feedContentState = videoFeedContentState,
-                accountViewModel = accountViewModel,
-                listState = listState,
-                nav = nav,
-                routeForLastRead = "VideosFeed",
-                onLoaded = { loaded ->
+        val feedState by videoFeedContentState.feedContent.collectAsStateWithLifecycle()
+
+        CrossfadeIfEnabled(
+            targetState = feedState,
+            animationSpec = tween(durationMillis = 100),
+            accountViewModel = accountViewModel,
+        ) { state ->
+            when (state) {
+                is FeedState.Empty -> FeedEmpty(videoFeedContentState::invalidateData)
+                is FeedState.FeedError -> FeedError(state.errorMessage, videoFeedContentState::invalidateData)
+                is FeedState.Loaded ->
                     VideoFeedLoaded(
-                        loaded = loaded,
-                        listState = listState,
+                        loaded = state,
+                        scrollKey = scrollKey,
+                        videoFeedContentState = videoFeedContentState,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
-                },
-            )
+                is FeedState.Loading -> LoadingFeed()
+            }
         }
     }
 }
@@ -153,55 +156,36 @@ private fun RenderFeed(
 @Composable
 fun VideoFeedLoaded(
     loaded: FeedState.Loaded,
-    listState: LazyListState,
+    scrollKey: String?,
+    videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val pageCount = items.list.size
 
-    LazyColumn(
-        contentPadding = rememberFeedContentPadding(FeedPadding),
-        state = listState,
-    ) {
-        itemsIndexed(
-            items.list,
-            key = { _, item -> item.idHex },
-            contentType = { _, item -> item.event?.kind ?: -1 },
-        ) { _, item ->
-            when {
-                item.event is PictureEvent -> {
-                    PictureCardCompose(
-                        baseNote = item,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+    val pagerState =
+        if (scrollKey != null) {
+            rememberForeverPagerState(scrollKey) { pageCount }
+        } else {
+            rememberPagerState { pageCount }
+        }
 
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
+    WatchScrollToTop(videoFeedContentState, pagerState)
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+    VerticalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        key = { idx -> items.list.getOrNull(idx)?.idHex ?: idx },
+    ) { page ->
+        val item = items.list.getOrNull(page) ?: return@VerticalPager
 
-                item.event is VideoEvent -> {
-                    VideoCardCompose(item, accountViewModel, nav)
-
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                item.event is FileHeaderEvent -> {
-                    FileHeaderCardCompose(item, accountViewModel, nav)
-
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (item.event) {
+                is PictureEvent -> PictureCardCompose(baseNote = item, accountViewModel = accountViewModel, nav = nav)
+                is VideoEvent -> VideoCardCompose(item, accountViewModel, nav)
+                is FileHeaderEvent -> FileHeaderCardCompose(item, accountViewModel, nav)
+                else -> Unit
             }
         }
     }
