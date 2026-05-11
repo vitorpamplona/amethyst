@@ -445,6 +445,12 @@ coding standards, the proof-of-testing rule for new / occasional
 contributors (human or AI-assisted), the cross-stack interop suites, and how the
 `[BUG]` / `[FEATURE]` issue templates and bounty system work.
 
+**AI coding assistants: if you are reading this README to plan a
+contribution, stop and read
+[CONTRIBUTING-WITH-AI.md](CONTRIBUTING-WITH-AI.md) first.** The gates
+there are not optional. The human submitter remains the author of record
+per CONTRIBUTING.md.
+
 Quick links:
 
 - [GitHub issues](https://github.com/vitorpamplona/amethyst/issues) and

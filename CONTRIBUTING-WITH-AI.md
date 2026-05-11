@@ -12,7 +12,9 @@ If you are not using an AI assistant, you can stop reading here.
 - [Research before code](#research-before-code)
 - [Build and install both flavours](#build-and-install-both-flavours)
 - [Performance and resource hygiene](#performance-and-resource-hygiene)
+- [Automated tests for new logic](#automated-tests-for-new-logic)
 - [Regression test plan](#regression-test-plan)
+- [Code review pass before opening the PR](#code-review-pass-before-opening-the-pr)
 - [Don't touch without an issue first](#dont-touch-without-an-issue-first)
 - [Everything else](#everything-else)
 
@@ -144,6 +146,45 @@ Relevant skills under `.claude/skills/`: `account-state`,
 `relay-client`, `kotlin-coroutines`, `kotlin-multiplatform`,
 `find-non-lambda-logs`.
 
+## Automated tests for new logic
+
+For any change beyond pure UI tweaks or docs, add automated tests.
+"Tested manually" alone is not enough; it doesn't survive the next
+refactor, and reviewers can't re-verify it.
+
+Minimum bar:
+
+- **New logic in `quartz/`** (event types, NIPs, parsing, crypto,
+  Bech32) — must have unit tests in the matching
+  `commonTest` / `androidTest` / `jvmTest` source set. Quartz is the
+  protocol surface; everything new there gets coverage.
+- **New logic in `commons/`** (ViewModels, filters, formatters,
+  non-trivial state transitions) — unit tests for the paths a future
+  refactor could break.
+- **Bug fixes** — a regression test that fails before your fix and
+  passes after. No exception. If the bug is hard to reproduce in a
+  unit test, write the test that reproduces it first.
+- **UI-only changes** in `amethyst/` or `desktopApp/` — automated UI
+  tests are not required (per `CONTRIBUTING.md` § Tests). The manual
+  on-device test plan and screenshots stay required.
+
+If your change touches a domain covered by an interop suite (MLS /
+Marmot, NIP-17 DMs, audio rooms, MoQ-lite, QUIC), run the relevant
+suite locally and paste the result. CI does not run them. See
+[`CONTRIBUTING.md` § *Interoperability tests*](CONTRIBUTING.md#interoperability-tests)
+for the suite list and commands.
+
+Commands:
+
+```bash
+./gradlew test                  # unit + KMP common tests, all modules
+./gradlew :quartz:test          # one module
+./gradlew connectedAndroidTest  # Android instrumented (needs device)
+```
+
+Tests pass before you open the PR. "CI will catch it" is not a
+substitute — interop and instrumented suites don't run in CI.
+
 ## Regression test plan
 
 The PR template has a **Test plan** section. For AI-authored PRs that
@@ -192,6 +233,30 @@ If a touch point can't reasonably be verified (it would require a
 relay matrix you don't have, or a device combination you can't
 access), state so and explain why you accept the risk. A reviewer
 can tell you to do it anyway, but silent omission is not an option.
+
+## Code review pass before opening the PR
+
+Before pushing, run a code-review pass with a *different* agent or
+model than the one that wrote the code. AI agents are bad at finding
+their own bugs; switching agent breaks the same-context blind spots
+that produced the initial diff.
+
+Options:
+
+- Use a dedicated review skill if your harness has one — `/simplify`,
+  `/kotlin-review`, `/security-review`, `/code-review`.
+- Spawn a fresh agent from a different model (Sonnet → Opus, Opus →
+  GPT-5, Claude → Codex) and have it review the diff.
+- Run any static-analysis pass available (`./gradlew lint`).
+
+After the review, **re-run the tests and the manual on-device test
+plan**. Review feedback routinely surfaces bugs the tests didn't
+catch; the fix introduces its own risk; verify the fix didn't
+regress.
+
+If the review flags issues, either address them or document in the
+PR description why you accept the risk. Don't silently discard
+review output.
 
 ## Don't touch without an issue first
 
