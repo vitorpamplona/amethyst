@@ -265,6 +265,21 @@ fun SinglePaneLayout(
         }
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            // Offline banner — shows when no remote relays connected
+            val connectedRelays by relayManager.connectedRelays.collectAsState()
+            val localRelay = LocalLocalRelayStore.current
+            val hasLocalData =
+                if (localRelay != null) {
+                    val count by localRelay.eventCount.collectAsState()
+                    count > 0
+                } else {
+                    false
+                }
+            com.vitorpamplona.amethyst.desktop.ui.components.OfflineBanner(
+                connectedRelayCount = connectedRelays.size,
+                hasLocalData = hasLocalData,
+            )
+
             // Content extends to the window edges; individual screens add their
             // own internal padding where appropriate (Messages uses full-bleed
             // panes to match native two-column chat apps).

@@ -131,6 +131,21 @@ fun DeckColumnContainer(
 
         HorizontalDivider()
 
+        // Offline banner — shows when no remote relays connected
+        val connectedRelays by relayManager.connectedRelays.collectAsState()
+        val localRelay = LocalLocalRelayStore.current
+        val hasLocalData =
+            if (localRelay != null) {
+                val count by localRelay.eventCount.collectAsState()
+                count > 0
+            } else {
+                false
+            }
+        com.vitorpamplona.amethyst.desktop.ui.components.OfflineBanner(
+            connectedRelayCount = connectedRelays.size,
+            hasLocalData = hasLocalData,
+        )
+
         // Content runs edge-to-edge; each screen adds its own header padding
         // to match the Messages pattern (padding(horizontal = 12, vertical = 8)
         // on the title row, no outer wrapper).

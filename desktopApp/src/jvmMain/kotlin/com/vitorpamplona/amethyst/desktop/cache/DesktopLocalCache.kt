@@ -79,6 +79,9 @@ class DesktopLocalCache : ICacheProvider {
 
     val eventStream = DesktopCacheEventStream()
 
+    /** Local relay store for persisting events to SQLite. Set from Main.kt on account login. */
+    var localRelayStore: com.vitorpamplona.amethyst.desktop.relay.LocalRelayStore? = null
+
     /** Cached follow set for the logged-in user. Thread-safe + Compose-observable. */
     private val _followedUsers = MutableStateFlow<Set<HexKey>>(emptySet())
     val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
@@ -204,7 +207,12 @@ class DesktopLocalCache : ICacheProvider {
         wasVerified: Boolean = false,
     ): Boolean {
         if (!wasVerified && !justVerify(event)) return false
-        return route(event, relay)
+        val consumed = route(event, relay)
+        // Write-through to local store, but skip if event came from local store (hydration)
+        if (consumed && relay != com.vitorpamplona.amethyst.desktop.relay.LocalRelayStore.LOCAL_RELAY_URL) {
+            localRelayStore?.enqueue(event)
+        }
+        return consumed
     }
 
     private fun route(
