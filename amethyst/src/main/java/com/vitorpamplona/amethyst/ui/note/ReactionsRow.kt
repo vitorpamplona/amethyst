@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -1309,31 +1310,29 @@ fun ZapReaction(
                 label = "ZapIconIndicator",
             )
 
-            ObserveZapIcon(
+            ObserveZapIconState(
                 baseNote,
                 accountViewModel,
                 zapStartingTime,
-            ) { wasZappedByLoggedInUser ->
-                CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
-                    if (it) {
+            ) { zapIconState ->
+                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
+                    if (it.wasZappedByLoggedInUser) {
                         ZappedIcon(iconSizeModifier)
                     } else {
-                        CircularProgressIndicator(
-                            progress = { animatedProgress },
-                            modifier = animationModifier,
-                            strokeWidth = 2.dp,
-                        )
+                        TwoStageZapProgressIcon(animatedProgress, animationModifier, grayTint)
                     }
                 }
             }
         } else {
-            ObserveZapIcon(
+            ObserveZapIconState(
                 baseNote,
                 accountViewModel,
-            ) { wasZappedByLoggedInUser ->
-                CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
-                    if (it) {
+            ) { zapIconState ->
+                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
+                    if (it.wasZappedByLoggedInUser) {
                         ZappedIcon(iconSizeModifier)
+                    } else if (it.hasPendingPaymentRequest) {
+                        ZapIcon(iconSizeModifier, MaterialTheme.colorScheme.primary)
                     } else {
                         OutlinedZapIcon(iconSizeModifier, grayTint)
                     }
@@ -1392,6 +1391,90 @@ fun zapClick(
     } else if (choices.size > 1) {
         onMultipleChoices()
     }
+}
+
+@Composable
+private fun TwoStageZapProgressIcon(
+    progress: Float,
+    modifier: Modifier,
+    invoiceTint: Color,
+) {
+    val isPaymentRequestStage = progress >= 0.75f
+    val stageProgress =
+        if (isPaymentRequestStage) {
+            ((progress - 0.75f) / 0.25f).coerceIn(0f, 1f)
+        } else {
+            (progress / 0.75f).coerceIn(0f, 1f)
+        }
+    val stageTint = if (isPaymentRequestStage) MaterialTheme.colorScheme.primary else invoiceTint
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Center,
+    ) {
+        CircularProgressIndicator(
+            progress = { stageProgress },
+            modifier = modifier,
+            strokeWidth = 2.dp,
+            color = stageTint,
+        )
+
+        if (isPaymentRequestStage) {
+            ZapIcon(Modifier.size(10.dp), stageTint)
+        } else {
+            OutlinedZapIcon(Modifier.size(10.dp), stageTint)
+        }
+    }
+}
+
+@Immutable
+data class ZapIconState(
+    val wasZappedByLoggedInUser: Boolean = false,
+    val hasPendingPaymentRequest: Boolean = false,
+)
+
+@Composable
+fun ObserveZapIconState(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    afterTimeInSeconds: Long = 0,
+    inner: @Composable (ZapIconState) -> Unit,
+) {
+    val zapIconState = remember { mutableStateOf(ZapIconState()) }
+
+    if (!zapIconState.value.wasZappedByLoggedInUser) {
+        val zapsState by observeNoteZaps(baseNote, accountViewModel)
+        val hasPendingPaymentRequest =
+            zapsState?.note?.zapPayments?.any { it.value == null } == true
+
+        zapsState?.note?.zapPayments?.forEach {
+            if (it.value == null) {
+                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
+            }
+        }
+
+        LaunchedEffect(key1 = zapsState, key2 = hasPendingPaymentRequest) {
+            val hasZapData =
+                zapsState?.note?.zapPayments?.isNotEmpty() == true ||
+                    zapsState?.note?.zaps?.isNotEmpty() == true
+            val wasZapped =
+                if (hasZapData) {
+                    accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, afterTimeInSeconds)
+                } else {
+                    false
+                }
+            val newState =
+                ZapIconState(
+                    wasZappedByLoggedInUser = wasZapped,
+                    hasPendingPaymentRequest = hasPendingPaymentRequest && !wasZapped,
+                )
+            if (zapIconState.value != newState) {
+                zapIconState.value = newState
+            }
+        }
+    }
+
+    inner(zapIconState.value)
 }
 
 @Composable
