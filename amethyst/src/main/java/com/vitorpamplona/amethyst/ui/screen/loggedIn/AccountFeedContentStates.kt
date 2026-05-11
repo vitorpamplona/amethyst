@@ -129,6 +129,13 @@ class AccountFeedContentStates(
                 dmNew.invalidateData()
             }
         }
+
+        scope.launch(Dispatchers.IO) {
+            account.hiddenUsers.flow.collect {
+                dmKnown.invalidateData()
+                dmNew.invalidateData()
+            }
+        }
     }
 
     suspend fun init() {
