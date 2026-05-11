@@ -205,6 +205,7 @@ class AccountSettings(
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
+    val translationServiceApiKey: MutableStateFlow<String> = MutableStateFlow(""),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
     var callTurnServers: List<CallTurnServer> = emptyList(),
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
@@ -663,6 +664,16 @@ class AccountSettings(
 
     fun updateTranslationServiceUrl(url: String): Boolean {
         if (syncedSettings.languages.updateTranslationServiceUrl(url)) {
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun updateTranslationServiceApiKey(apiKey: String): Boolean {
+        val normalized = apiKey.trim()
+        if (translationServiceApiKey.value != normalized) {
+            translationServiceApiKey.tryEmit(normalized)
             saveAccountSettings()
             return true
         }

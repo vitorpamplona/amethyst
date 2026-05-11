@@ -1137,6 +1137,8 @@ class AccountViewModel(
 
     fun translationServiceUrl() = account.settings.syncedSettings.languages.translationServiceUrl.value
 
+    fun translationServiceApiKey() = account.settings.translationServiceApiKey.value
+
     fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
 
     fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
@@ -1205,6 +1207,8 @@ class AccountViewModel(
     fun updateTranslateTo(languageCode: String) = launchSigner { account.updateTranslateTo(languageCode) }
 
     fun updateTranslationServiceUrl(url: String) = launchSigner { account.updateTranslationServiceUrl(url) }
+
+    fun updateTranslationServiceApiKey(apiKey: String) = launchSigner { account.updateTranslationServiceApiKey(apiKey) }
 
     fun prefer(
         source: String,

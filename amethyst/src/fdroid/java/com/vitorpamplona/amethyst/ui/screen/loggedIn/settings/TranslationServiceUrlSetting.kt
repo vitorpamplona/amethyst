@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -50,11 +53,20 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 fun TranslationServiceUrlSetting(accountViewModel: AccountViewModel) {
     val savedUrl by accountViewModel.account.settings.syncedSettings.languages.translationServiceUrl
         .collectAsStateWithLifecycle()
+    val savedApiKey by accountViewModel.account.settings.translationServiceApiKey
+        .collectAsStateWithLifecycle()
     var text by remember { mutableStateOf(savedUrl) }
+    var apiKeyText by remember { mutableStateOf(savedApiKey) }
 
     LaunchedEffect(savedUrl) {
         if (savedUrl != text) {
             text = savedUrl
+        }
+    }
+
+    LaunchedEffect(savedApiKey) {
+        if (savedApiKey != apiKeyText) {
+            apiKeyText = savedApiKey
         }
     }
 
@@ -75,6 +87,25 @@ fun TranslationServiceUrlSetting(accountViewModel: AccountViewModel) {
             )
             if (text.trim().trimEnd('/') != savedUrl) {
                 TextButton(onClick = { accountViewModel.updateTranslationServiceUrl(text) }) {
+                    Text(stringRes(R.string.save))
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        SettingsRow(
+            name = R.string.translation_service_api_key,
+            description = R.string.translation_service_api_key_description,
+        ) {
+            OutlinedTextField(
+                value = apiKeyText,
+                onValueChange = { apiKeyText = it },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (apiKeyText.trim() != savedApiKey) {
+                TextButton(onClick = { accountViewModel.updateTranslationServiceApiKey(apiKeyText) }) {
                     Text(stringRes(R.string.save))
                 }
             }

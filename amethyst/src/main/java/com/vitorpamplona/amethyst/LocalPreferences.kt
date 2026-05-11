@@ -151,6 +151,7 @@ private object PrefKeys {
     const val DISMISSED_POLL_NOTE_IDS = "dismissed_poll_note_ids"
     const val VIEWED_POLL_RESULT_NOTE_IDS = "viewed_poll_result_note_ids"
     const val PENDING_ATTESTATIONS = "pending_attestations"
+    const val TRANSLATION_SERVICE_API_KEY = "translationServiceApiKey"
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
@@ -444,6 +445,12 @@ object LocalPreferences {
                         PrefKeys.PENDING_ATTESTATIONS,
                         JsonMapper.toJson(settings.pendingAttestations.value),
                     )
+
+                    if (settings.translationServiceApiKey.value.isNotBlank()) {
+                        putString(PrefKeys.TRANSLATION_SERVICE_API_KEY, settings.translationServiceApiKey.value)
+                    } else {
+                        remove(PrefKeys.TRANSLATION_SERVICE_API_KEY)
+                    }
                 }
             }
         }
@@ -540,6 +547,7 @@ object LocalPreferences {
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
+                    val translationServiceApiKey = getString(PrefKeys.TRANSLATION_SERVICE_API_KEY, "") ?: ""
                     val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
                     val latestContactListStr = getString(PrefKeys.LATEST_CONTACT_LIST, null)
                     val latestDmRelayListStr = getString(PrefKeys.LATEST_DM_RELAY_LIST, null)
@@ -678,6 +686,7 @@ object LocalPreferences {
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
+                        translationServiceApiKey = MutableStateFlow(translationServiceApiKey),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
                         callsEnabled = MutableStateFlow(callsEnabled),
                     )

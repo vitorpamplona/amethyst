@@ -31,6 +31,7 @@ object TranslationsCache {
         val translateTo: String,
         val dontTranslateFrom: Set<String>,
         val serverUrl: String,
+        val apiKeyFingerprint: Int,
     )
 
     private val cache = LruCache<Key, TranslationConfig>(MAX_ENTRIES)
@@ -40,16 +41,18 @@ object TranslationsCache {
         translateTo: String,
         dontTranslateFrom: Set<String>,
         serverUrl: String,
-    ): TranslationConfig? = cache.get(Key(content, translateTo, dontTranslateFrom, serverUrl))
+        apiKey: String,
+    ): TranslationConfig? = cache.get(Key(content, translateTo, dontTranslateFrom, serverUrl, apiKey.trim().hashCode()))
 
     fun set(
         content: String,
         translateTo: String,
         dontTranslateFrom: Set<String>,
         serverUrl: String,
+        apiKey: String,
         config: TranslationConfig,
     ) {
-        cache.put(Key(content, translateTo, dontTranslateFrom, serverUrl), config)
+        cache.put(Key(content, translateTo, dontTranslateFrom, serverUrl, apiKey.trim().hashCode()), config)
     }
 
     fun clear() {

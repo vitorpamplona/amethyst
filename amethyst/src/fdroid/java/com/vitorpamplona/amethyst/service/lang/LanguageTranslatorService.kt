@@ -51,24 +51,31 @@ object LanguageTranslatorService {
         dontTranslateFrom: Set<String>,
         translateTo: String,
         serverUrl: String,
+        apiKey: String,
     ): ResultOrError? {
         if (serverUrl.isBlank() || !TranslationDictionary.isWorthTranslating(text)) return null
 
         val url = normalizedTranslateUrl(serverUrl) ?: return null
         val dict = TranslationDictionary.build(text)
         val encoded = TranslationDictionary.encode(text, dict)
+        val normalizedApiKey = apiKey.trim()
 
         return withContext(Dispatchers.IO) {
+            val payload =
+                mutableMapOf(
+                    "q" to encoded,
+                    "source" to "auto",
+                    "target" to translateTo,
+                )
+
+            if (normalizedApiKey.isNotBlank()) {
+                payload["api_key"] = normalizedApiKey
+            }
+
             val requestBody =
                 json
-                    .writeValueAsString(
-                        mapOf(
-                            "q" to encoded,
-                            "source" to "auto",
-                            "target" to translateTo,
-                            "format" to "text",
-                        ),
-                    ).toRequestBody(jsonMediaType)
+                    .writeValueAsString(payload)
+                    .toRequestBody(jsonMediaType)
 
             val request =
                 Request

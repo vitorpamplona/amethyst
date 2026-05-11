@@ -88,18 +88,20 @@ fun TranslatableRichTextViewer(
     val dontTranslateFrom by languages.dontTranslateFrom.collectAsStateWithLifecycle()
     val languagePreferences by languages.languagePreferences.collectAsStateWithLifecycle()
     val serverUrl by languages.translationServiceUrl.collectAsStateWithLifecycle()
+    val apiKey by accountViewModel.account.settings.translationServiceApiKey
+        .collectAsStateWithLifecycle()
 
     val translatedTextState =
-        remember(id, content, translateTo, dontTranslateFrom, serverUrl) {
+        remember(id, content, translateTo, dontTranslateFrom, serverUrl, apiKey) {
             mutableStateOf(
-                TranslationsCache.get(content, translateTo, dontTranslateFrom, serverUrl)
+                TranslationsCache.get(content, translateTo, dontTranslateFrom, serverUrl, apiKey)
                     ?: TranslationConfig(content, null, null),
             )
         }
 
-    LaunchedEffect(content, translateTo, dontTranslateFrom, serverUrl) {
+    LaunchedEffect(content, translateTo, dontTranslateFrom, serverUrl, apiKey) {
         try {
-            translatedTextState.value = translateAndCache(content, translateTo, dontTranslateFrom, serverUrl)
+            translatedTextState.value = translateAndCache(content, translateTo, dontTranslateFrom, serverUrl, apiKey)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -156,8 +158,9 @@ private suspend fun translateAndCache(
     translateTo: String,
     dontTranslateFrom: Set<String>,
     serverUrl: String,
+    apiKey: String,
 ): TranslationConfig {
-    TranslationsCache.get(content, translateTo, dontTranslateFrom, serverUrl)?.let { return it }
+    TranslationsCache.get(content, translateTo, dontTranslateFrom, serverUrl, apiKey)?.let { return it }
 
     val noOp = TranslationConfig(content, null, null)
     val raw =
@@ -166,10 +169,11 @@ private suspend fun translateAndCache(
             dontTranslateFrom = dontTranslateFrom,
             translateTo = translateTo,
             serverUrl = serverUrl,
-        ) ?: return noOp.also { TranslationsCache.set(content, translateTo, dontTranslateFrom, serverUrl, it) }
+            apiKey = apiKey,
+        ) ?: return noOp.also { TranslationsCache.set(content, translateTo, dontTranslateFrom, serverUrl, apiKey, it) }
 
     val config = raw.toTranslationConfig(content) ?: noOp
-    TranslationsCache.set(content, translateTo, dontTranslateFrom, serverUrl, config)
+    TranslationsCache.set(content, translateTo, dontTranslateFrom, serverUrl, apiKey, config)
     return config
 }
 

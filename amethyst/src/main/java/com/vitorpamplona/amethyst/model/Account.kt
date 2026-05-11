@@ -626,6 +626,10 @@ class Account(
         }
     }
 
+    fun updateTranslationServiceApiKey(apiKey: String) {
+        settings.updateTranslationServiceApiKey(apiKey)
+    }
+
     suspend fun prefer(
         source: String,
         target: String,
