@@ -2185,6 +2185,8 @@
     <string name="translate_to_description">Choose the language to translate content into.</string>
     <string name="translation_service_url">Translation Server</string>
     <string name="translation_service_url_description">Optional LibreTranslate-compatible server for F-Droid translations. Leave empty to keep external translation disabled.</string>
+    <string name="translation_service_privacy_warning_title">Privacy warning</string>
+    <string name="translation_service_privacy_warning_description">Any content you translate with this server is sent in plaintext to that server, including private DMs and encrypted payloads after Amethyst decrypts them. Whoever controls the server can read everything sent for translation, including passwords, private photos, and other private information.</string>
     <string name="language_preferences">Language Display Preferences</string>
     <string name="language_preferences_description">For each translated language pair, choose which language to show first.</string>
     <string name="language_preference_pair">%1$s → %2$s</string>
