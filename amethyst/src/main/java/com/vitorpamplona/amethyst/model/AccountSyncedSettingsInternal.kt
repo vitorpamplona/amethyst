@@ -38,6 +38,7 @@ val DefaultReactions =
     )
 
 val DefaultZapAmounts = listOf(100L, 500L, 1000L)
+val DefaultReportWarningThreshold = 5
 
 @Serializable
 enum class ReactionRowAction {
@@ -144,6 +145,7 @@ class AccountLanguagePreferencesInternal(
 class AccountSecurityPreferencesInternal(
     val showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,
+    val reportWarningThreshold: Int = DefaultReportWarningThreshold,
     var filterSpamFromStrangers: Boolean = true,
     val maxHashtagLimit: Int = 5,
     var sendKind0EventsToLocalRelay: Boolean = false,

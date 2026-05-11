@@ -341,12 +341,12 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = spacedBy(10.dp),
     ) {
+        var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports.value) }
+
         SettingsRow(
             R.string.warn_when_posts_have_reports_from_your_follows_title,
             R.string.warn_when_posts_have_reports_from_your_follows_explainer,
         ) {
-            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports) }
-
             Switch(
                 checked = warnAboutReports,
                 onCheckedChange = {
@@ -354,6 +354,33 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
                     accountViewModel.updateWarnReports(warnAboutReports)
                 },
             )
+        }
+
+        if (warnAboutReports) {
+            SettingsRow(
+                R.string.report_warning_threshold_title,
+                R.string.report_warning_threshold_explainer,
+            ) {
+                var reportWarningThreshold by remember {
+                    mutableStateOf(accountViewModel.account.settings.syncedSettings.security.reportWarningThreshold.value.coerceAtLeast(1).toString())
+                }
+
+                OutlinedTextField(
+                    value = reportWarningThreshold,
+                    onValueChange = {
+                        val updatedThreshold = (it.toIntOrNull() ?: 1).coerceAtLeast(1)
+                        reportWarningThreshold = updatedThreshold.toString()
+                        accountViewModel.updateReportWarningThreshold(updatedThreshold)
+                    },
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done,
+                        ),
+                    singleLine = true,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
         }
 
         SettingsRow(

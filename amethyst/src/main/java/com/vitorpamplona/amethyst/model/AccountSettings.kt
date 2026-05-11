@@ -1083,6 +1083,14 @@ class AccountSettings(
             false
         }
 
+    fun updateReportWarningThreshold(threshold: Int): Boolean =
+        if (syncedSettings.security.updateReportWarningThreshold(threshold)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
     fun updateFilterSpam(filterSpam: Boolean): Boolean =
         if (syncedSettings.security.updateFilterSpam(filterSpam)) {
             saveAccountSettings()

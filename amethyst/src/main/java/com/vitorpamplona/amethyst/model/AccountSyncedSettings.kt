@@ -51,7 +51,8 @@ class AccountSyncedSettings(
     val security =
         AccountSecurityPreferences(
             MutableStateFlow(internalSettings.security.showSensitiveContent),
-            internalSettings.security.warnAboutPostsWithReports,
+            MutableStateFlow(internalSettings.security.warnAboutPostsWithReports),
+            MutableStateFlow(internalSettings.security.reportWarningThreshold),
             MutableStateFlow(internalSettings.security.filterSpamFromStrangers),
             MutableStateFlow(internalSettings.security.maxHashtagLimit),
             MutableStateFlow(internalSettings.security.sendKind0EventsToLocalRelay),
@@ -79,7 +80,8 @@ class AccountSyncedSettings(
             security =
                 AccountSecurityPreferencesInternal(
                     security.showSensitiveContent.value,
-                    security.warnAboutPostsWithReports,
+                    security.warnAboutPostsWithReports.value,
+                    security.reportWarningThreshold.value,
                     security.filterSpamFromStrangers.value,
                     security.maxHashtagLimit.value,
                     security.sendKind0EventsToLocalRelay.value,
@@ -128,8 +130,12 @@ class AccountSyncedSettings(
             security.filterSpamFromStrangers.tryEmit(syncedSettingsInternal.security.filterSpamFromStrangers)
         }
 
-        if (security.warnAboutPostsWithReports != syncedSettingsInternal.security.warnAboutPostsWithReports) {
-            security.warnAboutPostsWithReports = syncedSettingsInternal.security.warnAboutPostsWithReports
+        if (security.warnAboutPostsWithReports.value != syncedSettingsInternal.security.warnAboutPostsWithReports) {
+            security.warnAboutPostsWithReports.tryEmit(syncedSettingsInternal.security.warnAboutPostsWithReports)
+        }
+
+        if (security.reportWarningThreshold.value != syncedSettingsInternal.security.reportWarningThreshold) {
+            security.reportWarningThreshold.tryEmit(syncedSettingsInternal.security.reportWarningThreshold)
         }
 
         if (security.maxHashtagLimit.value != syncedSettingsInternal.security.maxHashtagLimit) {
@@ -235,7 +241,8 @@ class AccountLanguagePreferences(
 @Stable
 class AccountSecurityPreferences(
     val showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
-    var warnAboutPostsWithReports: Boolean = true,
+    val warnAboutPostsWithReports: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val reportWarningThreshold: MutableStateFlow<Int> = MutableStateFlow(DefaultReportWarningThreshold),
     var filterSpamFromStrangers: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(5),
     var sendKind0EventsToLocalRelay: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -250,8 +257,16 @@ class AccountSecurityPreferences(
     }
 
     fun updateWarnReports(warnReports: Boolean): Boolean =
-        if (warnAboutPostsWithReports != warnReports) {
-            warnAboutPostsWithReports = warnReports
+        if (warnAboutPostsWithReports.value != warnReports) {
+            warnAboutPostsWithReports.tryEmit(warnReports)
+            true
+        } else {
+            false
+        }
+
+    fun updateReportWarningThreshold(threshold: Int): Boolean =
+        if (reportWarningThreshold.value != threshold) {
+            reportWarningThreshold.update { threshold }
             true
         } else {
             false

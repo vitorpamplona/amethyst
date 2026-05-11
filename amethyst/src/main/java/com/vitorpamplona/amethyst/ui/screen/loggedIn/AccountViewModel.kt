@@ -532,7 +532,11 @@ class AccountViewModel(
                 account.kind3FollowList.flow,
                 note.flow().author(),
                 note.flow().metadata.stateFlow,
-                note.flow().reports.stateFlow,
+                combine(
+                    note.flow().reports.stateFlow,
+                    account.settings.syncedSettings.security.warnAboutPostsWithReports,
+                    account.settings.syncedSettings.security.reportWarningThreshold,
+                ) { reports, _, _ -> reports },
             ) { hiddenUsers, followingUsers, _, metadata, _ ->
                 emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.authors))
             }.onStart {
@@ -1152,6 +1156,8 @@ class AccountViewModel(
     fun toggleSendKind0ToLocalRelay(enabled: Boolean) = launchSigner { account.updateSendKind0EventsToLocalRelay(enabled) }
 
     fun updateWarnReports(warnReports: Boolean) = launchSigner { account.updateWarnReports(warnReports) }
+
+    fun updateReportWarningThreshold(threshold: Int) = launchSigner { account.updateReportWarningThreshold(threshold) }
 
     fun updateDisableClientTag(disable: Boolean) = launchSigner { account.updateDisableClientTag(disable) }
 
