@@ -426,6 +426,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="schedule_post_always_on_prompt_message">Geplante Beiträge werden zuverlässig nur veröffentlicht, wenn Dauerbenachrichtigungen aktiviert sind. Andernfalls werden sie möglicherweise erst beim nächsten Öffnen der App ausgelöst.</string>
     <string name="schedule_post_always_on_prompt_open_settings">Einstellungen öffnen</string>
     <string name="schedule_post_always_on_prompt_continue">Trotzdem fortfahren</string>
+    <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
     <string name="scheduled_posts_at_time_past">%1$s · vor %2$s</string>
     <string name="scheduled_posts_day_tomorrow">Morgen</string>
     <string name="scheduled_posts_logout_toast_zero">Abgemeldet</string>
@@ -1889,6 +1890,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="remove_dvm_from_favorites">Aus Favoriten entfernen</string>
     <string name="favorite_dvms_title">Bevorzugte Feed-Algorithmen</string>
     <string name="favorite_dvms_explainer">Feed-Algorithmen, die du mit einem Stern markierst, erscheinen als Filter-Chips im Home-Feed. Öffne Entdecken, um weitere hinzuzufügen.</string>
+    <string name="favorite_dvms_empty_headline">Lieblingsalgorithmen anheften</string>
+    <string name="favorite_dvms_empty_subtitle">Tippe auf die Schaltfläche unten, um Algorithmen zu durchsuchen, und markiere die, die du hier behalten möchtest, mit einem Stern.</string>
+    <string name="favorite_dvms_empty_cta">Feeds hinzufügen</string>
     <string name="dvm_home_status_requesting">Frage %1$s nach einem Feed…</string>
     <string name="dvm_home_status_requesting_all">Frage deine bevorzugten Feed-Algorithmen nach Feeds…</string>
     <string name="dvm_home_status_processing">Feed wird verarbeitet…</string>

@@ -1884,6 +1884,9 @@
     <string name="remove_dvm_from_favorites">Ta bort från favoriter</string>
     <string name="favorite_dvms_title">Favorit-flödesalgoritmer</string>
     <string name="favorite_dvms_explainer">Flödesalgoritmer du stjärnmarkerar visas som filterchips på Hem-flödet. Öppna Upptäck för att lägga till fler.</string>
+    <string name="favorite_dvms_empty_headline">Fäst dina favoritalgoritmer</string>
+    <string name="favorite_dvms_empty_subtitle">Tryck på knappen nedan för att bläddra bland algoritmer och stjärnmarkera de du vill behålla här.</string>
+    <string name="favorite_dvms_empty_cta">Lägg till några flöden</string>
     <string name="dvm_home_status_requesting">Frågar %1$s om ett flöde…</string>
     <string name="dvm_home_status_requesting_all">Frågar dina favorit-flödesalgoritmer om flöden…</string>
     <string name="dvm_home_status_processing">Bearbetar ditt flöde…</string>
