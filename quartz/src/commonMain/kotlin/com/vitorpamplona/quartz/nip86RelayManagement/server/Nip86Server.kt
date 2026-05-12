@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip86RelayManagement.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedEvent
@@ -46,8 +45,8 @@ import kotlinx.serialization.json.int
  *
  * Holds the [BanStore] (mutated by ban/allow methods), an [InfoHolder]
  * for the live NIP-11 doc (mutated by `changerelay*` methods, which
- * atomically swap it), and an optional [IEventStore] so `banevent`
- * can also delete the offending event from the store.
+ * atomically swap it), and an [onBan] hook so each ban method can
+ * retroactively purge matching events from the relay's event store.
  *
  * Transport-agnostic — relay implementations call [dispatch] from
  * whatever HTTP route they expose (e.g. POST `application/nostr+json+rpc`),
@@ -67,7 +66,23 @@ class Nip86Server(
      * every request, not cache it.
      */
     private val infoHolder: InfoHolder,
-    private val store: IEventStore? = null,
+    /**
+     * Called from `banpubkey` / `banevent` / `disallowkind` AFTER the
+     * [BanStore] has been updated, with a [Filter] selecting all events
+     * the operator just banned: respectively `Filter(authors=[pk])`,
+     * `Filter(ids=[id])`, `Filter(kinds=[k])`. Production callers wire
+     * this to `IEventStore.delete(filter)` so the existing offending
+     * events are removed from storage, not just blocked from re-ingest.
+     * Without it, a ban would only stop *future* matches while clients
+     * kept seeing whatever was already there — important for spam
+     * cleanup, and a real safety issue for `banevent` on illegal /
+     * leaked content.
+     *
+     * Defaults to a no-op so unit tests for the dispatcher don't need
+     * to stand up an event store. Production callers (e.g.
+     * `geode/KtorRelay`) wire it to `store.delete(filter)`.
+     */
+    private val onBan: suspend (Filter) -> Unit = {},
 ) {
     /** Pluggable container so the relay's NIP-11 doc can be swapped at runtime. */
     interface InfoHolder {
@@ -108,7 +123,12 @@ class Nip86Server(
                 }
 
                 Nip86Method.BAN_PUBKEY -> {
-                    withHexAndReason(req, "pubkey") { pk, reason -> banStore.banPubkey(pk, reason) }
+                    withHexAndReason(req, "pubkey") { pk, reason ->
+                        banStore.banPubkey(pk, reason)
+                        // Purge everything the banned author had posted
+                        // so REQ stops serving their history.
+                        onBan(Filter(authors = listOf(pk)))
+                    }
                 }
 
                 Nip86Method.UNBAN_PUBKEY -> {
@@ -134,8 +154,9 @@ class Nip86Server(
                 Nip86Method.BAN_EVENT -> {
                     withHexAndReason(req, "event_id") { id, reason ->
                         banStore.banEvent(id, reason)
-                        // Also remove the event from the store if present.
-                        store?.delete(Filter(ids = listOf(id)))
+                        // Also remove the event from the relay's event
+                        // store so REQ stops serving the offending copy.
+                        onBan(Filter(ids = listOf(id)))
                     }
                 }
 
@@ -152,7 +173,11 @@ class Nip86Server(
                 }
 
                 Nip86Method.DISALLOW_KIND -> {
-                    withInt(req, "kind") { k -> banStore.disallowKind(k) }
+                    withInt(req, "kind") { k ->
+                        banStore.disallowKind(k)
+                        // Purge every event of the now-disallowed kind.
+                        onBan(Filter(kinds = listOf(k)))
+                    }
                 }
 
                 Nip86Method.LIST_ALLOWED_KINDS -> {
@@ -205,10 +230,10 @@ class Nip86Server(
         return okTrue
     }
 
-    private inline fun withInt(
+    private suspend inline fun withInt(
         req: Nip86Request,
         label: String,
-        action: (Int) -> Unit,
+        action: suspend (Int) -> Unit,
     ): Nip86Response {
         val v = req.params.firstInt() ?: return malformed("expected [$label]")
         action(v)

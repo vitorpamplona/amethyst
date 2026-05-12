@@ -42,7 +42,7 @@ class Nip86ServerTest {
     private fun fixture(): Triple<Nip86Server, BanStore, Holder> {
         val store = BanStore()
         val holder = Holder(Nip11RelayInformation(name = "before", description = "before-desc"))
-        val server = Nip86Server(banStore = store, infoHolder = holder, store = null)
+        val server = Nip86Server(banStore = store, infoHolder = holder)
         return Triple(server, store, holder)
     }
 

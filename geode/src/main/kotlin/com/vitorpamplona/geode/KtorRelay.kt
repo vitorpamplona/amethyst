@@ -113,7 +113,12 @@ class KtorRelay(
             }
         }
 
-    private val nip86Server = Nip86Server(banStore = relay.banStore, infoHolder = infoHolder, store = relay.store)
+    private val nip86Server =
+        Nip86Server(
+            banStore = relay.banStore,
+            infoHolder = infoHolder,
+            onBan = { filter -> relay.store.delete(filter) },
+        )
     private val nip86Route =
         Nip86HttpRoute(
             server = nip86Server,
