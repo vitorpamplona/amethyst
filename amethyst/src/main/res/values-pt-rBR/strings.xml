@@ -2543,4 +2543,26 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
+    <string name="nest_confirm_cancel">Cancelar</string>
+    <string name="nest_confirm_force_mute_body">Pede ao cliente de %1$s para silenciar o microfone. Alguns clientes podem ignorar este comando.</string>
+    <string name="nest_confirm_force_mute_confirm">Silenciar à força</string>
+    <string name="nest_confirm_force_mute_title">Silenciar palestrante à força?</string>
+    <string name="nest_confirm_kick_body">%1$s será removido(a) do plano de áudio e retirado(a) da lista de participantes. Poderá voltar a entrar se obtiver o link da sala.</string>
+    <string name="nest_confirm_kick_confirm">Expulsar</string>
+    <string name="nest_confirm_kick_title">Expulsar da sala?</string>
+    <string name="nest_force_mute_note">Pode ser ignorado por clientes que não respeitam o comando.</string>
+    <string name="nest_toast_action_title">Sala de áudio</string>
+    <string name="nest_toast_demote_listener_sent">%1$s rebaixado(a) a ouvinte.</string>
+    <string name="nest_toast_follow_sent">Seguindo %1$s.</string>
+    <string name="nest_toast_force_mute_sent">%1$s silenciado(a) à força.</string>
+    <string name="nest_toast_kick_sent">%1$s expulso(a) da sala.</string>
+    <string name="nest_toast_mute_sent">%1$s silenciado(a).</string>
+    <string name="nest_toast_promote_moderator_sent">%1$s promovido(a) a moderador(a).</string>
+    <string name="nest_toast_promote_speaker_sent">%1$s promovido(a) a palestrante.</string>
+    <string name="nest_toast_unfollow_sent">Você deixou de seguir %1$s.</string>
+    <string name="nest_toast_unmute_sent">Som de %1$s reativado.</string>
+    <string name="notification_tab_everyone">Todos</string>
+    <string name="notification_tab_following">Seguindo</string>
+    <string name="split_notifications_setting_description">Mostra duas abas de notificações — Seguindo (pessoas que você segue) e Todos. O indicador de não lidas só acende para atividade de pessoas que você segue.</string>
+    <string name="split_notifications_setting_title">Dividir notificações por Seguindo</string>
 </resources>
