@@ -33,7 +33,6 @@ class RichTextViewerState(
     val customEmoji: ImmutableMap<String, String>,
     val paragraphs: ImmutableList<ParagraphState>,
     val tags: ImmutableListOfLists<String>,
-    val isMarkdown: Boolean = false,
 )
 
 @Immutable

@@ -224,7 +224,6 @@ class RichTextParser {
             customEmoji = emojiMap.toImmutableMap(),
             paragraphs = segments,
             tags = tags,
-            isMarkdown = isMarkdown(content),
         )
     }
 
@@ -412,18 +411,6 @@ class RichTextParser {
     }
 
     companion object {
-        // Cheap heuristic: stored on the parsed state so callers (e.g. RichTextViewer's
-        // markdown vs regular dispatch) can read the decision off the cached result instead
-        // of running a separate scan + maintaining a separate cache.
-        fun isMarkdown(content: String): Boolean =
-            content.startsWith("> ") ||
-                content.startsWith("# ") ||
-                content.contains("##") ||
-                content.contains("__") ||
-                content.contains("**") ||
-                content.contains("```") ||
-                content.contains("](")
-
         val longDatePattern: Regex = Regex("^\\d{4}-\\d{2}-\\d{2}$")
         val shortDatePattern: Regex = Regex("^\\d{2}-\\d{2}-\\d{2}$")
 

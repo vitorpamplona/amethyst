@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 
 object CachedRichTextParser {
     private val richTextCache = LruCache<Int, RichTextViewerState>(50)
+    private val isMarkdownCache = LruCache<Int, Boolean>(200)
 
     private fun hashCodeCache(
         content: String,
@@ -69,6 +70,25 @@ object CachedRichTextParser {
             newUrls
         }
     }
+
+    // Shared across every RichTextViewer instance so that the same content quoted in multiple
+    // notes only pays for the scan once. The decision is purely a function of `content`.
+    fun isMarkdown(content: String): Boolean {
+        val key = content.hashCode()
+        isMarkdownCache[key]?.let { return it }
+        val result = computeIsMarkdown(content)
+        isMarkdownCache.put(key, result)
+        return result
+    }
+
+    private fun computeIsMarkdown(content: String): Boolean =
+        content.startsWith("> ") ||
+            content.startsWith("# ") ||
+            content.contains("##") ||
+            content.contains("__") ||
+            content.contains("**") ||
+            content.contains("```") ||
+            content.contains("](")
 }
 
 object CachedUrlParser {
