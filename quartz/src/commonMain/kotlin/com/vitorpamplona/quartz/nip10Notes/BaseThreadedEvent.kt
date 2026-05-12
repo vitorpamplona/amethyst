@@ -31,7 +31,14 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
-fun Event.threadRootIdOrSelf(): HexKey = (this as? BaseThreadedEvent)?.root()?.eventId ?: id
+fun Event.threadRootIdOrSelf(): HexKey {
+    val threaded = this as? BaseThreadedEvent ?: return id
+    threaded.root()?.eventId?.let { return it }
+    // NIP-10 legacy single-level form: when only a "reply"-marked e-tag is
+    // present (no "root" marker), the reply target IS the conversation root.
+    threaded.markedReply()?.eventId?.let { return it }
+    return id
+}
 
 @Immutable
 open class BaseThreadedEvent(

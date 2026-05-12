@@ -138,7 +138,16 @@ class AccountFeedContentStates(
             account.hiddenUsers.flow.collect {
                 dmKnown.invalidateData()
                 dmNew.invalidateData()
+                // Re-mute removes cards, not just adds them. CardFeedContentState's
+                // refreshSuspended() takes an additive-only path when lastNotes is
+                // populated, which keeps stale cards for notes that no longer pass
+                // the filter. Clear first so the refresh hits the full-rebuild branch.
+                notifications.clear()
                 notifications.invalidateData()
+                notificationsFollowing.clear()
+                notificationsFollowing.invalidateData()
+                notificationsEveryone.clear()
+                notificationsEveryone.invalidateData()
             }
         }
     }
