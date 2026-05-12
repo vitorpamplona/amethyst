@@ -159,6 +159,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -397,10 +398,13 @@ class AccountViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val homeHasNewItems =
+    private fun tabHasNewItems(
+        route: String,
+        feedContent: StateFlow<FeedState>,
+    ): Flow<Boolean> =
         combineTransform(
-            account.loadLastReadFlow("HomeFollows"),
-            feedStates.homeNewThreads.feedContent
+            account.loadLastReadFlow(route),
+            feedContent
                 .flatMapLatest {
                     if (it is FeedState.Loaded) {
                         it.feed
@@ -412,15 +416,31 @@ class AccountViewModel(
                 },
         ) { lastRead, newestItemCreatedAt ->
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
-        }.onStart {
-            val lastRead = account.loadLastReadFlow("HomeFollows").value
-            val feed = feedStates.homeNewThreads.feedContent.value
-            if (feed is FeedState.Loaded) {
-                val newestItemCreatedAt =
-                    feed.feed.value.list
-                        .firstOrNull { it.event != null && it.event !is GenericRepostEvent && it.event !is RepostEvent }
-                        ?.createdAt()
-                emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+        }
+
+    val homeHasNewItems: Flow<Boolean> =
+        combine(
+            settings.uiSettingsFlow.showHomeNewThreadsTab,
+            settings.uiSettingsFlow.showHomeConversationsTab,
+            settings.uiSettingsFlow.showHomeEverythingTab,
+            tabHasNewItems("HomeFollows", feedStates.homeNewThreads.feedContent),
+            tabHasNewItems("HomeFollowsReplies", feedStates.homeReplies.feedContent),
+            tabHasNewItems("HomeFollowsEverything", feedStates.homeEverything.feedContent),
+        ) { values ->
+            val showThreads = values[0]
+            val showReplies = values[1]
+            val showEverything = values[2]
+            val threadsHas = values[3]
+            val repliesHas = values[4]
+            val everythingHas = values[5]
+            val anyEnabled = showThreads || showReplies || showEverything
+            if (!anyEnabled) {
+                // HomeScreen falls back to the New Threads tab when the user disables every tab.
+                threadsHas
+            } else {
+                (showThreads && threadsHas) ||
+                    (showReplies && repliesHas) ||
+                    (showEverything && everythingHas)
             }
         }
 
