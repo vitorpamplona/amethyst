@@ -213,10 +213,14 @@ class NwcPaymentHandler(
         val client = Nip47Client.fromNip47URI(nwcConnection)
         val requestEvent = client.getBalance()
 
-        relayManager.publishToRelay(nwcConnection.relayUri, requestEvent)
-
         return withTimeoutOrNull(timeoutMs) {
-            waitForGenericResponse(requestEvent.id, nwcConnection, nwcSigner) { response ->
+            // Subscribe BEFORE publishing to avoid race with fast wallet responses
+            waitForGenericResponse(
+                requestId = requestEvent.id,
+                nwcConnection = nwcConnection,
+                nwcSigner = nwcSigner,
+                onSubscribed = { relayManager.publishToRelay(nwcConnection.relayUri, requestEvent) },
+            ) { response ->
                 when (response) {
                     is GetBalanceSuccessResponse -> {
                         val msats = response.result?.balance ?: 0L
@@ -261,10 +265,14 @@ class NwcPaymentHandler(
         val client = Nip47Client.fromNip47URI(nwcConnection)
         val requestEvent = client.makeInvoice(amountMsats, description)
 
-        relayManager.publishToRelay(nwcConnection.relayUri, requestEvent)
-
         return withTimeoutOrNull(timeoutMs) {
-            waitForGenericResponse(requestEvent.id, nwcConnection, nwcSigner) { response ->
+            // Subscribe BEFORE publishing to avoid race with fast wallet responses
+            waitForGenericResponse(
+                requestId = requestEvent.id,
+                nwcConnection = nwcConnection,
+                nwcSigner = nwcSigner,
+                onSubscribed = { relayManager.publishToRelay(nwcConnection.relayUri, requestEvent) },
+            ) { response ->
                 when (response) {
                     is MakeInvoiceSuccessResponse -> {
                         val invoice = response.result?.invoice
@@ -293,6 +301,7 @@ class NwcPaymentHandler(
         requestId: String,
         nwcConnection: Nip47WalletConnect.Nip47URINorm,
         nwcSigner: NostrSignerInternal,
+        onSubscribed: () -> Unit = {},
         processResponse: (Response) -> T,
     ): T =
         suspendCancellableCoroutine { continuation ->
@@ -343,6 +352,9 @@ class NwcPaymentHandler(
                     }
                 },
             )
+
+            // Publish AFTER subscribing to avoid missing fast wallet responses
+            onSubscribed()
 
             continuation.invokeOnCancellation {
                 relayManager.closeSubscription(nwcConnection.relayUri, subId)
