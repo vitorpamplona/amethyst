@@ -1098,6 +1098,8 @@
     <string name="disable_client_tag_explainer">启用时，Amethyst 将不会在您发布的事件中附加一个 NIP-89 客户端标签。</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">举报警示</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">当帖子有来自你关注的五次及以上举报时显示警告消息</string>
+    <string name="report_warning_threshold_title">举报警告阈值</string>
+    <string name="report_warning_threshold_explainer">当帖子或个人资料达到此数量的来自你关注的人的举报时进行警告</string>
     <string name="show_sensitive_content_title">显示敏感内容</string>
     <string name="show_sensitive_content_explainer">当帖子作者将帖子标记为敏感时显示警告消息</string>
     <string name="max_hashtag_limit_title">每个帖子最大话题标签数</string>
@@ -1669,6 +1671,8 @@
     <string name="video_player_settings_action_download_description">下载视频到您的设备 (在直播流中隐藏)</string>
     <string name="video_player_settings_action_pip">画中画</string>
     <string name="video_player_settings_action_pip_description">在浮动窗口播放视频(不支持时隐藏)</string>
+    <string name="video_player_settings_action_cast">投射到设备</string>
+    <string name="video_player_settings_action_cast_description">发送视频到您Wi-Fi上的 Chromecast 接收器(本地文件隐藏)</string>
     <string name="profile_image_of_user">%1$s 的个人头像</string>
     <string name="relay_info">中继器 %1$s</string>
     <string name="expand_relay_list">展开中继列表</string>
@@ -2272,6 +2276,10 @@
     <string name="playback_actions_dialog_title">播放</string>
     <string name="video_quality_auto">自动</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">投射到设备</string>
+    <string name="cast_stop_casting">停止投影</string>
+    <string name="cast_to_device_dialog_title">投射到…</string>
+    <string name="cast_searching_for_devices">正在搜索Wi-Fi网络上的设备…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS 上传</string>
     <string name="share_hls_video_drawer_description">将多分辨率HLS发布到您的媒体服务器</string>
