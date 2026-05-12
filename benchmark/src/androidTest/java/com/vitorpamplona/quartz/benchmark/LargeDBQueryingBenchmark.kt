@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -52,19 +53,20 @@ class LargeDBQueryingBenchmark : BaseLargeCacheBenchmark() {
     lateinit var db: com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 
     @Before
-    fun setup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+    fun setup() =
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
 
-        context.deleteDatabase("allEvents.db")
-        db = EventStore("allEvents.db")
-        allEvents.forEach { event ->
-            try {
-                db.insert(event)
-            } catch (e: SQLiteException) {
-                Log.w("LargeDBQueryingBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+            context.deleteDatabase("allEvents.db")
+            db = EventStore("allEvents.db")
+            allEvents.forEach { event ->
+                try {
+                    db.insert(event)
+                } catch (e: SQLiteException) {
+                    Log.w("LargeDBQueryingBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+                }
             }
         }
-    }
 
     @After
     fun tearDown() {
@@ -76,30 +78,36 @@ class LargeDBQueryingBenchmark : BaseLargeCacheBenchmark() {
     @Test
     fun benchQuerying1000Events() {
         benchmarkRule.measureRepeated {
-            db.query<Event>(Filter(limit = 1000))
+            runBlocking {
+                db.query<Event>(Filter(limit = 1000))
+            }
         }
     }
 
     @Test
     fun benchQuerying1614GiftWrapsEvents() {
         benchmarkRule.measureRepeated {
-            db.query<GiftWrapEvent>(
-                Filter(
-                    kinds = listOf(GiftWrapEvent.KIND),
-                    tags = mapOf("p" to listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")),
-                ),
-            )
+            runBlocking {
+                db.query<GiftWrapEvent>(
+                    Filter(
+                        kinds = listOf(GiftWrapEvent.KIND),
+                        tags = mapOf("p" to listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")),
+                    ),
+                )
+            }
         }
     }
 
     @Test
     fun benchQueryingEventsByAuthor() {
         benchmarkRule.measureRepeated {
-            db.query<Event>(
-                Filter(
-                    authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-                ),
-            )
+            runBlocking {
+                db.query<Event>(
+                    Filter(
+                        authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                    ),
+                )
+            }
         }
     }
 
@@ -107,12 +115,14 @@ class LargeDBQueryingBenchmark : BaseLargeCacheBenchmark() {
     fun benchQueryingMetadataByAuthor() {
         benchmarkRule.measureRepeated {
             val result =
-                db.query<MetadataEvent>(
-                    Filter(
-                        kinds = listOf(MetadataEvent.KIND),
-                        authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-                    ),
-                )
+                runBlocking {
+                    db.query<MetadataEvent>(
+                        Filter(
+                            kinds = listOf(MetadataEvent.KIND),
+                            authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                        ),
+                    )
+                }
             assertEquals(1, result.size)
         }
     }
@@ -121,12 +131,14 @@ class LargeDBQueryingBenchmark : BaseLargeCacheBenchmark() {
     fun benchQueryingRelayListByAuthor() {
         benchmarkRule.measureRepeated {
             val result =
-                db.query<AdvertisedRelayListEvent>(
-                    Filter(
-                        kinds = listOf(AdvertisedRelayListEvent.KIND),
-                        authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-                    ),
-                )
+                runBlocking {
+                    db.query<AdvertisedRelayListEvent>(
+                        Filter(
+                            kinds = listOf(AdvertisedRelayListEvent.KIND),
+                            authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                        ),
+                    )
+                }
             assertEquals(0, result.size)
         }
     }
@@ -134,20 +146,24 @@ class LargeDBQueryingBenchmark : BaseLargeCacheBenchmark() {
     @Test
     fun benchQueryingEmptyReturnByTags() {
         benchmarkRule.measureRepeated {
-            db.query<Event>(
-                Filter(
-                    tags = mapOf("p" to listOf("176d972f60dcdc3212ed8c92ef85065c176d972f60dcdc3212ed8c92ef85065c")),
-                ),
-            )
+            runBlocking {
+                db.query<Event>(
+                    Filter(
+                        tags = mapOf("p" to listOf("176d972f60dcdc3212ed8c92ef85065c176d972f60dcdc3212ed8c92ef85065c")),
+                    ),
+                )
+            }
         }
     }
 
     @Test
     fun benchQueryingEmptyReturnByIds() {
         benchmarkRule.measureRepeated {
-            db.query<Event>(
-                Filter(ids = listOf("176d972f60dcdc3212ed8c92ef85065c176d972f60dcdc3212ed8c92ef85065c")),
-            )
+            runBlocking {
+                db.query<Event>(
+                    Filter(ids = listOf("176d972f60dcdc3212ed8c92ef85065c176d972f60dcdc3212ed8c92ef85065c")),
+                )
+            }
         }
     }
 }

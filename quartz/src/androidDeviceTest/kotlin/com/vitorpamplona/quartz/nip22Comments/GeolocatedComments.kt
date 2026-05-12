@@ -85,7 +85,7 @@ class GeolocatedComments {
                 ),
             )
 
-        assertEquals("drt3n", event!!.geohashedScope())
+        assertEquals("drt3n", event.geohashedScope())
         assertTrue(event.isTaggedScope(GeohashId.toScope("drt3n")))
         assertFalse(event.isTaggedScope("drt3n"))
 

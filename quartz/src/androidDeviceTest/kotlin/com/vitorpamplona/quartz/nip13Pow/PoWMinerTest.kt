@@ -61,8 +61,8 @@ class PoWMinerTest {
 
         val event = signer.sign(template)
 
-        println(event?.toJson())
+        println(event.toJson())
 
-        assertEquals(25, event!!.pow())
+        assertEquals(25, event.pow())
     }
 }

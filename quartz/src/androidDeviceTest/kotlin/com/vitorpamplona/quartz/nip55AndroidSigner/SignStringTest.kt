@@ -42,7 +42,7 @@ class SignStringTest {
         assertEquals(expectedValue, signedMessage)
 
         val message2 = "Hello"
-        val signedMessage2 = signString(message2, keyPair.privKey!!, random).toHexKey()
+        val signedMessage2 = signString(message2, keyPair.privKey, random).toHexKey()
         val expectedValue2 = "7ec8194a585bfb513564113b6b7bfeaafa0254c99d24eaf92280657c2291bab908b1b7bc553c83276a0254aef5041bbe6a50e93381edc4de3d859efa1c3a5a1e"
         assertEquals(expectedValue2, signedMessage2)
     }

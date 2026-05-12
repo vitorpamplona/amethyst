@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.flattenToSet
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,11 +54,13 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                 runWithMeasurementDisabled {
                     EventStore(null)
                 }
-            firstThousandEvents.forEach { event ->
-                try {
-                    db.insert(event)
-                } catch (e: SQLiteException) {
-                    Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+            runBlocking {
+                firstThousandEvents.forEach { event ->
+                    try {
+                        db.insert(event)
+                    } catch (e: SQLiteException) {
+                        Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+                    }
                 }
             }
             runWithMeasurementDisabled {
@@ -83,21 +86,25 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                 runWithMeasurementDisabled {
                     val db =
                         EventStore(null)
-                    toBeDeletedEvents.forEach { event ->
-                        try {
-                            db.insert(event)
-                        } catch (e: SQLiteException) {
-                            Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+                    runBlocking {
+                        toBeDeletedEvents.forEach { event ->
+                            try {
+                                db.insert(event)
+                            } catch (e: SQLiteException) {
+                                Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
+                            }
                         }
                     }
                     db
                 }
 
-            deletions.forEach { event ->
-                try {
-                    db.insert(event)
-                } catch (e: SQLiteException) {
-                    Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: $event" }
+            runBlocking {
+                deletions.forEach { event ->
+                    try {
+                        db.insert(event)
+                    } catch (e: SQLiteException) {
+                        Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: $event" }
+                    }
                 }
             }
 
