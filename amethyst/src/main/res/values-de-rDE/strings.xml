@@ -2548,4 +2548,26 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
+    <string name="nest_confirm_cancel">Abbrechen</string>
+    <string name="nest_confirm_force_mute_body">Fordert den Client von %1$s auf, das Mikrofon stummzuschalten. Manche Clients ignorieren diesen Befehl.</string>
+    <string name="nest_confirm_force_mute_confirm">Stummschalten erzwingen</string>
+    <string name="nest_confirm_force_mute_title">Stummschalten des Sprechers erzwingen?</string>
+    <string name="nest_confirm_kick_body">%1$s wird aus dem Audiobereich entfernt und aus der Teilnehmerliste gestrichen. Mit dem Raum-Link kann %1$s erneut beitreten.</string>
+    <string name="nest_confirm_kick_confirm">Entfernen</string>
+    <string name="nest_confirm_kick_title">Aus Raum entfernen?</string>
+    <string name="nest_force_mute_note">Wird möglicherweise von Clients ignoriert, die diesen Befehl nicht unterstützen.</string>
+    <string name="nest_toast_action_title">Audioraum</string>
+    <string name="nest_toast_demote_listener_sent">%1$s zum Zuhörer herabgestuft.</string>
+    <string name="nest_toast_follow_sent">Du folgst %1$s.</string>
+    <string name="nest_toast_force_mute_sent">%1$s wurde zwangsweise stummgeschaltet.</string>
+    <string name="nest_toast_kick_sent">%1$s aus dem Raum entfernt.</string>
+    <string name="nest_toast_mute_sent">%1$s stummgeschaltet.</string>
+    <string name="nest_toast_promote_moderator_sent">%1$s zum Moderator befördert.</string>
+    <string name="nest_toast_promote_speaker_sent">%1$s zum Sprecher befördert.</string>
+    <string name="nest_toast_unfollow_sent">Du folgst %1$s nicht mehr.</string>
+    <string name="nest_toast_unmute_sent">Stummschaltung von %1$s aufgehoben.</string>
+    <string name="notification_tab_everyone">Alle</string>
+    <string name="notification_tab_following">Gefolgt</string>
+    <string name="split_notifications_setting_description">Zwei Benachrichtigungs-Tabs anzeigen — Gefolgt (Personen, denen du folgst) und Alle. Der Indikator für ungelesene Nachrichten leuchtet nur bei Aktivität von Personen, denen du folgst.</string>
+    <string name="split_notifications_setting_title">Benachrichtigungen nach Gefolgt aufteilen</string>
 </resources>

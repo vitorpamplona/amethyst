@@ -2542,4 +2542,26 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
+    <string name="nest_confirm_cancel">Avbryt</string>
+    <string name="nest_confirm_force_mute_body">Ber %1$s:s klient att stänga av mikrofonen. Vissa klienter kan ignorera detta kommando.</string>
+    <string name="nest_confirm_force_mute_confirm">Tysta påtvingat</string>
+    <string name="nest_confirm_force_mute_title">Tysta talare påtvingat?</string>
+    <string name="nest_confirm_kick_body">%1$s tas bort från ljudplanet och från deltagarlistan. De kan återansluta om de får länken till rummet.</string>
+    <string name="nest_confirm_kick_confirm">Sparka ut</string>
+    <string name="nest_confirm_kick_title">Sparka ut från rummet?</string>
+    <string name="nest_force_mute_note">Kan ignoreras av klienter som inte stödjer kommandot.</string>
+    <string name="nest_toast_action_title">Ljudrum</string>
+    <string name="nest_toast_demote_listener_sent">%1$s degraderad till lyssnare.</string>
+    <string name="nest_toast_follow_sent">Följer %1$s.</string>
+    <string name="nest_toast_force_mute_sent">%1$s tystad påtvingat.</string>
+    <string name="nest_toast_kick_sent">%1$s utsparkad från rummet.</string>
+    <string name="nest_toast_mute_sent">%1$s tystad.</string>
+    <string name="nest_toast_promote_moderator_sent">%1$s befordrad till moderator.</string>
+    <string name="nest_toast_promote_speaker_sent">%1$s befordrad till talare.</string>
+    <string name="nest_toast_unfollow_sent">Slutade följa %1$s.</string>
+    <string name="nest_toast_unmute_sent">%1$s avtystad.</string>
+    <string name="notification_tab_everyone">Alla</string>
+    <string name="notification_tab_following">Följer</string>
+    <string name="split_notifications_setting_description">Visa två flikar för notiser — Följer (personer du följer) och Alla. Oläst-indikatorn lyser endast för aktivitet från personer du följer.</string>
+    <string name="split_notifications_setting_title">Dela upp notiser efter Följer</string>
 </resources>
