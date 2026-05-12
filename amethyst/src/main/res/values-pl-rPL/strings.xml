@@ -658,6 +658,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nest_participant_unfollow">Nie obserwuj</string>
     <string name="nest_participant_mute">Wycisz</string>
     <string name="nest_participant_unmute">Włącz dźwięk</string>
+    <string name="nest_confirm_cancel">Anuluj</string>
     <string name="nest_share_action">Udostępnij pokój</string>
     <string name="nest_minimize">Zminimalizuj</string>
     <string name="nest_minimize_description">Minimalizuj aby słuchać</string>
