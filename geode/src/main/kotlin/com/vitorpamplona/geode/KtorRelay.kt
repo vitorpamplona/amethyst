@@ -48,7 +48,7 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Hosts a [Relay] over a real `ws://` endpoint backed by Ktor + CIO.
+ * Hosts a [RelayEngine] over a real `ws://` endpoint backed by Ktor + CIO.
  *
  * Use this when something other than the in-process
  * [com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket]
@@ -56,19 +56,19 @@ import java.util.concurrent.ConcurrentHashMap
  * tooling, external clients, or a standalone "run a Nostr relay"
  * process.
  *
- * For unit-test wiring inside a single JVM, prefer [RelayHub] + the
+ * For unit-test wiring inside a single JVM, prefer [InProcessRelays] + the
  * in-process socket — same protocol, no socket overhead.
  *
  * Lifecycle:
  * ```
- * val server = LocalRelayServer(Relay(url = ...)).start()
+ * val server = KtorRelay(RelayEngine(url = ...)).start()
  * println("listening on ${server.url}")
  * // ... do stuff ...
  * server.stop()
  * ```
  */
-class LocalRelayServer(
-    val relay: Relay,
+class KtorRelay(
+    val relay: RelayEngine,
     val host: String = "127.0.0.1",
     /** Pass 0 to let the OS pick a free port. Read [url] after [start] to learn it. */
     val port: Int = 0,
@@ -178,7 +178,7 @@ class LocalRelayServer(
      * Binds the Ktor engine. Returns once the engine reports ready, so
      * [url] is safe to read on the very next line.
      */
-    fun start(): LocalRelayServer {
+    fun start(): KtorRelay {
         // Snapshot the constructor-supplied overrides into locals so
         // the `configure` lambda below can assign to its receiver
         // without the names colliding with outer properties.

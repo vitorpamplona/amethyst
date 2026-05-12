@@ -117,7 +117,7 @@ fun main(args: Array<String>) {
             maxSessionsPerConnection = config.negentropy.max_sessions_per_connection,
         )
     val relay =
-        Relay(
+        RelayEngine(
             advertisedUrl,
             store,
             info,
@@ -132,7 +132,7 @@ fun main(args: Array<String>) {
     val frameLimit =
         (config.limits.max_ws_frame_bytes ?: config.limits.max_ws_message_bytes)?.toLong()
     val server =
-        LocalRelayServer(
+        KtorRelay(
             relay,
             host = host,
             port = port,

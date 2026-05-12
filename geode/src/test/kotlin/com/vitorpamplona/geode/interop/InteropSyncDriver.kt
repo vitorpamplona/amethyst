@@ -42,7 +42,7 @@ import kotlin.test.fail
  * Equivalent of strfry's `test/syncTest.pl` driver for our interop
  * tests. Drives one round of NIP-77 *negotiation* (NEG-OPEN /
  * NEG-MSG / NEG-CLOSE) against a real `ws://` endpoint — a Geode
- * `LocalRelayServer`, a strfry process, or any other NIP-77 relay.
+ * `KtorRelay`, a strfry process, or any other NIP-77 relay.
  *
  * The driver opens a raw WebSocket — no `NostrClient` overhead —
  * to keep the wire format under direct control, the same way

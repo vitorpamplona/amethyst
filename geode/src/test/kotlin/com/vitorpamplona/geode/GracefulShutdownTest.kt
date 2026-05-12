@@ -48,14 +48,14 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Tests [LocalRelayServer.stop] honours the graceful-shutdown contract:
+ * Tests [KtorRelay.stop] honours the graceful-shutdown contract:
  *  1. Active clients receive a `NOTICE` warning of imminent shutdown.
  *  2. The active session counter accurately tracks open WS sessions.
  *  3. After `stop()` returns, no sessions remain registered.
  */
 class GracefulShutdownTest {
-    private lateinit var relay: Relay
-    private lateinit var server: LocalRelayServer
+    private lateinit var relay: RelayEngine
+    private lateinit var server: KtorRelay
     private lateinit var scope: CoroutineScope
     private lateinit var client: NostrClient
 
@@ -64,8 +64,8 @@ class GracefulShutdownTest {
     @BeforeTest
     fun setup() {
         val placeholder = "ws://127.0.0.1:7771/".normalizeRelayUrl()
-        relay = Relay(url = placeholder)
-        server = LocalRelayServer(relay, host = "127.0.0.1", port = 0).start()
+        relay = RelayEngine(url = placeholder)
+        server = KtorRelay(relay, host = "127.0.0.1", port = 0).start()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val builder = BasicOkHttpWebSocket.Builder { _ -> httpClient }
         client = NostrClient(builder, scope)

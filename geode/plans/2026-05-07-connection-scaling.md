@@ -95,7 +95,7 @@ path = "/"
 
 Default is **`null` (Ktor default)** — no behavior change unless an
 operator explicitly tunes them. The values are wired through
-`LocalRelayServer` into the new `embeddedServer(factory = CIO,
+`KtorRelay` into the new `embeddedServer(factory = CIO,
 rootConfig = serverConfig {…}, configure = {…})` overload (the
 short-form `embeddedServer(factory, host, port) {…}` overload doesn't
 expose CIO config). The auto-connector that the short form created

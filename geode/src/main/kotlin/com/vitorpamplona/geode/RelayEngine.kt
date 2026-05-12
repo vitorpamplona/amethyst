@@ -23,9 +23,6 @@ package com.vitorpamplona.geode
 import com.vitorpamplona.geode.persistence.BannedEntry
 import com.vitorpamplona.geode.persistence.RelayPersistedState
 import com.vitorpamplona.geode.persistence.RelayStateStore
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
@@ -51,13 +48,13 @@ import kotlin.coroutines.CoroutineContext
  *
  * Two transports:
  *   - [com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket] /
- *     [RelayHub] — no socket, fastest path, ideal
+ *     [InProcessRelays] — no socket, fastest path, ideal
  *     for unit tests inside one JVM.
- *   - [LocalRelayServer] — Ktor `embeddedServer` listening on a real port.
+ *   - [KtorRelay] — Ktor `embeddedServer` listening on a real port.
  *     Use when external clients need to connect (`cli`, instrumented tests,
  *     standalone deployment).
  */
-class Relay(
+class RelayEngine(
     val url: NormalizedRelayUrl,
     val store: IEventStore = EventStore(dbName = null, relay = url),
     info: RelayInfo = RelayInfo.default(url),
@@ -178,34 +175,6 @@ class Relay(
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
         )
-
-    /**
-     * Inserts events directly into the underlying store, bypassing the wire protocol.
-     *
-     * Use this for **pre-test setup** — events that exist before any client connects.
-     * It does NOT broadcast to active subscriptions. For sending events that should
-     * fan out to live subscribers (post-EOSE), use [publish] instead.
-     */
-    suspend fun preload(events: Iterable<Event>) {
-        events.forEach { store.insert(it) }
-    }
-
-    /** @see preload(Iterable) */
-    suspend fun preload(vararg events: Event) = preload(events.toList())
-
-    /**
-     * Publishes an event through the relay's session machinery so it both lands
-     * in the store and fans out to active subscriptions matching its filters
-     * (mirrors what a real client would do via an `EVENT` command).
-     */
-    suspend fun publish(event: Event) {
-        val session = server.connect { /* ignore OK echo */ }
-        try {
-            session.receive(OptimizedJsonMapper.toJson(EventCmd(event)))
-        } finally {
-            session.close()
-        }
-    }
 
     override fun close() = server.close()
 }

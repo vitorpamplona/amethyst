@@ -51,14 +51,14 @@ import kotlin.test.assertNotNull
  *    passes that `isExpired()` returns true on read).
  */
 class Nip40ExpirationTest {
-    private lateinit var hub: RelayHub
+    private lateinit var hub: InProcessRelays
     private lateinit var scope: CoroutineScope
     private lateinit var client: NostrClient
     private val relayUrl: NormalizedRelayUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/")
 
     @BeforeTest
     fun setup() {
-        hub = RelayHub()
+        hub = InProcessRelays()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         client = NostrClient(hub, scope)
     }

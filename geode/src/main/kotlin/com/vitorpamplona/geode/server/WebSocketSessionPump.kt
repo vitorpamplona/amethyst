@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Per-WebSocket pump that owns the bounded outbound queue and the
- * writer coroutine. Pulled out of `LocalRelayServer` so that file
+ * writer coroutine. Pulled out of `KtorRelay` so that file
  * stays focused on Ktor wiring; the slow-client / backpressure
  * policy now lives next to the data structures it manages.
  *

@@ -65,7 +65,7 @@ data class RelayInfo(
         val SUPPORTED_NIPS: List<String> =
             listOf("1", "9", "11", "40", "42", "45", "50", "62", "77", "86")
 
-        /** Pre-built default for `Relay(url = ...)` — advertises the supported NIPs. */
+        /** Pre-built default for `RelayEngine(url = ...)` — advertises the supported NIPs. */
         fun default(url: NormalizedRelayUrl): RelayInfo =
             RelayInfo(
                 Nip11RelayInformation(

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.geode.testing
 
-import com.vitorpamplona.geode.Relay
-import com.vitorpamplona.geode.RelayHub
+import com.vitorpamplona.geode.InProcessRelays
+import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +32,7 @@ import org.junit.After
 
 /**
  * Base class for tests that drive a real [NostrClient] against an
- * in-process [RelayHub]. Owns the lifecycle of the four pieces every
+ * in-process [InProcessRelays]. Owns the lifecycle of the four pieces every
  * such test needs:
  *
  *  - [hub] — the registry of in-process relays (also serves as
@@ -59,15 +59,15 @@ import org.junit.After
  * ```
  */
 open class RelayClientTest {
-    val hub: RelayHub = RelayHub()
+    val hub: InProcessRelays = InProcessRelays()
     val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     val client: NostrClient = NostrClient(hub, scope)
 
-    /** Stable URL for the single-relay case — see [RelayHub.DEFAULT_URL]. */
-    val defaultRelayUrl: NormalizedRelayUrl get() = RelayHub.DEFAULT_URL
+    /** Stable URL for the single-relay case — see [InProcessRelays.DEFAULT_URL]. */
+    val defaultRelayUrl: NormalizedRelayUrl get() = InProcessRelays.DEFAULT_URL
 
     /** Lazy handle to the relay at [defaultRelayUrl]. Auto-created on first read. */
-    val defaultRelay: Relay get() = hub.getOrCreate(defaultRelayUrl)
+    val defaultRelay: RelayEngine get() = hub.getOrCreate(defaultRelayUrl)
 
     @After
     fun tearDownRelayClientTest() {

@@ -42,7 +42,7 @@ import kotlin.test.assertEquals
 
 /**
  * Verifies NIP-09 deletion request behavior end-to-end through
- * `NostrClient` → `RelayHub`. The relay's
+ * `NostrClient` → `InProcessRelays`. The relay's
  * [com.vitorpamplona.quartz.nip01Core.store.sqlite.DeletionRequestModule]
  * is responsible for honouring kind-5 events:
  *
@@ -54,14 +54,14 @@ import kotlin.test.assertEquals
  *     pubkey X cannot delete pubkey Y's events.
  */
 class Nip09DeletionTest {
-    private lateinit var hub: RelayHub
+    private lateinit var hub: InProcessRelays
     private lateinit var scope: CoroutineScope
     private lateinit var client: NostrClient
     private val relayUrl: NormalizedRelayUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/")
 
     @BeforeTest
     fun setup() {
-        hub = RelayHub()
+        hub = InProcessRelays()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         client = NostrClient(hub, scope)
     }

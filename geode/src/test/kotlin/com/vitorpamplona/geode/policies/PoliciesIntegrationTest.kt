@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.geode.policies
 
-import com.vitorpamplona.geode.RelayHub
+import com.vitorpamplona.geode.InProcessRelays
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -44,7 +44,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * End-to-end through `NostrClient → RelayHub → Relay` with the policies
+ * End-to-end through `NostrClient → InProcessRelays → Relay` with the policies
  * actually wired into the relay. Proves an EVENT command sent on the
  * wire surfaces an OK false response when the policy rejects.
  */
@@ -63,8 +63,8 @@ class PoliciesIntegrationTest {
     }
 
     /** Spin up a hub whose only relay uses the supplied policy factory. */
-    private fun hubWith(policyFactory: () -> IRelayPolicy): Pair<NostrClient, RelayHub> {
-        val hub = RelayHub(defaultPolicy = policyFactory)
+    private fun hubWith(policyFactory: () -> IRelayPolicy): Pair<NostrClient, InProcessRelays> {
+        val hub = InProcessRelays(defaultPolicy = policyFactory)
         // Materialise the relay so the URL resolves in the hub.
         hub.getOrCreate(relayUrl)
         return NostrClient(hub, scope) to hub

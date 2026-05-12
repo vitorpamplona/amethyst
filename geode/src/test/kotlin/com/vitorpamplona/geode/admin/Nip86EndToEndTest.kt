@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.geode.admin
 
-import com.vitorpamplona.geode.LocalRelayServer
-import com.vitorpamplona.geode.Relay
+import com.vitorpamplona.geode.KtorRelay
+import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -53,14 +53,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Drives a real `LocalRelayServer` over HTTP and proves the NIP-86
+ * Drives a real `KtorRelay` over HTTP and proves the NIP-86
  * admin RPC flow works end-to-end: NIP-98 auth, admin allow-list
  * gate, ban mutation, and the resulting policy effect on a follow-up
  * EVENT publish.
  */
 class Nip86EndToEndTest {
-    private lateinit var relay: Relay
-    private lateinit var server: LocalRelayServer
+    private lateinit var relay: RelayEngine
+    private lateinit var server: KtorRelay
     private lateinit var scope: CoroutineScope
     private lateinit var nostrClient: NostrClient
 
@@ -73,9 +73,9 @@ class Nip86EndToEndTest {
     @BeforeTest
     fun setup() {
         val placeholder = "ws://127.0.0.1:7771/".normalizeRelayUrl()
-        relay = Relay(url = placeholder)
+        relay = RelayEngine(url = placeholder)
         server =
-            LocalRelayServer(
+            KtorRelay(
                 relay = relay,
                 host = "127.0.0.1",
                 port = 0,
@@ -200,9 +200,9 @@ class Nip86EndToEndTest {
         runBlocking {
             // Spin up a *separate* server with no admin pubkeys.
             val placeholder = "ws://127.0.0.1:7771/".normalizeRelayUrl()
-            val openRelay = Relay(url = placeholder)
+            val openRelay = RelayEngine(url = placeholder)
             val openServer =
-                LocalRelayServer(openRelay, host = "127.0.0.1", port = 0).start()
+                KtorRelay(openRelay, host = "127.0.0.1", port = 0).start()
             try {
                 val openHttpUrl = openServer.url.replace("ws://", "http://")
                 val body =

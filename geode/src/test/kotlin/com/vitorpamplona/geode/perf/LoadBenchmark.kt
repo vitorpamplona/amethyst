@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.geode.perf
 
-import com.vitorpamplona.geode.LocalRelayServer
-import com.vitorpamplona.geode.Relay
+import com.vitorpamplona.geode.KtorRelay
+import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -801,10 +801,10 @@ class LoadBenchmark {
         }
 
     /** Spin up an isolated relay + http client per scenario. */
-    private inline fun runBenchmarkServer(block: (LocalRelayServer, OkHttpClient) -> Unit) {
+    private inline fun runBenchmarkServer(block: (KtorRelay, OkHttpClient) -> Unit) {
         val placeholder = "ws://127.0.0.1:7771/".normalizeRelayUrl()
-        val relay = Relay(url = placeholder)
-        val server = LocalRelayServer(relay, host = "127.0.0.1", port = 0).start()
+        val relay = RelayEngine(url = placeholder)
+        val server = KtorRelay(relay, host = "127.0.0.1", port = 0).start()
         val http =
             OkHttpClient
                 .Builder()

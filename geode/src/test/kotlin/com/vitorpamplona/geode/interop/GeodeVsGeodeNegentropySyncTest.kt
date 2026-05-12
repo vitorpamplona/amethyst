@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.geode.interop
 
-import com.vitorpamplona.geode.LocalRelayServer
-import com.vitorpamplona.geode.Relay
+import com.vitorpamplona.geode.KtorRelay
+import com.vitorpamplona.geode.RelayEngine
+import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -72,10 +73,10 @@ import kotlin.test.assertTrue
  * small scale. Larger corpora belong in `LoadBenchmark`.
  */
 class GeodeVsGeodeNegentropySyncTest {
-    private lateinit var relayA: Relay
-    private lateinit var relayB: Relay
-    private lateinit var serverA: LocalRelayServer
-    private lateinit var serverB: LocalRelayServer
+    private lateinit var relayA: RelayEngine
+    private lateinit var relayB: RelayEngine
+    private lateinit var serverA: KtorRelay
+    private lateinit var serverB: KtorRelay
     private lateinit var scope: CoroutineScope
     private lateinit var client: NostrClient
     private val httpClient = OkHttpClient.Builder().build()
@@ -84,10 +85,10 @@ class GeodeVsGeodeNegentropySyncTest {
     fun setup() {
         // The placeholder URLs are normalised so the relay accepts
         // them; ports come from the autobind below via [server.url].
-        relayA = Relay(url = "ws://127.0.0.1:7771/".normalizeRelayUrl())
-        relayB = Relay(url = "ws://127.0.0.1:7772/".normalizeRelayUrl())
-        serverA = LocalRelayServer(relayA, host = "127.0.0.1", port = 0).start()
-        serverB = LocalRelayServer(relayB, host = "127.0.0.1", port = 0).start()
+        relayA = RelayEngine(url = "ws://127.0.0.1:7771/".normalizeRelayUrl())
+        relayB = RelayEngine(url = "ws://127.0.0.1:7772/".normalizeRelayUrl())
+        serverA = KtorRelay(relayA, host = "127.0.0.1", port = 0).start()
+        serverB = KtorRelay(relayB, host = "127.0.0.1", port = 0).start()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         client = NostrClient(BasicOkHttpWebSocket.Builder { _ -> httpClient }, scope)
     }

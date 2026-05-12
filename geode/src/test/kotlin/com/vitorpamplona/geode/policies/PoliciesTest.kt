@@ -36,7 +36,7 @@ import kotlin.test.fail
  * single hit, collision between allow + deny, etc.).
  *
  * The end-to-end "policy is applied through the Ktor server" coverage
- * lives in `LocalRelayServerTest` / `Nip01ComplianceTest` — these tests
+ * lives in `KtorRelayTest` / `Nip01ComplianceTest` — these tests
  * just exercise the policy in isolation.
  */
 class PoliciesTest {

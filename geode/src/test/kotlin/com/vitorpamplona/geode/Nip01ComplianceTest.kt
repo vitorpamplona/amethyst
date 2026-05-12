@@ -24,6 +24,8 @@ import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.geode.testing.collectUntilEose
 import com.vitorpamplona.geode.testing.collectUntilEoseMulti
+import com.vitorpamplona.geode.testing.preload
+import com.vitorpamplona.geode.testing.publish
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener

@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Registry of [Relay] instances keyed by relay URL. Implements
+ * Registry of [RelayEngine] instances keyed by relay URL. Implements
  * [WebsocketBuilder] so it can be plugged into
  * [com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient] in place of
  * `BasicOkHttpWebSocket.Builder` to redirect every outbound connection to an
@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Usage:
  * ```
- * val hub = RelayHub()
+ * val hub = InProcessRelays()
  * val relay = hub.getOrCreate("ws://test.relay/")
  * runBlocking { relay.preload(listOf(event1, event2)) }
  * val client = NostrClient(hub, scope)
@@ -49,20 +49,20 @@ import java.util.concurrent.ConcurrentHashMap
  * Unknown URLs auto-create an empty relay so a single hub can transparently
  * back any number of test endpoints.
  */
-class RelayHub(
+class InProcessRelays(
     private val defaultPolicy: () -> IRelayPolicy = { EmptyPolicy },
     private val negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : WebsocketBuilder,
     AutoCloseable {
-    private val relays = ConcurrentHashMap<NormalizedRelayUrl, Relay>()
+    private val relays = ConcurrentHashMap<NormalizedRelayUrl, RelayEngine>()
 
     @Volatile
     private var closed = false
 
-    fun getOrCreate(url: NormalizedRelayUrl): Relay {
-        check(!closed) { "RelayHub has been closed" }
+    fun getOrCreate(url: NormalizedRelayUrl): RelayEngine {
+        check(!closed) { "InProcessRelays has been closed" }
         return relays.getOrPut(url) {
-            Relay(
+            RelayEngine(
                 url = url,
                 policyBuilder = defaultPolicy,
                 negentropySettings = negentropySettings,
@@ -70,9 +70,9 @@ class RelayHub(
         }
     }
 
-    fun getOrCreate(url: String): Relay = getOrCreate(RelayUrlNormalizer.normalize(url))
+    fun getOrCreate(url: String): RelayEngine = getOrCreate(RelayUrlNormalizer.normalize(url))
 
-    fun get(url: NormalizedRelayUrl): Relay? = relays[url]
+    fun get(url: NormalizedRelayUrl): RelayEngine? = relays[url]
 
     fun urls(): Set<NormalizedRelayUrl> = relays.keys.toSet()
 

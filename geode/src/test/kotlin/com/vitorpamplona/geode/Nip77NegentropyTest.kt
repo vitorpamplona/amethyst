@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.geode
 
+import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -46,7 +47,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * End-to-end NIP-77 reconciliation through `RelayHub` + the
+ * End-to-end NIP-77 reconciliation through `InProcessRelays` + the
  * in-process WebSocket bridge.
  *
  *  - The relay is preloaded with a known set of events.
@@ -62,12 +63,12 @@ import kotlin.test.assertTrue
  * must surface a NEG-ERR from the relay.
  */
 class Nip77NegentropyTest {
-    private lateinit var hub: RelayHub
+    private lateinit var hub: InProcessRelays
     private val relayUrl: NormalizedRelayUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7770/")
 
     @BeforeTest
     fun setup() {
-        hub = RelayHub()
+        hub = InProcessRelays()
     }
 
     @AfterTest
@@ -82,7 +83,7 @@ class Nip77NegentropyTest {
      * tests — we drive the wire.
      */
     private class WireClient(
-        hub: RelayHub,
+        hub: InProcessRelays,
         url: NormalizedRelayUrl,
     ) {
         val incoming: Channel<String> = Channel(UNLIMITED)
@@ -252,7 +253,7 @@ class Nip77NegentropyTest {
             // Tiny cap so the test is fast. Preload more events than the
             // cap so NEG-OPEN must reject — strfry's parity behaviour for
             // `relay__negentropy__maxSyncEvents`.
-            val capped = RelayHub(negentropySettings = NegentropySettings(maxSyncEvents = 5))
+            val capped = InProcessRelays(negentropySettings = NegentropySettings(maxSyncEvents = 5))
             try {
                 val capUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7771/")
                 val events = makeEvents(20)
@@ -286,7 +287,7 @@ class Nip77NegentropyTest {
         runBlocking {
             // Cap = 2, so the third NEG-OPEN on one connection should
             // be rejected with a NOTICE (matching strfry's wording).
-            val capped = RelayHub(negentropySettings = NegentropySettings(maxSessionsPerConnection = 2))
+            val capped = InProcessRelays(negentropySettings = NegentropySettings(maxSessionsPerConnection = 2))
             try {
                 val capUrl = RelayUrlNormalizer.normalize("ws://127.0.0.1:7772/")
                 capped.getOrCreate(capUrl).preload(makeEvents(3))

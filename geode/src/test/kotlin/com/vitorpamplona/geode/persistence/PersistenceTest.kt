@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.geode.persistence
 
-import com.vitorpamplona.geode.Relay
+import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import java.io.File
@@ -50,7 +50,7 @@ class PersistenceTest {
 
     @Test
     fun firstBootWritesNothingUntilFirstMutation() {
-        val relay = Relay(url = url, stateFile = stateFile)
+        val relay = RelayEngine(url = url, stateFile = stateFile)
         try {
             // No mutation yet → file does not exist.
             assertTrue(!stateFile.exists(), "fresh relay must not eagerly write a snapshot")
@@ -62,7 +62,7 @@ class PersistenceTest {
     @Test
     fun banPubkeyTriggersSnapshotAndSurvivesRestart() {
         val pk = "a".repeat(64)
-        val r1 = Relay(url = url, stateFile = stateFile)
+        val r1 = RelayEngine(url = url, stateFile = stateFile)
         try {
             r1.banStore.banPubkey(pk, "spam")
         } finally {
@@ -71,7 +71,7 @@ class PersistenceTest {
         assertTrue(stateFile.exists(), "snapshot must be written after a mutation")
 
         // Fresh relay reads the snapshot and sees the ban.
-        val r2 = Relay(url = url, stateFile = stateFile)
+        val r2 = RelayEngine(url = url, stateFile = stateFile)
         try {
             assertTrue(r2.banStore.isBanned(pk))
             assertEquals("spam", r2.banStore.listBannedPubkeys()[0].second)
@@ -82,14 +82,14 @@ class PersistenceTest {
 
     @Test
     fun updateInfoSurvivesRestart() {
-        val r1 = Relay(url = url, stateFile = stateFile)
+        val r1 = RelayEngine(url = url, stateFile = stateFile)
         try {
             r1.updateInfo { it.copy(name = "renamed") }
         } finally {
             r1.close()
         }
 
-        val r2 = Relay(url = url, stateFile = stateFile)
+        val r2 = RelayEngine(url = url, stateFile = stateFile)
         try {
             assertEquals("renamed", r2.info.document.name)
         } finally {
@@ -99,7 +99,7 @@ class PersistenceTest {
 
     @Test
     fun allowKindRoundTripsAcrossRestart() {
-        val r1 = Relay(url = url, stateFile = stateFile)
+        val r1 = RelayEngine(url = url, stateFile = stateFile)
         try {
             r1.banStore.allowKind(1)
             r1.banStore.allowKind(7)
@@ -108,7 +108,7 @@ class PersistenceTest {
             r1.close()
         }
 
-        val r2 = Relay(url = url, stateFile = stateFile)
+        val r2 = RelayEngine(url = url, stateFile = stateFile)
         try {
             assertEquals(listOf(1, 7), r2.banStore.listAllowedKinds())
             assertEquals(listOf(4), r2.banStore.listDisallowedKinds())
@@ -121,7 +121,7 @@ class PersistenceTest {
     fun corruptStateFileIsTolerated() {
         stateFile.writeText("not valid json {")
         // Should not throw — just log and start fresh.
-        val r = Relay(url = url, stateFile = stateFile)
+        val r = RelayEngine(url = url, stateFile = stateFile)
         try {
             assertTrue(r.banStore.listBannedPubkeys().isEmpty())
             assertTrue(r.banStore.listAllowedKinds().isEmpty())
@@ -133,7 +133,7 @@ class PersistenceTest {
     @Test
     fun snapshotWriteIsAtomicViaTempFile() {
         // After a mutation completes, no `.tmp` file should remain.
-        val r = Relay(url = url, stateFile = stateFile)
+        val r = RelayEngine(url = url, stateFile = stateFile)
         try {
             r.banStore.banPubkey("b".repeat(64))
             val tmp = File(dir, "admin.json.tmp")
@@ -145,7 +145,7 @@ class PersistenceTest {
 
     @Test
     fun missingStateFileMeansInMemoryOnly() {
-        val r = Relay(url = url) // no stateFile
+        val r = RelayEngine(url = url) // no stateFile
         try {
             r.banStore.banPubkey("c".repeat(64))
             // No snapshot path → nothing on disk in our temp dir.

@@ -93,7 +93,7 @@ on each batch before opening the SQLite transaction. Failed
 verifies pre-mark `Rejected` and skip the insert.
 
 Wired through `NostrServer(parallelVerify = ...)` and
-`geode.Relay(parallelVerify = ...)`, controlled by
+`geode.RelayEngine(parallelVerify = ...)`, controlled by
 `[options].parallel_verify` in the relay config (default `true`)
 and `--no-parallel-verify` on the CLI. Internal direct callers of
 `NostrServer` (tests, library users) are opt-in: the flag defaults

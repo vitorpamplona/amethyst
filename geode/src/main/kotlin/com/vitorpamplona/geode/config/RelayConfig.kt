@@ -198,7 +198,7 @@ data class RelayConfig(
 
     /**
      * NIP-86 relay management API. When [pubkeys] is non-empty,
-     * `LocalRelayServer` exposes a POST endpoint at the relay path
+     * `KtorRelay` exposes a POST endpoint at the relay path
      * that accepts JSON-RPC admin requests authenticated via NIP-98
      * HTTP-Auth. Only requests signed by one of these pubkeys are
      * dispatched.

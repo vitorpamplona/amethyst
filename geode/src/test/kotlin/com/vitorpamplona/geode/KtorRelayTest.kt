@@ -21,6 +21,8 @@
 package com.vitorpamplona.geode
 
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
+import com.vitorpamplona.geode.testing.preload
+import com.vitorpamplona.geode.testing.publish
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -38,6 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlin.test.AfterTest
@@ -49,7 +52,7 @@ import kotlin.test.assertTrue
 
 /**
  * End-to-end tests that drive a real `ws://` connection between the
- * production [NostrClient] (over OkHttp) and the [LocalRelayServer]
+ * production [NostrClient] (over OkHttp) and the [KtorRelay]
  * (Ktor + CIO). These prove the relay implements:
  *
  *  - NIP-01 wire protocol (REQ/EVENT/EOSE) over real WebSockets
@@ -62,9 +65,9 @@ import kotlin.test.assertTrue
  * Tests use port 0 for autobind to avoid conflicts when multiple suites
  * run in parallel.
  */
-class LocalRelayServerTest {
-    private lateinit var relay: Relay
-    private lateinit var server: LocalRelayServer
+class KtorRelayTest {
+    private lateinit var relay: RelayEngine
+    private lateinit var server: KtorRelay
     private lateinit var scope: CoroutineScope
     private lateinit var client: NostrClient
 
@@ -76,8 +79,8 @@ class LocalRelayServerTest {
         // must be resolvable by the Nostr URL normalizer, which only
         // accepts loopback addresses. 127.0.0.1 qualifies.
         val placeholderUrl = "ws://127.0.0.1:7771/".normalizeRelayUrl()
-        relay = Relay(url = placeholderUrl)
-        server = LocalRelayServer(relay, host = "127.0.0.1", port = 0).start()
+        relay = RelayEngine(url = placeholderUrl)
+        server = KtorRelay(relay, host = "127.0.0.1", port = 0).start()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val builder = BasicOkHttpWebSocket.Builder { _ -> httpClient }
         client = NostrClient(builder, scope)
@@ -191,8 +194,8 @@ class LocalRelayServerTest {
             // Spin up a second relay that requires AUTH. Bind on a
             // separate port so it doesn't collide with [setup]'s server.
             val authUrl = "ws://127.0.0.1:7772/".normalizeRelayUrl()
-            val authRelay = Relay(authUrl, policyBuilder = { FullAuthPolicy(authUrl) })
-            val authServer = LocalRelayServer(authRelay, host = "127.0.0.1", port = 0).start()
+            val authRelay = RelayEngine(authUrl, policyBuilder = { FullAuthPolicy(authUrl) })
+            val authServer = KtorRelay(authRelay, host = "127.0.0.1", port = 0).start()
             try {
                 val signer =
                     com.vitorpamplona.quartz.nip01Core.signers
@@ -228,8 +231,8 @@ class LocalRelayServerTest {
             val freePort =
                 java.net.ServerSocket(0).use { it.localPort }
             val authUrl = "ws://127.0.0.1:$freePort/".normalizeRelayUrl()
-            val authRelay = Relay(authUrl, policyBuilder = { FullAuthPolicy(authUrl) })
-            val authServer = LocalRelayServer(authRelay, host = "127.0.0.1", port = freePort).start()
+            val authRelay = RelayEngine(authUrl, policyBuilder = { FullAuthPolicy(authUrl) })
+            val authServer = KtorRelay(authRelay, host = "127.0.0.1", port = freePort).start()
             try {
                 val signer =
                     com.vitorpamplona.quartz.nip01Core.signers
@@ -334,9 +337,9 @@ class LocalRelayServerTest {
                     supported_nips = listOf("1", "11", "42"),
                 ),
             )
-        val customRelay = Relay(customUrl, info = customInfo)
+        val customRelay = RelayEngine(customUrl, info = customInfo)
         val customServer =
-            LocalRelayServer(customRelay, host = "127.0.0.1", port = freePort).start()
+            KtorRelay(customRelay, host = "127.0.0.1", port = freePort).start()
         try {
             val httpUrl = customServer.url.replace("ws://", "http://")
             val response =
@@ -405,7 +408,7 @@ class LocalRelayServerTest {
             val late = signer.sign(TextNoteEvent.build("post-close"))
             relay.publish(late)
 
-            val seen = kotlinx.coroutines.withTimeoutOrNull(500) { ch.receive() }
+            val seen = withTimeoutOrNull(500) { ch.receive() }
             assertEquals(null, seen, "events arriving after CLOSE must not reach the unsubscribed client")
         }
 }
