@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -860,10 +861,10 @@ open class Note(
             return true
         }
 
-        // if this note belongs to a muted thread (by NIP-10 root id)
-        if (accountChoices.mutedThreads.isNotEmpty()) {
-            val rootId = (thisEvent as? BaseThreadedEvent)?.root()?.eventId ?: idHex
-            if (accountChoices.mutedThreads.contains(rootId)) return true
+        if (accountChoices.mutedThreads.isNotEmpty() &&
+            accountChoices.mutedThreads.contains(thisEvent.threadRootIdOrSelf())
+        ) {
+            return true
         }
 
         // if the post is sensitive and the user doesn't want to see sensitive content

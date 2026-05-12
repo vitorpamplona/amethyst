@@ -225,11 +225,8 @@ class NotificationFeedFilter(
                 }
             }
 
-        // Drop reactions/zaps/reposts whose target post is in a muted thread.
-        // The inner-note renderer would otherwise show a misleading
-        // "This post was hidden because it mentions your hidden users or words"
-        // placeholder for muted-thread targets (regression from Task 6's
-        // Note.isHiddenFor extension).
+        // Reactions/zaps/reposts target a note via `replyTo`, not via thread-root tags,
+        // so isNotInMutedThread on the wrapper event misses them.
         if (noteEvent is ReactionEvent || noteEvent is LnZapEvent ||
             noteEvent is RepostEvent || noteEvent is GenericRepostEvent
         ) {

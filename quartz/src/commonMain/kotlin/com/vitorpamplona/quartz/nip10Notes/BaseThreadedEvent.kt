@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip10Notes
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
@@ -29,6 +30,8 @@ import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
+
+fun Event.threadRootIdOrSelf(): HexKey = (this as? BaseThreadedEvent)?.root()?.eventId ?: id
 
 @Immutable
 open class BaseThreadedEvent(

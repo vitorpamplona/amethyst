@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -46,8 +46,7 @@ class FilterByListParams(
 
     fun isNotInMutedThread(noteEvent: Event): Boolean {
         if (hiddenLists.mutedThreads.isEmpty()) return true
-        val rootId = (noteEvent as? BaseThreadedEvent)?.root()?.eventId ?: noteEvent.id
-        return !hiddenLists.mutedThreads.contains(rootId)
+        return !hiddenLists.mutedThreads.contains(noteEvent.threadRootIdOrSelf())
     }
 
     fun isNotInTheFuture(noteEvent: Event) = noteEvent.createdAt <= now

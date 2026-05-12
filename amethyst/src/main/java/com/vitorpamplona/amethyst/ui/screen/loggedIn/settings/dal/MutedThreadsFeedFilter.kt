@@ -34,6 +34,6 @@ class MutedThreadsFeedFilter(
 
     override fun feed(): List<Note> =
         account.hiddenUsers.flow.value.mutedThreads
-            .mapNotNull { LocalCache.getNoteIfExists(it) ?: LocalCache.getOrCreateNote(it) }
+            .map { LocalCache.getOrCreateNote(it) }
             .sortedByDescending { it.createdAt() }
 }
