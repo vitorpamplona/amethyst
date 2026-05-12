@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip51Lists.muteList
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
@@ -36,3 +37,9 @@ fun TagArray.mutedUserIdSet() = mapNotNullTo(mutableSetOf(), UserTag::parseKey)
 fun TagArray.mutedWords() = mapNotNull(WordTag::parse)
 
 fun TagArray.mutedWordSet() = mapNotNullTo(mutableSetOf(), WordTag::parse)
+
+fun TagArray.mutedThreads() = mapNotNull(EventTag::parse)
+
+fun TagArray.mutedThreadIds() = mapNotNull(EventTag::parseId)
+
+fun TagArray.mutedThreadIdSet() = mapNotNullTo(mutableSetOf(), EventTag::parseId)

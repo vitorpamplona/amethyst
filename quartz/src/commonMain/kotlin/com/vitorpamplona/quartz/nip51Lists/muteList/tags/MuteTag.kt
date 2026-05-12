@@ -28,8 +28,8 @@ sealed interface MuteTag {
     fun toTagIdOnly(): Tag
 
     companion object {
-        fun isTagged(tag: Array<String>) = WordTag.isTagged(tag) || UserTag.isTagged(tag)
+        fun isTagged(tag: Array<String>) = WordTag.isTagged(tag) || UserTag.isTagged(tag) || EventTag.isTagged(tag)
 
-        fun parse(tag: Array<String>): MuteTag? = WordTag.parse(tag) ?: UserTag.parse(tag)
+        fun parse(tag: Array<String>): MuteTag? = WordTag.parse(tag) ?: UserTag.parse(tag) ?: EventTag.parse(tag)
     }
 }
