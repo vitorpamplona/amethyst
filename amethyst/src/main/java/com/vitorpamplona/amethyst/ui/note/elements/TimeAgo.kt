@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,7 +45,16 @@ fun TimeAgo(note: Note) {
 @Composable
 fun TimeAgo(time: Long) {
     val context = LocalContext.current
-    val timeStr by remember(time) { mutableStateOf(timeAgo(time, context = context)) }
+    // Subscribe to the shared coarse ticker; `derivedStateOf` ensures the Text only
+    // recomposes when the formatted string actually flips (e.g. 1m → 2m), not on every tick.
+    val nowState = LocalNowSeconds.current
+    val timeStr by
+        remember(time, context, nowState) {
+            derivedStateOf {
+                nowState.value
+                timeAgo(time, context = context)
+            }
+        }
 
     Text(
         text = timeStr,
@@ -61,9 +69,15 @@ fun NormalTimeAgo(
     modifier: Modifier,
 ) {
     val nowStr = stringRes(id = R.string.now)
+    val nowState = LocalNowSeconds.current
 
     val time by
-        remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0L, nowStr) } }
+        remember(baseNote, nowStr, nowState) {
+            derivedStateOf {
+                nowState.value
+                timeAgoShort(baseNote.createdAt() ?: 0L, nowStr)
+            }
+        }
 
     Text(
         text = time,
