@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.geode
 
+import com.vitorpamplona.geode.config.RuntimeConfig
+import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.geode.testing.publish
@@ -337,7 +339,15 @@ class KtorRelayTest {
                     supported_nips = listOf("1", "11", "42"),
                 ),
             )
-        val customRelay = RelayEngine(customUrl, info = customInfo)
+        val customRelay =
+            RelayEngine(
+                customUrl,
+                runtimeConfig =
+                    RuntimeConfig(
+                        file = null,
+                        seed = RuntimeConfigData(info = customInfo.document),
+                    ),
+            )
         val customServer =
             KtorRelay(customRelay, host = "127.0.0.1", port = freePort).start()
         try {

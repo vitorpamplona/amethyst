@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.geode
 
-import com.vitorpamplona.geode.config.AuthorizationSeed
 import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
@@ -35,7 +34,6 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanListPolicy
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import kotlinx.coroutines.SupervisorJob
-import java.io.File
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -58,34 +56,26 @@ import kotlin.coroutines.CoroutineContext
 class RelayEngine(
     val url: NormalizedRelayUrl,
     val store: IEventStore = EventStore(dbName = null, relay = url),
-    info: RelayInfo = RelayInfo.default(url),
+    /**
+     * Runtime configuration handle — owns the persistence path (when
+     * any), the NIP-11 doc seed, and the seed for the NIP-86 ban /
+     * allow / kind lists. Mirrors how [store] is built externally and
+     * passed in: tests use the in-memory default
+     * (`RuntimeConfig(file=null, seed=...)`); `Main.kt` builds one
+     * from `StaticConfig` so first-boot defaults flow from TOML and
+     * subsequent admin mutations are persisted next to the SQLite
+     * event store.
+     *
+     * The default constructs an in-memory-only handle whose seed
+     * advertises the supported NIPs via [RelayInfo.default].
+     */
+    private val runtimeConfig: RuntimeConfig =
+        RuntimeConfig(
+            file = null,
+            seed = RuntimeConfigData(info = RelayInfo.default(url).document),
+        ),
     policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
-    /**
-     * Optional path for the operator-state JSON snapshot. When set,
-     * the file is loaded at boot to seed [info] and [banStore], and
-     * rewritten atomically on every NIP-86 mutation and
-     * [updateInfo] call so admin actions survive restarts.
-     *
-     * Convention: place next to the SQLite event-store file
-     * (e.g. `events.db` → `events.db.admin.json`). `null` keeps
-     * everything in memory only — fine for tests.
-     */
-    stateFile: File? = null,
-    /**
-     * Static-config-derived allow / deny seed for the [BanStore].
-     * Used only on first boot — i.e. when [stateFile] doesn't yet
-     * exist. Once an admin RPC writes the file, the persisted snapshot
-     * is the sole source of truth and this seed is ignored on every
-     * subsequent boot.
-     *
-     * Pair with omitting `KindAllowDenyPolicy` / `PubkeyAllowDenyPolicy`
-     * from [policyBuilder] — [BanListPolicy] (always installed) reads
-     * the same lists from the [BanStore], so stacking the static
-     * policies would double-enforce the same rules at boot and then
-     * silently diverge after the first admin mutation.
-     */
-    seedAuthorization: AuthorizationSeed = AuthorizationSeed(),
     /**
      * Run Schnorr signature verification in parallel inside the
      * [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue]
@@ -103,25 +93,11 @@ class RelayEngine(
      */
     negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : AutoCloseable {
-    private val runtimeConfig: RuntimeConfig =
-        RuntimeConfig(
-            file = stateFile,
-            seed =
-                RuntimeConfigData(
-                    info = info.document,
-                    allowedPubkeys = seedAuthorization.allowedPubkeys.map { BannedEntry(it) },
-                    bannedPubkeys = seedAuthorization.bannedPubkeys.map { BannedEntry(it) },
-                    allowedKinds = seedAuthorization.allowedKinds,
-                    disallowedKinds = seedAuthorization.disallowedKinds,
-                ),
-        )
-
     /**
      * The runtime state to install at boot: the persisted snapshot if
-     * the file exists, otherwise the seed derived from
-     * [com.vitorpamplona.geode.config.StaticConfig]. Read once here
-     * so the `info` property initializer and the [banStore] seeding
-     * in [init] agree on the same source.
+     * the file exists, otherwise the seed baked into [runtimeConfig].
+     * Read once here so the `info` property initializer and the
+     * [banStore] seeding in [init] agree on the same source.
      */
     private val effectiveAtBoot: RuntimeConfigData = runtimeConfig.effective()
 
@@ -132,11 +108,11 @@ class RelayEngine(
      * request so changes are visible immediately, no restart needed.
      *
      * Initialized from [effectiveAtBoot] — a persisted admin override
-     * wins, otherwise we fall back to the static-config seed. The
-     * `!!` is load-bearing: the seed is always built with a non-null
-     * info above, so the only way we reach a null here is a manually
-     * corrupted state file, which we'd rather crash on than serve
-     * empty NIP-11 from.
+     * wins, otherwise we fall back to the seed baked into
+     * [runtimeConfig]. The `!!` is load-bearing: the seed is always
+     * built with a non-null info, so the only way we reach a null
+     * here is a manually corrupted state file, which we'd rather
+     * crash on than serve empty NIP-11 from.
      */
     @Volatile
     var info: RelayInfo = RelayInfo(effectiveAtBoot.info!!)

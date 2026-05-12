@@ -21,6 +21,7 @@
 package com.vitorpamplona.geode.config
 
 import com.vitorpamplona.geode.RelayEngine
+import com.vitorpamplona.geode.RelayInfo
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import java.io.File
@@ -48,9 +49,15 @@ class RuntimeConfigTest {
         dir.deleteRecursively()
     }
 
+    /** Default RuntimeConfigData seed for tests: just an info doc, no authorization seeds. */
+    private fun defaultSeed(info: Nip11RelayInformation = RelayInfo.default(url).document) = RuntimeConfigData(info = info)
+
+    /** RelayEngine bound to [stateFile] with the given (or default) seed. */
+    private fun relayPersisted(seed: RuntimeConfigData = defaultSeed()) = RelayEngine(url = url, runtimeConfig = RuntimeConfig(file = stateFile, seed = seed))
+
     @Test
     fun firstBootWritesNothingUntilFirstMutation() {
-        val relay = RelayEngine(url = url, stateFile = stateFile)
+        val relay = relayPersisted()
         try {
             // No mutation yet → file does not exist.
             assertTrue(!stateFile.exists(), "fresh relay must not eagerly write a snapshot")
@@ -62,7 +69,7 @@ class RuntimeConfigTest {
     @Test
     fun banPubkeyTriggersSnapshotAndSurvivesRestart() {
         val pk = "a".repeat(64)
-        val r1 = RelayEngine(url = url, stateFile = stateFile)
+        val r1 = relayPersisted()
         try {
             r1.banStore.banPubkey(pk, "spam")
         } finally {
@@ -71,7 +78,7 @@ class RuntimeConfigTest {
         assertTrue(stateFile.exists(), "snapshot must be written after a mutation")
 
         // Fresh relay reads the snapshot and sees the ban.
-        val r2 = RelayEngine(url = url, stateFile = stateFile)
+        val r2 = relayPersisted()
         try {
             assertTrue(r2.banStore.isBanned(pk))
             assertEquals("spam", r2.banStore.listBannedPubkeys()[0].second)
@@ -82,14 +89,14 @@ class RuntimeConfigTest {
 
     @Test
     fun updateInfoSurvivesRestart() {
-        val r1 = RelayEngine(url = url, stateFile = stateFile)
+        val r1 = relayPersisted()
         try {
             r1.updateInfo { it.copy(name = "renamed") }
         } finally {
             r1.close()
         }
 
-        val r2 = RelayEngine(url = url, stateFile = stateFile)
+        val r2 = relayPersisted()
         try {
             assertEquals("renamed", r2.info.document.name)
         } finally {
@@ -99,7 +106,7 @@ class RuntimeConfigTest {
 
     @Test
     fun allowKindRoundTripsAcrossRestart() {
-        val r1 = RelayEngine(url = url, stateFile = stateFile)
+        val r1 = relayPersisted()
         try {
             r1.banStore.allowKind(1)
             r1.banStore.allowKind(7)
@@ -108,7 +115,7 @@ class RuntimeConfigTest {
             r1.close()
         }
 
-        val r2 = RelayEngine(url = url, stateFile = stateFile)
+        val r2 = relayPersisted()
         try {
             assertEquals(listOf(1, 7), r2.banStore.listAllowedKinds())
             assertEquals(listOf(4), r2.banStore.listDisallowedKinds())
@@ -121,7 +128,7 @@ class RuntimeConfigTest {
     fun corruptStateFileIsTolerated() {
         stateFile.writeText("not valid json {")
         // Should not throw — just log and start fresh.
-        val r = RelayEngine(url = url, stateFile = stateFile)
+        val r = relayPersisted()
         try {
             assertTrue(r.banStore.listBannedPubkeys().isEmpty())
             assertTrue(r.banStore.listAllowedKinds().isEmpty())
@@ -133,7 +140,7 @@ class RuntimeConfigTest {
     @Test
     fun snapshotWriteIsAtomicViaTempFile() {
         // After a mutation completes, no `.tmp` file should remain.
-        val r = RelayEngine(url = url, stateFile = stateFile)
+        val r = relayPersisted()
         try {
             r.banStore.banPubkey("b".repeat(64))
             val tmp = File(dir, "admin.json.tmp")
@@ -145,7 +152,7 @@ class RuntimeConfigTest {
 
     @Test
     fun missingStateFileMeansInMemoryOnly() {
-        val r = RelayEngine(url = url) // no stateFile
+        val r = RelayEngine(url = url) // default runtimeConfig: file=null
         try {
             r.banStore.banPubkey("c".repeat(64))
             // No snapshot path → nothing on disk in our temp dir.
@@ -231,14 +238,11 @@ class RuntimeConfigTest {
         // First boot, no file → BanStore is seeded from static
         // authorization.
         val r1 =
-            RelayEngine(
-                url = url,
-                stateFile = stateFile,
-                seedAuthorization =
-                    AuthorizationSeed(
-                        bannedPubkeys = listOf(pk),
-                        allowedKinds = listOf(1, 7),
-                    ),
+            relayPersisted(
+                defaultSeed().copy(
+                    bannedPubkeys = listOf(BannedEntry(pk)),
+                    allowedKinds = listOf(1, 7),
+                ),
             )
         try {
             assertTrue(r1.banStore.isBanned(pk), "static-seed pubkey ban must apply on first boot")
@@ -251,7 +255,7 @@ class RuntimeConfigTest {
         assertTrue(!stateFile.exists(), "no admin mutation yet → no snapshot")
 
         // Trigger a mutation so the file gets written.
-        val r2 = RelayEngine(url = url, stateFile = stateFile)
+        val r2 = relayPersisted()
         try {
             r2.banStore.banPubkey("b".repeat(64))
         } finally {
@@ -262,14 +266,11 @@ class RuntimeConfigTest {
         // Now restart with a *different* static seed: it must be
         // ignored — the file is authoritative.
         val r3 =
-            RelayEngine(
-                url = url,
-                stateFile = stateFile,
-                seedAuthorization =
-                    AuthorizationSeed(
-                        bannedPubkeys = listOf("c".repeat(64)),
-                        allowedKinds = listOf(99),
-                    ),
+            relayPersisted(
+                defaultSeed().copy(
+                    bannedPubkeys = listOf(BannedEntry("c".repeat(64))),
+                    allowedKinds = listOf(99),
+                ),
             )
         try {
             assertTrue(r3.banStore.isBanned("b".repeat(64)), "persisted file ban must survive restart")
@@ -284,11 +285,8 @@ class RuntimeConfigTest {
     fun seedFromStaticConfigFlowsThroughToNip11Reply() {
         // End-to-end via RelayEngine: a static-derived info reaches the
         // engine's info property without any persisted runtime override.
-        val seeded =
-            com.vitorpamplona.geode.RelayInfo(
-                Nip11RelayInformation(name = "static-name", description = "static-desc"),
-            )
-        val engine = RelayEngine(url = url, info = seeded, stateFile = stateFile)
+        val seeded = Nip11RelayInformation(name = "static-name", description = "static-desc")
+        val engine = relayPersisted(defaultSeed(info = seeded))
         try {
             assertEquals("static-name", engine.info.document.name)
             assertEquals("static-desc", engine.info.document.description)

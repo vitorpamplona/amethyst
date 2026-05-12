@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.geode.config
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -139,19 +138,4 @@ data class RuntimeConfigData(
 data class BannedEntry(
     val key: String,
     val reason: String? = null,
-)
-
-/**
- * Static-config-derived seed for the operator allow / deny lists.
- * Built from [StaticConfig.AuthorizationSection] in `Main.kt` and
- * handed to [com.vitorpamplona.geode.RelayEngine], which composes it
- * with the static-derived NIP-11 doc into a [RuntimeConfigData] seed
- * for [RuntimeConfig]. Used only when no runtime file exists yet —
- * once an admin RPC has written one, the file wins forever.
- */
-data class AuthorizationSeed(
-    val allowedPubkeys: List<HexKey> = emptyList(),
-    val bannedPubkeys: List<HexKey> = emptyList(),
-    val allowedKinds: List<Int> = emptyList(),
-    val disallowedKinds: List<Int> = emptyList(),
 )

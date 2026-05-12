@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.geode
 
-import com.vitorpamplona.geode.config.AuthorizationSeed
+import com.vitorpamplona.geode.config.BannedEntry
+import com.vitorpamplona.geode.config.RuntimeConfig
+import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
@@ -110,18 +112,22 @@ fun main(args: Array<String>) {
         composePolicy(config, advertisedUrl, requireAuth, verifySigs, parallelVerify)
     }
 
-    val stateFile = config.admin.state_file?.let { File(it) }
     // Static [authorization] feeds the runtime BanStore only when no
     // state file exists yet. As soon as the operator's first admin RPC
     // writes the file, BanListPolicy consults the persisted lists
     // exclusively — later edits to [authorization] in the TOML are
     // ignored at boot.
-    val seedAuthorization =
-        AuthorizationSeed(
-            allowedPubkeys = config.authorization.pubkey_whitelist,
-            bannedPubkeys = config.authorization.pubkey_blacklist,
-            allowedKinds = config.authorization.kind_whitelist,
-            disallowedKinds = config.authorization.kind_blacklist,
+    val runtimeConfig =
+        RuntimeConfig(
+            file = config.admin.state_file?.let { File(it) },
+            seed =
+                RuntimeConfigData(
+                    info = info.document,
+                    allowedPubkeys = config.authorization.pubkey_whitelist.map { BannedEntry(it) },
+                    bannedPubkeys = config.authorization.pubkey_blacklist.map { BannedEntry(it) },
+                    allowedKinds = config.authorization.kind_whitelist,
+                    disallowedKinds = config.authorization.kind_blacklist,
+                ),
         )
     val negentropySettings =
         NegentropySettings(
@@ -133,10 +139,8 @@ fun main(args: Array<String>) {
         RelayEngine(
             advertisedUrl,
             store,
-            info,
+            runtimeConfig,
             policyBuilder,
-            stateFile = stateFile,
-            seedAuthorization = seedAuthorization,
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
         )
@@ -176,13 +180,6 @@ fun main(args: Array<String>) {
  *   1. AUTH (drops everything if not authenticated)
  *   2. Future-timestamp rejection
  *   3. Signature verification (most expensive — Schnorr verify)
- *
- * Pubkey and kind allow / deny lists are NOT installed here — they
- * live in the runtime [com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore],
- * which `RelayEngine` always wraps with `BanListPolicy`. The static
- * `[authorization]` section seeds the BanStore on first boot via
- * [com.vitorpamplona.geode.config.AuthorizationSeed]; afterwards
- * NIP-86 admin RPCs own those lists.
  */
 private fun composePolicy(
     config: StaticConfig,
