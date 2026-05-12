@@ -109,11 +109,6 @@ class AccountFeedContentStates(
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
-
-    // Split-notifications mode (Issue #197): when [AccountSettings.splitNotificationsEnabled]
-    // is on, the screen renders these two pinned-mode feeds in tabs instead of [notifications].
-    // Following = kind:3 follow list members only; Everyone = global. Both are always
-    // constructed so updateFeedsWith can fan out incoming events without rebuilding state.
     val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope)
     val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global), scope)
 
@@ -192,8 +187,10 @@ class AccountFeedContentStates(
         articlesFeed.updateFeedWith(newNotes)
 
         notifications.updateFeedWith(newNotes)
-        notificationsFollowing.updateFeedWith(newNotes)
-        notificationsEveryone.updateFeedWith(newNotes)
+        if (account.settings.splitNotificationsEnabled.value) {
+            notificationsFollowing.updateFeedWith(newNotes)
+            notificationsEveryone.updateFeedWith(newNotes)
+        }
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.updateFeedWith(newNotes)
@@ -242,8 +239,10 @@ class AccountFeedContentStates(
         articlesFeed.deleteFromFeed(newNotes)
 
         notifications.deleteFromFeed(newNotes)
-        notificationsFollowing.deleteFromFeed(newNotes)
-        notificationsEveryone.deleteFromFeed(newNotes)
+        if (account.settings.splitNotificationsEnabled.value) {
+            notificationsFollowing.deleteFromFeed(newNotes)
+            notificationsEveryone.deleteFromFeed(newNotes)
+        }
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.deleteFromFeed(newNotes)

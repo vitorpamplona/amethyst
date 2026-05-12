@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
@@ -319,16 +320,13 @@ class AccountViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
-        // Issue #197: when split-notifications is ON, the bottom-bar dot must glow only
-        // for items in the Following tab. When OFF, fall back to the user-selected single
-        // feed. Switch sources on the toggle flow so changing the setting takes effect
-        // without a restart.
+        // When split-notifications is on, the badge tracks only the Following feed.
         account.settings.splitNotificationsEnabled
             .flatMapLatest { isSplit ->
                 val source =
                     if (isSplit) feedStates.notificationsFollowing else feedStates.notifications
                 combineTransform(
-                    account.loadLastReadFlow("Notification"),
+                    account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY),
                     source.feedContent
                         .flatMapLatest {
                             if (it is CardFeedState.Loaded) {
@@ -347,7 +345,7 @@ class AccountViewModel(
                     } else {
                         feedStates.notifications
                     }
-                val lastRead = account.loadLastReadFlow("Notification").value
+                val lastRead = account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY).value
                 val cards = source.feedContent.value
                 if (cards is CardFeedState.Loaded) {
                     val newestItemCreatedAt =

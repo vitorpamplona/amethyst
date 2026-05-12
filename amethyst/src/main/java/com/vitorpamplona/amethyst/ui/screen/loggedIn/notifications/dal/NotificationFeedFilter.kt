@@ -81,13 +81,12 @@ class NotificationFeedFilter(
     val account: Account,
     val modeOverride: TopFilter? = null,
 ) : AdditiveFeedFilter<Note>() {
-    // When [modeOverride] is set (split-notifications tabs), build a dedicated
-    // IFeedTopNavFilter flow so this filter is independent of the user-controlled
-    // [Account.liveNotificationFollowLists]. The Following tab pins AllFollows; the
-    // Everyone tab pins Global. When the override is null we fall back to the
-    // shared, spinner-driven flow used by the single-feed layout.
-    private val overrideFollowLists: StateFlow<IFeedTopNavFilter>? =
+    // Pin to modeOverride for split-tab mode; otherwise follow the spinner.
+    // Lazy so the eagerly-collected topNavFilter pipeline is only built when
+    // the split UI actually opens this filter.
+    private val overrideFollowLists: StateFlow<IFeedTopNavFilter>? by lazy {
         modeOverride?.let { account.topNavFilterFlow(MutableStateFlow(it)) }
+    }
 
     companion object {
         val ADDRESSABLE_KINDS =

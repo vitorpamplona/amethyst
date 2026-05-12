@@ -20,11 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
@@ -33,15 +31,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
+import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -50,6 +49,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
+
+const val NOTIFICATION_LAST_READ_KEY = "Notification"
 
 @Composable
 fun NotificationScreen(
@@ -124,10 +125,7 @@ private fun SingleNotificationsScaffold(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            // DisappearingScaffold layers content under a translating topBar; without an
-            // opaque background, feed items scroll visibly through the SummaryBar gap
-            // between NotificationTopBar and the divider.
-            Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
+            Column {
                 NotificationTopBar(accountViewModel, nav, showSpinner = true)
                 SummaryBar(state = notifSummaryState)
             }
@@ -163,18 +161,13 @@ private fun SplitNotificationsScaffold(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState(pageCount = { 2 })
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.NOTIFICATION_SCREEN) { 2 }
     val coroutineScope = rememberCoroutineScope()
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            // Mirror HomeScreen: the TabRow lives in the topBar Column so it inherits
-            // the scaffold's status-bar inset handling and scrolls together with the
-            // title + summary instead of floating into the status bar area.
-            // Opaque background hides feed items that scroll under the topBar through
-            // the SummaryBar gap (which has no container of its own).
-            Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
+            Column {
                 NotificationTopBar(accountViewModel, nav, showSpinner = false)
                 SummaryBar(state = notifSummaryState)
                 SecondaryTabRow(
@@ -240,7 +233,7 @@ private fun SingleNotificationsBody(
             accountViewModel = accountViewModel,
             listState = listState,
             nav = nav,
-            routeForLastRead = "Notification",
+            routeForLastRead = NOTIFICATION_LAST_READ_KEY,
             scrollToEventId = scrollToEventId,
             headerContent = { ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav) },
         )
@@ -306,10 +299,7 @@ private fun NotificationPagerPage(
             accountViewModel = accountViewModel,
             listState = listState,
             nav = nav,
-            // Both tabs share the "Notification" last-read marker (Section H #7): the
-            // unread indicator is gated to the Following tab elsewhere, so a single
-            // marker keeps migration trivial and avoids a stale marker per tab.
-            routeForLastRead = "Notification",
+            routeForLastRead = NOTIFICATION_LAST_READ_KEY,
             scrollToEventId = scrollToEventId,
             headerContent = { ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav) },
         )

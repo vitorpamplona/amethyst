@@ -83,6 +83,7 @@ object PagerStateKeys {
     const val HOME_SCREEN = "PagerHome"
     const val DISCOVER_SCREEN = "PagerDiscover"
     const val POLLS_SCREEN = "PagerPolls"
+    const val NOTIFICATION_SCREEN = "PagerNotification"
 }
 
 @Composable

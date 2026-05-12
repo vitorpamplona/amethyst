@@ -52,8 +52,6 @@ fun NotificationTopBar(
                 onChange = accountViewModel.account.settings::changeDefaultNotificationFollowList,
             )
         } else {
-            // Split-notifications (Issue #197): tabs replace the list-filter spinner, so
-            // render a plain title in the top bar's content slot.
             Text(text = stringRes(R.string.route_notifications))
         }
     }
