@@ -66,8 +66,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteModifications
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -1783,23 +1783,25 @@ fun observeEdits(
             )
         }
 
-    val updatedNote by observeNoteEdits(baseNote, accountViewModel)
+    // Upstream resolves on IO and `distinctUntilChanged`s, so this LaunchedEffect only
+    // fires when the actual modification list changes — no more recomputing + reassigning
+    // editState on every unrelated emission of the edits flow.
+    val modifications by observeNoteModifications(baseNote, accountViewModel)
 
-    LaunchedEffect(key1 = updatedNote) {
-        updatedNote?.note?.let {
-            val newModifications = accountViewModel.findModificationEventsForNote(it)
-            if (newModifications.isEmpty()) {
-                if (editState.value !is GenericLoadable.Empty) {
-                    editState.value = GenericLoadable.Empty()
-                }
+    LaunchedEffect(modifications) {
+        val mods = modifications ?: return@LaunchedEffect
+        if (mods.isEmpty()) {
+            if (editState.value !is GenericLoadable.Empty) {
+                editState.value = GenericLoadable.Empty()
+            }
+        } else {
+            val current = editState.value
+            if (current is GenericLoadable.Loaded) {
+                current.loaded.updateModifications(mods)
             } else {
-                if (editState.value is GenericLoadable.Loaded) {
-                    (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.updateModifications(newModifications)
-                } else {
-                    val state = EditState()
-                    state.updateModifications(newModifications)
-                    editState.value = GenericLoadable.Loaded(state)
-                }
+                val state = EditState()
+                state.updateModifications(mods)
+                editState.value = GenericLoadable.Loaded(state)
             }
         }
     }

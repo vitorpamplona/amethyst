@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
@@ -359,17 +361,29 @@ fun observeNoteOts(
     return flow.collectAsStateWithLifecycle()
 }
 
+// Resolves the actual modification list off the main thread and filters identical results,
+// so the caller's LaunchedEffect only fires when the list of edits truly changes.
+// Returns `null` until the first IO resolution completes — callers should treat that as
+// "still loading" and not flip their UI to "no edits".
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeNoteEdits(
+fun observeNoteModifications(
     note: Note,
     accountViewModel: AccountViewModel,
-): State<NoteState?> {
+): State<List<Note>?> {
     // Subscribe in the relay for changes in this note.
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow = remember(note) { note.flow().edits.stateFlow }
-    return flow.collectAsStateWithLifecycle()
+    return produceState<List<Note>?>(initialValue = null, note) {
+        note
+            .flow()
+            .edits
+            .stateFlow
+            .mapLatest { LocalCache.findLatestModificationForNote(note) }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.IO)
+            .collect { value = it }
+    }
 }
 
 @Composable

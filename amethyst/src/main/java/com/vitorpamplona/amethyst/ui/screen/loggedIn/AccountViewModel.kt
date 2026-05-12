@@ -1310,11 +1310,6 @@ class AccountViewModel(
 
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
 
-    suspend fun findModificationEventsForNote(note: Note): List<Note> =
-        withContext(Dispatchers.IO) {
-            LocalCache.findLatestModificationForNote(note)
-        }
-
     fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = LocalCache.getOrCreatePublicChatChannel(key)
 
     fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel = LocalCache.getOrCreateLiveChannel(key)
