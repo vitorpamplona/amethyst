@@ -127,7 +127,7 @@ for unlimited). 500_000 is well above the floor. Pure config change in
 for operators who tune it down to fit smaller WS frame budgets.
 
 Note: `LimitsSection.max_ws_frame_bytes`
-(`geode/src/main/kotlin/com/vitorpamplona/geode/config/RelayConfig.kt:148`)
+(`geode/src/main/kotlin/com/vitorpamplona/geode/config/StaticConfig.kt:148`)
 applies to the WebSocket layer. After hex-encoding a 500_000-byte
 negentropy payload doubles to ~1_000_000 bytes on the wire; ensure
 `max_ws_frame_bytes` is at least 2 MB (or unlimited) in default

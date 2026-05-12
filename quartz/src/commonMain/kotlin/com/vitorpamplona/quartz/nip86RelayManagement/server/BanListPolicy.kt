@@ -30,12 +30,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolic
  * non-empty pubkey allow list, or kind disallowed / not in the kind
  * allow list.
  *
- * This is the runtime-mutable counterpart of the static
+ * Functionally equivalent to (and a superset of) the static
  * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy] +
- * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy] —
- * both layers compose: the event must clear all stacked policies.
- * NIP-86 admin RPC mutations land in the [BanStore]; the static
- * policies stay frozen at boot-time config values.
+ * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy].
+ * Callers that wire a [BanStore] should NOT also install those static
+ * policies: NIP-86 admin RPC mutations land in the [BanStore], so the
+ * static policies would silently diverge after the first admin call.
+ * Geode seeds the [BanStore] from `[authorization]` at first boot
+ * instead — see `com.vitorpamplona.geode.config.RuntimeConfig`.
  */
 class BanListPolicy(
     val banStore: BanStore,

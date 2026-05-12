@@ -81,7 +81,7 @@ swap was simulating, with none of the swap's race surface.
 
 ### B — per-relay event-loop pool sizing ✅ shipped
 
-Three optional knobs added to `[network]` in `RelayConfig`:
+Three optional knobs added to `[network]` in `StaticConfig`:
 
 ```toml
 [network]

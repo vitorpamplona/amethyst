@@ -45,7 +45,7 @@ data class RelayInfo(
 
         /**
          * NIPs this relay implements out of the box. Single source of
-         * truth — both [default] and [com.vitorpamplona.geode.config.RelayConfig.resolveInfo]
+         * truth — both [default] and [com.vitorpamplona.geode.config.StaticConfig.resolveInfo]
          * consult this list. Add a NIP here when its handler is wired
          * into [com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession]
          * (or in this module's policy stack).

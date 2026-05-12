@@ -26,10 +26,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class RelayConfigTest {
+class StaticConfigTest {
     @Test
     fun emptyTomlYieldsAllDefaults() {
-        val c = RelayConfig.fromToml("")
+        val c = StaticConfig.fromToml("")
         assertEquals("0.0.0.0", c.network.host)
         assertEquals(7447, c.network.port)
         assertEquals("/", c.network.path)
@@ -42,7 +42,7 @@ class RelayConfigTest {
 
     @Test
     fun verifySignaturesCanBeExplicitlyDisabled() {
-        val c = RelayConfig.fromToml("[options]\nverify_signatures = false")
+        val c = StaticConfig.fromToml("[options]\nverify_signatures = false")
         assertEquals(false, c.options.verify_signatures)
     }
 
@@ -78,7 +78,7 @@ class RelayConfigTest {
             kind_blacklist = [4, 1059]
             """.trimIndent()
 
-        val c = RelayConfig.fromToml(toml)
+        val c = StaticConfig.fromToml(toml)
 
         assertEquals("wss://relay.example.com/", c.info.relay_url)
         assertEquals("Example", c.info.name)
@@ -104,7 +104,7 @@ class RelayConfigTest {
     @Test
     fun supportedNipsRenderedAsStringsInNip11Doc() {
         val c =
-            RelayConfig.fromToml(
+            StaticConfig.fromToml(
                 """
                 [info]
                 supported_nips = [1, 11, 42]
@@ -137,7 +137,7 @@ class RelayConfigTest {
                     "config.example.toml not found in any of: ${candidates.joinToString { it.absolutePath }}",
                 )
 
-        val c = RelayConfig.fromFile(example)
+        val c = StaticConfig.fromFile(example)
 
         assertEquals("wss://relay.example.com/", c.info.relay_url)
         assertEquals(true, c.options.verify_signatures)
@@ -147,7 +147,7 @@ class RelayConfigTest {
 
     @Test
     fun missingSectionsAreOptional() {
-        val c = RelayConfig.fromToml("[info]\nname = \"only-info\"")
+        val c = StaticConfig.fromToml("[info]\nname = \"only-info\"")
         assertEquals("only-info", c.info.name)
         // Defaults preserved for unspecified sections.
         assertEquals(7447, c.network.port)

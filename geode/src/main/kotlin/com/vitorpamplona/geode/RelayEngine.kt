@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.geode
 
-import com.vitorpamplona.geode.persistence.BannedEntry
-import com.vitorpamplona.geode.persistence.RelayPersistedState
-import com.vitorpamplona.geode.persistence.RelayStateStore
+import com.vitorpamplona.geode.config.AuthorizationSeed
+import com.vitorpamplona.geode.config.BannedEntry
+import com.vitorpamplona.geode.config.RuntimeConfig
+import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
@@ -72,6 +73,20 @@ class RelayEngine(
      */
     stateFile: File? = null,
     /**
+     * Static-config-derived allow / deny seed for the [BanStore].
+     * Used only on first boot — i.e. when [stateFile] doesn't yet
+     * exist. Once an admin RPC writes the file, the persisted snapshot
+     * is the sole source of truth and this seed is ignored on every
+     * subsequent boot.
+     *
+     * Pair with omitting `KindAllowDenyPolicy` / `PubkeyAllowDenyPolicy`
+     * from [policyBuilder] — [BanListPolicy] (always installed) reads
+     * the same lists from the [BanStore], so stacking the static
+     * policies would double-enforce the same rules at boot and then
+     * silently diverge after the first admin mutation.
+     */
+    seedAuthorization: AuthorizationSeed = AuthorizationSeed(),
+    /**
      * Run Schnorr signature verification in parallel inside the
      * [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue]
      * instead of serially in the policy chain. Enables the Tier-3
@@ -88,7 +103,27 @@ class RelayEngine(
      */
     negentropySettings: NegentropySettings = NegentropySettings.Default,
 ) : AutoCloseable {
-    private val stateStore: RelayStateStore? = stateFile?.let { RelayStateStore(it) }
+    private val runtimeConfig: RuntimeConfig =
+        RuntimeConfig(
+            file = stateFile,
+            seed =
+                RuntimeConfigData(
+                    info = info.document,
+                    allowedPubkeys = seedAuthorization.allowedPubkeys.map { BannedEntry(it) },
+                    bannedPubkeys = seedAuthorization.bannedPubkeys.map { BannedEntry(it) },
+                    allowedKinds = seedAuthorization.allowedKinds,
+                    disallowedKinds = seedAuthorization.disallowedKinds,
+                ),
+        )
+
+    /**
+     * The runtime state to install at boot: the persisted snapshot if
+     * the file exists, otherwise the seed derived from
+     * [com.vitorpamplona.geode.config.StaticConfig]. Read once here
+     * so the `info` property initializer and the [banStore] seeding
+     * in [init] agree on the same source.
+     */
+    private val effectiveAtBoot: RuntimeConfigData = runtimeConfig.effective()
 
     /**
      * NIP-11 doc. Mutable so NIP-86 admin RPCs (`changerelayname`,
@@ -96,14 +131,15 @@ class RelayEngine(
      * atomically. Readers (the NIP-11 GET endpoint) re-read on every
      * request so changes are visible immediately, no restart needed.
      *
-     * If a [RelayStateStore] is configured and the snapshot exists,
-     * the persisted info doc takes precedence over the constructor
-     * default — operators expect their last `changerelayname` to
-     * survive a restart.
+     * Initialized from [effectiveAtBoot] — a persisted admin override
+     * wins, otherwise we fall back to the static-config seed. The
+     * `!!` is load-bearing: the seed is always built with a non-null
+     * info above, so the only way we reach a null here is a manually
+     * corrupted state file, which we'd rather crash on than serve
+     * empty NIP-11 from.
      */
     @Volatile
-    var info: RelayInfo =
-        stateStore?.load()?.info?.let { RelayInfo(it) } ?: info
+    var info: RelayInfo = RelayInfo(effectiveAtBoot.info!!)
         private set
 
     /** Mutates the live NIP-11 doc. Called by [Nip86Server]. */
@@ -120,33 +156,31 @@ class RelayEngine(
     val banStore: BanStore = BanStore(onMutation = { snapshot() })
 
     init {
-        // Seed the in-memory ban state from disk *without* triggering
-        // [snapshot] on every entry — the snapshot is exactly what we
-        // just loaded.
-        stateStore?.load()?.let { snap ->
-            banStore.seedFromSnapshot(
-                bannedPubkeys = snap.bannedPubkeys.map { it.key to it.reason },
-                allowedPubkeys = snap.allowedPubkeys.map { it.key to it.reason },
-                bannedEvents = snap.bannedEvents.map { it.key to it.reason },
-                allowedKinds = snap.allowedKinds,
-                disallowedKinds = snap.disallowedKinds,
-            )
-        }
+        // Seed the in-memory ban state from [effectiveAtBoot] *without*
+        // firing [snapshot] on every entry — the snapshot is exactly
+        // what we just loaded (or, on first boot, the static seed we
+        // just synthesized).
+        banStore.seedFromSnapshot(
+            bannedPubkeys = effectiveAtBoot.bannedPubkeys.map { it.key to it.reason },
+            allowedPubkeys = effectiveAtBoot.allowedPubkeys.map { it.key to it.reason },
+            bannedEvents = effectiveAtBoot.bannedEvents.map { it.key to it.reason },
+            allowedKinds = effectiveAtBoot.allowedKinds,
+            disallowedKinds = effectiveAtBoot.disallowedKinds,
+        )
     }
 
     /**
      * Writes the current state (NIP-11 doc + ban lists) to disk.
-     * No-op when no `stateFile` was configured.
+     * No-op when no `stateFile` was configured (see [RuntimeConfig.save]).
      *
      * Best-effort: any I/O failure is logged to stderr and swallowed
      * so an unwritable disk doesn't take the relay down. Operators
      * monitor for missing snapshots out-of-band.
      */
     fun snapshot() {
-        val s = stateStore ?: return
         runCatching {
-            s.save(
-                RelayPersistedState(
+            runtimeConfig.save(
+                RuntimeConfigData(
                     info = info.document,
                     bannedPubkeys = banStore.listBannedPubkeys().map { (k, r) -> BannedEntry(k, r) },
                     allowedPubkeys = banStore.listAllowedPubkeys().map { (k, r) -> BannedEntry(k, r) },

@@ -20,13 +20,12 @@
  */
 package com.vitorpamplona.geode
 
-import com.vitorpamplona.geode.config.RelayConfig
+import com.vitorpamplona.geode.config.AuthorizationSeed
+import com.vitorpamplona.geode.config.StaticConfig
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
@@ -50,8 +49,10 @@ import java.io.File
  *
  * Every section is enforced: `[info]` populates the NIP-11 doc,
  * `[network]` controls the bind, `[database]` chooses the SQLite path,
- * `[options]` toggles AUTH/verify/future-skew, `[limits]` and
- * `[authorization]` plug into the relay's policy stack.
+ * `[options]` toggles AUTH/verify/future-skew, `[limits]` plugs into
+ * the relay's policy stack, and `[authorization]` seeds the runtime
+ * [com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore] on
+ * first boot (see [com.vitorpamplona.geode.config.RuntimeConfig]).
  *
  * CLI flags:
  *   --config <file>    TOML config (see config.example.toml)
@@ -68,11 +69,11 @@ import java.io.File
 fun main(args: Array<String>) {
     val a = parseArgs(args)
 
-    val config: RelayConfig =
+    val config: StaticConfig =
         a
             .opt("--config")
-            ?.let { RelayConfig.fromFile(File(it)) }
-            ?: RelayConfig()
+            ?.let { StaticConfig.fromFile(File(it)) }
+            ?: StaticConfig()
 
     val host = a.opt("--host") ?: config.network.host
     val port = a.opt("--port")?.toInt() ?: config.network.port
@@ -110,6 +111,18 @@ fun main(args: Array<String>) {
     }
 
     val stateFile = config.admin.state_file?.let { File(it) }
+    // Static [authorization] feeds the runtime BanStore only when no
+    // state file exists yet. As soon as the operator's first admin RPC
+    // writes the file, BanListPolicy consults the persisted lists
+    // exclusively — later edits to [authorization] in the TOML are
+    // ignored at boot.
+    val seedAuthorization =
+        AuthorizationSeed(
+            allowedPubkeys = config.authorization.pubkey_whitelist,
+            bannedPubkeys = config.authorization.pubkey_blacklist,
+            allowedKinds = config.authorization.kind_whitelist,
+            disallowedKinds = config.authorization.kind_blacklist,
+        )
     val negentropySettings =
         NegentropySettings(
             frameSizeLimit = config.negentropy.frame_size_limit,
@@ -123,6 +136,7 @@ fun main(args: Array<String>) {
             info,
             policyBuilder,
             stateFile = stateFile,
+            seedAuthorization = seedAuthorization,
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
         )
@@ -166,11 +180,18 @@ fun main(args: Array<String>) {
  *
  * Order matters — cheap rejection paths run before expensive ones:
  *   1. AUTH (drops everything if not authenticated)
- *   2. Future-timestamp + allow/deny lists
+ *   2. Future-timestamp rejection
  *   3. Signature verification (most expensive — Schnorr verify)
+ *
+ * Pubkey and kind allow / deny lists are NOT installed here — they
+ * live in the runtime [com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore],
+ * which `RelayEngine` always wraps with `BanListPolicy`. The static
+ * `[authorization]` section seeds the BanStore on first boot via
+ * [com.vitorpamplona.geode.config.AuthorizationSeed]; afterwards
+ * NIP-86 admin RPCs own those lists.
  */
 private fun composePolicy(
-    config: RelayConfig,
+    config: StaticConfig,
     advertisedUrl: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
     requireAuth: Boolean,
     verifySigs: Boolean,
@@ -184,14 +205,6 @@ private fun composePolicy(
 
     config.options.reject_future_seconds?.let { secs ->
         pieces += RejectFutureEventsPolicy(secs)
-    }
-
-    val auth = config.authorization
-    if (auth.kind_whitelist.isNotEmpty() || auth.kind_blacklist.isNotEmpty()) {
-        pieces += KindAllowDenyPolicy(auth.kind_whitelist.toSet(), auth.kind_blacklist.toSet())
-    }
-    if (auth.pubkey_whitelist.isNotEmpty() || auth.pubkey_blacklist.isNotEmpty()) {
-        pieces += PubkeyAllowDenyPolicy(auth.pubkey_whitelist.toSet(), auth.pubkey_blacklist.toSet())
     }
 
     if (verifySigs) {

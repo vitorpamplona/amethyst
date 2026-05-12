@@ -29,13 +29,17 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import java.io.File
 
 /**
- * Operator-facing configuration. Section layout matches nostr-rs-relay's
- * `config.toml` so existing configs can be ported with little churn.
+ * Operator-facing **boot-time** configuration. Parsed once from a TOML
+ * file at startup and treated as immutable thereafter — anything that
+ * needs to change while the relay is running lives in [RuntimeConfig].
+ *
+ * Section layout matches nostr-rs-relay's `config.toml` so existing
+ * configs can be ported with little churn.
  *
  * Every section is optional; values not set fall back to sensible
  * defaults (or, for fields also exposed on the CLI, the CLI value wins).
  */
-data class RelayConfig(
+data class StaticConfig(
     val info: InfoSection = InfoSection(),
     val network: NetworkSection = NetworkSection(),
     val database: DatabaseSection = DatabaseSection(),
@@ -213,9 +217,10 @@ data class RelayConfig(
         val pubkeys: List<String> = emptyList(),
         val public_url: String? = null,
         /**
-         * Path for the JSON snapshot that persists NIP-86 admin state
-         * (ban lists + the live NIP-11 doc) across restarts. When
-         * unset, admin state is in-memory only.
+         * Path for the JSON snapshot that backs [RuntimeConfig] —
+         * NIP-86 admin state (ban lists + the live NIP-11 doc) that
+         * survives restarts. When unset, runtime config is in-memory
+         * only.
          *
          * Convention: place next to the SQLite event-store file —
          * e.g. `[database].file = "/var/lib/geode/events.db"`
@@ -228,10 +233,10 @@ data class RelayConfig(
         private val mapper = tomlMapper { }
 
         /** Parse a TOML string. */
-        fun fromToml(toml: String): RelayConfig = mapper.decode<RelayConfig>(toml)
+        fun fromToml(toml: String): StaticConfig = mapper.decode<StaticConfig>(toml)
 
         /** Load a TOML config file. */
-        fun fromFile(file: File): RelayConfig = mapper.decode<RelayConfig>(file.toPath())
+        fun fromFile(file: File): StaticConfig = mapper.decode<StaticConfig>(file.toPath())
 
         /**
          * Returns the URL the relay advertises in NIP-11 and NIP-42
@@ -240,7 +245,7 @@ data class RelayConfig(
          *   2. The `network` section's host/port/path (with 0.0.0.0 → 127.0.0.1)
          *   3. The CLI override (handled in `Main.kt`).
          */
-        fun advertisedUrl(config: RelayConfig): NormalizedRelayUrl =
+        fun advertisedUrl(config: StaticConfig): NormalizedRelayUrl =
             (
                 config.info.relay_url
                     ?: defaultUrl(config.network)
