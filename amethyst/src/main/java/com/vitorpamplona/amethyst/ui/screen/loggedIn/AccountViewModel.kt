@@ -319,29 +319,44 @@ class AccountViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
-        combineTransform(
-            account.loadLastReadFlow("Notification"),
-            feedStates.notifications.feedContent
-                .flatMapLatest {
-                    if (it is CardFeedState.Loaded) {
-                        it.feed
+        // Issue #197: when split-notifications is ON, the bottom-bar dot must glow only
+        // for items in the Following tab. When OFF, fall back to the user-selected single
+        // feed. Switch sources on the toggle flow so changing the setting takes effect
+        // without a restart.
+        account.settings.splitNotificationsEnabled
+            .flatMapLatest { isSplit ->
+                val source =
+                    if (isSplit) feedStates.notificationsFollowing else feedStates.notifications
+                combineTransform(
+                    account.loadLastReadFlow("Notification"),
+                    source.feedContent
+                        .flatMapLatest {
+                            if (it is CardFeedState.Loaded) {
+                                it.feed
+                            } else {
+                                MutableStateFlow(null)
+                            }
+                        }.map { it?.list?.firstOrNull()?.createdAt() },
+                ) { lastRead, newestItemCreatedAt ->
+                    emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+                }
+            }.onStart {
+                val source =
+                    if (account.settings.splitNotificationsEnabled.value) {
+                        feedStates.notificationsFollowing
                     } else {
-                        MutableStateFlow(null)
+                        feedStates.notifications
                     }
-                }.map { it?.list?.firstOrNull()?.createdAt() },
-        ) { lastRead, newestItemCreatedAt ->
-            emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
-        }.onStart {
-            val lastRead = account.loadLastReadFlow("Notification").value
-            val cards = feedStates.notifications.feedContent.value
-            if (cards is CardFeedState.Loaded) {
-                val newestItemCreatedAt =
-                    cards.feed.value.list
-                        .firstOrNull()
-                        ?.createdAt()
-                emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+                val lastRead = account.loadLastReadFlow("Notification").value
+                val cards = source.feedContent.value
+                if (cards is CardFeedState.Loaded) {
+                    val newestItemCreatedAt =
+                        cards.feed.value.list
+                            .firstOrNull()
+                            ?.createdAt()
+                    emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+                }
             }
-        }
 
     val notificationHasNewItemsFlow =
         notificationHasNewItems

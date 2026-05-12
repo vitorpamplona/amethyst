@@ -141,6 +141,7 @@ fun SettingsScreen(
         PushNotificationSettingsRow(sharedPrefs)
         if (accountViewModel != null) {
             AlwaysOnNotificationServiceChoice(accountViewModel)
+            SplitNotificationsChoice(accountViewModel)
         }
     }
 }
@@ -553,6 +554,24 @@ fun AlwaysOnNotificationServiceChoice(accountViewModel: AccountViewModel) {
 
     if (enabled) {
         BatteryOptimizationBanner()
+    }
+}
+
+@Composable
+fun SplitNotificationsChoice(accountViewModel: AccountViewModel) {
+    val enabled by accountViewModel.account.settings.splitNotificationsEnabled
+        .collectAsStateWithLifecycle()
+
+    SettingsRow(
+        R.string.split_notifications_setting_title,
+        R.string.split_notifications_setting_description,
+    ) {
+        Switch(
+            checked = enabled,
+            onCheckedChange = {
+                accountViewModel.account.settings.toggleSplitNotificationsEnabled()
+            },
+        )
     }
 }
 

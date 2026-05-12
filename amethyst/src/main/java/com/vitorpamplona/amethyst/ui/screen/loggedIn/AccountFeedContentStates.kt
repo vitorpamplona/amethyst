@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
@@ -108,6 +109,14 @@ class AccountFeedContentStates(
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
+
+    // Split-notifications mode (Issue #197): when [AccountSettings.splitNotificationsEnabled]
+    // is on, the screen renders these two pinned-mode feeds in tabs instead of [notifications].
+    // Following = kind:3 follow list members only; Everyone = global. Both are always
+    // constructed so updateFeedsWith can fan out incoming events without rebuilding state.
+    val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope)
+    val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global), scope)
+
     val notificationsOpenPolls = OpenPollsState(account, scope)
     val notificationSummary = NotificationSummaryState(account)
 
@@ -183,6 +192,8 @@ class AccountFeedContentStates(
         articlesFeed.updateFeedWith(newNotes)
 
         notifications.updateFeedWith(newNotes)
+        notificationsFollowing.updateFeedWith(newNotes)
+        notificationsEveryone.updateFeedWith(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.updateFeedWith(newNotes)
@@ -231,6 +242,8 @@ class AccountFeedContentStates(
         articlesFeed.deleteFromFeed(newNotes)
 
         notifications.deleteFromFeed(newNotes)
+        notificationsFollowing.deleteFromFeed(newNotes)
+        notificationsEveryone.deleteFromFeed(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.deleteFromFeed(newNotes)
@@ -240,6 +253,8 @@ class AccountFeedContentStates(
 
     fun destroy() {
         notifications.destroy()
+        notificationsFollowing.destroy()
+        notificationsEveryone.destroy()
         notificationSummary.destroy()
 
         feedListOptions.destroy()

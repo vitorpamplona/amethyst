@@ -38,6 +38,8 @@ private data class ScrollState(
 
 object ScrollStateKeys {
     const val NOTIFICATION_SCREEN = "NotificationsFeed"
+    const val NOTIFICATION_FOLLOWING = "NotificationsFollowingFeed"
+    const val NOTIFICATION_EVERYONE = "NotificationsEveryoneFeed"
     const val VIDEO_SCREEN = "VideoFeed"
     const val HOME_FOLLOWS = "HomeFollowsFeed"
     const val HOME_REPLIES = "HomeFollowsRepliesFeed"
