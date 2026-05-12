@@ -51,7 +51,7 @@ file = "/var/lib/geode/events.db"
 # recommended for any relay accepting traffic from real clients.
 # Verify Schnorr signatures on every EVENT. Default: true. Disable
 # only for trusted-input scenarios (test fixtures, mirror replays).
-# verify_signatures = true
+verify_signatures = true
 
 # Run signature verification in parallel inside the IngestQueue
 # (across all CPU cores) instead of serially on each connection's
@@ -80,13 +80,12 @@ require_auth = false
 # authenticated with NIP-98 HTTP-Auth. Only events signed by one of
 # the listed pubkeys can run admin RPCs (banpubkey / banevent /
 # changerelayname / …). Empty (the default) disables the endpoint.
-# pubkeys = ["abcdef...64hex..."]
 #
-# Canonical URL the relay is reachable at, e.g. behind a reverse proxy.
-# NIP-98 binds requests to this URL via the `u` tag. **Required** in
-# any production deployment — without it, an attacker can spoof the
-# Host header to bypass URL binding.
-# public_url = "https://relay.example.com/"
+# NIP-98 binds admin tokens to the relay's HTTP URL, which is derived
+# from [info].relay_url with the scheme swapped (ws -> http, wss ->
+# https) per NIP-86. Make sure [info].relay_url is set to the
+# canonical public URL when behind TLS termination or a reverse proxy.
+# pubkeys = ["abcdef...64hex..."]
 
 # Path for the JSON snapshot that persists NIP-86 admin state (ban
 # lists + the live NIP-11 doc) across restarts. When unset, admin

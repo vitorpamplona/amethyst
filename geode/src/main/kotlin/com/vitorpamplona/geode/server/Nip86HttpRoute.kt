@@ -32,39 +32,33 @@ import io.ktor.utils.io.readAvailable
 
 /**
  * Ktor adapter for the canonical NIP-86 HTTP flow encapsulated by
- * [Nip86HttpHandler]. This class is intentionally thin: it pulls the
- * Authorization header, signed URL, and body bytes out of the
- * [ApplicationCall], hands them to the handler, then maps each
- * [Nip86HttpHandler.Response] variant to the Ktor status / header /
- * body it expects.
+ * [Nip86HttpHandler]. Intentionally thin: pull the Authorization
+ * header and body bytes out of the [ApplicationCall], hand them to
+ * the handler, map each [Nip86HttpHandler.Response] variant to a
+ * Ktor status/header/body.
  *
- * The bounded body read happens here (Ktor exposes `ByteReadChannel`,
+ * Always wired — when the relay's admin allow-list is empty, every
+ * request just fails the [Nip86HttpHandler.Response.NotAdmin] check
+ * and returns 403. No "is admin on?" branch in either the handler
+ * or the route.
+ *
+ * Bounded body read happens here (Ktor exposes `ByteReadChannel`,
  * which is framework-specific) — we stop reading as soon as we'd
  * exceed [Nip86HttpHandler.maxBodyBytes] so an unauthenticated
  * attacker can't OOM the relay with a giant stream.
  *
- * Audit logging also lives here, off [Nip86HttpHandler.Response.Ok] —
- * the handler keeps logging policy out of quartz; the geode adapter
- * picks a stderr line format and runs with it.
+ * Audit logging stays here, off [Nip86HttpHandler.Response.Ok] — the
+ * handler keeps logging policy out of quartz; the geode adapter picks
+ * a stderr line format and runs with it.
  */
 internal class Nip86HttpRoute(
     private val handler: Nip86HttpHandler,
-    private val signedUrlFor: (ApplicationCall) -> String,
 ) {
     suspend fun handle(call: ApplicationCall) {
-        val body = readBoundedBody(call) ?: return // 413 already sent
+        val body = readBoundedBody(call, handler.maxBodyBytes) ?: return // 413 already sent
         val authHeader = call.request.header(HttpHeaders.Authorization)
-        val url = signedUrlFor(call)
 
-        when (val r = handler.handle(authHeader, url, body)) {
-            Nip86HttpHandler.Response.Disabled -> {
-                call.respondText(
-                    "NIP-86 management API is not enabled on this relay.",
-                    ContentType.Text.Plain,
-                    HttpStatusCode.Forbidden,
-                )
-            }
-
+        when (val r = handler.handle(authHeader, body)) {
             is Nip86HttpHandler.Response.PayloadTooLarge -> {
                 call.respondText(
                     "request body exceeds ${r.cap}-byte cap",
@@ -118,12 +112,14 @@ internal class Nip86HttpRoute(
     }
 
     /**
-     * Bounded read using `handler.maxBodyBytes`. Returns null after
-     * sending a 413 if the request body exceeds the cap — either the
-     * declared `Content-Length` or what we actually pull off the wire.
+     * Bounded read using [cap]. Returns null after sending a 413 if
+     * the request body exceeds the cap — either the declared
+     * `Content-Length` or what we actually pull off the wire.
      */
-    private suspend fun readBoundedBody(call: ApplicationCall): ByteArray? {
-        val cap = handler.maxBodyBytes
+    private suspend fun readBoundedBody(
+        call: ApplicationCall,
+        cap: Int,
+    ): ByteArray? {
         val declared = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
         if (declared != null && declared > cap) {
             call.respondText(

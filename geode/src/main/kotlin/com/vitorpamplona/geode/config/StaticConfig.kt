@@ -202,15 +202,15 @@ data class StaticConfig(
      * HTTP-Auth. Only requests signed by one of these pubkeys are
      * dispatched.
      *
-     * [public_url] is the canonical URL the relay is reachable at,
-     * e.g. `https://relay.example.com/`. NIP-98's URL binding compares
-     * the signed `u` tag against this — without it, an attacker can
-     * spoof the `Host` header to bind their signature to any URL.
-     * Required when running behind TLS termination or a reverse proxy.
+     * The NIP-98 URL binding compares the signed `u` tag against the
+     * `http(s)://` equivalent of the relay's WebSocket URL — i.e.
+     * `[info].relay_url` with the scheme swapped (per NIP-86's
+     * "same URI as `ws(s)://`, called via `http(s)://`"). Set
+     * `[info].relay_url` to the canonical public URL when running
+     * behind TLS termination or a reverse proxy.
      */
     data class AdminSection(
         val pubkeys: List<String> = emptyList(),
-        val public_url: String? = null,
         /**
          * Path for the JSON snapshot that backs [RuntimeConfig] —
          * NIP-86 admin state (ban lists + the live NIP-11 doc) that

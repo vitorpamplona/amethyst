@@ -54,10 +54,9 @@ import kotlinx.serialization.json.int
  * whatever HTTP route they expose (e.g. POST `application/nostr+json+rpc`),
  * and in-process tests can build a [Nip86Request] directly. The
  * [allowList] check is enforced inside [dispatch] so no caller can
- * accidentally bypass it; transports also have [isEnabled] and
- * [isAuthorized] to distinguish "endpoint disabled" (empty list, e.g.
- * 403 + "not enabled") from "not allowed" (valid token but
- * unrecognized pubkey, e.g. 403 + "not on admin list").
+ * accidentally bypass it; transports may also use [isAuthorized] to
+ * make the decision before dispatching (e.g. to short-circuit the
+ * request parse).
  *
  * [supportedMethods] is the canonical list this server actually
  * implements; methods returned outside of it are no-ops and a NIP-86
@@ -91,16 +90,14 @@ class Nip86Server(
      */
     private val onBan: suspend (Filter) -> Unit = {},
     /**
-     * Pubkeys allowed to invoke admin RPCs. Empty disables the admin
-     * API entirely — [isEnabled] returns false and [dispatch] rejects
-     * everything. Compared case-insensitively (lowercased on entry).
+     * Pubkeys allowed to invoke admin RPCs. Empty effectively disables
+     * the admin API: [isAuthorized] returns false for every pubkey
+     * and [dispatch] rejects everything as `not authorized`. Compared
+     * case-insensitively (lowercased on entry).
      */
     allowList: Set<HexKey> = emptySet(),
 ) {
     private val allowList: Set<HexKey> = allowList.mapTo(HashSet()) { it.lowercase() }
-
-    /** True when at least one admin pubkey is configured. */
-    fun isEnabled(): Boolean = allowList.isNotEmpty()
 
     /** True when [pubkey] is on the admin allow-list. Case-insensitive. */
     fun isAuthorized(pubkey: HexKey): Boolean = pubkey.lowercase() in allowList
@@ -138,10 +135,9 @@ class Nip86Server(
      * WS, or in-process trust).
      *
      * If [pubkey] is not in [allowList], returns a `not authorized`
-     * error response without executing anything. Transports that
-     * surface different HTTP statuses for "disabled" vs "not on list"
-     * should pre-check via [isEnabled] / [isAuthorized] instead of
-     * relying on this string.
+     * error response without executing anything. Transports that want
+     * to short-circuit before parsing the request can pre-check via
+     * [isAuthorized].
      */
     suspend fun dispatch(
         pubkey: HexKey,

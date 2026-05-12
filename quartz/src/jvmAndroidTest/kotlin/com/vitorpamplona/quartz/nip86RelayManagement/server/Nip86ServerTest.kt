@@ -188,7 +188,7 @@ class Nip86ServerTest {
             val (server, _, _) = fixture()
             val resp = server.dispatch(admin, Nip86Request(method = "frobnicate"))
             assertNotNull(resp.error)
-            assertTrue(resp.error!!.contains("frobnicate"))
+            assertTrue(resp.error.contains("frobnicate"))
         }
     }
 
@@ -199,7 +199,7 @@ class Nip86ServerTest {
             // banpubkey requires at least one positional param.
             val resp = server.dispatch(admin, Nip86Request(method = Nip86Method.BAN_PUBKEY))
             assertNotNull(resp.error)
-            assertTrue(resp.error!!.startsWith("invalid params"))
+            assertTrue(resp.error.startsWith("invalid params"))
         }
     }
 
@@ -210,18 +210,17 @@ class Nip86ServerTest {
             val intruder = "e".repeat(64)
             val resp = server.dispatch(intruder, Nip86Request.banPubkey(pk, "spam"))
             assertNotNull(resp.error)
-            assertTrue(resp.error!!.contains("not on the admin list"))
+            assertTrue(resp.error.contains("not on the admin list"))
             // And no state was mutated.
             assertTrue(!banStore.isBanned(pk))
         }
     }
 
     @Test
-    fun emptyAllowListDisablesTheServer() {
+    fun emptyAllowListRejectsEveryPubkey() {
         val store = BanStore()
         val holder = Holder(Nip11RelayInformation(name = "x"))
         val server = Nip86Server(banStore = store, infoHolder = holder) // no allowList
-        assertEquals(false, server.isEnabled())
         assertEquals(false, server.isAuthorized(admin))
     }
 

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -41,9 +42,9 @@ class Nip86HttpHandlerTest {
     private val verifier = Nip98AuthVerifier(now = { now })
     private val adminSigner = NostrSignerSync(KeyPair())
     private val intruderSigner = NostrSignerSync(KeyPair())
-    private val url = "http://relay.example.com/"
+    private val publicUrl = "https://relay.example.com/"
 
-    private fun handlerWith(adminInList: Boolean = true): Pair<Nip86HttpHandler, Nip86Server> {
+    private fun handler(): Nip86HttpHandler {
         val server =
             Nip86Server(
                 banStore = BanStore(),
@@ -57,13 +58,15 @@ class Nip86HttpHandlerTest {
                             doc = info
                         }
                     },
-                allowList = if (adminInList) setOf(adminSigner.pubKey) else emptySet(),
+                allowList = setOf(adminSigner.pubKey),
             )
-        return Nip86HttpHandler(server, verifier) to server
+        return Nip86HttpHandler(server, publicUrl, verifier)
     }
 
+    /** Build a NIP-98 token for [url] (which may or may not match [publicUrl]). */
     private fun signedHeader(
         body: ByteArray,
+        url: String = publicUrl,
         signer: NostrSignerSync = adminSigner,
     ): String {
         val template = HTTPAuthorizationEvent.build(url = url, method = "POST", file = body, createdAt = now)
@@ -74,32 +77,72 @@ class Nip86HttpHandlerTest {
         get() = JsonMapper.toJson(Nip86Request(method = Nip86Method.SUPPORTED_METHODS)).encodeToByteArray()
 
     @Test
-    fun disabledWhenAllowListIsEmpty() {
+    fun emptyAllowListRejectsValidlySignedRequestsAsNotAdmin() {
+        // No special "disabled" handling — the handler runs the same
+        // flow and the allow-list check (which always fails for an
+        // empty list) returns NotAdmin.
         runBlocking {
-            val (handler, _) = handlerWith(adminInList = false)
+            val disabledServer =
+                Nip86Server(
+                    banStore = BanStore(),
+                    infoHolder =
+                        object : Nip86Server.InfoHolder {
+                            private var doc = Nip11RelayInformation()
+
+                            override fun get() = doc
+
+                            override fun set(info: Nip11RelayInformation) {
+                                doc = info
+                            }
+                        },
+                    // no allowList
+                )
+            val h = Nip86HttpHandler(disabledServer, publicUrl, verifier)
             val body = supportedMethodsBody
-            val r = handler.handle(signedHeader(body), url, body)
-            assertIs<Nip86HttpHandler.Response.Disabled>(r)
+            val header = signedHeader(body) // signed by adminSigner — but list is empty
+            val r = h.handle(header, body)
+            assertIs<Nip86HttpHandler.Response.NotAdmin>(r)
+        }
+    }
+
+    @Test
+    fun rejectsConstructionWithBlankPublicUrl() {
+        val server =
+            Nip86Server(
+                banStore = BanStore(),
+                infoHolder =
+                    object : Nip86Server.InfoHolder {
+                        private var doc = Nip11RelayInformation()
+
+                        override fun get() = doc
+
+                        override fun set(info: Nip11RelayInformation) {
+                            doc = info
+                        }
+                    },
+                allowList = setOf(adminSigner.pubKey),
+            )
+        assertFailsWith<IllegalArgumentException> {
+            Nip86HttpHandler(server, publicUrl = "   ")
         }
     }
 
     @Test
     fun payloadTooLargeBeforeAuthCheck() {
         runBlocking {
-            val (handler, _) = handlerWith()
-            val oversized = ByteArray(handler.maxBodyBytes + 1)
+            val h = handler()
+            val oversized = ByteArray(h.maxBodyBytes + 1)
             // No need for a valid signature — size check fires first.
-            val r = handler.handle("anything", url, oversized)
+            val r = h.handle("anything", oversized)
             assertIs<Nip86HttpHandler.Response.PayloadTooLarge>(r)
-            assertEquals(handler.maxBodyBytes, r.cap)
+            assertEquals(h.maxBodyBytes, r.cap)
         }
     }
 
     @Test
     fun missingAuthHeader() {
         runBlocking {
-            val (handler, _) = handlerWith()
-            val r = handler.handle(authHeader = null, url = url, body = supportedMethodsBody)
+            val r = handler().handle(authHeader = null, body = supportedMethodsBody)
             assertIs<Nip86HttpHandler.Response.MissingAuth>(r)
         }
     }
@@ -107,20 +150,32 @@ class Nip86HttpHandlerTest {
     @Test
     fun malformedAuthIsBadAuth() {
         runBlocking {
-            val (handler, _) = handlerWith()
-            val r = handler.handle("Bearer not-a-nostr-token", url, supportedMethodsBody)
+            val r = handler().handle("Bearer not-a-nostr-token", supportedMethodsBody)
             assertIs<Nip86HttpHandler.Response.BadAuth>(r)
             assertTrue(r.reason.contains("Nostr"))
         }
     }
 
     @Test
+    fun urlMismatchInTokenIsBadAuth() {
+        // Token signed for a different URL — the URL-binding check
+        // fires and the relay refuses. This is the attack the
+        // publicUrl requirement is closing off.
+        runBlocking {
+            val body = supportedMethodsBody
+            val header = signedHeader(body, url = "https://other-relay.example.com/")
+            val r = handler().handle(header, body)
+            assertIs<Nip86HttpHandler.Response.BadAuth>(r)
+            assertTrue(r.reason.contains("url mismatch"))
+        }
+    }
+
+    @Test
     fun verifiedButNotAdminIsRejectedAsNotAdmin() {
         runBlocking {
-            val (handler, _) = handlerWith() // admin is adminSigner only
             val body = supportedMethodsBody
             val header = signedHeader(body, signer = intruderSigner)
-            val r = handler.handle(header, url, body)
+            val r = handler().handle(header, body)
             assertIs<Nip86HttpHandler.Response.NotAdmin>(r)
         }
     }
@@ -128,10 +183,9 @@ class Nip86HttpHandlerTest {
     @Test
     fun verifiedAdminButBadJsonBodyIsBadRequest() {
         runBlocking {
-            val (handler, _) = handlerWith()
             val body = "not valid json {".encodeToByteArray()
             val header = signedHeader(body)
-            val r = handler.handle(header, url, body)
+            val r = handler().handle(header, body)
             assertIs<Nip86HttpHandler.Response.BadRequest>(r)
         }
     }
@@ -139,10 +193,9 @@ class Nip86HttpHandlerTest {
     @Test
     fun verifiedAdminWithValidRequestDispatches() {
         runBlocking {
-            val (handler, _) = handlerWith()
             val body = supportedMethodsBody
             val header = signedHeader(body)
-            val r = handler.handle(header, url, body)
+            val r = handler().handle(header, body)
             val ok = assertIs<Nip86HttpHandler.Response.Ok>(r)
             assertEquals(adminSigner.pubKey, ok.pubkey)
             assertEquals(Nip86Method.SUPPORTED_METHODS, ok.request.method)

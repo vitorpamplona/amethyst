@@ -25,18 +25,17 @@ import com.vitorpamplona.geode.server.Nip86HttpRoute
 import com.vitorpamplona.geode.server.WebSocketSessionPump
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
-import io.ktor.http.HttpHeaders
 import io.ktor.server.application.install
 import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.request.header
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
@@ -80,20 +79,6 @@ class KtorRelay(
      */
     val adminPubkeys: Set<HexKey> = emptySet(),
     /**
-     * Canonical public URL the relay is reachable at, e.g.
-     * `https://relay.example.com/`. NIP-98 admin requests must sign
-     * the **same** URL string they're sending to. When the relay sits
-     * behind TLS termination or a reverse proxy, the `Host` header
-     * the relay sees does not match what the client signs, so the
-     * verifier must compare against this configured value.
-     *
-     * `null` (the default) falls back to the request's `Host` header
-     * with `http://` — fine for local-loopback unit tests, **NOT
-     * SAFE** in a public deployment because an attacker can spoof
-     * `Host` and bind their signature to any URL.
-     */
-    val publicUrl: String? = null,
-    /**
      * Ktor CIO acceptor-thread count. `null` keeps Ktor's default.
      * Lift on machines with many cores when targeting 10k+
      * concurrent connections — see `[network]` config docs.
@@ -119,13 +104,25 @@ class KtorRelay(
             allowList = adminPubkeys,
         )
 
+    /**
+     * Always assembled — when [adminPubkeys] is empty, the route
+     * still runs the canonical NIP-86 flow but every request fails
+     * the allow-list check ([Nip86HttpHandler.Response.NotAdmin] →
+     * 403). Uniform code path: the transport doesn't branch on
+     * "admin enabled?".
+     *
+     * The NIP-98 binding URL is derived from `relay.url` via [toHttp]
+     * because NIP-86 mandates it: admin requests target the same URI
+     * as the WebSocket endpoint, just with `http(s)://` instead of
+     * `ws(s)://`. This makes accidental misconfiguration impossible —
+     * the operator's configured `[info].relay_url` is the single
+     * source of truth.
+     */
     private val nip86Route =
         Nip86HttpRoute(
-            handler = Nip86HttpHandler(server = nip86Server),
-            signedUrlFor = { call ->
-                publicUrl ?: ("http://" + (call.request.header(HttpHeaders.Host) ?: "$host:$resolvedPort") + path)
-            },
+            handler = Nip86HttpHandler(server = nip86Server, publicUrl = relay.url.toHttp()),
         )
+
     private val nip11Route = Nip11HttpRoute(liveJson = { relay.info.json })
 
     private var engine: CIOApplicationEngine? = null
@@ -190,6 +187,8 @@ class KtorRelay(
                                 }
                                 // NIP-86: POST application/nostr+json+rpc with a NIP-98
                                 // signed Authorization header → JSON-RPC dispatch.
+                                // Always mounted; an empty [adminPubkeys] just means
+                                // every request fails the allow-list check (403).
                                 post(path) {
                                     nip86Route.handle(call)
                                 }

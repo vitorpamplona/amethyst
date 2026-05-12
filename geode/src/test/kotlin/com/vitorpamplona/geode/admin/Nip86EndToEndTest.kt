@@ -72,13 +72,19 @@ class Nip86EndToEndTest {
 
     @BeforeTest
     fun setup() {
-        val placeholder = "ws://127.0.0.1:7771/".normalizeRelayUrl()
-        relay = RelayEngine(url = placeholder)
+        // KtorRelay derives the NIP-98 admin URL from relay.url (per
+        // NIP-86: same URI as the WebSocket, just http(s)://). We must
+        // therefore pre-allocate the port and set relay.url to match
+        // — placeholder + OS-assigned port would cause the URL the
+        // server expects to differ from where it actually listens.
+        val freePort = java.net.ServerSocket(0).use { it.localPort }
+        val url = "ws://127.0.0.1:$freePort/".normalizeRelayUrl()
+        relay = RelayEngine(url = url)
         server =
             KtorRelay(
                 relay = relay,
                 host = "127.0.0.1",
-                port = 0,
+                port = freePort,
                 adminPubkeys = setOf(admin.pubKey),
             ).start()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -196,13 +202,16 @@ class Nip86EndToEndTest {
     }
 
     @Test
-    fun adminEndpointDisabledWhenNoPubkeysConfigured() =
+    fun adminEndpointRejectsValidTokenAsNotAdminWhenNoPubkeysConfigured() =
         runBlocking {
-            // Spin up a *separate* server with no admin pubkeys.
-            val placeholder = "ws://127.0.0.1:7771/".normalizeRelayUrl()
-            val openRelay = RelayEngine(url = placeholder)
+            // Spin up a *separate* server with no admin pubkeys. The
+            // POST route is still mounted (uniform code path); every
+            // request just fails the empty allow-list check → 403.
+            val freePort = java.net.ServerSocket(0).use { it.localPort }
+            val url = "ws://127.0.0.1:$freePort/".normalizeRelayUrl()
+            val openRelay = RelayEngine(url = url)
             val openServer =
-                KtorRelay(openRelay, host = "127.0.0.1", port = 0).start()
+                KtorRelay(openRelay, host = "127.0.0.1", port = freePort).start()
             try {
                 val openHttpUrl = openServer.url.replace("ws://", "http://")
                 val body =

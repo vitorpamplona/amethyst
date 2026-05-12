@@ -33,31 +33,41 @@ import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
  * implementation can plug its HTTP framework in without re-deriving
  * the auth / parse / dispatch / serialize sequence:
  *
- *  1. **Gate.** If `server.isEnabled()` is false (empty admin list),
- *     reject with [Response.Disabled] (→ 403, "admin API not
- *     enabled"). No body read, no signature verify.
- *  2. **Size cap.** If `body.size > maxBodyBytes`, reject with
+ *  1. **Size cap.** If `body.size > maxBodyBytes`, reject with
  *     [Response.PayloadTooLarge]. Adapters MUST also bound the read
  *     itself — NIP-98 forces us to compute sha256 over the full
  *     body for signature binding, so an unbounded read is a pre-auth
  *     OOM vector. This check is defense-in-depth.
- *  3. **Verify.** Run [Nip98AuthVerifier.verify] (method = `POST`,
- *     given [url] and [body]). Missing → [Response.MissingAuth]
+ *  2. **Verify.** Run [Nip98AuthVerifier.verify] with method = `POST`
+ *     and the handler's configured [publicUrl]. The NIP-98 token's
+ *     signed `u` tag MUST match [publicUrl] — that's how the relay
+ *     proves the admin token was minted for *this* relay and not
+ *     replayed from another one. Missing header → [Response.MissingAuth]
  *     (→ 401 + `WWW-Authenticate: Nostr`). Malformed →
  *     [Response.BadAuth] (→ 401).
- *  4. **Admin check.** If the verified pubkey is not in
+ *  3. **Admin check.** If the verified pubkey is not in
  *     `server.isAuthorized`, reject with [Response.NotAdmin] (→ 403).
- *  5. **Parse.** Decode [Nip86Request] from the body bytes. Invalid
+ *  4. **Parse.** Decode [Nip86Request] from the body bytes. Invalid
  *     → [Response.BadRequest] (→ 400).
- *  6. **Dispatch.** Call `server.dispatch(pubkey, req)` and wrap the
+ *  5. **Dispatch.** Call `server.dispatch(pubkey, req)` and wrap the
  *     [Nip86Response] in [Response.Ok], pre-serialized as JSON ready
  *     to write to the wire with `Content-Type: application/nostr+json+rpc`.
  *
- * Transport-agnostic: takes raw primitives ([authHeader], [url],
- * [body]) and returns a sealed [Response]. The adapter maps each
- * variant to its framework's status-code / header API — for Ktor,
- * see `geode/server/Nip86HttpRoute`.
+ * An empty admin allow-list is not a special case: the handler runs
+ * the same flow, the pubkey check (step 3) just always fails with
+ * [Response.NotAdmin]. Transports therefore wire the route the same
+ * way regardless of whether admin happens to be enabled — uniform
+ * code path, uniform error model.
  *
+ * Transport-agnostic: takes raw primitives ([authHeader], [body])
+ * and returns a sealed [Response]. The adapter maps each variant to
+ * its framework's status-code / header API — for Ktor, see
+ * `geode/server/Nip86HttpRoute`.
+ *
+ * @param publicUrl Canonical URL admin tokens must sign for —
+ *   typically `https://relay.example.com/`. Required (non-blank)
+ *   precisely because the alternative ("trust the `Host` header")
+ *   lets an attacker bind their signed admin token to any URL.
  * @param maxBodyBytes Defense-in-depth cap. NIP-86 RPC payloads are
  *   a few hundred bytes; the 1 MiB default is ~1000× any plausible
  *   request, but small enough that an attacker can't OOM the relay
@@ -65,19 +75,22 @@ import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
  */
 class Nip86HttpHandler(
     private val server: Nip86Server,
+    private val publicUrl: String,
     private val verifier: Nip98AuthVerifier = Nip98AuthVerifier(),
     val maxBodyBytes: Int = DEFAULT_MAX_BODY_BYTES,
 ) {
+    init {
+        require(publicUrl.isNotBlank()) { "publicUrl must not be blank" }
+    }
+
     suspend fun handle(
         authHeader: String?,
-        url: String,
         body: ByteArray,
     ): Response {
-        if (!server.isEnabled()) return Response.Disabled
         if (body.size > maxBodyBytes) return Response.PayloadTooLarge(maxBodyBytes)
 
         val pubkey =
-            when (val v = verifier.verify(authHeader, method = "POST", url = url, body = body)) {
+            when (val v = verifier.verify(authHeader, method = "POST", url = publicUrl, body = body)) {
                 is Nip98AuthVerifier.Result.Verified -> v.pubkey
                 Nip98AuthVerifier.Result.Missing -> return Response.MissingAuth
                 is Nip98AuthVerifier.Result.Malformed -> return Response.BadAuth(v.reason)
@@ -102,17 +115,17 @@ class Nip86HttpHandler(
      *
      * | Variant | HTTP | Notes |
      * |---|---|---|
-     * | [Disabled] | 403 | "admin API not enabled" |
      * | [PayloadTooLarge] | 413 | adapter SHOULD bound the read itself |
      * | [MissingAuth] | 401 | send `WWW-Authenticate: Nostr` |
-     * | [BadAuth] | 401 | NIP-98 signature/binding failed |
+     * | [BadAuth] | 401 | NIP-98 signature/binding failed (incl. URL mismatch) |
      * | [NotAdmin] | 403 | verified pubkey not on allow-list |
      * | [BadRequest] | 400 | body wasn't a valid `Nip86Request` |
      * | [Ok] | 200 | `Content-Type: application/nostr+json+rpc`; write [Ok.json] |
+     *
+     * "Admin endpoint disabled" is **not** a [Response] variant — the
+     * adapter must check that case before instantiating a handler.
      */
     sealed interface Response {
-        data object Disabled : Response
-
         data class PayloadTooLarge(
             val cap: Int,
         ) : Response
