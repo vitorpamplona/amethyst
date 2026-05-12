@@ -45,6 +45,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,12 +58,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
-import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -82,6 +83,7 @@ enum class WalletScreen {
 @Composable
 fun WalletColumnScreen(
     account: AccountState.LoggedIn,
+    accountManager: AccountManager,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     nwcConnection: Nip47URINorm?,
@@ -117,6 +119,21 @@ fun WalletColumnScreen(
             NwcPaymentHandler(relayManager, localCache)
         }
 
+    // Auto-fetch balance when wallet connects
+    LaunchedEffect(nwcConnection) {
+        if (nwcConnection != null && balanceSats == null) {
+            isLoadingBalance = true
+            when (val result = paymentHandler.getBalance(nwcConnection)) {
+                is NwcPaymentHandler.BalanceResult.Success -> {
+                    balanceSats = result.balanceMsats / 1000
+                }
+
+                else -> { /* silently fail on auto-fetch */ }
+            }
+            isLoadingBalance = false
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         when (currentScreen) {
             WalletScreen.HOME -> {
@@ -131,15 +148,27 @@ fun WalletColumnScreen(
                         if (nwcConnection != null) {
                             isLoadingBalance = true
                             scope.launch {
-                                // TODO: implement NWC get_balance RPC
+                                when (val result = paymentHandler.getBalance(nwcConnection)) {
+                                    is NwcPaymentHandler.BalanceResult.Success -> {
+                                        balanceSats = result.balanceMsats / 1000
+                                    }
+
+                                    is NwcPaymentHandler.BalanceResult.Error -> {
+                                        snackbarHostState.showSnackbar("Balance error: ${result.message}")
+                                    }
+
+                                    is NwcPaymentHandler.BalanceResult.Timeout -> {
+                                        snackbarHostState.showSnackbar("Balance request timed out")
+                                    }
+                                }
                                 isLoadingBalance = false
                             }
                         }
                     },
                     onDisconnect = {
-                        // TODO: clear NWC from account settings
+                        accountManager.clearNwcConnection()
                         scope.launch {
-                            snackbarHostState.showSnackbar("Disconnect from account settings")
+                            snackbarHostState.showSnackbar("Wallet disconnected")
                         }
                     },
                 )
@@ -167,14 +196,12 @@ fun WalletColumnScreen(
                         }
                     },
                     onConnect = {
-                        val parsed = Nip47WalletConnect.parse(nwcUri)
-                        if (parsed != null) {
-                            // TODO: save to account settings
-                            isConnecting = true
+                        val result = accountManager.setNwcConnection(nwcUri)
+                        if (result.isSuccess) {
+                            nwcUri = ""
+                            currentScreen = WalletScreen.HOME
                             scope.launch {
-                                snackbarHostState.showSnackbar("Wallet connected! Restart to apply.")
-                                isConnecting = false
-                                currentScreen = WalletScreen.HOME
+                                snackbarHostState.showSnackbar("Wallet connected!")
                             }
                         } else {
                             connectionError = "Invalid NWC URI. Expected: nostr+walletconnect://..."
@@ -245,11 +272,29 @@ fun WalletColumnScreen(
                     onAmountChanged = { receiveAmount = it },
                     onDescriptionChanged = { receiveDescription = it },
                     onGenerate = {
-                        // TODO: implement NWC make_invoice RPC
-                        scope.launch {
-                            isGenerating = true
-                            snackbarHostState.showSnackbar("make_invoice not yet implemented")
-                            isGenerating = false
+                        if (nwcConnection != null) {
+                            val amountSats = receiveAmount.toLongOrNull() ?: 0L
+                            if (amountSats > 0) {
+                                isGenerating = true
+                                scope.launch {
+                                    val amountMsats = amountSats * 1000
+                                    val desc = receiveDescription.ifBlank { null }
+                                    when (val result = paymentHandler.makeInvoice(nwcConnection, amountMsats, desc)) {
+                                        is NwcPaymentHandler.InvoiceResult.Success -> {
+                                            generatedInvoice = result.invoice
+                                        }
+
+                                        is NwcPaymentHandler.InvoiceResult.Error -> {
+                                            snackbarHostState.showSnackbar("Invoice error: ${result.message}")
+                                        }
+
+                                        is NwcPaymentHandler.InvoiceResult.Timeout -> {
+                                            snackbarHostState.showSnackbar("Invoice request timed out")
+                                        }
+                                    }
+                                    isGenerating = false
+                                }
+                            }
                         }
                     },
                     onCopyInvoice = { invoice ->
