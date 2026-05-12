@@ -21,6 +21,7 @@
 package com.vitorpamplona.geode.config
 
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -139,3 +140,28 @@ data class BannedEntry(
     val key: String,
     val reason: String? = null,
 )
+
+/** Bulk-load this snapshot into [banStore] without firing its `onMutation` hook. */
+fun RuntimeConfigData.seedInto(banStore: BanStore) {
+    banStore.seedFromSnapshot(
+        bannedPubkeys = bannedPubkeys.map { it.key to it.reason },
+        allowedPubkeys = allowedPubkeys.map { it.key to it.reason },
+        bannedEvents = bannedEvents.map { it.key to it.reason },
+        allowedKinds = allowedKinds,
+        disallowedKinds = disallowedKinds,
+    )
+}
+
+/** Capture the current state of [info] + [banStore] as a fresh snapshot. */
+fun snapshotOf(
+    info: Nip11RelayInformation,
+    banStore: BanStore,
+): RuntimeConfigData =
+    RuntimeConfigData(
+        info = info,
+        bannedPubkeys = banStore.listBannedPubkeys().map { (k, r) -> BannedEntry(k, r) },
+        allowedPubkeys = banStore.listAllowedPubkeys().map { (k, r) -> BannedEntry(k, r) },
+        bannedEvents = banStore.listBannedEvents().map { (k, r) -> BannedEntry(k, r) },
+        allowedKinds = banStore.listAllowedKinds(),
+        disallowedKinds = banStore.listDisallowedKinds(),
+    )

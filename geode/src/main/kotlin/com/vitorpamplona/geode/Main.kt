@@ -104,7 +104,7 @@ fun main(args: Array<String>) {
 
     val info =
         cliInfoFile?.let { RelayInfo.fromFile(it) }
-            ?: config.resolveInfo(advertisedUrl)
+            ?: config.resolveInfo()
 
     val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
 

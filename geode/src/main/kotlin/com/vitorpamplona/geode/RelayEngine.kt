@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.geode
 
-import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
+import com.vitorpamplona.geode.config.seedInto
+import com.vitorpamplona.geode.config.snapshotOf
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
@@ -103,67 +104,40 @@ class RelayEngine(
      */
     adminPubkeys: Set<HexKey> = emptySet(),
 ) : AutoCloseable {
-    /**
-     * The runtime state to install at boot: the persisted snapshot if
-     * the file exists, otherwise the seed baked into [runtimeConfig].
-     * Read once here so the `info` property initializer and the
-     * [banStore] seeding in [init] agree on the same source.
-     */
-    private val effectiveAtBoot: RuntimeConfigData = runtimeConfig.effective()
+    private val boot: RuntimeConfigData = runtimeConfig.effective()
 
     /**
-     * NIP-11 doc. Mutable so NIP-86 admin RPCs (`changerelayname`,
-     * `changerelaydescription`, `changerelayicon`) can swap the doc
-     * atomically. Readers (the NIP-11 GET endpoint) re-read on every
-     * request so changes are visible immediately, no restart needed.
-     *
-     * Initialized from [effectiveAtBoot] — a persisted admin override
-     * wins, otherwise we fall back to the seed baked into
-     * [runtimeConfig]. The `!!` is load-bearing: the seed is always
-     * built with a non-null info, so the only way we reach a null
-     * here is a manually corrupted state file, which we'd rather
-     * crash on than serve empty NIP-11 from.
+     * Live NIP-11 doc. Mutable via [updateInfo] so NIP-86 admin RPCs
+     * can swap it atomically; readers (NIP-11 GET) re-read every
+     * request so changes are visible immediately. The `!!` is load-
+     * bearing: the seed always has a non-null info, so a null here
+     * means a manually corrupted state file — fail loud over serving
+     * empty NIP-11.
      */
     @Volatile
-    var info: RelayInfo = RelayInfo(effectiveAtBoot.info!!)
+    var info: RelayInfo = RelayInfo(boot.info!!)
         private set
 
-    /** Mutates the live NIP-11 doc. Called by [Nip86Server]. */
+    /** Mutates the live NIP-11 doc and persists the snapshot. */
     fun updateInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
         info = RelayInfo(transform(info.document))
         snapshot()
     }
 
     /**
-     * Runtime-mutable ban / allow lists. NIP-86 RPC handlers in
-     * [Nip86Server] mutate this; the policy stack consults it on
-     * every accept call via [BanListPolicy].
+     * Runtime-mutable ban / allow lists. Mutated by [Nip86Server] via
+     * NIP-86 RPCs; consulted on every EVENT by [BanListPolicy]. Seeded
+     * at boot from the persisted snapshot (or the static [runtimeConfig]
+     * seed on first boot) without firing the mutation hook.
      */
-    val banStore: BanStore = BanStore(onMutation = { snapshot() })
-
-    init {
-        // Seed the in-memory ban state from [effectiveAtBoot] *without*
-        // firing [snapshot] on every entry — the snapshot is exactly
-        // what we just loaded (or, on first boot, the static seed we
-        // just synthesized).
-        banStore.seedFromSnapshot(
-            bannedPubkeys = effectiveAtBoot.bannedPubkeys.map { it.key to it.reason },
-            allowedPubkeys = effectiveAtBoot.allowedPubkeys.map { it.key to it.reason },
-            bannedEvents = effectiveAtBoot.bannedEvents.map { it.key to it.reason },
-            allowedKinds = effectiveAtBoot.allowedKinds,
-            disallowedKinds = effectiveAtBoot.disallowedKinds,
-        )
-    }
+    val banStore: BanStore =
+        BanStore(onMutation = ::snapshot)
+            .apply { boot.seedInto(this) }
 
     /**
-     * NIP-86 admin RPC dispatcher. Owns the ban / allow / kind list
-     * mutations, the NIP-11 `changerelay*` mutations (via an
-     * [Nip86Server.InfoHolder] adapter that wraps [info] / [updateInfo]),
-     * the event-store purge on each ban method (via `store.delete`),
-     * and the admin allow-list ([adminPubkeys]). Transport-agnostic:
-     * `KtorRelay` wraps it with `Nip86HttpHandler` for HTTP/NIP-98;
-     * an in-process tool could call `dispatch(adminPubkey, req)`
-     * directly.
+     * NIP-86 admin RPC dispatcher. Transport-agnostic — `KtorRelay`
+     * wraps it with `Nip86HttpHandler` for HTTP/NIP-98; an in-process
+     * tool could call `dispatch(adminPubkey, req)` directly.
      */
     val nip86Server: Nip86Server =
         Nip86Server(
@@ -179,25 +153,14 @@ class RelayEngine(
         )
 
     /**
-     * Writes the current state (NIP-11 doc + ban lists) to disk.
-     * No-op when no `stateFile` was configured (see [RuntimeConfig.save]).
-     *
-     * Best-effort: any I/O failure is logged to stderr and swallowed
-     * so an unwritable disk doesn't take the relay down. Operators
-     * monitor for missing snapshots out-of-band.
+     * Writes the current state (NIP-11 doc + ban lists) to disk via
+     * [RuntimeConfig.save] — no-op when no state file is configured.
+     * Best-effort: I/O failures are logged to stderr and swallowed so
+     * an unwritable disk doesn't take the relay down.
      */
     fun snapshot() {
         runCatching {
-            runtimeConfig.save(
-                RuntimeConfigData(
-                    info = info.document,
-                    bannedPubkeys = banStore.listBannedPubkeys().map { (k, r) -> BannedEntry(k, r) },
-                    allowedPubkeys = banStore.listAllowedPubkeys().map { (k, r) -> BannedEntry(k, r) },
-                    bannedEvents = banStore.listBannedEvents().map { (k, r) -> BannedEntry(k, r) },
-                    allowedKinds = banStore.listAllowedKinds(),
-                    disallowedKinds = banStore.listDisallowedKinds(),
-                ),
-            )
+            runtimeConfig.save(snapshotOf(info.document, banStore))
         }.onFailure {
             System.err.println("warning: failed to write relay state file: ${it.message}")
         }
@@ -206,10 +169,9 @@ class RelayEngine(
     val server =
         NostrServer(
             store,
-            // Always prepend a BanListPolicy so NIP-86 admin actions
-            // bite. When the operator-supplied builder returns
-            // [EmptyPolicy] we use the dynamic policy alone; otherwise
-            // we stack them so both layers must accept.
+            // Always prepend BanListPolicy so NIP-86 admin actions bite.
+            // EmptyPolicy from the caller means "no extra policies" — use
+            // BanListPolicy alone; otherwise stack so both must accept.
             policyBuilder = {
                 val user = policyBuilder()
                 if (user === EmptyPolicy) BanListPolicy(banStore) else user + BanListPolicy(banStore)

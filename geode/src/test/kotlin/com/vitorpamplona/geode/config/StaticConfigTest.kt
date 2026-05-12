@@ -105,13 +105,7 @@ class StaticConfigTest {
                 supported_nips = [1, 11, 42]
                 """.trimIndent(),
             )
-        val info =
-            c.resolveInfo(
-                "ws://127.0.0.1:7447/".let {
-                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-                        .normalize(it)
-                },
-            )
+        val info = c.resolveInfo()
         assertEquals(listOf("1", "11", "42"), info.document.supported_nips)
     }
 
