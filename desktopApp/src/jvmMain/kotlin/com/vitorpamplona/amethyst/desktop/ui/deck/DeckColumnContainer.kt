@@ -356,6 +356,17 @@ internal fun RootContent(
             )
         }
 
+        DeckColumnType.Wallet -> {
+            com.vitorpamplona.amethyst.desktop.ui.wallet.WalletColumnScreen(
+                account = account,
+                relayManager = relayManager,
+                localCache = localCache,
+                nwcConnection = nwcConnection,
+                appScope = appScope,
+                onZapFeedback = onZapFeedback,
+            )
+        }
+
         DeckColumnType.Relays -> {
             val accountRelays = com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays.current
             RelayDashboardScreen(

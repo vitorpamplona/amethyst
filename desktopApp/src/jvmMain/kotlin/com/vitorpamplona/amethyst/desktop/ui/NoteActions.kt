@@ -49,7 +49,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.Bookmark
 import com.vitorpamplona.amethyst.commons.icons.BookmarkFilled
@@ -87,7 +91,19 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import kotlin.coroutines.resume
 
-private val ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
+private val DEFAULT_ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
+
+/**
+ * Zap type for the zap dialog.
+ */
+enum class ZapType(
+    val label: String,
+    val description: String,
+) {
+    PUBLIC("Public", "Everyone sees your zap"),
+    PRIVATE("Private", "Only recipient sees your identity"),
+    ANONYMOUS("Anonymous", "No identity attached"),
+}
 
 /**
  * Feedback from a zap operation for UI display.
@@ -150,58 +166,120 @@ fun getDisplayName(
 }
 
 /**
- * Dialog for selecting zap amount and optional message.
+ * Dialog for selecting zap amount, type, and optional message.
  */
 @Composable
 fun ZapAmountDialog(
     onDismiss: () -> Unit,
-    onZap: (Long, String) -> Unit,
+    onZap: (Long, String, ZapType) -> Unit,
+    zapAmounts: List<Long> = DEFAULT_ZAP_AMOUNTS,
+    defaultZapType: ZapType = ZapType.PUBLIC,
 ) {
-    var selectedAmount by remember { mutableStateOf(21L) }
+    var selectedAmount by remember { mutableStateOf(zapAmounts.firstOrNull() ?: 21L) }
+    var customAmount by remember { mutableStateOf("") }
+    var useCustom by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf(defaultZapType) }
+
+    val effectiveAmount = if (useCustom) customAmount.toLongOrNull() ?: 0L else selectedAmount
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Zap") },
         text = {
             Column {
+                // Amount selection
                 Text(
-                    "Select amount in sats",
-                    style = MaterialTheme.typography.bodyMedium,
+                    "Amount (sats)",
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    ZAP_AMOUNTS.take(3).forEach { amount ->
+                    zapAmounts.take(3).forEach { amount ->
                         FilterChip(
-                            selected = selectedAmount == amount,
-                            onClick = { selectedAmount = amount },
+                            selected = !useCustom && selectedAmount == amount,
+                            onClick = {
+                                selectedAmount = amount
+                                useCustom = false
+                            },
                             label = { Text("$amount") },
                         )
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    ZAP_AMOUNTS.drop(3).forEach { amount ->
+                    zapAmounts.drop(3).forEach { amount ->
                         FilterChip(
-                            selected = selectedAmount == amount,
-                            onClick = { selectedAmount = amount },
+                            selected = !useCustom && selectedAmount == amount,
+                            onClick = {
+                                selectedAmount = amount
+                                useCustom = false
+                            },
                             label = { Text(formatSats(amount)) },
                         )
                     }
+                    FilterChip(
+                        selected = useCustom,
+                        onClick = { useCustom = true },
+                        label = { Text("Custom") },
+                    )
                 }
+
+                if (useCustom) {
+                    Spacer(Modifier.height(8.dp))
+                    androidx.compose.material3.OutlinedTextField(
+                        value = customAmount,
+                        onValueChange = { new -> if (new.all { it.isDigit() }) customAmount = new },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Custom amount") },
+                        placeholder = { Text("Enter sats...") },
+                        singleLine = true,
+                    )
+                }
+
                 Spacer(Modifier.height(16.dp))
+
+                // Zap type selection
+                Text(
+                    "Zap Type",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    ZapType.entries.forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(type.label) },
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Message
+                val messageLabel =
+                    when (selectedType) {
+                        ZapType.PRIVATE -> "Private message (only recipient sees)"
+                        ZapType.ANONYMOUS -> "Message (optional)"
+                        ZapType.PUBLIC -> "Message (optional)"
+                    }
                 androidx.compose.material3.OutlinedTextField(
                     value = message,
                     onValueChange = { message = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Message (optional)") },
+                    label = { Text(messageLabel) },
                     placeholder = { Text("Add a comment...") },
                     singleLine = false,
                     maxLines = 3,
@@ -209,8 +287,11 @@ fun ZapAmountDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onZap(selectedAmount, message) }) {
-                Text("Zap ${formatSats(selectedAmount)} sats")
+            Button(
+                onClick = { onZap(effectiveAmount, message, selectedType) },
+                enabled = effectiveAmount > 0,
+            ) {
+                Text("Zap ${formatSats(effectiveAmount)} sats")
             }
         },
         dismissButton = {
@@ -610,7 +691,7 @@ fun NoteActionsRow(
             }
         }
 
-        // Zap button with amount (clickable to show receipts)
+        // Zap button: left-click = quick zap (default amount), right-click = custom dialog
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
                 if (isZapping) {
@@ -620,9 +701,40 @@ fun NoteActionsRow(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 } else {
+                    @OptIn(ExperimentalComposeUiApi::class)
                     IconButton(
-                        onClick = { showZapDialog = true },
-                        modifier = Modifier.size(32.dp),
+                        onClick = {
+                            // Quick zap with default amount (first preset)
+                            if (nwcConnection != null) {
+                                val defaultAmount = DEFAULT_ZAP_AMOUNTS.first()
+                                scope.launch {
+                                    isZapping = true
+                                    val feedback =
+                                        zapNote(
+                                            event = event,
+                                            account = account,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            amountSats = defaultAmount,
+                                            message = "",
+                                            nwcConnection = nwcConnection,
+                                        )
+                                    isZapping = false
+                                    onZapFeedback(feedback)
+                                }
+                            } else {
+                                // No wallet connected — open dialog for external wallet fallback
+                                showZapDialog = true
+                            }
+                        },
+                        modifier =
+                            Modifier
+                                .size(32.dp)
+                                .onPointerEvent(PointerEventType.Press) { pointerEvent ->
+                                    if (pointerEvent.buttons.isSecondaryPressed) {
+                                        showZapDialog = true
+                                    }
+                                },
                     ) {
                         Icon(
                             Zap,
@@ -771,7 +883,7 @@ fun NoteActionsRow(
     if (showZapDialog) {
         ZapAmountDialog(
             onDismiss = { showZapDialog = false },
-            onZap = { amountSats, message ->
+            onZap = { amountSats, message, zapType ->
                 showZapDialog = false
                 scope.launch {
                     isZapping = true
@@ -784,6 +896,7 @@ fun NoteActionsRow(
                             amountSats = amountSats,
                             message = message,
                             nwcConnection = nwcConnection,
+                            // TODO: pass zapType to ZapAction for PRIVATE/ANONYMOUS zap support
                         )
                     isZapping = false
                     onZapFeedback(feedback)

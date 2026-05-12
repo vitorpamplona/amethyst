@@ -590,6 +590,7 @@ fun main() {
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
                             Item("Chess", onClick = { deckState.addColumn(DeckColumnType.Chess) })
                             Item("Relays", onClick = { deckState.addColumn(DeckColumnType.Relays) })
+                            Item("Wallet", onClick = { deckState.addColumn(DeckColumnType.Wallet) })
                         }
                     }
                 }
