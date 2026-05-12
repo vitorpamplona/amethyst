@@ -107,6 +107,24 @@ class RoomParticipantActionsTest {
     }
 
     @Test
+    fun demotingAbsentTargetIsNoOp() {
+        // Audit #1: demote-to-listener used to fall through to setRole()
+        // which adds an absent target as PARTICIPANT — pinning a
+        // pure-audience listener to the participant list. After the
+        // fix, the call returns null instead.
+        val original = room()
+        assertNull(RoomParticipantActions.demoteToListener(original, alice))
+    }
+
+    @Test
+    fun demotingExistingParticipantIsNoOp() {
+        // Already a listener (PARTICIPANT role) — re-publishing with
+        // the same role is wasted relay traffic. Return null.
+        val original = room(listOf(arrayOf("p", alice, "", ROLE.PARTICIPANT.code)))
+        assertNull(RoomParticipantActions.demoteToListener(original, alice))
+    }
+
+    @Test
     fun republishKeepsSameDTag() {
         val original = room()
         val template = RoomParticipantActions.setRole(original, alice, ROLE.SPEAKER)!!

@@ -71,6 +71,7 @@ internal fun HandRaiseQueueSection(
     viewModel: NestViewModel,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    onLongPressParticipant: ((String) -> Unit)? = null,
 ) {
     val presences by viewModel.presences.collectAsState()
     // Memoize the on-stage gate so a heartbeat that doesn't change
@@ -120,6 +121,11 @@ internal fun HandRaiseQueueSection(
                             template?.let { accountViewModel.account.signAndComputeBroadcast(it) }
                         }
                     },
+                    // Tap or long-press on the avatar opens the
+                    // per-participant sheet — without this, a host
+                    // had to switch tabs to Audience to view profile
+                    // or kick a hand-raiser they didn't want to approve.
+                    onOpenParticipantSheet = onLongPressParticipant,
                 )
             }
         }
@@ -131,6 +137,7 @@ private fun HandRaiseRow(
     hand: RoomPresence,
     accountViewModel: AccountViewModel,
     onApprove: () -> Unit,
+    onOpenParticipantSheet: ((String) -> Unit)? = null,
 ) {
     val user = remember(hand.pubkey) { LocalCache.getOrCreateUser(hand.pubkey) }
     Row(
@@ -142,6 +149,8 @@ private fun HandRaiseRow(
             baseUserHex = hand.pubkey,
             size = Size35dp,
             accountViewModel = accountViewModel,
+            onClick = onOpenParticipantSheet,
+            onLongClick = onOpenParticipantSheet,
         )
         UsernameDisplay(
             baseUser = user,

@@ -83,13 +83,22 @@ internal object RoomParticipantActions {
 
     /**
      * Demote a speaker / moderator back to listener. Same guarantees
-     * as [setRole] — host can't be demoted; absent target is a no-op
-     * (the row just disappears from the participant list).
+     * as [setRole] — host can't be demoted.
+     *
+     * If the target isn't currently in the participant list at all,
+     * returns null — they're already a pure-audience listener and
+     * re-publishing the kind-30312 to add them back as PARTICIPANT
+     * would silently pin them to the room's participant tags forever
+     * (the "promote on demote" bug, audit #1).
      */
     fun demoteToListener(
         original: MeetingSpaceEvent,
         targetPubkey: String,
-    ): EventTemplate<MeetingSpaceEvent>? = setRole(original, targetPubkey, ROLE.PARTICIPANT)
+    ): EventTemplate<MeetingSpaceEvent>? {
+        val existing = original.participants().firstOrNull { it.pubKey == targetPubkey } ?: return null
+        if (existing.role.equals(ROLE.PARTICIPANT.code, ignoreCase = true)) return null
+        return setRole(original, targetPubkey, ROLE.PARTICIPANT)
+    }
 
     /**
      * Drop [targetPubkey]'s p-tag from the room event entirely.
