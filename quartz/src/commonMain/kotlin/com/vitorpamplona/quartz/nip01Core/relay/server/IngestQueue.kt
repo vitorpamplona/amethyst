@@ -33,6 +33,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -73,6 +75,7 @@ import kotlin.coroutines.CoroutineContext
  * propagates back through the WebSocket pump so a slow disk
  * eventually slows the publisher rather than ballooning JVM memory.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class IngestQueue(
     private val store: IEventStore,
     parentContext: CoroutineContext,
@@ -120,9 +123,7 @@ class IngestQueue(
      * keeps relays that never see an EVENT (read-only sessions,
      * negentropy-only) from paying for the writer at all.
      */
-    @Volatile
-    private var writerStarted = false
-    private val startLock = Any()
+    private val writerStarted = AtomicBoolean(false)
 
     /**
      * Hand off [event] for insertion. [onComplete] is invoked once
@@ -144,11 +145,8 @@ class IngestQueue(
     }
 
     private fun ensureWriterStarted() {
-        if (writerStarted) return
-        synchronized(startLock) {
-            if (writerStarted) return
+        if (writerStarted.compareAndSet(expectedValue = false, newValue = true)) {
             scope.launch { drainLoop() }
-            writerStarted = true
         }
     }
 
