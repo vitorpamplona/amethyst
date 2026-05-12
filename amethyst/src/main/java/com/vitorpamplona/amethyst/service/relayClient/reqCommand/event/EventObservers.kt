@@ -363,9 +363,11 @@ fun observeNoteOts(
 
 // Resolves the actual modification list off the main thread and filters identical results,
 // so the caller's LaunchedEffect only fires when the list of edits truly changes.
+// `sample(500)` collapses bursts — a heavily-edited note can emit hundreds of times during
+// initial relay sync, and we only need the last state per ~half second.
 // Returns `null` until the first IO resolution completes — callers should treat that as
 // "still loading" and not flip their UI to "no edits".
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeNoteModifications(
     note: Note,
@@ -379,6 +381,7 @@ fun observeNoteModifications(
             .flow()
             .edits
             .stateFlow
+            .sample(500)
             .mapLatest { LocalCache.findLatestModificationForNote(note) }
             .distinctUntilChanged()
             .flowOn(Dispatchers.IO)
