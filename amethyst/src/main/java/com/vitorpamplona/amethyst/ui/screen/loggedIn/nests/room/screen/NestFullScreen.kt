@@ -242,6 +242,12 @@ internal fun NestFullScreen(
                 reactionsByPubkey = reactionsByPubkey,
                 connectingSpeakers = ui.connectingSpeakers,
                 onLongPressParticipant = onLongPressParticipant,
+                // Tap on a stage avatar opens the same per-participant
+                // sheet as long-press, mirroring the audience grid.
+                // Long-press was previously the only entry point — a
+                // host with no awareness of the long-press affordance
+                // had no way to reach Promote / Demote / Kick.
+                onTapParticipant = onLongPressParticipant,
                 myPubkey = myPubkey,
                 onTapSelf = onTapSelf,
                 listenerCount = presences.size,
@@ -321,6 +327,7 @@ internal fun NestFullScreen(
                         event = event,
                         viewModel = viewModel,
                         accountViewModel = accountViewModel,
+                        onLongPressParticipant = onLongPressParticipant,
                         modifier =
                             Modifier
                                 .weight(1f)
