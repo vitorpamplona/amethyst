@@ -860,6 +860,12 @@ open class Note(
             return true
         }
 
+        // if this note belongs to a muted thread (by NIP-10 root id)
+        if (accountChoices.mutedThreads.isNotEmpty()) {
+            val rootId = (thisEvent as? BaseThreadedEvent)?.root()?.eventId ?: idHex
+            if (accountChoices.mutedThreads.contains(rootId)) return true
+        }
+
         // if the post is sensitive and the user doesn't want to see sensitive content
         if (accountChoices.showSensitiveContent == false && thisEvent.isSensitiveOrNSFW()) {
             return true
