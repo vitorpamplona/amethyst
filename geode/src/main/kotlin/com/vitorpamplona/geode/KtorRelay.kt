@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.geode
 
+import com.vitorpamplona.geode.server.Nip11HttpRoute
 import com.vitorpamplona.geode.server.Nip86HttpRoute
 import com.vitorpamplona.geode.server.WebSocketSessionPump
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -28,9 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
 import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
-import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.install
 import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
@@ -38,7 +37,6 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.request.header
-import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
@@ -142,6 +140,7 @@ class KtorRelay(
                 publicUrl ?: ("http://" + (call.request.header(HttpHeaders.Host) ?: "$host:$resolvedPort") + path)
             },
         )
+    private val nip11Route = Nip11HttpRoute(liveJson = { relay.info.json })
 
     private var engine: CIOApplicationEngine? = null
     private var resolvedPort: Int = -1
@@ -203,20 +202,7 @@ class KtorRelay(
                                 // serves NIP-11 for plain HTTP GETs and only upgrades
                                 // to a WebSocket when the request is a WS upgrade.
                                 get(path) {
-                                    val accept = call.request.header(HttpHeaders.Accept).orEmpty()
-                                    if (accept.contains("application/nostr+json")) {
-                                        call.response.headers.append("Access-Control-Allow-Origin", "*")
-                                        call.respondText(
-                                            relay.info.json,
-                                            ContentType.parse("application/nostr+json"),
-                                        )
-                                    } else {
-                                        call.respondText(
-                                            "Use a Nostr client (NIP-01 WebSocket) or send Accept: application/nostr+json (NIP-11).",
-                                            ContentType.Text.Plain,
-                                            HttpStatusCode.UpgradeRequired,
-                                        )
-                                    }
+                                    nip11Route.handle(call)
                                 }
                                 // NIP-86: POST application/nostr+json+rpc with a NIP-98
                                 // signed Authorization header → JSON-RPC dispatch.
