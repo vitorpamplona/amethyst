@@ -91,7 +91,7 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import kotlin.coroutines.resume
 
-private val DEFAULT_ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
+internal val DEFAULT_ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
 
 /**
  * Zap type for the zap dialog.
@@ -302,7 +302,7 @@ fun ZapAmountDialog(
     )
 }
 
-private fun formatSats(amount: Long): String = if (amount >= 1000) "${amount / 1000}k" else "$amount"
+internal fun formatSats(amount: Long): String = if (amount >= 1000) "${amount / 1000}k" else "$amount"
 
 /**
  * Dialog for choosing bookmark visibility (public or private).
