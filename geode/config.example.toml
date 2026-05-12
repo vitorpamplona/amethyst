@@ -66,13 +66,6 @@ require_auth = false
 # the future. Enforced by RejectFutureEventsPolicy.
 # reject_future_seconds = 1800
 
-[limits]
-# Maximum WebSocket frame size. Frames larger than this are dropped at
-# the WS layer. (max_ws_message_bytes maps to the same setting since
-# Ktor's WebSockets plugin only exposes per-frame caps.)
-# max_ws_message_bytes = 1048576
-# max_ws_frame_bytes = 1048576
-
 [authorization]
 # Allow / deny lists. Allow is a permissive ceiling; deny still
 # removes specific entries inside it. Enforced by Pubkey/KindAllowDenyPolicy.

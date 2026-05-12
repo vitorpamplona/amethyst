@@ -70,9 +70,6 @@ class StaticConfigTest {
             require_auth = true
             reject_future_seconds = 1800
 
-            [limits]
-            max_ws_frame_bytes = 1048576
-
             [authorization]
             pubkey_blacklist = ["aaaa", "bbbb"]
             kind_blacklist = [4, 1059]
@@ -94,8 +91,6 @@ class StaticConfigTest {
         assertEquals(true, c.options.verify_signatures)
         assertEquals(true, c.options.require_auth)
         assertEquals(1800, c.options.reject_future_seconds)
-
-        assertEquals(1_048_576, c.limits.max_ws_frame_bytes)
 
         assertEquals(listOf("aaaa", "bbbb"), c.authorization.pubkey_blacklist)
         assertEquals(listOf(4, 1059), c.authorization.kind_blacklist)

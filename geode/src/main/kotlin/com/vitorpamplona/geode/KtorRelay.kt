@@ -72,13 +72,6 @@ class KtorRelay(
     val port: Int = 0,
     val path: String = "/",
     /**
-     * Per-frame size cap; mirrors `[limits].max_ws_frame_bytes` in the
-     * config. Frames larger than this are rejected at the WebSocket
-     * layer, which is the only layer that sees the raw bytes. `null`
-     * uses Ktor's default (~1 MiB).
-     */
-    val maxFrameBytes: Long? = null,
-    /**
      * Pubkeys allowed to call NIP-86 admin RPCs. Empty (the default)
      * disables the admin endpoint entirely — POSTs return 403.
      * Otherwise: HTTP POSTs to [path] with `Content-Type:
@@ -100,15 +93,6 @@ class KtorRelay(
      * `Host` and bind their signature to any URL.
      */
     val publicUrl: String? = null,
-    /**
-     * Maximum body size accepted on the NIP-86 POST endpoint, in
-     * bytes. Bounded *before* auth verification because we read the
-     * body to compute its sha256 for NIP-98's payload binding —
-     * unbounded reads would let an unauthenticated attacker stream
-     * gigabytes and OOM the relay. 1 MiB easily fits any plausible
-     * RPC payload.
-     */
-    val maxAdminBodyBytes: Int = 1 shl 20,
     /**
      * Ktor CIO acceptor-thread count. `null` keeps Ktor's default.
      * Lift on machines with many cores when targeting 10k+
@@ -135,7 +119,13 @@ class KtorRelay(
             server = nip86Server,
             verifier = Nip98AuthVerifier(),
             allowList = adminPubkeys.mapTo(HashSet()) { it.lowercase() },
-            maxBodyBytes = maxAdminBodyBytes,
+            // 1 MiB. Bounded *before* NIP-98 auth verification — we
+            // have to read the body to compute its sha256 for the
+            // payload binding, so an unbounded read would let an
+            // unauthenticated attacker stream gigabytes and OOM the
+            // relay. NIP-86 RPC payloads are a few hundred bytes;
+            // 1 MiB is ~1000× any plausible request.
+            maxBodyBytes = 1 shl 20,
             signedUrlFor = { call ->
                 publicUrl ?: ("http://" + (call.request.header(HttpHeaders.Host) ?: "$host:$resolvedPort") + path)
             },
@@ -192,9 +182,7 @@ class KtorRelay(
                 rootConfig =
                     serverConfig {
                         module {
-                            install(WebSockets) {
-                                maxFrameBytes?.let { maxFrameSize = it }
-                            }
+                            install(WebSockets)
                             routing {
                                 // NIP-11: GET on the relay URL with Accept:
                                 // application/nostr+json returns the relay info doc.

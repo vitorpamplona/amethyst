@@ -126,12 +126,13 @@ for unlimited). 500_000 is well above the floor. Pure config change in
 `NegSessionRegistry.open`; expose via `[negentropy].frame_size_limit`
 for operators who tune it down to fit smaller WS frame budgets.
 
-Note: `LimitsSection.max_ws_frame_bytes`
-(`geode/src/main/kotlin/com/vitorpamplona/geode/config/StaticConfig.kt:148`)
-applies to the WebSocket layer. After hex-encoding a 500_000-byte
-negentropy payload doubles to ~1_000_000 bytes on the wire; ensure
-`max_ws_frame_bytes` is at least 2 MB (or unlimited) in default
-config so the response isn't truncated by the WS layer.
+Note: Ktor's WebSocket layer does not impose a default frame cap, so a
+~1 MB hex-encoded negentropy payload is delivered intact. The
+`[limits].max_ws_frame_bytes` operator knob was removed once Ktor's
+unbounded default was confirmed to be sufficient — see the
+`refactor(geode): drop [limits] section` commit. If a reverse proxy
+is in front of the relay, the proxy's frame cap is the only thing
+that can still truncate.
 
 ### D — concurrent NEG-OPEN cap, shared with REQ
 

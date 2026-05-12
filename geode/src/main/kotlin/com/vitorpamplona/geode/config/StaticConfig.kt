@@ -44,7 +44,6 @@ data class StaticConfig(
     val network: NetworkSection = NetworkSection(),
     val database: DatabaseSection = DatabaseSection(),
     val options: OptionsSection = OptionsSection(),
-    val limits: LimitsSection = LimitsSection(),
     val authorization: AuthorizationSection = AuthorizationSection(),
     val admin: AdminSection = AdminSection(),
     val negentropy: NegentropySection = NegentropySection(),
@@ -160,11 +159,6 @@ data class StaticConfig(
         val parallel_verify: Boolean = true,
     )
 
-    data class LimitsSection(
-        val max_ws_message_bytes: Int? = null,
-        val max_ws_frame_bytes: Int? = null,
-    )
-
     /**
      * NIP-77 negentropy tuning. Defaults track strfry
      * (`hoytech/strfry`) so a Geode relay accepts the same workload
@@ -173,9 +167,10 @@ data class StaticConfig(
      *
      * - [frame_size_limit] mirrors strfry's hard-coded
      *   `Negentropy ne(storage, 500'000)` in `RelayNegentropy.cpp`.
-     *   Hex-encoded that's ~1 MB on the wire per NEG-MSG; ensure
-     *   `[limits].max_ws_frame_bytes` (when set) is at least double
-     *   this or NEG-MSGs get truncated by the WS layer.
+     *   Hex-encoded that's ~1 MB on the wire per NEG-MSG. Ktor's
+     *   WebSocket layer does not impose a default frame cap, so this
+     *   payload is delivered intact unless a reverse proxy is
+     *   misconfigured.
      * - [max_sync_events] mirrors strfry's
      *   `relay__negentropy__maxSyncEvents`. NEG-OPEN whose snapshot
      *   exceeds this returns

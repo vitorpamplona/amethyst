@@ -49,8 +49,8 @@ import java.io.File
  *
  * Every section is enforced: `[info]` populates the NIP-11 doc,
  * `[network]` controls the bind, `[database]` chooses the SQLite path,
- * `[options]` toggles AUTH/verify/future-skew, `[limits]` plugs into
- * the relay's policy stack, and `[authorization]` seeds the runtime
+ * `[options]` toggles AUTH/verify/future-skew, and `[authorization]`
+ * seeds the runtime
  * [com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore] on
  * first boot (see [com.vitorpamplona.geode.config.RuntimeConfig]).
  *
@@ -140,18 +140,12 @@ fun main(args: Array<String>) {
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
         )
-    // Frame cap honors max_ws_frame_bytes when set; max_ws_message_bytes
-    // is treated as the same cap (Ktor's WebSockets plugin only exposes
-    // a single per-frame limit; multi-frame messages remain unbounded).
-    val frameLimit =
-        (config.limits.max_ws_frame_bytes ?: config.limits.max_ws_message_bytes)?.toLong()
     val server =
         KtorRelay(
             relay,
             host = host,
             port = port,
             path = path,
-            maxFrameBytes = frameLimit,
             adminPubkeys = config.admin.pubkeys.toSet(),
             publicUrl = config.admin.public_url,
             connectionGroupSize = config.network.connection_group_size,
