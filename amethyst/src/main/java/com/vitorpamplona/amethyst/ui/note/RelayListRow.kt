@@ -99,7 +99,8 @@ fun ShouldShowExpandButton(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val showExpandButton by accountViewModel.createMustShowExpandButtonFlows(baseNote).collectAsStateWithLifecycle()
+    val flow = remember(baseNote) { accountViewModel.createMustShowExpandButtonFlows(baseNote) }
+    val showExpandButton by flow.collectAsStateWithLifecycle()
 
     if (showExpandButton) {
         content()

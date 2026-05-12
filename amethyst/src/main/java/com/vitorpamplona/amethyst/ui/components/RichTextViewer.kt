@@ -122,15 +122,6 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-fun isMarkdown(content: String): Boolean =
-    content.startsWith("> ") ||
-        content.startsWith("# ") ||
-        content.contains("##") ||
-        content.contains("__") ||
-        content.contains("**") ||
-        content.contains("```") ||
-        content.contains("](")
-
 @Composable
 fun RichTextViewer(
     content: String,
@@ -145,7 +136,7 @@ fun RichTextViewer(
     nav: INav,
 ) {
     Column(modifier = modifier) {
-        if (remember(content) { isMarkdown(content) }) {
+        if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
         } else {
             RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav)

@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
@@ -52,10 +54,8 @@ fun observeNote(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .metadata.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().metadata.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -187,10 +187,8 @@ fun observeNoteReplies(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .replies.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().replies.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -225,10 +223,8 @@ fun observeNoteReactions(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .reactions.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().reactions.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -265,10 +261,8 @@ fun observeNoteZaps(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .zaps.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().zaps.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -280,10 +274,8 @@ fun observeNoteReposts(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .boosts.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().boosts.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -365,27 +357,36 @@ fun observeNoteOts(
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .ots
-        .stateFlow
-        .collectAsStateWithLifecycle()
+    val flow = remember(note) { note.flow().ots.stateFlow }
+    return flow.collectAsStateWithLifecycle()
 }
 
+// Resolves the actual modification list off the main thread and filters identical results,
+// so the caller's LaunchedEffect only fires when the list of edits truly changes.
+// `sample(500)` collapses bursts — a heavily-edited note can emit hundreds of times during
+// initial relay sync, and we only need the last state per ~half second.
+// Returns `null` until the first IO resolution completes — callers should treat that as
+// "still loading" and not flip their UI to "no edits".
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeNoteEdits(
+fun observeNoteModifications(
     note: Note,
     accountViewModel: AccountViewModel,
-): State<NoteState?> {
+): State<List<Note>?> {
     // Subscribe in the relay for changes in this note.
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .flow()
-        .edits
-        .stateFlow
-        .collectAsStateWithLifecycle()
+    return produceState<List<Note>?>(initialValue = null, note) {
+        note
+            .flow()
+            .edits
+            .stateFlow
+            .sample(500)
+            .mapLatest { LocalCache.findLatestModificationForNote(note) }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.IO)
+            .collect { value = it }
+    }
 }
 
 @Composable

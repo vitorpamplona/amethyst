@@ -66,8 +66,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteModifications
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -489,30 +489,31 @@ fun calculateBackgroundColor(
 ): MutableState<Color> {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+
+    // Only fade in/out the "new item" highlight for items that track read state.
+    // Inner notes (reposts/quotes) pass routeForLastRead = null and reuse the parent color directly,
+    // so the LaunchedEffect would just park a coroutine for 5s per item during scroll.
+    val isNew =
+        remember(createdAt, routeForLastRead) {
+            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+        }
+
     val bgColor =
         remember(createdAt) {
             mutableStateOf(
-                if (routeForLastRead != null) {
-                    val isNew = accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
-
-                    if (isNew) {
-                        if (parentBackgroundColor != null) {
-                            newItemColor.compositeOver(parentBackgroundColor.value)
-                        } else {
-                            newItemColor.compositeOver(defaultBackgroundColor)
-                        }
-                    } else {
-                        parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
-                    }
+                if (isNew) {
+                    newItemColor.compositeOver(parentBackgroundColor?.value ?: defaultBackgroundColor)
                 } else {
-                    parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+                    parentBackgroundColor?.value ?: Color.Transparent
                 },
             )
         }
 
-    LaunchedEffect(createdAt) {
-        delay(5000)
-        bgColor.value = parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+    if (isNew) {
+        LaunchedEffect(createdAt) {
+            delay(5000)
+            bgColor.value = parentBackgroundColor?.value ?: Color.Transparent
+        }
     }
 
     return bgColor
@@ -1782,23 +1783,25 @@ fun observeEdits(
             )
         }
 
-    val updatedNote by observeNoteEdits(baseNote, accountViewModel)
+    // Upstream resolves on IO and `distinctUntilChanged`s, so this LaunchedEffect only
+    // fires when the actual modification list changes — no more recomputing + reassigning
+    // editState on every unrelated emission of the edits flow.
+    val modifications by observeNoteModifications(baseNote, accountViewModel)
 
-    LaunchedEffect(key1 = updatedNote) {
-        updatedNote?.note?.let {
-            val newModifications = accountViewModel.findModificationEventsForNote(it)
-            if (newModifications.isEmpty()) {
-                if (editState.value !is GenericLoadable.Empty) {
-                    editState.value = GenericLoadable.Empty()
-                }
+    LaunchedEffect(modifications) {
+        val mods = modifications ?: return@LaunchedEffect
+        if (mods.isEmpty()) {
+            if (editState.value !is GenericLoadable.Empty) {
+                editState.value = GenericLoadable.Empty()
+            }
+        } else {
+            val current = editState.value
+            if (current is GenericLoadable.Loaded) {
+                current.loaded.updateModifications(mods)
             } else {
-                if (editState.value is GenericLoadable.Loaded) {
-                    (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.updateModifications(newModifications)
-                } else {
-                    val state = EditState()
-                    state.updateModifications(newModifications)
-                    editState.value = GenericLoadable.Loaded(state)
-                }
+                val state = EditState()
+                state.updateModifications(mods)
+                editState.value = GenericLoadable.Loaded(state)
             }
         }
     }

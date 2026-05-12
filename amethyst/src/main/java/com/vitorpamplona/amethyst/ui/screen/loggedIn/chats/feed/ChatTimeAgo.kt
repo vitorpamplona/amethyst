@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +37,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.note.elements.LocalNowSeconds
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -46,7 +49,14 @@ import com.vitorpamplona.quartz.nip40Expiration.expiration
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
     val nowStr = stringRes(id = R.string.now)
-    val time = remember(baseNote) { timeAgoShort(baseNote.createdAt() ?: 0L, nowStr) }
+    val nowState = LocalNowSeconds.current
+    val time by
+        remember(baseNote, nowStr, nowState) {
+            derivedStateOf {
+                nowState.value
+                timeAgoShort(baseNote.createdAt() ?: 0L, nowStr)
+            }
+        }
 
     Text(
         text = time,

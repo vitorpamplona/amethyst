@@ -22,35 +22,47 @@ package com.vitorpamplona.amethyst.commons.compose
 
 import androidx.collection.LruCache
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 
+// On a cache hit, short-circuit with a remembered State<V?> and skip the produceState coroutine.
+// Only on a miss do we launch the suspending update.
 @Composable
 fun <K : Any, V : Any> produceCachedStateAsync(
     cache: AsyncCachedState<K, V>,
     key: K,
-): State<V?> =
-    @Suppress("ProduceStateDoesNotAssignValue")
-    produceState(initialValue = cache.cached(key), key1 = key) {
-        val newValue = cache.update(key)
-        if (newValue != value) {
-            value = newValue
+): State<V?> {
+    val state = remember(key) { mutableStateOf(cache.cached(key)) }
+    if (state.value == null) {
+        LaunchedEffect(key) {
+            val newValue = cache.update(key)
+            if (state.value != newValue) {
+                state.value = newValue
+            }
         }
     }
+    return state
+}
 
 @Composable
 fun <K : Any, V : Any> produceCachedStateAsync(
     cache: AsyncCachedState<K, V>,
     key: String,
     updateValue: K,
-): State<V?> =
-    @Suppress("ProduceStateDoesNotAssignValue")
-    produceState(initialValue = cache.cached(updateValue), key1 = key) {
-        val newValue = cache.update(updateValue)
-        if (newValue != value) {
-            value = newValue
+): State<V?> {
+    val state = remember(key) { mutableStateOf(cache.cached(updateValue)) }
+    if (state.value == null) {
+        LaunchedEffect(key) {
+            val newValue = cache.update(updateValue)
+            if (state.value != newValue) {
+                state.value = newValue
+            }
         }
     }
+    return state
+}
 
 interface AsyncCachedState<K : Any, V : Any> {
     fun cached(k: K): V?

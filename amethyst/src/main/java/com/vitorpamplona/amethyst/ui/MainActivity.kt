@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -76,7 +77,9 @@ class MainActivity : AppCompatActivity() {
         setContent {
             StringResSetup()
             AmethystTheme {
-                AccountScreen(Amethyst.instance.sessionManager)
+                NowProvider {
+                    AccountScreen(Amethyst.instance.sessionManager)
+                }
             }
         }
     }

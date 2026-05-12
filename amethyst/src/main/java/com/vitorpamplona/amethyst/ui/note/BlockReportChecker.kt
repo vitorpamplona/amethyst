@@ -59,7 +59,8 @@ fun WatchBlockAndReport(
     nav: INav,
     normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
-    val isHidden by accountViewModel.createIsHiddenFlow(note).collectAsStateWithLifecycle()
+    val isHidden by remember(note) { accountViewModel.createIsHiddenFlow(note) }
+        .collectAsStateWithLifecycle()
 
     val showAnyway =
         remember {
