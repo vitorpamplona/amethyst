@@ -27,8 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
-import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
 import io.ktor.http.HttpHeaders
 import io.ktor.server.application.install
 import io.ktor.server.application.serverConfig
@@ -108,9 +108,7 @@ class KtorRelay(
         object : Nip86Server.InfoHolder {
             override fun get(): Nip11RelayInformation = relay.info.document
 
-            override fun set(info: Nip11RelayInformation) {
-                relay.updateInfo { info }
-            }
+            override fun set(info: Nip11RelayInformation) = relay.updateInfo { info }
         }
 
     private val nip86Server =
@@ -118,19 +116,12 @@ class KtorRelay(
             banStore = relay.banStore,
             infoHolder = infoHolder,
             onBan = { filter -> relay.store.delete(filter) },
+            allowList = adminPubkeys,
         )
+
     private val nip86Route =
         Nip86HttpRoute(
-            server = nip86Server,
-            verifier = Nip98AuthVerifier(),
-            allowList = adminPubkeys.mapTo(HashSet()) { it.lowercase() },
-            // 1 MiB. Bounded *before* NIP-98 auth verification — we
-            // have to read the body to compute its sha256 for the
-            // payload binding, so an unbounded read would let an
-            // unauthenticated attacker stream gigabytes and OOM the
-            // relay. NIP-86 RPC payloads are a few hundred bytes;
-            // 1 MiB is ~1000× any plausible request.
-            maxBodyBytes = 1 shl 20,
+            handler = Nip86HttpHandler(server = nip86Server),
             signedUrlFor = { call ->
                 publicUrl ?: ("http://" + (call.request.header(HttpHeaders.Host) ?: "$host:$resolvedPort") + path)
             },

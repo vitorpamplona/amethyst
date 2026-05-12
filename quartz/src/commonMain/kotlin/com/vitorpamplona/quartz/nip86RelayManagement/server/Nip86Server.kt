@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip86RelayManagement.server
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
@@ -45,12 +46,18 @@ import kotlinx.serialization.json.int
  *
  * Holds the [BanStore] (mutated by ban/allow methods), an [InfoHolder]
  * for the live NIP-11 doc (mutated by `changerelay*` methods, which
- * atomically swap it), and an [onBan] hook so each ban method can
- * retroactively purge matching events from the relay's event store.
+ * atomically swap it), an [onBan] hook so each ban method can
+ * retroactively purge matching events from the relay's event store,
+ * and the [allowList] of admin pubkeys authorized to call admin RPCs.
  *
  * Transport-agnostic — relay implementations call [dispatch] from
  * whatever HTTP route they expose (e.g. POST `application/nostr+json+rpc`),
- * and in-process tests can build a [Nip86Request] directly.
+ * and in-process tests can build a [Nip86Request] directly. The
+ * [allowList] check is enforced inside [dispatch] so no caller can
+ * accidentally bypass it; transports also have [isEnabled] and
+ * [isAuthorized] to distinguish "endpoint disabled" (empty list, e.g.
+ * 403 + "not enabled") from "not allowed" (valid token but
+ * unrecognized pubkey, e.g. 403 + "not on admin list").
  *
  * [supportedMethods] is the canonical list this server actually
  * implements; methods returned outside of it are no-ops and a NIP-86
@@ -83,7 +90,21 @@ class Nip86Server(
      * `geode/KtorRelay`) wire it to `store.delete(filter)`.
      */
     private val onBan: suspend (Filter) -> Unit = {},
+    /**
+     * Pubkeys allowed to invoke admin RPCs. Empty disables the admin
+     * API entirely — [isEnabled] returns false and [dispatch] rejects
+     * everything. Compared case-insensitively (lowercased on entry).
+     */
+    allowList: Set<HexKey> = emptySet(),
 ) {
+    private val allowList: Set<HexKey> = allowList.mapTo(HashSet()) { it.lowercase() }
+
+    /** True when at least one admin pubkey is configured. */
+    fun isEnabled(): Boolean = allowList.isNotEmpty()
+
+    /** True when [pubkey] is on the admin allow-list. Case-insensitive. */
+    fun isAuthorized(pubkey: HexKey): Boolean = pubkey.lowercase() in allowList
+
     /** Pluggable container so the relay's NIP-11 doc can be swapped at runtime. */
     interface InfoHolder {
         fun get(): Nip11RelayInformation
@@ -112,11 +133,24 @@ class Nip86Server(
         )
 
     /**
-     * Dispatches a single RPC request. Synchronous-looking but does
-     * suspend internally for the `banevent` event-store delete path.
+     * Dispatches a single RPC request from [pubkey] (the caller, as
+     * authenticated by the transport — NIP-98 over HTTP, NIP-42 over
+     * WS, or in-process trust).
+     *
+     * If [pubkey] is not in [allowList], returns a `not authorized`
+     * error response without executing anything. Transports that
+     * surface different HTTP statuses for "disabled" vs "not on list"
+     * should pre-check via [isEnabled] / [isAuthorized] instead of
+     * relying on this string.
      */
-    suspend fun dispatch(req: Nip86Request): Nip86Response =
-        runCatching {
+    suspend fun dispatch(
+        pubkey: HexKey,
+        req: Nip86Request,
+    ): Nip86Response {
+        if (!isAuthorized(pubkey)) {
+            return Nip86Response(error = "pubkey is not on the admin list")
+        }
+        return runCatching {
             when (req.method) {
                 Nip86Method.SUPPORTED_METHODS -> {
                     ok(buildJsonArray { supportedMethods.forEach { add(JsonPrimitive(it)) } })
@@ -207,6 +241,7 @@ class Nip86Server(
             if (e is CancellationException) throw e
             Nip86Response(error = "internal: ${e.message ?: e::class.simpleName}")
         }
+    }
 
     private inline fun withHex(
         req: Nip86Request,

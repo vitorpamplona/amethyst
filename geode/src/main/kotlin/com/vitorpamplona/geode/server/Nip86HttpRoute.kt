@@ -20,12 +20,7 @@
  */
 package com.vitorpamplona.geode.server
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response
-import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
-import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
+import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -36,90 +31,119 @@ import io.ktor.server.response.respondText
 import io.ktor.utils.io.readAvailable
 
 /**
- * NIP-86 admin POST handler. Owns the gating order:
- *  1. 403 if no admin pubkey list is configured (endpoint disabled).
- *  2. 413 if body exceeds [maxBodyBytes] (declared or actual).
- *  3. 401 if the NIP-98 Authorization header is missing/invalid.
- *  4. 403 if the verified pubkey isn't in [allowList].
- *  5. 400 if the body isn't a valid Nip86Request.
- *  6. 200 with a Nip86Response JSON body otherwise.
+ * Ktor adapter for the canonical NIP-86 HTTP flow encapsulated by
+ * [Nip86HttpHandler]. This class is intentionally thin: it pulls the
+ * Authorization header, signed URL, and body bytes out of the
+ * [ApplicationCall], hands them to the handler, then maps each
+ * [Nip86HttpHandler.Response] variant to the Ktor status / header /
+ * body it expects.
  *
- * The [signedUrlFor] callback resolves what URL the client must have
- * signed in their NIP-98 token. Operators configure the canonical
- * `publicUrl`; loopback tests fall back to the request's `Host`
- * header. We pass it as a callback rather than a string so the route
- * doesn't need to know about Ktor request internals.
+ * The bounded body read happens here (Ktor exposes `ByteReadChannel`,
+ * which is framework-specific) — we stop reading as soon as we'd
+ * exceed [Nip86HttpHandler.maxBodyBytes] so an unauthenticated
+ * attacker can't OOM the relay with a giant stream.
+ *
+ * Audit logging also lives here, off [Nip86HttpHandler.Response.Ok] —
+ * the handler keeps logging policy out of quartz; the geode adapter
+ * picks a stderr line format and runs with it.
  */
 internal class Nip86HttpRoute(
-    private val server: Nip86Server,
-    private val verifier: Nip98AuthVerifier,
-    private val allowList: Set<HexKey>,
-    private val maxBodyBytes: Int,
+    private val handler: Nip86HttpHandler,
     private val signedUrlFor: (ApplicationCall) -> String,
 ) {
     suspend fun handle(call: ApplicationCall) {
-        if (allowList.isEmpty()) {
-            call.respondText(
-                "NIP-86 management API is not enabled on this relay.",
-                ContentType.Text.Plain,
-                HttpStatusCode.Forbidden,
-            )
-            return
-        }
+        val body = readBoundedBody(call) ?: return // 413 already sent
+        val authHeader = call.request.header(HttpHeaders.Authorization)
+        val url = signedUrlFor(call)
 
-        val body = readBoundedBody(call) ?: return
-        val pubkey = verifyAuth(call, body) ?: return
-        if (pubkey.lowercase() !in allowList) {
-            call.respondText(
-                "pubkey is not on the admin list",
-                ContentType.Text.Plain,
-                HttpStatusCode.Forbidden,
-            )
-            return
-        }
-
-        val req =
-            try {
-                JsonMapper.fromJson<Nip86Request>(body.decodeToString())
-            } catch (e: Exception) {
+        when (val r = handler.handle(authHeader, url, body)) {
+            Nip86HttpHandler.Response.Disabled -> {
                 call.respondText(
-                    "invalid Nip86Request: ${e.message ?: e::class.simpleName}",
+                    "NIP-86 management API is not enabled on this relay.",
+                    ContentType.Text.Plain,
+                    HttpStatusCode.Forbidden,
+                )
+            }
+
+            is Nip86HttpHandler.Response.PayloadTooLarge -> {
+                call.respondText(
+                    "request body exceeds ${r.cap}-byte cap",
+                    ContentType.Text.Plain,
+                    HttpStatusCode.PayloadTooLarge,
+                )
+            }
+
+            Nip86HttpHandler.Response.MissingAuth -> {
+                call.response.headers.append(HttpHeaders.WWWAuthenticate, Nip86HttpHandler.WWW_AUTHENTICATE)
+                call.respondText(
+                    "missing Authorization header (NIP-98)",
+                    ContentType.Text.Plain,
+                    HttpStatusCode.Unauthorized,
+                )
+            }
+
+            is Nip86HttpHandler.Response.BadAuth -> {
+                call.respondText(
+                    "invalid NIP-98 Authorization: ${r.reason}",
+                    ContentType.Text.Plain,
+                    HttpStatusCode.Unauthorized,
+                )
+            }
+
+            Nip86HttpHandler.Response.NotAdmin -> {
+                call.respondText(
+                    "pubkey is not on the admin list",
+                    ContentType.Text.Plain,
+                    HttpStatusCode.Forbidden,
+                )
+            }
+
+            is Nip86HttpHandler.Response.BadRequest -> {
+                call.respondText(
+                    r.reason,
                     ContentType.Text.Plain,
                     HttpStatusCode.BadRequest,
                 )
-                return
             }
 
-        val response: Nip86Response = server.dispatch(req)
-        audit(pubkey, req, response)
-        call.respondText(
-            JsonMapper.toJson(response),
-            ContentType.parse("application/nostr+json+rpc"),
-            HttpStatusCode.OK,
-        )
+            is Nip86HttpHandler.Response.Ok -> {
+                audit(r)
+                call.respondText(
+                    r.json,
+                    ContentType.parse(Nip86HttpHandler.CONTENT_TYPE),
+                    HttpStatusCode.OK,
+                )
+            }
+        }
     }
 
+    /**
+     * Bounded read using `handler.maxBodyBytes`. Returns null after
+     * sending a 413 if the request body exceeds the cap — either the
+     * declared `Content-Length` or what we actually pull off the wire.
+     */
     private suspend fun readBoundedBody(call: ApplicationCall): ByteArray? {
+        val cap = handler.maxBodyBytes
         val declared = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
-        if (declared != null && declared > maxBodyBytes) {
+        if (declared != null && declared > cap) {
             call.respondText(
-                "request body exceeds $maxBodyBytes-byte cap",
+                "request body exceeds $cap-byte cap",
                 ContentType.Text.Plain,
                 HttpStatusCode.PayloadTooLarge,
             )
             return null
         }
         val ch = call.receiveChannel()
-        val buf = ByteArray(maxBodyBytes + 1)
+        val buf = ByteArray(cap + 1)
         var pos = 0
-        while (pos <= maxBodyBytes) {
+        while (pos <= cap) {
             val read = ch.readAvailable(buf, pos, buf.size - pos)
             if (read <= 0) break
             pos += read
         }
-        if (pos > maxBodyBytes) {
+        if (pos > cap) {
             call.respondText(
-                "request body exceeds $maxBodyBytes-byte cap",
+                "request body exceeds $cap-byte cap",
                 ContentType.Text.Plain,
                 HttpStatusCode.PayloadTooLarge,
             )
@@ -128,53 +152,16 @@ internal class Nip86HttpRoute(
         return buf.copyOfRange(0, pos)
     }
 
-    private suspend fun verifyAuth(
-        call: ApplicationCall,
-        body: ByteArray,
-    ): HexKey? {
-        val header = call.request.header(HttpHeaders.Authorization)
-        val verification = verifier.verify(header, method = "POST", url = signedUrlFor(call), body = body)
-        return when (verification) {
-            is Nip98AuthVerifier.Result.Verified -> {
-                verification.pubkey
-            }
-
-            Nip98AuthVerifier.Result.Missing -> {
-                call.response.headers.append(HttpHeaders.WWWAuthenticate, Nip98AuthVerifier.SCHEME.trim())
-                call.respondText(
-                    "missing Authorization header (NIP-98)",
-                    ContentType.Text.Plain,
-                    HttpStatusCode.Unauthorized,
-                )
-                null
-            }
-
-            is Nip98AuthVerifier.Result.Malformed -> {
-                call.respondText(
-                    "invalid NIP-98 Authorization: ${verification.reason}",
-                    ContentType.Text.Plain,
-                    HttpStatusCode.Unauthorized,
-                )
-                null
-            }
-        }
-    }
-
     /**
-     * Audit log: structured single line so an operator can grep
-     * "nip86" / pubkey / method without a logging framework
-     * dependency. Best-effort — a missing log line shouldn't fail
-     * the response.
+     * Single-line stderr audit. Operators grep on "nip86" / pubkey /
+     * method without needing a logging framework. Best-effort — a
+     * failed log line must not fail the response.
      */
-    private fun audit(
-        pubkey: HexKey,
-        req: Nip86Request,
-        response: Nip86Response,
-    ) {
+    private fun audit(ok: Nip86HttpHandler.Response.Ok) {
         runCatching {
             System.err.println(
-                "nip86 audit pubkey=$pubkey method=${req.method} ok=${response.error == null}" +
-                    (response.error?.let { " error=$it" } ?: ""),
+                "nip86 audit pubkey=${ok.pubkey} method=${ok.request.method} ok=${ok.response.error == null}" +
+                    (ok.response.error?.let { " error=$it" } ?: ""),
             )
         }
     }

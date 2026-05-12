@@ -42,9 +42,12 @@ class Nip86ServerTest {
     private fun fixture(): Triple<Nip86Server, BanStore, Holder> {
         val store = BanStore()
         val holder = Holder(Nip11RelayInformation(name = "before", description = "before-desc"))
-        val server = Nip86Server(banStore = store, infoHolder = holder)
+        val server = Nip86Server(banStore = store, infoHolder = holder, allowList = setOf(admin))
         return Triple(server, store, holder)
     }
+
+    /** Admin pubkey used in all dispatch calls — must match the allow-list above. */
+    private val admin = "d".repeat(64)
 
     private class Holder(
         var current: Nip11RelayInformation,
@@ -64,7 +67,7 @@ class Nip86ServerTest {
     fun supportedMethodsRoundTrip() {
         runBlocking {
             val (server, _, _) = fixture()
-            val resp = server.dispatch(Nip86Request.supportedMethods())
+            val resp = server.dispatch(admin, Nip86Request.supportedMethods())
             assertNull(resp.error)
             val arr = resp.result as JsonArray
             val names = arr.map { it.jsonPrimitive.content }
@@ -79,11 +82,11 @@ class Nip86ServerTest {
         runBlocking {
             val (server, banStore, _) = fixture()
 
-            val ok = server.dispatch(Nip86Request.banPubkey(pk, "spam"))
+            val ok = server.dispatch(admin, Nip86Request.banPubkey(pk, "spam"))
             assertEquals(true, (ok.result as JsonPrimitive).boolean)
             assertTrue(banStore.isBanned(pk))
 
-            val list = server.dispatch(Nip86Request.listBannedPubkeys())
+            val list = server.dispatch(admin, Nip86Request.listBannedPubkeys())
             val parsed =
                 kotlinx.serialization.json.Json
                     .decodeFromJsonElement(
@@ -94,7 +97,7 @@ class Nip86ServerTest {
             assertEquals(pk, parsed[0].pubkey)
             assertEquals("spam", parsed[0].reason)
 
-            server.dispatch(Nip86Request.unbanPubkey(pk))
+            server.dispatch(admin, Nip86Request.unbanPubkey(pk))
             assertTrue(banStore.listBannedPubkeys().isEmpty())
         }
     }
@@ -103,11 +106,11 @@ class Nip86ServerTest {
     fun allowPubkeyAndListRoundTrip() {
         runBlocking {
             val (server, banStore, _) = fixture()
-            server.dispatch(Nip86Request.allowPubkey(pk, "trusted"))
-            server.dispatch(Nip86Request.allowPubkey(pk2))
+            server.dispatch(admin, Nip86Request.allowPubkey(pk, "trusted"))
+            server.dispatch(admin, Nip86Request.allowPubkey(pk2))
             assertTrue(banStore.hasAllowList())
 
-            val resp = server.dispatch(Nip86Request.listAllowedPubkeys())
+            val resp = server.dispatch(admin, Nip86Request.listAllowedPubkeys())
             val list =
                 kotlinx.serialization.json.Json
                     .decodeFromJsonElement(
@@ -123,10 +126,10 @@ class Nip86ServerTest {
     fun banEventMarksIdAndDeletesFromStoreWhenStorePresent() {
         runBlocking {
             val (server, banStore, _) = fixture()
-            server.dispatch(Nip86Request.banEvent(eventId, "off-topic"))
+            server.dispatch(admin, Nip86Request.banEvent(eventId, "off-topic"))
             assertTrue(banStore.isBannedEvent(eventId))
 
-            val resp = server.dispatch(Nip86Request.listBannedEvents())
+            val resp = server.dispatch(admin, Nip86Request.listBannedEvents())
             val list =
                 kotlinx.serialization.json.Json
                     .decodeFromJsonElement(
@@ -138,7 +141,7 @@ class Nip86ServerTest {
             assertEquals("off-topic", list[0].reason)
 
             // allowevent (which is "unban") removes the entry.
-            server.dispatch(Nip86Request.allowEvent(eventId))
+            server.dispatch(admin, Nip86Request.allowEvent(eventId))
             assertTrue(banStore.listBannedEvents().isEmpty())
         }
     }
@@ -147,11 +150,11 @@ class Nip86ServerTest {
     fun allowKindAndDisallowKind() {
         runBlocking {
             val (server, banStore, _) = fixture()
-            server.dispatch(Nip86Request.allowKind(1))
-            server.dispatch(Nip86Request.allowKind(7))
-            server.dispatch(Nip86Request.disallowKind(4))
+            server.dispatch(admin, Nip86Request.allowKind(1))
+            server.dispatch(admin, Nip86Request.allowKind(7))
+            server.dispatch(admin, Nip86Request.disallowKind(4))
 
-            val list = server.dispatch(Nip86Request.listAllowedKinds())
+            val list = server.dispatch(admin, Nip86Request.listAllowedKinds())
             val ints = (list.result as JsonArray).map { it.jsonPrimitive.int }
             assertEquals(listOf(1, 7), ints)
 
@@ -168,13 +171,13 @@ class Nip86ServerTest {
             val (server, _, holder) = fixture()
             assertEquals("before", holder.current.name)
 
-            server.dispatch(Nip86Request.changeRelayName("after"))
+            server.dispatch(admin, Nip86Request.changeRelayName("after"))
             assertEquals("after", holder.current.name)
 
-            server.dispatch(Nip86Request.changeRelayDescription("nice relay"))
+            server.dispatch(admin, Nip86Request.changeRelayDescription("nice relay"))
             assertEquals("nice relay", holder.current.description)
 
-            server.dispatch(Nip86Request.changeRelayIcon("https://x/icon.png"))
+            server.dispatch(admin, Nip86Request.changeRelayIcon("https://x/icon.png"))
             assertEquals("https://x/icon.png", holder.current.icon)
         }
     }
@@ -183,7 +186,7 @@ class Nip86ServerTest {
     fun unsupportedMethodReturnsError() {
         runBlocking {
             val (server, _, _) = fixture()
-            val resp = server.dispatch(Nip86Request(method = "frobnicate"))
+            val resp = server.dispatch(admin, Nip86Request(method = "frobnicate"))
             assertNotNull(resp.error)
             assertTrue(resp.error!!.contains("frobnicate"))
         }
@@ -194,9 +197,41 @@ class Nip86ServerTest {
         runBlocking {
             val (server, _, _) = fixture()
             // banpubkey requires at least one positional param.
-            val resp = server.dispatch(Nip86Request(method = Nip86Method.BAN_PUBKEY))
+            val resp = server.dispatch(admin, Nip86Request(method = Nip86Method.BAN_PUBKEY))
             assertNotNull(resp.error)
             assertTrue(resp.error!!.startsWith("invalid params"))
         }
+    }
+
+    @Test
+    fun dispatchRejectsPubkeyNotOnAllowList() {
+        runBlocking {
+            val (server, banStore, _) = fixture()
+            val intruder = "e".repeat(64)
+            val resp = server.dispatch(intruder, Nip86Request.banPubkey(pk, "spam"))
+            assertNotNull(resp.error)
+            assertTrue(resp.error!!.contains("not on the admin list"))
+            // And no state was mutated.
+            assertTrue(!banStore.isBanned(pk))
+        }
+    }
+
+    @Test
+    fun emptyAllowListDisablesTheServer() {
+        val store = BanStore()
+        val holder = Holder(Nip11RelayInformation(name = "x"))
+        val server = Nip86Server(banStore = store, infoHolder = holder) // no allowList
+        assertEquals(false, server.isEnabled())
+        assertEquals(false, server.isAuthorized(admin))
+    }
+
+    @Test
+    fun allowListIsCaseInsensitive() {
+        val store = BanStore()
+        val holder = Holder(Nip11RelayInformation(name = "x"))
+        // Configure in upper-case; lookups normalize.
+        val server = Nip86Server(banStore = store, infoHolder = holder, allowList = setOf(admin.uppercase()))
+        assertTrue(server.isAuthorized(admin))
+        assertTrue(server.isAuthorized(admin.uppercase()))
     }
 }
