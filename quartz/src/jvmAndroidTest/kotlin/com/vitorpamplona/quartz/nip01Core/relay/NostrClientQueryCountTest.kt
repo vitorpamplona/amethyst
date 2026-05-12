@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.geode.testing.RelayClientTest
+import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl

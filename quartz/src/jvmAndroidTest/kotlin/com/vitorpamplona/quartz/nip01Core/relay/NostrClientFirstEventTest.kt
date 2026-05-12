@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.geode.testing.RelayClientTest
+import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
