@@ -195,7 +195,7 @@ class GracefulShutdownTest {
                     request,
                     object : okhttp3.WebSocketListener() {
                         override fun onMessage(
-                            ws: okhttp3.WebSocket,
+                            webSocket: okhttp3.WebSocket,
                             text: String,
                         ) {
                             frames.trySend(text)
