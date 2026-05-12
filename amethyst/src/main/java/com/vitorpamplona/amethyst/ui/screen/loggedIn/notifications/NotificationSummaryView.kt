@@ -25,7 +25,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -46,21 +48,25 @@ import com.vitorpamplona.amethyst.ui.theme.chartStyle
 fun SummaryBar(state: NotificationSummaryState) {
     var showChart by remember { mutableStateOf(false) }
 
-    UserReactionsRow(state) { showChart = !showChart }
+    // Opaque background: DisappearingScaffold layers feed content under the topBar
+    // on scroll, and SummaryBar otherwise has no container of its own.
+    Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
+        UserReactionsRow(state) { showChart = !showChart }
 
-    AnimatedVisibility(
-        visible = showChart,
-        enter = slideInVertically() + expandVertically(),
-        exit = slideOutVertically() + shrinkVertically(),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .padding(vertical = 0.dp, horizontal = 20.dp)
-                    .clickable(onClick = { showChart = !showChart }),
+        AnimatedVisibility(
+            visible = showChart,
+            enter = slideInVertically() + expandVertically(),
+            exit = slideOutVertically() + shrinkVertically(),
         ) {
-            ProvideVicoTheme(MaterialTheme.colorScheme.chartStyle) {
-                ObserveAndShowChart(state)
+            Row(
+                modifier =
+                    Modifier
+                        .padding(vertical = 0.dp, horizontal = 20.dp)
+                        .clickable(onClick = { showChart = !showChart }),
+            ) {
+                ProvideVicoTheme(MaterialTheme.colorScheme.chartStyle) {
+                    ObserveAndShowChart(state)
+                }
             }
         }
     }

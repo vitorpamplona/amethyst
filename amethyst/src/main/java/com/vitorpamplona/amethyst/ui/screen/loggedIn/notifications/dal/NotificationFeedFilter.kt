@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -73,10 +74,20 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class NotificationFeedFilter(
     val account: Account,
+    val modeOverride: TopFilter? = null,
 ) : AdditiveFeedFilter<Note>() {
+    // Pin to modeOverride for split-tab mode; otherwise follow the spinner.
+    // Lazy so the eagerly-collected topNavFilter pipeline is only built when
+    // the split UI actually opens this filter.
+    private val overrideFollowLists: StateFlow<IFeedTopNavFilter>? by lazy {
+        modeOverride?.let { account.topNavFilterFlow(MutableStateFlow(it)) }
+    }
+
     companion object {
         val ADDRESSABLE_KINDS =
             listOf(
@@ -125,7 +136,7 @@ class NotificationFeedFilter(
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
-    fun followList(): TopFilter = account.settings.defaultNotificationFollowList.value
+    fun followList(): TopFilter = modeOverride ?: account.settings.defaultNotificationFollowList.value
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 
@@ -137,7 +148,7 @@ class NotificationFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            followLists = account.liveNotificationFollowLists.value,
+            followLists = overrideFollowLists?.value ?: account.liveNotificationFollowLists.value,
             hiddenUsers = account.hiddenUsers.flow.value,
         )
 

@@ -38,6 +38,8 @@ private data class ScrollState(
 
 object ScrollStateKeys {
     const val NOTIFICATION_SCREEN = "NotificationsFeed"
+    const val NOTIFICATION_FOLLOWING = "NotificationsFollowingFeed"
+    const val NOTIFICATION_EVERYONE = "NotificationsEveryoneFeed"
     const val VIDEO_SCREEN = "VideoFeed"
     const val HOME_FOLLOWS = "HomeFollowsFeed"
     const val HOME_REPLIES = "HomeFollowsRepliesFeed"
@@ -81,6 +83,7 @@ object PagerStateKeys {
     const val HOME_SCREEN = "PagerHome"
     const val DISCOVER_SCREEN = "PagerDiscover"
     const val POLLS_SCREEN = "PagerPolls"
+    const val NOTIFICATION_SCREEN = "PagerNotification"
 }
 
 @Composable

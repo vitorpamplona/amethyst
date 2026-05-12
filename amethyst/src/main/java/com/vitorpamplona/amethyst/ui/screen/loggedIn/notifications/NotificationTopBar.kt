@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,17 +38,22 @@ import com.vitorpamplona.amethyst.ui.stringRes
 fun NotificationTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    showSpinner: Boolean = true,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultNotificationFollowList
-            .collectAsStateWithLifecycle()
+        if (showSpinner) {
+            val list by accountViewModel.account.settings.defaultNotificationFollowList
+                .collectAsStateWithLifecycle()
 
-        TopNavFilterBar(
-            followListsModel = accountViewModel.feedStates.feedListOptions,
-            listName = list,
-            accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultNotificationFollowList,
-        )
+            TopNavFilterBar(
+                followListsModel = accountViewModel.feedStates.feedListOptions,
+                listName = list,
+                accountViewModel = accountViewModel,
+                onChange = accountViewModel.account.settings::changeDefaultNotificationFollowList,
+            )
+        } else {
+            Text(text = stringRes(R.string.route_notifications))
+        }
     }
 }
 

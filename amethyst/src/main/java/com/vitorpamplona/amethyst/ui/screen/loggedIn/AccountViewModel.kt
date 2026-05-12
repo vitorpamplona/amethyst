@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
@@ -319,29 +320,41 @@ class AccountViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
-        combineTransform(
-            account.loadLastReadFlow("Notification"),
-            feedStates.notifications.feedContent
-                .flatMapLatest {
-                    if (it is CardFeedState.Loaded) {
-                        it.feed
+        // When split-notifications is on, the badge tracks only the Following feed.
+        account.settings.splitNotificationsEnabled
+            .flatMapLatest { isSplit ->
+                val source =
+                    if (isSplit) feedStates.notificationsFollowing else feedStates.notifications
+                combineTransform(
+                    account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY),
+                    source.feedContent
+                        .flatMapLatest {
+                            if (it is CardFeedState.Loaded) {
+                                it.feed
+                            } else {
+                                MutableStateFlow(null)
+                            }
+                        }.map { it?.list?.firstOrNull()?.createdAt() },
+                ) { lastRead, newestItemCreatedAt ->
+                    emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+                }
+            }.onStart {
+                val source =
+                    if (account.settings.splitNotificationsEnabled.value) {
+                        feedStates.notificationsFollowing
                     } else {
-                        MutableStateFlow(null)
+                        feedStates.notifications
                     }
-                }.map { it?.list?.firstOrNull()?.createdAt() },
-        ) { lastRead, newestItemCreatedAt ->
-            emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
-        }.onStart {
-            val lastRead = account.loadLastReadFlow("Notification").value
-            val cards = feedStates.notifications.feedContent.value
-            if (cards is CardFeedState.Loaded) {
-                val newestItemCreatedAt =
-                    cards.feed.value.list
-                        .firstOrNull()
-                        ?.createdAt()
-                emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+                val lastRead = account.loadLastReadFlow(NOTIFICATION_LAST_READ_KEY).value
+                val cards = source.feedContent.value
+                if (cards is CardFeedState.Loaded) {
+                    val newestItemCreatedAt =
+                        cards.feed.value.list
+                            .firstOrNull()
+                            ?.createdAt()
+                    emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+                }
             }
-        }
 
     val notificationHasNewItemsFlow =
         notificationHasNewItems
