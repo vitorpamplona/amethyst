@@ -24,8 +24,10 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
@@ -132,6 +134,37 @@ class MuteListState(
             MuteListEvent.remove(
                 earlierVersion = muteList,
                 mute = WordTag(word),
+                signer = signer,
+            )
+        } else {
+            null
+        }
+    }
+
+    suspend fun hideThread(rootHex: HexKey): MuteListEvent {
+        val muteList = getMuteList()
+        return if (muteList != null) {
+            MuteListEvent.add(
+                earlierVersion = muteList,
+                mute = EventTag(rootHex),
+                isPrivate = true,
+                signer = signer,
+            )
+        } else {
+            MuteListEvent.create(
+                mute = EventTag(rootHex),
+                isPrivate = true,
+                signer = signer,
+            )
+        }
+    }
+
+    suspend fun showThread(rootHex: HexKey): MuteListEvent? {
+        val muteList = getMuteList()
+        return if (muteList != null) {
+            MuteListEvent.remove(
+                earlierVersion = muteList,
+                mute = EventTag(rootHex),
                 signer = signer,
             )
         } else {

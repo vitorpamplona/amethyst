@@ -225,6 +225,20 @@ class NotificationFeedFilter(
                 }
             }
 
+        // Drop reactions/zaps/reposts whose target post is in a muted thread.
+        // The inner-note renderer would otherwise show a misleading
+        // "This post was hidden because it mentions your hidden users or words"
+        // placeholder for muted-thread targets (regression from Task 6's
+        // Note.isHiddenFor extension).
+        if (noteEvent is ReactionEvent || noteEvent is LnZapEvent ||
+            noteEvent is RepostEvent || noteEvent is GenericRepostEvent
+        ) {
+            val target = it.replyTo?.lastOrNull()
+            if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) {
+                return false
+            }
+        }
+
         // Chess events bypass the follow filter — opponents may not be followed
         val isChessEvent = noteEvent is LiveChessGameAcceptEvent || noteEvent is LiveChessMoveEvent
 

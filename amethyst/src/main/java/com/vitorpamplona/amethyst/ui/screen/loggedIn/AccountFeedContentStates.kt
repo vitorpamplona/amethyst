@@ -138,6 +138,7 @@ class AccountFeedContentStates(
             account.hiddenUsers.flow.collect {
                 dmKnown.invalidateData()
                 dmNew.invalidateData()
+                notifications.invalidateData()
             }
         }
     }

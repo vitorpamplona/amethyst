@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip51Lists.muteList
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.mutedThreadIdSet
 import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUserIdSet
 import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUsers
 import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUsersAndWords
@@ -44,6 +45,8 @@ class MuteListDecryptionCache(
 
     fun cachedWordSet(event: MuteListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedWordSet()
 
+    fun cachedThreadIdSet(event: MuteListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedThreadIdSet()
+
     suspend fun mutedUsersAndWords(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedUsersAndWords()
 
     suspend fun mutedUsers(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedUsers()
@@ -53,4 +56,6 @@ class MuteListDecryptionCache(
     suspend fun mutedWords(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedWords()
 
     suspend fun mutedWordSet(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedWordSet()
+
+    suspend fun mutedThreadIdSet(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedThreadIdSet()
 }

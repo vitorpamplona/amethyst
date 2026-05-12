@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
@@ -56,6 +57,7 @@ class HiddenUsersState(
     ): LiveHiddenUsers {
         val hiddenUsers = blockList.mapNotNullTo(mutableSetOf()) { if (it is UserTag) it.pubKey else null } + muteList.mapNotNull { if (it is UserTag) it.pubKey else null }
         val hiddenWords = blockList.mapNotNullTo(mutableSetOf()) { if (it is WordTag) it.word else null } + muteList.mapNotNull { if (it is WordTag) it.word else null }
+        val mutedThreads = muteList.mapNotNullTo(mutableSetOf()) { if (it is EventTag) it.eventId else null }
 
         return LiveHiddenUsers(
             showSensitiveContent = showSensitiveContent,
@@ -66,6 +68,7 @@ class HiddenUsersState(
             spammers = transientHiddenUsers,
             hiddenWords = hiddenWords,
             maxHashtagLimit = maxHashtagLimit,
+            mutedThreads = mutedThreads,
         )
     }
 

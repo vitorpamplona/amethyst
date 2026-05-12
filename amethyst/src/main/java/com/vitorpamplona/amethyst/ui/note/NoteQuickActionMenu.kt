@@ -326,6 +326,27 @@ fun CardBody(
                         showBlockAlertDialog.value = true
                     }
                 }
+
+                VerticalDivider(color = primaryLight)
+
+                val isMuted = accountViewModel.isThreadMutedFor(note)
+                NoteQuickActionItem(
+                    MaterialSymbols.AutoMirrored.VolumeOff,
+                    stringRes(
+                        if (isMuted) {
+                            R.string.quick_action_unmute_thread
+                        } else {
+                            R.string.quick_action_mute_thread
+                        },
+                    ),
+                ) {
+                    if (isMuted) {
+                        accountViewModel.unmuteThread(note)
+                    } else {
+                        accountViewModel.muteThread(note)
+                    }
+                    onDismiss()
+                }
             }
         }
         HorizontalDivider(
