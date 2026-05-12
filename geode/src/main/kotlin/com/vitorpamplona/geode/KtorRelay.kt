@@ -23,13 +23,10 @@ package com.vitorpamplona.geode
 import com.vitorpamplona.geode.server.Nip11HttpRoute
 import com.vitorpamplona.geode.server.Nip86HttpRoute
 import com.vitorpamplona.geode.server.WebSocketSessionPump
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
-import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
-import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
 import io.ktor.server.application.install
 import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
@@ -71,14 +68,6 @@ class KtorRelay(
     val port: Int = 0,
     val path: String = "/",
     /**
-     * Pubkeys allowed to call NIP-86 admin RPCs. Empty (the default)
-     * disables the admin endpoint entirely — POSTs return 403.
-     * Otherwise: HTTP POSTs to [path] with `Content-Type:
-     * application/nostr+json+rpc` are dispatched to [Nip86Server],
-     * gated by NIP-98 HTTP-Auth membership in this set.
-     */
-    val adminPubkeys: Set<HexKey> = emptySet(),
-    /**
      * Ktor CIO acceptor-thread count. `null` keeps Ktor's default.
      * Lift on machines with many cores when targeting 10k+
      * concurrent connections — see `[network]` config docs.
@@ -89,27 +78,12 @@ class KtorRelay(
     /** Ktor CIO call-handling thread count. `null` keeps Ktor's default. */
     val callGroupSize: Int? = null,
 ) {
-    private val infoHolder =
-        object : Nip86Server.InfoHolder {
-            override fun get(): Nip11RelayInformation = relay.info.document
-
-            override fun set(info: Nip11RelayInformation) = relay.updateInfo { info }
-        }
-
-    private val nip86Server =
-        Nip86Server(
-            banStore = relay.banStore,
-            infoHolder = infoHolder,
-            onBan = { filter -> relay.store.delete(filter) },
-            allowList = adminPubkeys,
-        )
-
     /**
-     * Always assembled — when [adminPubkeys] is empty, the route
-     * still runs the canonical NIP-86 flow but every request fails
-     * the allow-list check ([Nip86HttpHandler.Response.NotAdmin] →
-     * 403). Uniform code path: the transport doesn't branch on
-     * "admin enabled?".
+     * NIP-86 HTTP adapter. Wraps the engine's [RelayEngine.nip86Server]
+     * with the NIP-98 HTTP flow ([Nip86HttpHandler]) and binds it to
+     * Ktor's request lifecycle. The admin pubkey allow-list lives on
+     * the engine, not here — turning admin on is a relay-level
+     * decision, not a transport-level one.
      *
      * The NIP-98 binding URL is derived from `relay.url` via [toHttp]
      * because NIP-86 mandates it: admin requests target the same URI
@@ -117,10 +91,15 @@ class KtorRelay(
      * `ws(s)://`. This makes accidental misconfiguration impossible —
      * the operator's configured `[info].relay_url` is the single
      * source of truth.
+     *
+     * Always wired: when the engine's admin allow-list is empty, the
+     * handler runs the same flow and the allow-list check fails with
+     * [Nip86HttpHandler.Response.NotAdmin] → 403. No "admin enabled?"
+     * branch.
      */
     private val nip86Route =
         Nip86HttpRoute(
-            handler = Nip86HttpHandler(server = nip86Server, publicUrl = relay.url.toHttp()),
+            handler = Nip86HttpHandler(server = relay.nip86Server, publicUrl = relay.url.toHttp()),
         )
 
     private val nip11Route = Nip11HttpRoute(liveJson = { relay.info.json })
@@ -187,7 +166,7 @@ class KtorRelay(
                                 }
                                 // NIP-86: POST application/nostr+json+rpc with a NIP-98
                                 // signed Authorization header → JSON-RPC dispatch.
-                                // Always mounted; an empty [adminPubkeys] just means
+                                // Always mounted; an empty admin allow-list on the engine just means
                                 // every request fails the allow-list check (403).
                                 post(path) {
                                     nip86Route.handle(call)

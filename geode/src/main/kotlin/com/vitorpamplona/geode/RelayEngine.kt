@@ -23,6 +23,7 @@ package com.vitorpamplona.geode
 import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
@@ -33,6 +34,7 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanListPolicy
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
+import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
 import kotlinx.coroutines.SupervisorJob
 import kotlin.coroutines.CoroutineContext
 
@@ -92,6 +94,14 @@ class RelayEngine(
      * per-connection session cap). Defaults to strfry-parity values.
      */
     negentropySettings: NegentropySettings = NegentropySettings.Default,
+    /**
+     * Pubkeys allowed to invoke NIP-86 admin RPCs. Empty (the default)
+     * effectively disables the admin API: every dispatch returns
+     * `not authorized`. Transports (e.g. [KtorRelay] over HTTP) read
+     * [nip86Server] and bind it to their wire protocol — the engine
+     * owns *who* is admin; the transport owns *how* admins authenticate.
+     */
+    adminPubkeys: Set<HexKey> = emptySet(),
 ) : AutoCloseable {
     /**
      * The runtime state to install at boot: the persisted snapshot if
@@ -144,6 +154,29 @@ class RelayEngine(
             disallowedKinds = effectiveAtBoot.disallowedKinds,
         )
     }
+
+    /**
+     * NIP-86 admin RPC dispatcher. Owns the ban / allow / kind list
+     * mutations, the NIP-11 `changerelay*` mutations (via an
+     * [Nip86Server.InfoHolder] adapter that wraps [info] / [updateInfo]),
+     * the event-store purge on each ban method (via `store.delete`),
+     * and the admin allow-list ([adminPubkeys]). Transport-agnostic:
+     * `KtorRelay` wraps it with `Nip86HttpHandler` for HTTP/NIP-98;
+     * an in-process tool could call `dispatch(adminPubkey, req)`
+     * directly.
+     */
+    val nip86Server: Nip86Server =
+        Nip86Server(
+            banStore = banStore,
+            infoHolder =
+                object : Nip86Server.InfoHolder {
+                    override fun get(): Nip11RelayInformation = info.document
+
+                    override fun set(info: Nip11RelayInformation) = updateInfo { info }
+                },
+            onBan = { filter -> store.delete(filter) },
+            allowList = adminPubkeys,
+        )
 
     /**
      * Writes the current state (NIP-11 doc + ban lists) to disk.

@@ -143,6 +143,7 @@ fun main(args: Array<String>) {
             policyBuilder,
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
+            adminPubkeys = config.admin.pubkeys.toSet(),
         )
     val server =
         KtorRelay(
@@ -150,7 +151,6 @@ fun main(args: Array<String>) {
             host = host,
             port = port,
             path = path,
-            adminPubkeys = config.admin.pubkeys.toSet(),
             connectionGroupSize = config.network.connection_group_size,
             workerGroupSize = config.network.worker_group_size,
             callGroupSize = config.network.call_group_size,

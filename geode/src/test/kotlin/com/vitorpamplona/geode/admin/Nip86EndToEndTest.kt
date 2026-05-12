@@ -79,13 +79,12 @@ class Nip86EndToEndTest {
         // server expects to differ from where it actually listens.
         val freePort = java.net.ServerSocket(0).use { it.localPort }
         val url = "ws://127.0.0.1:$freePort/".normalizeRelayUrl()
-        relay = RelayEngine(url = url)
+        relay = RelayEngine(url = url, adminPubkeys = setOf(admin.pubKey))
         server =
             KtorRelay(
                 relay = relay,
                 host = "127.0.0.1",
                 port = freePort,
-                adminPubkeys = setOf(admin.pubKey),
             ).start()
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val builder = BasicOkHttpWebSocket.Builder { _ -> httpClient }
