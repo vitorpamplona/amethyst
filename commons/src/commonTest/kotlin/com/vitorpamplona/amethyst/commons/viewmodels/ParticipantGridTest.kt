@@ -169,6 +169,50 @@ class ParticipantGridTest {
     }
 
     @Test
+    fun stalePresenceWithOnstageFalseIsIgnoredAfterRoleGrant() {
+        // Audience-promoted-to-speaker scenario: presence event was
+        // emitted at t=100 with onstage=false (their pre-promotion
+        // audience-mode kind-10312). The host then promotes them at
+        // t=200 (the room's new createdAt). Without the staleness
+        // gate, this lands the speaker in the audience tab even
+        // though their role just changed — the bug reported on
+        // 2026-05-13. With roleGrantSec=200, the t=100 presence is
+        // stale and the role tag wins → speaker on stage.
+        val grid =
+            buildParticipantGrid(
+                participants = listOf(pTag(host, ROLE.HOST), pTag(speaker, ROLE.SPEAKER)),
+                presences =
+                    mapOf(
+                        host to presence(host, 200L),
+                        speaker to presence(speaker, 100L, onstage = false),
+                    ),
+                roleGrantSec = 200L,
+            )
+        assertEquals(setOf(host, speaker), grid.onStage.map { it.pubkey }.toSet())
+        assertEquals(0, grid.audience.size)
+    }
+
+    @Test
+    fun freshOnstageFalseAfterRoleGrantStillDropsToAudience() {
+        // Inverse: speaker emits onstage=0 AFTER the role grant
+        // (deliberate "stepped off stage" while keeping the role).
+        // Should still drop to audience — the existing leave-stage
+        // contract.
+        val grid =
+            buildParticipantGrid(
+                participants = listOf(pTag(host, ROLE.HOST), pTag(speaker, ROLE.SPEAKER)),
+                presences =
+                    mapOf(
+                        host to presence(host, 200L),
+                        speaker to presence(speaker, 300L, onstage = false),
+                    ),
+                roleGrantSec = 200L,
+            )
+        assertEquals(setOf(host), grid.onStage.map { it.pubkey }.toSet())
+        assertEquals(setOf(speaker), grid.audience.map { it.pubkey }.toSet())
+    }
+
+    @Test
     fun explicitHostInPTagsIsNotDuplicated() {
         // The author already tagged themselves with role=host. The
         // synthesized entry must NOT shadow / duplicate them.

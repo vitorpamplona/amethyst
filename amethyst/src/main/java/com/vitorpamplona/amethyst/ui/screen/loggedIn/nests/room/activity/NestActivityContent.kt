@@ -251,6 +251,14 @@ private fun NestActivityBody(
                 participants = event.participants(),
                 presences = presences,
                 hostPubkey = event.pubKey,
+                // Treat presence as authoritative only when fresher
+                // than the role grant. nostrnests audience members
+                // emit kind-10312 with `onstage=0` and never flip
+                // it back on after a promotion — without this gate,
+                // a freshly-promoted speaker would render in the
+                // audience tab with role=SPEAKER, looking unchanged
+                // to the host who just promoted them.
+                roleGrantSec = event.createdAt,
             )
         }
     val onStageKeys =

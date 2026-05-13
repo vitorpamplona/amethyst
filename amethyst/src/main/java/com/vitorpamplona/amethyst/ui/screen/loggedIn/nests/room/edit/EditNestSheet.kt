@@ -26,9 +26,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -108,60 +111,80 @@ fun EditNestSheet(
         )
     }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        // Two-region layout so the keyboard never squashes the action
+        // row: the form scrolls inside its own viewport, the bottom
+        // buttons stay anchored. `imePadding()` on the outer Column
+        // lifts the whole sheet above the keyboard, so the anchored
+        // row sits just above the IME instead of behind it.
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().imePadding(),
         ) {
-            Text(
-                text = stringRes(R.string.nest_edit_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
-
-            OutlinedTextField(
-                value = state.roomName,
-                onValueChange = viewModel::setRoomName,
-                label = { Text(stringRes(R.string.nest_create_field_room)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.summary,
-                onValueChange = viewModel::setSummary,
-                label = { Text(stringRes(R.string.nest_create_field_summary)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.serviceUrl,
-                onValueChange = viewModel::setServiceUrl,
-                label = { Text(stringRes(R.string.nest_create_field_service)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.endpointUrl,
-                onValueChange = viewModel::setEndpointUrl,
-                label = { Text(stringRes(R.string.nest_create_field_endpoint)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.imageUrl,
-                onValueChange = viewModel::setImageUrl,
-                label = { Text(stringRes(R.string.nest_create_field_image)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            state.error?.let { error ->
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringRes(R.string.nest_edit_title),
+                    style = MaterialTheme.typography.titleLarge,
                 )
-            }
 
-            Spacer(Modifier.height(4.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                OutlinedTextField(
+                    value = state.roomName,
+                    onValueChange = viewModel::setRoomName,
+                    label = { Text(stringRes(R.string.nest_create_field_room)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = state.summary,
+                    onValueChange = viewModel::setSummary,
+                    label = { Text(stringRes(R.string.nest_create_field_summary)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = state.serviceUrl,
+                    onValueChange = viewModel::setServiceUrl,
+                    label = { Text(stringRes(R.string.nest_create_field_service)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = state.endpointUrl,
+                    onValueChange = viewModel::setEndpointUrl,
+                    label = { Text(stringRes(R.string.nest_create_field_endpoint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = state.imageUrl,
+                    onValueChange = viewModel::setImageUrl,
+                    label = { Text(stringRes(R.string.nest_create_field_image)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                state.error?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+            }
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 // Destructive — flips status to CLOSED with the same d-tag
                 // so subscribers see the room go dark. Confirm prompt
                 // gates the actual publish so a misclick on the

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,16 +37,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.viewmodels.REACTION_WINDOW_SEC
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
-import kotlinx.coroutines.delay
 
 /**
  * Floating-emoji overlay drawn under a speaker's avatar. Each chip
@@ -99,47 +94,46 @@ private fun ReactionChip(
     count: Int,
     youngestSec: Long,
 ) {
-    // Tick a [progress] state from 0f → 1f over the eviction window
-    // so the chip can drift + fade in lockstep with how close it is
-    // to falling out of the aggregator. Reset whenever a fresher
-    // reaction lands by re-keying on [youngestSec].
-    var progress by remember(youngestSec) { mutableStateOf(0f) }
+    // One-shot rise + fade keyed on [youngestSec], so a fresh
+    // reaction in the same emoji burst restarts the motion. The
+    // previous implementation re-derived `progress` on a 100 ms
+    // `delay` loop over the 10 s eviction window — drift came out
+    // to ~0.16 dp per tick (visibly stepped) and the rise barely
+    // moved over the full lifetime. Using `Animatable` drives the
+    // value on Compose's frame clock at full refresh rate, and the
+    // shorter [REACTION_RISE_MS] duration produces an actual
+    // pop-and-rise instead of a slow creep.
+    val rise = remember(youngestSec) { Animatable(0f) }
     LaunchedEffect(youngestSec) {
-        // Re-sync against wall-clock so a chip whose window started
-        // before this composable mounted (e.g. user rotated the
-        // device mid-burst) still ages correctly.
-        val ageMs = (System.currentTimeMillis() / 1000L - youngestSec).coerceAtLeast(0L) * 1000L
-        val remaining = (REACTION_WINDOW_MS - ageMs).coerceAtLeast(0L)
-        progress = (ageMs.toFloat() / REACTION_WINDOW_MS).coerceIn(0f, 1f)
-        if (remaining <= 0L) return@LaunchedEffect
-        // 100 ms ticks keep the drift smooth without burning a frame
-        // budget — the avatar is small and the chip's motion is
-        // sub-pixel between ticks anyway.
-        val steps = (remaining / 100L).coerceAtLeast(1L)
-        repeat(steps.toInt()) {
-            delay(100L)
-            progress =
-                ((System.currentTimeMillis() / 1000L - youngestSec).toFloat() * 1000f / REACTION_WINDOW_MS)
-                    .coerceIn(0f, 1f)
+        // Wall-clock seed so a chip already mid-window when the
+        // composable first mounts (e.g. recompose after rotation)
+        // picks up where it left off rather than restarting.
+        val ageMs = ((System.currentTimeMillis() / 1000L) - youngestSec).coerceAtLeast(0L) * 1000L
+        val startProgress = (ageMs.toFloat() / REACTION_RISE_MS.toFloat()).coerceIn(0f, 1f)
+        rise.snapTo(startProgress)
+        val remainingMs = (REACTION_RISE_MS - ageMs).toInt().coerceAtLeast(0)
+        if (remainingMs > 0) {
+            rise.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = remainingMs, easing = LinearOutSlowInEasing),
+            )
         }
-        progress = 1f
     }
 
-    // Drift up by ~16 dp over the window so the chip reads as
-    // "rising and dissipating", and fade out over the second half
-    // so the first half stays solidly readable.
-    val driftDp = (-16f * progress).dp
-    val animatedAlpha by animateFloatAsState(
-        targetValue = (1f - ((progress - 0.5f).coerceAtLeast(0f) * 2f)).coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 100, easing = LinearEasing),
-        label = "reaction-chip-alpha",
-    )
+    val progress = rise.value
+    // Final rise distance has to land within the participant cell's
+    // headroom — much past 24 dp clips into the avatar above on a
+    // 75 dp grid cell.
+    val driftDp = (-DRIFT_MAX_DP * progress).dp
+    // Solid for the first half, then fades linearly over the second
+    // half so the reaction reads as "popping in, then dissipating".
+    val alpha = (1f - ((progress - 0.5f).coerceAtLeast(0f) * 2f)).coerceIn(0f, 1f)
 
     Surface(
         modifier =
             Modifier
                 .offset(y = driftDp)
-                .alpha(animatedAlpha),
+                .alpha(alpha),
         shape = MaterialTheme.shapes.small,
         tonalElevation = 2.dp,
         shadowElevation = 1.dp,
@@ -154,4 +148,11 @@ private fun ReactionChip(
     }
 }
 
-private const val REACTION_WINDOW_MS = REACTION_WINDOW_SEC * 1000L
+// Rise + fade plays out well inside the 10 s eviction window so the
+// chip is fully transparent before the aggregator drops it from the
+// list (avoids a hard pop on removal). 6 s keeps the chip solidly
+// visible for ~3 s (alpha=1 holds for the first half) before the
+// fade begins — earlier 1.5 s and 4 s passes still read as a
+// "blink" relative to nostrnests' web reaction lifetime.
+private const val REACTION_RISE_MS = 6000L
+private const val DRIFT_MAX_DP = 28f

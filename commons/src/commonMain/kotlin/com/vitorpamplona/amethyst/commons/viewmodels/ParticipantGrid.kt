@@ -69,6 +69,16 @@ data class ParticipantGrid(
  *     AND whose latest presence advertises `onstage != false`. A
  *     speaker who explicitly emitted `onstage=0` ("step off the
  *     stage") drops to audience without losing their role tag.
+ *
+ *     Caveat: a presence event is only honoured for the on-stage
+ *     gate when it's NEWER than the role grant ([roleGrantSec],
+ *     conservatively the kind-30312 `created_at`). Otherwise a
+ *     freshly-promoted audience member whose pre-promotion
+ *     `kind-10312` carried `onstage=0` would be pinned to the
+ *     audience tab until they re-heartbeat — which on nostrnests
+ *     never happens, since audience members there don't toggle
+ *     their `onstage` flag back on after a role bump. Stale
+ *     presence ⇒ trust the role.
  *   * Audience: every pubkey with recent presence that isn't on
  *     stage, plus participant-tagged users who haven't emitted
  *     presence yet (rendered as `absent = true`).
@@ -86,6 +96,7 @@ fun buildParticipantGrid(
     participants: List<ParticipantTag>,
     presences: Map<String, RoomPresence>,
     hostPubkey: HexKey? = null,
+    roleGrantSec: Long = 0L,
 ): ParticipantGrid {
     val effectiveParticipants =
         if (hostPubkey != null && participants.none { it.pubKey == hostPubkey }) {
@@ -103,7 +114,10 @@ fun buildParticipantGrid(
         val pres = presences[p.pubKey]
         val role = p.effectiveRole()
         val canSpeak = p.canSpeak()
-        val onstageFlag = pres?.onstage ?: true // default true for backwards compat
+        // Stale-presence override: trust the role when the presence
+        // event predates the role grant. See KDoc above for why.
+        val presenceIsFresh = pres != null && pres.updatedAtSec >= roleGrantSec
+        val onstageFlag = if (presenceIsFresh) pres.onstage else true
         val member =
             RoomMember(
                 pubkey = p.pubKey,
