@@ -438,9 +438,11 @@ class AccountViewModel(
                 // HomeScreen falls back to the New Threads tab when the user disables every tab.
                 threadsHas
             } else {
-                (showThreads && threadsHas) ||
-                    (showReplies && repliesHas) ||
-                    (showEverything && everythingHas)
+                // Dot stays lit only when every enabled tab still has unread items.
+                // Reaching the top of any single tab marks its newest item read and clears the dot.
+                (!showThreads || threadsHas) &&
+                    (!showReplies || repliesHas) &&
+                    (!showEverything || everythingHas)
             }
         }
 
