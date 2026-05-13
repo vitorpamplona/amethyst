@@ -177,23 +177,25 @@ class MediaUrlContentExtTest {
     @Test
     fun bridgeOnPicksRightmostShaWhenPathHasTwoHashes() {
         // share.yabu.me layout: <cache-prefix-sha>/<blob-sha>.<ext>
-        val prefix = "84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5"
-        val blob = "28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5"
-        val image = MediaUrlImage(url = "https://share.yabu.me/$prefix/$blob.webp", hash = null)
+        val image =
+            MediaUrlImage(
+                url = "https://share.yabu.me/84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5/28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5.webp",
+                hash = null,
+            )
         assertEquals(
-            "blossom:$blob.webp?xs=https://share.yabu.me/$prefix",
+            "blossom:28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5.webp?xs=https://share.yabu.me/84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5",
             image.toCoilModel(useLocalBlossomBridge = true),
         )
     }
 
     @Test
     fun bridgeProfilePictureUrlPicksRightmostShaWhenPathHasTwoHashes() {
-        val prefix = "84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5"
-        val blob = "28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5"
-        val url = "https://share.yabu.me/$prefix/$blob.webp"
         assertEquals(
-            "http://127.0.0.1:24242/$blob.webp?xs=https%3A%2F%2Fshare.yabu.me%2F$prefix",
-            bridgeProfilePictureUrl(url, useBridge = true),
+            "http://127.0.0.1:24242/28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5.webp?xs=https%3A%2F%2Fshare.yabu.me%2F84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5",
+            bridgeProfilePictureUrl(
+                "https://share.yabu.me/84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5/28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5.webp",
+                useBridge = true,
+            ),
         )
     }
 }
