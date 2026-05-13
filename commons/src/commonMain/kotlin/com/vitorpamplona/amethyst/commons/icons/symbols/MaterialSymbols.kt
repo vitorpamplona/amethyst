@@ -178,6 +178,7 @@ object MaterialSymbols {
     val RadioButtonUnchecked = MaterialSymbol("\uE836")
     val Recommend = MaterialSymbol("\uE9D2")
     val Refresh = MaterialSymbol("\uE5D5")
+    val Remove = MaterialSymbol("\uE15B")
     val RemoveCircleOutline = MaterialSymbol("\uF08F")
     val RemoveDone = MaterialSymbol("\uE9D3")
     val Replay = MaterialSymbol("\uE042")

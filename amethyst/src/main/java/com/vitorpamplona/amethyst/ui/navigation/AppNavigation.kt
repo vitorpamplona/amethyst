@@ -154,10 +154,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.VanishEventsS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BlockedUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HiddenWordsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.MutedThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.OtsSettingsScreen
@@ -165,6 +168,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ProfileUiSettingsS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ReactionsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SpammingUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
@@ -299,6 +303,10 @@ fun BuildNavigation(
         composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
         composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BlockedUsers> { BlockedUsersScreen(accountViewModel, nav) }
+        composableFromEnd<Route.SpammingUsers> { SpammingUsersScreen(accountViewModel, nav) }
+        composableFromEnd<Route.HiddenWords> { HiddenWordsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.MutedThreads> { MutedThreadsScreen(accountViewModel, nav) }
         composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(nav) }
         composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(nav) }
         composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(nav) }
