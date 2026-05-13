@@ -940,8 +940,10 @@ class Account(
     private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = cache.getAnyChannel(event)?.relays() ?: emptySet()
 
     // Personal events the user stores just for themselves — drafts, app settings, bookmark
-    // lists — and channel/community events that already declare their own relay set should
-    // not be replicated to the user's broadcasting relays.
+    // lists — and channel/community events that already declare their own home relays
+    // should not be replicated to the user's broadcasting relays. Channel/community events
+    // that don't define any home relays fall through to broadcast, since there's nowhere
+    // else for them to land.
     private fun wantsBroadcastRelays(event: Event): Boolean {
         if (event is DraftWrapEvent ||
             event is AppSpecificDataEvent ||
@@ -951,14 +953,14 @@ class Account(
         ) {
             return false
         }
-        if (event is PollEvent ||
-            event is MeetingSpaceEvent ||
-            event is MeetingRoomEvent ||
-            event is LiveActivitiesEvent ||
-            cache.getAnyChannel(event) != null
-        ) {
-            return false
-        }
+        if (event is PollEvent && event.relays().isNotEmpty()) return false
+        if (event is MeetingSpaceEvent && event.allRelayUrls().isNotEmpty()) return false
+        if (event is MeetingRoomEvent && event.allRelayUrls().isNotEmpty()) return false
+        if (event is LiveActivitiesEvent && event.allRelayUrls().isNotEmpty()) return false
+
+        val channelRelays = cache.getAnyChannel(event)?.relays()
+        if (channelRelays != null && channelRelays.isNotEmpty()) return false
+
         return true
     }
 
