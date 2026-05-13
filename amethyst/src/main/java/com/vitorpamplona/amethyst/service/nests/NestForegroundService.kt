@@ -310,10 +310,27 @@ class NestForegroundService : Service() {
         // startForegroundService MUST call startForeground within 5 s, on
         // every invocation (audit Android #8). Even the STOP path needs a
         // foreground state before stopForeground can demote it cleanly.
+        //
+        // Three startForegroundService entry points reach this code:
+        //   - `startListening(context)`  → intent != null, action == null
+        //     The wrapper is in listener-only mode; the service must
+        //     foreground with MEDIA_PLAYBACK type (no MICROPHONE).
+        //   - `promoteToMicrophone(ctx)` → intent.action == ACTION_PROMOTE_TO_MIC
+        //   - OS-restart of a START_STICKY service → intent == null
+        //     Preserve whatever foreground type we last ran with.
+        //
+        // The explicit demote branch (`else -> false`) is load-bearing:
+        // when the user leaves the stage, `startListening` is called to
+        // demote, AudioRecord is being released, and asking the OS for
+        // FOREGROUND_SERVICE_TYPE_MICROPHONE here throws SecurityException
+        // on Android 14+. The runCatching below would then `stopSelf()`
+        // without ever calling `startForeground`, tripping
+        // ForegroundServiceDidNotStartInTimeException.
         val mic =
-            when (intent?.action) {
-                ACTION_PROMOTE_TO_MIC -> true
-                else -> promoted
+            when {
+                intent == null -> promoted
+                intent.action == ACTION_PROMOTE_TO_MIC -> true
+                else -> false
             }
         runCatching { startForegroundWithType(includeMic = mic) }
             .onFailure {

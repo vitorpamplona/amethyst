@@ -33,6 +33,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid
@@ -255,8 +257,30 @@ private fun NestActivityBody(
         remember(participantGrid) {
             participantGrid.onStage.map { it.pubkey }.toSet()
         }
+    val isOnStageMe = remember(onStageKeys, localPubkey) { localPubkey in onStageKeys }
 
     AutoConnectAndTrackSpeakers(viewModel, onStageKeys)
+
+    // Auto-stop broadcast if the local user falls off the stage while
+    // still publishing — covers two cases the manual Leave Stage button
+    // doesn't:
+    //   1. Host edits the kind-30312 to remove our `p`-tag (demotion).
+    //      Without this effect, the broadcast keeps running until the
+    //      user navigates away and the MoQ relay accepts the packets,
+    //      so a demoted speaker can keep talking on nostrnests.
+    //   2. The user taps Leave Stage on another client. Their kind-10312
+    //      arrives with onstage=0, participantGrid drops them, we tear
+    //      down here in mirror.
+    // Driven by participantGrid + presence (the same source as the
+    // StageGrid render), so it stays consistent with what the UI shows.
+    LaunchedEffect(isOnStageMe, ui.broadcast) {
+        if (!isOnStageMe &&
+            (ui.broadcast is BroadcastUiState.Broadcasting || ui.broadcast == BroadcastUiState.Connecting)
+        ) {
+            viewModel.stopBroadcast()
+            viewModel.setOnStage(false)
+        }
+    }
 
     // Single REQ per relay covering chat, presence, reactions, admin
     // commands. See NestRoomFilterAssembler for the filter shape.

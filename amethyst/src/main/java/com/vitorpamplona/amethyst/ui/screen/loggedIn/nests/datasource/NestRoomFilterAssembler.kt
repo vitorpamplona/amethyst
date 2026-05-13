@@ -108,6 +108,25 @@ class NestRoomFilterSubAssembler(
                             since = since?.get(relay)?.time,
                         ),
                 ),
+                // Live-update subscription for the room event itself.
+                // EventFinder loads it once when missing and stops; the
+                // discovery-side feeds (FilterLiveActivitiesBy*) don't
+                // run while the user is inside a room. So without this
+                // third filter, a kind-30312 edit on the host's end
+                // (remove-from-stage, role change, status flip) never
+                // reaches the in-room screen — the demoted speaker
+                // keeps seeing themselves on stage and broadcasting,
+                // because participantGrid is built from a frozen event.
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = listOf(MeetingSpaceEvent.KIND),
+                            authors = listOf(key.note.address.pubKeyHex),
+                            tags = mapOf("d" to listOf(key.note.address.dTag)),
+                            since = since?.get(relay)?.time,
+                        ),
+                ),
             )
         }
     }
