@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,10 +31,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -53,7 +57,7 @@ import androidx.compose.material3.Icon as Material3Icon
 
 @Composable
 internal fun SettingsSection(
-    title: Int,
+    @StringRes title: Int,
     isDanger: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -93,10 +97,10 @@ internal fun SettingsDivider() {
     )
 }
 
-/** Navigation row: icon + title + optional `trailing` (count badge, etc.) + chevron. */
+/** Navigation row: icon + title + optional [trailing] (count badge, etc.) + chevron. */
 @Composable
 internal fun SettingsItem(
-    title: Int,
+    @StringRes title: Int,
     icon: MaterialSymbol,
     isDanger: Boolean = false,
     trailing: @Composable () -> Unit = {},
@@ -120,7 +124,7 @@ internal fun SettingsItem(
 /** Navigation row variant taking a drawable painter as the leading icon. */
 @Composable
 internal fun SettingsItem(
-    title: Int,
+    @StringRes title: Int,
     iconPainter: Int,
     iconPainterRef: Int,
     isDanger: Boolean = false,
@@ -145,7 +149,7 @@ internal fun SettingsItem(
 
 @Composable
 private fun SettingsItemRow(
-    title: Int,
+    @StringRes title: Int,
     isDanger: Boolean,
     trailing: @Composable () -> Unit,
     onClick: () -> Unit,
@@ -199,28 +203,24 @@ private fun SettingsItemRow(
 }
 
 /**
- * Control row: icon + title + description, with an inline `trailing` control (switch, stepper).
- * Clicking anywhere on the row invokes [onClick] — pass `null` to disable row clicks
- * (useful when the control alone should toggle state).
+ * Control row: icon + title + description, with an inline [trailing] control (switch, stepper).
+ * When [onClick] is non-null the whole row becomes clickable — useful for `Switch` rows where
+ * tapping anywhere should toggle the state.
  */
 @Composable
 internal fun SettingsControlRow(
     icon: MaterialSymbol,
     title: String,
     description: String,
-    enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     trailing: @Composable () -> Unit,
 ) {
-    val rowModifier =
-        Modifier
-            .fillMaxWidth()
-            .let { if (onClick != null && enabled) it.clickable(onClick = onClick) else it }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    val alpha = if (enabled) 1f else 0.5f
-
     Row(
-        modifier = rowModifier,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsIconBox(MaterialTheme.colorScheme.primaryContainer) {
@@ -228,7 +228,7 @@ internal fun SettingsControlRow(
                 symbol = icon,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = alpha),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
         Column(
@@ -237,15 +237,11 @@ internal fun SettingsControlRow(
                     .weight(1f)
                     .padding(start = 16.dp, end = 12.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
-            )
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         trailing()
@@ -255,7 +251,7 @@ internal fun SettingsControlRow(
 /**
  * Sub-row variant of [SettingsControlRow]: indented in place of a leading icon,
  * used for controls hierarchically grouped under the row above (e.g. a threshold
- * that only matters when the parent toggle is on).
+ * that only matters when the parent toggle is on). Text dims when [enabled] is false.
  */
 @Composable
 internal fun SettingsSubControlRow(
@@ -272,9 +268,7 @@ internal fun SettingsSubControlRow(
                 .padding(start = 68.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            modifier = Modifier.weight(1f).padding(end = 12.dp),
-        ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -329,6 +323,77 @@ internal fun SettingsBlockTile(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             content()
+        }
+    }
+}
+
+/** Pill-shaped count for [SettingsItem.trailing]. Renders a space placeholder when zero. */
+@Composable
+internal fun SettingsCountBadge(count: Int) {
+    Box(
+        modifier = Modifier.widthIn(min = 28.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (count > 0) {
+            Box(
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 10.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
+    }
+}
+
+/** Numeric stepper: `-` value `+`. [unsetLabel] is shown when value <= 0 (e.g. "∞"). */
+@Composable
+internal fun SettingsStepper(
+    value: Int,
+    min: Int,
+    max: Int,
+    enabled: Boolean = true,
+    unsetLabel: String? = null,
+    onValueChange: (Int) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            enabled = enabled && value > min,
+            onClick = { onValueChange((value - 1).coerceAtLeast(min)) },
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Remove,
+                contentDescription = "−",
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Text(
+            text = if (unsetLabel != null && value <= 0) unsetLabel else value.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(min = 40.dp),
+        )
+        IconButton(
+            enabled = enabled && value < max,
+            onClick = { onValueChange((value + 1).coerceAtMost(max)) },
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Add,
+                contentDescription = "+",
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

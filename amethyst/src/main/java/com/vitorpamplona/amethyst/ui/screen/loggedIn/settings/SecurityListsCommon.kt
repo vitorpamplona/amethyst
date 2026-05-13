@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -54,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -74,25 +76,25 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 
+/**
+ * Re-runs [invalidate] whenever the user's block/mute state changes. `hiddenUsers.flow`
+ * already combines transient spammers, so subscribing to that alone covers both.
+ */
 @Composable
 internal fun InvalidateOnBlockListChange(
     accountViewModel: AccountViewModel,
     invalidate: () -> Unit,
 ) {
-    val transientSpammers by accountViewModel.account.hiddenUsers.transientHiddenUsers
-        .collectAsStateWithLifecycle()
     val blockListState by accountViewModel.account.hiddenUsers.flow
         .collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, transientSpammers, blockListState) {
-        invalidate()
-    }
+    LaunchedEffect(blockListState) { invalidate() }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BlockListTopBar(
-    title: Int,
+    @StringRes title: Int,
     selectedCount: Int,
     onCancel: () -> Unit,
     onUnblock: () -> Unit,
@@ -132,81 +134,84 @@ internal fun BlockListTopBar(
 internal fun SelectableUserList(
     modifier: Modifier = Modifier,
     viewModel: UserFeedViewModel,
-    emptyMessage: Int,
+    @StringRes emptyMessage: Int,
     selected: Set<String>,
     onToggle: (String) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    enablePullRefresh: Boolean = true,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
-    val selectionMode = selected.isNotEmpty()
+    RefresheableBox(viewModel, enablePullRefresh) {
+        val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+        val selectionMode = selected.isNotEmpty()
 
-    when (val state = feedState) {
-        is UserFeedState.Loaded -> {
-            val items by state.feed.collectAsStateWithLifecycle()
-            val listState = rememberLazyListState()
+        when (val state = feedState) {
+            is UserFeedState.Loaded -> {
+                val items by state.feed.collectAsStateWithLifecycle()
+                val listState = rememberLazyListState()
 
-            LazyColumn(
-                modifier = modifier.fillMaxSize(),
-                contentPadding = rememberFeedContentPadding(FeedPadding),
-                state = listState,
-            ) {
-                items(items, key = { it.pubkeyHex }) { user ->
-                    val isSelected = user.pubkeyHex in selected
-                    val rowModifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .combinedClickable(
-                                onClick = {
-                                    if (selectionMode) {
-                                        onToggle(user.pubkeyHex)
+                LazyColumn(
+                    modifier = modifier.fillMaxSize(),
+                    contentPadding = rememberFeedContentPadding(FeedPadding),
+                    state = listState,
+                ) {
+                    items(items, key = { it.pubkeyHex }) { user ->
+                        val isSelected = user.pubkeyHex in selected
+                        val rowModifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = {
+                                        if (selectionMode) {
+                                            onToggle(user.pubkeyHex)
+                                        } else {
+                                            nav.nav(routeFor(user))
+                                        }
+                                    },
+                                    onLongClick = { onToggle(user.pubkeyHex) },
+                                ).let {
+                                    if (isSelected) {
+                                        it.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                                     } else {
-                                        nav.nav(routeFor(user))
+                                        it
                                     }
-                                },
-                                onLongClick = { onToggle(user.pubkeyHex) },
-                            ).let {
-                                if (isSelected) {
-                                    it.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                } else {
-                                    it
                                 }
-                            }
 
-                    Row(
-                        modifier = rowModifier.padding(horizontal = Size15dp, vertical = Size10dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        UserPicture(user, Size55dp, accountViewModel = accountViewModel, nav = nav)
-                        Column(
-                            modifier =
-                                Modifier
-                                    .padding(start = 10.dp)
-                                    .weight(1f),
+                        Row(
+                            modifier = rowModifier.padding(horizontal = Size15dp, vertical = Size10dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            UsernameDisplay(user, accountViewModel = accountViewModel)
+                            UserPicture(user, Size55dp, accountViewModel = accountViewModel, nav = nav)
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .padding(start = 10.dp)
+                                        .weight(1f),
+                            ) {
+                                UsernameDisplay(user, accountViewModel = accountViewModel)
+                            }
+                            if (selectionMode) {
+                                Checkbox(checked = isSelected, onCheckedChange = { onToggle(user.pubkeyHex) })
+                            } else {
+                                ShowUserButton { accountViewModel.show(user) }
+                            }
                         }
-                        if (selectionMode) {
-                            Checkbox(checked = isSelected, onCheckedChange = { onToggle(user.pubkeyHex) })
-                        } else {
-                            ShowUserButton { accountViewModel.show(user) }
-                        }
+                        HorizontalDivider(thickness = DividerThickness)
                     }
-                    HorizontalDivider(thickness = DividerThickness)
                 }
             }
-        }
 
-        is UserFeedState.Empty -> {
-            EmptyState(modifier, emptyMessage)
-        }
+            is UserFeedState.Empty -> {
+                EmptyState(modifier, emptyMessage)
+            }
 
-        is UserFeedState.Loading -> {
-            LoadingFeed()
-        }
+            is UserFeedState.Loading -> {
+                LoadingFeed()
+            }
 
-        is UserFeedState.FeedError -> {
-            FeedError(state.errorMessage) { viewModel.invalidateData() }
+            is UserFeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
         }
     }
 }
@@ -214,7 +219,7 @@ internal fun SelectableUserList(
 @Composable
 internal fun EmptyState(
     modifier: Modifier = Modifier,
-    message: Int,
+    @StringRes message: Int,
 ) {
     Column(
         modifier = modifier.fillMaxSize().padding(32.dp),
