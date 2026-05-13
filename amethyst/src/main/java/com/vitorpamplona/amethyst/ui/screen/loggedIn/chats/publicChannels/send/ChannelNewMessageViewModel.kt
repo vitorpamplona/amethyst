@@ -304,10 +304,9 @@ open class ChannelNewMessageViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (!accountViewModel.settings.automaticallyCreateDrafts()) return
         if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftTag.current)
-        } else {
+        } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
                 attachments.add(it.first)

@@ -422,10 +422,9 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (!accountViewModel.settings.automaticallyCreateDrafts()) return
         if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftTag.current)
-        } else {
+        } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             innerSendPost(draftTag.current)
         }
     }
