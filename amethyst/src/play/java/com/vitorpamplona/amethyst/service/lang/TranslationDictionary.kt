@@ -25,16 +25,17 @@ import java.util.regex.Pattern
 
 /**
  * Pure-JVM helpers that protect non-translatable substrings (URLs, Lightning invoices, NIP-19
- * references, NIP-08 positional references) by swapping them with single Unicode Private Use Area
- * codepoints around a translator. Extracted out of [LanguageTranslatorService] so the round-trip
- * can be unit-tested without ML Kit / Android runtime.
+ * references, NIP-08 positional references) by swapping them with ICU MessageFormat positional
+ * tokens ({0}, {1}, ...) around a translator. Extracted out of [LanguageTranslatorService] so the
+ * round-trip can be unit-tested without ML Kit / Android runtime.
  */
 internal object TranslationDictionary {
-    // Range U+E000..U+F8FF gives 6400 placeholder slots. PUA codepoints don't appear in normal
-    // user text, the translator has no rule for them so it passes them through, and using one
-    // codepoint per placeholder means the translator can't split or reorder it.
-    const val PLACEHOLDER_BASE: Int = 0xE000
-    const val PLACEHOLDER_LIMIT: Int = 0xF8FF - PLACEHOLDER_BASE
+    // Placeholders use ICU MessageFormat positional syntax: {0}, {1}, .... ML Kit's translation
+    // models are trained on localization corpora and preserve these tokens intact across all source
+    // languages we measured (ja, zh, ko, ar, hi, ru, pt, de). Prior schemes failed: U+E000+ PUA
+    // codepoints were dropped by CJK models (issue #1180); "B0/C0/A0" markers collided with user
+    // text. 10k slots per note is effectively unbounded.
+    const val PLACEHOLDER_LIMIT: Int = 9999
 
     // Texts shorter than this, or with no letter codepoints (emoji-only, punctuation), are skipped
     // before any ML Kit work — language identification is unreliable on them.
@@ -51,6 +52,11 @@ internal object TranslationDictionary {
     // brackets ("# [0]"), so we shield them via the placeholder dictionary.
     val nip08RefRegex: Pattern = Pattern.compile("#\\[\\d+]")
 
+    // Matches placeholders the user already wrote in their note (e.g. a code snippet containing
+    // `{0}`). We start our own counter above the max user-supplied index so encode/decode can't
+    // clobber it.
+    private val placeholderRegex: Pattern = Pattern.compile("\\{(\\d+)\\}")
+
     fun isWorthTranslating(text: String): Boolean {
         if (text.length < MIN_TRANSLATABLE_LENGTH) return false
         for (cp in text.codePoints()) {
@@ -61,7 +67,7 @@ internal object TranslationDictionary {
 
     fun build(text: String): Map<String, String> {
         val dict = LinkedHashMap<String, String>()
-        var counter = 0
+        var counter = firstFreeIndex(text)
 
         fun addUnique(value: String) {
             if (value.isEmpty()) return
@@ -82,6 +88,20 @@ internal object TranslationDictionary {
         }
 
         return dict
+    }
+
+    private fun firstFreeIndex(text: String): Int {
+        if (text.indexOf('{') < 0) return 0
+        var max = -1
+        val matcher = placeholderRegex.matcher(text)
+        while (matcher.find()) {
+            val idx = matcher.group(1)?.toIntOrNull() ?: continue
+            // Clamp at the table limit so adversarial user text like `{99999}` can't push our
+            // counter past PLACEHOLDER_LIMIT and make every subsequent placeholder() throw.
+            if (idx > PLACEHOLDER_LIMIT) continue
+            if (idx > max) max = idx
+        }
+        return max + 1
     }
 
     private inline fun Pattern.forEachMatch(
@@ -119,6 +139,6 @@ internal object TranslationDictionary {
 
     fun placeholder(index: Int): String {
         require(index in 0..PLACEHOLDER_LIMIT) { "placeholder index $index out of range" }
-        return String(Character.toChars(PLACEHOLDER_BASE + index))
+        return "{$index}"
     }
 }

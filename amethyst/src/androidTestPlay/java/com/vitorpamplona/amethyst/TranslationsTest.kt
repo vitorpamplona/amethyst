@@ -168,6 +168,20 @@ class TranslationsTest {
     }
 
     @Test
+    fun testJapaneseImageUrlIssue1180() {
+        // Regression for https://github.com/vitorpamplona/amethyst/issues/1180 — image URL at the end
+        // of a Japanese post must survive ja→en auto-translation intact.
+        assertTranslateContains(
+            "https://image.nostr.build/3cd07f308c13dd9197d03430a75bf5326f86d2ab68674af971e915f55a638ecd.jpg",
+            "「正方形のカードを並べて盤面にして、その上でカードゲームとボードゲーム同時にやったらおもろくね？」" +
+                "という誰でも思いつきはしそうなアイデアを、ちゃんとルール練り上げて実装まで漕ぎ着けてしまったやつ。" +
+                "ブースの人が「こんなところに気を遣ったんですわ〜」っていうのに全部ウンウンわかるそれそれと思わされたので買った " +
+                "https://image.nostr.build/3cd07f308c13dd9197d03430a75bf5326f86d2ab68674af971e915f55a638ecd.jpg ",
+            "en",
+        )
+    }
+
+    @Test
     fun testHttp() {
         val text = "https://m.primal.net/MdDd.png \nRunning... \uD83D\uDE01   nostr:npub126ntw5mnermmj0znhjhgdk8lh2af72sm8qfzq48umdlnhaj9kuns3le9ll  nostr:npub1getal6ykt05fsz5nqu4uld09nfj3y3qxmv8crys4aeut53unfvlqr80nfm"
 
