@@ -24,6 +24,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -126,40 +127,42 @@ private fun HiddenWordsList(
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    when (val state = feedState) {
-        is StringFeedState.Loaded -> {
-            val items by state.feed.collectAsStateWithLifecycle()
-            if (items.isEmpty()) {
-                EmptyState(modifier, R.string.security_hidden_words_empty)
-            } else {
-                val listState = rememberLazyListState()
-                LazyColumn(
-                    modifier = modifier.fillMaxSize(),
-                    state = listState,
-                ) {
-                    items(items, key = { it }) { word ->
-                        MutedWordRow(
-                            tag = word,
-                            isSelected = word in selected,
-                            selectionMode = selected.isNotEmpty(),
-                            onToggle = { onToggle(word) },
-                        )
-                        HorizontalDivider(thickness = DividerThickness)
+    Box(modifier.fillMaxSize()) {
+        when (val state = feedState) {
+            is StringFeedState.Loaded -> {
+                val items by state.feed.collectAsStateWithLifecycle()
+                if (items.isEmpty()) {
+                    EmptyState(R.string.security_hidden_words_empty)
+                } else {
+                    val listState = rememberLazyListState()
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = listState,
+                    ) {
+                        items(items, key = { it }) { word ->
+                            MutedWordRow(
+                                tag = word,
+                                isSelected = word in selected,
+                                selectionMode = selected.isNotEmpty(),
+                                onToggle = { onToggle(word) },
+                            )
+                            HorizontalDivider(thickness = DividerThickness)
+                        }
                     }
                 }
             }
-        }
 
-        is StringFeedState.Empty -> {
-            EmptyState(modifier, R.string.security_hidden_words_empty)
-        }
+            is StringFeedState.Empty -> {
+                EmptyState(R.string.security_hidden_words_empty)
+            }
 
-        is StringFeedState.Loading -> {
-            LoadingFeed()
-        }
+            is StringFeedState.Loading -> {
+                LoadingFeed()
+            }
 
-        is StringFeedState.FeedError -> {
-            FeedError(state.errorMessage) { viewModel.invalidateData() }
+            is StringFeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
         }
     }
 }

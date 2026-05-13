@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -90,32 +91,34 @@ private fun MutedThreadsList(
 ) {
     val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
-    when (val state = feedState) {
-        is FeedState.Loaded -> {
-            val items by state.feed.collectAsStateWithLifecycle()
-            val listState = rememberLazyListState()
-            LazyColumn(
-                modifier = modifier.fillMaxSize(),
-                contentPadding = rememberFeedContentPadding(FeedPadding),
-                state = listState,
-            ) {
-                items(items.list, key = { it.idHex }) { note ->
-                    MutedThreadRow(note = note, accountViewModel = accountViewModel)
-                    HorizontalDivider(thickness = DividerThickness)
+    Box(modifier.fillMaxSize()) {
+        when (val state = feedState) {
+            is FeedState.Loaded -> {
+                val items by state.feed.collectAsStateWithLifecycle()
+                val listState = rememberLazyListState()
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = rememberFeedContentPadding(FeedPadding),
+                    state = listState,
+                ) {
+                    items(items.list, key = { it.idHex }) { note ->
+                        MutedThreadRow(note = note, accountViewModel = accountViewModel)
+                        HorizontalDivider(thickness = DividerThickness)
+                    }
                 }
             }
-        }
 
-        is FeedState.Empty -> {
-            EmptyState(modifier, R.string.settings_muted_threads_empty)
-        }
+            is FeedState.Empty -> {
+                EmptyState(R.string.settings_muted_threads_empty)
+            }
 
-        is FeedState.Loading -> {
-            LoadingFeed()
-        }
+            is FeedState.Loading -> {
+                LoadingFeed()
+            }
 
-        is FeedState.FeedError -> {
-            FeedError(state.errorMessage) { viewModel.invalidateData() }
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
         }
     }
 }

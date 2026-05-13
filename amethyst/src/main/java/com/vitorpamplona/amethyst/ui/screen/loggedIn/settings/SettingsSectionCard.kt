@@ -352,7 +352,13 @@ internal fun SettingsCountBadge(count: Int) {
     }
 }
 
-/** Numeric stepper: `-` value `+`. [unsetLabel] is shown when value <= 0 (e.g. "∞"). */
+/**
+ * Numeric stepper: `-` value `+`. Display is clamped to `[min, max]`, and `-`/`+`
+ * operate on the raw `value` then re-clamp, so a model that starts out below `min`
+ * lifts to `min` on the first tap of `+` (no skipped step). [unsetLabel] is shown
+ * when `value <= 0` (typically the model uses `0` to mean "unlimited"); pass
+ * `null` to always show the number.
+ */
 @Composable
 internal fun SettingsStepper(
     value: Int,
@@ -362,6 +368,7 @@ internal fun SettingsStepper(
     unsetLabel: String? = null,
     onValueChange: (Int) -> Unit,
 ) {
+    val clamped = value.coerceIn(min, max)
     Row(
         modifier =
             Modifier
@@ -370,8 +377,8 @@ internal fun SettingsStepper(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
-            enabled = enabled && value > min,
-            onClick = { onValueChange((value - 1).coerceAtLeast(min)) },
+            enabled = enabled && clamped > min,
+            onClick = { onValueChange((value - 1).coerceIn(min, max)) },
         ) {
             Icon(
                 symbol = MaterialSymbols.Remove,
@@ -380,14 +387,14 @@ internal fun SettingsStepper(
             )
         }
         Text(
-            text = if (unsetLabel != null && value <= 0) unsetLabel else value.toString(),
+            text = if (unsetLabel != null && value <= 0) unsetLabel else clamped.toString(),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(min = 40.dp),
         )
         IconButton(
-            enabled = enabled && value < max,
-            onClick = { onValueChange((value + 1).coerceAtMost(max)) },
+            enabled = enabled && clamped < max,
+            onClick = { onValueChange((value + 1).coerceIn(min, max)) },
         ) {
             Icon(
                 symbol = MaterialSymbols.Add,

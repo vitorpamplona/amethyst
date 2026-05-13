@@ -25,6 +25,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -141,76 +142,80 @@ internal fun SelectableUserList(
     nav: INav,
     enablePullRefresh: Boolean = true,
 ) {
-    RefresheableBox(viewModel, enablePullRefresh) {
-        val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
-        val selectionMode = selected.isNotEmpty()
+    // Outer Box applies caller padding (Scaffold insets) so the Loading/Error
+    // states inside RefresheableBox don't render under the top bar.
+    Box(modifier.fillMaxSize()) {
+        RefresheableBox(viewModel, enablePullRefresh) {
+            val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+            val selectionMode = selected.isNotEmpty()
 
-        when (val state = feedState) {
-            is UserFeedState.Loaded -> {
-                val items by state.feed.collectAsStateWithLifecycle()
-                val listState = rememberLazyListState()
+            when (val state = feedState) {
+                is UserFeedState.Loaded -> {
+                    val items by state.feed.collectAsStateWithLifecycle()
+                    val listState = rememberLazyListState()
 
-                LazyColumn(
-                    modifier = modifier.fillMaxSize(),
-                    contentPadding = rememberFeedContentPadding(FeedPadding),
-                    state = listState,
-                ) {
-                    items(items, key = { it.pubkeyHex }) { user ->
-                        val isSelected = user.pubkeyHex in selected
-                        val rowModifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {
-                                        if (selectionMode) {
-                                            onToggle(user.pubkeyHex)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = rememberFeedContentPadding(FeedPadding),
+                        state = listState,
+                    ) {
+                        items(items, key = { it.pubkeyHex }) { user ->
+                            val isSelected = user.pubkeyHex in selected
+                            val rowModifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (selectionMode) {
+                                                onToggle(user.pubkeyHex)
+                                            } else {
+                                                nav.nav(routeFor(user))
+                                            }
+                                        },
+                                        onLongClick = { onToggle(user.pubkeyHex) },
+                                    ).let {
+                                        if (isSelected) {
+                                            it.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                                         } else {
-                                            nav.nav(routeFor(user))
+                                            it
                                         }
-                                    },
-                                    onLongClick = { onToggle(user.pubkeyHex) },
-                                ).let {
-                                    if (isSelected) {
-                                        it.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                    } else {
-                                        it
                                     }
-                                }
 
-                        Row(
-                            modifier = rowModifier.padding(horizontal = Size15dp, vertical = Size10dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            UserPicture(user, Size55dp, accountViewModel = accountViewModel, nav = nav)
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .padding(start = 10.dp)
-                                        .weight(1f),
+                            Row(
+                                modifier = rowModifier.padding(horizontal = Size15dp, vertical = Size10dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                UsernameDisplay(user, accountViewModel = accountViewModel)
+                                UserPicture(user, Size55dp, accountViewModel = accountViewModel, nav = nav)
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .padding(start = 10.dp)
+                                            .weight(1f),
+                                ) {
+                                    UsernameDisplay(user, accountViewModel = accountViewModel)
+                                }
+                                if (selectionMode) {
+                                    Checkbox(checked = isSelected, onCheckedChange = { onToggle(user.pubkeyHex) })
+                                } else {
+                                    ShowUserButton { accountViewModel.show(user) }
+                                }
                             }
-                            if (selectionMode) {
-                                Checkbox(checked = isSelected, onCheckedChange = { onToggle(user.pubkeyHex) })
-                            } else {
-                                ShowUserButton { accountViewModel.show(user) }
-                            }
+                            HorizontalDivider(thickness = DividerThickness)
                         }
-                        HorizontalDivider(thickness = DividerThickness)
                     }
                 }
-            }
 
-            is UserFeedState.Empty -> {
-                EmptyState(modifier, emptyMessage)
-            }
+                is UserFeedState.Empty -> {
+                    EmptyState(emptyMessage)
+                }
 
-            is UserFeedState.Loading -> {
-                LoadingFeed()
-            }
+                is UserFeedState.Loading -> {
+                    LoadingFeed()
+                }
 
-            is UserFeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
+                is UserFeedState.FeedError -> {
+                    FeedError(state.errorMessage) { viewModel.invalidateData() }
+                }
             }
         }
     }
@@ -218,11 +223,10 @@ internal fun SelectableUserList(
 
 @Composable
 internal fun EmptyState(
-    modifier: Modifier = Modifier,
     @StringRes message: Int,
 ) {
     Column(
-        modifier = modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

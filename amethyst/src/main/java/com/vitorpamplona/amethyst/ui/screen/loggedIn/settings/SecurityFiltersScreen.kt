@@ -181,7 +181,7 @@ private fun WarnReportsTile(accountViewModel: AccountViewModel) {
         enabled = warnReports,
     ) {
         SettingsStepper(
-            value = threshold.coerceAtLeast(1),
+            value = threshold,
             min = 1,
             max = 999,
             enabled = warnReports,
