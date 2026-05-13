@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid
+import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestChatPanel
@@ -79,7 +79,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import kotlinx.coroutines.launch
 
 /**
@@ -108,7 +107,7 @@ import kotlinx.coroutines.launch
 internal fun NestFullScreen(
     event: MeetingSpaceEvent,
     roomNote: com.vitorpamplona.amethyst.model.AddressableNote,
-    onStage: List<ParticipantTag>,
+    participantGrid: ParticipantGrid,
     viewModel: NestViewModel,
     ui: NestUiState,
     accountViewModel: AccountViewModel,
@@ -143,14 +142,6 @@ internal fun NestFullScreen(
     val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
     val audioLevels by viewModel.audioLevels.collectAsState()
 
-    val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
-    val participantGrid =
-        remember(event, presences) {
-            buildParticipantGrid(
-                participants = event.participants(),
-                presences = presences,
-            )
-        }
     // Tie the action bar's "am I on stage" gate to the same data
     // source the StageGrid uses (role + presence.onstage flag),
     // not just the kind-30312 role tag. Otherwise a host who taps
@@ -161,6 +152,10 @@ internal fun NestFullScreen(
     val isOnStageMe =
         remember(participantGrid, myPubkey) {
             participantGrid.onStage.any { it.pubkey == myPubkey }
+        }
+    val onStageKeys =
+        remember(participantGrid) {
+            participantGrid.onStage.map { it.pubkey }.toSet()
         }
     // Same logic HandRaiseQueueSection uses internally — duplicated
     // here so the tab label can show a count without coupling the

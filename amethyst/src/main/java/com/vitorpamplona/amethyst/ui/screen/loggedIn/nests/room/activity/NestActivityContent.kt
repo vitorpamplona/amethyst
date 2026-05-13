@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.buildParticipantGrid
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.call.KeepScreenOn
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import kotlinx.coroutines.flow.SharedFlow
 
 /**
@@ -233,18 +233,28 @@ private fun NestActivityBody(
     val localPubkey = account.signer.pubKey
     val roomATag = roomNote.idHex
 
-    // Static room layout: hosts + speakers from the kind-30312 `p`-tags.
-    // The grid renderer derives audience from the kind-10312 presence
-    // aggregator (see ParticipantsGrid / buildParticipantGrid); this
-    // composable only needs the on-stage subset for the talk-row gate
-    // and the PIP renderer.
-    val onStage =
-        remember(event) {
-            event.participants().filter {
-                it.role.equals(ROLE.HOST.code, true) || it.role.equals(ROLE.SPEAKER.code, true)
-            }
+    val ui by viewModel.uiState.collectAsState()
+    val presences by viewModel.presences.collectAsState()
+
+    // Single source of truth for "who is on the stage". Built from the
+    // kind-30312 `p`-tags + the kind-10312 presence aggregator, with
+    // the event author synthesised as the implicit HOST when they're
+    // not in their own `p`-tags (per EGG-07; nostrnests' default).
+    // This drives BOTH the StageGrid render AND the audio subscription
+    // set, so the two stay in lockstep when a speaker (or the host)
+    // emits `onstage=0` to step off the stage.
+    val participantGrid =
+        remember(event, presences) {
+            buildParticipantGrid(
+                participants = event.participants(),
+                presences = presences,
+                hostPubkey = event.pubKey,
+            )
         }
-    val onStageKeys = remember(onStage) { onStage.map { it.pubKey }.toSet() }
+    val onStageKeys =
+        remember(participantGrid) {
+            participantGrid.onStage.map { it.pubkey }.toSet()
+        }
 
     AutoConnectAndTrackSpeakers(viewModel, onStageKeys)
 
@@ -263,8 +273,6 @@ private fun NestActivityBody(
     // Same teardown path as kick — VM.onCleared() releases the
     // listener + speaker when the activity finishes.
     LeaveOnRoomClosed(event, onLeave)
-
-    val ui by viewModel.uiState.collectAsState()
 
     // Hold a screen-on lock while the user is actively in the room so the
     // device doesn't lock and interrupt the audio session UI.
@@ -310,7 +318,7 @@ private fun NestActivityBody(
     if (isInPipMode) {
         NestPipScreen(
             title = event.room(),
-            onStage = onStage,
+            onStage = participantGrid.onStage,
             ui = ui,
             viewModel = viewModel,
             handRaised = handRaised,
@@ -320,7 +328,7 @@ private fun NestActivityBody(
         NestFullScreen(
             event = event,
             roomNote = roomNote,
-            onStage = onStage,
+            participantGrid = participantGrid,
             viewModel = viewModel,
             ui = ui,
             accountViewModel = accountViewModel,

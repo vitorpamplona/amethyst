@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.viewmodels
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 
 /**
@@ -70,16 +72,33 @@ data class ParticipantGrid(
  *   * Audience: every pubkey with recent presence that isn't on
  *     stage, plus participant-tagged users who haven't emitted
  *     presence yet (rendered as `absent = true`).
+ *
+ * [hostPubkey] is the kind-30312 event signer. Per the EGG-07
+ * convention (and nostrnests' production behaviour), the room
+ * author is the implicit host even when they don't self-tag.
+ * When the author isn't already in [participants], a synthetic
+ * `["p", hostPubkey, "", "host"]` tag is prepended so the
+ * presence-aware on-stage/audience rules apply uniformly —
+ * including the "host stepped off stage" case (presence with
+ * `onstage=0` → drops to audience, role stays HOST).
  */
 fun buildParticipantGrid(
-    participants: List<com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag>,
+    participants: List<ParticipantTag>,
     presences: Map<String, RoomPresence>,
+    hostPubkey: HexKey? = null,
 ): ParticipantGrid {
+    val effectiveParticipants =
+        if (hostPubkey != null && participants.none { it.pubKey == hostPubkey }) {
+            listOf(ParticipantTag(hostPubkey, null, ROLE.HOST.code, null)) + participants
+        } else {
+            participants
+        }
+
     val onStage = mutableListOf<RoomMember>()
     val audience = mutableListOf<RoomMember>()
 
     val seen = mutableSetOf<String>()
-    for (p in participants) {
+    for (p in effectiveParticipants) {
         seen += p.pubKey
         val pres = presences[p.pubKey]
         val role = p.effectiveRole()

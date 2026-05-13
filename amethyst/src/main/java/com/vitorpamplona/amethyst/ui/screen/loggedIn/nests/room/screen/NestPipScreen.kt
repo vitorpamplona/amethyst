@@ -53,10 +53,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 
 /**
  * Compact PIP layout. Renders three things, in priority order:
@@ -84,7 +84,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTa
 @Composable
 internal fun NestPipScreen(
     title: String?,
-    onStage: List<ParticipantTag>,
+    onStage: List<RoomMember>,
     ui: NestUiState,
     viewModel: NestViewModel,
     handRaised: Boolean,
@@ -97,7 +97,7 @@ internal fun NestPipScreen(
     // with the speakingNow set and produce ghost avatars.
     val onStageNowSpeaking =
         remember(onStage, ui.speakingNow) {
-            onStage.filter { it.pubKey in ui.speakingNow }
+            onStage.filter { it.pubkey in ui.speakingNow }
         }
     val focused =
         if (onStageNowSpeaking.isNotEmpty()) {
@@ -143,11 +143,11 @@ internal fun NestPipScreen(
             ) {
                 focused.forEach { participant ->
                     PipAvatar(
-                        pubkey = participant.pubKey,
+                        pubkey = participant.pubkey,
                         size = avatarSize,
-                        isSpeaking = participant.pubKey in ui.speakingNow,
-                        isConnecting = participant.pubKey in ui.connectingSpeakers,
-                        audioLevel = audioLevels[participant.pubKey] ?: 0f,
+                        isSpeaking = participant.pubkey in ui.speakingNow,
+                        isConnecting = participant.pubkey in ui.connectingSpeakers,
+                        audioLevel = audioLevels[participant.pubkey] ?: 0f,
                         accountViewModel = accountViewModel,
                     )
                 }

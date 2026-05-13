@@ -115,4 +115,70 @@ class ParticipantGridTest {
         assertEquals(0, grid.onStage.size)
         assertEquals(0, grid.audience.size)
     }
+
+    @Test
+    fun implicitHostNotInPTagsLandsOnStage() {
+        // nostrnests publishes kind-30312 with no self-`p`-tag for
+        // the room author — the author is the implicit host. Without
+        // synthesizing them, they fell through into the pure-audience
+        // branch (role=null) AND were left out of the audio
+        // subscription set, producing "host shown in audience + no
+        // sound" — the exact regression this case exists to catch.
+        val grid =
+            buildParticipantGrid(
+                participants = listOf(pTag(speaker, ROLE.SPEAKER)),
+                presences = emptyMap(),
+                hostPubkey = host,
+            )
+        val hostRow = grid.onStage.firstOrNull { it.pubkey == host }
+        assertEquals(ROLE.HOST, hostRow?.role)
+        // No presence yet — host shows up greyed-out, matching how
+        // p-tagged speakers without presence already render.
+        assertEquals(true, hostRow?.absent)
+        assertTrue(grid.audience.none { it.pubkey == host })
+    }
+
+    @Test
+    fun implicitHostWithOnstageTrueStaysOnStage() {
+        val grid =
+            buildParticipantGrid(
+                participants = listOf(pTag(speaker, ROLE.SPEAKER)),
+                presences = mapOf(host to presence(host, 100L, onstage = true)),
+                hostPubkey = host,
+            )
+        val hostRow = grid.onStage.firstOrNull { it.pubkey == host }
+        assertEquals(ROLE.HOST, hostRow?.role)
+        assertEquals(false, hostRow?.absent)
+    }
+
+    @Test
+    fun implicitHostLeavesStageDropsToAudienceKeepingHostRole() {
+        // The host taps "Leave Stage" on nostrnests → kind-10312 with
+        // onstage=0. They should drop to audience but the host crown
+        // stays — exact same behaviour as an explicit speaker stepping
+        // off the stage.
+        val grid =
+            buildParticipantGrid(
+                participants = listOf(pTag(speaker, ROLE.SPEAKER)),
+                presences = mapOf(host to presence(host, 100L, onstage = false)),
+                hostPubkey = host,
+            )
+        assertTrue(grid.onStage.none { it.pubkey == host })
+        val hostRow = grid.audience.firstOrNull { it.pubkey == host }
+        assertEquals(ROLE.HOST, hostRow?.role)
+    }
+
+    @Test
+    fun explicitHostInPTagsIsNotDuplicated() {
+        // The author already tagged themselves with role=host. The
+        // synthesized entry must NOT shadow / duplicate them.
+        val grid =
+            buildParticipantGrid(
+                participants = listOf(pTag(host, ROLE.HOST), pTag(speaker, ROLE.SPEAKER)),
+                presences = mapOf(host to presence(host, 100L)),
+                hostPubkey = host,
+            )
+        assertEquals(2, grid.onStage.size)
+        assertEquals(1, grid.onStage.count { it.pubkey == host })
+    }
 }
