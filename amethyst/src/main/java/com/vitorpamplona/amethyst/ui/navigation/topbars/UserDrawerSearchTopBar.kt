@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 fun UserDrawerSearchTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    searchRoute: Route = Route.Search(),
     content: @Composable () -> Unit,
 ) {
     ShorterTopAppBar(
@@ -75,7 +76,7 @@ fun UserDrawerSearchTopBar(
             }
         },
         actions = {
-            IconButton(onClick = { nav.nav(Route.Search) }) {
+            IconButton(onClick = { nav.nav(searchRoute) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
         },

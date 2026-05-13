@@ -52,6 +52,8 @@ class SearchUserWatcherSubAssembler(
         key: SearchQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
+        if (key.kind != null) return null
+
         val mySearchString = key.searchQuery.value
 
         if (mySearchString.isBlank()) return null
@@ -96,5 +98,5 @@ class SearchUserWatcherSubAssembler(
         return directFilters + searchFilters
     }
 
-    override fun id(key: SearchQueryState) = key.searchQuery.hashCode()
+    override fun id(key: SearchQueryState) = 31 * key.searchQuery.hashCode() + (key.kind ?: -1)
 }

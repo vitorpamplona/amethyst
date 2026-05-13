@@ -292,7 +292,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
-        composable<Route.Search> { SearchScreen(accountViewModel, nav) }
+        composableArgs<Route.Search> { SearchScreen(accountViewModel, nav, it.kind) }
 
         composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }

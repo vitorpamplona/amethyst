@@ -100,32 +100,47 @@ val SearchPostsByTextKinds3 =
 fun searchPostsByText(
     searchString: HexKey,
     relay: NormalizedRelayUrl,
-) = listOf(
-    RelayBasedFilter(
-        relay = relay,
-        filter =
-            Filter(
-                kinds = SearchPostsByTextKinds1,
-                search = searchString,
-                limit = 100,
-            ),
-    ),
-    RelayBasedFilter(
-        relay = relay,
-        filter =
-            Filter(
-                kinds = SearchPostsByTextKinds2,
-                search = searchString,
-                limit = 100,
-            ),
-    ),
-    RelayBasedFilter(
-        relay = relay,
-        filter =
-            Filter(
-                kinds = SearchPostsByTextKinds3,
-                search = searchString,
-                limit = 100,
-            ),
-    ),
-)
+    kind: Int? = null,
+) = if (kind != null) {
+    listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = listOf(kind),
+                    search = searchString,
+                    limit = 100,
+                ),
+        ),
+    )
+} else {
+    listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = SearchPostsByTextKinds1,
+                    search = searchString,
+                    limit = 100,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = SearchPostsByTextKinds2,
+                    search = searchString,
+                    limit = 100,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = SearchPostsByTextKinds3,
+                    search = searchString,
+                    limit = 100,
+                ),
+        ),
+    )
+}

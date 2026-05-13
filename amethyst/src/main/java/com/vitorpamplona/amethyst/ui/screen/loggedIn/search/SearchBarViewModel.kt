@@ -80,6 +80,7 @@ import kotlinx.coroutines.flow.update
 class SearchBarViewModel(
     val account: Account,
     val nip05Client: INip05Client,
+    val kind: Int? = null,
 ) : ViewModel(),
     InvalidatableContent {
     val focusRequester = FocusRequester()
@@ -88,7 +89,7 @@ class SearchBarViewModel(
     val invalidations = MutableStateFlow(0)
     val searchValueFlow = MutableStateFlow("")
 
-    val scope = MutableStateFlow(SearchScope.ALL)
+    val scope = MutableStateFlow(if (kind == null) SearchScope.ALL else SearchScope.NOTES)
     val source = MutableStateFlow(SearchSource.RELAYS)
     val followsOnly = MutableStateFlow(false)
     val sortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
@@ -100,7 +101,7 @@ class SearchBarViewModel(
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
-    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
+    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account, kind)
 
     @Suppress("unused")
     val sourceWatcher =
@@ -226,6 +227,7 @@ class SearchBarViewModel(
                 if (only) follows.authorsPlusMe else null
             },
         ) { term, _, nip05Resolver, currentScope, follows ->
+            if (kind != null) return@combine emptyList<User>()
             if (currentScope == SearchScope.NOTES) return@combine emptyList<User>()
 
             if (nip05Resolver != null) {
@@ -254,7 +256,10 @@ class SearchBarViewModel(
         ) { term, _, currentScope, order, follows ->
             if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
 
-            val raw = LocalCache.findNotesStartingWith(term, account.hiddenUsers)
+            val raw =
+                LocalCache
+                    .findNotesStartingWith(term, account.hiddenUsers)
+                    .filter { note -> kind == null || note.event?.kind == kind }
             val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
 
             when (order) {
@@ -286,6 +291,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
+            if (kind != null) return@combine emptyList()
             if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findPublicChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -296,6 +302,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
+            if (kind != null) return@combine emptyList()
             if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -306,6 +313,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
+            if (kind != null) return@combine emptyList()
             if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -316,6 +324,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
+            if (kind != null) return@combine emptyList()
             if (currentScope == SearchScope.PEOPLE) emptyList() else findHashtags(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -326,6 +335,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
+            if (kind != null) return@combine emptyList()
             if (currentScope != SearchScope.ALL) return@combine emptyList()
             if (term.length > 1) {
                 val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
@@ -397,8 +407,9 @@ class SearchBarViewModel(
     class Factory(
         val account: Account,
         val nip05: INip05Client,
+        val kind: Int? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05, kind) as T
     }
 }

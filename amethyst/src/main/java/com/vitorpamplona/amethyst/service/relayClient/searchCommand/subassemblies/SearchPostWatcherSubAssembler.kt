@@ -86,11 +86,11 @@ class SearchPostWatcherSubAssembler(
 
         val searchFilters =
             key.account.searchRelayList.flow.value.flatMap {
-                searchPostsByText(mySearchString, it)
+                searchPostsByText(mySearchString, it, key.kind)
             }
 
         return directFilters + searchFilters
     }
 
-    override fun id(key: SearchQueryState) = key.searchQuery.hashCode()
+    override fun id(key: SearchQueryState) = 31 * key.searchQuery.hashCode() + (key.kind ?: -1)
 }

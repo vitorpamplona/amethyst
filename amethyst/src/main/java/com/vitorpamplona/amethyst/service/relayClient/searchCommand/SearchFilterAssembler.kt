@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class SearchQueryState(
     val searchQuery: MutableStateFlow<String>,
     val account: Account,
+    val kind: Int? = null,
 ) : MutableQueryState {
     override fun flow(): Flow<String> = searchQuery
 }

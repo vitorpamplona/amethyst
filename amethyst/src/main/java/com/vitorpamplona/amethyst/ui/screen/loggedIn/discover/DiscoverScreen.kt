@@ -227,7 +227,8 @@ private fun DiscoverPages(
         isInvertedLayout = false,
         topBar = {
             Column {
-                DiscoveryTopBar(accountViewModel, nav)
+                val searchKind = feedTabs.getOrNull(pagerState.currentPage)?.forceEventKind
+                DiscoveryTopBar(accountViewModel, nav, searchRoute = Route.Search(kind = searchKind))
                 SecondaryScrollableTabRow(
                     containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,

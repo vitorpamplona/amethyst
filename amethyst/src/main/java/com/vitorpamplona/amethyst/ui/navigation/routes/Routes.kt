@@ -118,7 +118,9 @@ sealed class Route {
 
     @Serializable object WalletAdd : Route()
 
-    @Serializable object Search : Route()
+    @Serializable data class Search(
+        val kind: Int? = null,
+    ) : Route()
 
     @Serializable object SecurityFilters : Route()
 

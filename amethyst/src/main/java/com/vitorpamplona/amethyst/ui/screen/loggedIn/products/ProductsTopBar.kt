@@ -26,19 +26,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 @Composable
 fun ProductsTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
+    UserDrawerSearchTopBar(accountViewModel, nav, searchRoute = Route.Search(kind = ClassifiedsEvent.KIND)) {
         val list by accountViewModel.account.settings.defaultProductsFollowList
             .collectAsStateWithLifecycle()
 

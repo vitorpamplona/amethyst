@@ -26,19 +26,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 
 @Composable
 fun FollowPacksTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
+    UserDrawerSearchTopBar(accountViewModel, nav, searchRoute = Route.Search(kind = FollowListEvent.KIND)) {
         val list by accountViewModel.account.settings.defaultFollowPacksFollowList
             .collectAsStateWithLifecycle()
 

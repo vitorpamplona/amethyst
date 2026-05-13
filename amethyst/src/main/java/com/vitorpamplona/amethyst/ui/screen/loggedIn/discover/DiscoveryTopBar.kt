@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -37,8 +38,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 fun DiscoveryTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    searchRoute: Route = Route.Search(),
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
+    UserDrawerSearchTopBar(accountViewModel, nav, searchRoute = searchRoute) {
         val list by accountViewModel.account.settings.defaultDiscoveryFollowList
             .collectAsStateWithLifecycle()
 

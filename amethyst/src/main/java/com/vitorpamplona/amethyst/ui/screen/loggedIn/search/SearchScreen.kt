@@ -108,14 +108,16 @@ import kotlinx.coroutines.launch
 fun SearchScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
+    kind: Int? = null,
 ) {
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
-            key = "SearchBarViewModel",
+            key = "SearchBarViewModel-${kind ?: "all"}",
             factory =
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
                     accountViewModel.nip05ClientBuilder(),
+                    kind,
                 ),
         )
 
@@ -142,7 +144,7 @@ fun SearchScreen(
             SearchBar(searchBarViewModel, accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Search, nav, accountViewModel) { route ->
+            AppBottomBar(Route.Search(), nav, accountViewModel) { route ->
                 nav.navBottomBar(route)
             }
         },
