@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.concurrent.Volatile
 
 class PoolEventOutbox {
     // @Volatile so the polling path (INostrClient.pendingPublishRelaysFor)

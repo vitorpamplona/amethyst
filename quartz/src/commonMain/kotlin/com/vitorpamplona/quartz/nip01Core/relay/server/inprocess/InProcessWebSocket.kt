@@ -65,7 +65,7 @@ class InProcessWebSocket(
 
     override fun connect() {
         if (session != null) return
-        val newScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val newScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val newIncoming = Channel<String>(UNLIMITED)
         val s = server.connect { json -> out.onMessage(json) }
 

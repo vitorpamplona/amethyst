@@ -55,18 +55,15 @@ class Nip98AuthVerifier(
 ) {
     /**
      * Recently-accepted event ids → expiry epoch second. Bounded to
-     * [MAX_REPLAY_ENTRIES] (LRU eviction); each entry expires after
-     * `2 × toleranceSeconds` (twice the accepted window so a token
+     * [MAX_REPLAY_ENTRIES] (insertion-order eviction); each entry expires
+     * after `2 × toleranceSeconds` (twice the accepted window so a token
      * can't be reused by an attacker who buffers across the boundary).
      *
      * Guarded by [seenLock] so the eviction sweep + insertion are
      * atomic. We use a coroutine [Mutex] so the type works in KMP
      * commonMain (no `synchronized` block).
      */
-    private val seenEventIds: LinkedHashMap<String, Long> =
-        object : LinkedHashMap<String, Long>(64, 0.75f, true) {
-            override fun removeEldestEntry(eldest: Map.Entry<String, Long>?): Boolean = size > MAX_REPLAY_ENTRIES
-        }
+    private val seenEventIds: LinkedHashMap<String, Long> = LinkedHashMap()
 
     private val seenLock = Mutex()
 
@@ -145,6 +142,15 @@ class Nip98AuthVerifier(
             }
             if (seenEventIds.put(event.id, expiry) != null) {
                 return Result.Malformed("replay: this NIP-98 token has already been used")
+            }
+            // Cap entries: drop oldest by insertion order. Equivalent to
+            // the JDK LinkedHashMap.removeEldestEntry hook we used before,
+            // but works in KMP commonMain.
+            while (seenEventIds.size > MAX_REPLAY_ENTRIES) {
+                val eldest = seenEventIds.keys.iterator()
+                if (!eldest.hasNext()) break
+                eldest.next()
+                eldest.remove()
             }
         }
 
