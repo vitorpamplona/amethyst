@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
+import android.text.format.DateFormat
 import android.text.format.DateUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import kotlin.math.round
 
@@ -41,6 +44,51 @@ var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
 
 var yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
 var monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+
+/**
+ * Formats a Unix timestamp (seconds) as an absolute date/time string, picking the
+ * granularity from how far away the timestamp is:
+ *   - same day → time only (e.g. "14:32" / "2:32 PM", locale-aware)
+ *   - same year → "MMM dd, HH:mm"
+ *   - older    → "MMM dd, yyyy"
+ *
+ * Used by [com.vitorpamplona.amethyst.ui.note.elements.TimeAgo] when the user
+ * taps the relative timestamp to reveal the absolute one.
+ */
+fun timeAbsolute(
+    time: Long?,
+    context: Context,
+    prefix: String = " • ",
+): String {
+    if (time == null) return " "
+    if (time == 0L) return prefix + stringRes(context, R.string.never)
+
+    if (locale != Locale.getDefault()) {
+        locale = Locale.getDefault()
+        yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+        monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+    }
+
+    val timeMs = time * 1000
+    val now = Calendar.getInstance()
+    val then = Calendar.getInstance().apply { timeInMillis = timeMs }
+
+    val sameYear = now.get(Calendar.YEAR) == then.get(Calendar.YEAR)
+    val sameDay = sameYear && now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+
+    val timeOfDay = DateFormat.getTimeFormat(context).format(Date(timeMs))
+
+    return when {
+        sameDay -> prefix + timeOfDay
+        sameYear -> prefix + monthFormatter.format(timeMs) + ", " + timeOfDay
+        else -> prefix + yearFormatter.format(timeMs)
+    }
+}
+
+fun timeAbsoluteNoDot(
+    time: Long?,
+    context: Context,
+): String = timeAbsolute(time, context, prefix = "")
 
 fun timeAgo(
     time: Long?,

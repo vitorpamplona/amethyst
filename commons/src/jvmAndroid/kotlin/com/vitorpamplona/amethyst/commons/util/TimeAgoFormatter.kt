@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.util
 
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
@@ -30,12 +33,14 @@ private const val MONTH_DATE_FORMAT = "MMM dd"
 private var locale = Locale.getDefault()
 private var yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
 private var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+private var timeOnlyFormatter = DateFormat.getTimeInstance(DateFormat.SHORT, locale)
 
 private fun updateFormattersIfNeeded() {
     if (locale != Locale.getDefault()) {
         locale = Locale.getDefault()
         yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
         monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        timeOnlyFormatter = DateFormat.getTimeInstance(DateFormat.SHORT, locale)
     }
 }
 
@@ -145,3 +150,39 @@ fun dateFormatter(
  * Extension function for Long timestamps.
  */
 fun Long.toTimeAgo(withDot: Boolean = true): String = timeAgo(this, withDot)
+
+/**
+ * Formats a Unix timestamp (seconds) as an absolute date/time string. Granularity
+ * depends on how far in the past the timestamp is:
+ *   - same day → time only (e.g. "14:32"), locale-aware
+ *   - same year → "MMM dd, HH:mm"
+ *   - older    → "MMM dd, yyyy"
+ */
+fun timeAbsolute(
+    time: Long?,
+    withDot: Boolean = true,
+    never: String = "never",
+): String {
+    if (time == null) return " "
+    val prefix = if (withDot) " • " else ""
+    if (time == 0L) return prefix + never
+
+    updateFormattersIfNeeded()
+
+    val timeMs = time * 1000
+    val now = Calendar.getInstance()
+    val then = Calendar.getInstance().apply { timeInMillis = timeMs }
+
+    val sameYear = now.get(Calendar.YEAR) == then.get(Calendar.YEAR)
+    val sameDay = sameYear && now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+
+    val timeOfDay = timeOnlyFormatter.format(Date(timeMs))
+
+    return when {
+        sameDay -> prefix + timeOfDay
+        sameYear -> prefix + monthFormatter.format(timeMs) + ", " + timeOfDay
+        else -> prefix + yearFormatter.format(timeMs)
+    }
+}
+
+fun Long.toTimeAbsolute(withDot: Boolean = true): String = timeAbsolute(this, withDot)

@@ -66,7 +66,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
-import com.vitorpamplona.amethyst.commons.util.toTimeAgo
+import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.launch
 
@@ -363,8 +363,8 @@ private fun ConversationCard(
 
                 if (item.lastMessageTimestamp > 0) {
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = item.lastMessageTimestamp.toTimeAgo(withDot = false),
+                    ToggleableTimeAgoText(
+                        timestamp = item.lastMessageTimestamp,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
