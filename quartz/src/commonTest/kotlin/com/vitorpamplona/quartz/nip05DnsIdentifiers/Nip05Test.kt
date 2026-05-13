@@ -110,7 +110,7 @@ class Nip05Test {
     }
 
     @Test
-    fun `toDisplayValue with regular name returns name@domain`() {
+    fun `toDisplayValue with regular name returns name at domain`() {
         val nip05 = Nip05Id.parse("alice@example.com")
         assertNotNull(nip05)
         assertEquals("alice@example.com", nip05.toDisplayValue())
