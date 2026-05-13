@@ -325,6 +325,7 @@ open class NewProductViewModel :
     }
 
     suspend fun sendDraftSync() {
+        if (!accountViewModel.settings.automaticallyCreateDrafts()) return
         if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {

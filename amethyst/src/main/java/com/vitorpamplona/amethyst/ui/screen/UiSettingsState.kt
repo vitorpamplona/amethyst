@@ -133,6 +133,8 @@ class UiSettingsState(
 
     fun useTrackedBroadcasts() = uiSettingsFlow.useTrackedBroadcasts.value == BooleanType.ALWAYS
 
+    fun automaticallyCreateDrafts() = uiSettingsFlow.automaticallyCreateDrafts.value == BooleanType.ALWAYS
+
     fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
 
     fun showProfilePictures() = showProfilePictures.value

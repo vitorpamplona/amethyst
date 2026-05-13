@@ -308,6 +308,7 @@ open class NestNewMessageViewModel :
     }
 
     suspend fun sendDraftSync() {
+        if (!accountViewModel.settings.automaticallyCreateDrafts()) return
         if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftTag.current)
         } else {

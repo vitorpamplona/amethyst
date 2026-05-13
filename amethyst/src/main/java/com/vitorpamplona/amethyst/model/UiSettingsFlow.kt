@@ -43,6 +43,7 @@ class UiSettingsFlow(
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val automaticallyCreateDrafts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
@@ -64,6 +65,7 @@ class UiSettingsFlow(
             gallerySet,
             automaticallyProposeAiImprovements,
             useTrackedBroadcasts,
+            automaticallyCreateDrafts,
             bottomBarItems,
             showHomeNewThreadsTab,
             showHomeConversationsTab,
@@ -89,10 +91,11 @@ class UiSettingsFlow(
                 flows[11] as ProfileGalleryType,
                 flows[12] as BooleanType,
                 flows[13] as BooleanType,
-                flows[14] as List<NavBarItem>,
-                flows[15] as Boolean,
+                flows[14] as BooleanType,
+                flows[15] as List<NavBarItem>,
                 flows[16] as Boolean,
                 flows[17] as Boolean,
+                flows[18] as Boolean,
             )
         }
 
@@ -112,6 +115,7 @@ class UiSettingsFlow(
             gallerySet.value,
             automaticallyProposeAiImprovements.value,
             useTrackedBroadcasts.value,
+            automaticallyCreateDrafts.value,
             bottomBarItems.value,
             showHomeNewThreadsTab.value,
             showHomeConversationsTab.value,
@@ -177,6 +181,10 @@ class UiSettingsFlow(
             useTrackedBroadcasts.tryEmit(torSettings.useTrackedBroadcasts)
             any = true
         }
+        if (automaticallyCreateDrafts.value != torSettings.automaticallyCreateDrafts) {
+            automaticallyCreateDrafts.tryEmit(torSettings.automaticallyCreateDrafts)
+            any = true
+        }
         if (bottomBarItems.value != torSettings.bottomBarItems) {
             bottomBarItems.tryEmit(torSettings.bottomBarItems)
             any = true
@@ -226,6 +234,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.gallerySet),
                 MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
                 MutableStateFlow(uiSettings.useTrackedBroadcasts),
+                MutableStateFlow(uiSettings.automaticallyCreateDrafts),
                 MutableStateFlow(uiSettings.bottomBarItems),
                 MutableStateFlow(uiSettings.showHomeNewThreadsTab),
                 MutableStateFlow(uiSettings.showHomeConversationsTab),

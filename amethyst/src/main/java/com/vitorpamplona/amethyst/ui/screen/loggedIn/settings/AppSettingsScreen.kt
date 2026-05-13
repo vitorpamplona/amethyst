@@ -136,8 +136,6 @@ fun SettingsScreen(
         ImmersiveScrollingChoice(sharedPrefs)
         FeatureSetChoice(sharedPrefs)
         GalleryChoice(sharedPrefs)
-        AiWritingHelpChoice(sharedPrefs)
-        TrackedBroadcastsChoice(sharedPrefs)
         PushNotificationSettingsRow(sharedPrefs)
         if (accountViewModel != null) {
             AlwaysOnNotificationServiceChoice(accountViewModel)

@@ -237,6 +237,12 @@ fun AllSettingsScreen(
                 )
                 SettingsDivider()
                 SettingsItem(
+                    title = R.string.compose_settings,
+                    icon = MaterialSymbols.Edit,
+                    onClick = { nav.nav(Route.ComposeSettings) },
+                )
+                SettingsDivider()
+                SettingsItem(
                     title = R.string.reactions_settings,
                     icon = MaterialSymbols.ThumbUp,
                     onClick = { nav.nav(Route.ReactionsSettings) },
