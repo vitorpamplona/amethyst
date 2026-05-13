@@ -50,7 +50,7 @@ fun SpammingUsersScreen(
         topBar = {
             BlockListTopBar(
                 title = R.string.spamming_users,
-                selected = selected,
+                selectedCount = selected.size,
                 onCancel = { selected = emptySet() },
                 onUnblock = {
                     accountViewModel.showUsers(selected.toList())

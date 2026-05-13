@@ -20,14 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,14 +54,25 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ShowUserButton
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.UserFeedState
+import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size15dp
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 
 @Composable
 internal fun InvalidateOnBlockListChange(
@@ -73,18 +93,18 @@ internal fun InvalidateOnBlockListChange(
 @Composable
 internal fun BlockListTopBar(
     title: Int,
-    selected: Set<*>,
+    selectedCount: Int,
     onCancel: () -> Unit,
     onUnblock: () -> Unit,
     nav: INav,
 ) {
-    if (selected.isEmpty()) {
+    if (selectedCount == 0) {
         TopBarWithBackButton(stringRes(id = title), nav)
     } else {
         ShorterTopAppBar(
             title = {
                 Text(
-                    text = stringRes(R.string.num_selected, selected.size),
+                    text = stringRes(R.string.num_selected, selectedCount),
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Start,
                     overflow = TextOverflow.Ellipsis,
@@ -107,18 +127,87 @@ internal fun BlockListTopBar(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun EmptyOrLoading(
+internal fun SelectableUserList(
     modifier: Modifier = Modifier,
-    state: UserFeedState,
+    viewModel: UserFeedViewModel,
     emptyMessage: Int,
-    onRefresh: () -> Unit,
+    selected: Set<String>,
+    onToggle: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    when (state) {
-        is UserFeedState.Empty -> EmptyState(modifier, emptyMessage)
-        is UserFeedState.Loading -> LoadingFeed()
-        is UserFeedState.FeedError -> FeedError(state.errorMessage, onRefresh)
-        else -> Unit
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val selectionMode = selected.isNotEmpty()
+
+    when (val state = feedState) {
+        is UserFeedState.Loaded -> {
+            val items by state.feed.collectAsStateWithLifecycle()
+            val listState = rememberLazyListState()
+
+            LazyColumn(
+                modifier = modifier.fillMaxSize(),
+                contentPadding = rememberFeedContentPadding(FeedPadding),
+                state = listState,
+            ) {
+                items(items, key = { it.pubkeyHex }) { user ->
+                    val isSelected = user.pubkeyHex in selected
+                    val rowModifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                onClick = {
+                                    if (selectionMode) {
+                                        onToggle(user.pubkeyHex)
+                                    } else {
+                                        nav.nav(routeFor(user))
+                                    }
+                                },
+                                onLongClick = { onToggle(user.pubkeyHex) },
+                            ).let {
+                                if (isSelected) {
+                                    it.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                } else {
+                                    it
+                                }
+                            }
+
+                    Row(
+                        modifier = rowModifier.padding(horizontal = Size15dp, vertical = Size10dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        UserPicture(user, Size55dp, accountViewModel = accountViewModel, nav = nav)
+                        Column(
+                            modifier =
+                                Modifier
+                                    .padding(start = 10.dp)
+                                    .weight(1f),
+                        ) {
+                            UsernameDisplay(user, accountViewModel = accountViewModel)
+                        }
+                        if (selectionMode) {
+                            Checkbox(checked = isSelected, onCheckedChange = { onToggle(user.pubkeyHex) })
+                        } else {
+                            ShowUserButton { accountViewModel.show(user) }
+                        }
+                    }
+                    HorizontalDivider(thickness = DividerThickness)
+                }
+            }
+        }
+
+        is UserFeedState.Empty -> {
+            EmptyState(modifier, emptyMessage)
+        }
+
+        is UserFeedState.Loading -> {
+            LoadingFeed()
+        }
+
+        is UserFeedState.FeedError -> {
+            FeedError(state.errorMessage) { viewModel.invalidateData() }
+        }
     }
 }
 

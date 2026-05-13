@@ -24,11 +24,14 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
@@ -79,10 +82,11 @@ fun HiddenWordsScreen(
     var selected by remember { mutableStateOf(setOf<String>()) }
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         topBar = {
             BlockListTopBar(
                 title = R.string.hidden_words,
-                selected = selected,
+                selectedCount = selected.size,
                 onCancel = { selected = emptySet() },
                 onUnblock = {
                     if (!accountViewModel.isWriteable()) {
@@ -109,7 +113,6 @@ fun HiddenWordsScreen(
             viewModel = viewModel,
             selected = selected,
             onToggle = { selected = if (it in selected) selected - it else selected + it },
-            accountViewModel = accountViewModel,
         )
     }
 }
@@ -120,7 +123,6 @@ private fun HiddenWordsList(
     viewModel: HiddenWordsFeedViewModel,
     selected: Set<String>,
     onToggle: (String) -> Unit,
-    accountViewModel: AccountViewModel,
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
@@ -130,8 +132,12 @@ private fun HiddenWordsList(
             if (items.isEmpty()) {
                 EmptyState(modifier, R.string.security_hidden_words_empty)
             } else {
-                Column(modifier = modifier.fillMaxSize()) {
-                    items.forEach { word ->
+                val listState = rememberLazyListState()
+                LazyColumn(
+                    modifier = modifier.fillMaxSize(),
+                    state = listState,
+                ) {
+                    items(items, key = { it }) { word ->
                         MutedWordRow(
                             tag = word,
                             isSelected = word in selected,

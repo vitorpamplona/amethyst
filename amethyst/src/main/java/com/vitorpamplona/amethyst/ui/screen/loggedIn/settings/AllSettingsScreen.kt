@@ -21,26 +21,15 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,26 +40,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -370,154 +352,4 @@ private fun ResetMarmotStateDialog(
             }
         },
     )
-}
-
-@Composable
-private fun SettingsSection(
-    title: Int,
-    isDanger: Boolean = false,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringRes(title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color =
-                if (isDanger) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        ) {
-            Column(content = content)
-        }
-    }
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 68.dp),
-        thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outlineVariant,
-    )
-}
-
-@Composable
-private fun SettingsItem(
-    title: Int,
-    icon: MaterialSymbol,
-    isDanger: Boolean = false,
-    onClick: () -> Unit,
-) {
-    SettingsItemRow(
-        title = title,
-        isDanger = isDanger,
-        onClick = onClick,
-        leadingIcon = { tint ->
-            Icon(
-                symbol = icon,
-                contentDescription = stringRes(title),
-                modifier = Modifier.size(20.dp),
-                tint = tint,
-            )
-        },
-    )
-}
-
-@Composable
-private fun SettingsItem(
-    title: Int,
-    iconPainter: Int,
-    iconPainterRef: Int,
-    isDanger: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val painter: Painter = painterRes(iconPainter, iconPainterRef)
-    SettingsItemRow(
-        title = title,
-        isDanger = isDanger,
-        onClick = onClick,
-        leadingIcon = { tint ->
-            Icon(
-                painter = painter,
-                contentDescription = stringRes(title),
-                modifier = Modifier.size(20.dp),
-                tint = tint,
-            )
-        },
-    )
-}
-
-@Composable
-private fun SettingsItemRow(
-    title: Int,
-    isDanger: Boolean,
-    onClick: () -> Unit,
-    leadingIcon: @Composable (tint: Color) -> Unit,
-) {
-    val containerColor =
-        if (isDanger) {
-            MaterialTheme.colorScheme.errorContainer
-        } else {
-            MaterialTheme.colorScheme.primaryContainer
-        }
-    val iconTint =
-        if (isDanger) {
-            MaterialTheme.colorScheme.onErrorContainer
-        } else {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        }
-    val textColor =
-        if (isDanger) {
-            MaterialTheme.colorScheme.error
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        }
-
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(containerColor),
-            contentAlignment = Alignment.Center,
-        ) {
-            leadingIcon(iconTint)
-        }
-        Text(
-            text = stringRes(title),
-            style = MaterialTheme.typography.bodyLarge,
-            color = textColor,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp),
-        )
-        Icon(
-            symbol = MaterialSymbols.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
 }

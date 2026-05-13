@@ -21,24 +21,18 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -51,7 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -110,19 +104,18 @@ private fun SensitiveContentTile(accountViewModel: AccountViewModel) {
     val showSensitive by accountViewModel.account.settings.syncedSettings.security.showSensitiveContent
         .collectAsStateWithLifecycle()
 
-    SettingsTile(
-        icon = MaterialSymbols.VisibilityOff,
+    SettingsBlockTile(
+        icon = MaterialSymbols.Visibility,
         title = stringRes(R.string.show_sensitive_content_title),
         description = stringRes(R.string.show_sensitive_content_explainer),
     ) {
         val current = parseWarningType(showSensitive)
-        val options = listOf(WarningType.WARN, WarningType.SHOW, WarningType.HIDE)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            options.forEachIndexed { index, type ->
+            WarningType.entries.forEachIndexed { index, type ->
                 SegmentedButton(
                     selected = current == type,
                     onClick = { accountViewModel.updateShowSensitiveContent(type.prefCode) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = WarningType.entries.size),
                 ) {
                     Text(stringRes(type.resourceId))
                 }
@@ -138,8 +131,8 @@ private fun FilterSpamTile(accountViewModel: AccountViewModel) {
 
     SwitchTile(
         icon = MaterialSymbols.FilterAlt,
-        title = stringRes(R.string.filter_spam_from_strangers_title),
-        description = stringRes(R.string.filter_spam_from_strangers_explainer),
+        titleRes = R.string.filter_spam_from_strangers_title,
+        descriptionRes = R.string.filter_spam_from_strangers_explainer,
         checked = filterSpam,
         onCheckedChange = { accountViewModel.updateFilterSpam(it) },
     )
@@ -152,8 +145,8 @@ private fun HideCommunityViolationsTile(accountViewModel: AccountViewModel) {
 
     SwitchTile(
         icon = MaterialSymbols.Shield,
-        title = stringRes(R.string.hide_community_rules_violations_title),
-        description = stringRes(R.string.hide_community_rules_violations_explainer),
+        titleRes = R.string.hide_community_rules_violations_title,
+        descriptionRes = R.string.hide_community_rules_violations_explainer,
         checked = hideViolations,
         onCheckedChange = { accountViewModel.account.settings.changeHideCommunityRulesViolations(it) },
     )
@@ -165,9 +158,9 @@ private fun DisableClientTagTile(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle()
 
     SwitchTile(
-        icon = MaterialSymbols.Tag,
-        title = stringRes(R.string.disable_client_tag_title),
-        description = stringRes(R.string.disable_client_tag_explainer),
+        icon = MaterialSymbols.Code,
+        titleRes = R.string.disable_client_tag_title,
+        descriptionRes = R.string.disable_client_tag_explainer,
         checked = disableClientTag,
         onCheckedChange = { accountViewModel.updateDisableClientTag(it) },
     )
@@ -180,30 +173,25 @@ private fun WarnReportsTile(accountViewModel: AccountViewModel) {
     val threshold by accountViewModel.account.settings.syncedSettings.security.reportWarningThreshold
         .collectAsStateWithLifecycle()
 
-    Column {
-        SwitchTile(
-            icon = MaterialSymbols.Report,
-            title = stringRes(R.string.warn_when_posts_have_reports_from_your_follows_title),
-            description = stringRes(R.string.warn_when_posts_have_reports_from_your_follows_explainer),
-            checked = warnReports,
-            onCheckedChange = { accountViewModel.updateWarnReports(it) },
-        )
-
-        SettingsTile(
-            icon = null,
-            title = stringRes(R.string.report_warning_threshold_title),
-            description = stringRes(R.string.report_warning_threshold_explainer),
-            indented = true,
+    SwitchTile(
+        icon = MaterialSymbols.Report,
+        titleRes = R.string.warn_when_posts_have_reports_from_your_follows_title,
+        descriptionRes = R.string.warn_when_posts_have_reports_from_your_follows_explainer,
+        checked = warnReports,
+        onCheckedChange = { accountViewModel.updateWarnReports(it) },
+    )
+    SettingsSubControlRow(
+        title = stringRes(R.string.report_warning_threshold_title),
+        description = stringRes(R.string.report_warning_threshold_explainer),
+        enabled = warnReports,
+    ) {
+        Stepper(
+            value = threshold.coerceAtLeast(1),
+            min = 1,
+            max = 999,
             enabled = warnReports,
-        ) {
-            Stepper(
-                value = threshold.coerceAtLeast(1),
-                min = 1,
-                max = 999,
-                enabled = warnReports,
-                onValueChange = { accountViewModel.updateReportWarningThreshold(it) },
-            )
-        }
+            onValueChange = { accountViewModel.updateReportWarningThreshold(it) },
+        )
     }
 }
 
@@ -212,7 +200,7 @@ private fun MaxHashtagsTile(accountViewModel: AccountViewModel) {
     val maxHashtags by accountViewModel.account.settings.syncedSettings.security.maxHashtagLimit
         .collectAsStateWithLifecycle()
 
-    SettingsTile(
+    SettingsControlRow(
         icon = MaterialSymbols.Tag,
         title = stringRes(R.string.max_hashtag_limit_title),
         description = stringRes(R.string.max_hashtag_limit_explainer),
@@ -228,6 +216,24 @@ private fun MaxHashtagsTile(accountViewModel: AccountViewModel) {
 }
 
 @Composable
+private fun SwitchTile(
+    icon: MaterialSymbol,
+    titleRes: Int,
+    descriptionRes: Int,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    SettingsControlRow(
+        icon = icon,
+        title = stringRes(titleRes),
+        description = stringRes(descriptionRes),
+        onClick = { onCheckedChange(!checked) },
+    ) {
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
 private fun BlockedContentSection(
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -236,224 +242,58 @@ private fun BlockedContentSection(
         .collectAsStateWithLifecycle()
 
     SettingsSection(R.string.security_section_blocked_content) {
-        BlockedContentRow(
+        SettingsItem(
+            title = R.string.blocked_users,
             icon = MaterialSymbols.PersonOff,
-            title = stringRes(R.string.blocked_users),
-            count = hidden.hiddenUsers.size,
+            trailing = { CountBadge(hidden.hiddenUsers.size) },
             onClick = { nav.nav(Route.BlockedUsers) },
         )
         SettingsDivider()
-        BlockedContentRow(
+        SettingsItem(
+            title = R.string.spamming_users,
             icon = MaterialSymbols.Block,
-            title = stringRes(R.string.spamming_users),
-            count = hidden.spammers.size,
+            trailing = { CountBadge(hidden.spammers.size) },
             onClick = { nav.nav(Route.SpammingUsers) },
         )
         SettingsDivider()
-        BlockedContentRow(
-            icon = MaterialSymbols.Tag,
-            title = stringRes(R.string.hidden_words),
-            count = hidden.hiddenWords.size,
+        SettingsItem(
+            title = R.string.hidden_words,
+            icon = MaterialSymbols.VisibilityOff,
+            trailing = { CountBadge(hidden.hiddenWords.size) },
             onClick = { nav.nav(Route.HiddenWords) },
         )
         SettingsDivider()
-        BlockedContentRow(
+        SettingsItem(
+            title = R.string.settings_muted_threads_title,
             icon = MaterialSymbols.Forum,
-            title = stringRes(R.string.settings_muted_threads_title),
-            count = hidden.mutedThreads.size,
+            trailing = { CountBadge(hidden.mutedThreads.size) },
             onClick = { nav.nav(Route.MutedThreads) },
-        )
-    }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Building blocks
-// ──────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun SettingsSection(
-    title: Int,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringRes(title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        ) {
-            Column(content = content)
-        }
-    }
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 68.dp),
-        thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outlineVariant,
-    )
-}
-
-@Composable
-private fun SettingsTile(
-    icon: MaterialSymbol?,
-    title: String,
-    description: String,
-    indented: Boolean = false,
-    enabled: Boolean = true,
-    trailing: @Composable () -> Unit,
-) {
-    val alpha = if (enabled) 1f else 0.5f
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = if (indented) 56.dp else 16.dp,
-                    end = 16.dp,
-                    top = 12.dp,
-                    bottom = 12.dp,
-                ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            SettingsLeadingIcon(icon)
-        }
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(start = if (icon != null) 16.dp else 0.dp, end = 12.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-            )
-        }
-        Box(contentAlignment = Alignment.Center) { trailing() }
-    }
-}
-
-@Composable
-private fun SwitchTile(
-    icon: MaterialSymbol,
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable { onCheckedChange(!checked) }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsLeadingIcon(icon)
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp, end = 12.dp),
-        ) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-@Composable
-private fun SettingsLeadingIcon(icon: MaterialSymbol) {
-    Box(
-        modifier =
-            Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            symbol = icon,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-    }
-}
-
-@Composable
-private fun BlockedContentRow(
-    icon: MaterialSymbol,
-    title: String,
-    count: Int,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsLeadingIcon(icon)
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp),
-        )
-        CountBadge(count)
-        Icon(
-            symbol = MaterialSymbols.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.padding(start = 8.dp).size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 @Composable
 private fun CountBadge(count: Int) {
-    if (count <= 0) return
+    // Reserve space so transitions to/from 0 don't shift the row.
     Box(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(horizontal = 10.dp, vertical = 2.dp),
+        modifier = Modifier.widthIn(min = 28.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
+        if (count > 0) {
+            Box(
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 10.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
     }
 }
 
@@ -466,13 +306,11 @@ private fun Stepper(
     unsetLabel: String? = null,
     onValueChange: (Int) -> Unit,
 ) {
-    val alpha = if (enabled) 1f else 0.5f
     Row(
         modifier =
             Modifier
-                .height(40.dp)
                 .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = alpha)),
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
@@ -483,20 +321,13 @@ private fun Stepper(
                 symbol = MaterialSymbols.Remove,
                 contentDescription = "−",
                 modifier = Modifier.size(18.dp),
-                tint = LocalContentColor.current.copy(alpha = alpha),
             )
         }
-        val display =
-            if (unsetLabel != null && value <= 0) {
-                unsetLabel
-            } else {
-                value.toString()
-            }
         Text(
-            text = display,
+            text = if (unsetLabel != null && value <= 0) unsetLabel else value.toString(),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
-            modifier = Modifier.padding(horizontal = 4.dp),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(min = 28.dp),
         )
         IconButton(
             enabled = enabled && value < max,
@@ -506,7 +337,6 @@ private fun Stepper(
                 symbol = MaterialSymbols.Add,
                 contentDescription = "+",
                 modifier = Modifier.size(18.dp),
-                tint = LocalContentColor.current.copy(alpha = alpha),
             )
         }
     }
