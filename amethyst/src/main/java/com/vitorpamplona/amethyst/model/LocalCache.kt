@@ -671,7 +671,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             return false
         }
 
-        if (wasVerified || justVerify(event)) {
+        return if (wasVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -681,9 +681,9 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             refreshNewNoteObservers(note)
 
-            return true
+            true
         } else {
-            return false
+            false
         }
     }
 
@@ -1118,7 +1118,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         // Already processed this event.
         if (replaceableNote.event?.id == event.id) return isVerified
 
-        if (event.createdAt > (replaceableNote.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
+        return if (event.createdAt > (replaceableNote.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
             // clear index from previous tags
             replaceableNote.replyTo?.forEach {
                 it.removeNote(replaceableNote)
@@ -1128,9 +1128,9 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             refreshNewNoteObservers(replaceableNote)
 
-            return true
+            true
         } else {
-            return false
+            false
         }
     }
 
@@ -1150,7 +1150,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         // Already processed this event.
         if (note.event != null) return false
 
-        if (wasVerified || justVerify(event)) {
+        return if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
             if (deletionIndex.add(event, wasVerified)) {
@@ -1205,9 +1205,9 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             refreshNewNoteObservers(note)
 
-            return true
+            true
         } else {
-            return false
+            false
         }
     }
 
@@ -2061,10 +2061,10 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
             if (note.event?.isContentEncoded() == false) {
-                if (!note.isHiddenFor(hiddenUsers.flow.value)) {
-                    return@filter note.event?.content?.contains(text, true) ?: false
+                return@filter if (!note.isHiddenFor(hiddenUsers.flow.value)) {
+                    note.event?.content?.contains(text, true) ?: false
                 } else {
-                    return@filter false
+                    false
                 }
             }
 
@@ -2082,10 +2082,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 if (addressable.event?.isContentEncoded() == false) {
-                    if (!addressable.isHiddenFor(hiddenUsers.flow.value)) {
-                        return@filter addressable.event?.content?.contains(text, true) ?: false
+                    return@filter if (!addressable.isHiddenFor(hiddenUsers.flow.value)) {
+                        addressable.event?.content?.contains(text, true) ?: false
                     } else {
-                        return@filter false
+                        false
                     }
                 }
 

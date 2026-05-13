@@ -143,7 +143,7 @@ class AntiSpamFilter {
     ): Spammer {
         val spammer = spamMessages.get(hashCode)
 
-        if (spammer == null) {
+        return if (spammer == null) {
             val newSpammer =
                 if (event is AddressableEvent) {
                     Spammer(
@@ -159,14 +159,14 @@ class AntiSpamFilter {
                     )
                 }
             spamMessages.put(hashCode, newSpammer)
-            return newSpammer
+            newSpammer
         } else {
             if (event is AddressableEvent) {
                 spammer.duplicatedEventAddresses += event.address()
             } else {
                 spammer.duplicatedEventIds += event.id
             }
-            return spammer
+            spammer
         }
     }
 

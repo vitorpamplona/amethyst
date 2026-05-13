@@ -943,16 +943,16 @@ class Account(
         }
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
-            if (receiver != null) {
+            return if (receiver != null) {
                 val relayList =
                     cache
                         .getOrCreateUser(receiver)
                         .dmInboxRelayList()
                         ?.relays()
                         ?.ifEmpty { null }
-                return relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
+                relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
             } else {
-                return emptySet()
+                emptySet()
             }
         }
         if (event is WrappedEvent) {
