@@ -2570,4 +2570,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
+    <string name="action_unmute">Stummschaltung aufheben</string>
+    <string name="quick_action_mute_thread">Thread stummschalten</string>
+    <string name="quick_action_unmute_thread">Stummschaltung des Threads aufheben</string>
+    <string name="settings_muted_threads_empty">Keine stummgeschalteten Threads</string>
+    <string name="settings_muted_threads_title">Stummgeschaltete Threads</string>
+    <string name="settings_muted_threads_unknown">Unbekannter Thread · %1$s</string>
 </resources>
