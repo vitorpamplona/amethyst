@@ -28,13 +28,15 @@ import com.vitorpamplona.amethyst.model.User
 @Composable
 fun UserProfileFilterAssemblerSubscription(
     user: User,
+    loadFollowers: Boolean,
+    loadZapsReceived: Boolean,
     assembler: UserProfileFilterAssembler,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(user) {
-            UserProfileQueryState(user)
+        remember(user, loadFollowers, loadZapsReceived) {
+            UserProfileQueryState(user, loadFollowers, loadZapsReceived)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, assembler)

@@ -112,6 +112,10 @@ class UiSharedPreferences(
         val UI_SHOW_HOME_NEW_THREADS_TAB = booleanPreferencesKey("ui.show_home_new_threads_tab")
         val UI_SHOW_HOME_CONVERSATIONS_TAB = booleanPreferencesKey("ui.show_home_conversations_tab")
         val UI_SHOW_HOME_EVERYTHING_TAB = booleanPreferencesKey("ui.show_home_everything_tab")
+        val UI_SHOW_PROFILE_BADGES = booleanPreferencesKey("ui.show_profile_badges")
+        val UI_SHOW_PROFILE_APP_RECOMMENDATIONS = booleanPreferencesKey("ui.show_profile_app_recommendations")
+        val UI_SHOW_PROFILE_ZAP_RECEIVED_FEED = booleanPreferencesKey("ui.show_profile_zap_received_feed")
+        val UI_SHOW_PROFILE_FOLLOWERS_FEED = booleanPreferencesKey("ui.show_profile_followers_feed")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -142,6 +146,10 @@ class UiSharedPreferences(
                     showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
                     showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
                     showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
+                    showProfileBadges = preferences[UI_SHOW_PROFILE_BADGES] ?: true,
+                    showProfileAppRecommendations = preferences[UI_SHOW_PROFILE_APP_RECOMMENDATIONS] ?: true,
+                    showProfileZapReceivedFeed = preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] ?: true,
+                    showProfileFollowersFeed = preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] ?: true,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -185,6 +193,10 @@ class UiSharedPreferences(
                     preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
                     preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
                     preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
+                    preferences[UI_SHOW_PROFILE_BADGES] = sharedSettings.showProfileBadges
+                    preferences[UI_SHOW_PROFILE_APP_RECOMMENDATIONS] = sharedSettings.showProfileAppRecommendations
+                    preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] = sharedSettings.showProfileZapReceivedFeed
+                    preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] = sharedSettings.showProfileFollowersFeed
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

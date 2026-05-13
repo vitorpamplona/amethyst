@@ -48,6 +48,10 @@ class UiSettingsFlow(
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeEverythingTab: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val showProfileBadges: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val showProfileAppRecommendations: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val showProfileZapReceivedFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val showProfileFollowersFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -70,6 +74,10 @@ class UiSettingsFlow(
             showHomeNewThreadsTab,
             showHomeConversationsTab,
             showHomeEverythingTab,
+            showProfileBadges,
+            showProfileAppRecommendations,
+            showProfileZapReceivedFeed,
+            showProfileFollowersFeed,
         )
 
     // emits at every change in any of the propertyes.
@@ -96,6 +104,10 @@ class UiSettingsFlow(
                 flows[16] as Boolean,
                 flows[17] as Boolean,
                 flows[18] as Boolean,
+                flows[19] as Boolean,
+                flows[20] as Boolean,
+                flows[21] as Boolean,
+                flows[22] as Boolean,
             )
         }
 
@@ -120,6 +132,10 @@ class UiSettingsFlow(
             showHomeNewThreadsTab.value,
             showHomeConversationsTab.value,
             showHomeEverythingTab.value,
+            showProfileBadges.value,
+            showProfileAppRecommendations.value,
+            showProfileZapReceivedFeed.value,
+            showProfileFollowersFeed.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -201,6 +217,22 @@ class UiSettingsFlow(
             showHomeEverythingTab.tryEmit(torSettings.showHomeEverythingTab)
             any = true
         }
+        if (showProfileBadges.value != torSettings.showProfileBadges) {
+            showProfileBadges.tryEmit(torSettings.showProfileBadges)
+            any = true
+        }
+        if (showProfileAppRecommendations.value != torSettings.showProfileAppRecommendations) {
+            showProfileAppRecommendations.tryEmit(torSettings.showProfileAppRecommendations)
+            any = true
+        }
+        if (showProfileZapReceivedFeed.value != torSettings.showProfileZapReceivedFeed) {
+            showProfileZapReceivedFeed.tryEmit(torSettings.showProfileZapReceivedFeed)
+            any = true
+        }
+        if (showProfileFollowersFeed.value != torSettings.showProfileFollowersFeed) {
+            showProfileFollowersFeed.tryEmit(torSettings.showProfileFollowersFeed)
+            any = true
+        }
 
         return any
     }
@@ -239,6 +271,10 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showHomeNewThreadsTab),
                 MutableStateFlow(uiSettings.showHomeConversationsTab),
                 MutableStateFlow(uiSettings.showHomeEverythingTab),
+                MutableStateFlow(uiSettings.showProfileBadges),
+                MutableStateFlow(uiSettings.showProfileAppRecommendations),
+                MutableStateFlow(uiSettings.showProfileZapReceivedFeed),
+                MutableStateFlow(uiSettings.showProfileFollowersFeed),
             )
     }
 }

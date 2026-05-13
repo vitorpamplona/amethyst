@@ -48,6 +48,10 @@ data class UiSettings(
     val showHomeNewThreadsTab: Boolean = true,
     val showHomeConversationsTab: Boolean = true,
     val showHomeEverythingTab: Boolean = false,
+    val showProfileBadges: Boolean = true,
+    val showProfileAppRecommendations: Boolean = true,
+    val showProfileZapReceivedFeed: Boolean = true,
+    val showProfileFollowersFeed: Boolean = true,
 )
 
 enum class ThemeType(

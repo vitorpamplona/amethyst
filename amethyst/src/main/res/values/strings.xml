@@ -1881,6 +1881,12 @@
     <string name="home_tabs_settings">Home Tabs</string>
     <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
     <string name="home_tab_everything">Everything</string>
+    <string name="profile_ui_settings">Profile UI</string>
+    <string name="profile_ui_settings_description">Pick which sections and feeds appear on user profile screens. All options are enabled by default.</string>
+    <string name="profile_ui_setting_badges">Profile Badges</string>
+    <string name="profile_ui_setting_app_recommendations">App Recommendations</string>
+    <string name="profile_ui_setting_zap_received_feed">Zap Received Feed</string>
+    <string name="profile_ui_setting_followers_feed">Followers Feed</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
