@@ -60,14 +60,11 @@ class TranslationDictionaryTest {
     // ----- placeholder -----
 
     @Test
-    fun `placeholder is a single Unicode Private Use Area codepoint`() {
-        val p0 = TranslationDictionary.placeholder(0)
-        val p1 = TranslationDictionary.placeholder(1)
-        assertEquals(1, p0.codePointCount(0, p0.length))
-        assertEquals(1, p1.codePointCount(0, p1.length))
-        assertEquals(0xE000, p0.codePointAt(0))
-        assertEquals(0xE001, p1.codePointAt(0))
-        assertNotEquals(p0, p1)
+    fun `placeholder is the ICU MessageFormat positional token for that index`() {
+        assertEquals("{0}", TranslationDictionary.placeholder(0))
+        assertEquals("{1}", TranslationDictionary.placeholder(1))
+        assertEquals("{42}", TranslationDictionary.placeholder(42))
+        assertNotEquals(TranslationDictionary.placeholder(0), TranslationDictionary.placeholder(1))
     }
 
     @Test
@@ -167,7 +164,7 @@ class TranslationDictionaryTest {
         val encoded = TranslationDictionary.encode(text, dict)
 
         assertFalse("URL must be removed from encoded text", encoded.contains("https://t.me/mygroup"))
-        assertTrue("encoded text must contain the placeholder", encoded.codePoints().anyMatch { it in 0xE000..0xF8FF })
+        assertTrue("encoded text must contain a {N} placeholder", Regex("\\{\\d+}").containsMatchIn(encoded))
 
         val decoded = TranslationDictionary.decode(encoded, dict)
         assertEquals(text, decoded)
@@ -185,7 +182,11 @@ class TranslationDictionaryTest {
         val decoded = TranslationDictionary.decode(translated, dict)!!
         assertTrue("decoded must contain #[0]", decoded.contains("#[0]"))
         assertTrue("decoded must contain the nostr ref", decoded.contains("nostr:nevent1qqsabcdefgh023456"))
-        assertFalse("decoded must not leak placeholder codepoints", decoded.codePoints().anyMatch { it in 0xE000..0xF8FF })
+        // The dictionary picks indices above any user-supplied {N}; user text here has none, so the
+        // dict starts at {0}. After decode, no {N} placeholder we issued should remain.
+        for (token in dict.keys) {
+            assertFalse("decoded leaked placeholder $token", decoded.contains(token))
+        }
     }
 
     @Test
@@ -279,5 +280,32 @@ class TranslationDictionaryTest {
         assertFalse(encoded.contains("https://m.primal.net/MdDd.png"))
         assertFalse(encoded.contains("nostr:npub126ntw5mnermmj0znhjhgdk8lh2af72sm8qfzq48umdlnhaj9kuns3le9ll"))
         assertFalse(encoded.contains("nostr:npub1getal6ykt05fsz5nqu4uld09nfj3y3qxmv8crys4aeut53unfvlqr80nfm"))
+    }
+
+    @Test
+    fun `build allocates indices above any user-supplied placeholders`() {
+        // User's note contains literal {0} and {3} (e.g. a code snippet). Our dictionary must not
+        // reuse those indices, or decode would clobber the user's own text.
+        val text = "Code is printf(\"%s\", arg{0}) or fmt(\"%s\", arg{3}); see https://docs.example.com"
+        val dict = TranslationDictionary.build(text)
+        assertTrue("dict should include the URL", dict.containsValue("https://docs.example.com"))
+        for (token in dict.keys) {
+            assertFalse("$token collides with user-supplied {0}", token == "{0}")
+            assertFalse("$token collides with user-supplied {3}", token == "{3}")
+        }
+    }
+
+    @Test
+    fun `round-trip preserves user-supplied placeholders in source text`() {
+        // The user wrote {0} and {3}; after encode/decode they must round-trip intact alongside our
+        // own placeholder for the URL.
+        val text = "Code: printf(\"%s\", arg{0}) and fmt(\"%s\", arg{3}); see https://docs.example.com"
+        val dict = TranslationDictionary.build(text)
+        val encoded = TranslationDictionary.encode(text, dict)
+        // Encoded form still contains the user's {0} and {3} verbatim — we never touched them.
+        assertTrue(encoded.contains("arg{0}"))
+        assertTrue(encoded.contains("arg{3}"))
+        val decoded = TranslationDictionary.decode(encoded, dict)
+        assertEquals(text, decoded)
     }
 }
