@@ -658,7 +658,14 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nest_participant_unfollow">Nie obserwuj</string>
     <string name="nest_participant_mute">Wycisz</string>
     <string name="nest_participant_unmute">Włącz dźwięk</string>
+    <string name="nest_confirm_kick_title">Wyrzucić z pokoju?</string>
+    <string name="nest_confirm_kick_confirm">Wyrzuć</string>
+    <string name="nest_confirm_force_mute_title">Wymuś wyłączenie głośnika?</string>
+    <string name="nest_confirm_force_mute_body">Prosi klienta %1$so wyciszenie mikrofonu. Niektórzy klienci mogą zignorować to polecenie.</string>
+    <string name="nest_confirm_force_mute_confirm">Wymuś wyciszenie</string>
     <string name="nest_confirm_cancel">Anuluj</string>
+    <string name="nest_toast_action_title">Pokój audio</string>
+    <string name="nest_toast_mute_sent">Wyciszono %1$s.</string>
     <string name="nest_share_action">Udostępnij pokój</string>
     <string name="nest_minimize">Zminimalizuj</string>
     <string name="nest_minimize_description">Minimalizuj aby słuchać</string>
