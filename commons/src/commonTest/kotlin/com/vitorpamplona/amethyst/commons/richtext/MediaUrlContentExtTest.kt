@@ -175,7 +175,7 @@ class MediaUrlContentExtTest {
     }
 
     @Test
-    fun bridgeOnPicksRightmostShaWhenPathHasTwoHashes() {
+    fun bridgeOnRewritesShaInLastPathSegmentWithHexPrefix() {
         // share.yabu.me layout: <cache-prefix-sha>/<blob-sha>.<ext>
         val image =
             MediaUrlImage(
@@ -189,7 +189,7 @@ class MediaUrlContentExtTest {
     }
 
     @Test
-    fun bridgeProfilePictureUrlPicksRightmostShaWhenPathHasTwoHashes() {
+    fun bridgeProfilePictureUrlRewritesShaInLastPathSegmentWithHexPrefix() {
         assertEquals(
             "http://127.0.0.1:24242/28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5.webp?xs=https%3A%2F%2Fshare.yabu.me%2F84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5",
             bridgeProfilePictureUrl(
@@ -197,5 +197,20 @@ class MediaUrlContentExtTest {
                 useBridge = true,
             ),
         )
+    }
+
+    @Test
+    fun bridgeOnSkipsWhenLastSegmentIsNotSha() {
+        // Per BUD-01 the last segment is the blob; if it isn't a sha256, the
+        // URL isn't a Blossom blob even if an earlier segment is hex.
+        val url = "https://example.com/$sha/avatar.jpg"
+        val image = MediaUrlImage(url = url, hash = null)
+        assertEquals(url, image.toCoilModel(useLocalBlossomBridge = true))
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlSkipsWhenLastSegmentIsNotSha() {
+        val url = "https://example.com/$sha/avatar.jpg"
+        assertEquals(url, bridgeProfilePictureUrl(url, useBridge = true))
     }
 }

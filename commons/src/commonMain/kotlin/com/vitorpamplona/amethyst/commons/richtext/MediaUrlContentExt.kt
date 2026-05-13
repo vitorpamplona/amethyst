@@ -144,11 +144,13 @@ private fun percentEncode(input: String): String {
 }
 
 private fun extractSha256FromUrlPath(url: String): String? {
+    // Per Blossom (BUD-01) the blob is always the last path segment. If the
+    // last segment isn't a sha256, this isn't a Blossom URL and the bridge
+    // must leave it alone — even if an earlier path segment happens to be
+    // a 64-char hex (e.g. a per-user cache prefix).
     val pathPart = url.substringBefore('?').substringBefore('#')
-    // Prefer the rightmost 64-char hex segment so CDNs that put a cache prefix
-    // (itself a 64-char hex) ahead of the blob hash — e.g.
-    // `https://share.yabu.me/<prefix>/<sha>.webp` — still resolve to the blob.
-    val match = sha256InPathRegex.findAll(pathPart).lastOrNull() ?: return null
+    val lastSegment = pathPart.substringAfterLast('/')
+    val match = sha256InPathRegex.find(lastSegment) ?: return null
     return match.value.lowercase()
 }
 
