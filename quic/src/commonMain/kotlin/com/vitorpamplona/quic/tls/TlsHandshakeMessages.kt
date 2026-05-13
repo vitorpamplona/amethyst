@@ -236,8 +236,8 @@ data class TlsNewSessionTicket(
  * header has already been consumed by the caller's framing loop).
  */
 fun parseNewSessionTicketBody(r: QuicReader): TlsNewSessionTicket {
-    val lifetime = r.readUint32().toLong() and 0xFFFFFFFFL
-    val ageAdd = r.readUint32().toLong() and 0xFFFFFFFFL
+    val lifetime = r.readUint32() and 0xFFFFFFFFL
+    val ageAdd = r.readUint32() and 0xFFFFFFFFL
     val nonce = r.readTlsOpaque1()
     val ticket = r.readTlsOpaque2()
     val extensions = TlsExtension.decodeList(r)

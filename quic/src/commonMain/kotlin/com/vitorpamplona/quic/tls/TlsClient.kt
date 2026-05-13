@@ -570,7 +570,7 @@ class TlsClient(
                             val edExt = ticket.extensions.firstOrNull { it.type == TlsConstants.EXT_EARLY_DATA }
                             val maxEarly =
                                 if (edExt != null && edExt.data.size >= 4) {
-                                    QuicReader(edExt.data).readUint32().toLong() and 0xFFFFFFFFL
+                                    QuicReader(edExt.data).readUint32() and 0xFFFFFFFFL
                                 } else {
                                     0L
                                 }

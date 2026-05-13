@@ -612,7 +612,7 @@ class DesktopLocalCache : ICacheProvider {
         if (event is AddressableEvent) {
             val address = event.address()
             val note = getOrCreateAddressableNote(address)
-            val author = getOrCreateUser(event.pubKey) ?: return false
+            val author = getOrCreateUser(event.pubKey)
             if (note.event == null || (note.event?.createdAt ?: 0) <= event.createdAt) {
                 note.loadEvent(event, author, emptyList())
                 return true
