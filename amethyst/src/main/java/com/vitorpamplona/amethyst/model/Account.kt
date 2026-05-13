@@ -195,7 +195,9 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -234,6 +236,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -936,6 +939,29 @@ class Account(
 
     private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = cache.getAnyChannel(event)?.relays() ?: emptySet()
 
+    // Personal events the user stores just for themselves — drafts, app settings, bookmark
+    // lists — and channel/community events that already declare their own relay set should
+    // not be replicated to the user's broadcasting relays.
+    private fun wantsBroadcastRelays(event: Event): Boolean {
+        if (event is DraftWrapEvent ||
+            event is AppSpecificDataEvent ||
+            event is BookmarkListEvent ||
+            event is OldBookmarkListEvent ||
+            event is LabeledBookmarkListEvent
+        ) {
+            return false
+        }
+        if (event is PollEvent ||
+            event is MeetingSpaceEvent ||
+            event is MeetingRoomEvent ||
+            event is LiveActivitiesEvent ||
+            cache.getAnyChannel(event) != null
+        ) {
+            return false
+        }
+        return true
+    }
+
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
@@ -955,8 +981,8 @@ class Account(
             return emptySet()
         }
 
-        // Non-private sends always go to the user's broadcasting relays.
-        val broadcastRelays = broadcastRelayList.flow.value
+        val includeBroadcast = wantsBroadcastRelays(event)
+        val broadcastRelays = if (includeBroadcast) broadcastRelayList.flow.value else emptySet()
 
         if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
             // everywhere
@@ -970,7 +996,15 @@ class Account(
 
         if (author != null) {
             if (author == userProfile()) {
-                relayList.addAll(outboxRelays.flow.value)
+                if (includeBroadcast) {
+                    relayList.addAll(outboxRelays.flow.value)
+                } else {
+                    // outboxRelays mixes in the broadcast list; for personal/channel events
+                    // we want the user's NIP-65 / private / local outbox without it.
+                    relayList.addAll(nip65RelayList.outboxFlow.value)
+                    relayList.addAll(privateStorageRelayList.flow.value)
+                    relayList.addAll(localRelayList.flow.value)
+                }
             } else {
                 val relays =
                     author.outboxRelays()?.ifEmpty { null }
