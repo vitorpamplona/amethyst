@@ -11,6 +11,7 @@ If you are not using an AI assistant, you can stop reading here.
 
 - [Research before code](#research-before-code)
 - [Build and install both flavours](#build-and-install-both-flavours)
+- [Protocol-introducing changes](#protocol-introducing-changes)
 - [Performance and resource hygiene](#performance-and-resource-hygiene)
 - [Automated tests for new logic](#automated-tests-for-new-logic)
 - [Regression test plan](#regression-test-plan)
@@ -67,6 +68,50 @@ breaks.
 If a change is conclusively flavour-irrelevant (a pure `quartz/`
 protocol fix, a docs change, a translation), one flavour is enough —
 say which and why in the PR description.
+
+### Test the release-minified build, not just `*-debug`
+
+Reflection-touched code paths — `ViewModelProvider.Factory`,
+`expect`/`actual` boundaries, serialization, custom Compose runtime
+machinery — silently break under R8 / ProGuard while compiling fine
+in `*-debug` builds. The cheapest way to catch this on this codebase
+is the `benchmark` build type:
+
+```bash
+./gradlew :amethyst:installPlayBenchmark
+```
+
+That installs `com.vitorpamplona.amethyst.benchmark` ("Amy Benchmark"
+on the home screen) — R8-minified, release-flavoured, `profileable =
+true`, side-by-side with your normal Amethyst install via the
+`.benchmark` applicationId suffix. Sign in to a test npub and exercise
+the new flow there before opening the PR. A feature that crashes or
+silently no-ops in the benchmark build but works in `*-debug` is a
+missing keep rule — file it before reviewers find it.
+
+## Protocol-introducing changes
+
+If your PR publishes a new event kind, a new tag form, a new marker,
+or a new interpretation of an existing NIP clause, the diff must also
+include:
+
+- **Cross-client compatibility section in the PR description.** State
+  explicitly: which earlier Amethyst versions honour the new payload
+  (forward/backward compat), whether other major clients (Damus,
+  Primal, Iris, Coracle, etc.) implement the same NIP clause today,
+  and what user-visible behaviour differs for users still on older
+  builds or other clients. Don't paper over this with "syncs across
+  devices" — say which devices, which clients, and which versions.
+- **Wire-format verification.** Before opening the PR, fetch the
+  published event from a relay and confirm its tags, content, and
+  encryption envelope match what you intended. `nak req -i <event-id>
+  wss://<relay>` is the standard tool. Paste the relevant tag line
+  (redact private content) into the PR description. This catches bugs
+  that don't show locally — wrong markers, missing relay hints,
+  malformed private-tag JSON.
+- **NIP citation.** If you claim "NIP-X allows this", quote the exact
+  spec line in the PR. A reviewer should not have to re-derive the
+  authority for your tag form.
 
 ## Performance and resource hygiene
 
@@ -141,6 +186,15 @@ device. PRs that introduce any of them will be sent back.
   body only runs when the log level is enabled. Plain
   `Log.d("msg $x")` allocates the formatted string on every call,
   including in feed and scroll hot paths.
+- **Strip diagnostic `Log.d` calls before commit.** Logs added
+  during on-device debugging — even lambda-form ones — must be
+  removed from the production diff. They survive R8 stripping only
+  in debug builds, so committed `Log.d` doesn't directly hurt
+  release performance, but it bloats the diff, scatters noise across
+  logcat for the next developer, and silently grows over time. If a
+  log line is genuinely load-bearing for future
+  incident-response, promote it to `Log.i`/`w` with explicit
+  justification in the commit message.
 
 Relevant skills under `.claude/skills/`: `account-state`,
 `relay-client`, `kotlin-coroutines`, `kotlin-multiplatform`,
@@ -199,6 +253,39 @@ parts under these exact subheadings:
 Don't add a new top-level section to the PR description — put both
 subheadings inside the existing **Test plan** section.
 
+Worked example of the required structure (real shape from a recent
+feature PR; substitute your own touch points and verifications):
+
+````markdown
+## Test plan
+
+### Feature test plan
+
+- Long-press a reply note → quick-action sheet → "Mute thread" →
+  thread disappears from Home immediately.
+- Force-stop the app, relaunch → muted thread still hidden (relay
+  round-trip verified).
+- Settings → Security & Filters → Muted threads → tap "Unmute" →
+  thread reappears in Home.
+
+### Regression test plan
+
+Touch points and verification:
+
+- Existing user-mute — could regress through the shared
+  `Account.isAcceptable` chokepoint — verified: muted a different
+  user, posts hidden as before.
+- Hidden words — same chokepoint — verified: added a word, posts
+  filtered; removed it, posts back.
+- Multi-account switch — could leak mute list across accounts —
+  verified: switched between two npubs, each saw only its own mutes.
+- R8-minified build — could fail on new ViewModel factory — verified
+  on `installPlayBenchmark`.
+- Both flavours — built and installed `installPlayDebug`; F-Droid
+  build is flavour-irrelevant for this change (no Google-proprietary
+  touch points), built only.
+````
+
 For the regression test plan, list:
 
 1. **Touch points** — screens, flows, ViewModels, shared state, or
@@ -222,12 +309,20 @@ Worked example, for "add a new field to `Account`":
 Common touch-point categories worth scanning every PR for:
 
 - Account / login / logout / multi-account switch.
+- **Multi-device sync when the feature publishes per-account state to
+  relays.** Sign in to the same npub on a second device and verify
+  the new state propagates and is honoured there. State explicitly
+  which Amethyst versions both sides need to be running for the sync
+  to work (current build only, or older builds too).
 - Both flavours (Play and F-Droid).
 - Feed types: home, profile, hashtag, bookmarks, notifications,
   DMs, communities.
 - Orientation changes.
 - Cold start vs warm start.
 - Background → foreground transitions.
+- Release-minified build (`installPlayBenchmark`) for any code path
+  that touches reflection — ViewModel factories, expect/actual,
+  custom serialization.
 
 If a touch point can't reasonably be verified (it would require a
 relay matrix you don't have, or a device combination you can't
@@ -257,6 +352,24 @@ regress.
 If the review flags issues, either address them or document in the
 PR description why you accept the risk. Don't silently discard
 review output.
+
+### When on-device QA finds bugs in your own diff
+
+On-device QA frequently surfaces defects after the initial
+implementation reads as "done". Don't fold those fixes silently
+into the feature commit and force-push — that erases the signal that
+the defect existed and what it was. Instead:
+
+- Land each fix as its own commit, or a final squashed
+  `"Manual testing fixes"` commit at the tip of the branch.
+- The commit message body names the root cause, not just the
+  symptom. Answer the question "why was this missing from the initial
+  diff?" — undocumented event-shape variant, collision with a
+  recently-merged upstream change, Compose recomposition assumption,
+  R8 keep-rule gap, lifecycle race.
+- A reviewer reading your branch sees: feature → code-review cleanup
+  → on-device manual-QA fixes. That's a healthy development arc, not
+  a liability.
 
 ## Don't touch without an issue first
 
