@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -856,6 +857,12 @@ open class Note(
         // if the author is hidden by spam or blocked
         if (accountChoices.hiddenUsersHashCodes.contains(hash) ||
             accountChoices.spammersHashCodes.contains(hash)
+        ) {
+            return true
+        }
+
+        if (accountChoices.mutedThreads.isNotEmpty() &&
+            accountChoices.mutedThreads.contains(thisEvent.threadRootIdOrSelf())
         ) {
             return true
         }

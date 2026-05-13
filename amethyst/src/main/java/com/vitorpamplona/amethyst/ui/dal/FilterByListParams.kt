@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
+import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -42,6 +43,11 @@ class FilterByListParams(
     val now: Long = TimeUtils.oneMinuteFromNow(),
 ) {
     fun isNotHidden(userHex: String) = !(hiddenLists.hiddenUsers.contains(userHex) || hiddenLists.spammers.contains(userHex))
+
+    fun isNotInMutedThread(noteEvent: Event): Boolean {
+        if (hiddenLists.mutedThreads.isEmpty()) return true
+        return !hiddenLists.mutedThreads.contains(noteEvent.threadRootIdOrSelf())
+    }
 
     fun isNotInTheFuture(noteEvent: Event) = noteEvent.createdAt <= now
 
@@ -84,6 +90,7 @@ class FilterByListParams(
         comingFrom: List<NormalizedRelayUrl>,
     ) = (applyTopFilter(comingFrom, noteEvent)) &&
         (isHiddenList || isNotHidden(noteEvent.pubKey)) &&
+        isNotInMutedThread(noteEvent) &&
         isNotInTheFuture(noteEvent) &&
         !hasExcessiveHashtags(noteEvent)
 

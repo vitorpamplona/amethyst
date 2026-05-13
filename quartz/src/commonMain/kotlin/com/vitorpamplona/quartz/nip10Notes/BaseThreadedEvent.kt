@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip10Notes
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
@@ -29,6 +30,15 @@ import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
+
+fun Event.threadRootIdOrSelf(): HexKey {
+    val threaded = this as? BaseThreadedEvent ?: return id
+    threaded.root()?.eventId?.let { return it }
+    // NIP-10 legacy single-level form: when only a "reply"-marked e-tag is
+    // present (no "root" marker), the reply target IS the conversation root.
+    threaded.markedReply()?.eventId?.let { return it }
+    return id
+}
 
 @Immutable
 open class BaseThreadedEvent(

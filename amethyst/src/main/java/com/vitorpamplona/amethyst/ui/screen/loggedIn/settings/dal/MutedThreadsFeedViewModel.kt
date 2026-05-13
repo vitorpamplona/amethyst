@@ -18,18 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip51Lists.muteList.tags
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
-import com.vitorpamplona.quartz.nip01Core.core.Tag
+import androidx.compose.runtime.Stable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
-sealed interface MuteTag {
-    fun toTagArray(): Tag
-
-    fun toTagIdOnly(): Tag
-
-    companion object {
-        fun isTagged(tag: Array<String>) = WordTag.isTagged(tag) || UserTag.isTagged(tag) || EventTag.isTagged(tag)
-
-        fun parse(tag: Array<String>): MuteTag? = WordTag.parse(tag) ?: UserTag.parse(tag) ?: EventTag.parse(tag)
+@Stable
+class MutedThreadsFeedViewModel(
+    val account: Account,
+) : AndroidFeedViewModel(MutedThreadsFeedFilter(account)) {
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = MutedThreadsFeedViewModel(account) as T
     }
 }

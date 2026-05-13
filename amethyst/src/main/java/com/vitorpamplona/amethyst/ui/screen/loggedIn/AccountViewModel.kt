@@ -1260,6 +1260,26 @@ class AccountViewModel(
 
     fun showWords(words: List<String>) = launchSigner { account.showWords(words) }
 
+    fun muteThread(note: Note) {
+        launchSigner {
+            account.muteThread(account.resolveThreadRoot(note))
+        }
+    }
+
+    fun unmuteThread(note: Note) {
+        launchSigner {
+            account.unmuteThread(account.resolveThreadRoot(note))
+        }
+    }
+
+    fun unmuteThread(rootHex: HexKey) {
+        launchSigner {
+            account.unmuteThread(rootHex)
+        }
+    }
+
+    fun isThreadMutedFor(note: Note): Boolean = account.isThreadMuted(account.resolveThreadRoot(note))
+
     fun createStatus(newStatus: String) = launchSigner { account.createStatus(newStatus) }
 
     fun updateStatus(

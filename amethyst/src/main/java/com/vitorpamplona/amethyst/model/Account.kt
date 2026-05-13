@@ -171,6 +171,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -2836,6 +2837,20 @@ class Account(
         sendMyPublicAndPrivateOutbox(muteList.showWords(words))
     }
 
+    suspend fun muteThread(rootHex: HexKey) {
+        if (isThreadMuted(rootHex)) return
+        sendMyPublicAndPrivateOutbox(muteList.hideThread(rootHex))
+    }
+
+    suspend fun unmuteThread(rootHex: HexKey) {
+        if (!isThreadMuted(rootHex)) return
+        muteList.showThread(rootHex)?.let { sendMyPublicAndPrivateOutbox(it) }
+    }
+
+    fun resolveThreadRoot(note: Note): HexKey = note.event?.threadRootIdOrSelf() ?: note.idHex
+
+    fun isThreadMuted(rootHex: HexKey): Boolean = hiddenUsers.flow.value.isThreadMuted(rootHex)
+
     suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
         onReady: (event: NIP90ContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
@@ -2975,6 +2990,8 @@ class Account(
     }
 
     override fun isAcceptable(note: Note): Boolean {
+        val mutedThreads = hiddenUsers.flow.value.mutedThreads
+        if (mutedThreads.isNotEmpty() && mutedThreads.contains(resolveThreadRoot(note))) return false
         return note.author?.let { isAcceptable(it) } ?: true &&
             // if user hasn't hided this author
             isAcceptableDirect(note) &&

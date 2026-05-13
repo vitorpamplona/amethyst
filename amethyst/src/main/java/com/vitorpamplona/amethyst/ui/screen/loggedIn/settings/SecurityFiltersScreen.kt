@@ -78,6 +78,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
@@ -104,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenWordsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.MutedThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.SpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -141,16 +144,23 @@ fun SecurityFiltersScreen(
             factory = SpammerAccountsFeedViewModel.Factory(accountViewModel.account),
         )
 
+    val mutedThreadsFeedViewModel: MutedThreadsFeedViewModel =
+        viewModel(
+            factory = MutedThreadsFeedViewModel.Factory(accountViewModel.account),
+        )
+
     WatchAccountAndBlockList(accountViewModel = accountViewModel) {
         hiddenFeedViewModel.invalidateData()
         spammerFeedViewModel.invalidateData()
         hiddenWordsFeedViewModel.invalidateData()
+        mutedThreadsFeedViewModel.invalidateData()
     }
 
     SecurityFiltersScreen(
         hiddenFeedViewModel,
         hiddenWordsFeedViewModel,
         spammerFeedViewModel,
+        mutedThreadsFeedViewModel,
         accountViewModel,
         nav,
     )
@@ -162,6 +172,7 @@ fun SecurityFiltersScreen(
     hiddenFeedViewModel: HiddenAccountsFeedViewModel,
     hiddenWordsViewModel: HiddenWordsFeedViewModel,
     spammerFeedViewModel: SpammerAccountsFeedViewModel,
+    mutedThreadsFeedViewModel: MutedThreadsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -175,6 +186,7 @@ fun SecurityFiltersScreen(
                     hiddenWordsViewModel.invalidateData()
                     hiddenFeedViewModel.invalidateData()
                     spammerFeedViewModel.invalidateData()
+                    mutedThreadsFeedViewModel.invalidateData()
                 }
             }
 
@@ -182,7 +194,7 @@ fun SecurityFiltersScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val pagerState = rememberPagerState { 3 }
+    val pagerState = rememberPagerState { 4 }
     val coroutineScope = rememberCoroutineScope()
 
     var selectedUsers by remember { mutableStateOf(setOf<String>()) }
@@ -258,6 +270,11 @@ fun SecurityFiltersScreen(
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                     text = { Text(text = stringRes(R.string.hidden_words)) },
                 )
+                Tab(
+                    selected = pagerState.currentPage == 3,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
+                    text = { Text(text = stringRes(R.string.settings_muted_threads_title)) },
+                )
             }
             HorizontalPager(state = pagerState) { page ->
                 when (page) {
@@ -287,6 +304,13 @@ fun SecurityFiltersScreen(
                                 selectedWords =
                                     if (word in selectedWords) selectedWords - word else selectedWords + word
                             },
+                        )
+                    }
+
+                    3 -> {
+                        MutedThreadsFeed(
+                            viewModel = mutedThreadsFeedViewModel,
+                            accountViewModel = accountViewModel,
                         )
                     }
                 }
@@ -798,6 +822,119 @@ private fun SelectableHiddenUsersList(
             }
 
             HorizontalDivider(thickness = DividerThickness)
+        }
+    }
+}
+
+@Composable
+private fun MutedThreadsFeed(
+    viewModel: MutedThreadsFeedViewModel,
+    accountViewModel: AccountViewModel,
+) {
+    RefresheableBox(viewModel, false) {
+        val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
+
+        CrossfadeIfEnabled(
+            targetState = feedState,
+            animationSpec = tween(durationMillis = 100),
+            accountViewModel = accountViewModel,
+        ) { state ->
+            when (state) {
+                is FeedState.Empty -> {
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(text = stringRes(R.string.settings_muted_threads_empty))
+                    }
+                }
+
+                is FeedState.FeedError -> {
+                    FeedError(state.errorMessage) { viewModel.invalidateData() }
+                }
+
+                is FeedState.Loading -> {
+                    LoadingFeed()
+                }
+
+                is FeedState.Loaded -> {
+                    val items by state.feed.collectAsStateWithLifecycle()
+                    val listState = rememberLazyListState()
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = rememberFeedContentPadding(FeedPadding),
+                        state = listState,
+                    ) {
+                        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, note ->
+                            MutedThreadRow(note = note, accountViewModel = accountViewModel)
+                            HorizontalDivider(thickness = DividerThickness)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MutedThreadRow(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val event = note.event
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Size15dp, vertical = Size10dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            if (event == null) {
+                Text(
+                    text = stringRes(R.string.settings_muted_threads_unknown, note.idHex.take(12) + "…"),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                val authorName = note.author?.metadataOrNull()?.bestName()
+                if (authorName != null) {
+                    Text(
+                        text = authorName,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text =
+                        event.content
+                            .lines()
+                            .firstOrNull()
+                            ?.trim() ?: "",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        Button(
+            modifier = Modifier.padding(start = 3.dp),
+            onClick = { accountViewModel.unmuteThread(note) },
+            shape = ButtonBorder,
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            contentPadding = ButtonPadding,
+        ) {
+            Text(text = stringRes(R.string.action_unmute), color = Color.White)
         }
     }
 }

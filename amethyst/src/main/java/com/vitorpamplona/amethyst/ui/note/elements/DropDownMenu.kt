@@ -335,6 +335,18 @@ fun NoteDropDownMenu(
 
         // Moderation section
         M3ActionSection {
+            val isThreadMuted = accountViewModel.isThreadMutedFor(note)
+            M3ActionRow(
+                icon = MaterialSymbols.AutoMirrored.VolumeOff,
+                text = stringRes(if (isThreadMuted) R.string.quick_action_unmute_thread else R.string.quick_action_mute_thread),
+            ) {
+                if (isThreadMuted) {
+                    accountViewModel.unmuteThread(note)
+                } else {
+                    accountViewModel.muteThread(note)
+                }
+                onDismiss()
+            }
             if (state.isLoggedUser) {
                 M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)

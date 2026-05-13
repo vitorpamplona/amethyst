@@ -604,6 +604,9 @@ class EventNotificationConsumer(
 
         Log.d(TAG) { "Notify ZapRequest $noteZapRequest zapped $noteZapped" }
 
+        // Drop zaps on muted threads, hidden authors, etc.
+        if (!account.isAcceptable(noteZapped)) return
+
         if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
 
         Log.d(TAG, "Notify Amount Bigger than 10")
@@ -720,6 +723,9 @@ class EventNotificationConsumer(
         val reactedPostId = event.originalPost().firstOrNull() ?: return
         val reactedNote = LocalCache.checkGetOrCreateNote(reactedPostId)
 
+        // Drop reactions on muted threads, hidden authors, etc.
+        if (reactedNote != null && !account.isAcceptable(reactedNote)) return
+
         val author = LocalCache.getOrCreateUser(event.pubKey)
         val user = author.toBestDisplayName()
         val userPicture = author.profilePicture()
@@ -832,6 +838,9 @@ class EventNotificationConsumer(
     ) {
         val replyNote = LocalCache.getNoteIfExists(event.id) ?: return
 
+        // Drop events from muted threads, hidden authors, etc.
+        if (!account.isAcceptable(replyNote)) return
+
         val author = LocalCache.getOrCreateUser(event.pubKey)
         val user = author.toBestDisplayName()
         val userPicture = author.profilePicture()
@@ -889,6 +898,9 @@ class EventNotificationConsumer(
     ) {
         // Age + self-author gates run centrally in dispatchForAccount.
         val note = LocalCache.getNoteIfExists(event.id) ?: return
+
+        // Drop events from muted threads, hidden authors, etc.
+        if (!account.isAcceptable(note)) return
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
         val user = author.toBestDisplayName()

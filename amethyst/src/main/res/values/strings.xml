@@ -401,6 +401,8 @@
     <string name="quick_action_block_dialog_btn">Block</string>
     <string name="quick_action_delete_dialog_btn">Delete</string>
     <string name="quick_action_block">Block</string>
+    <string name="quick_action_mute_thread">Mute thread</string>
+    <string name="quick_action_unmute_thread">Unmute thread</string>
     <string name="quick_action_report">Report</string>
     <string name="quick_action_delete_button">Delete</string>
     <string name="quick_action_dont_show_again_button">Don\'t show again</string>
@@ -1449,6 +1451,7 @@
 
     <string name="muted_button">Muted. Click to unmute</string>
     <string name="mute_button">Sound on. Click to mute</string>
+    <string name="action_unmute">Unmute</string>
     <string name="skip_back">Skip back %d seconds</string>
     <string name="skip_forward">Skip forward %d seconds</string>
     <string name="picture_in_picture">Picture-in-Picture</string>
@@ -1606,6 +1609,9 @@
 
     <string name="hidden_words">Hidden Words</string>
     <string name="hide_new_word_label">Hide new word or sentence</string>
+    <string name="settings_muted_threads_title">Muted threads</string>
+    <string name="settings_muted_threads_empty">No muted threads</string>
+    <string name="settings_muted_threads_unknown">Unknown thread · %1$s</string>
     <string name="automatically_show_profile_picture">Profile Picture</string>
     <string name="automatically_show_profile_picture_description">Show Profile pictures</string>
 
