@@ -59,6 +59,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -439,7 +440,28 @@ private fun RenderScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 11 }
+    val ui = accountViewModel.settings.uiSettingsFlow
+    val showFollowersTab by ui.showProfileFollowersFeed.collectAsStateWithLifecycle()
+    val showZapsTab by ui.showProfileZapReceivedFeed.collectAsStateWithLifecycle()
+
+    val visibleTabs =
+        remember(showFollowersTab, showZapsTab) {
+            buildList {
+                add(ProfileTab.Notes)
+                add(ProfileTab.Replies)
+                add(ProfileTab.Mutual)
+                add(ProfileTab.Gallery)
+                add(ProfileTab.Follows)
+                if (showFollowersTab) add(ProfileTab.Followers)
+                if (showZapsTab) add(ProfileTab.Zaps)
+                add(ProfileTab.Bookmarks)
+                add(ProfileTab.FollowedTags)
+                add(ProfileTab.Reports)
+                add(ProfileTab.Relays)
+            }
+        }
+
+    val pagerState = rememberPagerState(pageCount = { visibleTabs.size })
 
     Column {
         ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
@@ -454,6 +476,7 @@ private fun RenderScreen(
             CreateAndRenderTabs(
                 baseUser,
                 pagerState,
+                visibleTabs,
                 threadsViewModel,
                 repliesViewModel,
                 mutualViewModel,
@@ -471,7 +494,7 @@ private fun RenderScreen(
             modifier = pagerModifier,
         ) { page ->
             CreateAndRenderPages(
-                page,
+                visibleTabs[page],
                 baseUser,
                 threadsViewModel,
                 repliesViewModel,
@@ -490,9 +513,23 @@ private fun RenderScreen(
     }
 }
 
+private enum class ProfileTab {
+    Notes,
+    Replies,
+    Mutual,
+    Gallery,
+    Follows,
+    Followers,
+    Zaps,
+    Bookmarks,
+    FollowedTags,
+    Reports,
+    Relays,
+}
+
 @Composable
 private fun CreateAndRenderPages(
-    page: Int,
+    tab: ProfileTab,
     baseUser: User,
     threadsViewModel: UserProfileNewThreadsFeedViewModel,
     repliesViewModel: UserProfileConversationsFeedViewModel,
@@ -514,18 +551,18 @@ private fun CreateAndRenderPages(
         accountViewModel,
     )
 
-    when (page) {
-        0 -> TabNotesNewThreads(threadsViewModel, pinnedNotesFeedViewModel, accountViewModel, nav)
-        1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
-        2 -> TabMutualConversations(mutualViewModel, accountViewModel, nav)
-        3 -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
-        4 -> TabFollows(followsFeedViewModel, accountViewModel, nav)
-        5 -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
-        6 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
-        7 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
-        8 -> TabFollowedTags(baseUser, accountViewModel, nav)
-        9 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
-        10 -> TabRelays(baseUser, accountViewModel, nav)
+    when (tab) {
+        ProfileTab.Notes -> TabNotesNewThreads(threadsViewModel, pinnedNotesFeedViewModel, accountViewModel, nav)
+        ProfileTab.Replies -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
+        ProfileTab.Mutual -> TabMutualConversations(mutualViewModel, accountViewModel, nav)
+        ProfileTab.Gallery -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
+        ProfileTab.Follows -> TabFollows(followsFeedViewModel, accountViewModel, nav)
+        ProfileTab.Followers -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
+        ProfileTab.Zaps -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
+        ProfileTab.Bookmarks -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
+        ProfileTab.FollowedTags -> TabFollowedTags(baseUser, accountViewModel, nav)
+        ProfileTab.Reports -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
+        ProfileTab.Relays -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
 
@@ -548,6 +585,7 @@ fun UpdateThreadsAndRepliesWhenBlockUnblock(
 private fun CreateAndRenderTabs(
     baseUser: User,
     pagerState: PagerState,
+    visibleTabs: List<ProfileTab>,
     threadsViewModel: UserProfileNewThreadsFeedViewModel,
     repliesViewModel: UserProfileConversationsFeedViewModel,
     mutualViewModel: UserProfileMutualFeedViewModel,
@@ -561,26 +599,25 @@ private fun CreateAndRenderTabs(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val tabs =
-        listOf<@Composable (() -> Unit)?>(
-            { Text(text = stringRes(R.string.notes)) },
-            { Text(text = stringRes(R.string.replies)) },
-            { Text(text = stringRes(R.string.mutual)) },
-            { Text(text = stringRes(R.string.gallery)) },
-            { FollowTabHeader(followsFeedViewModel, accountViewModel) },
-            { FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel) },
-            { ZapTabHeader(zapFeedViewModel, accountViewModel) },
-            { BookmarkTabHeader(baseUser, accountViewModel) },
-            { FollowedTagsTabHeader(baseUser, accountViewModel) },
-            { ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel) },
-            { RelaysTabHeader(baseUser, accountViewModel) },
-        )
-
-    tabs.forEachIndexed { index, function ->
+    visibleTabs.forEachIndexed { index, tab ->
         Tab(
             selected = pagerState.currentPage == index,
             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-            text = function,
+            text = {
+                when (tab) {
+                    ProfileTab.Notes -> Text(text = stringRes(R.string.notes))
+                    ProfileTab.Replies -> Text(text = stringRes(R.string.replies))
+                    ProfileTab.Mutual -> Text(text = stringRes(R.string.mutual))
+                    ProfileTab.Gallery -> Text(text = stringRes(R.string.gallery))
+                    ProfileTab.Follows -> FollowTabHeader(followsFeedViewModel, accountViewModel)
+                    ProfileTab.Followers -> FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel)
+                    ProfileTab.Zaps -> ZapTabHeader(zapFeedViewModel, accountViewModel)
+                    ProfileTab.Bookmarks -> BookmarkTabHeader(baseUser, accountViewModel)
+                    ProfileTab.FollowedTags -> FollowedTagsTabHeader(baseUser, accountViewModel)
+                    ProfileTab.Reports -> ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel)
+                    ProfileTab.Relays -> RelaysTabHeader(baseUser, accountViewModel)
+                }
+            },
         )
     }
 }

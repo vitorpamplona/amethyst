@@ -259,6 +259,12 @@ fun AllSettingsScreen(
                     icon = MaterialSymbols.Home,
                     onClick = { nav.nav(Route.HomeTabsSettings) },
                 )
+                SettingsDivider()
+                SettingsItem(
+                    title = R.string.profile_ui_settings,
+                    icon = MaterialSymbols.AccountCircle,
+                    onClick = { nav.nav(Route.ProfileUiSettings) },
+                )
             }
 
             SettingsSection(R.string.danger_zone, isDanger = true) {

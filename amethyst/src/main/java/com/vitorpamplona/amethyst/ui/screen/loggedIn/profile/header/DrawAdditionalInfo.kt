@@ -113,6 +113,10 @@ fun DrawAdditionalInfo(
 
     val displayName = user.info.bestName()
 
+    val ui = accountViewModel.settings.uiSettingsFlow
+    val showBadges by ui.showProfileBadges.collectAsStateWithLifecycle()
+    val showAppRecommendations by ui.showProfileAppRecommendations.collectAsStateWithLifecycle()
+
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = SpacedBy3dp) {
         if (displayName != null) {
             Row(
@@ -267,7 +271,9 @@ fun DrawAdditionalInfo(
             }
         }
 
-        DisplayBadges(baseUser, accountViewModel, nav)
+        if (showBadges) {
+            DisplayBadges(baseUser, accountViewModel, nav)
+        }
 
         user.info.about?.let {
             Row(
@@ -289,7 +295,9 @@ fun DrawAdditionalInfo(
             }
         }
 
-        DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
+        if (showAppRecommendations) {
+            DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
+        }
     }
 }
 
