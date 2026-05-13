@@ -20,20 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,9 +35,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.note.elements.LocalNowSeconds
-import com.vitorpamplona.amethyst.ui.note.timeAbsoluteNoDot
-import com.vitorpamplona.amethyst.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -54,31 +46,11 @@ import com.vitorpamplona.quartz.nip40Expiration.expiration
 
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
-    val nowStr = stringRes(id = R.string.now)
-    val nowState = LocalNowSeconds.current
-    val context = LocalContext.current
-    var showAbsolute by rememberSaveable(baseNote.idHex) { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
-
-    val time by
-        remember(baseNote, nowStr, nowState) {
-            derivedStateOf {
-                nowState.value
-                val createdAt = baseNote.createdAt() ?: 0L
-                if (showAbsolute) timeAbsoluteNoDot(createdAt, context) else timeAgoShort(createdAt, nowStr)
-            }
-        }
-
-    Text(
-        text = time,
+    ToggleableTimeAgoText(
+        timestamp = baseNote.createdAt() ?: 0L,
+        style = TimeAgoStyle.Short,
         color = MaterialTheme.colorScheme.placeholderText,
         fontSize = Font12SP,
-        maxLines = 1,
-        modifier =
-            Modifier.clickable(
-                interactionSource = interactionSource,
-                indication = null,
-            ) { showAbsolute = !showAbsolute },
     )
 }
 

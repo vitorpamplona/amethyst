@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.LocalTextStyle
@@ -29,14 +27,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -64,9 +59,8 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
-import com.vitorpamplona.amethyst.ui.note.elements.LocalNowSeconds
-import com.vitorpamplona.amethyst.ui.note.timeAbsolute
-import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
@@ -487,27 +481,10 @@ fun ChannelName(
 @Composable
 private fun TimeAgo(channelLastTime: Long?) {
     if (channelLastTime == null) return
-
-    val context = LocalContext.current
-    val nowState = LocalNowSeconds.current
-    var showAbsolute by rememberSaveable(channelLastTime) { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val timeAgo by
-        remember(channelLastTime, context, nowState) {
-            derivedStateOf {
-                nowState.value
-                if (showAbsolute) timeAbsolute(channelLastTime, context) else timeAgo(channelLastTime, context)
-            }
-        }
-    Text(
-        text = timeAgo,
+    ToggleableTimeAgoText(
+        timestamp = channelLastTime,
+        style = TimeAgoStyle.Dotted,
         color = MaterialTheme.colorScheme.grayText,
-        maxLines = 1,
-        modifier =
-            Modifier.clickable(
-                interactionSource = interactionSource,
-                indication = null,
-            ) { showAbsolute = !showAbsolute },
     )
 }
 

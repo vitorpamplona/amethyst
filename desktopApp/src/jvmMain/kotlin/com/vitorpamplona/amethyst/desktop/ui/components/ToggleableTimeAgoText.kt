@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,8 +38,16 @@ import com.vitorpamplona.amethyst.commons.util.toTimeAgo
  * Timestamp text that toggles between a relative ("5m") and an absolute, scale-adjusted
  * ("14:32" / "Dec 12, 14:32" / "Dec 12, 2023") form when the user clicks it.
  *
- * The toggle is local to the call site and persists across recomposition via
- * [rememberSaveable], so it survives scroll-induced disposal in a LazyColumn.
+ * Notes for the audit:
+ * - Plain [remember] (not `rememberSaveable`): the toggle is a transient peek. Persisting
+ *   it for every visible+scrolled-past notification/chat/note across config changes is
+ *   pure memory bloat — recycling resets to relative, which is the right default.
+ * - Both formatters here are pure functions of the timestamp, so for desktop we don't need
+ *   any tick subscription at all (desktop has no shared "now" ticker). The string is
+ *   stable for a given (timestamp, showAbsolute) pair, so a [derivedStateOf] also isn't
+ *   needed — we just compute on flip.
+ * - All params are primitives/value types, so the Compose compiler can skip this composable
+ *   when nothing changes.
  */
 @Composable
 fun ToggleableTimeAgoText(
@@ -49,13 +56,11 @@ fun ToggleableTimeAgoText(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    var showAbsolute by rememberSaveable(timestamp) { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
-    val text =
-        if (showAbsolute) timeAbsolute(timestamp, withDot = false) else timestamp.toTimeAgo(withDot = false)
+    var showAbsolute by remember(timestamp) { mutableStateOf(false) }
 
     Text(
-        text = text,
+        text = if (showAbsolute) timeAbsolute(timestamp, withDot = false) else timestamp.toTimeAgo(withDot = false),
         style = style,
         color = color,
         modifier =
