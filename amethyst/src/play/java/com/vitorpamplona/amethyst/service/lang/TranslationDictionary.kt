@@ -25,9 +25,9 @@ import java.util.regex.Pattern
 
 /**
  * Pure-JVM helpers that protect non-translatable substrings (URLs, Lightning invoices, NIP-19
- * references, NIP-08 positional references) by swapping them with single Unicode Private Use Area
- * codepoints around a translator. Extracted out of [LanguageTranslatorService] so the round-trip
- * can be unit-tested without ML Kit / Android runtime.
+ * references, NIP-08 positional references) by swapping them with ICU MessageFormat positional
+ * tokens ({0}, {1}, ...) around a translator. Extracted out of [LanguageTranslatorService] so the
+ * round-trip can be unit-tested without ML Kit / Android runtime.
  */
 internal object TranslationDictionary {
     // Placeholders use ICU MessageFormat positional syntax: {0}, {1}, .... ML Kit's translation
@@ -91,10 +91,14 @@ internal object TranslationDictionary {
     }
 
     private fun firstFreeIndex(text: String): Int {
+        if (text.indexOf('{') < 0) return 0
         var max = -1
         val matcher = placeholderRegex.matcher(text)
         while (matcher.find()) {
             val idx = matcher.group(1)?.toIntOrNull() ?: continue
+            // Clamp at the table limit so adversarial user text like `{99999}` can't push our
+            // counter past PLACEHOLDER_LIMIT and make every subsequent placeholder() throw.
+            if (idx > PLACEHOLDER_LIMIT) continue
             if (idx > max) max = idx
         }
         return max + 1

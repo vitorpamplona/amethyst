@@ -214,9 +214,9 @@ class TranslationDictionaryTest {
 
     @Test
     fun `decode does not corrupt user text containing the old B0 C0 A0 placeholders`() {
-        // Regression for the pre-rewrite bug: old placeholders "B0", "C0", "A0" collided with arbitrary
-        // user content. The new PUA placeholders are invisible codepoints that cannot occur in normal text,
-        // so a sentence mentioning "B0" or "C0" should round-trip unchanged when there's nothing to replace.
+        // Regression for a pre-rewrite bug where placeholders were "B0", "C0", "A0" — those tokens
+        // collided with arbitrary user content. Today's {N} tokens can't collide with B0/C0/A0
+        // strings, but this case is cheap to keep as a guard.
         val text = "Pricing tier B0 vs C0 vs A0 — see https://docs.example.com/tiers"
         val dict = TranslationDictionary.build(text)
         val encoded = TranslationDictionary.encode(text, dict)
@@ -293,6 +293,21 @@ class TranslationDictionaryTest {
             assertFalse("$token collides with user-supplied {0}", token == "{0}")
             assertFalse("$token collides with user-supplied {3}", token == "{3}")
         }
+    }
+
+    @Test
+    fun `build is resilient to adversarial user placeholders beyond the table limit`() {
+        // Adversarial note carries `{99999}` — well past PLACEHOLDER_LIMIT. If we naively started
+        // our counter at max+1, the very next call to placeholder() would throw and translation
+        // would fail entirely. Counter must stay within the allowed range.
+        val text = "weird {99999} placeholder; see https://docs.example.com"
+        val dict = TranslationDictionary.build(text)
+        assertTrue("dict should include the URL", dict.containsValue("https://docs.example.com"))
+        // {99999} is out of range and never enters our dict, so it survives encode/decode untouched.
+        val encoded = TranslationDictionary.encode(text, dict)
+        assertTrue("user's {99999} must survive encode", encoded.contains("{99999}"))
+        val decoded = TranslationDictionary.decode(encoded, dict)
+        assertEquals(text, decoded)
     }
 
     @Test
