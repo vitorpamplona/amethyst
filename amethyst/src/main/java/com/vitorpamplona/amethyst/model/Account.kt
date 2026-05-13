@@ -937,10 +937,6 @@ class Account(
     private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = cache.getAnyChannel(event)?.relays() ?: emptySet()
 
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
-        if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
-            // everywhere
-            return followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value
-        }
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
             if (receiver != null) {
@@ -959,7 +955,16 @@ class Account(
             return emptySet()
         }
 
+        // Non-private sends always go to the user's broadcasting relays.
+        val broadcastRelays = broadcastRelayList.flow.value
+
+        if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
+            // everywhere
+            return followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value + broadcastRelays
+        }
+
         val relayList = mutableSetOf<NormalizedRelayUrl>()
+        relayList.addAll(broadcastRelays)
 
         val author = cache.getUserIfExists(event.pubKey)
 
