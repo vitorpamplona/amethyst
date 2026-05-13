@@ -46,10 +46,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -288,15 +290,27 @@ fun ProfileScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val ui = accountViewModel.settings.uiSettingsFlow
+    val showAppRecommendations by ui.showProfileAppRecommendations.collectAsStateWithLifecycle()
+    val showFollowersFeed by ui.showProfileFollowersFeed.collectAsStateWithLifecycle()
+    val showZapReceivedFeed by ui.showProfileZapReceivedFeed.collectAsStateWithLifecycle()
+
     WatchLifecycleAndUpdateModel(threadsViewModel)
     WatchLifecycleAndUpdateModel(repliesViewModel)
     WatchLifecycleAndUpdateModel(mutualViewModel)
-    WatchLifecycleAndUpdateModel(appRecommendations)
+    if (showAppRecommendations) {
+        WatchLifecycleAndUpdateModel(appRecommendations)
+    }
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
     WatchLifecycleAndUpdateModel(pinnedNotesFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
 
-    UserProfileFilterAssemblerSubscription(baseUser, accountViewModel.dataSources().profile)
+    UserProfileFilterAssemblerSubscription(
+        user = baseUser,
+        loadFollowers = showFollowersFeed,
+        loadZapsReceived = showZapReceivedFeed,
+        assembler = accountViewModel.dataSources().profile,
+    )
 
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -461,54 +475,74 @@ private fun RenderScreen(
             }
         }
 
-    val pagerState = rememberPagerState(pageCount = { visibleTabs.size })
+    // Track the tab the user was viewing so we can re-pin to it when the
+    // visible-tabs list changes (e.g. they hid Followers from settings while
+    // standing on the Zaps tab).
+    var viewedTab by remember { mutableStateOf(visibleTabs.first()) }
 
-    Column {
-        ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
-        SecondaryScrollableTabRow(
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onBackground,
-            selectedTabIndex = pagerState.currentPage,
-            edgePadding = Size8dp,
-            modifier = tabRowModifier,
-            divider = { HorizontalDivider(thickness = DividerThickness) },
-        ) {
-            CreateAndRenderTabs(
-                baseUser,
-                pagerState,
-                visibleTabs,
-                threadsViewModel,
-                repliesViewModel,
-                mutualViewModel,
-                followsFeedViewModel,
-                followersFeedViewModel,
-                zapFeedViewModel,
-                bookmarksFeedViewModel,
-                galleryFeedViewModel,
-                reportsFeedViewModel,
-                accountViewModel,
+    // key() rebuilds the pager state whenever the visible-tabs list changes,
+    // re-initializing it on the same tab the user was looking at.
+    key(visibleTabs) {
+        val pagerState =
+            rememberPagerState(
+                initialPage = visibleTabs.indexOf(viewedTab).coerceAtLeast(0),
+                pageCount = { visibleTabs.size },
             )
+
+        LaunchedEffect(pagerState, visibleTabs) {
+            snapshotFlow { pagerState.currentPage }
+                .collect { page ->
+                    visibleTabs.getOrNull(page)?.let { viewedTab = it }
+                }
         }
-        HorizontalPager(
-            state = pagerState,
-            modifier = pagerModifier,
-        ) { page ->
-            CreateAndRenderPages(
-                visibleTabs[page],
-                baseUser,
-                threadsViewModel,
-                repliesViewModel,
-                mutualViewModel,
-                followsFeedViewModel,
-                followersFeedViewModel,
-                zapFeedViewModel,
-                bookmarksFeedViewModel,
-                pinnedNotesFeedViewModel,
-                galleryFeedViewModel,
-                reportsFeedViewModel,
-                accountViewModel,
-                nav,
-            )
+
+        Column {
+            ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
+            SecondaryScrollableTabRow(
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                selectedTabIndex = pagerState.currentPage,
+                edgePadding = Size8dp,
+                modifier = tabRowModifier,
+                divider = { HorizontalDivider(thickness = DividerThickness) },
+            ) {
+                CreateAndRenderTabs(
+                    baseUser,
+                    pagerState,
+                    visibleTabs,
+                    threadsViewModel,
+                    repliesViewModel,
+                    mutualViewModel,
+                    followsFeedViewModel,
+                    followersFeedViewModel,
+                    zapFeedViewModel,
+                    bookmarksFeedViewModel,
+                    galleryFeedViewModel,
+                    reportsFeedViewModel,
+                    accountViewModel,
+                )
+            }
+            HorizontalPager(
+                state = pagerState,
+                modifier = pagerModifier,
+            ) { page ->
+                CreateAndRenderPages(
+                    visibleTabs[page],
+                    baseUser,
+                    threadsViewModel,
+                    repliesViewModel,
+                    mutualViewModel,
+                    followsFeedViewModel,
+                    followersFeedViewModel,
+                    zapFeedViewModel,
+                    bookmarksFeedViewModel,
+                    pinnedNotesFeedViewModel,
+                    galleryFeedViewModel,
+                    reportsFeedViewModel,
+                    accountViewModel,
+                    nav,
+                )
+            }
         }
     }
 }

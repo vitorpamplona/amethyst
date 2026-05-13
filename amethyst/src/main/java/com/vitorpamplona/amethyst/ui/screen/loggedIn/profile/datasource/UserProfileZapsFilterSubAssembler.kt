@@ -33,9 +33,13 @@ class UserProfileZapsFilterSubAssembler(
         key: UserProfileQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
-        listOfNotNull(
-            filterUserProfileZapsReceived(user(key), since),
-        ).flatten()
+        if (key.loadZapsReceived) {
+            listOfNotNull(
+                filterUserProfileZapsReceived(user(key), since),
+            ).flatten()
+        } else {
+            emptyList()
+        }
 
     override fun user(key: UserProfileQueryState) = key.user
 }
