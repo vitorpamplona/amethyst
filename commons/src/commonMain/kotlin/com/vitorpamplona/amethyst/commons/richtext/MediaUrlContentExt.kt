@@ -145,7 +145,10 @@ private fun percentEncode(input: String): String {
 
 private fun extractSha256FromUrlPath(url: String): String? {
     val pathPart = url.substringBefore('?').substringBefore('#')
-    val match = sha256InPathRegex.find(pathPart) ?: return null
+    // Prefer the rightmost 64-char hex segment so CDNs that put a cache prefix
+    // (itself a 64-char hex) ahead of the blob hash — e.g.
+    // `https://share.yabu.me/<prefix>/<sha>.webp` — still resolve to the blob.
+    val match = sha256InPathRegex.findAll(pathPart).lastOrNull() ?: return null
     return match.value.lowercase()
 }
 
@@ -189,7 +192,7 @@ private fun extractServerBase(
     val hostStart = schemeEnd + 3
     if (hostStart >= pathPart.length) return null
 
-    val shaIndex = pathPart.indexOf(sha, ignoreCase = true)
+    val shaIndex = pathPart.lastIndexOf(sha, ignoreCase = true)
     if (shaIndex >= 0) {
         // Anchor on the slash immediately preceding the sha so the cache
         // can append "/<sha>" verbatim per the local-blossom-cache spec.

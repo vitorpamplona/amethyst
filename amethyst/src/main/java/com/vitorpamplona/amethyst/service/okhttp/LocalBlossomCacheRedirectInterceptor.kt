@@ -72,8 +72,13 @@ class LocalBlossomCacheRedirectInterceptor(
     }
 
     private fun findSha256AndExtensionInPath(url: HttpUrl): Triple<Int, String, String>? {
-        url.pathSegments.forEachIndexed { index, segment ->
-            val match = SHA256_SEGMENT_REGEX.find(segment) ?: return@forEachIndexed
+        // Walk segments right-to-left so CDNs that put a cache prefix (itself a
+        // 64-char hex segment) ahead of the blob hash — e.g.
+        // `https://share.yabu.me/<prefix>/<sha>.webp` — still resolve to the
+        // blob and leave the prefix in `xs`.
+        for (index in url.pathSegments.indices.reversed()) {
+            val segment = url.pathSegments[index]
+            val match = SHA256_SEGMENT_REGEX.find(segment) ?: continue
             val sha = match.value.lowercase()
             val ext = guessExtensionFrom(segment, sha) ?: "bin"
             return Triple(index, sha, ext)
