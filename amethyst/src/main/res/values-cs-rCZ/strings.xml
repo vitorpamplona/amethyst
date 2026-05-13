@@ -2589,10 +2589,4 @@
     <string name="community_rules_violation_quota_exceeded">Dnes jsi již zveřejnil %1$d událostí tohoto typu (limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
-    <string name="action_unmute">Zrušit ztlumení</string>
-    <string name="quick_action_mute_thread">Ztlumit vlákno</string>
-    <string name="quick_action_unmute_thread">Zrušit ztlumení vlákna</string>
-    <string name="settings_muted_threads_empty">Žádná ztlumená vlákna</string>
-    <string name="settings_muted_threads_title">Ztlumená vlákna</string>
-    <string name="settings_muted_threads_unknown">Neznámé vlákno · %1$s</string>
 </resources>

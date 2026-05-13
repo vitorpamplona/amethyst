@@ -2565,10 +2565,4 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
-    <string name="action_unmute">Reativar</string>
-    <string name="quick_action_mute_thread">Silenciar tópico</string>
-    <string name="quick_action_unmute_thread">Reativar tópico</string>
-    <string name="settings_muted_threads_empty">Nenhum tópico silenciado</string>
-    <string name="settings_muted_threads_title">Tópicos silenciados</string>
-    <string name="settings_muted_threads_unknown">Tópico desconhecido · %1$s</string>
 </resources>

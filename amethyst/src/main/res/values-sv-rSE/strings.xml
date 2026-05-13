@@ -2564,10 +2564,4 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
-    <string name="action_unmute">Avtysta</string>
-    <string name="quick_action_mute_thread">Tysta tråd</string>
-    <string name="quick_action_unmute_thread">Avtysta tråd</string>
-    <string name="settings_muted_threads_empty">Inga tystade trådar</string>
-    <string name="settings_muted_threads_title">Tystade trådar</string>
-    <string name="settings_muted_threads_unknown">Okänd tråd · %1$s</string>
 </resources>
