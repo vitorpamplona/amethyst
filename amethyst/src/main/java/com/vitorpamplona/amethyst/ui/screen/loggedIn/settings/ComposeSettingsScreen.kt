@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,10 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.BooleanType
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.model.parseBooleanType
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -46,7 +44,7 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Composable
 fun ComposeSettingsScreen(
@@ -82,68 +80,38 @@ fun ComposeSettingsContent(sharedPrefs: UiSettingsFlow) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = RowColSpacing,
     ) {
-        AutoCreateDraftsChoice(sharedPrefs)
-        AiWritingHelpChoice(sharedPrefs)
-        TrackedBroadcastsChoice(sharedPrefs)
+        BooleanSwitchRow(
+            sharedPrefs.automaticallyCreateDrafts,
+            R.string.auto_create_drafts_setting_title,
+            R.string.auto_create_drafts_setting_description,
+        )
+        BooleanSwitchRow(
+            sharedPrefs.automaticallyProposeAiImprovements,
+            R.string.ai_writing_setting_title,
+            R.string.ai_writing_setting_description,
+        )
+        BooleanSwitchRow(
+            sharedPrefs.useTrackedBroadcasts,
+            R.string.tracked_broadcasts_setting_title,
+            R.string.tracked_broadcasts_setting_description,
+        )
     }
 }
 
 @Composable
-fun AutoCreateDraftsChoice(sharedPrefs: UiSettingsFlow) {
-    val createDraftsIndex by sharedPrefs.automaticallyCreateDrafts.collectAsState()
+private fun BooleanSwitchRow(
+    flow: MutableStateFlow<BooleanType>,
+    title: Int,
+    description: Int,
+) {
+    val value by flow.collectAsState()
 
-    val booleanItems =
-        persistentListOf(
-            TitleExplainer(stringRes(BooleanType.ALWAYS.reourceId)),
-            TitleExplainer(stringRes(BooleanType.NEVER.reourceId)),
+    SettingsRow(title, description) {
+        Switch(
+            checked = value == BooleanType.ALWAYS,
+            onCheckedChange = { isOn ->
+                flow.tryEmit(if (isOn) BooleanType.ALWAYS else BooleanType.NEVER)
+            },
         )
-
-    SettingsRow(
-        R.string.auto_create_drafts_setting_title,
-        R.string.auto_create_drafts_setting_description,
-        booleanItems,
-        createDraftsIndex.screenCode,
-    ) {
-        sharedPrefs.automaticallyCreateDrafts.tryEmit(parseBooleanType(it))
-    }
-}
-
-@Composable
-fun AiWritingHelpChoice(sharedPrefs: UiSettingsFlow) {
-    val aiIndex by sharedPrefs.automaticallyProposeAiImprovements.collectAsState()
-
-    val booleanItems =
-        persistentListOf(
-            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
-            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
-        )
-
-    SettingsRow(
-        R.string.ai_writing_setting_title,
-        R.string.ai_writing_setting_description,
-        booleanItems,
-        aiIndex.screenCode,
-    ) {
-        sharedPrefs.automaticallyProposeAiImprovements.tryEmit(parseBooleanType(it))
-    }
-}
-
-@Composable
-fun TrackedBroadcastsChoice(sharedPrefs: UiSettingsFlow) {
-    val useTrackedBroadcastsIndex by sharedPrefs.useTrackedBroadcasts.collectAsState()
-
-    val booleanItems =
-        persistentListOf(
-            TitleExplainer(stringRes(BooleanType.ALWAYS.reourceId)),
-            TitleExplainer(stringRes(BooleanType.NEVER.reourceId)),
-        )
-
-    SettingsRow(
-        R.string.tracked_broadcasts_setting_title,
-        R.string.tracked_broadcasts_setting_description,
-        booleanItems,
-        useTrackedBroadcastsIndex.screenCode,
-    ) {
-        sharedPrefs.useTrackedBroadcasts.tryEmit(parseBooleanType(it))
     }
 }
