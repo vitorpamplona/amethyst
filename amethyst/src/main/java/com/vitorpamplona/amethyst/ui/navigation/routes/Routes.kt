@@ -122,6 +122,14 @@ sealed class Route {
 
     @Serializable object SecurityFilters : Route()
 
+    @Serializable object BlockedUsers : Route()
+
+    @Serializable object SpammingUsers : Route()
+
+    @Serializable object HiddenWords : Route()
+
+    @Serializable object MutedThreads : Route()
+
     @Serializable object PrivacyOptions : Route()
 
     @Serializable object NamecoinSettings : Route()
