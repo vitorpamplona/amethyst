@@ -212,32 +212,38 @@ fun EditPostView(
                                 if (myUrlPreview != null) {
                                     Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
                                         if (RichTextParser.isValidURL(myUrlPreview)) {
-                                            if (RichTextParser.isImageUrl(myUrlPreview)) {
-                                                AsyncImage(
-                                                    model = myUrlPreview,
-                                                    contentDescription = myUrlPreview,
-                                                    contentScale = ContentScale.FillWidth,
-                                                    modifier =
-                                                        Modifier
-                                                            .padding(top = 4.dp)
-                                                            .fillMaxWidth()
-                                                            .clip(shape = QuoteBorder)
-                                                            .border(
-                                                                1.dp,
-                                                                MaterialTheme.colorScheme.subtleBorder,
-                                                                QuoteBorder,
-                                                            ),
-                                                )
-                                            } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
-                                                VideoView(
-                                                    myUrlPreview,
-                                                    mimeType = null,
-                                                    roundedCorner = true,
-                                                    contentScale = ContentScale.FillWidth,
-                                                    accountViewModel = accountViewModel,
-                                                )
-                                            } else {
-                                                LoadUrlPreview(myUrlPreview, myUrlPreview, null, accountViewModel)
+                                            when {
+                                                RichTextParser.isImageUrl(myUrlPreview) -> {
+                                                    AsyncImage(
+                                                        model = myUrlPreview,
+                                                        contentDescription = myUrlPreview,
+                                                        contentScale = ContentScale.FillWidth,
+                                                        modifier =
+                                                            Modifier
+                                                                .padding(top = 4.dp)
+                                                                .fillMaxWidth()
+                                                                .clip(shape = QuoteBorder)
+                                                                .border(
+                                                                    1.dp,
+                                                                    MaterialTheme.colorScheme.subtleBorder,
+                                                                    QuoteBorder,
+                                                                ),
+                                                    )
+                                                }
+
+                                                RichTextParser.isVideoUrl(myUrlPreview) -> {
+                                                    VideoView(
+                                                        myUrlPreview,
+                                                        mimeType = null,
+                                                        roundedCorner = true,
+                                                        contentScale = ContentScale.FillWidth,
+                                                        accountViewModel = accountViewModel,
+                                                    )
+                                                }
+
+                                                else -> {
+                                                    LoadUrlPreview(myUrlPreview, myUrlPreview, null, accountViewModel)
+                                                }
                                             }
                                         } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
                                             val bgColor = MaterialTheme.colorScheme.background

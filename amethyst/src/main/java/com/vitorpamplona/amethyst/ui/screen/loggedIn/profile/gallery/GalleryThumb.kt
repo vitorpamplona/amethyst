@@ -79,100 +79,110 @@ fun GalleryThumbnail(
     val noteEvent = noteState.note.event ?: return
 
     val content =
-        if (noteEvent is ProfileGalleryEntryEvent) {
-            noteEvent.urls().map { url ->
-                if (isVideoUrl(url)) {
-                    MediaUrlVideo(
-                        url = url,
-                        description = noteEvent.content,
-                        hash = null,
-                        blurhash = noteEvent.blurhash(),
-                        dim = noteEvent.dimensions(),
-                        uri = null,
-                        mimeType = noteEvent.mimeType(),
-                        thumbhash = noteEvent.thumbhash(),
-                        artworkUri = noteEvent.image()?.imageUrl ?: noteEvent.thumb()?.imageUrl,
-                    )
-                } else {
+        when {
+            noteEvent is ProfileGalleryEntryEvent -> {
+                noteEvent.urls().map { url ->
+                    if (isVideoUrl(url)) {
+                        MediaUrlVideo(
+                            url = url,
+                            description = noteEvent.content,
+                            hash = null,
+                            blurhash = noteEvent.blurhash(),
+                            dim = noteEvent.dimensions(),
+                            uri = null,
+                            mimeType = noteEvent.mimeType(),
+                            thumbhash = noteEvent.thumbhash(),
+                            artworkUri = noteEvent.image()?.imageUrl ?: noteEvent.thumb()?.imageUrl,
+                        )
+                    } else {
+                        MediaUrlImage(
+                            url = url,
+                            description = noteEvent.content,
+                            // We don't want to show the hash banner here
+                            hash = null,
+                            blurhash = noteEvent.blurhash(),
+                            dim = noteEvent.dimensions(),
+                            uri = null,
+                            mimeType = noteEvent.mimeType(),
+                            thumbhash = noteEvent.thumbhash(),
+                        )
+                    }
+                }
+            }
+
+            noteEvent is PictureEvent -> {
+                noteEvent.imetaTags().map { imeta ->
                     MediaUrlImage(
-                        url = url,
+                        url = imeta.url,
                         description = noteEvent.content,
                         // We don't want to show the hash banner here
                         hash = null,
-                        blurhash = noteEvent.blurhash(),
-                        dim = noteEvent.dimensions(),
+                        blurhash = imeta.blurhash,
+                        dim = imeta.dimension,
                         uri = null,
-                        mimeType = noteEvent.mimeType(),
-                        thumbhash = noteEvent.thumbhash(),
+                        mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 }
             }
-        } else if (noteEvent is PictureEvent) {
-            noteEvent.imetaTags().map { imeta ->
-                MediaUrlImage(
-                    url = imeta.url,
-                    description = noteEvent.content,
-                    // We don't want to show the hash banner here
-                    hash = null,
-                    blurhash = imeta.blurhash,
-                    dim = imeta.dimension,
-                    uri = null,
-                    mimeType = imeta.mimeType,
-                    thumbhash = imeta.thumbhash,
-                )
-            }
-        } else if (noteEvent is VideoEvent) {
-            // An HLS publish writes one imeta per rendition (master + each variant) on the same
-            // NIP-71 event. Rendering them all expands a single video into a sub-grid of black
-            // tiles inside one gallery card — the .m3u8 playlist is a text manifest Coil can't
-            // decode. Collapse to a single tile when every imeta is an HLS playlist; prefer an
-            // imeta that carries a poster image, breaking ties by smallest dimensions so we
-            // pick the lowest-resolution variant. Non-HLS multi-imeta videos keep the existing
-            // per-imeta layout.
-            val imetas = noteEvent.imetaTags()
-            val isAllHls = imetas.isNotEmpty() && imetas.all { isHlsMimeType(it.mimeType) }
-            val toRender =
-                if (isAllHls) {
-                    val withPoster = imetas.filter { it.image.isNotEmpty() }
-                    val pick =
-                        withPoster.ifEmpty { imetas }.minBy {
-                            it.dimension?.let { d -> d.width * d.height } ?: Int.MAX_VALUE
-                        }
-                    listOf(pick)
-                } else {
-                    imetas
-                }
-            toRender.map { imeta ->
-                MediaUrlVideo(
-                    url = imeta.url,
-                    description = noteEvent.content,
-                    // We don't want to show the hash banner here
-                    hash = null,
-                    blurhash = imeta.blurhash,
-                    dim = imeta.dimension,
-                    uri = null,
-                    mimeType = imeta.mimeType,
-                    thumbhash = imeta.thumbhash,
-                    artworkUri = imeta.image.firstOrNull(),
-                )
-            }
-        } else if (noteEvent is LiveActivitiesClipEvent) {
-            noteEvent.videoUrl()?.let { url ->
-                listOf(
+
+            noteEvent is VideoEvent -> {
+                // An HLS publish writes one imeta per rendition (master + each variant) on the same
+                // NIP-71 event. Rendering them all expands a single video into a sub-grid of black
+                // tiles inside one gallery card — the .m3u8 playlist is a text manifest Coil can't
+                // decode. Collapse to a single tile when every imeta is an HLS playlist; prefer an
+                // imeta that carries a poster image, breaking ties by smallest dimensions so we
+                // pick the lowest-resolution variant. Non-HLS multi-imeta videos keep the existing
+                // per-imeta layout.
+                val imetas = noteEvent.imetaTags()
+                val isAllHls = imetas.isNotEmpty() && imetas.all { isHlsMimeType(it.mimeType) }
+                val toRender =
+                    if (isAllHls) {
+                        val withPoster = imetas.filter { it.image.isNotEmpty() }
+                        val pick =
+                            withPoster.ifEmpty { imetas }.minBy {
+                                it.dimension?.let { d -> d.width * d.height } ?: Int.MAX_VALUE
+                            }
+                        listOf(pick)
+                    } else {
+                        imetas
+                    }
+                toRender.map { imeta ->
                     MediaUrlVideo(
-                        url = url,
-                        description = noteEvent.title() ?: noteEvent.content,
+                        url = imeta.url,
+                        description = noteEvent.content,
+                        // We don't want to show the hash banner here
                         hash = null,
-                        blurhash = null,
-                        dim = null,
+                        blurhash = imeta.blurhash,
+                        dim = imeta.dimension,
                         uri = null,
-                        mimeType = null,
-                        thumbhash = null,
-                    ),
-                )
-            } ?: emptyList()
-        } else {
-            emptyList()
+                        mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
+                        artworkUri = imeta.image.firstOrNull(),
+                    )
+                }
+            }
+
+            noteEvent is LiveActivitiesClipEvent -> {
+                noteEvent.videoUrl()?.let { url ->
+                    listOf(
+                        MediaUrlVideo(
+                            url = url,
+                            description = noteEvent.title() ?: noteEvent.content,
+                            hash = null,
+                            blurhash = null,
+                            dim = null,
+                            uri = null,
+                            mimeType = null,
+                            thumbhash = null,
+                        ),
+                    )
+                } ?: emptyList()
+            }
+
+            else -> {
+                emptyList()
+            }
         }
 
     InnerRenderGalleryThumb(content, baseNote, accountViewModel)

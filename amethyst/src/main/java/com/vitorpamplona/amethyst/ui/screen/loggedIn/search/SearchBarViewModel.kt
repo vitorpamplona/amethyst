@@ -125,50 +125,58 @@ class SearchBarViewModel(
                     } else {
                         null
                     }
-                if (nip05 != null) {
-                    runCatching {
-                        nip05Client.get(nip05)?.let { info ->
-                            val user = account.cache.checkGetOrCreateUser(info.pubkey)
-                            if (user != null) {
-                                info.relays.forEach {
-                                    it.normalizeRelayUrlOrNull()?.let { relay ->
-                                        account.cache.relayHints.addKey(user.pubkey(), relay)
+                when {
+                    nip05 != null -> {
+                        runCatching {
+                            nip05Client.get(nip05)?.let { info ->
+                                val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                                if (user != null) {
+                                    info.relays.forEach {
+                                        it.normalizeRelayUrlOrNull()?.let { relay ->
+                                            account.cache.relayHints.addKey(user.pubkey(), relay)
+                                        }
+                                    }
+                                }
+                                user
+                            }
+                        }.getOrNull()
+                    }
+
+                    term.startsWithAny(userUriPrefixes) -> {
+                        runCatching {
+                            Nip19Parser.uriToRoute(term)?.entity?.let { parsed ->
+                                when (parsed) {
+                                    is NSec -> {
+                                        account.cache.getOrCreateUser(parsed.toPubKey().toHexKey())
+                                    }
+
+                                    is NPub -> {
+                                        account.cache.getOrCreateUser(parsed.hex)
+                                    }
+
+                                    is NProfile -> {
+                                        val user = account.cache.getOrCreateUser(parsed.hex)
+                                        parsed.relay.forEach { relay ->
+                                            account.cache.relayHints.addKey(user.pubkey(), relay)
+                                        }
+                                        user
+                                    }
+
+                                    else -> {
+                                        null
                                     }
                                 }
                             }
-                            user
-                        }
-                    }.getOrNull()
-                } else if (term.startsWithAny(userUriPrefixes)) {
-                    runCatching {
-                        Nip19Parser.uriToRoute(term)?.entity?.let { parsed ->
-                            when (parsed) {
-                                is NSec -> {
-                                    account.cache.getOrCreateUser(parsed.toPubKey().toHexKey())
-                                }
+                        }.getOrNull()
+                    }
 
-                                is NPub -> {
-                                    account.cache.getOrCreateUser(parsed.hex)
-                                }
+                    term.length == 64 && Hex.isHex64(term) -> {
+                        account.cache.getOrCreateUser(term)
+                    }
 
-                                is NProfile -> {
-                                    val user = account.cache.getOrCreateUser(parsed.hex)
-                                    parsed.relay.forEach { relay ->
-                                        account.cache.relayHints.addKey(user.pubkey(), relay)
-                                    }
-                                    user
-                                }
-
-                                else -> {
-                                    null
-                                }
-                            }
-                        }
-                    }.getOrNull()
-                } else if (term.length == 64 && Hex.isHex64(term)) {
-                    account.cache.getOrCreateUser(term)
-                } else {
-                    null
+                    else -> {
+                        null
+                    }
                 }
             }.flowOn(Dispatchers.IO)
 

@@ -735,17 +735,25 @@ class ChatNewMessageViewModel :
 
     fun autocompleteWithUser(item: User) {
         userSuggestions?.let { userSuggestions ->
-            if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
-                val lastWord = message.currentWord()
-                userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message.text.toString())
-            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
-                forwardZapTo.value.addItem(item)
-                forwardZapToEditting.value = TextFieldValue("")
-            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
-                val lastWord = toUsers.currentWord()
-                userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
-                updateRoomFromUsersInput()
+            when (userSuggestionsMainMessage) {
+                UserSuggestionAnchor.MAIN_MESSAGE -> {
+                    val lastWord = message.currentWord()
+                    userSuggestions.replaceCurrentWord(message, lastWord, item)
+                    urlPreviews.update(message.text.toString())
+                }
+
+                UserSuggestionAnchor.FORWARD_ZAPS -> {
+                    forwardZapTo.value.addItem(item)
+                    forwardZapToEditting.value = TextFieldValue("")
+                }
+
+                UserSuggestionAnchor.TO_USERS -> {
+                    val lastWord = toUsers.currentWord()
+                    userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
+                    updateRoomFromUsersInput()
+                }
+
+                else -> {}
             }
 
             userSuggestionsMainMessage = null

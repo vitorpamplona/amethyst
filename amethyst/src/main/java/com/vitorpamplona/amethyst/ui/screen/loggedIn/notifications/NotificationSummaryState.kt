@@ -98,41 +98,48 @@ class NotificationSummaryState(
         LocalCache.notes.forEach { _, it ->
             val noteEvent = it.event
             if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
-                if (noteEvent is ReactionEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
-                        reactions[netDate] = (reactions[netDate] ?: 0) + 1
-                        takenIntoAccount.add(noteEvent.id)
-                    }
-                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
-                        boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                        takenIntoAccount.add(noteEvent.id)
-                    }
-                } else if (noteEvent is LnZapEvent) {
-                    // the user might be sending his own receipts noteEvent.pubKey != currentUser
-                    if (noteEvent.isTaggedUser(currentUser)) {
-                        val netDate = formatDate(noteEvent.createdAt)
-                        zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
-                        takenIntoAccount.add(noteEvent.id)
-                    }
-                } else if (noteEvent is BaseThreadedEvent &&
-                    noteEvent.isTaggedUser(currentUser) &&
-                    noteEvent.pubKey != currentUser
-                ) {
-                    val isCitation =
-                        noteEvent.findCitations().any {
-                            LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                when {
+                    noteEvent is ReactionEvent -> {
+                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                            val netDate = formatDate(noteEvent.createdAt)
+                            reactions[netDate] = (reactions[netDate] ?: 0) + 1
+                            takenIntoAccount.add(noteEvent.id)
                         }
-
-                    val netDate = formatDate(noteEvent.createdAt)
-                    if (isCitation) {
-                        boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                    } else {
-                        replies[netDate] = (replies[netDate] ?: 0) + 1
                     }
-                    takenIntoAccount.add(noteEvent.id)
+
+                    noteEvent is RepostEvent || noteEvent is GenericRepostEvent -> {
+                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                            val netDate = formatDate(noteEvent.createdAt)
+                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                            takenIntoAccount.add(noteEvent.id)
+                        }
+                    }
+
+                    noteEvent is LnZapEvent -> {
+                        // the user might be sending his own receipts noteEvent.pubKey != currentUser
+                        if (noteEvent.isTaggedUser(currentUser)) {
+                            val netDate = formatDate(noteEvent.createdAt)
+                            zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                            takenIntoAccount.add(noteEvent.id)
+                        }
+                    }
+
+                    noteEvent is BaseThreadedEvent &&
+                        noteEvent.isTaggedUser(currentUser) &&
+                        noteEvent.pubKey != currentUser -> {
+                        val isCitation =
+                            noteEvent.findCitations().any {
+                                LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                            }
+
+                        val netDate = formatDate(noteEvent.createdAt)
+                        if (isCitation) {
+                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                        } else {
+                            replies[netDate] = (replies[netDate] ?: 0) + 1
+                        }
+                        takenIntoAccount.add(noteEvent.id)
+                    }
                 }
             }
         }
@@ -162,45 +169,52 @@ class NotificationSummaryState(
             newNotes.forEach {
                 val noteEvent = it.event
                 if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
-                    if (noteEvent is ReactionEvent) {
-                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                            val netDate = formatDate(noteEvent.createdAt)
-                            reactions[netDate] = (reactions[netDate] ?: 0) + 1
-                            takenIntoAccount.add(noteEvent.id)
-                            hasNewElements = true
-                        }
-                    } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                            val netDate = formatDate(noteEvent.createdAt)
-                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                            takenIntoAccount.add(noteEvent.id)
-                            hasNewElements = true
-                        }
-                    } else if (noteEvent is LnZapEvent) {
-                        if (noteEvent.isTaggedUser(currentUser)) {
-                            //  && noteEvent.pubKey != currentUser User might be sending his own receipts
-                            val netDate = formatDate(noteEvent.createdAt)
-                            zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
-                            takenIntoAccount.add(noteEvent.id)
-                            hasNewElements = true
-                        }
-                    } else if (noteEvent is BaseThreadedEvent &&
-                        noteEvent.isTaggedUser(currentUser) &&
-                        noteEvent.pubKey != currentUser
-                    ) {
-                        val isCitation =
-                            noteEvent.findCitations().any {
-                                LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                    when {
+                        noteEvent is ReactionEvent -> {
+                            if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                                val netDate = formatDate(noteEvent.createdAt)
+                                reactions[netDate] = (reactions[netDate] ?: 0) + 1
+                                takenIntoAccount.add(noteEvent.id)
+                                hasNewElements = true
                             }
-
-                        val netDate = formatDate(noteEvent.createdAt)
-                        if (isCitation) {
-                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                        } else {
-                            replies[netDate] = (replies[netDate] ?: 0) + 1
                         }
-                        takenIntoAccount.add(noteEvent.id)
-                        hasNewElements = true
+
+                        noteEvent is RepostEvent || noteEvent is GenericRepostEvent -> {
+                            if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                                val netDate = formatDate(noteEvent.createdAt)
+                                boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                                takenIntoAccount.add(noteEvent.id)
+                                hasNewElements = true
+                            }
+                        }
+
+                        noteEvent is LnZapEvent -> {
+                            if (noteEvent.isTaggedUser(currentUser)) {
+                                //  && noteEvent.pubKey != currentUser User might be sending his own receipts
+                                val netDate = formatDate(noteEvent.createdAt)
+                                zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                                takenIntoAccount.add(noteEvent.id)
+                                hasNewElements = true
+                            }
+                        }
+
+                        noteEvent is BaseThreadedEvent &&
+                            noteEvent.isTaggedUser(currentUser) &&
+                            noteEvent.pubKey != currentUser -> {
+                            val isCitation =
+                                noteEvent.findCitations().any {
+                                    LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                                }
+
+                            val netDate = formatDate(noteEvent.createdAt)
+                            if (isCitation) {
+                                boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                            } else {
+                                replies[netDate] = (replies[netDate] ?: 0) + 1
+                            }
+                            takenIntoAccount.add(noteEvent.id)
+                            hasNewElements = true
+                        }
                     }
                 }
             }

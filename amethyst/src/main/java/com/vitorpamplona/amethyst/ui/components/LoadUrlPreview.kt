@@ -95,34 +95,42 @@ fun RenderLoaded(
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
 ) {
-    if (state.previewInfo.mimeType.startsWith("image")) {
-        Box(modifier = HalfVertPadding) {
-            ZoomableContentView(
-                content = MediaUrlImage(url, uri = callbackUri),
-                roundedCorner = true,
-                contentScale = ContentScale.FillWidth,
-                accountViewModel = accountViewModel,
-            )
+    when {
+        state.previewInfo.mimeType.startsWith("image") -> {
+            Box(modifier = HalfVertPadding) {
+                ZoomableContentView(
+                    content = MediaUrlImage(url, uri = callbackUri),
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
-    } else if (state.previewInfo.mimeType.startsWith("video")) {
-        Box(modifier = HalfVertPadding) {
-            ZoomableContentView(
-                content = MediaUrlVideo(url, uri = callbackUri),
-                roundedCorner = true,
-                contentScale = ContentScale.FillWidth,
-                accountViewModel = accountViewModel,
-            )
+
+        state.previewInfo.mimeType.startsWith("video") -> {
+            Box(modifier = HalfVertPadding) {
+                ZoomableContentView(
+                    content = MediaUrlVideo(url, uri = callbackUri),
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
-    } else if (state.previewInfo.mimeType.startsWith("application/pdf")) {
-        Box(modifier = HalfVertPadding) {
-            ZoomableContentView(
-                content = MediaUrlPdf(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
-                roundedCorner = true,
-                contentScale = ContentScale.FillWidth,
-                accountViewModel = accountViewModel,
-            )
+
+        state.previewInfo.mimeType.startsWith("application/pdf") -> {
+            Box(modifier = HalfVertPadding) {
+                ZoomableContentView(
+                    content = MediaUrlPdf(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
-    } else {
-        UrlPreviewCard(url, state.previewInfo)
+
+        else -> {
+            UrlPreviewCard(url, state.previewInfo)
+        }
     }
 }

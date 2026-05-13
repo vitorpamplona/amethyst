@@ -1146,20 +1146,28 @@ private fun likeClick(
     }
 
     val choices = accountViewModel.reactionChoices()
-    if (choices.isEmpty()) {
-        accountViewModel.toastManager.toast(
-            R.string.no_reactions_setup,
-            R.string.no_reaction_type_setup_long_press_to_change,
-        )
-    } else if (!accountViewModel.isWriteable()) {
-        accountViewModel.toastManager.toast(
-            R.string.read_only_user,
-            R.string.login_with_a_private_key_to_like_posts,
-        )
-    } else if (choices.size == 1) {
-        onWantsToSignReaction()
-    } else if (choices.size > 1) {
-        onMultipleChoices()
+    when {
+        choices.isEmpty() -> {
+            accountViewModel.toastManager.toast(
+                R.string.no_reactions_setup,
+                R.string.no_reaction_type_setup_long_press_to_change,
+            )
+        }
+
+        !accountViewModel.isWriteable() -> {
+            accountViewModel.toastManager.toast(
+                R.string.read_only_user,
+                R.string.login_with_a_private_key_to_like_posts,
+            )
+        }
+
+        choices.size == 1 -> {
+            onWantsToSignReaction()
+        }
+
+        choices.size > 1 -> {
+            onMultipleChoices()
+        }
     }
 }
 
@@ -1369,27 +1377,35 @@ fun zapClick(
 
     val choices = accountViewModel.zapAmountChoices()
 
-    if (choices.isEmpty()) {
-        onCustomAmount()
-    } else if (!accountViewModel.isWriteable()) {
-        accountViewModel.toastManager.toast(
-            R.string.error_dialog_zap_error,
-            R.string.login_with_a_private_key_to_be_able_to_send_zaps,
-        )
-    } else if (choices.size == 1) {
-        onZapStarts()
-        accountViewModel.zap(
-            baseNote,
-            choices.first() * 1000,
-            null,
-            "",
-            context,
-            onError = onError,
-            onProgress = { onZappingProgress(it) },
-            onPayViaIntent = onPayViaIntent,
-        )
-    } else if (choices.size > 1) {
-        onMultipleChoices()
+    when {
+        choices.isEmpty() -> {
+            onCustomAmount()
+        }
+
+        !accountViewModel.isWriteable() -> {
+            accountViewModel.toastManager.toast(
+                R.string.error_dialog_zap_error,
+                R.string.login_with_a_private_key_to_be_able_to_send_zaps,
+            )
+        }
+
+        choices.size == 1 -> {
+            onZapStarts()
+            accountViewModel.zap(
+                baseNote,
+                choices.first() * 1000,
+                null,
+                "",
+                context,
+                onError = onError,
+                onProgress = { onZappingProgress(it) },
+                onPayViaIntent = onPayViaIntent,
+            )
+        }
+
+        choices.size > 1 -> {
+            onMultipleChoices()
+        }
     }
 }
 

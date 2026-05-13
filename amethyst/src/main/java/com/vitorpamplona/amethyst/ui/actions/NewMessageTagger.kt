@@ -188,55 +188,67 @@ class NewMessageTagger(
         key = key.removePrefix("@")
 
         try {
-            if (key.startsWith("nsec1", true)) {
-                if (key.length < 63) {
-                    return null
+            when {
+                key.startsWith("nsec1", true) -> {
+                    if (key.length < 63) {
+                        return null
+                    }
+
+                    val keyB32 = key.substring(0, 63)
+                    val restOfWord = key.substring(63)
+                    // Converts to npub
+                    val pubkey =
+                        Nip19Parser.uriToRoute(Nip01Crypto.pubKeyCreate(keyB32.bechToBytes()).toNpub()) ?: return null
+
+                    return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
                 }
 
-                val keyB32 = key.substring(0, 63)
-                val restOfWord = key.substring(63)
-                // Converts to npub
-                val pubkey =
-                    Nip19Parser.uriToRoute(Nip01Crypto.pubKeyCreate(keyB32.bechToBytes()).toNpub()) ?: return null
+                key.startsWith("npub1", true) -> {
+                    if (key.length < 63) {
+                        return null
+                    }
 
-                return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
-            } else if (key.startsWith("npub1", true)) {
-                if (key.length < 63) {
-                    return null
+                    val keyB32 = key.substring(0, 63)
+                    val restOfWord = key.substring(63)
+
+                    val pubkey = Nip19Parser.uriToRoute(keyB32) ?: return null
+
+                    return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
                 }
 
-                val keyB32 = key.substring(0, 63)
-                val restOfWord = key.substring(63)
+                key.startsWith("note1", true) -> {
+                    if (key.length < 63) {
+                        return null
+                    }
 
-                val pubkey = Nip19Parser.uriToRoute(keyB32) ?: return null
+                    val keyB32 = key.substring(0, 63)
+                    val restOfWord = key.substring(63)
 
-                return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
-            } else if (key.startsWith("note1", true)) {
-                if (key.length < 63) {
-                    return null
+                    val noteId = Nip19Parser.uriToRoute(keyB32) ?: return null
+
+                    return DirtyKeyInfo(noteId, restOfWord.ifEmpty { null })
                 }
 
-                val keyB32 = key.substring(0, 63)
-                val restOfWord = key.substring(63)
+                key.startsWith("nprofile", true) -> {
+                    val pubkeyRelay = Nip19Parser.uriToRoute(key) ?: return null
 
-                val noteId = Nip19Parser.uriToRoute(keyB32) ?: return null
+                    return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
+                }
 
-                return DirtyKeyInfo(noteId, restOfWord.ifEmpty { null })
-            } else if (key.startsWith("nprofile", true)) {
-                val pubkeyRelay = Nip19Parser.uriToRoute(key) ?: return null
+                key.startsWith("nevent1", true) -> {
+                    val noteRelayId = Nip19Parser.uriToRoute(key) ?: return null
 
-                return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
-            } else if (key.startsWith("nevent1", true)) {
-                val noteRelayId = Nip19Parser.uriToRoute(key) ?: return null
+                    return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
+                }
 
-                return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
-            } else if (key.startsWith("naddr1", true)) {
-                val address = Nip19Parser.uriToRoute(key) ?: return null
+                key.startsWith("naddr1", true) -> {
+                    val address = Nip19Parser.uriToRoute(key) ?: return null
 
-                return DirtyKeyInfo(
-                    address,
-                    address.additionalChars,
-                ) // no way to know when they address ends and dirt begins
+                    return DirtyKeyInfo(
+                        address,
+                        address.additionalChars,
+                    ) // no way to know when they address ends and dirt begins
+                }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

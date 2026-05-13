@@ -233,14 +233,11 @@ fun RenderEyeGlassesPrescription(
         val isContacts = contactsRightEye != null || contactsLeftEye != null
 
         Text(
-            if (isGlasses && isContacts) {
-                "Vision Prescription"
-            } else if (isGlasses) {
-                "Glasses Prescription"
-            } else if (isContacts) {
-                "Contact Lenses Prescription"
-            } else {
-                "Empty Prescription"
+            when {
+                isGlasses && isContacts -> "Vision Prescription"
+                isGlasses -> "Glasses Prescription"
+                isContacts -> "Contact Lenses Prescription"
+                else -> "Empty Prescription"
             },
             modifier = Modifier.padding(4.dp).fillMaxWidth(),
             textAlign = TextAlign.Center,

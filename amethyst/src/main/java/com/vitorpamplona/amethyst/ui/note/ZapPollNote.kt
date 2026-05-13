@@ -547,59 +547,69 @@ fun ZapVote(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple24dp,
                 onClick = {
-                    if (!accountViewModel.isWriteable()) {
-                        accountViewModel.toastManager.toast(
-                            R.string.read_only_user,
-                            R.string.login_with_a_private_key_to_be_able_to_send_zaps,
-                        )
-                    } else if (pollViewModel.isPollClosed()) {
-                        accountViewModel.toastManager.toast(
-                            R.string.poll_unable_to_vote,
-                            R.string.poll_is_closed_explainer,
-                        )
-                    } else if (isLoggedUser) {
-                        accountViewModel.toastManager.toast(
-                            R.string.poll_unable_to_vote,
-                            R.string.poll_author_no_vote,
-                        )
-                    } else if (pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn.value) {
-                        // only allow one vote per option when min==max, i.e. atomic vote amount specified
-                        accountViewModel.toastManager.toast(
-                            R.string.poll_unable_to_vote,
-                            R.string.one_vote_per_user_on_atomic_votes,
-                        )
-                        return@combinedClickable
-                    } else if (
+                    when {
+                        !accountViewModel.isWriteable() -> {
+                            accountViewModel.toastManager.toast(
+                                R.string.read_only_user,
+                                R.string.login_with_a_private_key_to_be_able_to_send_zaps,
+                            )
+                        }
+
+                        pollViewModel.isPollClosed() -> {
+                            accountViewModel.toastManager.toast(
+                                R.string.poll_unable_to_vote,
+                                R.string.poll_is_closed_explainer,
+                            )
+                        }
+
+                        isLoggedUser -> {
+                            accountViewModel.toastManager.toast(
+                                R.string.poll_unable_to_vote,
+                                R.string.poll_author_no_vote,
+                            )
+                        }
+
+                        pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn.value -> {
+                            // only allow one vote per option when min==max, i.e. atomic vote amount specified
+                            accountViewModel.toastManager.toast(
+                                R.string.poll_unable_to_vote,
+                                R.string.one_vote_per_user_on_atomic_votes,
+                            )
+                            return@combinedClickable
+                        }
+
                         accountViewModel.zapAmountChoices().size == 1 &&
-                        pollViewModel.isValidInputVoteAmount(accountViewModel.zapAmountChoices().first())
-                    ) {
-                        accountViewModel.zap(
-                            baseNote,
-                            accountViewModel.zapAmountChoices().first() * 1000,
-                            poolOption.option,
-                            "",
-                            context,
-                            onError = { title, message, user ->
-                                zappingProgress = 0f
-                                showErrorMessageDialog = StringToastMsg(title, message)
-                            },
-                            onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
-                            onPayViaIntent = {
-                                if (it.size == 1) {
-                                    val payable = it.first()
-                                    payViaIntent(payable.invoice, context, { }) { error ->
-                                        zappingProgress = 0f
-                                        showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                            pollViewModel.isValidInputVoteAmount(accountViewModel.zapAmountChoices().first()) -> {
+                            accountViewModel.zap(
+                                baseNote,
+                                accountViewModel.zapAmountChoices().first() * 1000,
+                                poolOption.option,
+                                "",
+                                context,
+                                onError = { title, message, user ->
+                                    zappingProgress = 0f
+                                    showErrorMessageDialog = StringToastMsg(title, message)
+                                },
+                                onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
+                                onPayViaIntent = {
+                                    if (it.size == 1) {
+                                        val payable = it.first()
+                                        payViaIntent(payable.invoice, context, { }) { error ->
+                                            zappingProgress = 0f
+                                            showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                                        }
+                                    } else {
+                                        val uid = Uuid.random().toString()
+                                        accountViewModel.tempManualPaymentCache.put(uid, it)
+                                        nav.nav(Route.ManualZapSplitPayment(uid))
                                     }
-                                } else {
-                                    val uid = Uuid.random().toString()
-                                    accountViewModel.tempManualPaymentCache.put(uid, it)
-                                    nav.nav(Route.ManualZapSplitPayment(uid))
-                                }
-                            },
-                        )
-                    } else {
-                        wantsToZap = true
+                                },
+                            )
+                        }
+
+                        else -> {
+                            wantsToZap = true
+                        }
                     }
                 },
             ),

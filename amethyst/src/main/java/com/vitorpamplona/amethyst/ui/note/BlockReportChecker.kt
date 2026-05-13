@@ -67,25 +67,31 @@ fun WatchBlockAndReport(
             mutableStateOf(false)
         }
 
-    if (showAnyway.value) {
-        normalNote(true)
-    } else if (!isHidden.isPostHidden) {
-        if (isHidden.isAcceptable) {
-            normalNote(isHidden.canPreview)
-        } else {
-            HiddenNote(
-                isHidden.relevantReports,
-                isHidden.isHiddenAuthor,
-                accountViewModel,
-                modifier,
-                nav,
-                onClick = { showAnyway.value = true },
-            )
+    when {
+        showAnyway.value -> {
+            normalNote(true)
         }
-    } else if (showHiddenWarning) {
-        // if it is a quoted or boosted note, how the hidden warning.
-        HiddenNoteByMe {
-            showAnyway.value = true
+
+        !isHidden.isPostHidden -> {
+            if (isHidden.isAcceptable) {
+                normalNote(isHidden.canPreview)
+            } else {
+                HiddenNote(
+                    isHidden.relevantReports,
+                    isHidden.isHiddenAuthor,
+                    accountViewModel,
+                    modifier,
+                    nav,
+                    onClick = { showAnyway.value = true },
+                )
+            }
+        }
+
+        showHiddenWarning -> {
+            // if it is a quoted or boosted note, how the hidden warning.
+            HiddenNoteByMe {
+                showAnyway.value = true
+            }
         }
     }
 }

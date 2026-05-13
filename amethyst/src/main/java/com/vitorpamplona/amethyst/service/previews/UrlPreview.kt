@@ -63,18 +63,28 @@ class UrlPreview {
                         val mimeType =
                             response.headers["Content-Type"]?.toMediaType()
                                 ?: throw IllegalArgumentException("Website returned unknown mimetype: ${response.headers["Content-Type"]}")
-                        if (mimeType.type == "text" && mimeType.subtype == "html") {
-                            val metaTags = HtmlParser().parseHtml(response.body.source(), mimeType.charset())
-                            val data = OpenGraphParser().extractUrlInfo(metaTags)
-                            UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
-                        } else if (mimeType.type == "image") {
-                            UrlInfoItem(url, image = url, mimeType = mimeType.toString())
-                        } else if (mimeType.type == "video") {
-                            UrlInfoItem(url, image = url, mimeType = mimeType.toString())
-                        } else if (mimeType.type == "application" && mimeType.subtype == "pdf") {
-                            UrlInfoItem(url, image = url, mimeType = mimeType.toString())
-                        } else {
-                            throw IllegalArgumentException("Website returned unknown encoding for previews: $mimeType")
+                        when {
+                            mimeType.type == "text" && mimeType.subtype == "html" -> {
+                                val metaTags = HtmlParser().parseHtml(response.body.source(), mimeType.charset())
+                                val data = OpenGraphParser().extractUrlInfo(metaTags)
+                                UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
+                            }
+
+                            mimeType.type == "image" -> {
+                                UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                            }
+
+                            mimeType.type == "video" -> {
+                                UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                            }
+
+                            mimeType.type == "application" && mimeType.subtype == "pdf" -> {
+                                UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                            }
+
+                            else -> {
+                                throw IllegalArgumentException("Website returned unknown encoding for previews: $mimeType")
+                            }
                         }
                     } else {
                         throw IllegalArgumentException("Website returned: " + response.code)
