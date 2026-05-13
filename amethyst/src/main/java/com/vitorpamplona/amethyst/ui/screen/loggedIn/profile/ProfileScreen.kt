@@ -475,24 +475,23 @@ private fun RenderScreen(
             }
         }
 
-    // Track the tab the user was viewing so we can re-pin to it when the
-    // visible-tabs list changes (e.g. they hid Followers from settings while
-    // standing on the Zaps tab).
-    var viewedTab by remember { mutableStateOf(visibleTabs.first()) }
+    // Plain holder (not MutableState) so tab swipes don't recompose RenderScreen.
+    // We only need the value when key(visibleTabs) rebuilds the pager.
+    val viewedTabRef = remember { ViewedTabRef(visibleTabs.first()) }
 
     // key() rebuilds the pager state whenever the visible-tabs list changes,
     // re-initializing it on the same tab the user was looking at.
     key(visibleTabs) {
         val pagerState =
             rememberPagerState(
-                initialPage = visibleTabs.indexOf(viewedTab).coerceAtLeast(0),
+                initialPage = visibleTabs.indexOf(viewedTabRef.value).coerceAtLeast(0),
                 pageCount = { visibleTabs.size },
             )
 
         LaunchedEffect(pagerState, visibleTabs) {
             snapshotFlow { pagerState.currentPage }
                 .collect { page ->
-                    visibleTabs.getOrNull(page)?.let { viewedTab = it }
+                    visibleTabs.getOrNull(page)?.let { viewedTabRef.value = it }
                 }
         }
 
@@ -560,6 +559,10 @@ private enum class ProfileTab {
     Reports,
     Relays,
 }
+
+private class ViewedTabRef(
+    var value: ProfileTab,
+)
 
 @Composable
 private fun CreateAndRenderPages(
