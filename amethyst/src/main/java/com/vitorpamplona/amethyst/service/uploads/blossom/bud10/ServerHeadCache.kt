@@ -64,13 +64,13 @@ class ServerHeadCache {
                 val contentLength = response.header("Content-Length")?.toLongOrNull()
                 val mimeType = response.header("Content-Type")?.toMediaType()?.toString()
 
-                if (contentLength != null && mimeType != null) {
+                return if (contentLength != null && mimeType != null) {
                     val result = HasFile.TypeAndSize(mimeType, contentLength)
                     cache.put(url, result)
-                    return result
+                    result
                 } else {
                     cache.put(url, HasFile.NoFile)
-                    return HasFile.NoFile
+                    HasFile.NoFile
                 }
             }
         } catch (e: Exception) {

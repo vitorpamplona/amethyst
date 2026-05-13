@@ -293,40 +293,48 @@ private fun handleZapClick(
 
     val choices = zapAmountChoices ?: accountViewModel.zapAmountChoices()
 
-    if (choices.isEmpty()) {
-        accountViewModel.toastManager.toast(
-            stringRes(context, R.string.error_dialog_zap_error),
-            stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
-        )
-    } else if (!accountViewModel.isWriteable()) {
-        accountViewModel.toastManager.toast(
-            stringRes(context, R.string.error_dialog_zap_error),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
-        )
-    } else if (choices.size == 1) {
-        val amount = choices.first()
-
-        if (amount > 1100 || zapAmountChoices != null) {
-            onZapStarts()
-            accountViewModel.zap(
-                baseNote,
-                amount * 1000,
-                null,
-                "",
-                context,
-                showErrorIfNoLnAddress = false,
-                onError = onError,
-                onProgress = { onZappingProgress(it) },
-                onPayViaIntent = onPayViaIntent,
+    when {
+        choices.isEmpty() -> {
+            accountViewModel.toastManager.toast(
+                stringRes(context, R.string.error_dialog_zap_error),
+                stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
             )
-        } else {
-            onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
         }
-    } else {
-        if (choices.any { it > 1100 } || zapAmountChoices != null) {
-            onMultipleChoices(choices)
-        } else {
-            onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
+
+        !accountViewModel.isWriteable() -> {
+            accountViewModel.toastManager.toast(
+                stringRes(context, R.string.error_dialog_zap_error),
+                stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+            )
+        }
+
+        choices.size == 1 -> {
+            val amount = choices.first()
+
+            if (amount > 1100 || zapAmountChoices != null) {
+                onZapStarts()
+                accountViewModel.zap(
+                    baseNote,
+                    amount * 1000,
+                    null,
+                    "",
+                    context,
+                    showErrorIfNoLnAddress = false,
+                    onError = onError,
+                    onProgress = { onZappingProgress(it) },
+                    onPayViaIntent = onPayViaIntent,
+                )
+            } else {
+                onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
+            }
+        }
+
+        else -> {
+            if (choices.any { it > 1100 } || zapAmountChoices != null) {
+                onMultipleChoices(choices)
+            } else {
+                onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
+            }
         }
     }
 }

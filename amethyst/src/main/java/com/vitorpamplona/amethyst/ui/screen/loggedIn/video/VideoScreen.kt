@@ -168,34 +168,40 @@ fun VideoFeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            if (item.event is PictureEvent) {
-                PictureCardCompose(
-                    baseNote = item,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+            when {
+                item.event is PictureEvent -> {
+                    PictureCardCompose(
+                        baseNote = item,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
 
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
 
-                Spacer(modifier = Modifier.height(8.dp))
-            } else if (item.event is VideoEvent) {
-                VideoCardCompose(item, accountViewModel, nav)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
+                item.event is VideoEvent -> {
+                    VideoCardCompose(item, accountViewModel, nav)
 
-                Spacer(modifier = Modifier.height(8.dp))
-            } else if (item.event is FileHeaderEvent) {
-                FileHeaderCardCompose(item, accountViewModel, nav)
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
 
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                item.event is FileHeaderEvent -> {
+                    FileHeaderCardCompose(item, accountViewModel, nav)
+
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }

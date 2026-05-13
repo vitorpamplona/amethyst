@@ -56,34 +56,45 @@ fun timeAgo(
 
     val timeDifference = TimeUtils.now() - time
 
-    return if (timeDifference > TimeUtils.ONE_YEAR) {
-        // Dec 12, 2022
+    return when {
+        timeDifference > TimeUtils.ONE_YEAR -> {
+            // Dec 12, 2022
 
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            }
+
+            prefix + yearFormatter.format(time * 1000)
         }
 
-        prefix + yearFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_MONTH) {
-        // Dec 12
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        timeDifference > TimeUtils.ONE_MONTH -> {
+            // Dec 12
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            }
+
+            prefix + monthFormatter.format(time * 1000)
         }
 
-        prefix + monthFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_DAY) {
-        // 2 days
-        prefix + (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, days)
-    } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        prefix + (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, hours)
-    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        prefix + (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, minutes)
-    } else {
-        prefix + stringRes(context, seconds)
+        timeDifference > TimeUtils.ONE_DAY -> {
+            prefix + (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, days)
+        }
+
+        timeDifference > TimeUtils.ONE_HOUR -> {
+            prefix + (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, hours)
+        }
+
+        timeDifference > TimeUtils.ONE_MINUTE -> {
+            prefix + (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, minutes)
+        }
+
+        else -> {
+            prefix + stringRes(context, seconds)
+        }
     }
 }
 
@@ -96,34 +107,45 @@ fun timeAgoNoDot(
 
     val timeDifference = TimeUtils.now() - time
 
-    return if (timeDifference > TimeUtils.ONE_YEAR) {
-        // Dec 12, 2022
+    return when {
+        timeDifference > TimeUtils.ONE_YEAR -> {
+            // Dec 12, 2022
 
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            }
+
+            yearFormatter.format(time * 1000)
         }
 
-        yearFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_MONTH) {
-        // Dec 12
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        timeDifference > TimeUtils.ONE_MONTH -> {
+            // Dec 12
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            }
+
+            monthFormatter.format(time * 1000)
         }
 
-        monthFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_DAY) {
-        // 2 days
-        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
-    } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
-    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
-    } else {
-        stringRes(context, R.string.now)
+        timeDifference > TimeUtils.ONE_DAY -> {
+            (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
+        }
+
+        timeDifference > TimeUtils.ONE_HOUR -> {
+            (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
+        }
+
+        timeDifference > TimeUtils.ONE_MINUTE -> {
+            (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+        }
+
+        else -> {
+            stringRes(context, R.string.now)
+        }
     }
 }
 
@@ -136,34 +158,45 @@ fun timeAgoNoDotNoDay(
 
     val timeDifference = TimeUtils.now() - time
 
-    return if (timeDifference > TimeUtils.ONE_YEAR) {
-        // Dec 12, 2022
+    return when {
+        timeDifference > TimeUtils.ONE_YEAR -> {
+            // Dec 12, 2022
 
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
-            monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
+                monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+            }
+
+            yearNoDayFormatter.format(time * 1000)
         }
 
-        yearNoDayFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_MONTH) {
-        // Dec 12
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
-            monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+        timeDifference > TimeUtils.ONE_MONTH -> {
+            // Dec 12
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
+                monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+            }
+
+            monthNoDayFormatter.format(time * 1000)
         }
 
-        monthNoDayFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_DAY) {
-        // 2 days
-        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
-    } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
-    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
-    } else {
-        stringRes(context, R.string.now)
+        timeDifference > TimeUtils.ONE_DAY -> {
+            (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
+        }
+
+        timeDifference > TimeUtils.ONE_HOUR -> {
+            (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
+        }
+
+        timeDifference > TimeUtils.ONE_MINUTE -> {
+            (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+        }
+
+        else -> {
+            stringRes(context, R.string.now)
+        }
     }
 }
 
@@ -176,34 +209,45 @@ fun timeAheadNoDot(
 
     val timeDifference = time - TimeUtils.now()
 
-    return if (timeDifference > TimeUtils.ONE_YEAR) {
-        // Dec 12, 2022
+    return when {
+        timeDifference > TimeUtils.ONE_YEAR -> {
+            // Dec 12, 2022
 
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            }
+
+            yearFormatter.format(time * 1000)
         }
 
-        yearFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_MONTH) {
-        // Dec 12
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        timeDifference > TimeUtils.ONE_MONTH -> {
+            // Dec 12
+            if (locale != Locale.getDefault()) {
+                locale = Locale.getDefault()
+                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+            }
+
+            monthFormatter.format(time * 1000)
         }
 
-        monthFormatter.format(time * 1000)
-    } else if (timeDifference > TimeUtils.ONE_DAY) {
-        // 2 days
-        round(timeDifference / TimeUtils.ONE_DAY.toFloat()).toInt().toString() + stringRes(context, R.string.d)
-    } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        round(timeDifference / TimeUtils.ONE_HOUR.toFloat()).toInt().toString() + stringRes(context, R.string.h)
-    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        round(timeDifference / TimeUtils.ONE_MINUTE.toFloat()).toInt().toString() + stringRes(context, R.string.m)
-    } else {
-        stringRes(context, R.string.now)
+        timeDifference > TimeUtils.ONE_DAY -> {
+            round(timeDifference / TimeUtils.ONE_DAY.toFloat()).toInt().toString() + stringRes(context, R.string.d)
+        }
+
+        timeDifference > TimeUtils.ONE_HOUR -> {
+            round(timeDifference / TimeUtils.ONE_HOUR.toFloat()).toInt().toString() + stringRes(context, R.string.h)
+        }
+
+        timeDifference > TimeUtils.ONE_MINUTE -> {
+            round(timeDifference / TimeUtils.ONE_MINUTE.toFloat()).toInt().toString() + stringRes(context, R.string.m)
+        }
+
+        else -> {
+            stringRes(context, R.string.now)
+        }
     }
 }
 

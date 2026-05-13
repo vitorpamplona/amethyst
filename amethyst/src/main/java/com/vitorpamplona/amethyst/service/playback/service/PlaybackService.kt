@@ -96,7 +96,7 @@ class PlaybackService : MediaSessionService() {
 
     @OptIn(UnstableApi::class)
     fun lazyPool(proxyPort: Int): MediaSessionPool {
-        if (proxyPort <= 0) {
+        return if (proxyPort <= 0) {
             // no proxy
             poolNoProxy?.let { return it }
 
@@ -105,7 +105,7 @@ class PlaybackService : MediaSessionService() {
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
             // creates new
-            return newPool(videoCache, okHttpClient, blossomServerResolver)
+            newPool(videoCache, okHttpClient, blossomServerResolver)
                 .also {
                     poolNoProxy = it
                     // Kick off the player pool warmup as soon as we know this pool is being used.
@@ -124,7 +124,7 @@ class PlaybackService : MediaSessionService() {
             val videoCache = Amethyst.instance.videoCache
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
-            return newPool(videoCache, okHttpClient, blossomServerResolver)
+            newPool(videoCache, okHttpClient, blossomServerResolver)
                 .also {
                     poolWithProxy = it
                     it.exoPlayerPool.create(applicationContext)

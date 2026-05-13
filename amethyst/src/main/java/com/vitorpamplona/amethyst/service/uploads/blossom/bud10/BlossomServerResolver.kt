@@ -136,14 +136,11 @@ class BlossomServerResolver(
         url: String,
         mimeType: String?,
     ): OkHttpClient =
-        if (mimeType == null) {
-            httpClientBuilder.okHttpClientForPreview(url)
-        } else if (mimeType.startsWith("audio/") || mimeType.startsWith("video/")) {
-            httpClientBuilder.okHttpClientForVideo(url)
-        } else if (mimeType.startsWith("image/")) {
-            httpClientBuilder.okHttpClientForImage(url)
-        } else {
-            httpClientBuilder.okHttpClientForPreview(url)
+        when {
+            mimeType == null -> httpClientBuilder.okHttpClientForPreview(url)
+            mimeType.startsWith("audio/") || mimeType.startsWith("video/") -> httpClientBuilder.okHttpClientForVideo(url)
+            mimeType.startsWith("image/") -> httpClientBuilder.okHttpClientForImage(url)
+            else -> httpClientBuilder.okHttpClientForPreview(url)
         }
 
     fun canResolve(scheme: String) = scheme == SCHEME

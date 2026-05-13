@@ -138,14 +138,11 @@ class PollNoteViewModel : ViewModel() {
         } == true
 
     fun voteAmountPlaceHolderText(sats: String): String =
-        if (valueMinimum == null && valueMaximum == null) {
-            sats
-        } else if (valueMinimum == null) {
-            "1—$valueMaximum $sats"
-        } else if (valueMaximum == null) {
-            ">$valueMinimum $sats"
-        } else {
-            "$valueMinimum—$valueMaximum $sats"
+        when {
+            valueMinimum == null && valueMaximum == null -> sats
+            valueMinimum == null -> "1—$valueMaximum $sats"
+            valueMaximum == null -> ">$valueMinimum $sats"
+            else -> "$valueMinimum—$valueMaximum $sats"
         }
 
     fun inputVoteAmountLong(textAmount: String) =
@@ -160,46 +157,66 @@ class PollNoteViewModel : ViewModel() {
         }
 
     fun isValidInputVoteAmount(amount: BigDecimal?): Boolean {
-        if (amount == null) {
-            return false
-        } else if (valueMinimum == null && valueMaximum == null) {
-            if (amount > BigDecimal.ZERO) {
-                return true
+        when {
+            amount == null -> {
+                return false
             }
-        } else if (valueMinimum == null) {
-            if (amount > BigDecimal.ZERO && amount <= valueMaximumBD!!) {
-                return true
+
+            valueMinimum == null && valueMaximum == null -> {
+                if (amount > BigDecimal.ZERO) {
+                    return true
+                }
             }
-        } else if (valueMaximum == null) {
-            if (amount >= valueMinimumBD!!) {
-                return true
+
+            valueMinimum == null -> {
+                if (amount > BigDecimal.ZERO && amount <= valueMaximumBD!!) {
+                    return true
+                }
             }
-        } else {
-            if ((valueMinimumBD!! <= amount) && (amount <= valueMaximumBD!!)) {
-                return true
+
+            valueMaximum == null -> {
+                if (amount >= valueMinimumBD!!) {
+                    return true
+                }
+            }
+
+            else -> {
+                if ((valueMinimumBD!! <= amount) && (amount <= valueMaximumBD!!)) {
+                    return true
+                }
             }
         }
         return false
     }
 
     fun isValidInputVoteAmount(amount: Long?): Boolean {
-        if (amount == null) {
-            return false
-        } else if (valueMinimum == null && valueMaximum == null) {
-            if (amount > 0) {
-                return true
+        when {
+            amount == null -> {
+                return false
             }
-        } else if (valueMinimum == null) {
-            if (amount > 0 && amount <= valueMaximum!!) {
-                return true
+
+            valueMinimum == null && valueMaximum == null -> {
+                if (amount > 0) {
+                    return true
+                }
             }
-        } else if (valueMaximum == null) {
-            if (amount >= valueMinimum!!) {
-                return true
+
+            valueMinimum == null -> {
+                if (amount > 0 && amount <= valueMaximum!!) {
+                    return true
+                }
             }
-        } else {
-            if ((valueMinimum!! <= amount) && (amount <= valueMaximum!!)) {
-                return true
+
+            valueMaximum == null -> {
+                if (amount >= valueMinimum!!) {
+                    return true
+                }
+            }
+
+            else -> {
+                if ((valueMinimum!! <= amount) && (amount <= valueMaximum!!)) {
+                    return true
+                }
             }
         }
         return false

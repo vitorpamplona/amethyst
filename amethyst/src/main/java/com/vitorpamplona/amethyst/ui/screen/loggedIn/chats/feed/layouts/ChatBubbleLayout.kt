@@ -145,10 +145,8 @@ fun ChatBubbleLayout(
             remember {
                 Modifier.combinedClickable(
                     onClick = {
-                        if (!onClick()) {
-                            if (!isComplete) {
-                                showDetails.value = !showDetails.value
-                            }
+                        if (!onClick() && !isComplete) {
+                            showDetails.value = !showDetails.value
                         }
                     },
                     onLongClick = { popupExpanded.value = true },

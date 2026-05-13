@@ -134,35 +134,45 @@ class AccountSessionManager(
         }
 
         val accountSettings =
-            if (loginWithExternalSigner) {
-                AccountSettings(
-                    keyPair = KeyPair(pubKey = pubKeyParsed),
-                    transientAccount = transientAccount,
-                    externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
-                )
-            } else if (key.startsWith("nsec")) {
-                val privHex =
-                    decodePrivateKeyAsHexOrNull(key)
-                        ?: throw Exception("Invalid nsec key")
-                AccountSettings(
-                    keyPair = KeyPair(privKey = privHex.hexToByteArray()),
-                    transientAccount = transientAccount,
-                )
-            } else if (key.contains(" ") && Nip06().isValidMnemonic(key)) {
-                AccountSettings(
-                    keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key)),
-                    transientAccount = transientAccount,
-                )
-            } else if (pubKeyParsed != null) {
-                AccountSettings(
-                    keyPair = KeyPair(pubKey = pubKeyParsed),
-                    transientAccount = transientAccount,
-                )
-            } else {
-                AccountSettings(
-                    keyPair = KeyPair(Hex.decode(key)),
-                    transientAccount = transientAccount,
-                )
+            when {
+                loginWithExternalSigner -> {
+                    AccountSettings(
+                        keyPair = KeyPair(pubKey = pubKeyParsed),
+                        transientAccount = transientAccount,
+                        externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
+                    )
+                }
+
+                key.startsWith("nsec") -> {
+                    val privHex =
+                        decodePrivateKeyAsHexOrNull(key)
+                            ?: throw Exception("Invalid nsec key")
+                    AccountSettings(
+                        keyPair = KeyPair(privKey = privHex.hexToByteArray()),
+                        transientAccount = transientAccount,
+                    )
+                }
+
+                key.contains(" ") && Nip06().isValidMnemonic(key) -> {
+                    AccountSettings(
+                        keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key)),
+                        transientAccount = transientAccount,
+                    )
+                }
+
+                pubKeyParsed != null -> {
+                    AccountSettings(
+                        keyPair = KeyPair(pubKey = pubKeyParsed),
+                        transientAccount = transientAccount,
+                    )
+                }
+
+                else -> {
+                    AccountSettings(
+                        keyPair = KeyPair(Hex.decode(key)),
+                        transientAccount = transientAccount,
+                    )
+                }
             }
 
         localPreferences.setDefaultAccount(accountSettings)

@@ -415,112 +415,120 @@ open class ChannelNewMessageViewModel :
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
-        return if (channel is PublicChatChannel) {
-            val replyingToEvent = replyTo.value?.toEventHint<ChannelMessageEvent>()
-            val channelEvent = channel.event
+        return when {
+            channel is PublicChatChannel -> {
+                val replyingToEvent = replyTo.value?.toEventHint<ChannelMessageEvent>()
+                val channelEvent = channel.event
 
-            if (replyingToEvent != null) {
-                ChannelMessageEvent.reply(tagger.message, replyingToEvent) {
-                    notify(replyingToEvent.toPTag())
+                if (replyingToEvent != null) {
+                    ChannelMessageEvent.reply(tagger.message, replyingToEvent) {
+                        notify(replyingToEvent.toPTag())
 
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
 
-                    geoHash?.let { geohash(it) }
+                        geoHash?.let { geohash(it) }
 
-                    emojis(emojis)
-                    imetas(usedAttachments)
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
+                } else if (channelEvent != null) {
+                    val hint = EventHintBundle(channelEvent, channelRelays.firstOrNull())
+                    ChannelMessageEvent.message(tagger.message, hint) {
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        geoHash?.let { geohash(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
+                } else {
+                    ChannelMessageEvent.message(tagger.message, ETag(channel.idHex, channelRelays.firstOrNull())) {
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        geoHash?.let { geohash(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
                 }
-            } else if (channelEvent != null) {
-                val hint = EventHintBundle(channelEvent, channelRelays.firstOrNull())
-                ChannelMessageEvent.message(tagger.message, hint) {
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
+            }
 
-                    geoHash?.let { geohash(it) }
+            channel is LiveActivitiesChannel -> {
+                val replyingToEvent = replyTo.value?.toEventHint<LiveActivitiesChatMessageEvent>()
+                val activity = channel.info
 
-                    emojis(emojis)
-                    imetas(usedAttachments)
+                if (replyingToEvent != null) {
+                    LiveActivitiesChatMessageEvent.reply(tagger.message, replyingToEvent) {
+                        notify(replyingToEvent.toPTag())
+
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
+                } else if (activity != null) {
+                    val hint = EventHintBundle(activity, channelRelays.firstOrNull())
+
+                    LiveActivitiesChatMessageEvent.message(tagger.message, hint) {
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
+                } else {
+                    LiveActivitiesChatMessageEvent.message(tagger.message, channel.toATag()) {
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
                 }
-            } else {
-                ChannelMessageEvent.message(tagger.message, ETag(channel.idHex, channelRelays.firstOrNull())) {
+            }
+
+            channel is EphemeralChatChannel -> {
+                EphemeralChatEvent.build(
+                    tagger.message,
+                    channel.roomId.relayUrl,
+                    channel.roomId.id,
+                ) {
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
                     contentWarningReason?.let { contentWarning(it) }
                     localExpirationDate?.let { expiration(it) }
-
-                    geoHash?.let { geohash(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
                 }
             }
-        } else if (channel is LiveActivitiesChannel) {
-            val replyingToEvent = replyTo.value?.toEventHint<LiveActivitiesChatMessageEvent>()
-            val activity = channel.info
 
-            if (replyingToEvent != null) {
-                LiveActivitiesChatMessageEvent.reply(tagger.message, replyingToEvent) {
-                    notify(replyingToEvent.toPTag())
-
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
-            } else if (activity != null) {
-                val hint = EventHintBundle(activity, channelRelays.firstOrNull())
-
-                LiveActivitiesChatMessageEvent.message(tagger.message, hint) {
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
-            } else {
-                LiveActivitiesChatMessageEvent.message(tagger.message, channel.toATag()) {
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
+            else -> {
+                null
             }
-        } else if (channel is EphemeralChatChannel) {
-            EphemeralChatEvent.build(
-                tagger.message,
-                channel.roomId.relayUrl,
-                channel.roomId.id,
-            ) {
-                hashtags(findHashtags(tagger.message))
-                references(findURLs(tagger.message))
-                quotes(findNostrUris(tagger.message))
-                contentWarningReason?.let { contentWarning(it) }
-                localExpirationDate?.let { expiration(it) }
-
-                emojis(emojis)
-                imetas(usedAttachments)
-            }
-        } else {
-            null
         }
     }
 

@@ -29,10 +29,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 fun MediaMetadataRetriever.getThumbnail(): Bitmap? {
     val raw: ByteArray? = embeddedPicture
-    if (raw != null) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return ImageDecoder.decodeBitmap(ImageDecoder.createSource(raw))
-        }
+    if (raw != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        return ImageDecoder.decodeBitmap(ImageDecoder.createSource(raw))
     }
 
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

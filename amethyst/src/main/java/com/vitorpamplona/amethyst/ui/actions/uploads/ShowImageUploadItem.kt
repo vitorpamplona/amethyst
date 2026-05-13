@@ -113,51 +113,69 @@ fun ShowImageGallery(
     media: SelectedMedia,
     accountViewModel: AccountViewModel,
 ) {
-    if (media.isImage() == true) {
-        AsyncImage(
-            model = media.uri.toString(),
-            contentDescription = media.uri.toString(),
-            contentScale = ContentScale.Crop,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-        )
-    } else if (media.isAudio() == true) {
-        FilePreviewPlaceholder(
-            icon = MaterialSymbols.AudioFile,
-            label = media.mimeType ?: "audio/*",
-        )
-    } else if (media.isDocument()) {
-        FilePreviewPlaceholder(
-            icon = MaterialSymbols.PictureAsPdf,
-            label = media.mimeType ?: "application/pdf",
-        )
-    } else if (media.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-        val context = LocalContext.current
+    when {
+        media.isImage() == true -> {
+            AsyncImage(
+                model = media.uri.toString(),
+                contentDescription = media.uri.toString(),
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+            )
+        }
 
-        LaunchedEffect(key1 = media) {
-            launch(Dispatchers.IO) {
-                try {
-                    bitmap = createVideoThumb(context, media.uri)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
+        media.isAudio() == true -> {
+            FilePreviewPlaceholder(
+                icon = MaterialSymbols.AudioFile,
+                label = media.mimeType ?: "audio/*",
+            )
+        }
+
+        media.isDocument() -> {
+            FilePreviewPlaceholder(
+                icon = MaterialSymbols.PictureAsPdf,
+                label = media.mimeType ?: "application/pdf",
+            )
+        }
+
+        media.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+            var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+            val context = LocalContext.current
+
+            LaunchedEffect(key1 = media) {
+                launch(Dispatchers.IO) {
+                    try {
+                        bitmap = createVideoThumb(context, media.uri)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
+                    }
                 }
+            }
+
+            if (bitmap != null) {
+                bitmap?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = "some useful description",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            } else {
+                VideoView(
+                    videoUri = media.uri.toString(),
+                    mimeType = media.mimeType,
+                    roundedCorner = false,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
             }
         }
 
-        if (bitmap != null) {
-            bitmap?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = "some useful description",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        } else {
+        else -> {
             VideoView(
                 videoUri = media.uri.toString(),
                 mimeType = media.mimeType,
@@ -166,14 +184,6 @@ fun ShowImageGallery(
                 accountViewModel = accountViewModel,
             )
         }
-    } else {
-        VideoView(
-            videoUri = media.uri.toString(),
-            mimeType = media.mimeType,
-            roundedCorner = false,
-            contentScale = ContentScale.Crop,
-            accountViewModel = accountViewModel,
-        )
     }
 }
 

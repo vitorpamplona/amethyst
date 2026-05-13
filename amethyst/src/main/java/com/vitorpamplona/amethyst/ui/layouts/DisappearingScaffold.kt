@@ -245,10 +245,10 @@ private fun ResetBarsOnResume(state: DisappearingBarState) {
     DisposableEffect(lifecycleOwner, state) {
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    if (state.topHeightOffset != 0f || state.bottomHeightOffset != 0f) {
-                        scope.launch { state.resetToVisible() }
-                    }
+                if (event == Lifecycle.Event.ON_RESUME &&
+                    (state.topHeightOffset != 0f || state.bottomHeightOffset != 0f)
+                ) {
+                    scope.launch { state.resetToVisible() }
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)

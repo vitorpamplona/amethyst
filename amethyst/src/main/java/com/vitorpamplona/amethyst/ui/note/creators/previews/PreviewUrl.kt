@@ -60,40 +60,52 @@ fun PreviewUrl(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (RichTextParser.isValidURL(myUrlPreview)) {
-        if (RichTextParser.isImageUrl(myUrlPreview)) {
-            AsyncImage(
-                model = myUrlPreview,
-                contentDescription = myUrlPreview,
-                contentScale = ContentScale.FillHeight,
-                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-            )
-        } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
-            VideoView(
-                myUrlPreview,
-                mimeType = null,
-                roundedCorner = false,
-                gallery = false,
-                contentScale = ContentScale.FillHeight,
-                accountViewModel = accountViewModel,
-            )
-        } else {
-            MyLoadUrlPreviewDirect(myUrlPreview, myUrlPreview, accountViewModel)
-        }
-    } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
-        val bgColor = MaterialTheme.colorScheme.background
-        val backgroundColor = remember { mutableStateOf(bgColor) }
+    when {
+        RichTextParser.isValidURL(myUrlPreview) -> {
+            when {
+                RichTextParser.isImageUrl(myUrlPreview) -> {
+                    AsyncImage(
+                        model = myUrlPreview,
+                        contentDescription = myUrlPreview,
+                        contentScale = ContentScale.FillHeight,
+                        modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+                    )
+                }
 
-        BechLinkPreview(
-            word = myUrlPreview,
-            canPreview = true,
-            quotesLeft = 1,
-            backgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
-        MyLoadUrlPreviewDirect("https://$myUrlPreview", myUrlPreview, accountViewModel)
+                RichTextParser.isVideoUrl(myUrlPreview) -> {
+                    VideoView(
+                        myUrlPreview,
+                        mimeType = null,
+                        roundedCorner = false,
+                        gallery = false,
+                        contentScale = ContentScale.FillHeight,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+
+                else -> {
+                    MyLoadUrlPreviewDirect(myUrlPreview, myUrlPreview, accountViewModel)
+                }
+            }
+        }
+
+        RichTextParser.startsWithNIP19Scheme(myUrlPreview) -> {
+            val bgColor = MaterialTheme.colorScheme.background
+            val backgroundColor = remember { mutableStateOf(bgColor) }
+
+            BechLinkPreview(
+                word = myUrlPreview,
+                canPreview = true,
+                quotesLeft = 1,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        RichTextParser.isUrlWithoutScheme(myUrlPreview) -> {
+            MyLoadUrlPreviewDirect("https://$myUrlPreview", myUrlPreview, accountViewModel)
+        }
     }
 }
 
@@ -104,24 +116,30 @@ fun PreviewUrlFillWidth(
     nav: INav,
 ) {
     if (RichTextParser.isValidURL(myUrlPreview)) {
-        if (RichTextParser.isImageUrl(myUrlPreview)) {
-            AsyncImage(
-                model = myUrlPreview,
-                contentDescription = myUrlPreview,
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-            )
-        } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
-            VideoView(
-                myUrlPreview,
-                mimeType = null,
-                roundedCorner = false,
-                gallery = false,
-                contentScale = ContentScale.FillWidth,
-                accountViewModel = accountViewModel,
-            )
-        } else {
-            MyLoadUrlPreviewDirectFillWidth(myUrlPreview, myUrlPreview, accountViewModel)
+        when {
+            RichTextParser.isImageUrl(myUrlPreview) -> {
+                AsyncImage(
+                    model = myUrlPreview,
+                    contentDescription = myUrlPreview,
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+                )
+            }
+
+            RichTextParser.isVideoUrl(myUrlPreview) -> {
+                VideoView(
+                    myUrlPreview,
+                    mimeType = null,
+                    roundedCorner = false,
+                    gallery = false,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            }
+
+            else -> {
+                MyLoadUrlPreviewDirectFillWidth(myUrlPreview, myUrlPreview, accountViewModel)
+            }
         }
     } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
         val bgColor = MaterialTheme.colorScheme.background

@@ -278,21 +278,29 @@ private fun DisplayQuoteAuthor(
         }
     }
 
-    if (addressable != null) {
-        addressable?.let {
-            DisplayEntryForNote(it, userBase, accountViewModel, nav)
+    when {
+        addressable != null -> {
+            addressable?.let {
+                DisplayEntryForNote(it, userBase, accountViewModel, nav)
+            }
         }
-    } else if (version != null) {
-        version?.let {
-            DisplayEntryForNote(it, userBase, accountViewModel, nav)
-        }
-    } else if (baseUrl != null) {
-        val url = "$baseUrl${if (baseUrl.contains("#")) "&" else "#"}:~:text=${Uri.encode(highlightQuote)}"
 
-        DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
-    } else if (userBase != null) {
-        userBase?.let {
-            DisplayEntryForUser(it, accountViewModel, nav)
+        version != null -> {
+            version?.let {
+                DisplayEntryForNote(it, userBase, accountViewModel, nav)
+            }
+        }
+
+        baseUrl != null -> {
+            val url = "$baseUrl${if (baseUrl.contains("#")) "&" else "#"}:~:text=${Uri.encode(highlightQuote)}"
+
+            DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
+        }
+
+        userBase != null -> {
+            userBase?.let {
+                DisplayEntryForUser(it, accountViewModel, nav)
+            }
         }
     }
 }

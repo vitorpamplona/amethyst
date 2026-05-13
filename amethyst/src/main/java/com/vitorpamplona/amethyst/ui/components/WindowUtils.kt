@@ -52,7 +52,7 @@ tailrec fun Context.getActivity(): ComponentActivity =
     when (this) {
         is ComponentActivity -> this
         is ContextWrapper -> baseContext.getActivity()
-        else -> throw IllegalStateException("Requires a ComponentActivity to run")
+        else -> error("Requires a ComponentActivity to run")
     }
 
 fun Context.getActivityOrNull(): ComponentActivity? =

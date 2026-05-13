@@ -293,78 +293,86 @@ fun DisplayStatusInner(
         )
     }
 
-    if (url != null) {
-        val uri = LocalUriHandler.current
-        Spacer(modifier = StdHorzSpacer)
-        IconButton(
-            modifier = Size15Modifier,
-            onClick = { runCatching { uri.openUri(url.trim()) } },
-        ) {
-            Icon(
-                symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                null,
+    when {
+        url != null -> {
+            val uri = LocalUriHandler.current
+            Spacer(modifier = StdHorzSpacer)
+            IconButton(
                 modifier = Size15Modifier,
-                tint = MaterialTheme.colorScheme.lessImportantLink,
-            )
-        }
-    } else if (nostrATag != null) {
-        LoadAddressableNote(nostrATag, accountViewModel) { note ->
-            if (note != null) {
-                Spacer(modifier = StdHorzSpacer)
-                IconButton(
+                onClick = { runCatching { uri.openUri(url.trim()) } },
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                    null,
                     modifier = Size15Modifier,
-                    onClick = {
-                        routeFor(
-                            note,
-                            accountViewModel.account,
-                        )?.let { nav.nav(it) }
-                    },
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                        null,
+                    tint = MaterialTheme.colorScheme.lessImportantLink,
+                )
+            }
+        }
+
+        nostrATag != null -> {
+            LoadAddressableNote(nostrATag, accountViewModel) { note ->
+                if (note != null) {
+                    Spacer(modifier = StdHorzSpacer)
+                    IconButton(
                         modifier = Size15Modifier,
-                        tint = MaterialTheme.colorScheme.lessImportantLink,
-                    )
+                        onClick = {
+                            routeFor(
+                                note,
+                                accountViewModel.account,
+                            )?.let { nav.nav(it) }
+                        },
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                            null,
+                            modifier = Size15Modifier,
+                            tint = MaterialTheme.colorScheme.lessImportantLink,
+                        )
+                    }
                 }
             }
         }
-    } else if (nostrETag != null) {
-        LoadNote(baseNoteHex = nostrETag.eventId, accountViewModel) {
-            if (it != null) {
-                Spacer(modifier = StdHorzSpacer)
-                IconButton(
-                    modifier = Size15Modifier,
-                    onClick = {
-                        routeFor(
-                            it,
-                            accountViewModel.account,
-                        )?.let { nav.nav(it) }
-                    },
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                        null,
+
+        nostrETag != null -> {
+            LoadNote(baseNoteHex = nostrETag.eventId, accountViewModel) {
+                if (it != null) {
+                    Spacer(modifier = StdHorzSpacer)
+                    IconButton(
                         modifier = Size15Modifier,
-                        tint = MaterialTheme.colorScheme.lessImportantLink,
-                    )
+                        onClick = {
+                            routeFor(
+                                it,
+                                accountViewModel.account,
+                            )?.let { nav.nav(it) }
+                        },
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                            null,
+                            modifier = Size15Modifier,
+                            tint = MaterialTheme.colorScheme.lessImportantLink,
+                        )
+                    }
                 }
             }
         }
-    } else if (nostrPTag != null) {
-        LoadUser(baseUserHex = nostrPTag, accountViewModel) { user ->
-            if (user != null) {
-                Spacer(modifier = StdHorzSpacer)
-                IconButton(
-                    modifier = Size15Modifier,
-                    onClick = { nav.nav(routeForUser(nostrPTag)) },
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                        null,
+
+        nostrPTag != null -> {
+            LoadUser(baseUserHex = nostrPTag, accountViewModel) { user ->
+                if (user != null) {
+                    Spacer(modifier = StdHorzSpacer)
+                    IconButton(
                         modifier = Size15Modifier,
-                        tint = MaterialTheme.colorScheme.lessImportantLink,
-                    )
+                        onClick = { nav.nav(routeForUser(nostrPTag)) },
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                            null,
+                            modifier = Size15Modifier,
+                            tint = MaterialTheme.colorScheme.lessImportantLink,
+                        )
+                    }
                 }
             }
         }

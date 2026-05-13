@@ -140,18 +140,26 @@ fun RenderContentDVMThumb(
             card.amount?.let {
                 var color = Color.DarkGray
                 var amount = it
-                if (card.amount == "free" || card.amount == "0") {
-                    color = MaterialTheme.colorScheme.secondary
-                    amount = "Free"
-                } else if (card.amount == "flexible") {
-                    color = MaterialTheme.colorScheme.primaryContainer
-                    amount = "Flexible"
-                } else if (card.amount == "") {
-                    color = MaterialTheme.colorScheme.grayText
-                    amount = "Unknown"
-                } else {
-                    color = MaterialTheme.colorScheme.primary
-                    amount = card.amount + " Sats"
+                when {
+                    card.amount == "free" || card.amount == "0" -> {
+                        color = MaterialTheme.colorScheme.secondary
+                        amount = "Free"
+                    }
+
+                    card.amount == "flexible" -> {
+                        color = MaterialTheme.colorScheme.primaryContainer
+                        amount = "Flexible"
+                    }
+
+                    card.amount == "" -> {
+                        color = MaterialTheme.colorScheme.grayText
+                        amount = "Unknown"
+                    }
+
+                    else -> {
+                        color = MaterialTheme.colorScheme.primary
+                        amount = card.amount + " Sats"
+                    }
                 }
                 Text(
                     textAlign = TextAlign.End,

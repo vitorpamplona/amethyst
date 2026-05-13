@@ -287,10 +287,8 @@ class HomeLiveFilter(
 
         channel.notes.forEach { _, value ->
             val author = value.author
-            if (author != null) {
-                if (followingSet == null || author.pubkeyHex in followingSet) {
-                    count++
-                }
+            if (author != null && (followingSet == null || author.pubkeyHex in followingSet)) {
+                count++
             }
         }
 

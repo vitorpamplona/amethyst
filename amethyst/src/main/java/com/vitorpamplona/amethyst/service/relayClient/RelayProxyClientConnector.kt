@@ -70,31 +70,39 @@ class RelayProxyClientConnector(
             RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity, torStatus)
         }.debounce(100)
             .onEach {
-                if (it.connectivity is ConnectivityStatus.StartingService) {
-                    // ignore
-                } else if (it.connectivity is ConnectivityStatus.Off) {
-                    Log.d("ManageRelayServices") { "Connectivity Off: Pausing Relay Services ${it.connectivity}" }
-                    if (client.isActive()) {
-                        client.disconnect()
-                    }
-                    if (it.torStatus is TorServiceStatus.Active) {
-                        Log.d("ManageRelayServices", "Connectivity off, Tor idle")
-                    }
-                } else if (it.connectivity is ConnectivityStatus.Active && !client.isActive()) {
-                    Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
-
-                    if (it.torStatus is TorServiceStatus.Active) {
-                        Log.d("ManageRelayServices", "Connectivity resumed, Tor active")
+                when {
+                    it.connectivity is ConnectivityStatus.StartingService -> {
+                        // ignore
                     }
 
-                    // only calls this if the client is not active. Otherwise goes to the else below
-                    client.connect()
-                } else {
-                    Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to")
-                    client.reconnect(
-                        onlyIfChanged = true,
-                        ignoreRetryDelays = true,
-                    )
+                    it.connectivity is ConnectivityStatus.Off -> {
+                        Log.d("ManageRelayServices") { "Connectivity Off: Pausing Relay Services ${it.connectivity}" }
+                        if (client.isActive()) {
+                            client.disconnect()
+                        }
+                        if (it.torStatus is TorServiceStatus.Active) {
+                            Log.d("ManageRelayServices", "Connectivity off, Tor idle")
+                        }
+                    }
+
+                    it.connectivity is ConnectivityStatus.Active && !client.isActive() -> {
+                        Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
+
+                        if (it.torStatus is TorServiceStatus.Active) {
+                            Log.d("ManageRelayServices", "Connectivity resumed, Tor active")
+                        }
+
+                        // only calls this if the client is not active. Otherwise goes to the else below
+                        client.connect()
+                    }
+
+                    else -> {
+                        Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to")
+                        client.reconnect(
+                            onlyIfChanged = true,
+                            ignoreRetryDelays = true,
+                        )
+                    }
                 }
             }.onStart {
                 Log.d("ManageRelayServices", "Resuming Relay Services")

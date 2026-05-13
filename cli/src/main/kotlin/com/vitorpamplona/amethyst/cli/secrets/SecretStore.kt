@@ -91,7 +91,7 @@ class SecretStore internal constructor(
                 when (secret.backend) {
                     MacosKeychainBackend.BACKEND_ID -> MacosKeychainBackend
                     SecretServiceBackend.BACKEND_ID -> SecretServiceBackend
-                    else -> throw IllegalStateException("unknown keychain backend: ${secret.backend}")
+                    else -> error("unknown keychain backend: ${secret.backend}")
                 }
             }
 

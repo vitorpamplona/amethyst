@@ -184,16 +184,14 @@ class ChatroomListKnownFeedFilter(
         newItems
             .forEach { newNote ->
                 val channelId = (newNote.event as? ChannelMessageEvent)?.channelId()
-                if (channelId != null) {
-                    if (channelId in followingChannels && account.isAcceptable(newNote)) {
-                        val lastNote = newRelevantPublicMessages.get(channelId)
-                        if (lastNote != null) {
-                            if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
-                                newRelevantPublicMessages.put(channelId, newNote)
-                            }
-                        } else {
+                if (channelId != null && channelId in followingChannels && account.isAcceptable(newNote)) {
+                    val lastNote = newRelevantPublicMessages.get(channelId)
+                    if (lastNote != null) {
+                        if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                             newRelevantPublicMessages.put(channelId, newNote)
                         }
+                    } else {
+                        newRelevantPublicMessages.put(channelId, newNote)
                     }
                 }
             }
@@ -239,23 +237,21 @@ class ChatroomListKnownFeedFilter(
                 val roomKey = (newNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
                 if (roomKey != null) {
                     val room = account.chatroomList.rooms.get(roomKey)
-                    if (room != null) {
-                        if (
-                            (
-                                newNote.author?.pubkeyHex == me.pubkeyHex ||
-                                    room.senderIntersects(followingKeySet) ||
-                                    account.chatroomList.hasSentMessagesTo(roomKey)
-                            ) &&
-                            !account.isAllHidden(roomKey.users)
-                        ) {
-                            val lastNote = newRelevantPrivateMessages.get(roomKey)
-                            if (lastNote != null) {
-                                if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
-                                    newRelevantPrivateMessages.put(roomKey, newNote)
-                                }
-                            } else {
+                    if (room != null &&
+                        (
+                            newNote.author?.pubkeyHex == me.pubkeyHex ||
+                                room.senderIntersects(followingKeySet) ||
+                                account.chatroomList.hasSentMessagesTo(roomKey)
+                        ) &&
+                        !account.isAllHidden(roomKey.users)
+                    ) {
+                        val lastNote = newRelevantPrivateMessages.get(roomKey)
+                        if (lastNote != null) {
+                            if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                                 newRelevantPrivateMessages.put(roomKey, newNote)
                             }
+                        } else {
+                            newRelevantPrivateMessages.put(roomKey, newNote)
                         }
                     }
                 }

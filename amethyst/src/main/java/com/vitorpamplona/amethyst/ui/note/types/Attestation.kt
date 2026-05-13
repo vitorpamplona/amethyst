@@ -331,60 +331,66 @@ fun RenderAttestationRequest(
     }
 
     if (quotesLeft > 0) {
-        if (aboutAddress != null) {
-            LoadAddressableNote(aboutAddress, accountViewModel) {
-                if (it != null) {
-                    Spacer(modifier = DoubleVertSpacer)
-                    Text(
-                        text = stringRes(R.string.attestation_requests_attestation_to),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    NoteCompose(
-                        baseNote = it,
-                        modifier = MaterialTheme.colorScheme.replyModifier,
-                        isQuotedNote = true,
-                        unPackReply = ReplyRenderType.NONE,
-                        makeItShort = true,
-                        quotesLeft = quotesLeft - 1,
-                        parentBackgroundColor = backgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+        when {
+            aboutAddress != null -> {
+                LoadAddressableNote(aboutAddress, accountViewModel) {
+                    if (it != null) {
+                        Spacer(modifier = DoubleVertSpacer)
+                        Text(
+                            text = stringRes(R.string.attestation_requests_attestation_to),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        NoteCompose(
+                            baseNote = it,
+                            modifier = MaterialTheme.colorScheme.replyModifier,
+                            isQuotedNote = true,
+                            unPackReply = ReplyRenderType.NONE,
+                            makeItShort = true,
+                            quotesLeft = quotesLeft - 1,
+                            parentBackgroundColor = backgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
-        } else if (aboutEvent != null) {
-            LoadNote(aboutEvent, accountViewModel) {
-                if (it != null) {
-                    Spacer(modifier = DoubleVertSpacer)
-                    Text(
-                        text = stringRes(R.string.attestation_requests_attestation_to),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    NoteCompose(
-                        baseNote = it,
-                        modifier = MaterialTheme.colorScheme.replyModifier,
-                        isQuotedNote = true,
-                        unPackReply = ReplyRenderType.NONE,
-                        makeItShort = true,
-                        quotesLeft = quotesLeft - 1,
-                        parentBackgroundColor = backgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+
+            aboutEvent != null -> {
+                LoadNote(aboutEvent, accountViewModel) {
+                    if (it != null) {
+                        Spacer(modifier = DoubleVertSpacer)
+                        Text(
+                            text = stringRes(R.string.attestation_requests_attestation_to),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        NoteCompose(
+                            baseNote = it,
+                            modifier = MaterialTheme.colorScheme.replyModifier,
+                            isQuotedNote = true,
+                            unPackReply = ReplyRenderType.NONE,
+                            makeItShort = true,
+                            quotesLeft = quotesLeft - 1,
+                            parentBackgroundColor = backgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
-        } else if (aboutPubkey != null) {
-            LoadUser(aboutPubkey, accountViewModel) {
-                if (it != null) {
-                    Spacer(modifier = DoubleVertSpacer)
-                    Text(
-                        text = stringRes(R.string.attestation_requests_attestation_to),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    UserCompose(it, accountViewModel = accountViewModel, nav = nav)
+
+            aboutPubkey != null -> {
+                LoadUser(aboutPubkey, accountViewModel) {
+                    if (it != null) {
+                        Spacer(modifier = DoubleVertSpacer)
+                        Text(
+                            text = stringRes(R.string.attestation_requests_attestation_to),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        UserCompose(it, accountViewModel = accountViewModel, nav = nav)
+                    }
                 }
             }
         }

@@ -116,14 +116,11 @@ val graspLink = { graspNumber: String ->
 
 val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
-        if (note.event?.bountyBaseReward() != null) {
-            "https://nostrbounties.com/b/${note.toNAddr()}"
-        } else if (note.event is PeopleListEvent) {
-            "https://listr.lol/a/${note.toNAddr()}"
-        } else if (note.event is FollowListEvent) {
-            "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
-        } else {
-            njumpLink(note.toNAddr())
+        when {
+            note.event?.bountyBaseReward() != null -> "https://nostrbounties.com/b/${note.toNAddr()}"
+            note.event is PeopleListEvent -> "https://listr.lol/a/${note.toNAddr()}"
+            note.event is FollowListEvent -> "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
+            else -> njumpLink(note.toNAddr())
         }
     } else {
         njumpLink(note.toNEvent())

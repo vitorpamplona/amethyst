@@ -88,48 +88,56 @@ class ZapPaymentHandler(
         val zapSplitSetup = noteEvent?.zapSplitSetup()
 
         val unverifiedZapsToSend =
-            if (!zapSplitSetup.isNullOrEmpty()) {
-                zapSplitSetup.map { setup ->
-                    when (setup) {
-                        is ZapSplitSetupLnAddress -> {
-                            UnverifiedZapSplitSetup(
-                                lnAddress = setup.lnAddress,
-                                weight = setup.weight,
-                            )
-                        }
+            when {
+                !zapSplitSetup.isNullOrEmpty() -> {
+                    zapSplitSetup.map { setup ->
+                        when (setup) {
+                            is ZapSplitSetupLnAddress -> {
+                                UnverifiedZapSplitSetup(
+                                    lnAddress = setup.lnAddress,
+                                    weight = setup.weight,
+                                )
+                            }
 
-                        is ZapSplitSetup -> {
-                            val user = LocalCache.checkGetOrCreateUser(setup.pubKeyHex)
-                            UnverifiedZapSplitSetup(
-                                lnAddress = user?.lnAddress(),
-                                weight = setup.weight,
-                                relay = setup.relay,
-                                user = user,
-                            )
+                            is ZapSplitSetup -> {
+                                val user = LocalCache.checkGetOrCreateUser(setup.pubKeyHex)
+                                UnverifiedZapSplitSetup(
+                                    lnAddress = user?.lnAddress(),
+                                    weight = setup.weight,
+                                    relay = setup.relay,
+                                    user = user,
+                                )
+                            }
                         }
                     }
                 }
-            } else if (noteEvent is LiveActivitiesEvent && noteEvent.hasHost()) {
-                noteEvent.hosts().map {
-                    val user = LocalCache.checkGetOrCreateUser(it.pubKey)
-                    val lnAddress = user?.lnAddress()
-                    UnverifiedZapSplitSetup(lnAddress, relay = it.relayHint, user = user)
+
+                noteEvent is LiveActivitiesEvent && noteEvent.hasHost() -> {
+                    noteEvent.hosts().map {
+                        val user = LocalCache.checkGetOrCreateUser(it.pubKey)
+                        val lnAddress = user?.lnAddress()
+                        UnverifiedZapSplitSetup(lnAddress, relay = it.relayHint, user = user)
+                    }
                 }
-            } else if (noteEvent is AppDefinitionEvent) {
-                val appLud16 = noteEvent.appMetaData()?.lnAddress()
-                if (appLud16 != null) {
-                    listOf(UnverifiedZapSplitSetup(appLud16))
-                } else {
-                    val lud16 =
-                        note.author?.lnAddress()
-                    listOf(UnverifiedZapSplitSetup(lud16))
+
+                noteEvent is AppDefinitionEvent -> {
+                    val appLud16 = noteEvent.appMetaData()?.lnAddress()
+                    if (appLud16 != null) {
+                        listOf(UnverifiedZapSplitSetup(appLud16))
+                    } else {
+                        val lud16 =
+                            note.author?.lnAddress()
+                        listOf(UnverifiedZapSplitSetup(lud16))
+                    }
                 }
-            } else {
-                listOf(
-                    UnverifiedZapSplitSetup(
-                        note.author?.lnAddress(),
-                    ),
-                )
+
+                else -> {
+                    listOf(
+                        UnverifiedZapSplitSetup(
+                            note.author?.lnAddress(),
+                        ),
+                    )
+                }
             }
 
         if (showErrorIfNoLnAddress) {

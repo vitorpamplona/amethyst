@@ -943,16 +943,16 @@ class Account(
         }
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
-            if (receiver != null) {
+            return if (receiver != null) {
                 val relayList =
                     cache
                         .getOrCreateUser(receiver)
                         .dmInboxRelayList()
                         ?.relays()
                         ?.ifEmpty { null }
-                return relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
+                relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
             } else {
-                return emptySet()
+                emptySet()
             }
         }
         if (event is WrappedEvent) {
@@ -2859,14 +2859,11 @@ class Account(
         if (event == null) return null
 
         return if (isWriteable()) {
-            if (event is PrivateDmEvent) {
-                privateDMDecryptionCache.cachedDM(event)
-            } else if (event is LnZapRequestEvent && event.isPrivateZap()) {
-                privateZapsDecryptionCache.cachedPrivateZap(event)?.content
-            } else if (event is DraftWrapEvent) {
-                draftsDecryptionCache.preCachedDraft(event)?.content
-            } else {
-                event.content
+            when {
+                event is PrivateDmEvent -> privateDMDecryptionCache.cachedDM(event)
+                event is LnZapRequestEvent && event.isPrivateZap() -> privateZapsDecryptionCache.cachedPrivateZap(event)?.content
+                event is DraftWrapEvent -> draftsDecryptionCache.preCachedDraft(event)?.content
+                else -> event.content
             }
         } else {
             event.content
@@ -2875,22 +2872,30 @@ class Account(
 
     suspend fun decryptContent(note: Note): String? {
         val event = note.event
-        return if (event is PrivateDmEvent && isWriteable()) {
-            privateDMDecryptionCache.decryptDM(event)
-        } else if (event is LnZapRequestEvent && isWriteable()) {
-            if (event.isPrivateZap()) {
-                if (isWriteable()) {
-                    privateZapsDecryptionCache.decryptPrivateZap(event)?.content
-                } else {
-                    null
-                }
-            } else {
-                event.content
+        return when {
+            event is PrivateDmEvent && isWriteable() -> {
+                privateDMDecryptionCache.decryptDM(event)
             }
-        } else if (event is DraftWrapEvent && isWriteable()) {
-            draftsDecryptionCache.cachedDraft(event)?.content
-        } else {
-            event?.content
+
+            event is LnZapRequestEvent && isWriteable() -> {
+                if (event.isPrivateZap()) {
+                    if (isWriteable()) {
+                        privateZapsDecryptionCache.decryptPrivateZap(event)?.content
+                    } else {
+                        null
+                    }
+                } else {
+                    event.content
+                }
+            }
+
+            event is DraftWrapEvent && isWriteable() -> {
+                draftsDecryptionCache.cachedDraft(event)?.content
+            }
+
+            else -> {
+                event?.content
+            }
         }
     }
 
@@ -3277,10 +3282,12 @@ class Account(
         scope.launch {
             cache.antiSpam.flowSpam.collect {
                 it.cache.spamMessages.snapshot().values.forEach { spammer ->
-                    if (!hiddenUsers.isHidden(spammer.pubkeyHex) && spammer.shouldHide()) {
-                        if (spammer.pubkeyHex != userProfile().pubkeyHex && spammer.pubkeyHex !in followingKeySet()) {
-                            hiddenUsers.hideUser(spammer.pubkeyHex)
-                        }
+                    if (!hiddenUsers.isHidden(spammer.pubkeyHex) &&
+                        spammer.shouldHide() &&
+                        spammer.pubkeyHex != userProfile().pubkeyHex &&
+                        spammer.pubkeyHex !in followingKeySet()
+                    ) {
+                        hiddenUsers.hideUser(spammer.pubkeyHex)
                     }
                 }
             }
