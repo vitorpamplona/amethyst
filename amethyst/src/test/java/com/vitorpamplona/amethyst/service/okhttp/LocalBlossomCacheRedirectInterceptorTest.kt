@@ -132,6 +132,37 @@ class LocalBlossomCacheRedirectInterceptorTest {
         response.close()
     }
 
+    @Test
+    fun bridgeOnRewritesShaInLastPathSegmentWithHexPrefix() {
+        // share.yabu.me layout: <cache-prefix-sha>/<blob-sha>.<ext>
+        val interceptor = LocalBlossomCacheRedirectInterceptor { true }
+        val captured = mutableListOf<String>()
+        val response =
+            interceptor.intercept(
+                fakeChain(
+                    "https://share.yabu.me/84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5/28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5.webp",
+                    captured,
+                ),
+            )
+        assertEquals(
+            "http://127.0.0.1:24242/28fa4d999af6ae3e4e11bfc2727130ef1b3a13cc0f981e5a93c3996cb2f524e5.webp?xs=https%3A%2F%2Fshare.yabu.me%2F84b0c46ab699ac35eb2ca286470b85e081db2087cdef63932236c397417782f5",
+            captured.single(),
+        )
+        response.close()
+    }
+
+    @Test
+    fun bridgeOnSkipsWhenLastSegmentIsNotSha() {
+        // Per BUD-01 the last segment is the blob; if it isn't a sha256, the
+        // URL isn't a Blossom blob even if an earlier segment is hex.
+        val interceptor = LocalBlossomCacheRedirectInterceptor { true }
+        val captured = mutableListOf<String>()
+        val url = "https://example.com/$sha/avatar.jpg"
+        val response = interceptor.intercept(fakeChain(url, captured))
+        assertEquals(url, captured.single())
+        response.close()
+    }
+
     private fun fakeChain(
         url: String,
         captured: MutableList<String>,
