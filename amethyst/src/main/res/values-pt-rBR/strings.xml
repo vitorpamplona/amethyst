@@ -370,6 +370,8 @@
     <string name="quick_action_block_dialog_btn">Bloquear</string>
     <string name="quick_action_delete_dialog_btn">Excluir</string>
     <string name="quick_action_block">Bloquear</string>
+    <string name="quick_action_mute_thread">Silenciar tópico</string>
+    <string name="quick_action_unmute_thread">Reativar tópico</string>
     <string name="quick_action_report">Denunciar</string>
     <string name="quick_action_delete_button">Excluir</string>
     <string name="quick_action_dont_show_again_button">Não mostar novamente</string>
@@ -1308,6 +1310,7 @@
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Clique para ativar o som</string>
     <string name="mute_button">Som ligado. Clique para silenciar</string>
+    <string name="action_unmute">Reativar</string>
     <string name="skip_back">Voltar %d segundos</string>
     <string name="skip_forward">Avançar %d segundos</string>
     <string name="picture_in_picture">Picture-in-Picture</string>
@@ -1430,6 +1433,9 @@
     <string name="no_blossom_apps_found_description">Nenhum aplicativo Blossom foi encontrado. Instale um aplicativo Blossom local para visualizar este arquivo</string>
     <string name="hidden_words">Palavras Ocultas</string>
     <string name="hide_new_word_label">Ocultar nova palavra ou frase</string>
+    <string name="settings_muted_threads_title">Tópicos silenciados</string>
+    <string name="settings_muted_threads_empty">Nenhum tópico silenciado</string>
+    <string name="settings_muted_threads_unknown">Tópico desconhecido · %1$s</string>
     <string name="automatically_show_profile_picture">Foto de Perfil</string>
     <string name="automatically_show_profile_picture_description">Mostrar fotos de perfil</string>
     <string name="select_an_option">Selecione uma Opção</string>

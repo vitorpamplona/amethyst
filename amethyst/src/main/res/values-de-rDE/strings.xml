@@ -374,6 +374,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="quick_action_block_dialog_btn">Blockieren</string>
     <string name="quick_action_delete_dialog_btn">Löschen</string>
     <string name="quick_action_block">Blockieren</string>
+    <string name="quick_action_mute_thread">Thread stummschalten</string>
+    <string name="quick_action_unmute_thread">Stummschaltung des Threads aufheben</string>
     <string name="quick_action_report">Melden</string>
     <string name="quick_action_delete_button">Löschen</string>
     <string name="quick_action_dont_show_again_button">Nicht erneut anzeigen</string>
@@ -1313,6 +1315,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="spamming_users">Spammer</string>
     <string name="muted_button">Stummgeschaltet. Drücken, um Ton einzuschalten</string>
     <string name="mute_button">Ton ein. Zur Stummschaltung drücken</string>
+    <string name="action_unmute">Stummschaltung aufheben</string>
     <string name="skip_back">Springe %d Sekunden zurück</string>
     <string name="skip_forward">Springe %d Sekunden vor</string>
     <string name="picture_in_picture">Bild-in-Bild</string>
@@ -1435,6 +1438,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="no_blossom_apps_found_description">Keine Blossom-Apps gefunden. Bitte installiere eine lokale Blossom-App, um diese Datei anzuzeigen</string>
     <string name="hidden_words">Versteckte Wörter</string>
     <string name="hide_new_word_label">Neues Wort oder neuen Satz verstecken</string>
+    <string name="settings_muted_threads_title">Stummgeschaltete Threads</string>
+    <string name="settings_muted_threads_empty">Keine stummgeschalteten Threads</string>
+    <string name="settings_muted_threads_unknown">Unbekannter Thread · %1$s</string>
     <string name="automatically_show_profile_picture">Profilbild</string>
     <string name="automatically_show_profile_picture_description">Profilbilder anzeigen</string>
     <string name="select_an_option">Option auswählen</string>
