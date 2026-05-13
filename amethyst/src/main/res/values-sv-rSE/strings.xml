@@ -370,6 +370,8 @@
     <string name="quick_action_block_dialog_btn">Blockera</string>
     <string name="quick_action_delete_dialog_btn">Radera</string>
     <string name="quick_action_block">Blockera</string>
+    <string name="quick_action_mute_thread">Tysta tråd</string>
+    <string name="quick_action_unmute_thread">Avtysta tråd</string>
     <string name="quick_action_report">Rapportera</string>
     <string name="quick_action_delete_button">Radera</string>
     <string name="quick_action_dont_show_again_button">Visa inte igen</string>
@@ -1307,6 +1309,7 @@
     <string name="spamming_users">Spammare</string>
     <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>
     <string name="mute_button">Ljud på. Klicka för att stänga av ljudet</string>
+    <string name="action_unmute">Avtysta</string>
     <string name="skip_back">Hoppa tillbaka %d sekunder</string>
     <string name="skip_forward">Hoppa framåt %d sekunder</string>
     <string name="picture_in_picture">Bild-i-bild</string>
@@ -1429,6 +1432,9 @@
     <string name="no_blossom_apps_found_description">Inga Blossom-appar hittades. Installera en lokal Blossom-app för att visa den här filen</string>
     <string name="hidden_words">Dolda ord</string>
     <string name="hide_new_word_label">Dölj nytt ord eller mening</string>
+    <string name="settings_muted_threads_title">Tystade trådar</string>
+    <string name="settings_muted_threads_empty">Inga tystade trådar</string>
+    <string name="settings_muted_threads_unknown">Okänd tråd · %1$s</string>
     <string name="automatically_show_profile_picture">Profilbild</string>
     <string name="automatically_show_profile_picture_description">Visa profilbilder</string>
     <string name="select_an_option">Välj ett alternativ</string>

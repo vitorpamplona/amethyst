@@ -370,6 +370,8 @@
     <string name="quick_action_block_dialog_btn">Blokovat</string>
     <string name="quick_action_delete_dialog_btn">Smazat</string>
     <string name="quick_action_block">Blokovat</string>
+    <string name="quick_action_mute_thread">Ztlumit vlákno</string>
+    <string name="quick_action_unmute_thread">Zrušit ztlumení vlákna</string>
     <string name="quick_action_report">Nahlásit</string>
     <string name="quick_action_delete_button">Smazat</string>
     <string name="quick_action_dont_show_again_button">Nepředvádět znovu</string>
@@ -1320,6 +1322,7 @@
     <string name="spamming_users">Spamovací uživatelé</string>
     <string name="muted_button">Ztlumené. Klikněte pro odztlumení</string>
     <string name="mute_button">Zvuk zapnutý. Klikněte pro ztlumení</string>
+    <string name="action_unmute">Zrušit ztlumení</string>
     <string name="skip_back">Přeskočit zpět o %d sekund</string>
     <string name="skip_forward">Přeskočit vpřed o %d sekund</string>
     <string name="picture_in_picture">Obraz v obraze</string>
@@ -1442,6 +1445,9 @@
     <string name="no_blossom_apps_found_description">Nebyly nalezeny žádné aplikace Blossom. Nainstalujte prosím lokální aplikaci Blossom pro zobrazení tohoto souboru</string>
     <string name="hidden_words">Skrytá slova</string>
     <string name="hide_new_word_label">Skrýt nové slovo nebo větu</string>
+    <string name="settings_muted_threads_title">Ztlumená vlákna</string>
+    <string name="settings_muted_threads_empty">Žádná ztlumená vlákna</string>
+    <string name="settings_muted_threads_unknown">Neznámé vlákno · %1$s</string>
     <string name="automatically_show_profile_picture">Profilový obrázek</string>
     <string name="automatically_show_profile_picture_description">Zobrazit profilové obrázky</string>
     <string name="select_an_option">Zvolte možnost</string>
