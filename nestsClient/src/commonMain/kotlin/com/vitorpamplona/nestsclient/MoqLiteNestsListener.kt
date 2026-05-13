@@ -135,10 +135,24 @@ class MoqLiteNestsListener internal constructor(
         val mapped =
             handle.frames.map { frame ->
                 val payload = if (stripLegacyTimestamp) stripLegacyTimestampPrefix(frame.payload) else frame.payload
+                val objId = objectIdSeq.getAndIncrement()
+                // Second stage of the listener-pipeline trace. Bridges
+                // `frame_received` (subscribeId + groupSequence + frame_idx)
+                // to `pcm_decoded` / `pcm_enqueued` (which know obj_id but
+                // not the per-group frame_idx). A gap between
+                // `frame_received` and `frame_object_mapped` of the same
+                // (sub_id, group_seq) means the consumer of the per-subscription
+                // Channel is slow — i.e. NestPlayer's decode/enqueue is the
+                // bottleneck.
+                com.vitorpamplona.nestsclient.trace.NestsTrace
+                    .emit("frame_object_mapped") {
+                        "\"sub_id\":${handle.id},\"group_seq\":${frame.groupSequence}," +
+                            "\"obj_id\":$objId,\"size\":${payload.size}"
+                    }
                 MoqObject(
                     trackAlias = handle.id,
                     groupId = frame.groupSequence,
-                    objectId = objectIdSeq.getAndIncrement(),
+                    objectId = objId,
                     publisherPriority = MoqLiteSession.DEFAULT_PRIORITY,
                     payload = payload,
                 )
