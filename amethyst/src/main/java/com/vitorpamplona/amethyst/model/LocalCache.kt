@@ -807,16 +807,14 @@ object LocalCache : ILocalCache, ICacheProvider {
             return false
         }
 
-        if (isVerified || justVerify(event)) {
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
-                val replyTo = computeReplyTo(event)
+        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+            val replyTo = computeReplyTo(event)
 
-                note.loadEvent(event, author, replyTo)
+            note.loadEvent(event, author, replyTo)
 
-                refreshNewNoteObservers(note)
+            refreshNewNoteObservers(note)
 
-                return true
-            }
+            return true
         }
 
         return false
@@ -852,16 +850,14 @@ object LocalCache : ILocalCache, ICacheProvider {
             return false
         }
 
-        if (isVerified || justVerify(event)) {
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
-                val replyTo = computeReplyTo(event)
+        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+            val replyTo = computeReplyTo(event)
 
-                note.loadEvent(event, author, replyTo)
+            note.loadEvent(event, author, replyTo)
 
-                refreshNewNoteObservers(note)
+            refreshNewNoteObservers(note)
 
-                return true
-            }
+            return true
         }
 
         return false
@@ -1197,10 +1193,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 notes.forEach { _, note ->
                     val noteEvent = note.event
-                    if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
-                        if (noteEvent.pubKey == event.pubKey && noteEvent.createdAt <= event.createdAt) {
-                            deleteNote(note)
-                        }
+                    if (noteEvent is AddressableEvent &&
+                        noteEvent.addressTag() in addressSet &&
+                        noteEvent.pubKey == event.pubKey &&
+                        noteEvent.createdAt <= event.createdAt
+                    ) {
+                        deleteNote(note)
                     }
                 }
             }
@@ -1466,10 +1464,8 @@ object LocalCache : ILocalCache, ICacheProvider {
             return false // older data, does nothing
         }
 
-        if (oldChannel.creator == null || oldChannel.creator == author) {
-            if (isVerified || justVerify(event)) {
-                oldChannel.updateChannelInfo(author, event, note)
-            }
+        if ((oldChannel.creator == null || oldChannel.creator == author) && (isVerified || justVerify(event))) {
+            oldChannel.updateChannelInfo(author, event, note)
         }
 
         return isVerified

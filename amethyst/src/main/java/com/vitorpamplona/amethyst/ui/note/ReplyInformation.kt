@@ -86,30 +86,28 @@ fun ReplyInformationChannel(
     onUserTagClick: (User) -> Unit,
 ) {
     FlowRow {
-        if (!mentions.isNullOrEmpty()) {
-            if (!replyTo.isNullOrEmpty()) {
-                Text(
-                    stringRes(id = R.string.replying_to),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                )
+        if (!mentions.isNullOrEmpty() && !replyTo.isNullOrEmpty()) {
+            Text(
+                stringRes(id = R.string.replying_to),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
 
-                mentions.forEachIndexed { idx, user ->
-                    ReplyInfoMention(user, prefix, accountViewModel, onUserTagClick)
+            mentions.forEachIndexed { idx, user ->
+                ReplyInfoMention(user, prefix, accountViewModel, onUserTagClick)
 
-                    if (idx < mentions.size - 2) {
-                        Text(
-                            ", ",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    } else if (idx < mentions.size - 1) {
-                        Text(
-                            " ${stringRes(id = R.string.and)} ",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    }
+                if (idx < mentions.size - 2) {
+                    Text(
+                        ", ",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                } else if (idx < mentions.size - 1) {
+                    Text(
+                        " ${stringRes(id = R.string.and)} ",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
                 }
             }
         }

@@ -40,14 +40,12 @@ fun QuickActionGallery(
 
     content { popupExpanded.value = true }
 
-    if (popupExpanded.value) {
-        if (baseNote.author == accountViewModel.account.userProfile()) {
-            DeleteFromGalleryDialog(
-                note = baseNote,
-                onDismiss = { popupExpanded.value = false },
-                accountViewModel = accountViewModel,
-            )
-        }
+    if (popupExpanded.value && baseNote.author == accountViewModel.account.userProfile()) {
+        DeleteFromGalleryDialog(
+            note = baseNote,
+            onDismiss = { popupExpanded.value = false },
+            accountViewModel = accountViewModel,
+        )
     }
 }
 

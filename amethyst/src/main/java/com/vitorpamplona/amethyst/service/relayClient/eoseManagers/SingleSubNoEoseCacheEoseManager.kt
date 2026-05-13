@@ -57,10 +57,8 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (isLive) {
-                        if (invalidateAfterEose) {
-                            invalidateFilters()
-                        }
+                    if (isLive && invalidateAfterEose) {
+                        invalidateFilters()
                     }
                 }
             },

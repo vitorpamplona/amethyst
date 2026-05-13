@@ -117,21 +117,22 @@ class NotificationSummaryState(
                         zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id)
                     }
-                } else if (noteEvent is BaseThreadedEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val isCitation =
-                            noteEvent.findCitations().any {
-                                LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
-                            }
-
-                        val netDate = formatDate(noteEvent.createdAt)
-                        if (isCitation) {
-                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                        } else {
-                            replies[netDate] = (replies[netDate] ?: 0) + 1
+                } else if (noteEvent is BaseThreadedEvent &&
+                    noteEvent.isTaggedUser(currentUser) &&
+                    noteEvent.pubKey != currentUser
+                ) {
+                    val isCitation =
+                        noteEvent.findCitations().any {
+                            LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
                         }
-                        takenIntoAccount.add(noteEvent.id)
+
+                    val netDate = formatDate(noteEvent.createdAt)
+                    if (isCitation) {
+                        boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                    } else {
+                        replies[netDate] = (replies[netDate] ?: 0) + 1
                     }
+                    takenIntoAccount.add(noteEvent.id)
                 }
             }
         }
@@ -183,22 +184,23 @@ class NotificationSummaryState(
                             takenIntoAccount.add(noteEvent.id)
                             hasNewElements = true
                         }
-                    } else if (noteEvent is BaseThreadedEvent) {
-                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                            val isCitation =
-                                noteEvent.findCitations().any {
-                                    LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
-                                }
-
-                            val netDate = formatDate(noteEvent.createdAt)
-                            if (isCitation) {
-                                boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                            } else {
-                                replies[netDate] = (replies[netDate] ?: 0) + 1
+                    } else if (noteEvent is BaseThreadedEvent &&
+                        noteEvent.isTaggedUser(currentUser) &&
+                        noteEvent.pubKey != currentUser
+                    ) {
+                        val isCitation =
+                            noteEvent.findCitations().any {
+                                LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
                             }
-                            takenIntoAccount.add(noteEvent.id)
-                            hasNewElements = true
+
+                        val netDate = formatDate(noteEvent.createdAt)
+                        if (isCitation) {
+                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                        } else {
+                            replies[netDate] = (replies[netDate] ?: 0) + 1
                         }
+                        takenIntoAccount.add(noteEvent.id)
+                        hasNewElements = true
                     }
                 }
             }

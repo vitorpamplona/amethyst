@@ -48,10 +48,8 @@ class UserProfileAppRecommendationsFeedFilter(
 
     fun filterMap(it: Note): List<Note>? {
         val noteEvent = it.event
-        if (noteEvent is AppRecommendationEvent) {
-            if (noteEvent.pubKey == user.pubkeyHex) {
-                return noteEvent.recommendations().map { LocalCache.getOrCreateAddressableNote(it.address) }
-            }
+        if (noteEvent is AppRecommendationEvent && noteEvent.pubKey == user.pubkeyHex) {
+            return noteEvent.recommendations().map { LocalCache.getOrCreateAddressableNote(it.address) }
         }
 
         return null

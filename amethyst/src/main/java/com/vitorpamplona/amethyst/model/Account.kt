@@ -3277,10 +3277,12 @@ class Account(
         scope.launch {
             cache.antiSpam.flowSpam.collect {
                 it.cache.spamMessages.snapshot().values.forEach { spammer ->
-                    if (!hiddenUsers.isHidden(spammer.pubkeyHex) && spammer.shouldHide()) {
-                        if (spammer.pubkeyHex != userProfile().pubkeyHex && spammer.pubkeyHex !in followingKeySet()) {
-                            hiddenUsers.hideUser(spammer.pubkeyHex)
-                        }
+                    if (!hiddenUsers.isHidden(spammer.pubkeyHex) &&
+                        spammer.shouldHide() &&
+                        spammer.pubkeyHex != userProfile().pubkeyHex &&
+                        spammer.pubkeyHex !in followingKeySet()
+                    ) {
+                        hiddenUsers.hideUser(spammer.pubkeyHex)
                     }
                 }
             }

@@ -320,9 +320,7 @@ class UploadOrchestrator {
                 MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
             }
 
-        if (!strippingResult.stripped) {
-            if (!onStrippingFailed()) return null
-        }
+        if (!strippingResult.stripped && !onStrippingFailed()) return null
 
         return strippingResult.uri
     }

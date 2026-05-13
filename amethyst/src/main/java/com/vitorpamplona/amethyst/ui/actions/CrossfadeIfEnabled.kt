@@ -83,13 +83,11 @@ fun <T> Transition<T>.MyCrossfade(
 ) {
     val currentlyVisible = remember { mutableStateListOf<T>().apply { add(currentState) } }
     val contentMap = remember { mutableScatterMapOf<T, @Composable () -> Unit>() }
-    if (currentState == targetState) {
-        // If not animating, just display the current state
-        if (currentlyVisible.size != 1 || currentlyVisible[0] != targetState) {
-            // Remove all the intermediate items from the list once the animation is finished.
-            currentlyVisible.removeAll { it != targetState }
-            contentMap.clear()
-        }
+    // If not animating, just display the current state
+    if (currentState == targetState && (currentlyVisible.size != 1 || currentlyVisible[0] != targetState)) {
+        // Remove all the intermediate items from the list once the animation is finished.
+        currentlyVisible.removeAll { it != targetState }
+        contentMap.clear()
     }
 
     if (targetState !in contentMap) {
